@@ -115,7 +115,7 @@ test('campagne : le plan couvre TOUS les scénarios enregistrés du Lot 1 et ne 
 });
 
 test('campagne : états, variables du faux API et pages sont cohérents avec le faux API', () => {
-  assert.deepEqual(Object.keys(campaign.PAGES).sort(), ['portfolio', 'rendement-fin', 'rendement-op', 'settings']);
+  assert.deepEqual(Object.keys(campaign.PAGES).sort(), ['founder', 'founder-rbac', 'portfolio', 'rendement-fin', 'rendement-op', 'settings']);
   for (const [key, p] of Object.entries(campaign.PAGES)) assert.equal(p.beta, ['portfolio', 'settings'].includes(key), `${key} : seules /settings et /activities/portfolio sont bêta`);
   const plan = campaign.buildPlan({});
   const env = (page, state) => plan.find((g) => g.page === page && g.state === state).env;
@@ -166,8 +166,8 @@ test('matrice : identifiants uniques et continus, champs complets, rôles et rou
 
 test('matrice : chaque contrôle automatique de l’API et chaque famille de contrôles navigateur est référencé', () => {
   const tools = matrix.MATRIX.map((m) => m.tool).join(' | ');
-  for (const id of ['PERM-API-01', 'PERM-API-04', 'PERM-API-07', 'PERM-API-08', 'PERM-API-14', 'PERM-BRW-01', 'PERM-BRW-03', 'PERM-BRW-04', 'PERM-BRW-05', 'PERM-BRW-06', 'PERM-BRW-07']) assert.ok(tools.includes(id), id);
-  assert.deepEqual(perm.API_CHECKS.map((c) => c.id), Array.from({ length: 15 }, (_, i) => `PERM-API-${String(i + 1).padStart(2, '0')}`));
+  for (const id of ['PERM-API-01', 'PERM-API-04', 'PERM-API-07', 'PERM-API-08', 'PERM-API-14', 'PERM-API-16', 'PERM-API-17', 'PERM-API-18', 'PERM-API-19', 'PERM-BRW-01', 'PERM-BRW-03', 'PERM-BRW-04', 'PERM-BRW-05', 'PERM-BRW-06', 'PERM-BRW-07']) assert.ok(tools.includes(id), id);
+  assert.deepEqual(perm.API_CHECKS.map((c) => c.id).sort(), Array.from({ length: 19 }, (_, i) => `PERM-API-${String(i + 1).padStart(2, '0')}`));
 });
 
 test('PREPROD.md : contient la matrice générée (sans dérive), toutes les sections demandées et aucun secret', () => {

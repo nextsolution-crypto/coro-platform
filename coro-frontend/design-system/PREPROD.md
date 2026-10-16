@@ -88,10 +88,11 @@ npm run glass:preprod-permissions -- --api https://<hôte-api-preprod>/api --app
 Garde-fous : hôtes de production refusés (code de sortie 2) ; secrets lus à l'exécution, jamais écrits ; le rapport JSON ne contient ni
 courriel, ni mot de passe, ni jeton ; un rôle sans identifiants est **non exécuté** (et fait échouer `--require-all`), jamais « ok ».
 
-Contrôles de l'API (`PERM-API-01` à `15`) : refus sans jeton ou avec un jeton invalide ; un CONSEILLER ne reçoit que ses propres données
+Contrôles de l'API (`PERM-API-01` à `19`) : refus sans jeton ou avec un jeton invalide ; un CONSEILLER ne reçoit que ses propres données
 **opérationnelles**, **sans aucun champ financier**, et le **financier lui est refusé (403)** ; l'ancien chemin `/rendement` renvoie la forme
-opérationnelle, jamais l'ancien modèle ; ADMIN et SUPER_ADMIN obtiennent des réponses conformes (montants en chaînes décimales, complétude, totaux
-cohérents avec le nombre de mandats) ; cloisonnement entre organisations ; `PERM-API-15` est une **information** (champs non prévus par le contrat).
+opérationnelle, jamais l'ancien modèle ; un SUPER_ADMIN autorisé (Founder ou permission FINANCIAL_RENDEMENT_READ) obtient des réponses conformes (montants en chaînes décimales, complétude, totaux
+cohérents avec le nombre de mandats) et un ADMIN client est **refusé (403)** sur le financier, sur `/admin/v1/platform-authority/me` et sur `/grants`
+(`PERM-API-12`, `16` à `19`) ; cloisonnement entre organisations ; `PERM-API-15` est une **information** (champs non prévus par le contrat).
 Contrôles navigateur (`PERM-BRW-01` à `07`) : accès direct aux quatre routes (un CONSEILLER qui ouvre `/dashboard/rendement` est **redirigé vers
 `/profile/rendement`** par la page), moteur de rendu (le rendement est toujours Legacy), absence de vocabulaire financier pour un non-administrateur,
 sections de `/settings`, lien « Rendement équipe » du menu, exceptions JavaScript, débordement horizontal aux 4 largeurs.
@@ -102,7 +103,7 @@ financier ouvert) et le harnais **doit échouer**. Ces deux cas sont couverts pa
 
 **Risque à consigner — accès direct par un non-administrateur.** La page `/dashboard/rendement` de `main` vérifie le rôle côté client
 (`router.replace("/profile/rendement")` pour tout utilisateur qui n'est pas ADMIN ou SUPER_ADMIN) et le backend refuse `/rendement/financial` à un
-non-administrateur (`requireTenantAdmin`, 403). C'est la lecture du code ; **ce n'est pas validé à l'exécution** : `PERM-API-07` et `PERM-BRW-01` /
+utilisateur qui n'a pas la permission de plateforme `FINANCIAL_RENDEMENT_READ` (Founder ou délégation ; un ADMIN client est refusé, 403). C'est la lecture du code ; **ce n'est pas validé à l'exécution** : `PERM-API-07` et `PERM-BRW-01` /
 `03` le testent. Reste à confirmer en préproduction qu'aucun indicateur financier n'apparaît, même brièvement, avant la redirection (M-07).
 Le rôle utilisé par l'interface vient désormais de `/users/me` (et non du seul stockage du navigateur), ce qui réduit le risque d'un rôle falsifié
 côté client ; la sécurité réelle reste celle du backend (M-10).
@@ -155,7 +156,7 @@ E = `/dashboard/rendement`. Mode : `auto` (script), `manuel` (personne), `mixte`
 |---|---|---|---|---|---|---|---|
 | M-01 | Permissions | GET /rendement/operational et /rendement/financial sans jeton ou avec un jeton invalide sont refusés (401/403) | — | E R | auto | preprod-permissions : PERM-API-01, 02, 03 | Aucune donnée renvoyée |
 | M-02 | Permissions | Un CONSEILLER ne reçoit que ses propres données opérationnelles, avec ou sans userId, y compris le userId d’un autre utilisateur | C | R | auto | preprod-permissions : PERM-API-04, 05, 06 | 0 conseiller étranger dans la réponse |
-| M-03 | Permissions | Le rendement financier est réservé à ADMIN et SUPER_ADMIN : refusé (403) à un CONSEILLER ; 200 conforme (montants décimaux, complétude, totaux cohérents) pour ADMIN et SUPER_ADMIN ; le filtre userId opérationnel se limite à l’utilisateur demandé | C A S | R E | auto | preprod-permissions : PERM-API-07, 10, 11, 12, 13 | 403 pour C ; réponses conformes pour A et S |
+| M-03 | Permissions | Le rendement financier est réservé à la permission de plateforme FINANCIAL_RENDEMENT_READ (Founder ou délégation CORO) : refusé (403) à un CONSEILLER et à un ADMIN client ; 200 conforme (montants décimaux, complétude, totaux cohérents) pour un SUPER_ADMIN autorisé ; le filtre userId opérationnel se limite à l’utilisateur demandé | C A S | R E | auto | preprod-permissions : PERM-API-07, 10, 11, 12, 13 | 403 pour C et A ; réponses conformes pour S |
 | M-04 | Permissions | Cloisonnement : un ADMIN ne voit aucune donnée d’une autre organisation (userId d’un utilisateur d’une autre organisation de test), ni en opérationnel ni en financier | A | R E | auto | preprod-permissions : PERM-API-14 (PREPROD_OTHER_ORG_USER_ID) | 0 donnée ou 403, sur les deux chemins |
 | M-05 | Permissions | La réponse opérationnelle d’un CONSEILLER ne contient aucun champ financier ; l’ancien chemin GET /rendement renvoie la forme opérationnelle et non l’ancien modèle ; inventaire des champs non prévus par le contrat | C | R E | auto | preprod-permissions : PERM-API-08, 09, 15 (information) | Aucun champ financier ; liste des champs supplémentaires transmise |
 | M-06 | Accès direct | Accès direct (URL saisie) aux quatre routes pour chaque rôle : /dashboard/rendement redirige un CONSEILLER vers /profile/rendement ; les autres routes sont atteintes | C A S | P T R E | auto | preprod-permissions --browser : PERM-BRW-01 | Redirection attendue uniquement pour C sur E |
@@ -189,6 +190,9 @@ E = `/dashboard/rendement`. Mode : `auto` (script), `manuel` (personne), `mixte`
 | M-34 | Retour arrière | Retirer le jeton et reconstruire : les deux routes bêta repassent en Legacy sans perte de données ; la préférence d’interface n’est qu’un réglage local ; retour à une version antérieure par un nouveau déploiement d’un commit déjà présent sur main (workflow manuel avec approbations) | A | P T | mixte | preprod-build-check (off) + répétition en préproduction | Legacy rétabli, données intactes |
 | M-35 | États | Chargement, vide et erreur avec le vrai backend : erreur 500, délai, 401 expiré, réponse vide | A | T R E | mixte | campaign scenarios (jeu fictif) + simulation d’incident en préproduction | Comportement identique au Legacy |
 | M-36 | Observabilité | Journaux serveur et navigateur pendant les parcours : aucune erreur 4xx/5xx nouvelle, aucune exception JavaScript | C A S | P T R E | mixte | PERM-BRW-06 + journaux serveur | 0 nouvelle erreur |
+| M-37 | Autorité de plateforme | GET /admin/v1/platform-authority/me et /grants : refusés (403) à un CONSEILLER et à un ADMIN client ; un SUPER_ADMIN reçoit une vue conforme (authorityStatus, founder, grants). La sécurité réelle reste celle du backend | C A S | — | auto | preprod-permissions : PERM-API-16, PERM-API-17, PERM-API-18, PERM-API-19 | 403 pour C et A ; vue conforme pour S |
+| M-38 | Autorité de plateforme | Navigation et accès selon l’autorité effective : Founder (menu Plateforme complet et « Permissions plateforme »), employé CORO délégué (menu limité, pas de page Permissions), employé sans permission et ADMIN client (aucun menu plateforme, redirection vers /dashboard) ; aucun indicateur financier pour ADMIN client ; mêmes résultats en Classic, Glass clair et Glass sombre | C A S | — | auto | campaign scenarios --pages founder-rbac | Menus et redirections conformes dans les 4 modes |
+| M-39 | Autorité de plateforme | Onze écrans Founder (permissions plateforme, tableau commercial, catalogue, price-books, configurateur, propositions, contrats, entitlements, organisation 360, émetteur légal, rendement financier) à 1440, 1920, 390 et 430 px en Classic, Glass clair et Glass sombre : écran atteint, aucune exception, aucun débordement horizontal, thème conservé après F5 | S | E | auto | campaign scenarios --pages founder | 0 exception, 0 débordement, thème persistant |
 
 **Parcours lecteur d'écran (M-27, M-28)** — pour chaque page, avec NVDA (Firefox puis Chrome) et VoiceOver (Safari) : (1) la page est annoncée avec son
 titre ; (2) naviguer aux titres et aux régions ; (3) atteindre chaque bouton par Tab et vérifier son nom ; (4) activer par Entrée puis Espace ;

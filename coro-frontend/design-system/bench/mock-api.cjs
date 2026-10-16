@@ -149,7 +149,7 @@ const strictAuth = process.env.BENCH_STRICT_AUTH === '1';
 const leak = process.env.BENCH_LEAK_RENDEMENT === '1';
 const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN'];
 const accountByToken = (header) => {
-  const simulated = /^Bearer bench-token:role:(CONSEILLER|ADMIN|SUPER_ADMIN)$/.exec(header || '');
+  const simulated = /^Bearer bench-token:role:(CONSEILLER|ADMIN|SUPER_ADMIN)(?::authority:(?:founder|delegated|none))?$/.exec(header || '');
   if (simulated) return { ...user, role: simulated[1] };
   const m = /^Bearer bench-token:(.+)$/.exec(header || '');
   return m ? Object.values(ACCOUNTS).find((a) => a.id === m[1]) || null : null;
@@ -162,6 +162,44 @@ function scopeOperational(body, account, queryUserId) {
 const readBody = (req) => new Promise((resolve) => { let b = ''; req.on('data', (c) => (b += c)); req.on('end', () => { try { resolve(JSON.parse(b || '{}')); } catch { resolve({}); } }); });
 const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
 const RENDEMENT_ROUTES = ['/api/rendement', '/api/rendement/operational', '/api/rendement/financial'];
+
+// ───────── Autorité de plateforme CORO (contrat de main : a3e23921, 79e6d604, 87ecb925) ─────────
+//  Reproduit la FORME du contrat, pas le backend : GET /admin/v1/platform-authority/me (SUPER_ADMIN seulement ; un ADMIN client ou un conseiller → 403),
+//  grants Founder-only (liste / création / révocation), et /rendement/financial réservé à la permission FINANCIAL_RENDEMENT_READ (Founder ou délégation).
+//  Mode d'autorité d'une session SUPER_ADMIN, porté par le jeton « bench-token:role:SUPER_ADMIN:authority:<mode> » :
+//    founder (défaut) : founder = true ;  delegated : employé CORO avec permissions déléguées ;  none : employé CORO sans permission.
+//  Aucun repli fondé sur le seul rôle SUPER_ADMIN : sans Founder ni grant, l'accès plateforme est refusé.
+const DELEGATED_GRANTS = [
+  { permission: 'COMMERCIAL_CATALOG_MANAGE', scope: 'GLOBAL', targetOrganizationId: null },
+  { permission: 'FINANCIAL_RENDEMENT_READ', scope: 'ORGANIZATION', targetOrganizationId: 'bench-org' },
+];
+const authorityModeOf = (header) => { const m = /:authority:(founder|delegated|none)$/.exec(header || ''); return m ? m[1] : 'founder'; };
+const authorityView = (header) => {
+  const mode = authorityModeOf(header);
+  if (mode === 'delegated') return { authorityStatus: 'ACTIVE', founder: false, grants: DELEGATED_GRANTS };
+  if (mode === 'none') return { authorityStatus: 'ACTIVE', founder: false, grants: [] };
+  return { authorityStatus: 'ACTIVE', founder: true, grants: [] };
+};
+const isFounderCaller = (header, caller) => (!caller || caller.role === 'SUPER_ADMIN') && authorityView(header).founder;
+const financialAllowed = (header, caller) => {
+  if (!caller) return true; // jeton historique du banc
+  if (caller.role !== 'SUPER_ADMIN') return false; // ADMIN client / conseiller : refusé (autorité de plateforme requise)
+  const v = authorityView(header);
+  return v.founder || v.grants.some((g) => g.permission === 'FINANCIAL_RENDEMENT_READ');
+};
+const GRANTS = [
+  { id: 'g1', userId: 'u-emp-1', permission: 'COMMERCIAL_CATALOG_MANAGE', scope: 'GLOBAL', targetOrganizationId: null, status: 'ACTIVE', effectiveFrom: '2026-10-16T12:00:00.000Z', grantedByUserId: 'bench-user', grantReason: 'Délégation de test (faux API)', revokedAt: null, revokedByUserId: null, revocationReason: null, lockVersion: 0, createdAt: '2026-10-16T12:00:00.000Z' },
+  { id: 'g2', userId: 'u-emp-2', permission: 'FINANCIAL_RENDEMENT_READ', scope: 'ORGANIZATION', targetOrganizationId: 'bench-org', status: 'REVOKED', effectiveFrom: '2026-10-10T12:00:00.000Z', grantedByUserId: 'bench-user', grantReason: 'Lecture temporaire', revokedAt: '2026-10-15T12:00:00.000Z', revokedByUserId: 'bench-user', revocationReason: 'Fin de mission', lockVersion: 1, createdAt: '2026-10-10T12:00:00.000Z' },
+];
+const EMPLOYEES = [
+  { id: 'u-emp-1', email: 'employe1@bench.test', firstName: 'Camille', lastName: 'Employée', role: 'SUPER_ADMIN', isActive: true },
+  { id: 'u-emp-2', email: 'employe2@bench.test', firstName: 'Noa', lastName: 'Opérateur', role: 'SUPER_ADMIN', isActive: true },
+];
+const ORGANIZATIONS = [
+  { id: 'bench-org', name: 'Organisation Démo A', isInternal: false, isActive: true },
+  { id: 'org-corp', name: 'CORO (interne)', isInternal: true, isActive: true },
+];
+
 
 http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
@@ -185,7 +223,7 @@ http.createServer(async (req, res) => {
   if (RENDEMENT_ROUTES.includes(route)) {
     if (process.env.BENCH_FAIL_RENDEMENT === '1') return json(res, 500, { message: 'bench: erreur simulée' });
     const financial = route === '/api/rendement/financial';
-    if (financial && caller && !ADMIN_ROLES.includes(caller.role) && !leak) return json(res, 403, { message: 'bench: réservé aux administrateurs' });
+    if (financial && !leak && !financialAllowed(req.headers.authorization, caller)) return json(res, 403, { message: 'bench: autorité de plateforme requise (FINANCIAL_RENDEMENT_READ)' });
     const send = () => {
       if (financial) return json(res, 200, financialBody(req.url));
       const full = operationalBody(req.url);
@@ -194,6 +232,28 @@ http.createServer(async (req, res) => {
     };
     return delay ? setTimeout(send, delay) : send();
   }
+  if (route === '/api/admin/v1/platform-authority/me') {
+    if (caller && caller.role !== 'SUPER_ADMIN') return json(res, 403, { message: 'bench: opérateur CORO requis' });
+    return json(res, 200, authorityView(req.headers.authorization));
+  }
+  if (route === '/api/admin/v1/platform-authority/grants' || /^\/api\/admin\/v1\/platform-authority\/grants\/[^/]+\/revoke$/.test(route)) {
+    if (!isFounderCaller(req.headers.authorization, caller)) return json(res, 403, { message: 'bench: réservé au Founder' });
+    if (req.method === 'GET') return json(res, 200, GRANTS);
+    const payload = await readBody(req);
+    if (route.endsWith('/revoke')) {
+      const g = GRANTS.find((x) => x.id === route.split('/')[6]);
+      if (!g) return json(res, 404, { message: 'bench: grant introuvable' });
+      Object.assign(g, { status: 'REVOKED', revokedAt: new Date().toISOString(), revokedByUserId: 'bench-user', revocationReason: payload.reason || 'bench', lockVersion: g.lockVersion + 1 });
+      return json(res, 201, g);
+    }
+    const g = { id: 'g' + (GRANTS.length + 1), userId: payload.userId, permission: payload.permission, scope: payload.scope, targetOrganizationId: payload.targetOrganizationId || null, status: 'ACTIVE', effectiveFrom: new Date().toISOString(), grantedByUserId: 'bench-user', grantReason: payload.reason || 'bench', revokedAt: null, revokedByUserId: null, revocationReason: null, lockVersion: 0, createdAt: new Date().toISOString() };
+    GRANTS.push(g); return json(res, 201, g);
+  }
+  // Écrans commerciaux Founder : listes vides conformes (le vrai backend renvoie des données ; ici seule la FORME compte pour le rendu).
+  if (['/api/admin/v1/commercial/price-books', '/api/admin/v1/commercial/capabilities', '/api/admin/v1/commercial/legal-issuers'].includes(route)) return json(res, 200, []);
+  if (route === '/api/admin/v1/control-center/organizations') return json(res, 200, { items: ORGANIZATIONS.map((o) => ({ ...o, status: 'ACTIVE' })), total: ORGANIZATIONS.length });
+  if (route === '/api/users/organization') return json(res, 200, EMPLOYEES);
+  if (route === '/api/organizations') return json(res, 200, ORGANIZATIONS);
   const body = routes[route];
   res.writeHead(body === undefined ? 404 : 200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(body === undefined ? { message: 'bench: route non simulée' } : body));

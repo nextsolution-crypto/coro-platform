@@ -34,6 +34,10 @@ const VIEWPORTS = {
   390: { width: 390, height: 844, deviceScaleFactor: 2, mobile: true },
   768: { width: 768, height: 1024, deviceScaleFactor: 2, mobile: true },
   1600: { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false },
+  // Matrice Founder (QA de main) : 1440 et 1920 (bureau), 390 et 430 (mobile).
+  430: { width: 430, height: 932, deviceScaleFactor: 2, mobile: true },
+  1440: { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false },
+  1920: { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false },
 };
 
 /**
@@ -122,7 +126,7 @@ async function launch() {
 }
 
 /** Ouvre un onglet et renvoie une session { send, eval, key, click, goto, ... }. */
-async function openSession(port, { ui, theme, viewport, colorScheme = 'light', width, beta = false, role = 'SUPER_ADMIN' }) {
+async function openSession(port, { ui, theme, viewport, colorScheme = 'light', width, beta = false, role = 'SUPER_ADMIN', authority }) {
   const target = await getJson(`http://127.0.0.1:${port}/json/new?about:blank`, 'PUT');
   const ws = new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((resolve) => (ws.onopen = resolve));
@@ -147,8 +151,8 @@ async function openSession(port, { ui, theme, viewport, colorScheme = 'light', w
   const fakeUser = { id: 'bench-user', email: 'bench@example.test', firstName: 'Alex', lastName: 'Démo', role, organizationId: 'bench-org' };
   const seed = `try{` +
     `var u=${JSON.stringify(JSON.stringify(fakeUser))};` +
-    `localStorage.setItem('coro_token','bench-token:role:${role}');localStorage.setItem('coro_user',u);` +
-    `sessionStorage.setItem('coro_token','bench-token:role:${role}');sessionStorage.setItem('coro_user',u);` +
+    `localStorage.setItem('coro_token','bench-token:role:${role}${authority ? ':authority:' + authority : ''}');localStorage.setItem('coro_user',u);` +
+    `sessionStorage.setItem('coro_token','bench-token:role:${role}${authority ? ':authority:' + authority : ''}');sessionStorage.setItem('coro_user',u);` +
     (ui ? `localStorage.setItem('coro-ui-generation','${ui}');` : '') +
     (theme ? `localStorage.setItem('coro-theme-preference','${theme}');` : '') +
     (beta ? `localStorage.setItem('coro-glass-beta','on');` : '') +

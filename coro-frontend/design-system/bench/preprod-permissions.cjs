@@ -181,10 +181,22 @@ const API_CHECKS = [
   } },
   { id: 'PERM-API-10', title: 'ADMIN : /rendement/operational sans userId → forme conforme (hours, activities, participatedMandates)', role: 'ADMIN', run: async (c) => operationalValid(await c.get('ADMIN', 'operational')) },
   { id: 'PERM-API-11', title: 'ADMIN : /rendement/operational avec le userId du conseiller → uniquement ce conseiller', role: 'ADMIN', needs: ['CONSEILLER'], run: async (c) => onlyAdvisor(await c.get('ADMIN', 'operational', c.sessions.CONSEILLER.user.id), c.sessions.CONSEILLER.user.id) },
-  { id: 'PERM-API-12', title: 'ADMIN : /rendement/financial → 200, montants en chaînes décimales, complétude et totaux cohérents', role: 'ADMIN', run: async (c) => financialValid(await c.get('ADMIN', 'financial')) },
-  { id: 'PERM-API-13', title: 'SUPER_ADMIN : /rendement/financial et /rendement/operational → 200, formes conformes', role: 'SUPER_ADMIN', run: async (c) => {
+  { id: 'PERM-API-12', title: 'ADMIN client : /rendement/financial → refusé (403) : autorité de plateforme requise, aucune donnée financière', role: 'ADMIN', run: async (c) => {
+    const r = await c.get('ADMIN', 'financial');
+    const leaked = r.status === 200 ? 'DONNÉES FINANCIÈRES RENVOYÉES À UN ADMIN CLIENT' : '';
+    return verdict(r.status === 403, `HTTP ${r.status}${leaked ? ' — ' + leaked : ''}`);
+  } },
+  { id: 'PERM-API-13', title: 'SUPER_ADMIN (Founder ou permission FINANCIAL_RENDEMENT_READ) : /rendement/financial et /rendement/operational → 200, formes conformes', role: 'SUPER_ADMIN', run: async (c) => {
     const f = financialValid(await c.get('SUPER_ADMIN', 'financial')); const o = operationalValid(await c.get('SUPER_ADMIN', 'operational'));
     return verdict(f.status === 'ok' && o.status === 'ok', `financier : ${f.detail} ; opérationnel : ${o.detail}`);
+  } },
+  { id: 'PERM-API-16', title: 'ADMIN client : GET /admin/v1/platform-authority/me → refusé (403)', role: 'ADMIN', run: async (c) => { const r = await c.raw('ADMIN', '/admin/v1/platform-authority/me'); return verdict(r.status === 403, `HTTP ${r.status}`); } },
+  { id: 'PERM-API-17', title: 'CONSEILLER : GET /admin/v1/platform-authority/me → refusé (403)', role: 'CONSEILLER', run: async (c) => { const r = await c.raw('CONSEILLER', '/admin/v1/platform-authority/me'); return verdict(r.status === 403, `HTTP ${r.status}`); } },
+  { id: 'PERM-API-18', title: 'ADMIN client : GET /admin/v1/platform-authority/grants → refusé (403), aucune liste de grants', role: 'ADMIN', run: async (c) => { const r = await c.raw('ADMIN', '/admin/v1/platform-authority/grants'); return verdict(r.status === 403, `HTTP ${r.status}${r.status === 200 ? ' — GRANTS RENVOYÉS À UN ADMIN CLIENT' : ''}`); } },
+  { id: 'PERM-API-19', title: 'SUPER_ADMIN : GET /admin/v1/platform-authority/me → 200, forme conforme (authorityStatus, founder, grants)', role: 'SUPER_ADMIN', run: async (c) => {
+    const r = await c.raw('SUPER_ADMIN', '/admin/v1/platform-authority/me'); const j = r.json || {};
+    const ok = r.status === 200 && ['UNCONFIGURED', 'DRAFT', 'ACTIVE'].includes(j.authorityStatus) && typeof j.founder === 'boolean' && Array.isArray(j.grants);
+    return verdict(ok, `HTTP ${r.status}${ok ? `, ${j.authorityStatus}, founder=${j.founder}, ${j.grants.length} grant(s)` : ', forme inattendue'}`);
   } },
   { id: 'PERM-API-14', title: 'ADMIN : le userId d’une AUTRE organisation ne renvoie aucune donnée (cloisonnement), sur les deux chemins', role: 'ADMIN', needs: ['otherOrgUserId'], run: async (c) => {
     const o = await c.get('ADMIN', 'operational', c.otherOrgUserId); const f = await c.get('ADMIN', 'financial', c.otherOrgUserId);
@@ -208,6 +220,7 @@ async function runApiChecks({ api, sessions, from, to, otherUserId, otherOrgUser
     sessions, otherUserId, otherOrgUserId,
     url: (endpoint, userId) => `${api}/rendement${endpoint ? '/' + endpoint : ''}?from=${from}&to=${to}${userId ? `&userId=${encodeURIComponent(userId)}` : ''}`,
     get: (role, endpoint, userId) => request('GET', ctx.url(endpoint, userId), { headers: { Authorization: `Bearer ${sessions[role].token}` } }),
+    raw: (role, path) => request('GET', `${api}${path}`, { headers: { Authorization: `Bearer ${sessions[role].token}` } }),
   };
   const out = [];
   for (const check of API_CHECKS) {
@@ -260,7 +273,12 @@ async function runBrowserChecks({ app, sessions, expectRenderer, beta }) {
           if (expected !== 'any') add(`PERM-BRW-02:${role}:${route}`, `${role} — moteur de rendu de ${route} = ${expected}`, renderer === expected ? 'ok' : 'ko', `observé : ${renderer}`);
           if (rendementRoute) {
             const text = await session.eval(`document.querySelector('main')?document.querySelector('main').innerText:''`);
-            if (route === '/dashboard/rendement' && !redirectedByDesign) {
+            if (route === '/dashboard/rendement' && role === 'ADMIN') {
+              // ADMIN client : le backend refuse (autorité de plateforme requise) ; la page ne doit afficher AUCUNE donnée financière, avec un message d'erreur.
+              const financialWords = /Montant vendu|Coût de main-d’œuvre|Marge des mandats|Synthèse financière|Mandats incomplets|Vendu|Coût connu/.test(text);
+              const alert = await session.eval(`!!document.querySelector('main [role=alert]')`);
+              add(`PERM-BRW-03:${role}:${route}`, `${role} client — /dashboard/rendement : aucun indicateur financier (refus du backend), message d’erreur affiché`, !financialWords && alert ? 'ok' : 'ko', financialWords ? 'DONNÉES FINANCIÈRES VISIBLES' : (alert ? 'aucune donnée, erreur affichée' : 'aucune donnée mais aucun message d’erreur'));
+            } else if (route === '/dashboard/rendement' && !redirectedByDesign) {
               // Administrateur : l'écran financier s'affiche sans message d'erreur (une erreur en préproduction doit être investiguée).
               const title = await session.eval(`document.querySelector('main h1')?document.querySelector('main h1').textContent.trim():''`);
               const alert = await session.eval(`!!document.querySelector('main [role=alert]')`);

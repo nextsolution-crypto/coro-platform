@@ -2,7 +2,7 @@
 
 > Généré par `npm run glass:inventory -- --write` (scanner d’imports × registre). Ne pas éditer à la main : les statuts se changent dans `routes/route-registry.ts`.
 
-**83 routes** (65 statiques, 18 dynamiques) — une page `page.tsx` = une route, aucun double comptage. Avec shell Glass : 74 ; plein écran : 9. Statuts : ga 3 · beta 2 · legacy-only 78.
+**84 routes** (66 statiques, 18 dynamiques) — une page `page.tsx` = une route, aucun double comptage. Avec shell Glass : 75 ; plein écran : 9. Statuts : ga 3 · beta 2 · legacy-only 79.
 
 ## Pilote migré — 2 route(s), 1877 lignes, 310 couleurs hex, 15 classes couleur Tailwind
 
@@ -11,12 +11,12 @@
 | `/dashboard` | statique | app | inline-hex + tailwind | 1241 | 193 | 7 | — | ga | ui/Typography.tsx |
 | `/profile` | statique | app | inline-hex + tailwind | 636 | 117 | 8 | destructive | ga | WorkScheduleEditorPanel.tsx, workScheduleEditor.ts |
 
-## Projets, mandats, activités — 11 route(s), 16703 lignes, 1854 couleurs hex, 181 classes couleur Tailwind
+## Projets, mandats, activités — 11 route(s), 16770 lignes, 1854 couleurs hex, 181 classes couleur Tailwind
 
 | Route | Type | Shell | Styles | Lignes | Hex | Tailwind | Sensibilité | Statut | Composants partagés |
 |---|---|---|---|---:|---:|---:|---|---|---|
 | `/activities/portfolio` | statique | app | inline-hex | 1106 | 94 | 0 | — | beta | — |
-| `/dashboard/rendement` | statique | app | tailwind | 526 | 0 | 33 | financial-legal, permissions | legacy-only | — |
+| `/dashboard/rendement` | statique | app | tailwind | 593 | 0 | 33 | financial-legal, permissions | legacy-only | — |
 | `/notifications` | statique | app | inline-hex | 605 | 35 | 0 | destructive | legacy-only | — |
 | `/planning` | statique | app | inline-hex + css-module | 2514 | 178 | 0 | destructive | legacy-only | — |
 | `/profile/rendement` | statique | app | tailwind | 455 | 0 | 34 | — | legacy-only | — |
@@ -84,7 +84,7 @@
 | `/settings/timelog-categories` | statique | app | inline-hex + tailwind | 352 | 37 | 3 | destructive | legacy-only | — |
 | `/settings/users` | statique | app | inline-hex + tailwind | 723 | 111 | 9 | destructive, permissions | legacy-only | WorkScheduleEditorPanel.tsx, workScheduleEditor.ts |
 
-## Super Admin (commercial, catalogue, supervision) — 24 route(s), 17694 lignes, 0 couleurs hex, 900 classes couleur Tailwind
+## Super Admin (commercial, catalogue, supervision) — 25 route(s), 18675 lignes, 0 couleurs hex, 935 classes couleur Tailwind
 
 | Route | Type | Shell | Styles | Lignes | Hex | Tailwind | Sensibilité | Statut | Composants partagés |
 |---|---|---|---|---:|---:|---:|---|---|---|
@@ -93,7 +93,7 @@
 | `/admin/commercial/assumptions/value` | statique | app | tailwind | 127 | 0 | 12 | permissions, financial-legal | legacy-only | — |
 | `/admin/commercial/clauses` | statique | app | tailwind | 783 | 0 | 31 | permissions, financial-legal | legacy-only | — |
 | `/admin/commercial/configuration` | statique | app | tailwind | 620 | 0 | 24 | permissions, financial-legal | legacy-only | — |
-| `/admin/commercial/configurator` | statique | app | tailwind | 3690 | 0 | 192 | permissions, financial-legal | legacy-only | — |
+| `/admin/commercial/configurator` | statique | app | tailwind | 3872 | 0 | 202 | permissions, financial-legal | legacy-only | — |
 | `/admin/commercial/content` | statique | app | tailwind | 1088 | 0 | 82 | permissions, financial-legal | legacy-only | — |
 | `/admin/commercial/contracts` | statique | app | tailwind | 373 | 0 | 35 | permissions, financial-legal | legacy-only | admin/control-center/ControlCenterComponents.tsx |
 | `/admin/commercial/dossier/[targetType]/[targetId]` | dynamique | app | tailwind | 1447 | 0 | 68 | permissions, financial-legal | legacy-only | admin/capability-operations/CapabilityOperationsWorkspace.tsx |
@@ -109,6 +109,7 @@
 | `/admin/commercial/simulator` | statique | app | tailwind | 552 | 0 | 25 | permissions, financial-legal | legacy-only | — |
 | `/admin/control-center` | statique | app | tailwind | 466 | 0 | 38 | permissions, supervision | legacy-only | admin/control-center/ControlCenterComponents.tsx |
 | `/admin/metering` | statique | app | tailwind | 168 | 0 | 9 | permissions, supervision | legacy-only | — |
+| `/admin/platform-permission-grants` | statique | app | tailwind | 799 | 0 | 25 | financial-legal, permissions | legacy-only | — |
 | `/admin/product-catalog` | statique | app | tailwind | 43 | 0 | 4 | permissions, financial-legal | legacy-only | — |
 | `/admin/product-catalog/capabilities` | statique | app | tailwind | 214 | 0 | 8 | permissions, financial-legal | legacy-only | — |
 | `/admin/product-catalog/price-books` | statique | app | tailwind | 924 | 0 | 25 | destructive, permissions, financial-legal | legacy-only | — |

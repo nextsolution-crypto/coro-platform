@@ -149,7 +149,7 @@ async function cmdScenarios(o) {
   try {
     for (const sc of scenarios) {
       if (only && !only.includes(sc.name)) continue;
-      const session = await openSession(chrome.port, { ui: sc.ui, theme: sc.theme, viewport: sc.viewport, beta: sc.beta, role: sc.role });
+      const session = await openSession(chrome.port, { ui: sc.ui, theme: sc.theme, viewport: sc.viewport, beta: sc.beta, role: sc.role, authority: sc.authority });
       const checks = [];
       const check = (label, ok, detail = '') => { checks.push({ label, ok: !!ok, detail }); };
       try { const how = await session.goto(sc.route); if (how.startsWith('ECHEC') && !(sc.redirectTo && how === 'ECHEC:' + sc.redirectTo)) { check('route accessible', false, how); } else { await sleep(600); await sc.run(session, check); } }

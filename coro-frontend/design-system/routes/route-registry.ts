@@ -110,7 +110,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { pattern: '/settings/task-templates', family: 'admin', shell: 'app', status: 'legacy-only', styling: ['inline-hex', 'tailwind'], sensitivity: ['destructive'] },
   { pattern: '/settings/timelog-categories', family: 'admin', shell: 'app', status: 'legacy-only', styling: ['inline-hex', 'tailwind'], sensitivity: ['destructive'] },
   { pattern: '/settings/users', family: 'admin', shell: 'app', status: 'legacy-only', styling: ['inline-hex', 'tailwind'], sensitivity: ['destructive', 'permissions'] },
-  // ── super-admin (24) ──
+  // ── super-admin (25) ──
   { pattern: '/admin/commercial', family: 'super-admin', shell: 'app', status: 'legacy-only', styling: ['tailwind'], sensitivity: ['permissions', 'financial-legal'] },
   { pattern: '/admin/commercial/assumptions/cost', family: 'super-admin', shell: 'app', status: 'legacy-only', styling: ['tailwind'], sensitivity: ['permissions', 'financial-legal'] },
   { pattern: '/admin/commercial/assumptions/value', family: 'super-admin', shell: 'app', status: 'legacy-only', styling: ['tailwind'], sensitivity: ['permissions', 'financial-legal'] },
@@ -131,6 +131,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { pattern: '/admin/commercial/reconciliation', family: 'super-admin', shell: 'app', status: 'legacy-only', styling: ['tailwind'], sensitivity: ['permissions', 'financial-legal'] },
   { pattern: '/admin/commercial/simulator', family: 'super-admin', shell: 'app', status: 'legacy-only', styling: ['tailwind'], sensitivity: ['permissions', 'financial-legal'] },
   { pattern: '/admin/control-center', family: 'super-admin', shell: 'app', status: 'legacy-only', styling: ['tailwind'], sensitivity: ['permissions', 'supervision'] },
+  { pattern: '/admin/platform-permission-grants', family: 'super-admin', shell: 'app', status: 'legacy-only', styling: ['tailwind'], sensitivity: ['financial-legal', 'permissions'] },
   { pattern: '/admin/metering', family: 'super-admin', shell: 'app', status: 'legacy-only', styling: ['tailwind'], sensitivity: ['permissions', 'supervision'] },
   { pattern: '/admin/product-catalog', family: 'super-admin', shell: 'app', status: 'legacy-only', styling: ['tailwind'], sensitivity: ['permissions', 'financial-legal'] },
   { pattern: '/admin/product-catalog/capabilities', family: 'super-admin', shell: 'app', status: 'legacy-only', styling: ['tailwind'], sensitivity: ['permissions', 'financial-legal'] },

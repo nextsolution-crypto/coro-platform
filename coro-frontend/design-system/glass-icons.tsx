@@ -2,7 +2,7 @@ import {
   Activity, ArrowLeftRight, BadgeCheck, BarChart3, Bell, Building2, Calculator, CalendarCheck, CalendarDays,
   CalendarRange, ChevronDown, ClipboardList, Circle, Coins, FilePlus2, FileSignature, FileText, FileWarning,
   Files, FolderKanban, FolderTree, Gauge, Gem, Gift, Globe, HeartPulse, History, Landmark, LayoutDashboard,
-  Library, ListChecks, Map as MapIcon, Menu, MessageSquare, Package, PenLine, Pilcrow, Radar, Route, Scale,
+  KeyRound, Library, ListChecks, Map as MapIcon, Menu, MessageSquare, Package, PenLine, Pilcrow, Radar, Route, Scale,
   Search, Settings, Shapes, ShieldCheck, SlidersHorizontal, Tags, Target, Timer, TrendingUp, UserCog, Users, X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -61,6 +61,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   '/admin/task-templates': ListChecks,
   '/admin/feedback': MessageSquare,
   '/admin/changelog': History,
+  '/admin/platform-permission-grants': KeyRound,
   '/blog': PenLine,
 };
 
