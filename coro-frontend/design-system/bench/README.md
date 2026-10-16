@@ -55,3 +55,18 @@ Via npm : `npm run glass:bench -- <commande> …`.
   (constaté en Legacy comme en Glass). Le banc entre donc par `/profile` avec une session semée puis navigue côté client. Tout nouveau scénario
   clavier doit commencer par vérifier que les touches arrivent (un `Tab` sans effet ferait croire à un piège de focus).
 - **Le panneau d'outils de développement de Next.js** (`nextjs-portal`) est exclu des mesures.
+
+## Campagne du Lot 1 et préproduction (phase 10B)
+
+Procédures complètes, matrice de validation, plan de retour arrière et critères Go / No-Go : **`design-system/PREPROD.md`**.
+
+| Commande | Rôle |
+|---|---|
+| `npm run glass:campaign -- plan\|scenarios\|capture\|compare\|contrast\|shots\|all` | Campagne reproductible des quatre pages du Lot 1 ; gère elle-même le faux API, état par état. |
+| `npm run glass:preprod-build` | Builds de test sans jeton, avec `NEXT_PUBLIC_GLASS_BETA=1` et avec `production-preview` ; moteur de rendu des quatre routes et absence des outils de développement. |
+| `npm run glass:preprod-permissions` | Permissions par rôle contre une préproduction (refuse tout hôte de production ; secrets lus dans l'environnement, jamais écrits). `--self-test` valide le harnais contre le faux API. |
+| `snapshot`, `contrast`, `shots` avec `--eval "JS"` | Exécute un script dans la page avant la mesure (p. ex. déplier une section). |
+
+Le faux API (`mock-api.cjs`) connaît trois comptes fictifs locaux (`conseiller@`, `admin@`, `super@bench.test`) et reproduit **le contrat documenté** de
+`GET /rendement` (un non-admin est limité à ses données) quand `BENCH_STRICT_AUTH=1` ; `BENCH_LEAK_RENDEMENT=1` supprime cette restriction pour vérifier
+que le harnais détecte une fuite. Ce n'est pas le backend et cela ne prouve rien sur lui.

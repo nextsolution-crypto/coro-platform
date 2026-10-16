@@ -87,22 +87,60 @@ function rendementBody(url) {
   return { conseillers, teamStats: { heuresTotal: conseillers.reduce((s, c) => s + c.heuresTotal, 0), revenusTotal: conseillers.reduce((s, c) => s + c.revenusTotal, 0), mandatsDeficitaires: conseillers.reduce((s, c) => s + c.mandatsDeficitaires, 0) } };
 }
 
-http.createServer((req, res) => {
+// ───────── Comptes de test LOCAUX et portée par rôle (Phase 10B) ─────────
+//  Servent uniquement à AUTO-TESTER les scripts de permissions (bench/preprod-permissions.cjs) sans backend : ils reproduisent le
+//  contrat DOCUMENTÉ de GET /rendement (un non-admin est limité à ses propres données ; seuls ADMIN et SUPER_ADMIN ciblent un
+//  utilisateur). Ce n'est PAS le backend : ils ne prouvent rien sur le vrai serveur. Mots de passe fictifs, valables ici seulement.
+//  BENCH_STRICT_AUTH=1   : jeton valide exigé (401 sinon) sur /rendement, /auth/me, /users/me, et identifiants vérifiés à la connexion.
+//  BENCH_LEAK_RENDEMENT=1 : supprime la restriction par rôle (simule un backend défaillant : le harnais DOIT alors échouer).
+const ACCOUNTS = {
+  'conseiller@bench.test': { id: 'u1', email: 'conseiller@bench.test', firstName: 'Sophie', lastName: 'Martin', role: 'CONSEILLER', organizationId: 'bench-org' },
+  'admin@bench.test': { id: 'bench-admin', email: 'admin@bench.test', firstName: 'Alex', lastName: 'Admin', role: 'ADMIN', organizationId: 'bench-org' },
+  'super@bench.test': { id: 'bench-super', email: 'super@bench.test', firstName: 'Sam', lastName: 'Super', role: 'SUPER_ADMIN', organizationId: 'bench-org' },
+};
+const BENCH_PASSWORD = 'bench-only';
+const strictAuth = process.env.BENCH_STRICT_AUTH === '1';
+const accountByToken = (header) => {
+  const m = /^Bearer bench-token:(.+)$/.exec(header || '');
+  return m ? Object.values(ACCOUNTS).find((a) => a.id === m[1]) || null : null;
+};
+function scopeRendement(body, account, queryUserId) {
+  const admin = ['ADMIN', 'SUPER_ADMIN'].includes(account.role);
+  const effective = admin ? (queryUserId || undefined) : account.id;
+  if (!effective || process.env.BENCH_LEAK_RENDEMENT === '1') return body;
+  const conseillers = body.conseillers.filter((c) => c.userId === effective);
+  const sum = (key) => conseillers.reduce((s, c) => s + c[key], 0);
+  return { conseillers, teamStats: { heuresTotal: sum('heuresTotal'), revenusTotal: sum('revenusTotal'), mandatsDeficitaires: sum('mandatsDeficitaires') } };
+}
+const readBody = (req) => new Promise((resolve) => { let b = ''; req.on('data', (c) => (b += c)); req.on('end', () => { try { resolve(JSON.parse(b || '{}')); } catch { resolve({}); } }); });
+const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
+
+http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Headers', '*'); res.setHeader('Access-Control-Allow-Methods', '*');
   if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
   const route = req.url.split('?')[0];
   if (req.method === 'POST' && route === '/api/auth/login') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ user, access_token: 'bench-token', refresh_token: 'bench-refresh' }));
+    const credentials = await readBody(req);
+    const account = ACCOUNTS[String(credentials.email || '').toLowerCase()];
+    if (account && credentials.password === BENCH_PASSWORD) return json(res, 200, { user: account, access_token: `bench-token:${account.id}`, refresh_token: 'bench-refresh' });
+    if (strictAuth) return json(res, 401, { message: 'bench: identifiants invalides' });
+    return json(res, 200, { user, access_token: 'bench-token', refresh_token: 'bench-refresh' });
   }
+  const caller = accountByToken(req.headers.authorization);
+  if (strictAuth && ['/api/rendement', '/api/auth/me', '/api/users/me'].includes(route) && !caller) return json(res, 401, { message: 'bench: jeton requis' });
+  if (caller && (route === '/api/auth/me' || route === '/api/users/me')) return json(res, 200, caller);
   const act = route.match(/^\/api\/projects\/(p\d+)\/activities$/);
   if (act) { res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify(process.env.BENCH_ACTIVITIES === '1' ? (ACTIVITIES[act[1]] || []) : [])); }
   if (route === '/api/clients' && process.env.BENCH_FAIL_CLIENTS === '1') { res.writeHead(500, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ message: 'bench: erreur simulée' })); }
   if (route === '/api/clients' && delay) return setTimeout(() => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(routes[route])); }, delay);
   if (route === '/api/rendement') {
     if (process.env.BENCH_FAIL_RENDEMENT === '1') { res.writeHead(500, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ message: 'bench: erreur simulée' })); }
-    const send = () => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(rendementBody(req.url))); };
+    const send = () => {
+      const full = rendementBody(req.url);
+      const queryUserId = new URL(req.url, 'http://bench').searchParams.get('userId') || '';
+      json(res, 200, caller ? scopeRendement(full, caller, queryUserId) : full);
+    };
     return delay ? setTimeout(send, delay) : send();
   }
   const body = routes[route];
