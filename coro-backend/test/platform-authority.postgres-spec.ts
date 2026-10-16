@@ -12,13 +12,13 @@ describePostgres('Platform operator authority on PostgreSQL', () => {
     ? new PrismaService({ datasources: { db: { url: databaseUrl } } })
     : new PrismaService();
   const service = new PlatformAuthorityService(prisma, new AdminAuditService());
-  let priorSuperAdmins: Array<{ id: string; role: 'SUPER_ADMIN' }> = [];
+  let priorSuperAdmins: Array<{ id: string }> = [];
 
   beforeAll(async () => {
     await prisma.$connect();
     priorSuperAdmins = await prisma.user.findMany({
       where: { role: 'SUPER_ADMIN', isActive: true },
-      select: { id: true, role: true },
+      select: { id: true },
     });
     if (priorSuperAdmins.length)
       await prisma.user.updateMany({
