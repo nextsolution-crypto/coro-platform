@@ -1,5 +1,7 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { PlatformPermission } from '@prisma/client';
+import { RequirePlatformPermission } from '../auth/platform-permission.decorator';
 import { SuperAdminOnly } from '../auth/platform-roles.decorator';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
 import { AuditQueryDto, PageQueryDto } from './organization-360.dto';
@@ -8,6 +10,10 @@ import { Organization360Service } from './organization-360.service';
 @Controller('admin/v1/organizations/:organizationId')
 @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
 @SuperAdminOnly()
+@RequirePlatformPermission(
+  PlatformPermission.ORGANIZATION_360_READ,
+  'organizationId',
+)
 export class Organization360Controller {
   constructor(private readonly service: Organization360Service) {}
 

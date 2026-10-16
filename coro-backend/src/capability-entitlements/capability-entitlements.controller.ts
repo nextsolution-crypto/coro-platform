@@ -9,7 +9,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { CapabilityCode } from '@prisma/client';
+import { CapabilityCode, PlatformPermission } from '@prisma/client';
+import { RequirePlatformPermission } from '../auth/platform-permission.decorator';
 import { SuperAdminOnly } from '../auth/platform-roles.decorator';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
 import { CapabilityEntitlementsService } from './capability-entitlements.service';
@@ -54,6 +55,10 @@ type CommandDto = PreviewStateDto & {
 @Controller('admin/v1/organizations/:organizationId/entitlements')
 @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
 @SuperAdminOnly()
+@RequirePlatformPermission(
+  PlatformPermission.COMMERCIAL_ENTITLEMENT_PROVISION,
+  'organizationId',
+)
 export class CapabilityEntitlementsController {
   constructor(
     private readonly service: CapabilityEntitlementsService,
@@ -377,6 +382,10 @@ export class SiteEntitlementsController {
 )
 @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
 @SuperAdminOnly()
+@RequirePlatformPermission(
+  PlatformPermission.COMMERCIAL_ENTITLEMENT_PROVISION,
+  'organizationId',
+)
 export class ContractEntitlementProvisioningController {
   constructor(private readonly commands: EntitlementCommandService) {}
   @Post()

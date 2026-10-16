@@ -13,6 +13,7 @@ import type { Server } from 'node:http';
 import request from 'supertest';
 import { PLATFORM_ROLES_KEY } from '../auth/platform-roles.decorator';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
+import { legacyPlatformAuthorityTestProvider } from '../auth/platform-authority.test-provider';
 import { CommercialDossierController } from './commercial-dossier.controller';
 import { CommercialDossierService } from './commercial-dossier.service';
 
@@ -41,6 +42,7 @@ describe('Commercial dossier API security contract', () => {
       providers: [
         Reflector,
         PlatformRolesGuard,
+        legacyPlatformAuthorityTestProvider,
         { provide: CommercialDossierService, useValue: service },
       ],
     })

@@ -10,6 +10,7 @@ import request from 'supertest';
 import { AdminAuditService } from '../src/admin-audit/admin-audit.service';
 import { JwtStrategy } from '../src/auth/jwt.strategy';
 import { PlatformRolesGuard } from '../src/auth/platform-roles.guard';
+import { legacyPlatformAuthorityTestProvider } from '../src/auth/platform-authority.test-provider';
 import { ProposalPricingEngine } from '../src/commercial-proposals/proposal-pricing-engine';
 import { CommercialSimulatorController } from '../src/commercial-simulator/commercial-simulator.controller';
 import { CommercialSimulatorService } from '../src/commercial-simulator/commercial-simulator.service';
@@ -151,6 +152,7 @@ describe('Commercial Simulator configured Scenario HTTP PostgreSQL', () => {
       providers: [
         Reflector,
         PlatformRolesGuard,
+        legacyPlatformAuthorityTestProvider,
         JwtStrategy,
         AdminAuditService,
         ProposalPricingEngine,

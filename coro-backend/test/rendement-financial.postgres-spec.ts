@@ -8,6 +8,11 @@ const databaseUrl = process.env.TEST_DATABASE_URL;
 const describePostgres = databaseUrl ? describe : describe.skip;
 
 describePostgres('Governed rendement financial authority on PostgreSQL', () => {
+  const authority = {
+    requirePermission: jest.fn((actor: { role: string }) => {
+      if (actor.role === 'OPERATOR') throw new ForbiddenException();
+    }),
+  };
   const prisma = databaseUrl
     ? new PrismaService({ datasources: { db: { url: databaseUrl } } })
     : new PrismaService();
@@ -31,8 +36,8 @@ describePostgres('Governed rendement financial authority on PostgreSQL', () => {
       organizationId: fixture.org.id,
       role: 'ADMIN',
     } as const;
-    const rates = new AdvisorCostRatesService(prisma);
-    const financial = new RendementFinancialService(prisma);
+    const rates = new AdvisorCostRatesService(prisma, authority as never);
+    const financial = new RendementFinancialService(prisma, authority as never);
     const mandate = await prisma.projectMandate.create({
       data: {
         projectId: fixture.project.id,
@@ -234,7 +239,7 @@ describePostgres('Governed rendement financial authority on PostgreSQL', () => {
       organizationId: fixture.org.id,
       role: 'ADMIN',
     } as const;
-    const rates = new AdvisorCostRatesService(prisma);
+    const rates = new AdvisorCostRatesService(prisma, authority as never);
     const proposed: Array<{ id: string; lockVersion: number }> = [];
     for (const effectiveFrom of ['2026-01-01', '2026-02-01']) {
       const draft = await rates.createDraft(

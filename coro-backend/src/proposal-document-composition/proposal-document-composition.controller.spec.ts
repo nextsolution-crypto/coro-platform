@@ -12,6 +12,7 @@ import type { Server } from 'node:http';
 import request from 'supertest';
 jest.mock('puppeteer', () => ({ __esModule: true, default: {} }));
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
+import { legacyPlatformAuthorityTestProvider } from '../auth/platform-authority.test-provider';
 import { ProposalDocumentCompositionController } from './proposal-document-composition.controller';
 import { ProposalDocumentCompositionService } from './proposal-document-composition.service';
 import { GovernedProposalPdfService } from './governed-proposal-pdf.service';
@@ -47,6 +48,7 @@ describe('Proposal document composition HTTP RBAC', () => {
       providers: [
         Reflector,
         PlatformRolesGuard,
+        legacyPlatformAuthorityTestProvider,
         { provide: ProposalDocumentCompositionService, useValue: service },
         { provide: GovernedProposalPdfService, useValue: pdf },
       ],

@@ -3,11 +3,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import {
-  requireTenantAdmin,
-  WorkManagementActor,
-} from '../auth/work-management-access';
+import { PlatformPermission, Prisma } from '@prisma/client';
+import { WorkManagementActor } from '../auth/work-management-access';
+import { PlatformAuthorityService } from '../auth/platform-authority.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { governedCurrency } from '../common/financial-currency';
 import {
@@ -52,7 +50,10 @@ type FinancialTotal = {
 
 @Injectable()
 export class RendementFinancialService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly platformAuthority: PlatformAuthorityService,
+  ) {}
 
   async operational(actor: FinancialActor, query: RendementPeriodQueryDto) {
     const userId = ['ADMIN', 'SUPER_ADMIN'].includes(actor.role)
@@ -130,7 +131,12 @@ export class RendementFinancialService {
   }
 
   async financial(actor: FinancialActor, query: FinancialRendementQueryDto) {
-    requireTenantAdmin(actor);
+    const organizationId = query.organizationId ?? actor.organizationId;
+    await this.platformAuthority.requirePermission(
+      actor,
+      PlatformPermission.FINANCIAL_RENDEMENT_READ,
+      organizationId,
+    );
     const view = query.view ?? 'cumulative';
     const workRange =
       view === 'work-period' ? reportingRange(query.from, query.to) : undefined;
@@ -144,7 +150,7 @@ export class RendementFinancialService {
 
     const mandates = await this.prisma.projectMandate.findMany({
       where: {
-        organizationId: actor.organizationId,
+        organizationId,
         ...(query.currency ? { soldCurrency: query.currency } : {}),
         ...(soldRange ? { soldAt: soldRange } : {}),
         ...(query.userId
@@ -194,7 +200,7 @@ export class RendementFinancialService {
       userIds.length && currencies.length
         ? await this.prisma.advisorInternalCostRate.findMany({
             where: {
-              organizationId: actor.organizationId,
+              organizationId,
               userId: { in: userIds },
               currency: { in: currencies },
               status: { in: ['APPROVED', 'SUPERSEDED'] },
@@ -338,10 +344,19 @@ export class RendementFinancialService {
     dto: ValidateMandateSaleDto,
     actor: FinancialActor,
   ) {
-    requireTenantAdmin(actor);
     const soldCurrency = governedCurrency(dto.soldCurrency, {
       defaultWhenMissing: true,
     });
+    const mandateScope = await this.prisma.projectMandate.findUnique({
+      where: { id: mandateId },
+      select: { organizationId: true },
+    });
+    if (!mandateScope) throw new NotFoundException('Mandat introuvable.');
+    await this.platformAuthority.requirePermission(
+      actor,
+      PlatformPermission.FINANCIAL_SALE_VALIDATE,
+      mandateScope.organizationId,
+    );
     const amount = new Prisma.Decimal(dto.soldAmount);
     if (!amount.isFinite() || amount.isNegative())
       throw new ConflictException(
@@ -353,7 +368,7 @@ export class RendementFinancialService {
     return this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${mandateId}, 0))`;
       const before = await tx.projectMandate.findFirst({
-        where: { id: mandateId, organizationId: actor.organizationId },
+        where: { id: mandateId, organizationId: mandateScope.organizationId },
       });
       if (!before) throw new NotFoundException('Mandat introuvable.');
       if (before.financialLockVersion !== dto.lockVersion)
@@ -363,7 +378,7 @@ export class RendementFinancialService {
       const updated = await tx.projectMandate.updateMany({
         where: {
           id: mandateId,
-          organizationId: actor.organizationId,
+          organizationId: mandateScope.organizationId,
           financialLockVersion: dto.lockVersion,
         },
         data: {
@@ -393,7 +408,7 @@ export class RendementFinancialService {
           action: 'PROJECT_MANDATE_SALE_VALIDATED',
           targetType: 'ProjectMandate',
           targetId: mandateId,
-          organizationId: actor.organizationId,
+          organizationId: mandateScope.organizationId,
           reason: dto.reason,
           beforeData: beforeJson,
           afterData: afterJson,
@@ -412,7 +427,7 @@ export class RendementFinancialService {
             reason: dto.reason,
           },
           userId: actor.userId,
-          organizationId: actor.organizationId,
+          organizationId: mandateScope.organizationId,
         },
       });
       return afterJson;

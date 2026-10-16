@@ -10,7 +10,8 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { CapabilityCode } from '@prisma/client';
+import { CapabilityCode, PlatformPermission } from '@prisma/client';
+import { RequirePlatformPermission } from '../auth/platform-permission.decorator';
 import { AuthGuard } from '@nestjs/passport';
 import { SuperAdminOnly } from '../auth/platform-roles.decorator';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
@@ -36,6 +37,7 @@ type AuthenticatedRequest = { user: { userId: string } };
 @Controller('admin/v1')
 @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
 @SuperAdminOnly()
+@RequirePlatformPermission(PlatformPermission.COMMERCIAL_CATALOG_MANAGE)
 export class CommercialCatalogController {
   constructor(private readonly service: CommercialCatalogService) {}
   @Get('commercial/capabilities') capabilities() {

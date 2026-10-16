@@ -11,6 +11,7 @@ import { UserRole } from '@prisma/client';
 import type { Server } from 'node:http';
 import request from 'supertest';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
+import { legacyPlatformAuthorityTestProvider } from '../auth/platform-authority.test-provider';
 import { CommercialClauseController } from './commercial-clause.controller';
 import { CommercialClauseService } from './commercial-clause.service';
 
@@ -42,6 +43,7 @@ describe('Commercial clause HTTP RBAC', () => {
       providers: [
         Reflector,
         PlatformRolesGuard,
+        legacyPlatformAuthorityTestProvider,
         { provide: CommercialClauseService, useValue: service },
       ],
     })

@@ -62,6 +62,8 @@ model Organization {
   meteringResults                MeteringResult[]
   commercialSimulationWorkspaces CommercialSimulationWorkspace[]
   advisorInternalCostRates       AdvisorInternalCostRate[]
+  platformAuthority              PlatformAuthorityConfiguration? @relation("PlatformOperatorOrganization")
+  platformPermissionScopes       PlatformPermissionGrant[]        @relation("PlatformPermissionTargetOrganization")
 }
 
 model User {
@@ -186,6 +188,12 @@ model User {
   advisorCostRatesRejected              AdvisorInternalCostRate[]   @relation("AdvisorInternalCostRateRejector")
   advisorCostRatesSuperseded            AdvisorInternalCostRate[]   @relation("AdvisorInternalCostRateSuperseder")
   mandateSalesValidated                 ProjectMandate[]            @relation("ProjectMandateSaleValidator")
+  platformAuthorityFounder              PlatformAuthorityConfiguration? @relation("PlatformAuthorityFounder")
+  platformAuthoritiesCreated            PlatformAuthorityConfiguration[] @relation("PlatformAuthorityCreator")
+  platformAuthoritiesActivated          PlatformAuthorityConfiguration[] @relation("PlatformAuthorityActivator")
+  platformPermissionGrants              PlatformPermissionGrant[]        @relation("PlatformPermissionSubject")
+  platformPermissionGrantsIssued        PlatformPermissionGrant[]        @relation("PlatformPermissionIssuer")
+  platformPermissionGrantsRevoked       PlatformPermissionGrant[]        @relation("PlatformPermissionRevoker")
 }
 
 model UserWorkSchedule {
@@ -256,6 +264,81 @@ enum UserRole {
   SUPER_ADMIN
   ADMIN
   OPERATOR
+}
+
+enum PlatformAuthorityStatus {
+  DRAFT
+  ACTIVE
+}
+
+enum PlatformPermission {
+  COMMERCIAL_CATALOG_MANAGE
+  COMMERCIAL_CONFIGURATION_MANAGE
+  COMMERCIAL_CONTENT_MANAGE
+  COMMERCIAL_LEGAL_ISSUER_MANAGE
+  COMMERCIAL_WORKSPACE_MANAGE
+  COMMERCIAL_PROPOSAL_PREPARE
+  COMMERCIAL_PROPOSAL_ISSUE
+  COMMERCIAL_CONTRACT_PREPARE
+  COMMERCIAL_CONTRACT_ACTIVATE
+  COMMERCIAL_ENTITLEMENT_PROVISION
+  ORGANIZATION_360_READ
+  FINANCIAL_RENDEMENT_READ
+  FINANCIAL_SALE_VALIDATE
+  FINANCIAL_ADVISOR_COST_MANAGE
+}
+
+enum PlatformPermissionScope {
+  ORGANIZATION
+  GLOBAL
+}
+
+enum PlatformPermissionGrantStatus {
+  ACTIVE
+  REVOKED
+}
+
+model PlatformAuthorityConfiguration {
+  id                     String                  @id @default("PRIMARY")
+  operatorOrganizationId String                  @unique
+  founderUserId          String                  @unique
+  status                 PlatformAuthorityStatus @default(DRAFT)
+  lockVersion            Int                     @default(0)
+  createdByUserId        String
+  createdAt              DateTime                @default(now())
+  activatedByUserId      String?
+  activatedAt            DateTime?
+  activationReason       String?
+  updatedAt              DateTime                @updatedAt
+  operatorOrganization   Organization            @relation("PlatformOperatorOrganization", fields: [operatorOrganizationId], references: [id], onDelete: Restrict)
+  founder                User                    @relation("PlatformAuthorityFounder", fields: [founderUserId], references: [id], onDelete: Restrict)
+  createdBy              User                    @relation("PlatformAuthorityCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  activatedBy            User?                   @relation("PlatformAuthorityActivator", fields: [activatedByUserId], references: [id], onDelete: Restrict)
+}
+
+model PlatformPermissionGrant {
+  id                   String                        @id @default(uuid())
+  userId               String
+  permission           PlatformPermission
+  scope                PlatformPermissionScope
+  targetOrganizationId String?
+  status               PlatformPermissionGrantStatus @default(ACTIVE)
+  effectiveFrom        DateTime                      @default(now())
+  grantedByUserId      String
+  grantReason          String
+  revokedAt            DateTime?
+  revokedByUserId      String?
+  revocationReason     String?
+  lockVersion          Int                           @default(0)
+  createdAt            DateTime                      @default(now())
+  updatedAt            DateTime                      @updatedAt
+  user                 User                          @relation("PlatformPermissionSubject", fields: [userId], references: [id], onDelete: Restrict)
+  targetOrganization   Organization?                 @relation("PlatformPermissionTargetOrganization", fields: [targetOrganizationId], references: [id], onDelete: Restrict)
+  grantedBy            User                          @relation("PlatformPermissionIssuer", fields: [grantedByUserId], references: [id], onDelete: Restrict)
+  revokedBy            User?                         @relation("PlatformPermissionRevoker", fields: [revokedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([userId, permission, status])
+  @@index([targetOrganizationId, permission, status])
 }
 
 enum CommercialRelationship {

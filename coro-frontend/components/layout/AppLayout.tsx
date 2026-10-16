@@ -11,6 +11,7 @@ import { createPalette } from '@/design-system/glass-palette';
 import { GlassNavIcon, GlassIcon } from '@/design-system/glass-icons';
 import { LegacyIsland } from '@/design-system/LegacyIsland';
 import { User, Timer, BarChart3 } from 'lucide-react';
+import { usePlatformAuthority } from '@/hooks/usePlatformAuthority';
 
 // ── Navigation par groupes ──────────────────────────────────
 const NAV_GROUPS = [
@@ -109,6 +110,11 @@ const SUPER_ADMIN_COMMERCIAL_ADVANCED_GROUP = {
 const SUPER_ADMIN_OTHER_GROUP = {
   label: 'Plateforme',
   items: [
+    {
+      label: 'Permissions plateforme',
+      path: '/admin/platform-permission-grants',
+      icon: '⚿',
+    },
     { label: 'Rapports REX', path: '/admin/rex-reports', icon: '📄' },
     { label: 'Recommandations', path: '/admin/referrals',     icon: '🎁' },
     { label: 'Carte globale',    path: '/admin/map',           icon: 'ðŸŒ' },
@@ -145,6 +151,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
+  const platform = usePlatformAuthority(Boolean(user));
   const { toasts, showToast, removeToast } = useToast();
   // Génération d'interface : 'legacy' (défaut, rendu strictement inchangé) ou 'glass'.
   const { ui, routeMode } = useTheme();
@@ -762,7 +769,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
             )}
 
-            {user?.role === 'SUPER_ADMIN' && (
+            {platform.hasAnyPlatformAccess && (
               <div>
                 <div className="mx-1 mb-3" style={{ borderTop: `1px solid ${p.line('#E9ECEF')}` }} />
                 <p className="px-3 text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: p.text('#ADB5BD') }}>
@@ -771,7 +778,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <div className="space-y-0.5">
                   {SUPER_ADMIN_PLATFORM_GROUP.items.map(item => renderNavItem(item))}
                 </div>
-                {[SUPER_ADMIN_COMMERCIAL_GROUP, SUPER_ADMIN_COMMERCIAL_ADMIN_GROUP, SUPER_ADMIN_COMMERCIAL_ADVANCED_GROUP, SUPER_ADMIN_OTHER_GROUP].map(group => (
+                {[SUPER_ADMIN_COMMERCIAL_GROUP, SUPER_ADMIN_COMMERCIAL_ADMIN_GROUP, SUPER_ADMIN_COMMERCIAL_ADVANCED_GROUP, ...(platform.isFounder ? [SUPER_ADMIN_OTHER_GROUP] : [])].map(group => (
                   <div key={group.label} className="mt-4">
                     <p className="px-3 text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: p.text('#ADB5BD') }}>
                       {group.label}

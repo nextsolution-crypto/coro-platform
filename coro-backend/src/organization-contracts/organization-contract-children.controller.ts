@@ -13,6 +13,8 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { PlatformPermission } from '@prisma/client';
+import { RequirePlatformPermission } from '../auth/platform-permission.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SuperAdminOnly } from '../auth/platform-roles.decorator';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
@@ -27,6 +29,10 @@ type Req = { user: { userId: string } };
 @Controller('admin/v1/organizations/:organizationId/contracts')
 @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
 @SuperAdminOnly()
+@RequirePlatformPermission(
+  PlatformPermission.COMMERCIAL_CONTRACT_PREPARE,
+  'organizationId',
+)
 export class OrganizationContractChildrenController {
   constructor(private readonly service: OrganizationContractsService) {}
   @Get(':contractId/revisions/:revisionId/adjustments') adjustments(

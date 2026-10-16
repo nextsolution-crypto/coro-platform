@@ -13,6 +13,7 @@ import { UserRole } from '@prisma/client';
 import request from 'supertest';
 import { PLATFORM_ROLES_KEY } from '../auth/platform-roles.decorator';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
+import { legacyPlatformAuthorityTestProvider } from '../auth/platform-authority.test-provider';
 import { CommercialSimulatorController } from './commercial-simulator.controller';
 import { CommercialSimulatorService } from './commercial-simulator.service';
 import {
@@ -134,6 +135,7 @@ describe('CommercialSimulatorController security contract', () => {
         providers: [
           Reflector,
           PlatformRolesGuard,
+          legacyPlatformAuthorityTestProvider,
           {
             provide: CommercialSimulatorService,
             useValue: {
