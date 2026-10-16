@@ -1,13 +1,19 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 /**
- * Scénarios de /profile/rendement (Phase 08A) : mêmes vérifications en Legacy, en île (bêta non activée) et en Glass.
- * Ils supposent un faux API configuré par variables d'environnement (voir bench/mock-api.cjs) :
- *   données    : BENCH_RENDEMENT=1          (4 mandats ; la période change la réponse)
- *   vide       : (défaut)                   (aucun conseiller renvoyé)
- *   erreur     : BENCH_FAIL_RENDEMENT=1     (/api/rendement → 500 ; le Legacy affiche l'état vide)
+ * Scénarios de /profile/rendement (rendement opérationnel) et /dashboard/rendement (rendement financier gouverné) — Phase 11D.
+ *
+ * Ces deux routes sont LEGACY-ONLY (aucune vue Glass) depuis la refonte de main (modèle `operational` / `financial`). Les scénarios les
+ * CARACTÉRISENT dans les quatre modes du banc : le contenu de <main> doit toujours être le Legacy de main (aucune carte `.cg-glass`, aucune
+ * primitive `.cgx-*`), même avec la préférence Glass, la bêta activée ou un build à jeton. Ils vérifient aussi qu'aucun élément de l'ancien
+ * modèle (conseillers, statistiques d'équipe, boutons de période, colonnes Budget / Montant vendu par conseiller) ne réapparaît.
+ *
+ * Faux API (voir bench/mock-api.cjs) :
+ *   données    : BENCH_RENDEMENT=1       (opérationnel : 3 conseillers ; financier : 6 mandats, 2 devises)
+ *   vide       : (défaut)
+ *   erreur     : BENCH_FAIL_RENDEMENT=1  (500 sur les trois chemins)
  *   chargement : BENCH_DELAY_MS=20000
- * Lancement : node design-system/bench/cli.cjs scenarios --only rendement-data-legacy,...
- * Les valeurs attendues viennent du code Legacy et du jeu de données du faux API, pas de la vue Glass.
+ * Lancement : node design-system/bench/cli.cjs scenarios --only rendement-op-data-legacy,rendement-fin-data-island,...
+ * Les valeurs attendues viennent du code de main et du jeu de données du faux API ; le faux API ne valide AUCUN calcul du backend.
  */
 const { sleep } = require('./cdp.cjs');
 
@@ -18,180 +24,165 @@ const MODES = [
   ['glass-dark', { ui: 'glass', theme: 'DARK', beta: true }],
   ['glass-light', { ui: 'glass', theme: 'LIGHT', beta: true }],
 ];
+const OP = '/profile/rendement';
+const FIN = '/dashboard/rendement';
+/** Vocabulaire de l'ancien modèle (période en trois boutons, équipe, budget) : ne doit réapparaître sur aucune des deux pages. */
+const OLD_MODEL = ['Heures équipe', 'Revenus équipe', 'Détail par mandat', 'Cette année', 'Personnalisé', 'Ce mois', 'Revenus générés', 'Mandats actifs', 'Budget'];
 
 const waitPath = async (s, predicate, ms = 30000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const p = await s.eval('location.pathname'); if (predicate(p)) return p; await sleep(400); } return s.eval('location.pathname'); };
-
-/** Texte (ligne suivante) qui suit un libellé de statistique dans <main>. */
+const mainText = (s) => s.eval(`document.querySelector('main')?document.querySelector('main').innerText:''`);
+/** Ligne qui suit un libellé dans <main> (cartes de statistiques : libellé puis valeur). */
 const statText = (s, label) => s.eval(`(()=>{const L=document.querySelector('main').innerText.split(${NL}).map(x=>x.trim()).filter(Boolean);const i=L.indexOf(${JSON.stringify(label)});return i<0?null:L[i+1]})()`);
-const visibleRows = (s) => s.eval(`[...document.querySelectorAll('main table tbody tr')].filter(r=>r.getClientRects().length>0).length`);
-const visibleCards = (s) => s.eval(`(()=>{const c=[...document.querySelectorAll('main [class~="md:hidden"]')].find(e=>e.getClientRects().length>0&&e.children.length>0);return c?c.children.length:0})()`);
-const cell = (s, row, col) => s.eval(`[...document.querySelectorAll('main table tbody tr')].filter(r=>r.getClientRects().length>0)[${row}].children[${col}].innerText.trim()`);
-const clickPeriod = (s, label) => s.eval(`(()=>{const b=[...document.querySelectorAll('main button')].find(x=>x.innerText.trim()===${JSON.stringify(label)});if(!b)return false;b.click();return true})()`);
-const dateInputs = (s) => s.eval(`document.querySelectorAll('main input[type=date]').length`);
+const renderer = (s) => s.eval(`(()=>{const m=document.querySelector('main');if(!m)return 'aucun-main';return m.querySelector('.cg-glass,[class*="cgx-"]')?'glass':'legacy'})()`);
+const overflow = (s) => s.eval(`JSON.stringify({docW:document.documentElement.scrollWidth,vw:innerWidth})`).then(JSON.parse);
+const tableRows = (s) => s.eval(`[...document.querySelectorAll('main table tbody tr')].filter(r=>r.getClientRects().length>0).length`);
 const setDate = (s, index, value) => s.eval(`(()=>{const c=document.querySelectorAll('main input[type=date]')[${index}];if(!c)return false;Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(c,${JSON.stringify(value)});c.dispatchEvent(new Event('input',{bubbles:true}));return true})()`);
-const periodButtons = (s) => s.eval(`[...document.querySelectorAll('main button')].filter(b=>['Ce mois','Cette année','Personnalisé'].includes(b.innerText.trim())).length`);
+const normalized = (t) => String(t).replace(/[  ]/g, ' ');
 
-function make(kind, mode, opts, run) {
+function make(prefix, route, kind, mode, opts, run) {
   const [modeName, base] = mode;
-  return { name: `rendement-${kind}-${modeName}`, description: `/profile/rendement — ${kind} (${modeName})`, route: '/profile/rendement', viewport: opts.viewport || 1600, ...base, ...(opts.extra || {}), run };
+  return { name: `${prefix}-${kind}-${modeName}`, description: `${route} — ${kind} (${modeName})`, route, viewport: opts.viewport || 1600, ...base, ...(opts.extra || {}), run };
+}
+/** Vérifications communes : rendu Legacy dans tous les modes, aucun vestige de l'ancien modèle. */
+async function commonChecks(s, check, { expectNoOldModel = true } = {}) {
+  check('contenu de <main> = Legacy de main (aucune carte .cg-glass ni primitive .cgx-*), quel que soit le mode', (await renderer(s)) === 'legacy', String(await renderer(s)));
+  if (expectNoOldModel) { const t = await mainText(s); const found = OLD_MODEL.filter((w) => t.includes(w)); check('aucun vestige de l’ancien modèle (équipe, période en boutons, budget, revenus)', found.length === 0, found.join(', ')); }
 }
 
 const scenarios = [];
 for (const mode of MODES) {
-  const glass = mode[0].startsWith('glass');
-
-  // ───── DONNÉES : statistiques, tableau, changement de période, ouverture d'un mandat ─────
-  scenarios.push(make('data', mode, {}, async (s, check) => {
-    await sleep(1500);
-    const stats = { h: await statText(s, 'Heures saisies'), r: await statText(s, 'Revenus générés'), m: await statText(s, 'Mandats actifs') };
-    check('statistiques : 42.5h, 7800 $, 4 mandats', stats.h === '42.5h' && stats.r === '7800 $' && stats.m === '4', JSON.stringify(stats));
-    check('4 lignes dans le tableau, titre « Détail par mandat »', (await visibleRows(s)) === 4 && (await s.eval(`document.querySelector('main').innerText.includes('Détail par mandat')`)), String(await visibleRows(s)));
-    check('3 boutons de période', (await periodButtons(s)) === 3, String(await periodButtons(s)));
-    check('marge positive « 2350 $ (56%) », montant vendu zéro → « — », marge négative « -500 $ (-50%) »',
-      (await cell(s, 0, 5)) === '2350 $ (56%)' && (await cell(s, 2, 3)) === '—' && (await cell(s, 2, 5)) === '—' && (await cell(s, 3, 5)) === '-500 $ (-50%)', JSON.stringify([await cell(s, 0, 5), await cell(s, 2, 3), await cell(s, 2, 5), await cell(s, 3, 5)]));
-    const color = (row, col) => s.eval(`getComputedStyle([...document.querySelectorAll('main table tbody tr')].filter(r=>r.getClientRects().length>0)[${row}].children[${col}]).color`);
-    const [cPos, cDash, cNeg, cClient] = [await color(0, 5), await color(2, 5), await color(3, 5), await color(2, 0)];
-    if (glass) check('marge indisponible « — » : teinte neutre (celle du texte secondaire), distincte des marges positive et négative', cDash === cClient && cDash !== cPos && cDash !== cNeg && cPos !== cNeg, JSON.stringify({ cPos, cDash, cNeg, cClient }));
-    else check('Legacy inchangé : le tiret garde la couleur de la marge négative (rouge du Legacy)', cDash === cNeg && cDash !== cPos, JSON.stringify({ cPos, cDash, cNeg }));
-    check('heures du tableau formatées à une décimale (18.5h) et coût réel arrondi (1850 $)', (await cell(s, 0, 2)) === '18.5h' && (await cell(s, 0, 4)) === '1850 $', `${await cell(s, 0, 2)} / ${await cell(s, 0, 4)}`);
-    check('libellé de mandat très long : aucun débordement horizontal de la page', await s.eval(`document.documentElement.scrollWidth<=innerWidth`));
-    if (glass) check('« Ce mois » est pressé (aria-pressed), les autres non', await s.eval(`(()=>{const b=[...document.querySelectorAll('main button[aria-pressed]')];return b.length===3&&b.filter(x=>x.getAttribute('aria-pressed')==='true').map(x=>x.innerText.trim()).join()==='Ce mois'})()`));
-    // Cette année
-    await clickPeriod(s, 'Cette année'); await sleep(900);
-    check('« Cette année » → 480.0h', (await statText(s, 'Heures saisies')) === '480.0h', String(await statText(s, 'Heures saisies')));
-    if (glass) check('« Cette année » est maintenant pressé', await s.eval(`[...document.querySelectorAll('main button[aria-pressed="true"]')].map(x=>x.innerText.trim()).join()==='Cette année'`));
-    // Personnalisé
-    check('aucun champ de date hors période personnalisée', (await dateInputs(s)) === 0);
-    await clickPeriod(s, 'Personnalisé'); await sleep(700);
-    check('« Personnalisé » → 2 champs de date (Du, Au)', (await dateInputs(s)) === 2, String(await dateInputs(s)));
-    await setDate(s, 0, '2026-01-01'); await sleep(200); await setDate(s, 1, '2026-01-10'); await sleep(1000);
-    const custom = { h: await statText(s, 'Heures saisies'), r: await statText(s, 'Revenus générés'), rows: await visibleRows(s) };
-    check('période de 10 jours → 12.0h, revenus « — », 1 ligne', custom.h === '12.0h' && custom.r === '—' && custom.rows === 1, JSON.stringify(custom));
-    if (glass) check('champs de date étiquetés « Du » et « Au »', await s.eval(`[...document.querySelectorAll('main input[type=date]')].map(i=>i.labels&&i.labels[0]?i.labels[0].textContent.trim():'').join()==='Du,Au'`));
-    // Retour au mois
-    await clickPeriod(s, 'Ce mois'); await sleep(900);
-    check('« Ce mois » → 42.5h et plus de champs de date', (await statText(s, 'Heures saisies')) === '42.5h' && (await dateInputs(s)) === 0);
-    // Ouverture d'un mandat
-    await s.eval(`[...document.querySelectorAll('main table tbody tr')].filter(r=>r.getClientRects().length>0)[1].children[0].click()`);
-    const p = await waitPath(s, (x) => x !== '/profile/rendement', 40000);
-    check('clic sur une ligne → /projects/p2/mandate', p === '/projects/p2/mandate', p);
-  }));
-
-  // ───── MOBILE (390, 320) : cartes, pas de défilement horizontal ─────
-  for (const width of [390, 320]) {
-    scenarios.push(make(`mobile${width}`, mode, { viewport: width }, async (s, check) => {
-      await sleep(1500);
-      check('4 cartes visibles (le tableau est masqué)', (await visibleCards(s)) === 4 && (await visibleRows(s)) === 0, `${await visibleCards(s)} cartes / ${await visibleRows(s)} lignes`);
-      const m = JSON.parse(await s.eval(`JSON.stringify({docW:document.documentElement.scrollWidth,vw:innerWidth,periods:[...document.querySelectorAll('main button')].filter(b=>['Ce mois','Cette année','Personnalisé'].includes(b.innerText.trim())).map(b=>Math.round(b.getBoundingClientRect().height))})`));
-      check('aucun défilement horizontal de la page', m.docW <= m.vw, JSON.stringify(m));
-      if (glass) check('cibles tactiles des boutons de période ≥ 44 px (Glass)', m.periods.length === 3 && m.periods.every((v) => v >= 44), JSON.stringify(m.periods));
-      const txt = await s.eval(`document.querySelector('main').innerText`);
-      check('cartes : libellés Heures, Montant vendu, Coût réel, Marge et « Voir le mandat »', /heures/i.test(txt) && /montant vendu/i.test(txt) && /coût réel/i.test(txt) && /marge/i.test(txt) && txt.includes('Voir le mandat'));
-      if (glass) {
-        // Carte 3 : montant vendu à zéro → marge « — » neutre ; carte 4 : marge négative colorée.
-        const mc = JSON.parse(await s.eval(`(()=>{const c=[...document.querySelectorAll('main [class~="md:hidden"]')].find(e=>e.getClientRects().length>0&&e.children.length>0);const dd=(i)=>[...c.children[i].querySelectorAll('dd')].pop();const col=(e)=>getComputedStyle(e).color;return JSON.stringify({dash:dd(2).innerText.trim(),dashColor:col(dd(2)),clientColor:col(c.children[2].querySelector('p')),negColor:col(dd(3)),posColor:col(dd(0))})})()`));
-        check('cartes : marge « — » neutre (couleur du texte secondaire), distincte des marges positive et négative', mc.dash === '—' && mc.dashColor === mc.clientColor && mc.dashColor !== mc.negColor && mc.dashColor !== mc.posColor, JSON.stringify(mc));
-      }
-      await s.eval(`(()=>{const c=[...document.querySelectorAll('main [class~="md:hidden"]')].find(e=>e.getClientRects().length>0&&e.children.length>0);c.children[1].querySelector('p').click()})()`);
-      const p = await waitPath(s, (x) => x !== '/profile/rendement', 40000);
-      check('clic sur une carte → /projects/p2/mandate', p === '/projects/p2/mandate', p);
-    }));
-  }
-
-  // ───── TABLETTE 768 : tableau avec défilement interne, jamais de défilement de page ─────
-  scenarios.push(make('tablet768', mode, { viewport: 768 }, async (s, check) => {
-    await sleep(1500);
-    const m = JSON.parse(await s.eval(`JSON.stringify({docW:document.documentElement.scrollWidth,vw:innerWidth,rows:[...document.querySelectorAll('main table tbody tr')].filter(r=>r.getClientRects().length>0).length,tableW:Math.round(document.querySelector('main table').getBoundingClientRect().width)})`));
-    check('tableau visible (4 lignes), largeur mini 820 px', m.rows === 4 && m.tableW >= 819, JSON.stringify(m));
-    check('aucun défilement horizontal de la page (le tableau défile dans son conteneur)', m.docW <= m.vw, JSON.stringify(m));
-  }));
-
-  // ───── CLAVIER : ordre de tabulation dans <main> ─────
-  scenarios.push(make('keyboard', mode, {}, async (s, check) => {
-    await sleep(1500);
-    await s.eval('document.body.focus()');
+  // ═════════ /profile/rendement — rendement opérationnel (aucune donnée financière) ═════════
+  const op = (kind, opts, run) => scenarios.push(make('rendement-op', OP, kind, mode, opts, run));
+  op('data', {}, async (s, check) => {
+    await sleep(2500);
+    await commonChecks(s, check);
+    const t = await mainText(s);
+    check('titre « Mon rendement opérationnel » et mention « Aucune donnée financière n’est affichée »', (await s.eval(`document.querySelector('main h1').textContent.trim()`)) === 'Mon rendement opérationnel' && t.includes('Aucune donnée financière n’est affichée'));
+    check('statistiques : 42.5 h, 3 activités, 4 mandats avec participation', (await statText(s, 'Heures saisies')) === '42.5 h' && (await statText(s, 'Activités')) === '3' && (await statText(s, 'Mandats avec participation')) === '4', JSON.stringify([await statText(s, 'Heures saisies'), await statText(s, 'Activités'), await statText(s, 'Mandats avec participation')]));
+    check('aucune donnée financière affichée (ni montant, ni marge, ni coût, ni devise)', !/Montant|Marge|Coût|Revenu|\$|CAD|USD/.test(t), t.match(/Montant|Marge|Coût|Revenu|\$|CAD|USD/)?.[0] || '');
+    check('4 participations (boutons natifs), la 1re est « Plan de mesures d’urgence 2026 »', await s.eval(`(()=>{const b=[...document.querySelectorAll('main ul button')];return b.length===4&&b[0].innerText.includes('Plan de mesures d’urgence 2026')})()`));
+    check('2 champs de date étiquetés « Du » et « Au »', await s.eval(`[...document.querySelectorAll('main input[type=date]')].map(i=>i.closest('label')&&i.closest('label').innerText.split(String.fromCharCode(10))[0].trim()).join()==='Du,Au'`));
+    await setDate(s, 0, '2026-01-01'); await sleep(200); await setDate(s, 1, '2026-01-10'); await sleep(1200);
+    check('période de 10 jours → 12.0 h, 1 activité, 1 participation (le changement de période recharge /rendement/operational)', (await statText(s, 'Heures saisies')) === '12.0 h' && (await statText(s, 'Activités')) === '1' && (await statText(s, 'Mandats avec participation')) === '1', JSON.stringify([await statText(s, 'Heures saisies'), await statText(s, 'Activités'), await statText(s, 'Mandats avec participation')]));
+    await s.eval(`document.querySelector('main ul button').click()`);
+    const p = await waitPath(s, (x) => x !== OP, 40000);
+    check('clic sur une participation → /projects/p1/mandate', p === '/projects/p1/mandate', p);
+  });
+  for (const width of [390, 320]) op(`mobile${width}`, { viewport: width }, async (s, check) => {
+    await sleep(2500);
+    await commonChecks(s, check);
+    const o = await overflow(s);
+    check('aucun défilement horizontal de la page', o.docW <= o.vw, JSON.stringify(o));
+    check('les 4 participations restent atteignables', await s.eval(`document.querySelectorAll('main ul button').length===4`));
+  });
+  op('tablet768', { viewport: 768 }, async (s, check) => { await sleep(2500); await commonChecks(s, check); const o = await overflow(s); check('aucun défilement horizontal de la page', o.docW <= o.vw, JSON.stringify(o)); });
+  op('keyboard', {}, async (s, check) => {
+    await sleep(2500);
+    await s.eval('(document.body||document.documentElement).focus()');
     const order = [];
-    for (let i = 0; i < 80 && order.length < 5; i++) {
+    // Un champ de date natif compte plusieurs arrêts Tab (jour, mois, année) : on collapse les arrêts consécutifs sur le MÊME élément.
+    for (let i = 0; i < 120 && order.length < 6; i++) {
       await s.key('Tab', 'Tab', 9);
-      const d = await s.eval(`(()=>{const a=document.activeElement;if(!a||!document.querySelector('main').contains(a))return null;return a.tagName+':'+(a.getAttribute('aria-label')||a.innerText||'').trim().slice(0,60)})()`);
-      if (d) order.push(d);
-      else if (order.length) break; // sorti de <main>
+      const d = await s.eval(`(()=>{const a=document.activeElement;if(!a||!document.querySelector('main').contains(a))return null;const lab=a.closest('label');return a.tagName+(a.type?'['+a.type+']':'')+':'+(a.innerText||a.getAttribute('aria-label')||(lab?lab.innerText.split(String.fromCharCode(10))[0]:'')).trim().replace(/\\s+/g,' ').slice(0,36)})()`);
+      if (d) { if (d !== order[order.length - 1]) order.push(d); } else if (order.length) break;
     }
-    check('Tab : les trois boutons de période en premier', order.slice(0, 3).join('|') === 'BUTTON:Ce mois|BUTTON:Cette année|BUTTON:Personnalisé', JSON.stringify(order));
-    if (glass) check('Tab : puis le bouton « Ouvrir le mandat » de la 1re ligne', (order[3] || '').startsWith('BUTTON:Ouvrir le mandat Plan de mesures d’urgence 2026 de'), JSON.stringify(order));
-    else check('Legacy : aucun arrêt sur les lignes (comportement historique conservé)', order.length === 3, JSON.stringify(order));
-  }));
+    check('Tab : champ « Du », champ « Au », puis les 4 participations dans l’ordre', order.length === 6 && order[0] === 'INPUT[date]:Du' && order[1] === 'INPUT[date]:Au' && /^BUTTON.*:Plan de mesures d’urgence 2026/.test(order[2]) && order.slice(2).every((x) => x.startsWith('BUTTON')), JSON.stringify(order));
+    for (let i = 0; i < 3; i++) await s.key('Tab', 'Tab', 9, true); // retour sur la 1re participation
+    await s.key('Enter', 'Enter', 13);
+    const p = await waitPath(s, (x) => x !== OP, 40000);
+    check('Entrée sur la 1re participation → /projects/p1/mandate', p === '/projects/p1/mandate', p);
+  });
+  op('empty', {}, async (s, check) => {
+    await sleep(2500); await commonChecks(s, check);
+    const t = await mainText(s);
+    check('« Aucune heure saisie pour cette période. » affiché, aucune statistique', t.includes('Aucune heure saisie pour cette période.') && !t.includes('Heures saisies'));
+  });
+  op('error', {}, async (s, check) => {
+    await sleep(2500); await commonChecks(s, check);
+    check('message d’erreur annoncé (role=alert) : « Votre rendement opérationnel ne peut pas être chargé. »', await s.eval(`(()=>{const a=document.querySelector('main [role=alert]');return !!a&&a.textContent.trim()==='Votre rendement opérationnel ne peut pas être chargé.'})()`));
+    const t = await mainText(s); check('ni statistiques ni message « Aucune heure saisie » en cas d’erreur', !t.includes('Heures saisies') && !t.includes('Aucune heure saisie'));
+  });
+  op('loading', {}, async (s, check) => {
+    await sleep(1200); await commonChecks(s, check, { expectNoOldModel: false });
+    check('« Chargement du rendement… » annoncé (role=status)', await s.eval(`(()=>{const a=document.querySelector('main [role=status]');return !!a&&a.textContent.includes('Chargement du rendement')})()`));
+  });
 
-  // ───── CLAVIER GLASS : période et ouverture d'un mandat, une seule action par touche ─────
-  if (glass) {
-    const probe = (s) => s.eval(`(()=>{const w=(k)=>{const c=JSON.parse(sessionStorage.getItem('__bench')||'{}');c[k]=(c[k]||0)+1;sessionStorage.setItem('__bench',JSON.stringify(c))};sessionStorage.setItem('__bench','{}');if(window.navigation)window.navigation.addEventListener('navigate',()=>w('nav'));window.addEventListener('click',()=>w('clicks'),true)})()`);
-    // Compteurs en sessionStorage : ils survivent à un éventuel rechargement complet lors de la navigation vers le mandat.
-    const counters = async (s) => { const c = JSON.parse(await s.eval("sessionStorage.getItem('__bench')||'{}'")); return { nav: c.nav || 0, clicks: c.clicks || 0, path: await s.eval('location.pathname') }; };
-    const focusDesc = (s) => s.eval(`(()=>{const a=document.activeElement;if(!a)return null;const c=getComputedStyle(a);const r=a.getBoundingClientRect();return JSON.stringify({tag:a.tagName,name:a.getAttribute('aria-label')||a.innerText.trim(),role:a.getAttribute('role'),tabindex:a.getAttribute('tabindex'),pressed:a.getAttribute('aria-pressed'),outlineStyle:c.outlineStyle,outlineWidth:parseFloat(c.outlineWidth),h:Math.round(r.height),inView:r.top>=0&&r.bottom<=innerHeight})})()`).then((v) => (v ? JSON.parse(v) : null));
-    const tabUntil = async (s, test) => { await sleep(300); await s.eval('(document.body||document.documentElement).focus()'); for (let i = 0; i < 80; i++) { await s.key('Tab', 'Tab', 9); const d = await focusDesc(s); if (d && test(d)) return d; } return null; };
-
-    scenarios.push(make('kbperiod', mode, {}, async (s, check) => {
-      await sleep(1500);
-      await probe(s);
-      const first = await tabUntil(s, (d) => d.name === 'Ce mois');
-      check('bouton « Ce mois » atteint par Tab, natif, pressé, contour visible ≥ 2 px et ≥ 44 px', !!first && first.tag === 'BUTTON' && first.role === null && first.tabindex === null && first.pressed === 'true' && first.outlineStyle !== 'none' && first.outlineWidth >= 2 && first.h >= 44, JSON.stringify(first));
+  // ═════════ /dashboard/rendement — rendement financier gouverné (ADMIN / SUPER_ADMIN) ═════════
+  const fin = (kind, opts, run) => scenarios.push(make('rendement-fin', FIN, kind, mode, opts, run));
+  fin('data', {}, async (s, check) => {
+    await sleep(3000);
+    await commonChecks(s, check);
+    const t = normalized(await mainText(s));
+    check('titre « Rendement et rentabilité » et mention de la vue cumulative gouvernée', (await s.eval(`document.querySelector('main h1').textContent.trim()`)) === 'Rendement et rentabilité' && t.includes('Vue cumulative gouvernée'));
+    check('totaux par devise : CAD (vendu 8 300,00 ; coût connu 6 250,00) et USD (3 000,00)', /CAD/.test(t) && /USD/.test(t) && /8 300,00/.test(t) && /6 250,00/.test(t) && /3 000,00/.test(t), '');
+    check('synthèse : 1 mandat déficitaire unique, 2 mandats incomplets', (await statText(s, 'Mandats déficitaires uniques')) === '1' && (await statText(s, 'Mandats incomplets')) === '2', JSON.stringify([await statText(s, 'Mandats déficitaires uniques'), await statText(s, 'Mandats incomplets')]));
+    check('tableau : 6 mandats, 5 colonnes (Client / mandat, Vendu, Coût connu, Marge, Complétude)', (await tableRows(s)) === 6 && (await s.eval(`[...document.querySelectorAll('main table thead th')].map(h=>h.textContent.trim()).join('|')`)) === 'Client / mandat|Vendu|Coût connu|Marge|Complétude');
+    check('valeurs indisponibles : « Non disponible » (vendu et marge du mandat sans montant validé, marge des mandats incomplets)', (t.match(/Non disponible/g) || []).length >= 3, String((t.match(/Non disponible/g) || []).length));
+    check('complétude : 4 « Complet » et 2 « Incomplet », raisons visibles', (t.match(/Complet\b/g) || []).length >= 4 && (t.match(/Incomplet/g) || []).length === 2 && /MISSING_SOLD_AMOUNT/.test(t) && /MISSING_ADVISOR_COST_RATE/.test(t), '');
+    check('marges en pourcentage : « 55.95 % » et perte « -50.00 % »', /55\.95 %/.test(t) && /-50\.00 %/.test(t));
+    await s.eval(`document.querySelector('main table tbody button').click()`);
+    const p = await waitPath(s, (x) => x !== FIN, 40000);
+    check('clic sur le premier mandat → /projects/p1/mandate', p === '/projects/p1/mandate', p);
+  });
+  for (const width of [390, 320]) fin(`mobile${width}`, { viewport: width }, async (s, check) => {
+    await sleep(3000); await commonChecks(s, check);
+    const o = await overflow(s); check('aucun défilement horizontal de la page (le tableau défile dans son conteneur)', o.docW <= o.vw, JSON.stringify(o));
+    check('le tableau de 6 mandats reste présent', (await tableRows(s)) === 6);
+  });
+  fin('tablet768', { viewport: 768 }, async (s, check) => { await sleep(3000); await commonChecks(s, check); const o = await overflow(s); check('aucun défilement horizontal de la page', o.docW <= o.vw, JSON.stringify(o)); });
+  fin('keyboard', {}, async (s, check) => {
+    await sleep(3000);
+    await s.eval('(document.body||document.documentElement).focus()');
+    const order = [];
+    for (let i = 0; i < 80 && order.length < 3; i++) {
       await s.key('Tab', 'Tab', 9);
-      const year = await focusDesc(s);
-      const c0 = await counters(s);
-      await s.key(' ', 'Space', 32); await sleep(900);
-      const c1 = await counters(s);
-      check('Espace sur « Cette année » : 480.0h, bouton pressé, 1 clic, 0 navigation', (await statText(s, 'Heures saisies')) === '480.0h' && (await focusDesc(s)).pressed === 'true' && c1.clicks - c0.clicks === 1 && c1.nav === c0.nav && c1.path === '/profile/rendement', JSON.stringify({ year, c0, c1 }));
-      await s.key('Tab', 'Tab', 9);
-      await s.key('Enter', 'Enter', 13); await sleep(700);
-      check('Entrée sur « Personnalisé » : champs de date apparus, 0 navigation', (await dateInputs(s)) === 2 && (await counters(s)).nav === c0.nav);
-      await s.key('Tab', 'Tab', 9);
-      const du = await focusDesc(s);
-      check('Tab : premier champ de date, nommé « Du »', !!du && du.tag === 'INPUT' && du.name === '' ? await s.eval(`document.activeElement.labels[0].textContent.trim()==='Du'`) : false, JSON.stringify(du));
-    }));
-
-    const kinds = [['kbopen-enter', 1600, 'Entrée', 'Enter', 13], ['kbopen-space', 1600, 'Espace', ' ', 32], ['kbopen-mobile390', 390, 'Entrée', 'Enter', 13]];
-    for (const [kind, viewport, label, key, vk] of kinds) {
-      scenarios.push(make(kind, mode, { viewport }, async (s, check) => {
-        await sleep(1500);
-        await probe(s);
-        const d = await tabUntil(s, (x) => /^Ouvrir le mandat /.test(x.name));
-        check('bouton natif « Ouvrir le mandat » atteint par Tab, sans rôle ARIA ni tabindex artificiel', !!d && d.tag === 'BUTTON' && d.role === null && d.tabindex === null, JSON.stringify(d));
-        check('focus visible (contour ≥ 2 px) et cible ≥ 44 px, dans la fenêtre', !!d && d.outlineStyle !== 'none' && d.outlineWidth >= 2 && d.h >= 44 && d.inView, JSON.stringify(d));
-        await s.key('Tab', 'Tab', 9);
-        const next = await focusDesc(s);
-        check('Tab suivant : « Ouvrir le mandat » de la ligne suivante (aucun arrêt parasite)', !!next && /^Ouvrir le mandat Plan de sécurité incendie de Organisation Démo B$/.test(next.name), JSON.stringify(next));
-        await s.key('Tab', 'Tab', 9, true);
-        const back = await focusDesc(s);
-        check('Maj+Tab : retour sur le même bouton', !!back && back.name === d.name, JSON.stringify(back));
-        const c3 = await counters(s);
-        await s.key(key, key === ' ' ? 'Space' : 'Enter', vk);
-        const p = await waitPath(s, (x) => x !== '/profile/rendement', 40000);
-        const c4 = await counters(s);
-        check(`${label} sur « Ouvrir le mandat » → /projects/p1/mandate`, p === '/projects/p1/mandate', p);
-        check(`${label} : une seule activation (1 clic) et un seul changement d’URL`, c4.clicks - c3.clicks === 1 && c4.nav - c3.nav === 1, JSON.stringify({ c3, c4 }));
-      }));
+      const d = await s.eval(`(()=>{const a=document.activeElement;if(!a||!document.querySelector('main').contains(a))return null;return a.tagName+':'+(a.innerText||'').trim().replace(/\\s+/g,' ').slice(0,40)})()`);
+      if (d) order.push(d); else if (order.length) break;
     }
-  }
-
-  // ───── VIDE / ERREUR : même rendu (une erreur de chargement donne l'état vide en Legacy) ─────
-  for (const kind of ['empty', 'error']) {
-    scenarios.push(make(kind, mode, {}, async (s, check) => {
-      await sleep(1500);
-      const t = await s.eval(`document.querySelector('main').innerText`);
-      check('« Aucune heure saisie pour cette période » affiché', t.includes('Aucune heure saisie pour cette période'));
-      check('ni statistiques, ni tableau, ni cartes', !t.includes('Heures saisies') && (await visibleRows(s)) === 0 && !t.includes('Détail par mandat'));
-      check('les 3 boutons de période restent disponibles', (await periodButtons(s)) === 3);
-    }));
-  }
-
-  // ───── CHARGEMENT (réponse retardée) ─────
-  scenarios.push(make('loading', mode, {}, async (s, check) => {
-    await sleep(1000);
-    const t = await s.eval(`document.querySelector('main').innerText`);
-    check('« Chargement... » affiché', t.includes('Chargement...'), t.slice(0, 80));
-    check('ni statistiques, ni tableau, ni message vide pendant le chargement', !t.includes('Heures saisies') && !t.includes('Aucune heure saisie') && (await visibleRows(s)) === 0);
-    if (glass) check('zone annoncée aux lecteurs d’écran (role=status)', await s.eval(`!!document.querySelector('main [role=status]')`));
-  }));
+    check('Tab : un bouton natif par mandat, dans l’ordre du tableau (1er : Organisation Démo A / Plan de mesures)', order.length === 3 && order.every((o) => o.startsWith('BUTTON:')) && order[0].includes('Organisation Démo A'), JSON.stringify(order));
+    await s.key('Tab', 'Tab', 9, true); await s.key('Tab', 'Tab', 9, true);
+    await s.key('Enter', 'Enter', 13);
+    const p = await waitPath(s, (x) => x !== FIN, 40000);
+    check('Entrée sur le 1er mandat → /projects/p1/mandate', p === '/projects/p1/mandate', p);
+  });
+  fin('empty', {}, async (s, check) => {
+    await sleep(3000); await commonChecks(s, check);
+    const t = await mainText(s);
+    check('« Aucun mandat financier dans ce périmètre. » affiché, aucun tableau', t.includes('Aucun mandat financier dans ce périmètre.') && (await tableRows(s)) === 0);
+  });
+  fin('error', {}, async (s, check) => {
+    await sleep(3000); await commonChecks(s, check);
+    check('message d’erreur annoncé (role=alert) : « Les indicateurs financiers ne peuvent pas être chargés. »', await s.eval(`(()=>{const a=document.querySelector('main [role=alert]');return !!a&&a.textContent.trim()==='Les indicateurs financiers ne peuvent pas être chargés.'})()`));
+    check('aucun indicateur financier affiché en cas d’erreur', (await tableRows(s)) === 0 && !(await mainText(s)).includes('Synthèse financière'));
+  });
+  fin('loading', {}, async (s, check) => {
+    await sleep(1500); await commonChecks(s, check, { expectNoOldModel: false });
+    check('« Chargement des indicateurs… » annoncé (role=status)', await s.eval(`(()=>{const a=document.querySelector('main [role=status]');return !!a&&a.textContent.includes('Chargement des indicateurs')})()`));
+  });
+  // Garde de rôle : un CONSEILLER qui ouvre l'URL est redirigé vers /profile/rendement, sans jamais voir d'indicateur financier.
+  // Le rôle est SEMÉ dans la session du banc (jeton « bench-token:role:CONSEILLER ») ; le faux API le respecte dans /users/me, comme le backend de main.
+  fin('role-conseiller', { extra: { role: 'CONSEILLER', redirectTo: OP } }, async (s, check) => {
+    await sleep(4000);
+    const path = await s.eval('location.pathname');
+    check('un CONSEILLER est redirigé de /dashboard/rendement vers /profile/rendement', path === OP, path);
+    const t = await mainText(s);
+    check('aucun indicateur financier visible (ni synthèse, ni totaux, ni tableau)', !/Synthèse financière|Mandats incomplets|Vendu|Coût connu/.test(t) && (await tableRows(s)) === 0);
+    check('la page affichée est le rendement opérationnel (« Mon rendement opérationnel »)', t.includes('Mon rendement opérationnel') || (await s.eval(`document.querySelector('main h1')?document.querySelector('main h1').textContent.trim():''`)) === 'Mon rendement opérationnel');
+  });
 }
+
+// ───────── Défaut connu de main (à signaler, non corrigé ici) : mandat sans devise de vente → groupe « UNKNOWN » → plantage de la page ─────────
+// Lancement : BENCH_FINANCIAL_UNKNOWN_CURRENCY=1 BENCH_RENDEMENT=1 (faux API) puis cli scenarios --only known-defect-rendement-fin-unknown-currency-legacy
+// Le scénario vérifie le comportement CORRECT (l'écran s'affiche et montre le groupe « UNKNOWN ») : il échoue tant que main n'est pas corrigé.
+// Il n'appartient volontairement à aucun plan de campagne (préfixe « known-defect- ») : il ne bloque pas la validation de l'intégration.
+scenarios.push({
+  name: 'known-defect-rendement-fin-unknown-currency-legacy', description: '/dashboard/rendement — mandat sans devise de vente (défaut connu de main)', route: FIN, viewport: 1600, ui: 'legacy', theme: 'SYSTEM',
+  run: async (s, check) => {
+    await sleep(3500);
+    const hasMain = await s.eval(`!!document.querySelector('main')`);
+    check('l’écran financier s’affiche malgré un mandat sans devise de vente (présence de <main>)', hasMain, hasMain ? '' : 'page plantée : ' + (s.consoleErrors[0] || 'aucune exception capturée').split('\n')[0].slice(0, 160));
+    if (hasMain) { const t = await mainText(s); check('le groupe de devise « UNKNOWN » est affiché sans exception', /UNKNOWN/.test(t) && s.consoleErrors.length === 0, s.consoleErrors.length + ' exception(s)'); }
+  },
+});
 
 module.exports = scenarios;

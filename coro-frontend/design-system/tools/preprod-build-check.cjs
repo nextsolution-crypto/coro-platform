@@ -5,11 +5,11 @@
  *
  *   node design-system/tools/preprod-build-check.cjs [--variants off,accidental,on] [--skip-build] [--port 3031]
  *
- * Pour chaque variante : build de production de test, serveur `next start`, faux API local, contrôle du moteur de rendu des quatre routes
+ * Pour chaque variante : build de production de test, serveur `next start`, faux API local, contrôle du moteur de rendu des deux routes bêta (et des routes legacy-only de contrôle, dont le rendement)
  * bêta (bench/beta-routes-check.cjs) puis contrôle d'absence des outils de développement (tools/production-check.cjs --skip-build).
- *   off        : NEXT_PUBLIC_GLASS_BETA absent            → les 4 routes restent en îlot Legacy (comportement de production par défaut)
+ *   off        : NEXT_PUBLIC_GLASS_BETA absent            → les 2 routes bêta restent en îlot Legacy (comportement de production par défaut)
  *   accidental : NEXT_PUBLIC_GLASS_BETA=1                 → idem : « 1 » n'active rien en production
- *   on         : NEXT_PUBLIC_GLASS_BETA=production-preview → les 4 routes sont rendues en Glass pour un utilisateur dont la préférence est Glass
+ *   on         : NEXT_PUBLIC_GLASS_BETA=production-preview → les 2 routes bêta sont rendues en Glass pour un utilisateur dont la préférence est Glass ; le rendement reste Legacy
  * Les builds écrivent dans .next/ (ignoré par Git) ; la dernière variante construite y reste. NEXT_PUBLIC_API_URL pointe vers le faux API local.
  * Ne touche à aucun fichier suivi par Git. Aucun accès réseau externe. Durée : ~4 min de build par variante.
  */

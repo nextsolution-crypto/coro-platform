@@ -62,11 +62,13 @@ Procédures complètes, matrice de validation, plan de retour arrière et critè
 
 | Commande | Rôle |
 |---|---|
-| `npm run glass:campaign -- plan\|scenarios\|capture\|compare\|contrast\|shots\|all` | Campagne reproductible des quatre pages du Lot 1 ; gère elle-même le faux API, état par état. |
-| `npm run glass:preprod-build` | Builds de test sans jeton, avec `NEXT_PUBLIC_GLASS_BETA=1` et avec `production-preview` ; moteur de rendu des quatre routes et absence des outils de développement. |
+| `npm run glass:campaign -- plan\|scenarios\|capture\|compare\|contrast\|shots\|all` | Campagne reproductible : `/settings`, `/activities/portfolio` (bêta) et les deux routes de rendement (legacy-only, toujours Legacy) ; gère elle-même le faux API, état par état. |
+| `npm run glass:preprod-build` | Builds de test sans jeton, avec `NEXT_PUBLIC_GLASS_BETA=1` et avec `production-preview` ; moteur de rendu des deux routes bêta (et des routes legacy-only de contrôle, dont le rendement) et absence des outils de développement. |
 | `npm run glass:preprod-permissions` | Permissions par rôle contre une préproduction (refuse tout hôte de production ; secrets lus dans l'environnement, jamais écrits). `--self-test` valide le harnais contre le faux API. |
 | `snapshot`, `contrast`, `shots` avec `--eval "JS"` | Exécute un script dans la page avant la mesure (p. ex. déplier une section). |
 
-Le faux API (`mock-api.cjs`) connaît trois comptes fictifs locaux (`conseiller@`, `admin@`, `super@bench.test`) et reproduit **le contrat documenté** de
-`GET /rendement` (un non-admin est limité à ses données) quand `BENCH_STRICT_AUTH=1` ; `BENCH_LEAK_RENDEMENT=1` supprime cette restriction pour vérifier
-que le harnais détecte une fuite. Ce n'est pas le backend et cela ne prouve rien sur lui.
+Le faux API (`mock-api.cjs`) connaît trois comptes fictifs locaux (`conseiller@`, `admin@`, `super@bench.test`) et reproduit la **forme du contrat** de
+`main` : `GET /rendement/operational` (un non-admin est limité à ses données, aucun champ financier), `GET /rendement/financial` (ADMIN et SUPER_ADMIN, 403
+sinon) et l'ancien `GET /rendement` (qui renvoie la forme opérationnelle). `BENCH_STRICT_AUTH=1` exige un jeton ; `BENCH_LEAK_RENDEMENT=1` supprime les
+restrictions par rôle pour vérifier que le harnais détecte une fuite. Un jeton `bench-token:role:<RÔLE>` simule le rôle d'une session : `/users/me` le renvoie,
+comme le backend de `main`. Ce n'est pas le backend : cela ne prouve rien sur lui ni sur l'exactitude de ses calculs.

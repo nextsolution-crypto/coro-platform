@@ -20,6 +20,9 @@
  *                       passer --modes legacy,glass-dark,glass-light).
  * Protocole « avant/après » : exécuter `capture` sur la version de référence (autre worktree ou commit), puis sur la version candidate,
  * puis `compare`. Aucune permutation de fichiers n'est nécessaire.
+ * Pages : `settings` et `portfolio` sont en bêta (Glass). `rendement-op` (/profile/rendement) et `rendement-fin` (/dashboard/rendement) sont
+ * legacy-only depuis la refonte de main (modèle gouverné operational / financial) : leurs scénarios vérifient qu'elles restent Legacy dans tous
+ * les modes, bêta activée ou non, et la campagne ne produit pour elles ni contraste ni capture Glass.
  * Le rapport (campaign-report.json) ne contient ni identifiants, ni jetons, ni donnée réelle.
  */
 const { spawn, spawnSync } = require('node:child_process');
@@ -34,10 +37,6 @@ const API_PORT = Number(process.env.BENCH_API_PORT || 3012);
 const W4 = '320,390,768,1600';
 const MODES_ALL = ['legacy', 'island', 'glass-dark', 'glass-light'];
 const DATA_KINDS_RECORD = ['data', 'mobile390', 'mobile320', 'tablet768', 'keyboard'];
-const GLASS_KEYBOARD = ['kbopen-enter', 'kbopen-space', 'kbopen-mobile390'];
-
-/** Dépliage du premier conseiller de la vue équipe (script exécuté dans la page, voir cli.cjs --eval). */
-const EXPAND_FIRST_USER = "(()=>{const b=[...document.querySelectorAll('main button')].find(x=>x.innerText.includes('Sophie Martin'));if(b)b.click()})()";
 
 /** États du faux API communs aux pages de rendement et au portfolio. */
 const stateSet = (dataEnv, errorEnv, extraDataKinds = []) => ({
@@ -47,7 +46,7 @@ const stateSet = (dataEnv, errorEnv, extraDataKinds = []) => ({
   loading: { env: { BENCH_DELAY_MS: '20000' }, kinds: ['loading'] },
 });
 
-/** Les quatre pages du Lot 1. `scenarioPrefix` + `-<type>-<mode>` = nom d'un scénario enregistré dans scenarios.cjs. */
+/** Pages suivies par la campagne (deux bêta, deux legacy-only). `scenarioPrefix` + `-<type>-<mode>` = nom d'un scénario enregistré dans scenarios.cjs. */
 const PAGES = {
   settings: {
     route: '/settings', beta: true,
@@ -56,8 +55,9 @@ const PAGES = {
     states: { data: { env: {}, kinds: [] } },
   },
   portfolio: { route: '/activities/portfolio', beta: true, scenarioPrefix: 'portfolio', states: stateSet({ BENCH_ACTIVITIES: '1' }, { BENCH_FAIL_CLIENTS: '1' }, ['kbopen-enter', 'kbopen-space', 'kbopen-mobile390']) },
-  rendement: { route: '/profile/rendement', beta: true, scenarioPrefix: 'rendement', states: stateSet({ BENCH_RENDEMENT: '1' }, { BENCH_FAIL_RENDEMENT: '1' }, ['kbperiod', ...GLASS_KEYBOARD]) },
-  equipe: { route: '/dashboard/rendement', beta: true, scenarioPrefix: 'rendement-equipe', expandEval: EXPAND_FIRST_USER, states: stateSet({ BENCH_RENDEMENT: '1' }, { BENCH_FAIL_RENDEMENT: '1' }, ['kbperiod', ...GLASS_KEYBOARD]) },
+  // Rendement : legacy-only (aucune vue Glass). Les scénarios caractérisent les pages de main dans les quatre modes.
+  'rendement-op': { route: '/profile/rendement', beta: false, scenarioPrefix: 'rendement-op', states: stateSet({ BENCH_RENDEMENT: '1' }, { BENCH_FAIL_RENDEMENT: '1' }) },
+  'rendement-fin': { route: '/dashboard/rendement', beta: false, scenarioPrefix: 'rendement-fin', states: stateSet({ BENCH_RENDEMENT: '1' }, { BENCH_FAIL_RENDEMENT: '1' }, ['role-conseiller']) },
 };
 /** Pages voisines surveillées contre toute régression (leur rendu ne doit pas changer). */
 const REGRESSION_ROUTES = { plain: ['/dashboard', '/profile'], beta: [] };
@@ -90,7 +90,7 @@ const get = (url) => new Promise((resolve) => { const req = http.get(url, (res) 
 
 async function startMock(env) {
   const child = spawn(process.execPath, [MOCK], { env: { ...process.env, BENCH_API_PORT: String(API_PORT), ...env }, stdio: 'ignore' });
-  for (let i = 0; i < 40; i++) { if ((await get(`http://localhost:${API_PORT}/api/clients`)) === 200) return child; await sleep(250); }
+  for (let i = 0; i < 40; i++) { if ((await get(`http://localhost:${API_PORT}/api/notifications/unread-count`)) === 200) return child; await sleep(250); }
   child.kill(); throw new Error(`le faux API n'a pas démarré sur le port ${API_PORT} (port occupé ?)`);
 }
 async function stopMock(child) { if (child) { child.kill(); await sleep(400); } }
@@ -147,12 +147,7 @@ async function runCapture(outDir, { pages, withGlass = false }) {
         run(['--ui', 'legacy', '--theme', 'SYSTEM', '--viewports', state === 'data' || state === 'empty' ? W4 : '390,1600']);
         run(['--ui', 'glass', '--theme', 'DARK', '--viewports', '390,1600']);
         if (state === 'data') run(['--ui', 'glass', '--theme', 'LIGHT', '--viewports', '390,1600']);
-        if (state === 'data' && page.expandEval) {
-          const dirX = path.join(outDir, key, 'expanded');
-          const r = cli(['snapshot', '--routes', page.route, '--ui', 'legacy', '--theme', 'SYSTEM', '--viewports', W4, '--eval', page.expandEval, '--out', dirX], { quiet: true }); if (r.status) failed = true;
-          const r2 = cli(['snapshot', '--routes', page.route, '--ui', 'glass', '--theme', 'DARK', '--viewports', '390,1600', '--eval', page.expandEval, '--out', dirX], { quiet: true }); if (r2.status) failed = true;
-        }
-        if (withGlass) { run(['--ui', 'glass', '--theme', 'DARK', '--viewports', W4, '--beta', 'true']); run(['--ui', 'glass', '--theme', 'LIGHT', '--viewports', W4, '--beta', 'true']); }
+        if (withGlass && page.beta) { run(['--ui', 'glass', '--theme', 'DARK', '--viewports', W4, '--beta', 'true']); run(['--ui', 'glass', '--theme', 'LIGHT', '--viewports', W4, '--beta', 'true']); }
         console.log(`   capturé : ${key}/${state}`);
         report.steps.push({ step: 'capture', page: key, state });
       });
@@ -162,7 +157,7 @@ async function runCapture(outDir, { pages, withGlass = false }) {
   if (!process.argv.includes('--skip-regression')) await withMock({ BENCH_RENDEMENT: '1', BENCH_ACTIVITIES: '1' }, async () => {
     for (const route of [...REGRESSION_ROUTES.plain, ...Object.values(PAGES).map((p) => p.route)]) {
       const dir = path.join(outDir, 'regression');
-      const beta = Object.values(PAGES).some((p) => p.route === route);
+      const beta = Object.values(PAGES).some((p) => p.route === route && p.beta);
       const r1 = cli(['snapshot', '--routes', route, '--ui', 'legacy', '--theme', 'SYSTEM', '--viewports', '1600,390', '--out', dir], { quiet: true });
       const r2 = cli(['snapshot', '--routes', route, '--ui', 'glass', '--theme', 'LIGHT', '--viewports', '1600,390', ...(beta ? ['--beta', 'true'] : []), '--out', dir], { quiet: true });
       if (r1.status || r2.status) failed = true;
@@ -200,11 +195,12 @@ async function runContrast(outDir, { pages }) {
   let failed = false;
   for (const key of pages) {
     const page = PAGES[key];
+    if (!page.beta) { console.log(`   contraste ignoré : ${key} (legacy-only, aucune vue Glass)`); continue; }
     for (const [state, def] of Object.entries(page.states)) {
       if (!['data', 'empty'].includes(state)) continue;
       await withMock(def.env, async () => {
         await warm(page.route);
-        const variants = state === 'data' && page.expandEval ? [['', null], ['-expanded', page.expandEval]] : [['', null]];
+        const variants = [['', null]];
         for (const [suffix, evalJs] of variants) {
           const base = path.join(outDir, key, `${state}${suffix}`); const ev = evalJs ? ['--eval', evalJs] : [];
           cli(['contrast', '--routes', page.route, '--ui', 'legacy', '--theme', 'SYSTEM', '--viewports', W4, ...ev, '--out', path.join(base, 'legacy')], { quiet: true });
@@ -226,6 +222,7 @@ async function runContrast(outDir, { pages }) {
 async function runShots(outDir, { pages }) {
   for (const key of pages) {
     const page = PAGES[key];
+    if (!page.beta) { console.log(`   captures ignorées : ${key} (legacy-only, aucune vue Glass)`); continue; }
     for (const [state, def] of Object.entries(page.states)) {
       await withMock(def.env, async () => {
         await warm(page.route);
@@ -243,7 +240,7 @@ async function main() {
   const pages = list(arg('--pages'), Object.keys(PAGES)); const modes = list(arg('--modes'), MODES_ALL); const out = arg('--out');
   if (cmd === 'plan') {
     const registered = new Set((() => { require('../test-loader.cjs'); return require('./scenarios.cjs').map((s) => s.name); })());
-    for (const g of buildPlan({ pages, modes, registered })) console.log(`${g.page.padEnd(10)} ${g.state.padEnd(8)} env=${JSON.stringify(g.env)} → ${g.names.length} scénario(s)`);
+    for (const g of buildPlan({ pages, modes, registered })) console.log(`${g.page.padEnd(14)} ${g.state.padEnd(8)} env=${JSON.stringify(g.env)} → ${g.names.length} scénario(s)`);
     return;
   }
   if (cmd === 'compare') { const a = arg('--a'); const b = arg('--b'); if (!a || !b) { console.error('--a et --b requis'); process.exit(2); } await requireServer().catch(() => {}); return finish(null, runCompare(a, b)); }
@@ -263,5 +260,5 @@ async function main() {
   finish(out, failed);
 }
 
-module.exports = { PAGES, buildPlan, MODES_ALL, EXPAND_FIRST_USER };
+module.exports = { PAGES, buildPlan, MODES_ALL };
 if (require.main === module) main().catch((e) => { console.error('ERREUR :', e.message); process.exit(3); });

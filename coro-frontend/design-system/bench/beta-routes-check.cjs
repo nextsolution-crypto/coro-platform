@@ -1,22 +1,25 @@
 #!/usr/bin/env node
 /* eslint-disable @typescript-eslint/no-require-imports */
 /**
- * Vérifie, sur un serveur DÉJÀ lancé (build de production de test ou serveur de dev), quel moteur rend chacune des quatre routes bêta
- * du Lot 1. OUTIL DE TEST UNIQUEMENT.
+ * Vérifie, sur un serveur DÉJÀ lancé (build de production de test ou serveur de dev), quel moteur rend chacune des deux routes bêta
+ * (/settings et /activities/portfolio), et que les routes legacy-only de contrôle — dont les deux routes de rendement, refondues par main —
+ * ne sont JAMAIS rendues en Glass, même avec le jeton exact. OUTIL DE TEST UNIQUEMENT.
  *
  *   BENCH_BASE_URL=http://localhost:3031 node design-system/bench/beta-routes-check.cjs --expect-beta off|on
  *
- *  --expect-beta off : build SANS jeton valide → les quatre routes restent en îlot Legacy, même avec la préférence Glass ET la clé locale
+ *  --expect-beta off : build SANS jeton valide → les deux routes bêta restent en îlot Legacy, même avec la préférence Glass ET la clé locale
  *                      de bêta posée (en production le stockage local ne compte jamais).
- *  --expect-beta on  : build avec NEXT_PUBLIC_GLASS_BETA=production-preview → les quatre routes sont rendues en Glass quand la préférence
+ *  --expect-beta on  : build avec NEXT_PUBLIC_GLASS_BETA=production-preview → les deux routes bêta sont rendues en Glass quand la préférence
  *                      de l'utilisateur est Glass, et restent en Legacy quand elle est Legacy.
  * Dans les deux cas : les routes « legacy-only » de contrôle restent Legacy, et /glass-kit répond 404.
  * Le faux API local (BENCH_API_PORT, défaut 3012) doit tourner et être celui de NEXT_PUBLIC_API_URL du build.
  */
 const http = require('node:http');
 
-const BETA_ROUTES = ['/settings', '/activities/portfolio', '/profile/rendement', '/dashboard/rendement'];
-const CONTROL_ROUTES = ['/projects', '/clients'];
+const BETA_ROUTES = ['/settings', '/activities/portfolio'];
+// Routes de contrôle : legacy-only, toujours Legacy. /profile/rendement et /dashboard/rendement y figurent depuis la refonte de main
+// (modèle gouverné operational / financial) : leurs anciennes vues Glass ne sont plus dans l'intégration.
+const CONTROL_ROUTES = ['/projects', '/clients', '/profile/rendement', '/dashboard/rendement'];
 /** Le contenu de <main> est Glass si une carte `.cg-glass` ou une primitive `.cgx-*` y figure ; sinon Legacy. */
 const RENDERER_PROBE = `(()=>{const m=document.querySelector('main');if(!m)return 'aucun-main';return m.querySelector('.cg-glass,[class*="cgx-"]')?'glass':'legacy'})()`;
 

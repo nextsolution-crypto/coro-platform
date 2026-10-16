@@ -152,7 +152,7 @@ async function cmdScenarios(o) {
       const session = await openSession(chrome.port, { ui: sc.ui, theme: sc.theme, viewport: sc.viewport, beta: sc.beta, role: sc.role });
       const checks = [];
       const check = (label, ok, detail = '') => { checks.push({ label, ok: !!ok, detail }); };
-      try { const how = await session.goto(sc.route); if (how.startsWith('ECHEC')) { check('route accessible', false, how); } else { await sleep(600); await sc.run(session, check); } }
+      try { const how = await session.goto(sc.route); if (how.startsWith('ECHEC') && !(sc.redirectTo && how === 'ECHEC:' + sc.redirectTo)) { check('route accessible', false, how); } else { await sleep(600); await sc.run(session, check); } }
       catch (e) { check('exécution du scénario', false, String(e.message || e)); }
       finally { await session.close(); }
       const bad = checks.filter((c) => !c.ok); failed += bad.length;

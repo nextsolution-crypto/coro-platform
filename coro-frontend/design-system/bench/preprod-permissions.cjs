@@ -12,7 +12,8 @@
  *  - Hôtes autorisés : locaux (localhost, 127.0.0.1, *.localhost, *.test) ou listés dans PREPROD_ALLOWED_HOSTS.
  *  - Identifiants LUS dans l'environnement au moment de l'exécution (PREPROD_<RÔLE>_EMAIL / _PASSWORD, ou PREPROD_<RÔLE>_TOKEN),
  *    jamais écrits sur disque, jamais journalisés. Le rapport ne contient ni courriel, ni mot de passe, ni jeton, ni identifiant complet.
- *  - Lecture seule : uniquement GET /rendement, GET /auth/me et la connexion. Aucune écriture, aucune suppression.
+ *  - Lecture seule : uniquement GET /rendement/operational, GET /rendement/financial, l'ancien GET /rendement, GET /auth/me et la connexion.
+ *    Aucune écriture (le PUT .../financial/mandates/:id/sale n'est JAMAIS appelé), aucune suppression.
  *  - Comptes DÉDIÉS aux tests (MFA désactivé) créés par l'équipe : aucun compte réel de client.
  *
  * Rôles : CONSEILLER, ADMIN, SUPER_ADMIN. Un rôle sans identifiants est « non exécuté » (--require-all : échec).
@@ -86,67 +87,138 @@ async function openSessions(api, accounts) {
   return { sessions, notes };
 }
 
-const sum = (list, key) => list.reduce((s, c) => s + (Number(c[key]) || 0), 0);
-const near = (a, b) => Math.abs(a - b) < 0.01 + Math.abs(b) * 1e-9;
-const KNOWN_KEYS = ['userId', 'userName', 'heuresTotal', 'revenusTotal', 'mandatsList', 'mandatsDeficitaires', 'mandatsCount'];
-const KNOWN_MANDATE_KEYS = ['projectId', 'projectName', 'clientName', 'heures', 'montantVendu', 'heuresBudgetees', 'coutReel', 'marge', 'margePct'];
+const OPERATIONAL_KEYS = { advisor: ['userId', 'userName', 'hours', 'activities', 'participatedMandates'], period: ['from', 'to', 'timeZone', 'upperBoundExclusive'] };
+// Champs qui n'ont rien à faire dans la réponse OPÉRATIONNELLE (contrat de main : « aucune donnée financière »).
+const FINANCIAL_KEYS = /^(soldAmount|soldCurrency|soldAt|knownLaborCost|contributionMargin|contributionMarginPercent|lossMaking|completeness|incompleteReasons|hourlyCost|tauxHoraire|coutReel|marge|margePct|montantVendu|revenusTotal|heuresBudgetees)$/;
+const MONEY = /^-?\d+\.\d{2}$/;
+const COMPLETENESS = ['COMPLETE', 'INCOMPLETE', 'NOT_AVAILABLE'];
 
-/** Contrôles de l'API /rendement par rôle. Chaque contrôle : { id, title, run(ctx) → { status, detail } }. */
-const API_CHECKS = [
-  { id: 'PERM-API-01', title: 'GET /rendement sans jeton → 401/403', run: async (c) => { const r = await request('GET', c.url()); return verdict([401, 403].includes(r.status), `HTTP ${r.status}`); } },
-  { id: 'PERM-API-02', title: 'GET /rendement avec un jeton invalide → 401/403', run: async (c) => { const r = await request('GET', c.url(), { headers: { Authorization: 'Bearer jeton-invalide-de-test' } }); return verdict([401, 403].includes(r.status), `HTTP ${r.status}`); } },
-  { id: 'PERM-API-03', title: 'CONSEILLER sans userId → uniquement ses propres données', role: 'CONSEILLER', run: async (c) => ownOnly(await c.get('CONSEILLER'), c.sessions.CONSEILLER.user.id) },
-  { id: 'PERM-API-04', title: 'CONSEILLER avec son propre userId → uniquement ses propres données', role: 'CONSEILLER', run: async (c) => ownOnly(await c.get('CONSEILLER', c.sessions.CONSEILLER.user.id), c.sessions.CONSEILLER.user.id) },
-  { id: 'PERM-API-05', title: 'CONSEILLER avec le userId d’un AUTRE utilisateur → aucune donnée étrangère', role: 'CONSEILLER', needs: ['otherUserId'], run: async (c) => ownOnly(await c.get('CONSEILLER', c.otherUserId), c.sessions.CONSEILLER.user.id, true) },
-  { id: 'PERM-API-06', title: 'ADMIN sans userId → réponse cohérente (teamStats = somme des conseillers)', role: 'ADMIN', run: async (c) => consistent(await c.get('ADMIN')) },
-  { id: 'PERM-API-07', title: 'ADMIN avec userId du conseiller → uniquement ce conseiller', role: 'ADMIN', needs: ['CONSEILLER'], run: async (c) => onlyUser(await c.get('ADMIN', c.sessions.CONSEILLER.user.id), c.sessions.CONSEILLER.user.id) },
-  { id: 'PERM-API-08', title: 'SUPER_ADMIN sans userId → réponse cohérente', role: 'SUPER_ADMIN', run: async (c) => consistent(await c.get('SUPER_ADMIN')) },
-  { id: 'PERM-API-09', title: 'SUPER_ADMIN avec userId du conseiller → uniquement ce conseiller', role: 'SUPER_ADMIN', needs: ['CONSEILLER'], run: async (c) => onlyUser(await c.get('SUPER_ADMIN', c.sessions.CONSEILLER.user.id), c.sessions.CONSEILLER.user.id) },
-  { id: 'PERM-API-10', title: 'ADMIN avec le userId d’une AUTRE organisation → aucune donnée (cloisonnement)', role: 'ADMIN', needs: ['otherOrgUserId'], run: async (c) => { const r = await c.get('ADMIN', c.otherOrgUserId); return verdict(r.status === 403 || (r.status === 200 && Array.isArray(r.json && r.json.conseillers) && r.json.conseillers.length === 0), `HTTP ${r.status}, ${r.json && r.json.conseillers ? r.json.conseillers.length : '?'} conseiller(s)`); } },
-  { id: 'PERM-API-11', title: 'Champs de la réponse : inventaire des champs non affichés par l’interface (information)', role: 'CONSEILLER', run: async (c) => {
-    const r = await c.get('CONSEILLER'); const list = (r.json && r.json.conseillers) || [];
-    const extra = new Set(); for (const x of list) { Object.keys(x).filter((k) => !KNOWN_KEYS.includes(k)).forEach((k) => extra.add(k)); for (const m of x.mandatsList || []) Object.keys(m).filter((k) => !KNOWN_MANDATE_KEYS.includes(k)).forEach((k) => extra.add(`mandatsList.${k}`)); }
-    return { status: 'info', detail: extra.size ? `champs supplémentaires renvoyés à un CONSEILLER : ${[...extra].sort().join(', ')} (à qualifier par le propriétaire du backend ; non affichés par l’interface)` : 'aucun champ supplémentaire' };
-  } },
-];
-
+const keysDeep = (value, out = new Set()) => { if (Array.isArray(value)) value.forEach((v) => keysDeep(v, out)); else if (value && typeof value === 'object') for (const [k, v] of Object.entries(value)) { out.add(k); keysDeep(v, out); } return out; };
 function verdict(ok, detail) { return { status: ok ? 'ok' : 'ko', detail }; }
-function ownOnly(r, ownId, allowForbidden = false) {
+
+/** Forme de la réponse opérationnelle (contrat de main) ; renvoie la liste des anomalies. */
+function operationalShapeIssues(json) {
+  const issues = [];
+  if (!json || typeof json !== 'object') return ['réponse non JSON'];
+  if (!json.period || typeof json.period !== 'object' || typeof json.period.timeZone !== 'string') issues.push('period.timeZone absent');
+  if (!Array.isArray(json.advisors)) { issues.push(Array.isArray(json.conseillers) ? 'ANCIEN MODÈLE (conseillers) au lieu de advisors' : 'advisors absent'); return issues; }
+  for (const a of json.advisors) {
+    if (typeof a.userId !== 'string' || typeof a.userName !== 'string') issues.push('advisor sans userId/userName');
+    if (typeof a.hours !== 'number' || a.hours < 0) issues.push('hours invalide');
+    if (!Array.isArray(a.activities) || !Array.isArray(a.participatedMandates)) issues.push('activities/participatedMandates invalides');
+  }
+  return issues;
+}
+function ownAdvisorsOnly(r, ownId, allowForbidden = false) {
   if (allowForbidden && r.status === 403) return verdict(true, 'HTTP 403 (refus explicite)');
-  const list = r.json && r.json.conseillers;
-  if (r.status !== 200 || !Array.isArray(list)) return verdict(false, `HTTP ${r.status}, forme inattendue`);
-  const foreign = list.filter((c) => c.userId !== ownId).length;
+  const list = r.json && r.json.advisors;
+  if (r.status !== 200 || !Array.isArray(list)) return verdict(false, `HTTP ${r.status}, forme inattendue${r.json && r.json.conseillers ? ' (ancien modèle « conseillers »)' : ''}`);
+  const foreign = list.filter((a) => a.userId !== ownId).length;
   return verdict(foreign === 0 && list.length <= 1, `${list.length} conseiller(s), ${foreign} étranger(s)`);
 }
-function onlyUser(r, userId) {
-  const list = r.json && r.json.conseillers;
+function onlyAdvisor(r, userId) {
+  const list = r.json && r.json.advisors;
   if (r.status !== 200 || !Array.isArray(list)) return verdict(false, `HTTP ${r.status}, forme inattendue`);
-  const foreign = list.filter((c) => c.userId !== userId).length;
+  const foreign = list.filter((a) => a.userId !== userId).length;
   return verdict(foreign === 0, `${list.length} conseiller(s), ${foreign} étranger(s)`);
 }
-function consistent(r) {
-  const list = r.json && r.json.conseillers; const t = r.json && r.json.teamStats;
-  if (r.status !== 200 || !Array.isArray(list) || !t) return verdict(false, `HTTP ${r.status}, forme inattendue`);
-  const ok = near(t.heuresTotal, sum(list, 'heuresTotal')) && near(t.revenusTotal, sum(list, 'revenusTotal')) && t.mandatsDeficitaires === sum(list, 'mandatsDeficitaires');
-  return verdict(ok, `${list.length} conseiller(s) ; teamStats ${ok ? 'cohérent' : 'INCOHÉRENT'} avec la somme`);
+function operationalValid(r) {
+  if (r.status !== 200) return verdict(false, `HTTP ${r.status}`);
+  const issues = operationalShapeIssues(r.json);
+  return verdict(issues.length === 0, issues.length ? issues.join(' ; ') : `${r.json.advisors.length} conseiller(s), forme conforme`);
 }
+/** Forme et invariants de la réponse financière (contrat de main). Ne valide AUCUN calcul. */
+function financialIssues(json) {
+  const issues = [];
+  if (!json || typeof json !== 'object') return ['réponse non JSON'];
+  if (!json.scope || typeof json.scope.view !== 'string') issues.push('scope.view absent');
+  if (!Array.isArray(json.mandates) || !Array.isArray(json.totals)) return [...issues, 'mandates/totals absents'];
+  for (const m of json.mandates) {
+    for (const key of ['soldAmount', 'knownLaborCost', 'contributionMargin']) if (m[key] != null && !MONEY.test(String(m[key]))) issues.push(`${key} n'est pas une chaîne décimale à 2 décimales`);
+    if (!COMPLETENESS.includes(m.completeness)) issues.push(`completeness inconnue : ${m.completeness}`);
+    if (m.completeness === 'INCOMPLETE' && !(Array.isArray(m.incompleteReasons) && m.incompleteReasons.length)) issues.push('mandat incomplet sans raison');
+    if (m.completeness === 'COMPLETE' && m.contributionMargin == null) issues.push('mandat complet sans marge');
+  }
+  const counted = json.totals.reduce((s, t) => s + (Number(t.completeMandates) || 0) + (Number(t.incompleteMandates) || 0), 0);
+  if (counted !== json.mandates.length) issues.push(`totaux incohérents : ${counted} mandat(s) comptés pour ${json.mandates.length} présent(s)`);
+  for (const t of json.totals) for (const key of ['soldAmount', 'knownLaborCost', 'contributionMargin']) if (!MONEY.test(String(t[key]))) issues.push(`totals.${key} n'est pas une chaîne décimale`);
+  return issues;
+}
+function financialValid(r) {
+  if (r.status !== 200) return verdict(false, `HTTP ${r.status}`);
+  const issues = financialIssues(r.json);
+  return verdict(issues.length === 0, issues.length ? issues.join(' ; ') : `${r.json.mandates.length} mandat(s), ${r.json.totals.length} devise(s), forme et invariants conformes`);
+}
+
+/** Contrôles de l'API de rendement par rôle (contrat de main : /rendement/operational et /rendement/financial). Lecture seule. */
+const API_CHECKS = [
+  { id: 'PERM-API-01', title: 'GET /rendement/operational sans jeton → 401/403', run: async (c) => { const r = await request('GET', c.url('operational')); return verdict([401, 403].includes(r.status), `HTTP ${r.status}`); } },
+  { id: 'PERM-API-02', title: 'GET /rendement/financial sans jeton → 401/403', run: async (c) => { const r = await request('GET', c.url('financial')); return verdict([401, 403].includes(r.status), `HTTP ${r.status}`); } },
+  { id: 'PERM-API-03', title: 'Jeton invalide sur /rendement/operational et /rendement/financial → 401/403', run: async (c) => {
+    const bad = { Authorization: 'Bearer jeton-invalide-de-test' };
+    const a = await request('GET', c.url('operational'), { headers: bad }); const b = await request('GET', c.url('financial'), { headers: bad });
+    return verdict([401, 403].includes(a.status) && [401, 403].includes(b.status), `operational HTTP ${a.status}, financial HTTP ${b.status}`);
+  } },
+  { id: 'PERM-API-04', title: 'CONSEILLER : /rendement/operational sans userId → uniquement ses propres données', role: 'CONSEILLER', run: async (c) => ownAdvisorsOnly(await c.get('CONSEILLER', 'operational'), c.sessions.CONSEILLER.user.id) },
+  { id: 'PERM-API-05', title: 'CONSEILLER : /rendement/operational avec son propre userId → uniquement ses propres données', role: 'CONSEILLER', run: async (c) => ownAdvisorsOnly(await c.get('CONSEILLER', 'operational', c.sessions.CONSEILLER.user.id), c.sessions.CONSEILLER.user.id) },
+  { id: 'PERM-API-06', title: 'CONSEILLER : /rendement/operational avec le userId d’un AUTRE utilisateur → aucune donnée étrangère', role: 'CONSEILLER', needs: ['otherUserId'], run: async (c) => ownAdvisorsOnly(await c.get('CONSEILLER', 'operational', c.otherUserId), c.sessions.CONSEILLER.user.id, true) },
+  { id: 'PERM-API-07', title: 'CONSEILLER : /rendement/financial → refusé (403), aucune donnée financière', role: 'CONSEILLER', run: async (c) => {
+    const r = await c.get('CONSEILLER', 'financial');
+    const leaked = r.status === 200 ? 'DONNÉES FINANCIÈRES RENVOYÉES' : '';
+    return verdict(r.status === 403, `HTTP ${r.status}${leaked ? ' — ' + leaked : ''}`);
+  } },
+  { id: 'PERM-API-08', title: 'CONSEILLER : la réponse opérationnelle ne contient AUCUN champ financier', role: 'CONSEILLER', run: async (c) => {
+    const r = await c.get('CONSEILLER', 'operational');
+    if (r.status !== 200) return verdict(false, `HTTP ${r.status}`);
+    const found = [...keysDeep(r.json)].filter((k) => FINANCIAL_KEYS.test(k));
+    return verdict(found.length === 0, found.length ? `champs financiers présents : ${found.join(', ')}` : 'aucun champ financier');
+  } },
+  { id: 'PERM-API-09', title: 'CONSEILLER : l’ancien chemin GET /rendement renvoie la forme opérationnelle (advisors), jamais l’ancien modèle (conseillers)', role: 'CONSEILLER', run: async (c) => {
+    const r = await request('GET', c.url('', c.sessions.CONSEILLER.user.id), { headers: { Authorization: `Bearer ${c.sessions.CONSEILLER.token}` } });
+    const own = ownAdvisorsOnly(r, c.sessions.CONSEILLER.user.id);
+    const hasOld = !!(r.json && (r.json.conseillers || r.json.teamStats));
+    return verdict(own.status === 'ok' && !hasOld, hasOld ? 'ANCIEN MODÈLE renvoyé (conseillers / teamStats)' : own.detail);
+  } },
+  { id: 'PERM-API-10', title: 'ADMIN : /rendement/operational sans userId → forme conforme (hours, activities, participatedMandates)', role: 'ADMIN', run: async (c) => operationalValid(await c.get('ADMIN', 'operational')) },
+  { id: 'PERM-API-11', title: 'ADMIN : /rendement/operational avec le userId du conseiller → uniquement ce conseiller', role: 'ADMIN', needs: ['CONSEILLER'], run: async (c) => onlyAdvisor(await c.get('ADMIN', 'operational', c.sessions.CONSEILLER.user.id), c.sessions.CONSEILLER.user.id) },
+  { id: 'PERM-API-12', title: 'ADMIN : /rendement/financial → 200, montants en chaînes décimales, complétude et totaux cohérents', role: 'ADMIN', run: async (c) => financialValid(await c.get('ADMIN', 'financial')) },
+  { id: 'PERM-API-13', title: 'SUPER_ADMIN : /rendement/financial et /rendement/operational → 200, formes conformes', role: 'SUPER_ADMIN', run: async (c) => {
+    const f = financialValid(await c.get('SUPER_ADMIN', 'financial')); const o = operationalValid(await c.get('SUPER_ADMIN', 'operational'));
+    return verdict(f.status === 'ok' && o.status === 'ok', `financier : ${f.detail} ; opérationnel : ${o.detail}`);
+  } },
+  { id: 'PERM-API-14', title: 'ADMIN : le userId d’une AUTRE organisation ne renvoie aucune donnée (cloisonnement), sur les deux chemins', role: 'ADMIN', needs: ['otherOrgUserId'], run: async (c) => {
+    const o = await c.get('ADMIN', 'operational', c.otherOrgUserId); const f = await c.get('ADMIN', 'financial', c.otherOrgUserId);
+    const oOk = o.status === 403 || (o.status === 200 && Array.isArray(o.json && o.json.advisors) && o.json.advisors.length === 0);
+    const fOk = f.status === 403 || (f.status === 200 && Array.isArray(f.json && f.json.mandates) && f.json.mandates.length === 0);
+    return verdict(oOk && fOk, `operational HTTP ${o.status} (${o.json && o.json.advisors ? o.json.advisors.length : '?'} conseiller(s)), financial HTTP ${f.status} (${f.json && f.json.mandates ? f.json.mandates.length : '?'} mandat(s))`);
+  } },
+  { id: 'PERM-API-15', title: 'Champs de la réponse opérationnelle d’un CONSEILLER non prévus par le contrat (information)', role: 'CONSEILLER', run: async (c) => {
+    const r = await c.get('CONSEILLER', 'operational'); const extra = new Set();
+    if (r.json && typeof r.json === 'object') {
+      for (const k of Object.keys(r.json)) if (!['period', 'advisors'].includes(k)) extra.add(k);
+      for (const k of Object.keys(r.json.period || {})) if (!OPERATIONAL_KEYS.period.includes(k)) extra.add(`period.${k}`);
+      for (const a of r.json.advisors || []) for (const k of Object.keys(a)) if (!OPERATIONAL_KEYS.advisor.includes(k)) extra.add(`advisors.${k}`);
+    }
+    return { status: 'info', detail: extra.size ? `champs supplémentaires : ${[...extra].sort().join(', ')} (à qualifier par le propriétaire du backend)` : 'aucun champ supplémentaire' };
+  } },
+];
 
 async function runApiChecks({ api, sessions, from, to, otherUserId, otherOrgUserId, only }) {
   const ctx = {
     sessions, otherUserId, otherOrgUserId,
-    url: (userId) => `${api}/rendement?from=${from}&to=${to}${userId ? `&userId=${encodeURIComponent(userId)}` : ''}`,
-    get: (role, userId) => request('GET', ctx.url(userId), { headers: { Authorization: `Bearer ${sessions[role].token}` } }),
+    url: (endpoint, userId) => `${api}/rendement${endpoint ? '/' + endpoint : ''}?from=${from}&to=${to}${userId ? `&userId=${encodeURIComponent(userId)}` : ''}`,
+    get: (role, endpoint, userId) => request('GET', ctx.url(endpoint, userId), { headers: { Authorization: `Bearer ${sessions[role].token}` } }),
   };
   const out = [];
   for (const check of API_CHECKS) {
     if (only && !only.includes(check.id)) continue;
     const need = [...(check.role ? [check.role] : []), ...(check.needs || []).filter((n) => ROLES.includes(n))];
     const missingRole = need.find((r) => !sessions[r]);
+    // Si aucun « autre utilisateur » n'est fourni mais qu'un administrateur existe, son identifiant en tient lieu.
+    if (check.needs && check.needs.includes('otherUserId') && !ctx.otherUserId) { const admin = sessions.ADMIN || sessions.SUPER_ADMIN; ctx.otherUserId = admin && admin.user && admin.user.id; }
     const missingParam = (check.needs || []).find((n) => !ROLES.includes(n) && !ctx[n]);
-    // Si le rôle de l'« autre utilisateur » est absent mais que ADMIN existe, son identifiant sert d'autre utilisateur.
-    if (check.needs && check.needs.includes('otherUserId') && !ctx.otherUserId) ctx.otherUserId = (sessions.ADMIN || sessions.SUPER_ADMIN || {}).user && (sessions.ADMIN || sessions.SUPER_ADMIN).user.id;
     if (missingRole) { out.push({ id: check.id, title: check.title, status: 'skip', detail: `rôle ${missingRole} sans identifiants` }); continue; }
-    if (missingParam && !ctx[missingParam]) { out.push({ id: check.id, title: check.title, status: 'skip', detail: `paramètre ${missingParam} non fourni (PREPROD_${missingParam.replace(/[A-Z]/g, (m) => '_' + m).toUpperCase().replace(/^_/, '')})` }); continue; }
+    if (missingParam) { out.push({ id: check.id, title: check.title, status: 'skip', detail: `paramètre ${missingParam} non fourni (PREPROD_${missingParam.replace(/[A-Z]/g, (m) => '_' + m).toUpperCase().replace(/^_/, '')})` }); continue; }
     try { const r = await check.run(ctx); out.push({ id: check.id, title: check.title, ...r }); } catch (e) { out.push({ id: check.id, title: check.title, status: 'ko', detail: `erreur : ${e.message}` }); }
   }
   return out;
@@ -175,16 +247,29 @@ async function runBrowserChecks({ app, sessions, expectRenderer, beta }) {
           await session.send('Page.addScriptToEvaluateOnNewDocument', { source: seed }); // exécuté APRÈS la session factice du banc : la vraie session prime
           await session.send('Page.navigate', { url: app + route }); await sleep(5000);
           const path = await session.eval('location.pathname');
-          const reached = path === route;
-          add(`PERM-BRW-01:${role}:${route}`, `${role} — accès direct à ${route}`, reached ? 'ok' : (route === '/dashboard/rendement' && role === 'CONSEILLER' ? 'info' : 'ko'), reached ? 'page atteinte' : `redirigé vers ${path}`);
+          // /dashboard/rendement : la page redirige un non-administrateur vers /profile/rendement (garde de rôle de main) ; toute autre route est atteinte.
+          const redirectedByDesign = route === '/dashboard/rendement' && role === 'CONSEILLER';
+          const expectedPath = redirectedByDesign ? '/profile/rendement' : route;
+          const reached = path === expectedPath;
+          add(`PERM-BRW-01:${role}:${route}`, `${role} — accès direct à ${route}${redirectedByDesign ? ' : redirection attendue vers /profile/rendement (garde de rôle de la page)' : ''}`, reached ? 'ok' : 'ko', reached ? (redirectedByDesign ? 'redirigé vers /profile/rendement' : 'page atteinte') : `chemin final ${path}, attendu ${expectedPath}`);
           if (!reached) continue;
           const renderer = await session.eval(RENDERER_PROBE);
-          if (expectRenderer !== 'any') add(`PERM-BRW-02:${role}:${route}`, `${role} — moteur de rendu de ${route} = ${expectRenderer}`, renderer === expectRenderer ? 'ok' : 'ko', `observé : ${renderer}`);
-          if (route === '/dashboard/rendement') {
+          // Rendement : legacy-only, JAMAIS Glass (même avec le jeton exact) ; routes bêta : le moteur attendu dépend du build (--expect-renderer).
+          const rendementRoute = route === '/profile/rendement' || route === '/dashboard/rendement';
+          const expected = rendementRoute ? 'legacy' : expectRenderer;
+          if (expected !== 'any') add(`PERM-BRW-02:${role}:${route}`, `${role} — moteur de rendu de ${route} = ${expected}`, renderer === expected ? 'ok' : 'ko', `observé : ${renderer}`);
+          if (rendementRoute) {
             const text = await session.eval(`document.querySelector('main')?document.querySelector('main').innerText:''`);
-            const headers = await session.eval(`[...document.querySelectorAll('main button')].filter(b=>/mandats?\\s·\\s/.test(b.innerText)).length`);
-            const adminLike = role !== 'CONSEILLER';
-            add(`PERM-BRW-03:${role}`, `${role} — /dashboard/rendement : périmètre des données visibles`, adminLike ? 'info' : (headers <= 1 ? 'ok' : 'ko'), `${headers} conseiller(s) affiché(s)${adminLike ? ' (rôle administrateur : toute l’équipe attendue)' : ' (≤ 1 attendu : soi-même)'}${/Heures équipe/.test(text) ? '' : ' ; statistiques d’équipe absentes'}`);
+            if (route === '/dashboard/rendement' && !redirectedByDesign) {
+              // Administrateur : l'écran financier s'affiche sans message d'erreur (une erreur en préproduction doit être investiguée).
+              const title = await session.eval(`document.querySelector('main h1')?document.querySelector('main h1').textContent.trim():''`);
+              const alert = await session.eval(`!!document.querySelector('main [role=alert]')`);
+              add(`PERM-BRW-03:${role}:${route}`, `${role} — /dashboard/rendement : écran financier affiché sans erreur`, title === 'Rendement et rentabilité' && !alert ? 'ok' : 'ko', `titre « ${title} »${alert ? ', message d’erreur affiché' : ''}`);
+            } else {
+              // Page opérationnelle (ou page vers laquelle un CONSEILLER a été redirigé) : aucune donnée financière.
+              const financialWords = /Montant vendu|Coût de main-d’œuvre|Marge des mandats|Synthèse financière|Mandats incomplets|Vendu|Coût connu/.test(text);
+              add(`PERM-BRW-03:${role}:${route}`, `${role} — ${route}${redirectedByDesign ? ' (après redirection)' : ''} : aucune donnée financière affichée`, financialWords ? 'ko' : 'ok', financialWords ? 'vocabulaire financier détecté' : 'aucun vocabulaire financier');
+            }
           }
           if (route === '/settings') {
             const text = (await session.eval(`document.querySelector('main')?document.querySelector('main').innerText:''`)).toLowerCase();

@@ -73,9 +73,9 @@ test('permissions : backend conforme au contrat documenté → tous les contrôl
     assert.deepEqual(Object.keys(sessions).sort(), ['ADMIN', 'CONSEILLER', 'SUPER_ADMIN'], notes.join(' | '));
     const results = await perm.runApiChecks({ api, sessions, ...range });
     const byId = Object.fromEntries(results.map((r) => [r.id, r]));
-    for (const id of ['PERM-API-01', 'PERM-API-02', 'PERM-API-03', 'PERM-API-04', 'PERM-API-05', 'PERM-API-06', 'PERM-API-07', 'PERM-API-08', 'PERM-API-09']) assert.equal(byId[id].status, 'ok', `${id} : ${byId[id].detail}`);
-    assert.equal(byId['PERM-API-10'].status, 'skip', 'sans PREPROD_OTHER_ORG_USER_ID : non exécuté, jamais « ok »');
-    assert.equal(byId['PERM-API-11'].status, 'info');
+    for (const id of ['PERM-API-01', 'PERM-API-02', 'PERM-API-03', 'PERM-API-04', 'PERM-API-05', 'PERM-API-06', 'PERM-API-07', 'PERM-API-08', 'PERM-API-09', 'PERM-API-10', 'PERM-API-11', 'PERM-API-12', 'PERM-API-13']) assert.equal(byId[id].status, 'ok', `${id} : ${byId[id].detail}`);
+    assert.equal(byId['PERM-API-14'].status, 'skip', 'sans PREPROD_OTHER_ORG_USER_ID : non exécuté, jamais « ok »');
+    assert.equal(byId['PERM-API-15'].status, 'info');
     const dump = JSON.stringify(results);
     for (const secret of ['bench-only', '@bench.test', 'bench-token', 'bench-refresh']) assert.ok(!dump.includes(secret), 'le rapport contient : ' + secret);
   });
@@ -86,8 +86,10 @@ test('permissions : backend défaillant (restriction par rôle supprimée) → l
     const { accounts } = perm.loadAccounts(FAKE);
     const { sessions } = await perm.openSessions(api, accounts);
     const byId = Object.fromEntries((await perm.runApiChecks({ api, sessions, ...range })).map((r) => [r.id, r]));
-    assert.equal(byId['PERM-API-03'].status, 'ko', 'un conseiller recevant toute l’équipe doit être détecté');
-    assert.equal(byId['PERM-API-05'].status, 'ko', 'userId étranger accepté pour un conseiller : à détecter');
+    assert.equal(byId['PERM-API-04'].status, 'ko', 'un conseiller recevant les données de toute l’équipe doit être détecté');
+    assert.equal(byId['PERM-API-06'].status, 'ko', 'userId étranger accepté pour un conseiller : à détecter');
+    assert.equal(byId['PERM-API-07'].status, 'ko', 'financier ouvert à un conseiller : à détecter');
+    assert.equal(byId['PERM-API-09'].status, 'ko', 'ancien chemin /rendement non filtré : à détecter');
   });
 });
 
@@ -96,7 +98,7 @@ test('permissions : identifiants invalides ou rôle absent → session non ouver
     const { sessions, notes } = await perm.openSessions(api, { CONSEILLER: { email: 'conseiller@bench.test', password: 'mauvais' } });
     assert.deepEqual(sessions, {}); assert.match(notes.join(' '), /connexion refusée/);
     const results = await perm.runApiChecks({ api, sessions, ...range });
-    assert.ok(results.filter((r) => r.id !== 'PERM-API-01' && r.id !== 'PERM-API-02').every((r) => r.status === 'skip'), JSON.stringify(results.map((r) => [r.id, r.status])));
+    assert.ok(results.filter((r) => !['PERM-API-01', 'PERM-API-02', 'PERM-API-03'].includes(r.id)).every((r) => r.status === 'skip'), JSON.stringify(results.map((r) => [r.id, r.status])));
   });
 });
 
@@ -106,21 +108,21 @@ test('campagne : le plan couvre TOUS les scénarios enregistrés du Lot 1 et ne 
   const plan = campaign.buildPlan({ registered });
   const planned = new Set(plan.flatMap((g) => g.names));
   for (const name of planned) assert.ok(registered.has(name), 'scénario inconnu : ' + name);
-  const lot1 = [...registered].filter((n) => /^(settings|portfolio|rendement|rendement-equipe)-/.test(n));
+  const lot1 = [...registered].filter((n) => /^(settings|portfolio|rendement-op|rendement-fin)-/.test(n));
   const missing = lot1.filter((n) => !planned.has(n));
   assert.deepEqual(missing, [], 'scénarios du Lot 1 absents du plan : ' + missing.join(', '));
-  assert.ok(planned.size >= 130, 'au moins 130 scénarios attendus, trouvés : ' + planned.size);
+  assert.ok(planned.size >= 118, 'au moins 118 scénarios attendus, trouvés : ' + planned.size);
 });
 
 test('campagne : états, variables du faux API et pages sont cohérents avec le faux API', () => {
-  assert.deepEqual(Object.keys(campaign.PAGES).sort(), ['equipe', 'portfolio', 'rendement', 'settings']);
-  for (const p of Object.values(campaign.PAGES)) assert.equal(p.beta, true);
+  assert.deepEqual(Object.keys(campaign.PAGES).sort(), ['portfolio', 'rendement-fin', 'rendement-op', 'settings']);
+  for (const [key, p] of Object.entries(campaign.PAGES)) assert.equal(p.beta, ['portfolio', 'settings'].includes(key), `${key} : seules /settings et /activities/portfolio sont bêta`);
   const plan = campaign.buildPlan({});
   const env = (page, state) => plan.find((g) => g.page === page && g.state === state).env;
-  assert.deepEqual(env('equipe', 'data'), { BENCH_RENDEMENT: '1' });
-  assert.deepEqual(env('equipe', 'error'), { BENCH_FAIL_RENDEMENT: '1' });
+  assert.deepEqual(env('rendement-fin', 'data'), { BENCH_RENDEMENT: '1' });
+  assert.deepEqual(env('rendement-fin', 'error'), { BENCH_FAIL_RENDEMENT: '1' });
   assert.deepEqual(env('portfolio', 'error'), { BENCH_FAIL_CLIENTS: '1' });
-  assert.deepEqual(env('rendement', 'loading'), { BENCH_DELAY_MS: '20000' });
+  assert.deepEqual(env('rendement-op', 'loading'), { BENCH_DELAY_MS: '20000' });
   const mock = fs.readFileSync(path.join(__dirname, 'mock-api.cjs'), 'utf8');
   for (const variable of ['BENCH_RENDEMENT', 'BENCH_FAIL_RENDEMENT', 'BENCH_FAIL_CLIENTS', 'BENCH_DELAY_MS', 'BENCH_ACTIVITIES']) assert.ok(mock.includes(variable), variable);
   assert.throws(() => campaign.buildPlan({ pages: ['inconnue'] }), /page inconnue/);
@@ -132,9 +134,10 @@ test('campagne : les modes restreints produisent des noms de scénarios restrein
 });
 
 // ───────── Vérification des routes bêta ─────────
-test('beta-routes-check : attentes — sans jeton les 4 routes restent Legacy ; avec jeton elles sont Glass seulement pour la préférence Glass', () => {
+test('beta-routes-check : attentes — sans jeton les 2 routes bêta restent Legacy ; avec jeton elles sont Glass seulement pour la préférence Glass ; le rendement reste Legacy', () => {
   const off = beta.expectations('off'); const on = beta.expectations('on');
-  assert.deepEqual(beta.BETA_ROUTES, ['/settings', '/activities/portfolio', '/profile/rendement', '/dashboard/rendement']);
+  assert.deepEqual(beta.BETA_ROUTES, ['/settings', '/activities/portfolio']);
+  for (const r of ['/profile/rendement', '/dashboard/rendement']) assert.ok(beta.CONTROL_ROUTES.includes(r), r + ' : route de contrôle (toujours Legacy)');
   assert.ok(off.every((r) => r.expected === 'legacy'));
   assert.deepEqual(on.filter((r) => r.expected === 'glass').map((r) => `${r.route}|${r.ui}`).sort(), beta.BETA_ROUTES.map((r) => `${r}|glass`).sort());
   assert.ok(on.filter((r) => beta.CONTROL_ROUTES.includes(r.route)).every((r) => r.expected === 'legacy'), 'routes de contrôle toujours Legacy');
@@ -163,8 +166,8 @@ test('matrice : identifiants uniques et continus, champs complets, rôles et rou
 
 test('matrice : chaque contrôle automatique de l’API et chaque famille de contrôles navigateur est référencé', () => {
   const tools = matrix.MATRIX.map((m) => m.tool).join(' | ');
-  for (const id of ['PERM-API-01', 'PERM-API-03', 'PERM-API-06', 'PERM-API-10', 'PERM-API-11', 'PERM-BRW-01', 'PERM-BRW-03', 'PERM-BRW-04', 'PERM-BRW-05', 'PERM-BRW-06', 'PERM-BRW-07']) assert.ok(tools.includes(id), id);
-  assert.deepEqual(perm.API_CHECKS.map((c) => c.id), Array.from({ length: 11 }, (_, i) => `PERM-API-${String(i + 1).padStart(2, '0')}`));
+  for (const id of ['PERM-API-01', 'PERM-API-04', 'PERM-API-07', 'PERM-API-08', 'PERM-API-14', 'PERM-BRW-01', 'PERM-BRW-03', 'PERM-BRW-04', 'PERM-BRW-05', 'PERM-BRW-06', 'PERM-BRW-07']) assert.ok(tools.includes(id), id);
+  assert.deepEqual(perm.API_CHECKS.map((c) => c.id), Array.from({ length: 15 }, (_, i) => `PERM-API-${String(i + 1).padStart(2, '0')}`));
 });
 
 test('PREPROD.md : contient la matrice générée (sans dérive), toutes les sections demandées et aucun secret', () => {
@@ -180,4 +183,29 @@ test('package.json : scripts de préproduction nommés glass:*, aucun dans build
   for (const name of ['glass:campaign', 'glass:preprod-permissions', 'glass:preprod-build']) assert.ok(scripts[name], name);
   for (const name of ['build', 'start', 'dev']) assert.ok(!/bench|preprod|campaign/.test(scripts[name]), name);
   assert.match(scripts['test:design-system'], /bench\/preprod\.test\.cjs/);
+});
+
+// ───────── Rendement : pages de main conservées, aucune vue Glass, aucun ancien modèle ─────────
+test('rendement : /profile/rendement et /dashboard/rendement restent les pages de main (contrats operational / financial), sans vue Glass ni ancien modèle', () => {
+  const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8').replace(/\r\n/g, '\n');
+  const op = read('app/profile/rendement/page.tsx'); const fin = read('app/dashboard/rendement/page.tsx');
+  assert.match(op, /\/rendement\/operational/); assert.doesNotMatch(op, /\/rendement\/financial|soldAmount|knownLaborCost|contributionMargin/, 'la page personnelle n’affiche aucune donnée financière');
+  assert.match(fin, /\/rendement\/financial/); assert.match(fin, /SUPER_ADMIN/); assert.match(fin, /router\.replace\("\/profile\/rendement"\)/, 'garde de rôle : redirection d’un non-administrateur');
+  for (const [name, source] of [['profile', op], ['dashboard', fin]]) {
+    assert.doesNotMatch(source, /GLASS:begin|GLASS:end|useTheme|RendementGlassView|RendementEquipeGlassView|design-system/, name + ' : aucun bloc ni vue Glass');
+    assert.doesNotMatch(source, /conseillers|teamStats|heuresTotal|revenusTotal|montantVendu|mandatsList|heuresBudgetees/, name + ' : aucun vestige de l’ancien modèle');
+  }
+  for (const gone of ['app/profile/rendement/RendementGlassView.tsx', 'app/profile/rendement/rendement-glass.contract.test.cjs', 'app/dashboard/rendement/RendementEquipeGlassView.tsx', 'app/dashboard/rendement/rendement-equipe-glass.contract.test.cjs', 'design-system/bench/scenarios-rendement-equipe.cjs'])
+    assert.ok(!fs.existsSync(path.join(ROOT, gone)), 'fichier de l’ancien modèle encore présent : ' + gone);
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).scripts;
+  assert.ok(!Object.keys(pkg).some((k) => /rendement.*glass|glass.*rendement/.test(k)) && !/rendement-(equipe-)?glass/.test(JSON.stringify(pkg)), 'aucun script npm de l’ancienne vue Glass de rendement');
+  const mock = fs.readFileSync(path.join(__dirname, 'mock-api.cjs'), 'utf8');
+  for (const needle of ['/api/rendement/operational', '/api/rendement/financial', 'advisors', 'knownLaborCost', 'contributionMarginPercent']) assert.ok(mock.includes(needle), 'le faux API ne reproduit pas le contrat : ' + needle);
+  assert.ok(!/teamStats|heuresTotal|conseillers/.test(mock), 'le faux API ne renvoie plus l’ancien modèle');
+});
+
+test('PREPROD.md : décrit le modèle actuel (operational / financial, workflow manuel, images par digest) et aucune affirmation périmée', () => {
+  for (const needle of ['/rendement/operational', '/rendement/financial', 'workflow_dispatch', 'DEPLOY_PRODUCTION', 'digest', 'legacy-only']) assert.ok(doc.includes(needle), 'PREPROD.md ne mentionne pas : ' + needle);
+  assert.ok(!/Seule l.étiquette`? ?`?:latest/i.test(doc) && !/tout push vers `main` \*\*déploie|Fusionner dans `main` équivaut donc à déployer/.test(doc), 'affirmation périmée sur le déploiement automatique');
+  assert.ok(!/teamStats|revenusTotal|conseillers\[0\]/.test(doc.replace(/ancien (modèle|chemin)[^\n]*/gi, '')), 'vocabulaire de l’ancien modèle hors mentions explicites');
 });

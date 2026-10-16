@@ -67,13 +67,15 @@ async function openSession(port, { ui, theme, viewport, colorScheme = 'light', w
   const vp = viewport ? VIEWPORTS[viewport] : { width: width || 1600, height: 900, deviceScaleFactor: 1, mobile: false };
   await send('Emulation.setDeviceMetricsOverride', vp);
   await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: colorScheme }] });
+  // Le jeton porte le rôle simulé (« bench-token:role:<RÔLE> ») : le faux API le respecte dans /users/me, comme le backend de main, dont
+  // initAuth remplace l'utilisateur stocké par la réponse du serveur. Sans cela, un rôle semé dans le stockage serait écrasé.
   // Préférences et session factice posées avant tout script de l'application (déterminisme : le résultat ne dépend
   // ni de l'ordre des routes ni d'une connexion antérieure partagée par le profil Chrome). Faux API local uniquement.
   const fakeUser = { id: 'bench-user', email: 'bench@example.test', firstName: 'Alex', lastName: 'Démo', role, organizationId: 'bench-org' };
   const seed = `try{` +
     `var u=${JSON.stringify(JSON.stringify(fakeUser))};` +
-    `localStorage.setItem('coro_token','bench-token');localStorage.setItem('coro_user',u);` +
-    `sessionStorage.setItem('coro_token','bench-token');sessionStorage.setItem('coro_user',u);` +
+    `localStorage.setItem('coro_token','bench-token:role:${role}');localStorage.setItem('coro_user',u);` +
+    `sessionStorage.setItem('coro_token','bench-token:role:${role}');sessionStorage.setItem('coro_user',u);` +
     (ui ? `localStorage.setItem('coro-ui-generation','${ui}');` : '') +
     (theme ? `localStorage.setItem('coro-theme-preference','${theme}');` : '') +
     (beta ? `localStorage.setItem('coro-glass-beta','on');` : '') +
