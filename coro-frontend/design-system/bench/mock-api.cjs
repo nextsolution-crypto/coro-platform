@@ -58,7 +58,7 @@ const delay = Number(process.env.BENCH_DELAY_MS || 0);
 //  BENCH_RENDEMENT=1       : données représentatives ; sinon réponses vides.
 //  BENCH_FAIL_RENDEMENT=1  : les trois chemins répondent 500 (état d'erreur).
 //  BENCH_DELAY_MS=n        : les trois chemins répondent après n ms (état de chargement prolongé).
-//  BENCH_FINANCIAL_UNKNOWN_CURRENCY=1 : un mandat sans devise de vente (groupe « UNKNOWN » : déclenche un défaut connu de la page financière de main).
+//  BENCH_FINANCIAL_UNKNOWN_CURRENCY=1 : devises mixtes (CAD, USD, « ZZZ » invalide, devise absente → groupe « UNKNOWN »), montant nul, marge négative.
 //  La période change la réponse opérationnelle : ≤ 10 jours → un seul mandat, 12,0 h ; > 300 jours → 480,0 h ; sinon → 42,5 h.
 //  Ces réponses reproduisent la FORME du contrat (types, champs, raisons d'incomplétude) ; elles ne valident AUCUN calcul financier du backend.
 const TIME_ZONE = 'America/Toronto';
@@ -69,6 +69,8 @@ const MANDATE_NAMES = {
   p4: ['Organisation Démo C', 'Plan de continuité'],
   p5: ['Organisation Démo D', 'Plan particulier d’intervention'],
   p6: ['Organisation Démo B', 'Suivi sans facturation'],
+  p7: ['Organisation Démo B', 'Montant nul'],
+  p8: ['Organisation Démo C', 'Devise ZZZ'],
 };
 const participation = (projectId, mandateId) => ({ mandateId, projectId, projectName: MANDATE_NAMES[projectId][1] });
 const OPERATIONAL_ADVISORS = (hours, short) => [
@@ -94,9 +96,9 @@ const FM = (id, projectId, soldAmount, soldCurrency, knownLaborCost, margin, pct
   soldAmount, soldCurrency, soldAt: soldAmount ? '2026-09-01' : null, knownLaborCost, coveredTimeEntries: completeness === 'COMPLETE' ? 5 : 3, totalTimeEntries: 5,
   completeness, incompleteReasons: reasons, contributionMargin: margin, contributionMarginPercent: pct, lossMaking,
 });
-// Cas déclencheur d'un défaut de main : un mandat SANS devise de vente. Le service regroupe alors les totaux sous la clé « UNKNOWN » et la page
-// appelle Intl.NumberFormat avec cette devise (RangeError : Invalid currency code), ce qui fait planter tout l'écran financier.
-//  BENCH_FINANCIAL_UNKNOWN_CURRENCY=1 : reproduit ce cas (scénarios « known-defect-… »). Par défaut, aucun mandat sans devise.
+// Jeu « devises mixtes » (BENCH_FINANCIAL_UNKNOWN_CURRENCY=1) : CAD, devise historique USD, code invalide « ZZZ », devise ABSENTE (le service regroupe alors
+// les totaux sous la clé « UNKNOWN »), montant nul, marge négative, montants non disponibles, mandats incomplets. Depuis les correctifs de main (5783e7b4,
+// a855b8cb), la page rend chaque cas explicitement (helper financial-money.ts) sans RangeError ni conversion implicite. Par défaut : aucun mandat sans devise.
 const UNKNOWN_CURRENCY = process.env.BENCH_FINANCIAL_UNKNOWN_CURRENCY === '1';
 const FINANCIAL_MANDATES = [
   FM('m1', 'p1', '4200.00', 'CAD', '1850.00', '2350.00', '55.95', 'COMPLETE', [], false),
@@ -107,11 +109,16 @@ const FINANCIAL_MANDATES = [
   FM('m5', 'p5', '3000.00', 'USD', '1000.00', '2000.00', '66.67', 'COMPLETE', [], false),
   FM('m2', 'p2', '2600.00', 'CAD', '1200.00', '1400.00', '53.85', 'COMPLETE', [], false),
   FM('m6', 'p6', '500.00', 'CAD', '900.00', null, null, 'INCOMPLETE', ['MISSING_ADVISOR_COST_RATE', 'PARTIAL_LABOR_COST'], null),
+  ...(UNKNOWN_CURRENCY ? [
+    FM('m7', 'p7', '0.00', 'CAD', '0.00', '0.00', '0.00', 'COMPLETE', [], false),
+    FM('m8', 'p8', '150.00', 'ZZZ', '50.00', '100.00', '66.67', 'COMPLETE', [], false),
+  ] : []),
 ];
 const FINANCIAL_TOTALS = UNKNOWN_CURRENCY ? [
-  { currency: 'CAD', soldAmount: '8300.00', knownLaborCost: '5450.00', contributionMargin: '3250.00', completeMandates: 3, incompleteMandates: 1, uniqueLossMakingMandates: 1 },
+  { currency: 'CAD', soldAmount: '8300.00', knownLaborCost: '5450.00', contributionMargin: '3250.00', completeMandates: 4, incompleteMandates: 1, uniqueLossMakingMandates: 1 },
   { currency: 'UNKNOWN', soldAmount: '0.00', knownLaborCost: '800.00', contributionMargin: '0.00', completeMandates: 0, incompleteMandates: 1, uniqueLossMakingMandates: 0 },
   { currency: 'USD', soldAmount: '3000.00', knownLaborCost: '1000.00', contributionMargin: '2000.00', completeMandates: 1, incompleteMandates: 0, uniqueLossMakingMandates: 0 },
+  { currency: 'ZZZ', soldAmount: '150.00', knownLaborCost: '50.00', contributionMargin: '100.00', completeMandates: 1, incompleteMandates: 0, uniqueLossMakingMandates: 0 },
 ] : [
   { currency: 'CAD', soldAmount: '8300.00', knownLaborCost: '6250.00', contributionMargin: '3250.00', completeMandates: 3, incompleteMandates: 2, uniqueLossMakingMandates: 1 },
   { currency: 'USD', soldAmount: '3000.00', knownLaborCost: '1000.00', contributionMargin: '2000.00', completeMandates: 1, incompleteMandates: 0, uniqueLossMakingMandates: 0 },

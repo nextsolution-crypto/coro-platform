@@ -169,20 +169,38 @@ for (const mode of MODES) {
     check('aucun indicateur financier visible (ni synthèse, ni totaux, ni tableau)', !/Synthèse financière|Mandats incomplets|Vendu|Coût connu/.test(t) && (await tableRows(s)) === 0);
     check('la page affichée est le rendement opérationnel (« Mon rendement opérationnel »)', t.includes('Mon rendement opérationnel') || (await s.eval(`document.querySelector('main h1')?document.querySelector('main h1').textContent.trim():''`)) === 'Mon rendement opérationnel');
   });
-}
 
-// ───────── Défaut connu de main (à signaler, non corrigé ici) : mandat sans devise de vente → groupe « UNKNOWN » → plantage de la page ─────────
-// Lancement : BENCH_FINANCIAL_UNKNOWN_CURRENCY=1 BENCH_RENDEMENT=1 (faux API) puis cli scenarios --only known-defect-rendement-fin-unknown-currency-legacy
-// Le scénario vérifie le comportement CORRECT (l'écran s'affiche et montre le groupe « UNKNOWN ») : il échoue tant que main n'est pas corrigé.
-// Il n'appartient volontairement à aucun plan de campagne (préfixe « known-defect- ») : il ne bloque pas la validation de l'intégration.
-scenarios.push({
-  name: 'known-defect-rendement-fin-unknown-currency-legacy', description: '/dashboard/rendement — mandat sans devise de vente (défaut connu de main)', route: FIN, viewport: 1600, ui: 'legacy', theme: 'SYSTEM',
-  run: async (s, check) => {
+  // ───────── Devises du rendement financier (correctifs de main 5783e7b4 et a855b8cb) ─────────
+  // Jeu « mixte » (BENCH_FINANCIAL_UNKNOWN_CURRENCY=1) : CAD, devise historique USD, devise invalide « ZZZ », devise ABSENTE (groupe « UNKNOWN »),
+  // montant nul, marge négative, montants non disponibles et mandats incomplets. Comportements distincts attendus (helper financial-money.ts) :
+  //  - CAD / USD / EUR : formatage monétaire Intl ;  - UNKNOWN ou absente : « Devise inconnue », montant sans symbole ni CAD (aucune conversion implicite) ;
+  //  - code non pris en charge : « Devise non prise en charge (ZZZ) » ;  - montant null : « Non disponible ».
+  // La page ne doit jamais lever de RangeError.
+  fin('unknown-currency', {}, async (s, check) => {
     await sleep(3500);
     const hasMain = await s.eval(`!!document.querySelector('main')`);
-    check('l’écran financier s’affiche malgré un mandat sans devise de vente (présence de <main>)', hasMain, hasMain ? '' : 'page plantée : ' + (s.consoleErrors[0] || 'aucune exception capturée').split('\n')[0].slice(0, 160));
-    if (hasMain) { const t = await mainText(s); check('le groupe de devise « UNKNOWN » est affiché sans exception', /UNKNOWN/.test(t) && s.consoleErrors.length === 0, s.consoleErrors.length + ' exception(s)'); }
-  },
-});
+    check('l’écran financier s’affiche malgré une devise absente (présence de <main>)', hasMain, hasMain ? '' : 'page plantée : ' + (s.consoleErrors[0] || 'aucune exception capturée').split('\n')[0].slice(0, 160));
+    if (!hasMain) return;
+    await commonChecks(s, check);
+    const t = normalized(await mainText(s));
+    check('aucune exception JavaScript (ni RangeError « Invalid currency code »)', s.consoleErrors.length === 0, s.consoleErrors.map((e) => String(e).split('\n')[0]).join(' | ').slice(0, 200));
+    const cards = (await s.eval(`[...document.querySelectorAll('main article')].map(a=>a.innerText.replace(/[\\u00a0\\u202f]/g,' ').replace(/\\s+/g,' ').trim())`)).filter((c) => c.includes('Montant vendu validé')); // groupes de totaux seulement (hors cartes de synthèse)
+    const unknown = cards.find((c) => /^devise inconnue/i.test(c)) || '';
+    const invalid = cards.find((c) => /^devise non prise en charge \(zzz\)/i.test(c)) || '';
+    check('4 groupes de totaux distincts : CAD, USD, « Devise inconnue » et « Devise non prise en charge (ZZZ) »', cards.length === 4 && /^CAD/.test(cards.find((c) => /^CAD/.test(c)) || '') && cards.some((c) => /^USD/.test(c)) && !!unknown && !!invalid, JSON.stringify(cards.map((c) => c.slice(0, 40))));
+    check('groupe « Devise inconnue » : montants sans symbole monétaire ni « CAD » (aucune conversion implicite)', !!unknown && /0,00 — Devise inconnue/.test(unknown) && !/\$|CAD|USD/.test(unknown), unknown.slice(0, 200));
+    check('groupe « ZZZ » : montants affichés avec le libellé « Devise non prise en charge », sans symbole', !!invalid && /150,00 — Devise non prise en charge \(ZZZ\)/.test(invalid) && !/\$|CAD/.test(invalid), invalid.slice(0, 200));
+    check('groupe CAD : vendu 8 300,00, coût connu 5 450,00, marge 3 250,00 (les montants en CAD restent formatés en dollars)', /8 300,00 \$/.test(cards.find((c) => /^CAD/.test(c)) || '') && /5 450,00 \$/.test(cards.find((c) => /^CAD/.test(c)) || '') && /3 250,00 \$/.test(cards.find((c) => /^CAD/.test(c)) || ''), (cards.find((c) => /^CAD/.test(c)) || '').slice(0, 200));
+    const rows = await s.eval(`[...document.querySelectorAll('main table tbody tr')].map(r=>r.innerText.replace(/[\\u00a0\\u202f]/g,' ').replace(/\\s+/g,' ').trim())`);
+    check('tableau : 8 mandats', rows.length === 8, String(rows.length));
+    check('mandat sans devise ni montant : « Non disponible » (aucun montant inventé, aucun CAD supposé)', rows.some((r) => /Mandat avec un nom/.test(r) && (r.match(/Non disponible/g) || []).length >= 2 && !/CAD|\$/.test(r)), rows.find((r) => /Mandat avec un nom/.test(r)) || '');
+    check('montant nul affiché « 0,00 $ » (zéro n’est pas « Non disponible »)', rows.some((r) => /Montant nul/.test(r) && /0,00 \$/.test(r) && !/Non disponible/.test(r)), rows.find((r) => /Montant nul/.test(r)) || '');
+    check('marge négative « -500,00 $ » et perte « -50.00 % »', rows.some((r) => /-500,00 \$/.test(r)) && /-50\.00 %/.test(t));
+    check('mandat en devise invalide : « 150,00 — Devise non prise en charge (ZZZ) » dans le tableau', rows.some((r) => /Devise ZZZ/.test(r) && /150,00 — Devise non prise en charge \(ZZZ\)/.test(r)), rows.find((r) => /Devise ZZZ/.test(r)) || '');
+    check('mandats incomplets : raisons visibles (MISSING_SOLD_CURRENCY, MISSING_ADVISOR_COST_RATE)', /MISSING_SOLD_CURRENCY/.test(t) && /MISSING_ADVISOR_COST_RATE/.test(t));
+    check('devise historique USD formatée en dollars américains', rows.some((r) => /Plan particulier/.test(r) && /3 000,00 \$ US/.test(r)), rows.find((r) => /Plan particulier/.test(r)) || '');
+  });
+}
+
 
 module.exports = scenarios;

@@ -57,7 +57,7 @@ const PAGES = {
   portfolio: { route: '/activities/portfolio', beta: true, scenarioPrefix: 'portfolio', states: stateSet({ BENCH_ACTIVITIES: '1' }, { BENCH_FAIL_CLIENTS: '1' }, ['kbopen-enter', 'kbopen-space', 'kbopen-mobile390']) },
   // Rendement : legacy-only (aucune vue Glass). Les scénarios caractérisent les pages de main dans les quatre modes.
   'rendement-op': { route: '/profile/rendement', beta: false, scenarioPrefix: 'rendement-op', states: stateSet({ BENCH_RENDEMENT: '1' }, { BENCH_FAIL_RENDEMENT: '1' }) },
-  'rendement-fin': { route: '/dashboard/rendement', beta: false, scenarioPrefix: 'rendement-fin', states: stateSet({ BENCH_RENDEMENT: '1' }, { BENCH_FAIL_RENDEMENT: '1' }, ['role-conseiller']) },
+  'rendement-fin': { route: '/dashboard/rendement', beta: false, scenarioPrefix: 'rendement-fin', states: { ...stateSet({ BENCH_RENDEMENT: '1' }, { BENCH_FAIL_RENDEMENT: '1' }, ['role-conseiller']), currencies: { env: { BENCH_RENDEMENT: '1', BENCH_FINANCIAL_UNKNOWN_CURRENCY: '1' }, kinds: ['unknown-currency'] } } },
 };
 /** Pages voisines surveillées contre toute régression (leur rendu ne doit pas changer). */
 const REGRESSION_ROUTES = { plain: ['/dashboard', '/profile'], beta: [] };
