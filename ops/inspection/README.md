@@ -28,3 +28,15 @@ Production provisioning requires separate Founder authorization. Run `install.sh
 - `/usr/local/sbin/coro-production-inspect`, root-owned mode `0755`.
 
 The environment file contains only the dedicated read-only database connection values and existing backup object verification configuration. Its values must never be printed.
+
+## Phase-aware result
+
+The report keeps five independent dimensions:
+
+- `inspectionExecution`: whether trustworthy evidence was collected and evaluated.
+- `platformAuthorityState`: `UNCONFIGURED`, `DRAFT`, `ACTIVE`, `INVALID`, or `NOT_VERIFIED`.
+- `releaseReadiness`: production evidence integrity (`GO`, `NO_GO`, or `UNKNOWN`).
+- `bootstrapReadiness`: whether DRAFT can be created, already exists, or activation has already completed.
+- `mainFreezeReadiness`: `READY` only when authority is `ACTIVE` and every other gate passes.
+
+Valid `UNCONFIGURED` and `DRAFT` evidence can therefore pass inspection without being misreported as final Main Freeze readiness.

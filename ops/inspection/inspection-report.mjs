@@ -57,6 +57,18 @@ const isCurrentWithinHours = (value, maximum) => {
   const age = ageHours(value);
   return age >= 0 && age <= maximum;
 };
+const authorityBindingMatches =
+  db.authority?.operatorOrganizationId === db.operator?.id &&
+  db.authority?.founderUserId === db.founder?.id &&
+  db.founder?.organizationId === db.operator?.id;
+const platformAuthorityState = !Object.hasOwn(db, "authority")
+  ? "NOT_VERIFIED"
+  : db.authority === null
+    ? "UNCONFIGURED"
+    : ["DRAFT", "ACTIVE"].includes(db.authority?.status) &&
+        authorityBindingMatches
+      ? db.authority.status
+      : "INVALID";
 
 if (
   !Object.values(containers).every(
@@ -94,12 +106,7 @@ if (
   issues.push("FOUNDER_IDENTITY_INVALID");
 if (db.activeSuperAdminCount !== 1 || db.customerSuperAdminCount !== 0)
   issues.push("SUPER_ADMIN_INVENTORY_INVALID");
-if (
-  db.authority?.status !== "ACTIVE" ||
-  db.authority.operatorOrganizationId !== db.operator?.id ||
-  db.authority.founderUserId !== db.founder?.id ||
-  db.founder?.organizationId !== db.operator?.id
-)
+if (["INVALID", "NOT_VERIFIED"].includes(platformAuthorityState))
   issues.push("PLATFORM_AUTHORITY_INVALID");
 if (db.activeCustomerGrantCount !== 0)
   issues.push("CUSTOMER_PLATFORM_GRANT_INVALID");
@@ -168,10 +175,33 @@ const deploymentLockBusy =
   );
 if (deploymentLockBusy) issues.push("DEPLOYMENT_LOCK_BUSY");
 
+const inspectionExecution = "PASS";
+const releaseReadiness = issues.length ? "NO_GO" : "GO";
+const bootstrapReadiness = issues.length
+  ? platformAuthorityState === "NOT_VERIFIED"
+    ? "UNKNOWN"
+    : "BLOCKED"
+  : ({
+      UNCONFIGURED: "READY_FOR_DRAFT",
+      DRAFT: "DRAFT_PRESENT",
+      ACTIVE: "ALREADY_ACTIVE",
+    }[platformAuthorityState] ?? "BLOCKED");
+const mainFreezeReadiness =
+  platformAuthorityState === "NOT_VERIFIED"
+    ? "UNKNOWN"
+    : platformAuthorityState === "ACTIVE" && issues.length === 0
+      ? "READY"
+      : "NOT_READY";
+
 const report = {
   schemaVersion: 1,
   generatedAt: new Date().toISOString(),
-  assessment: issues.length ? "NO_GO" : "GO",
+  assessment: releaseReadiness,
+  inspectionExecution,
+  platformAuthorityState,
+  releaseReadiness,
+  bootstrapReadiness,
+  mainFreezeReadiness,
   issues,
   production: {
     commit: read("commit"),

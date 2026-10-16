@@ -144,6 +144,11 @@ test("emits a sanitized GO report for complete coherent evidence", () => {
     assert.equal(result.status, 0, result.stderr);
     const report = JSON.parse(result.stdout);
     assert.equal(report.assessment, "GO");
+    assert.equal(report.inspectionExecution, "PASS");
+    assert.equal(report.platformAuthorityState, "ACTIVE");
+    assert.equal(report.releaseReadiness, "GO");
+    assert.equal(report.bootstrapReadiness, "ALREADY_ACTIVE");
+    assert.equal(report.mainFreezeReadiness, "READY");
     assert.equal(report.production.database.migrationCount, 138);
     assert.doesNotMatch(
       result.stdout,
@@ -164,6 +169,24 @@ test("fails closed for invalid remote backup evidence", () => {
     assert.ok(
       JSON.parse(result.stdout).issues.includes("REMOTE_BACKUP_INVALID"),
     );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("no pre-activation authority state bypasses backup evidence", () => {
+  const root = fixture({
+    database: { authority: null },
+    backup: { status: "LOCAL_VERIFIED", remoteVerification: "FAILED" },
+  });
+  try {
+    const result = run(root);
+    assert.equal(result.status, 2);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.platformAuthorityState, "UNCONFIGURED");
+    assert.equal(report.releaseReadiness, "NO_GO");
+    assert.equal(report.bootstrapReadiness, "BLOCKED");
+    assert.equal(report.mainFreezeReadiness, "NOT_READY");
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -233,7 +256,67 @@ test("fails closed when durable release state disagrees with production", () => 
   }
 });
 
-test("fails closed when platform authority is inactive or a customer has a platform grant", () => {
+test("fails closed when the durable state has the wrong release manifest checksum", () => {
+  const root = fixture({ releaseState: { manifestSha256: "f".repeat(64) } });
+  try {
+    const result = run(root);
+    assert.equal(result.status, 2);
+    assert.ok(
+      JSON.parse(result.stdout).issues.includes(
+        "DURABLE_RELEASE_STATE_INVALID",
+      ),
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("fails closed when an application image digest is missing", () => {
+  const root = fixture();
+  fs.writeFileSync(
+    path.join(root, "coro_frontend.image.json"),
+    JSON.stringify({ RepoDigests: [] }),
+  );
+  try {
+    const result = run(root);
+    assert.equal(result.status, 2);
+    const issues = JSON.parse(result.stdout).issues;
+    assert.ok(issues.includes("IMMUTABLE_IMAGES_MISSING"));
+    assert.ok(issues.includes("ACTIVE_RELEASE_IMAGE_MISMATCH"));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("rejects malformed inspection evidence instead of inventing a state", () => {
+  const root = fixture();
+  fs.writeFileSync(path.join(root, "database.json"), "{");
+  try {
+    const result = run(root);
+    assert.notEqual(result.status, 0);
+    assert.equal(result.stdout, "");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("reports UNCONFIGURED as ready for DRAFT but not ready for Main Freeze", () => {
+  const root = fixture({ database: { authority: null } });
+  try {
+    const result = run(root);
+    assert.equal(result.status, 0, result.stderr);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.inspectionExecution, "PASS");
+    assert.equal(report.platformAuthorityState, "UNCONFIGURED");
+    assert.equal(report.releaseReadiness, "GO");
+    assert.equal(report.bootstrapReadiness, "READY_FOR_DRAFT");
+    assert.equal(report.mainFreezeReadiness, "NOT_READY");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("reports a correctly bound DRAFT without treating it as ACTIVE", () => {
   const root = fixture({
     database: {
       authority: {
@@ -241,15 +324,88 @@ test("fails closed when platform authority is inactive or a customer has a platf
         operatorOrganizationId: "operator",
         founderUserId: "founder",
       },
-      activeCustomerGrantCount: 1,
+    },
+  });
+  try {
+    const result = run(root);
+    assert.equal(result.status, 0, result.stderr);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.platformAuthorityState, "DRAFT");
+    assert.equal(report.bootstrapReadiness, "DRAFT_PRESENT");
+    assert.equal(report.mainFreezeReadiness, "NOT_READY");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("fails closed for invalid authority binding", () => {
+  const root = fixture({
+    database: {
+      authority: {
+        status: "DRAFT",
+        operatorOrganizationId: "wrong-operator",
+        founderUserId: "wrong-founder",
+      },
     },
   });
   try {
     const result = run(root);
     assert.equal(result.status, 2);
-    const issues = JSON.parse(result.stdout).issues;
+    const report = JSON.parse(result.stdout);
+    const issues = report.issues;
     assert.ok(issues.includes("PLATFORM_AUTHORITY_INVALID"));
-    assert.ok(issues.includes("CUSTOMER_PLATFORM_GRANT_INVALID"));
+    assert.equal(report.platformAuthorityState, "INVALID");
+    assert.equal(report.bootstrapReadiness, "BLOCKED");
+    assert.equal(report.mainFreezeReadiness, "NOT_READY");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("reports missing authority evidence as NOT_VERIFIED and UNKNOWN", () => {
+  const root = fixture();
+  const database = JSON.parse(
+    fs.readFileSync(path.join(root, "database.json"), "utf8"),
+  );
+  delete database.authority;
+  fs.writeFileSync(path.join(root, "database.json"), JSON.stringify(database));
+  try {
+    const result = run(root);
+    assert.equal(result.status, 2);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.platformAuthorityState, "NOT_VERIFIED");
+    assert.equal(report.bootstrapReadiness, "UNKNOWN");
+    assert.equal(report.mainFreezeReadiness, "UNKNOWN");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("fails closed for unexpected SUPER_ADMIN inventory", () => {
+  const root = fixture({ database: { activeSuperAdminCount: 2 } });
+  try {
+    const result = run(root);
+    assert.equal(result.status, 2);
+    assert.ok(
+      JSON.parse(result.stdout).issues.includes(
+        "SUPER_ADMIN_INVENTORY_INVALID",
+      ),
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("fails closed for an active platform grant assigned to a customer", () => {
+  const root = fixture({ database: { activeCustomerGrantCount: 1 } });
+  try {
+    const result = run(root);
+    assert.equal(result.status, 2);
+    assert.ok(
+      JSON.parse(result.stdout).issues.includes(
+        "CUSTOMER_PLATFORM_GRANT_INVALID",
+      ),
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -314,6 +470,8 @@ test("workflow has no command input and uses the dedicated inspection identity",
   assert.match(source, /coro-inspector@\$INSPECTION_SERVER_IP/);
   assert.match(source, /StrictHostKeyChecking=yes/);
   assert.match(source, /INSPECTION_SSH_KNOWN_HOSTS/);
+  assert.match(source, /platformAuthorityState/);
+  assert.match(source, /mainFreezeReadiness/);
   assert.match(source, />"\$RUNNER_TEMP\/production-inspection-report\.json"/);
   assert.doesNotMatch(
     source,
