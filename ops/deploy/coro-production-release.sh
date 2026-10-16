@@ -8,6 +8,8 @@ BACKUP_DIR=/opt/coro-ops/backups/database
 RELEASE_DIR=/opt/coro-ops/releases
 LOCK_FILE=/run/lock/coro-production-deployment.lock
 COMPOSE_OVERRIDE=''
+AUTH_SMOKE_HEADERS=''
+AUTH_SMOKE_BODY=''
 
 fail() {
   code="$1"
@@ -17,8 +19,83 @@ fail() {
   printf 'RELEASE_FAILED code=%s\n' "$code" >&2
   exit 1
 }
-cleanup() { [[ -z "$COMPOSE_OVERRIDE" ]] || rm -f -- "$COMPOSE_OVERRIDE"; }
+cleanup() {
+  [[ -z "$COMPOSE_OVERRIDE" ]] || rm -f -- "$COMPOSE_OVERRIDE"
+  [[ -z "$AUTH_SMOKE_HEADERS" ]] || rm -f -- "$AUTH_SMOKE_HEADERS"
+  [[ -z "$AUTH_SMOKE_BODY" ]] || rm -f -- "$AUTH_SMOKE_BODY"
+}
 trap cleanup EXIT
+
+backup_aws_cli() {
+  [[ -n "${CORO_BACKUP_SPACES_ACCESS_KEY:-}" && -n "${CORO_BACKUP_SPACES_SECRET_KEY:-}" ]] || {
+    printf 'BACKUP_AWS_CREDENTIALS_MISSING\n' >&2
+    return 1
+  }
+  env -u AWS_SESSION_TOKEN -u AWS_PROFILE -u AWS_DEFAULT_PROFILE \
+    -u AWS_SHARED_CREDENTIALS_FILE -u AWS_CONFIG_FILE \
+    AWS_ACCESS_KEY_ID="$CORO_BACKUP_SPACES_ACCESS_KEY" \
+    AWS_SECRET_ACCESS_KEY="$CORO_BACKUP_SPACES_SECRET_KEY" \
+    AWS_EC2_METADATA_DISABLED=true \
+    aws "$@"
+}
+
+wait_for_application_ready() {
+  local container="$1" url="$2" failure_prefix="$3"
+  local timeout_seconds="${APPLICATION_READINESS_TIMEOUT_SECONDS:-120}"
+  local interval_seconds="${APPLICATION_READINESS_INTERVAL_SECONDS:-3}"
+  local started_at now curl_exit http_code restart_count
+
+  [[ "$timeout_seconds" =~ ^[1-9][0-9]*$ ]] || fail APPLICATION_READINESS_CONFIGURATION_INVALID
+  [[ "$interval_seconds" =~ ^[1-9][0-9]*$ ]] || fail APPLICATION_READINESS_CONFIGURATION_INVALID
+  started_at="$(date +%s)"
+
+  while true; do
+    [[ "$(docker inspect --format '{{.State.Running}}' "$container" 2>/dev/null)" == true ]] || fail "${failure_prefix}_CONTAINER_EXITED"
+    restart_count="$(docker inspect --format '{{.RestartCount}}' "$container" 2>/dev/null)" || fail "${failure_prefix}_CONTAINER_UNAVAILABLE"
+    [[ "$restart_count" == 0 ]] || fail "${failure_prefix}_RESTART_LOOP"
+
+    set +e
+    http_code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 10 "$url")"
+    curl_exit=$?
+    set -e
+    if [[ "$curl_exit" -eq 0 && "$http_code" =~ ^[23][0-9][0-9]$ ]]; then
+      return 0
+    fi
+    if [[ "$curl_exit" -eq 0 && ! "$http_code" =~ ^(500|502|503)$ ]]; then
+      fail "${failure_prefix}_HTTP_${http_code}"
+    fi
+
+    now="$(date +%s)"
+    (( now - started_at < timeout_seconds )) || fail "${failure_prefix}_READINESS_TIMEOUT"
+    sleep "$interval_seconds"
+  done
+}
+
+run_backend_auth_smoke() {
+  local url="$1" http_code curl_exit
+  AUTH_SMOKE_HEADERS="$(mktemp /tmp/coro-auth-smoke-headers.XXXXXX)"
+  AUTH_SMOKE_BODY="$(mktemp /tmp/coro-auth-smoke-body.XXXXXX)"
+
+  set +e
+  http_code="$(curl --silent --show-error --dump-header "$AUTH_SMOKE_HEADERS" --output "$AUTH_SMOKE_BODY" --write-out '%{http_code}' --max-time 15 \
+    -H 'content-type: application/json' \
+    -d '{"email":"release-smoke-nonexistent@example.invalid","password":"InvalidReleaseSmoke!123"}' \
+    "$url")"
+  curl_exit=$?
+  set -e
+  [[ "$curl_exit" -eq 0 ]] || fail BACKEND_HEALTH_NETWORK_FAILED
+  [[ "$http_code" =~ ^(400|401)$ ]] || fail "BACKEND_HEALTH_HTTP_${http_code}"
+  ! grep -Eqi '^set-cookie:' "$AUTH_SMOKE_HEADERS" || fail BACKEND_HEALTH_SESSION_CREATED
+  node -e '
+    const fs=require("fs");
+    let body;
+    try { body=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); } catch { process.exit(1); }
+    if (!body || typeof body!=="object" || Array.isArray(body)) process.exit(1);
+    const forbidden=/^(access_?token|refresh_?token|token|jwt|session)$/i;
+    const stack=[body];
+    while(stack.length){const value=stack.pop();for(const [key,child] of Object.entries(value)){if(forbidden.test(key))process.exit(1);if(child&&typeof child==="object")stack.push(child);}}
+  ' "$AUTH_SMOKE_BODY" || fail BACKEND_HEALTH_RESPONSE_INVALID
+}
 
 [[ "${PRODUCTION_APPROVAL:-}" == DEPLOY_PRODUCTION ]] || fail RELEASE_APPROVAL_MISSING
 [[ "${MIGRATION_COMPATIBILITY_APPROVAL:-}" == CONFIRMED_BACKWARD_COMPATIBLE ]] || fail MIGRATION_COMPATIBILITY_APPROVAL_MISSING
@@ -73,7 +150,7 @@ set -a
 # shellcheck disable=SC1091
 source /etc/coro-backup/spaces.env
 set +a
-remote_head="$(aws --endpoint-url "$CORO_BACKUP_SPACES_ENDPOINT" --region "$CORO_BACKUP_SPACES_REGION" s3api head-object --bucket "$remote_bucket" --key "$remote_object" --output json)" || fail BACKUP_REMOTE_UNAVAILABLE
+remote_head="$(backup_aws_cli --endpoint-url "$CORO_BACKUP_SPACES_ENDPOINT" --region "$CORO_BACKUP_SPACES_REGION" s3api head-object --bucket "$remote_bucket" --key "$remote_object" --output json)" || fail BACKUP_REMOTE_UNAVAILABLE
 backup_version_id="$(node -e 'const h=JSON.parse(process.argv[1]);if(!h.VersionId||h.VersionId==="null")process.exit(1);process.stdout.write(h.VersionId)' "$remote_head")" || fail BACKUP_VERSION_ID_MISSING
 node -e 'const h=JSON.parse(process.argv[1]);const expected=process.argv[2];const actual=(h.Metadata?.sha256||"").toLowerCase();if(actual!==expected)process.exit(1)' "$remote_head" "$backup_sha" || fail BACKUP_SHA_MISMATCH
 
@@ -114,13 +191,12 @@ current_migration_head="$(docker compose exec -T postgres sh -ceu 'psql -U "$POS
 
 "${compose[@]}" up -d --no-build --remove-orphans || fail APPLICATION_ROLLOUT_FAILED
 docker compose exec -T postgres sh -ceu 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"' >/dev/null || fail DATABASE_HEALTH_FAILED
-curl --fail --silent --show-error --max-time 15 http://127.0.0.1:3000/ >/dev/null || fail FRONTEND_HEALTH_FAILED
-curl --fail --silent --show-error --max-time 15 http://127.0.0.1:3003/ >/dev/null || fail CLIENT_PORTAL_HEALTH_FAILED
-curl --fail --silent --show-error --max-time 15 http://127.0.0.1:3001/ >/dev/null || fail WEBSITE_HEALTH_FAILED
-internal_auth_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{}' http://127.0.0.1:3002/api/auth/login)" || fail BACKEND_HEALTH_FAILED
+wait_for_application_ready coro_frontend http://127.0.0.1:3000/ FRONTEND
+wait_for_application_ready coro_client_portal http://127.0.0.1:3003/ CLIENT_PORTAL
+wait_for_application_ready coro_website http://127.0.0.1:3001/ WEBSITE
+run_backend_auth_smoke http://127.0.0.1:3002/api/auth/login
 client_auth_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{}' http://127.0.0.1:3002/api/client-auth/login)" || fail CLIENT_AUTH_SMOKE_FAILED
 booking_guard_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 http://127.0.0.1:3002/api/planning/my-assignments)" || fail BOOKING_SMOKE_FAILED
-[[ "$internal_auth_code" =~ ^(400|401)$ ]] || fail BACKEND_HEALTH_FAILED
 [[ "$client_auth_code" =~ ^(400|401)$ ]] || fail CLIENT_AUTH_SMOKE_FAILED
 [[ "$booking_guard_code" == 401 ]] || fail BOOKING_SMOKE_FAILED
 

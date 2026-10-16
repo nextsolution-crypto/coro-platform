@@ -34,7 +34,10 @@ test('migrates and verifies migration head before application rollout', () => {
   assert.match(release, /MIGRATION_HEAD_MISMATCH/);
 });
 test('requires health, smoke, restart and log checks', () => {
-  for (const value of ['BACKEND_HEALTH_FAILED', 'CLIENT_AUTH_SMOKE_FAILED', 'BOOKING_SMOKE_FAILED', 'FRONTEND_HEALTH_FAILED', 'CLIENT_PORTAL_HEALTH_FAILED', 'WEBSITE_HEALTH_FAILED', 'RESTART_COUNT_NONZERO', 'CRITICAL_LOGS_FOUND', 'MFA_QA_CAPTURE_ENABLED']) assert.match(release, new RegExp(value));
+  for (const value of ['BACKEND_HEALTH_NETWORK_FAILED', 'BACKEND_HEALTH_RESPONSE_INVALID', 'BACKEND_HEALTH_SESSION_CREATED', 'CLIENT_AUTH_SMOKE_FAILED', 'BOOKING_SMOKE_FAILED', 'READINESS_TIMEOUT', 'CONTAINER_EXITED', 'RESTART_LOOP', 'RESTART_COUNT_NONZERO', 'CRITICAL_LOGS_FOUND', 'MFA_QA_CAPTURE_ENABLED']) assert.match(release, new RegExp(value));
+  for (const value of ['coro_frontend', 'coro_client_portal', 'coro_website']) assert.match(release, new RegExp(`wait_for_application_ready ${value}`));
+  assert.match(release, /release-smoke-nonexistent@example\.invalid/);
+  assert.doesNotMatch(release, /-d '\{\}' http:\/\/127\.0\.0\.1:3002\/api\/auth\/login/);
 });
 test('records rollback and release evidence without automatic database restore', () => {
   for (const value of ['previousCommit', 'previousImages', 'previousCompose', 'previousMigrationHead', 'backupVersionId', 'healthChecks']) assert.match(release, new RegExp(value));
