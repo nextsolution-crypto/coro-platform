@@ -71,6 +71,41 @@ wait_for_application_ready() {
   done
 }
 
+wait_for_backend_ready() {
+  local container="$1" url="$2"
+  local timeout_seconds="${APPLICATION_READINESS_TIMEOUT_SECONDS:-120}"
+  local interval_seconds="${APPLICATION_READINESS_INTERVAL_SECONDS:-3}"
+  local started_at now curl_exit http_code restart_count
+
+  [[ "$timeout_seconds" =~ ^[1-9][0-9]*$ ]] || fail APPLICATION_READINESS_CONFIGURATION_INVALID
+  [[ "$interval_seconds" =~ ^[1-9][0-9]*$ ]] || fail APPLICATION_READINESS_CONFIGURATION_INVALID
+  started_at="$(date +%s)"
+
+  while true; do
+    [[ "$(docker inspect --format '{{.State.Running}}' "$container" 2>/dev/null)" == true ]] || fail BACKEND_CONTAINER_EXITED
+    restart_count="$(docker inspect --format '{{.RestartCount}}' "$container" 2>/dev/null)" || fail BACKEND_CONTAINER_UNAVAILABLE
+    [[ "$restart_count" == 0 ]] || fail BACKEND_RESTART_LOOP
+
+    set +e
+    http_code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 10 \
+      -H 'content-type: application/json' \
+      -d '{"email":"release-smoke-nonexistent@example.invalid","password":"InvalidReleaseSmoke!123"}' \
+      "$url")"
+    curl_exit=$?
+    set -e
+    if [[ "$curl_exit" -eq 0 && "$http_code" =~ ^(400|401)$ ]]; then
+      return 0
+    fi
+    if [[ "$curl_exit" -eq 0 && ! "$http_code" =~ ^(500|502|503)$ ]]; then
+      fail "BACKEND_READINESS_HTTP_${http_code}"
+    fi
+
+    now="$(date +%s)"
+    (( now - started_at < timeout_seconds )) || fail BACKEND_READINESS_TIMEOUT
+    sleep "$interval_seconds"
+  done
+}
+
 run_backend_auth_smoke() {
   local url="$1" http_code curl_exit
   AUTH_SMOKE_HEADERS="$(mktemp /tmp/coro-auth-smoke-headers.XXXXXX)"
@@ -194,11 +229,14 @@ docker compose exec -T postgres sh -ceu 'pg_isready -U "$POSTGRES_USER" -d "$POS
 wait_for_application_ready coro_frontend http://127.0.0.1:3000/ FRONTEND
 wait_for_application_ready coro_client_portal http://127.0.0.1:3003/ CLIENT_PORTAL
 wait_for_application_ready coro_website http://127.0.0.1:3001/ WEBSITE
+wait_for_backend_ready coro_backend http://127.0.0.1:3002/api/auth/login
 run_backend_auth_smoke http://127.0.0.1:3002/api/auth/login
 client_auth_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{}' http://127.0.0.1:3002/api/client-auth/login)" || fail CLIENT_AUTH_SMOKE_FAILED
 booking_guard_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 http://127.0.0.1:3002/api/planning/my-assignments)" || fail BOOKING_SMOKE_FAILED
+rendement_guard_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 http://127.0.0.1:3002/api/rendement/financial)" || fail RENDEMENT_SMOKE_FAILED
 [[ "$client_auth_code" =~ ^(400|401)$ ]] || fail CLIENT_AUTH_SMOKE_FAILED
 [[ "$booking_guard_code" == 401 ]] || fail BOOKING_SMOKE_FAILED
+[[ "$rendement_guard_code" == 401 ]] || fail RENDEMENT_SMOKE_FAILED
 
 for container in coro_backend coro_frontend coro_client_portal coro_website; do
   [[ "$(docker inspect --format '{{.State.Running}}' "$container")" == true ]] || fail CONTAINER_HEALTH_FAILED

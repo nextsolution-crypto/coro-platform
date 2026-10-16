@@ -65,9 +65,13 @@ printf 'PASS synthetic-reserved-identity-and-nonempty-payload\n'
 node - "$RELEASE" <<'NODE'
 const fs=require('fs');
 const source=fs.readFileSync(process.argv[2],'utf8');
-const order=['coro-db-restore-run.sh','migrate deploy','up -d --no-build --remove-orphans','wait_for_application_ready coro_frontend','run_backend_auth_smoke'];
+const order=['coro-db-restore-run.sh','migrate deploy','up -d --no-build --remove-orphans','wait_for_application_ready coro_frontend','wait_for_backend_ready coro_backend','run_backend_auth_smoke'];
 let previous=-1;
 for(const marker of order){const current=source.indexOf(marker,previous+1);if(current<0)throw new Error(`ORDER_OR_GATE_MISSING:${marker}`);previous=current;}
 for(const marker of ['previous_images','previous_compose','BACKUP_NOT_REMOTE_VERIFIED','RESTORE_VERIFICATION_FAILED'])if(!source.includes(marker))throw new Error(`SAFETY_GATE_MISSING:${marker}`);
 console.log('PASS release-order-backup-restore-readiness-rollback');
 NODE
+
+grep -q 'rendement_guard_code=' "$RELEASE"
+grep -q 'RENDEMENT_SMOKE_FAILED' "$RELEASE"
+printf 'PASS booking-and-rendement-unauthenticated-guards\n'
