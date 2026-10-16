@@ -20,6 +20,19 @@ fail() {
 cleanup() { [[ -z "$COMPOSE_OVERRIDE" ]] || rm -f -- "$COMPOSE_OVERRIDE"; }
 trap cleanup EXIT
 
+backup_aws_cli() {
+  [[ -n "${CORO_BACKUP_SPACES_ACCESS_KEY:-}" && -n "${CORO_BACKUP_SPACES_SECRET_KEY:-}" ]] || {
+    printf 'BACKUP_AWS_CREDENTIALS_MISSING\n' >&2
+    return 1
+  }
+  env -u AWS_SESSION_TOKEN -u AWS_PROFILE -u AWS_DEFAULT_PROFILE \
+    -u AWS_SHARED_CREDENTIALS_FILE -u AWS_CONFIG_FILE \
+    AWS_ACCESS_KEY_ID="$CORO_BACKUP_SPACES_ACCESS_KEY" \
+    AWS_SECRET_ACCESS_KEY="$CORO_BACKUP_SPACES_SECRET_KEY" \
+    AWS_EC2_METADATA_DISABLED=true \
+    aws "$@"
+}
+
 [[ "${PRODUCTION_APPROVAL:-}" == DEPLOY_PRODUCTION ]] || fail RELEASE_APPROVAL_MISSING
 [[ "${MIGRATION_COMPATIBILITY_APPROVAL:-}" == CONFIRMED_BACKWARD_COMPATIBLE ]] || fail MIGRATION_COMPATIBILITY_APPROVAL_MISSING
 [[ "${RELEASE_COMMIT:-}" =~ ^[0-9a-f]{40}$ ]] || fail RELEASE_COMMIT_INVALID
@@ -73,7 +86,7 @@ set -a
 # shellcheck disable=SC1091
 source /etc/coro-backup/spaces.env
 set +a
-remote_head="$(aws --endpoint-url "$CORO_BACKUP_SPACES_ENDPOINT" --region "$CORO_BACKUP_SPACES_REGION" s3api head-object --bucket "$remote_bucket" --key "$remote_object" --output json)" || fail BACKUP_REMOTE_UNAVAILABLE
+remote_head="$(backup_aws_cli --endpoint-url "$CORO_BACKUP_SPACES_ENDPOINT" --region "$CORO_BACKUP_SPACES_REGION" s3api head-object --bucket "$remote_bucket" --key "$remote_object" --output json)" || fail BACKUP_REMOTE_UNAVAILABLE
 backup_version_id="$(node -e 'const h=JSON.parse(process.argv[1]);if(!h.VersionId||h.VersionId==="null")process.exit(1);process.stdout.write(h.VersionId)' "$remote_head")" || fail BACKUP_VERSION_ID_MISSING
 node -e 'const h=JSON.parse(process.argv[1]);const expected=process.argv[2];const actual=(h.Metadata?.sha256||"").toLowerCase();if(actual!==expected)process.exit(1)' "$remote_head" "$backup_sha" || fail BACKUP_SHA_MISMATCH
 
