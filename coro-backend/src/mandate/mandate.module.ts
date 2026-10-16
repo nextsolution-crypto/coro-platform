@@ -11,12 +11,28 @@ import { MandateServicesService } from './mandate-services.service';
 import { MandateOperationsPreviewService } from './mandate-operations-preview.service';
 import { MandateOperationsApplyService } from './mandate-operations-apply.service';
 import { ActivitiesModule } from '../activities/activities.module';
+import { AdvisorCostRatesController } from './advisor-cost-rates.controller';
+import { AdvisorCostRatesService } from './advisor-cost-rates.service';
+import { RendementFinancialService } from './rendement-financial.service';
 
 @Module({
   imports: [PrismaModule, ActivityTypesModule, ActivitiesModule],
-  controllers: [MandateController, RendementController, PortfolioController, CapacityController],
-  providers: [MandateService, MandateServicesService, MandateOperationsPreviewService,
-    MandateOperationsApplyService, CapacityService],
+  controllers: [
+    MandateController,
+    RendementController,
+    AdvisorCostRatesController,
+    PortfolioController,
+    CapacityController,
+  ],
+  providers: [
+    MandateService,
+    MandateServicesService,
+    MandateOperationsPreviewService,
+    MandateOperationsApplyService,
+    CapacityService,
+    AdvisorCostRatesService,
+    RendementFinancialService,
+  ],
   exports: [MandateService, CapacityService],
 })
 export class MandateModule {}

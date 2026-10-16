@@ -61,6 +61,7 @@ model Organization {
   convertedCommercialProspects   CommercialProspect[]            @relation("CommercialProspectConversion")
   meteringResults                MeteringResult[]
   commercialSimulationWorkspaces CommercialSimulationWorkspace[]
+  advisorInternalCostRates       AdvisorInternalCostRate[]
 }
 
 model User {
@@ -179,6 +180,12 @@ model User {
   mandateServicesRemoved                ProjectMandateService[]     @relation("MandateServiceRemover")
   mandateServiceOperations              MandateServiceOperation[]   @relation("MandateServiceOperationCreator")
   meteringResultsCreated                MeteringResult[]            @relation("MeteringResultCreator")
+  advisorInternalCostRates              AdvisorInternalCostRate[]   @relation("AdvisorInternalCostRateAdvisor")
+  advisorCostRatesProposed              AdvisorInternalCostRate[]   @relation("AdvisorInternalCostRateProposer")
+  advisorCostRatesApproved              AdvisorInternalCostRate[]   @relation("AdvisorInternalCostRateApprover")
+  advisorCostRatesRejected              AdvisorInternalCostRate[]   @relation("AdvisorInternalCostRateRejector")
+  advisorCostRatesSuperseded            AdvisorInternalCostRate[]   @relation("AdvisorInternalCostRateSuperseder")
+  mandateSalesValidated                 ProjectMandate[]            @relation("ProjectMandateSaleValidator")
 }
 
 model UserWorkSchedule {
@@ -2517,28 +2524,82 @@ model TaskTimeEntry {
   updatedAt      DateTime    @updatedAt
 }
 
+enum AdvisorInternalCostRateStatus {
+  DRAFT
+  PROPOSED
+  APPROVED
+  REJECTED
+  SUPERSEDED
+}
+
+model AdvisorInternalCostRate {
+  id                    String                        @id @default(uuid())
+  organizationId        String
+  userId                String
+  currency              String                        @db.Char(3)
+  hourlyCost            Decimal                       @db.Decimal(20, 6)
+  effectiveFrom         DateTime                      @db.Date
+  effectiveUntil        DateTime?                     @db.Date
+  status                AdvisorInternalCostRateStatus @default(DRAFT)
+  proposedByUserId      String?
+  proposedAt            DateTime?
+  approvedByUserId      String?
+  approvedAt            DateTime?
+  rejectedByUserId      String?
+  rejectedAt            DateTime?
+  rejectionReason       String?
+  supersedesRateId      String?                       @unique
+  supersededByUserId    String?
+  supersededAt          DateTime?
+  supersededEffectiveAt DateTime?                     @db.Date
+  lockVersion           Int                           @default(0)
+  createdAt             DateTime                      @default(now())
+  updatedAt             DateTime                      @updatedAt
+
+  organization     Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  advisor          User                     @relation("AdvisorInternalCostRateAdvisor", fields: [userId], references: [id], onDelete: Restrict)
+  proposedBy       User?                    @relation("AdvisorInternalCostRateProposer", fields: [proposedByUserId], references: [id], onDelete: Restrict)
+  approvedBy       User?                    @relation("AdvisorInternalCostRateApprover", fields: [approvedByUserId], references: [id], onDelete: Restrict)
+  rejectedBy       User?                    @relation("AdvisorInternalCostRateRejector", fields: [rejectedByUserId], references: [id], onDelete: Restrict)
+  supersededByUser User?                    @relation("AdvisorInternalCostRateSuperseder", fields: [supersededByUserId], references: [id], onDelete: Restrict)
+  supersedes       AdvisorInternalCostRate? @relation("AdvisorInternalCostRateSupersession", fields: [supersedesRateId], references: [id], onDelete: Restrict)
+  supersededBy     AdvisorInternalCostRate? @relation("AdvisorInternalCostRateSupersession")
+
+  @@unique([organizationId, userId, currency, effectiveFrom])
+  @@index([organizationId, status])
+  @@index([userId, status, effectiveFrom])
+}
+
 model ProjectMandate {
-  id                String                    @id @default(uuid())
-  projectId         String                    @unique
-  project           Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  description       String?
-  montantVendu      Float?
-  tauxHoraire       Float?
-  heuresBudgetees   Float?
-  lienDrive         String?
-  organizationId    String
-  ownerId           String?
-  owner             User?                     @relation("mandateOwner", fields: [ownerId], references: [id])
-  createdAt         DateTime                  @default(now())
-  updatedAt         DateTime                  @updatedAt
-  typeMandat        String?
-  dateDebutDelai    DateTime?
-  dateLimite        DateTime?
-  delaiJours        Int?
-  alerteActive      Boolean                   @default(true)
-  typeDelai         String?
-  services          ProjectMandateService[]
-  serviceOperations MandateServiceOperation[]
+  id                    String                    @id @default(uuid())
+  projectId             String                    @unique
+  project               Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  description           String?
+  montantVendu          Float?
+  soldAmountDecimal     Decimal?                  @db.Decimal(20, 2)
+  soldCurrency          String?                   @db.Char(3)
+  soldAt                DateTime?                 @db.Date
+  soldValidatedByUserId String?
+  soldValidatedAt       DateTime?
+  soldValidationReason  String?
+  financialLockVersion  Int                       @default(0)
+  tauxHoraire           Float?
+  heuresBudgetees       Float?
+  lienDrive             String?
+  organizationId        String
+  ownerId               String?
+  owner                 User?                     @relation("mandateOwner", fields: [ownerId], references: [id])
+  soldValidatedBy       User?                     @relation("ProjectMandateSaleValidator", fields: [soldValidatedByUserId], references: [id], onDelete: Restrict)
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  typeMandat            String?
+  dateDebutDelai        DateTime?
+  dateLimite            DateTime?
+  delaiJours            Int?
+  alerteActive          Boolean                   @default(true)
+  typeDelai             String?
+  services              ProjectMandateService[]
+  serviceOperations     MandateServiceOperation[]
 
   @@unique([id, projectId, organizationId])
 }
