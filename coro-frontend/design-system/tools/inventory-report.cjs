@@ -34,5 +34,11 @@ for (const f of order) {
   }
   out.push('');
 }
+const exceptions = ROUTE_REGISTRY.filter((e) => e.exception);
+if (exceptions.length) {
+  out.push('## Exceptions de sécurité documentées', '', 'Routes sensibles qui restent `legacy-only` par décision explicite ; leur statut ne change pas sans nouvelle décision Founder.', '');
+  for (const e of exceptions) out.push(`- \`${e.pattern}\` (${e.status}) — ${e.exception}`);
+  out.push('');
+}
 const text = out.join('\n');
 if (process.argv.includes('--write')) { fs.writeFileSync(path.join(__dirname, '..', 'ROUTES.md'), text); console.log('ROUTES.md mis à jour (' + joined.length + ' routes)'); } else console.log(text);

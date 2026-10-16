@@ -47,6 +47,8 @@ export interface RouteEntry {
   island?: boolean;
   /** Route d'outillage de développement : introuvable en production. */
   devOnly?: boolean;
+  /** Exception de sécurité documentée (décision Founder) : explique pourquoi une route sensible reste en l'état ; imprimée dans ROUTES.md. */
+  exception?: string;
 }
 
 export const ROUTE_REGISTRY: readonly RouteEntry[] = [
@@ -131,7 +133,10 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { pattern: '/admin/commercial/reconciliation', family: 'super-admin', shell: 'app', status: 'legacy-only', styling: ['tailwind'], sensitivity: ['permissions', 'financial-legal'] },
   { pattern: '/admin/commercial/simulator', family: 'super-admin', shell: 'app', status: 'legacy-only', styling: ['tailwind'], sensitivity: ['permissions', 'financial-legal'] },
   { pattern: '/admin/control-center', family: 'super-admin', shell: 'app', status: 'legacy-only', styling: ['tailwind'], sensitivity: ['permissions', 'supervision'] },
-  { pattern: '/admin/platform-permission-grants', family: 'super-admin', shell: 'app', status: 'legacy-only', styling: ['tailwind'], sensitivity: ['financial-legal', 'permissions'] },
+  {
+    pattern: '/admin/platform-permission-grants', family: 'super-admin', shell: 'app', status: 'legacy-only', styling: ['tailwind'], sensitivity: ['financial-legal', 'permissions'],
+    exception: 'Exception de sécurité V1 (décision Founder, Phase 13) : page Founder-only de gestion des permissions de plateforme. Reste LEGACY-ONLY : elle s\'affiche dans le shell Glass (menu, en-tête, thème) à l\'intérieur de l\'îlot Legacy ; jamais bêta ni GA, aucune vue Glass native en V1. Préserver : réservée au Founder, portées ORGANIZATION et GLOBAL, confirmations d\'octroi et de révocation, provenance et audit, refus des ADMIN clients. Ne pas assouplir ces règles pour permettre un passage en bêta ou GA ; toute migration exige une décision Founder distincte et une revalidation RBAC sur le vrai backend.',
+  },
   { pattern: '/admin/metering', family: 'super-admin', shell: 'app', status: 'legacy-only', styling: ['tailwind'], sensitivity: ['permissions', 'supervision'] },
   { pattern: '/admin/product-catalog', family: 'super-admin', shell: 'app', status: 'legacy-only', styling: ['tailwind'], sensitivity: ['permissions', 'financial-legal'] },
   { pattern: '/admin/product-catalog/capabilities', family: 'super-admin', shell: 'app', status: 'legacy-only', styling: ['tailwind'], sensitivity: ['permissions', 'financial-legal'] },

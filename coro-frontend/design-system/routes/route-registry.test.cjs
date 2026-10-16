@@ -156,3 +156,15 @@ test('îlot Legacy : sélecteurs limités à l’îlot (aucun style global sur m
     assert.ok(!/(\[role|\.fixed|dialog|portal|body\s*>)/.test(part), 'cible interdite : ' + part);
   }
 });
+
+test('exception de sécurité : /admin/platform-permission-grants reste legacy-only, documentée, jamais bêta ni GA', () => {
+  const e = byPattern.get('/admin/platform-permission-grants');
+  assert.ok(e, 'route absente du registre');
+  assert.equal(e.status, 'legacy-only');
+  assert.ok(e.sensitivity.includes('permissions'));
+  assert.ok(typeof e.exception === 'string' && e.exception.length > 100, 'exception non documentée');
+  for (const word of ['Founder', 'ORGANIZATION', 'GLOBAL', 'révocation', 'provenance', 'ADMIN clients', 'bêta ni GA']) assert.ok(e.exception.includes(word), 'exception : mot manquant « ' + word + ' »');
+  assert.ok(!BETA_ALLOWLIST.includes(e.pattern) && !GA_ALLOWLIST.includes(e.pattern), 'une route sensible ne peut figurer dans aucune liste d’activation');
+  // Toute route portant une exception doit rester legacy-only.
+  for (const x of ROUTE_REGISTRY.filter((r) => r.exception)) assert.equal(x.status, 'legacy-only', x.pattern);
+});

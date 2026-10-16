@@ -127,3 +127,9 @@
 | Route | Type | Shell | Styles | Lignes | Hex | Tailwind | Sensibilité | Statut | Composants partagés |
 |---|---|---|---|---:|---:|---:|---|---|---|
 | `/glass-kit` | statique | app | none | 21 | 0 | 0 | — | ga (dev) | — |
+
+## Exceptions de sécurité documentées
+
+Routes sensibles qui restent `legacy-only` par décision explicite ; leur statut ne change pas sans nouvelle décision Founder.
+
+- `/admin/platform-permission-grants` (legacy-only) — Exception de sécurité V1 (décision Founder, Phase 13) : page Founder-only de gestion des permissions de plateforme. Reste LEGACY-ONLY : elle s'affiche dans le shell Glass (menu, en-tête, thème) à l'intérieur de l'îlot Legacy ; jamais bêta ni GA, aucune vue Glass native en V1. Préserver : réservée au Founder, portées ORGANIZATION et GLOBAL, confirmations d'octroi et de révocation, provenance et audit, refus des ADMIN clients. Ne pas assouplir ces règles pour permettre un passage en bêta ou GA ; toute migration exige une décision Founder distincte et une revalidation RBAC sur le vrai backend.
