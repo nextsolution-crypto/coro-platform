@@ -565,6 +565,19 @@ test("collector contract rejects arbitrary commands and uses a read-only transac
   assert.match(source, /\/opt\/coro-ops\/restore-drills/);
   assert.doesNotMatch(source, /\/opt\/coro-ops\/restores/);
   assert.match(source, /docker exec --env-file/);
+  assert.equal(source.match(/--quiet --tuples-only --no-align/g)?.length, 2);
+  assert.match(
+    source,
+    /migration_name='20261024010000_platform_authority'/,
+  );
+  assert.match(
+    source,
+    /finished_at IS NULL AND rolled_back_at IS NULL/,
+  );
+  assert.doesNotMatch(
+    source,
+    /finished_at IS NULL OR rolled_back_at IS NOT NULL/,
+  );
   assert.match(source, /sha256sum --check --status/);
   assert.doesNotMatch(source, /docker exec -e PGPASSWORD/);
   assert.doesNotMatch(source, /env .*AWS_ACCESS_KEY_ID=/);
