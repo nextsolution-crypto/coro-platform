@@ -12,5 +12,6 @@ export const legacyPlatformAuthorityTestProvider = {
   useValue: {
     requirePermission: jest.fn(requireLegacySuperAdmin),
     requireFounderAuthority: jest.fn(requireLegacySuperAdmin),
+    resolveTargetOrganization: jest.fn().mockResolvedValue('test-organization'),
   },
 };

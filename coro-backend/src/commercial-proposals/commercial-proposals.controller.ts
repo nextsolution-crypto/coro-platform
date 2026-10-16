@@ -38,7 +38,11 @@ type Req = { user: { userId: string } };
 @Controller('admin/v1/commercial/proposals')
 @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
 @SuperAdminOnly()
-@RequirePlatformPermission(PlatformPermission.COMMERCIAL_PROPOSAL_PREPARE)
+@RequirePlatformPermission(
+  PlatformPermission.COMMERCIAL_PROPOSAL_PREPARE,
+  undefined,
+  { kind: 'PROPOSAL', param: 'id' },
+)
 export class CommercialProposalsController {
   constructor(
     private service: CommercialProposalsService,

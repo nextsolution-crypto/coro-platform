@@ -25,10 +25,40 @@ describe('PlatformAuthorityService', () => {
     user: { findUnique: jest.fn() },
     platformAuthorityConfiguration: { findUnique: jest.fn() },
     platformPermissionGrant: { findFirst: jest.fn(), findMany: jest.fn() },
+    commercialSimulationWorkspace: { findUnique: jest.fn() },
+    commercialSimulationScenario: { findUnique: jest.fn() },
+    commercialProposal: { findUnique: jest.fn() },
+    commercialProposalRevision: { findUnique: jest.fn() },
+    organizationContract: { findUnique: jest.fn() },
+    organizationContractRevision: { findUnique: jest.fn() },
+    proposalDocumentCompositionSnapshot: { findUnique: jest.fn() },
+    capabilityEntitlement: { findUnique: jest.fn() },
   };
   const service = new PlatformAuthorityService(prisma as never, {} as never);
 
   beforeEach(() => jest.clearAllMocks());
+
+  it('resolves the canonical organization from a commercial resource', async () => {
+    prisma.commercialProposalRevision.findUnique.mockResolvedValue({
+      proposal: { organizationId: 'customer-org' },
+    });
+    await expect(
+      service.resolveTargetOrganization('PROPOSAL_REVISION', 'revision-1'),
+    ).resolves.toBe('customer-org');
+    expect(prisma.commercialProposalRevision.findUnique).toHaveBeenCalledWith({
+      where: { id: 'revision-1' },
+      select: { proposal: { select: { organizationId: true } } },
+    });
+  });
+
+  it('fails closed for a missing resource organization', async () => {
+    prisma.commercialSimulationWorkspace.findUnique.mockResolvedValue({
+      organizationId: null,
+    });
+    await expect(
+      service.resolveTargetOrganization('WORKSPACE', 'prospect-workspace'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
 
   it('préserve uniquement le SUPER_ADMIN persistant avant activation', async () => {
     prisma.platformAuthorityConfiguration.findUnique.mockResolvedValue(null);

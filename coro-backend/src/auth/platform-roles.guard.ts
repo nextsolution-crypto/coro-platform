@@ -10,7 +10,9 @@ import { PLATFORM_ROLES_KEY } from './platform-roles.decorator';
 import { PlatformAuthorityService } from './platform-authority.service';
 import {
   PLATFORM_PERMISSION_KEY,
+  PLATFORM_TARGET_RESOURCE_KEY,
   PLATFORM_TARGET_ORGANIZATION_PARAM_KEY,
+  PlatformTargetResource,
 } from './platform-permission.decorator';
 import { PlatformPermission } from '@prisma/client';
 
@@ -45,10 +47,24 @@ export class PlatformRolesGuard implements CanActivate {
         [context.getHandler(), context.getClass()],
       );
       const request = context.switchToHttp().getRequest<PlatformRequest>();
+      const targetResource =
+        this.reflector.getAllAndOverride<PlatformTargetResource>(
+          PLATFORM_TARGET_RESOURCE_KEY,
+          [context.getHandler(), context.getClass()],
+        );
+      const resourceId = targetResource
+        ? request.params?.[targetResource.param]
+        : undefined;
+      const resourceOrganizationId = resourceId
+        ? await this.authority.resolveTargetOrganization(
+            targetResource.kind,
+            resourceId,
+          )
+        : undefined;
       await this.authority.requirePermission(
         user,
         permission,
-        targetParam ? request.params?.[targetParam] : undefined,
+        targetParam ? request.params?.[targetParam] : resourceOrganizationId,
       );
       return true;
     }

@@ -55,7 +55,10 @@ type CommandDto = PreviewStateDto & {
 @Controller('admin/v1/organizations/:organizationId/entitlements')
 @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
 @SuperAdminOnly()
-@RequirePlatformPermission(PlatformPermission.COMMERCIAL_ENTITLEMENT_PROVISION)
+@RequirePlatformPermission(
+  PlatformPermission.COMMERCIAL_ENTITLEMENT_PROVISION,
+  'organizationId',
+)
 export class CapabilityEntitlementsController {
   constructor(
     private readonly service: CapabilityEntitlementsService,

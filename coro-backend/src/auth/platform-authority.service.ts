@@ -25,6 +25,97 @@ export class PlatformAuthorityService {
     private readonly audit: AdminAuditService,
   ) {}
 
+  async resolveTargetOrganization(
+    kind:
+      | 'WORKSPACE'
+      | 'SCENARIO'
+      | 'PROPOSAL'
+      | 'PROPOSAL_REVISION'
+      | 'CONTRACT'
+      | 'CONTRACT_REVISION'
+      | 'COMPOSITION_SNAPSHOT'
+      | 'ENTITLEMENT',
+    resourceId: string,
+  ): Promise<string> {
+    let organizationId: string | null | undefined;
+    switch (kind) {
+      case 'WORKSPACE':
+        organizationId = (
+          await this.prisma.commercialSimulationWorkspace.findUnique({
+            where: { id: resourceId },
+            select: { organizationId: true },
+          })
+        )?.organizationId;
+        break;
+      case 'SCENARIO':
+        organizationId = (
+          await this.prisma.commercialSimulationScenario.findUnique({
+            where: { id: resourceId },
+            select: { workspace: { select: { organizationId: true } } },
+          })
+        )?.workspace.organizationId;
+        break;
+      case 'PROPOSAL':
+        organizationId = (
+          await this.prisma.commercialProposal.findUnique({
+            where: { id: resourceId },
+            select: { organizationId: true },
+          })
+        )?.organizationId;
+        break;
+      case 'PROPOSAL_REVISION':
+        organizationId = (
+          await this.prisma.commercialProposalRevision.findUnique({
+            where: { id: resourceId },
+            select: { proposal: { select: { organizationId: true } } },
+          })
+        )?.proposal.organizationId;
+        break;
+      case 'CONTRACT':
+        organizationId = (
+          await this.prisma.organizationContract.findUnique({
+            where: { id: resourceId },
+            select: { organizationId: true },
+          })
+        )?.organizationId;
+        break;
+      case 'CONTRACT_REVISION':
+        organizationId = (
+          await this.prisma.organizationContractRevision.findUnique({
+            where: { id: resourceId },
+            select: { contract: { select: { organizationId: true } } },
+          })
+        )?.contract.organizationId;
+        break;
+      case 'COMPOSITION_SNAPSHOT':
+        organizationId = (
+          await this.prisma.proposalDocumentCompositionSnapshot.findUnique({
+            where: { id: resourceId },
+            select: {
+              proposalRevision: {
+                select: { proposal: { select: { organizationId: true } } },
+              },
+            },
+          })
+        )?.proposalRevision.proposal.organizationId;
+        break;
+      case 'ENTITLEMENT':
+        organizationId = (
+          await this.prisma.capabilityEntitlement.findUnique({
+            where: { id: resourceId },
+            select: { organizationId: true },
+          })
+        )?.organizationId;
+        break;
+    }
+    if (!organizationId) {
+      throw new ForbiddenException(
+        'Organisation de la ressource introuvable ou ambiguÃ«.',
+      );
+    }
+    return organizationId;
+  }
+
   async requirePermission(
     actor: Actor,
     permission: PlatformPermission,

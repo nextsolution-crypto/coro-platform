@@ -43,7 +43,11 @@ type RequestWithUser = { user: { userId: string } };
 @Controller('admin/v1/commercial/simulator')
 @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
 @SuperAdminOnly()
-@RequirePlatformPermission(PlatformPermission.COMMERCIAL_WORKSPACE_MANAGE)
+@RequirePlatformPermission(
+  PlatformPermission.COMMERCIAL_WORKSPACE_MANAGE,
+  undefined,
+  { kind: 'WORKSPACE', param: 'workspaceId' },
+)
 export class CommercialSimulatorController {
   constructor(private readonly service: CommercialSimulatorService) {}
   @Get('configurator/bootstrap') configuratorBootstrap() {

@@ -12,6 +12,7 @@ describe('PlatformRolesGuard', () => {
   const authority = {
     requireFounderAuthority: jest.fn().mockResolvedValue(undefined),
     requirePermission: jest.fn().mockResolvedValue(undefined),
+    resolveTargetOrganization: jest.fn().mockResolvedValue('customer-org'),
   };
   const guard = new PlatformRolesGuard(reflector, authority as never);
 
@@ -49,6 +50,37 @@ describe('PlatformRolesGuard', () => {
     (reflector.getAllAndOverride as jest.Mock).mockReturnValueOnce(undefined);
     await expect(guard.canActivate(context(UserRole.OPERATOR))).resolves.toBe(
       true,
+    );
+  });
+  it('resolves an organization scope from the persisted resource', async () => {
+    (reflector.getAllAndOverride as jest.Mock).mockImplementation(
+      (key: string) => {
+        if (key === 'platformPermission') return 'COMMERCIAL_PROPOSAL_PREPARE';
+        if (key === 'platformTargetResource')
+          return { kind: 'PROPOSAL', param: 'proposalId' };
+        return undefined;
+      },
+    );
+    const resourceContext = {
+      getHandler: () => function handler() {},
+      getClass: () => class Controller {},
+      switchToHttp: () => ({
+        getRequest: () => ({
+          user: { userId: 'employee', role: UserRole.ADMIN },
+          params: { proposalId: 'proposal-1' },
+        }),
+      }),
+    } as unknown as ExecutionContext;
+
+    await expect(guard.canActivate(resourceContext)).resolves.toBe(true);
+    expect(authority.resolveTargetOrganization).toHaveBeenCalledWith(
+      'PROPOSAL',
+      'proposal-1',
+    );
+    expect(authority.requirePermission).toHaveBeenCalledWith(
+      { userId: 'employee', role: UserRole.ADMIN },
+      'COMMERCIAL_PROPOSAL_PREPARE',
+      'customer-org',
     );
   });
 });
