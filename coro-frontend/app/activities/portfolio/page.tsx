@@ -6,6 +6,10 @@ import { Download } from 'lucide-react';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { formatCivilDate } from '@/app/planning/time';
+// GLASS:begin — vue Liquid Glass (route bêta du registre). Hors des blocs GLASS, ce fichier est le code Legacy d'origine, inchangé.
+import { useTheme } from '@/design-system/theme/ThemeProvider';
+import PortfolioGlassView from './PortfolioGlassView';
+// GLASS:end
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
   a_faire:  { label: 'À faire',  color: '#2980B9', bg: '#EBF5FB', border: '#AED6F1' },
@@ -17,6 +21,9 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 
 export default function ActivitiesPortfolioPage() {
   const router = useRouter();
+  // GLASS:begin
+  const { ui, routeMode } = useTheme();
+  // GLASS:end
 
   const [data, setData] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
@@ -105,6 +112,47 @@ export default function ActivitiesPortfolioPage() {
 
   const uniqueTypes = Array.from(new Set(data.map(r => r.type))).filter(Boolean);
 
+  // GLASS:begin
+  // Vue Liquid Glass : uniquement si Glass est actif ET que la route est rendue en Glass (bêta activée, ou ga au registre).
+  // Sinon (Legacy, ou île Legacy tant que la bêta n'est pas activée), le rendu d'origine ci-dessous est utilisé tel quel.
+  // Chargement, filtrage, statistiques, ouverture d'un projet et téléchargement .ics restent calculés ICI, une seule fois, pour les deux rendus.
+  if (ui === 'glass' && routeMode === 'glass') {
+    return (
+      <AppLayout>
+        <PortfolioGlassView
+          loading={loading}
+          stats={{ total, done, aFaire, reporte, pct }}
+          rows={filtered.map(row => ({
+            id: row.id,
+            projectId: row.projectId,
+            clientName: row.clientName,
+            buildingName: row.buildingName,
+            label: row.customLabel || row.label,
+            duration: row.duration,
+            mode: row.mode,
+            scheduledDate: row.scheduledDate,
+            status: row.status,
+          }))}
+          search={search}
+          onSearch={setSearch}
+          clients={clients}
+          filterClient={filterClient}
+          onFilterClient={setFilterClient}
+          statusOptions={Object.entries(STATUS_CONFIG).map(([value, config]) => ({ value, label: config.label }))}
+          filterStatus={filterStatus}
+          onFilterStatus={setFilterStatus}
+          types={uniqueTypes}
+          filterType={filterType}
+          onFilterType={setFilterType}
+          statusLabels={Object.fromEntries(Object.entries(STATUS_CONFIG).map(([key, config]) => [key, config.label]))}
+          formatDate={value => formatCivilDate(value, { day: 'numeric', month: 'short', year: 'numeric' })}
+          onOpen={projectId => router.push(`/projects/${projectId}/activities`)}
+          onDownloadIcs={handleDownloadIcs}
+        />
+      </AppLayout>
+    );
+  }
+  // GLASS:end
   if (loading) return (
     <AppLayout>
       <div className="flex items-center justify-center py-24">

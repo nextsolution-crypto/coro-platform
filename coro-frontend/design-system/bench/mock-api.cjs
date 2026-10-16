@@ -1,0 +1,149 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+/**
+ * FAUX API LOCAL — OUTIL DE TEST UNIQUEMENT. Aucune donnée réelle, aucune base, aucun secret.
+ * Remplace le backend (port 3002 par défaut) pour que les pages se rendent dans le banc de validation.
+ * Les routes inconnues répondent 404 (les pages gèrent déjà ce cas via leurs `catch`).
+ */
+const http = require('node:http');
+const PORT = Number(process.env.BENCH_API_PORT || 3002);
+
+const user = { id: 'bench-user', email: 'bench@example.test', firstName: 'Alex', lastName: 'Démo', role: 'SUPER_ADMIN', organizationId: 'bench-org' };
+const project = (id, name, status, type, progress, client, building, updatedAt) => ({ id, name, status, documentType: type, progress, updatedAt, client: { id: 'c-' + id, name: client }, building: { id: 'b-' + id, name: building } });
+const projects = [
+  project('p1', 'Plan de continuité — Démo A', 'IN_PROGRESS', 'PCA', 50, 'Organisation Démo A', 'Bâtiment A', '2026-09-13T12:00:00Z'),
+  project('p2', 'Plan des mesures d’urgence', 'DRAFT', 'PMU', 0, 'Organisation Démo B', 'Bâtiment B', '2026-09-10T12:00:00Z'),
+  project('p3', 'Plan de sécurité incendie', 'REVIEW', 'PSI', 80, 'Organisation Démo A', 'Bâtiment C', '2026-08-21T12:00:00Z'),
+];
+const routes = {
+  '/api/projects': { projects },
+  '/api/projects/upcoming-updates': [],
+  // BENCH_PENDING=1 : une approbation en attente, pour mesurer l'état « urgent » de la pastille de notification.
+  '/api/projects/pending-approval': process.env.BENCH_PENDING === '1' ? [{ id: 'p1', name: 'Plan de continuité — Démo A', documentType: 'PCA', client: { name: 'Organisation Démo A' }, submittedBy: { firstName: 'Sam', lastName: 'Exemple' } }] : [],
+  '/api/activities/recurring-to-renew': [],
+  '/api/activities/upcoming': [],
+  '/api/notifications/mandate-delays': [],
+  '/api/notifications/unread-count': { count: 3 },
+  '/api/notifications': [],
+  '/api/clients': [{ id: 'c-p1', name: 'Organisation Démo A', city: 'Montréal' }, { id: 'c-p2', name: 'Organisation Démo B', city: 'Québec' }, { id: 'c-p3', name: 'Organisation Démo C', city: 'Laval' }],
+  '/api/users/me': user, '/api/auth/me': user,
+};
+
+// ───────── États simulables pour /activities/portfolio (variables d'environnement, tout désactivé par défaut) ─────────
+//  BENCH_ACTIVITIES=1   : activités fictives représentatives (statuts, modes, types, libellé long, date manquante)
+//  BENCH_FAIL_CLIENTS=1 : /api/clients répond 500 (état d'erreur)
+//  BENCH_DELAY_MS=n     : /api/clients répond après n ms (état de chargement prolongé)
+const activity = (id, label, type, status, mode, duration, scheduledDate, extra = {}) => ({ id, label, type, status, mode, duration, scheduledDate, ...extra });
+const ACTIVITIES = {
+  p1: [
+    activity('a1', 'Visite de validation du plan', 'visite_validation', 'termine', 'presentiel', '2 h', '2026-09-18'),
+    activity('a2', 'Mise à jour annuelle du plan', 'mise_a_jour', 'a_faire', 'teams', '1 h 30', '2026-10-21'),
+    activity('a3', 'Formation du personnel', 'formation', 'reporte', 'presentiel', '3 h', '2026-11-04', { customLabel: 'Formation du personnel — groupe B' }),
+  ],
+  p2: [
+    activity('a4', 'Exercice annuel avec une description volontairement très longue pour vérifier la troncature dans le tableau', 'exercice', 'a_faire', 'presentiel', '4 h', '2026-10-30'),
+    activity('a5', 'Rencontre de suivi', 'rencontre', 'fait', 'teams', '45 min', '2026-10-02'),
+  ],
+  p3: [
+    activity('a6', 'Révision du contenu', 'revision', 'annule', 'teams', '', '2026-08-12'),
+    activity('a7', 'Activité sans date prévue', 'rencontre', 'a_faire', 'presentiel', '', null),
+  ],
+};
+const delay = Number(process.env.BENCH_DELAY_MS || 0);
+
+// ───────── États simulables pour /profile/rendement (Phase 08A) ─────────
+//  BENCH_RENDEMENT=1       : données représentatives (4 mandats : marge positive, négative, montant vendu à zéro, nom très long)
+//  BENCH_FAIL_RENDEMENT=1  : /api/rendement répond 500 (le Legacy retombe sur « Aucune heure saisie »)
+//  BENCH_DELAY_MS=n        : /api/rendement répond aussi après n ms (état de chargement prolongé)
+//  La réponse dépend de la période demandée (from/to) pour vérifier le changement de période :
+//  ≤ 10 jours → un seul mandat, 12,0 h ; > 300 jours → 480,0 h ; sinon → la période « mois » (42,5 h).
+const MANDATS = [
+  { projectId: 'p1', clientName: 'Organisation Démo A', projectName: 'Plan de mesures d’urgence 2026', heures: 18.5, montantVendu: 4200, coutReel: 1850, marge: 2350, margePct: 56 },
+  { projectId: 'p2', clientName: 'Organisation Démo B', projectName: 'Plan de sécurité incendie', heures: 12, montantVendu: 2600, coutReel: 1200, marge: 1400, margePct: 54 },
+  { projectId: 'p3', clientName: 'Organisation Démo A', projectName: 'Mandat avec un nom volontairement très long pour vérifier le retour à la ligne dans le tableau et dans les cartes', heures: 8, montantVendu: 0, coutReel: 800, marge: -800, margePct: 0 },
+  { projectId: 'p4', clientName: 'Organisation Démo C', projectName: 'Plan de continuité', heures: 4, montantVendu: 1000, coutReel: 1500, marge: -500, margePct: -50 },
+];
+// Phase 09A (/dashboard/rendement, vue équipe) : même point d'accès, réponse étendue — `teamStats` partout (le Legacy de l'équipe
+// le lit dès que la réponse existe) et, en mode données, trois conseillers. Le PREMIER conseiller reste celui de la page
+// personnelle (/profile/rendement lit conseillers[0]) : ses valeurs n'ont pas changé.
+const BUDGETS = { p1: 40, p2: 0, p3: 12, p4: 0 };
+const withBudget = (m) => ({ ...m, heuresBudgetees: BUDGETS[m.projectId] ?? 0 });
+const EMPTY_TEAM = { heuresTotal: 0, revenusTotal: 0, mandatsDeficitaires: 0 };
+const OTHER_CONSEILLERS = [
+  // Nom long, un seul mandat (singulier), aucun déficit.
+  { userId: 'u2', userName: 'Jean-Philippe Tremblay-Lavoie', heuresTotal: 10, revenusTotal: 1000, mandatsCount: 1, mandatsDeficitaires: 0,
+    mandatsList: [{ projectId: 'p5', clientName: 'Organisation Démo D', projectName: 'Plan particulier d’intervention', heures: 10, heuresBudgetees: 20, montantVendu: 3000, coutReel: 1000, marge: 2000, margePct: 67 }] },
+  // Montant vendu, coût et budget à zéro : toutes les valeurs financières sont indisponibles (« — »).
+  { userId: 'u3', userName: 'Zoé Roy', heuresTotal: 2.5, revenusTotal: 0, mandatsCount: 1, mandatsDeficitaires: 0,
+    mandatsList: [{ projectId: 'p6', clientName: 'Organisation Démo B', projectName: 'Suivi sans facturation', heures: 2.5, heuresBudgetees: 0, montantVendu: 0, coutReel: 0, marge: 0, margePct: 0 }] },
+];
+function rendementBody(url) {
+  if (process.env.BENCH_RENDEMENT !== '1') return { conseillers: [], teamStats: EMPTY_TEAM };
+  const q = new URL(url, 'http://bench').searchParams;
+  const days = (Date.parse(q.get('to')) - Date.parse(q.get('from'))) / 864e5 + 1;
+  if (days <= 10) return { conseillers: [{ userId: 'u1', userName: 'Sophie Martin', heuresTotal: 12, revenusTotal: 0, mandatsCount: 1, mandatsDeficitaires: 0, mandatsList: [withBudget({ ...MANDATS[0], heures: 12, montantVendu: 0, coutReel: 0, marge: 0 })] }], teamStats: { heuresTotal: 12, revenusTotal: 0, mandatsDeficitaires: 0 } };
+  const heuresTotal = days > 300 ? 480 : 42.5;
+  const first = { userId: 'u1', userName: 'Sophie Martin', heuresTotal, revenusTotal: 7800, mandatsCount: MANDATS.length, mandatsDeficitaires: MANDATS.filter((m) => m.marge < 0).length, mandatsList: MANDATS.map(withBudget) };
+  const conseillers = [first, ...OTHER_CONSEILLERS];
+  return { conseillers, teamStats: { heuresTotal: conseillers.reduce((s, c) => s + c.heuresTotal, 0), revenusTotal: conseillers.reduce((s, c) => s + c.revenusTotal, 0), mandatsDeficitaires: conseillers.reduce((s, c) => s + c.mandatsDeficitaires, 0) } };
+}
+
+// ───────── Comptes de test LOCAUX et portée par rôle (Phase 10B) ─────────
+//  Servent uniquement à AUTO-TESTER les scripts de permissions (bench/preprod-permissions.cjs) sans backend : ils reproduisent le
+//  contrat DOCUMENTÉ de GET /rendement (un non-admin est limité à ses propres données ; seuls ADMIN et SUPER_ADMIN ciblent un
+//  utilisateur). Ce n'est PAS le backend : ils ne prouvent rien sur le vrai serveur. Mots de passe fictifs, valables ici seulement.
+//  BENCH_STRICT_AUTH=1   : jeton valide exigé (401 sinon) sur /rendement, /auth/me, /users/me, et identifiants vérifiés à la connexion.
+//  BENCH_LEAK_RENDEMENT=1 : supprime la restriction par rôle (simule un backend défaillant : le harnais DOIT alors échouer).
+const ACCOUNTS = {
+  'conseiller@bench.test': { id: 'u1', email: 'conseiller@bench.test', firstName: 'Sophie', lastName: 'Martin', role: 'CONSEILLER', organizationId: 'bench-org' },
+  'admin@bench.test': { id: 'bench-admin', email: 'admin@bench.test', firstName: 'Alex', lastName: 'Admin', role: 'ADMIN', organizationId: 'bench-org' },
+  'super@bench.test': { id: 'bench-super', email: 'super@bench.test', firstName: 'Sam', lastName: 'Super', role: 'SUPER_ADMIN', organizationId: 'bench-org' },
+};
+const BENCH_PASSWORD = 'bench-only';
+const strictAuth = process.env.BENCH_STRICT_AUTH === '1';
+const accountByToken = (header) => {
+  const m = /^Bearer bench-token:(.+)$/.exec(header || '');
+  return m ? Object.values(ACCOUNTS).find((a) => a.id === m[1]) || null : null;
+};
+function scopeRendement(body, account, queryUserId) {
+  const admin = ['ADMIN', 'SUPER_ADMIN'].includes(account.role);
+  const effective = admin ? (queryUserId || undefined) : account.id;
+  if (!effective || process.env.BENCH_LEAK_RENDEMENT === '1') return body;
+  const conseillers = body.conseillers.filter((c) => c.userId === effective);
+  const sum = (key) => conseillers.reduce((s, c) => s + c[key], 0);
+  return { conseillers, teamStats: { heuresTotal: sum('heuresTotal'), revenusTotal: sum('revenusTotal'), mandatsDeficitaires: sum('mandatsDeficitaires') } };
+}
+const readBody = (req) => new Promise((resolve) => { let b = ''; req.on('data', (c) => (b += c)); req.on('end', () => { try { resolve(JSON.parse(b || '{}')); } catch { resolve({}); } }); });
+const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
+
+http.createServer(async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.setHeader('Access-Control-Allow-Headers', '*'); res.setHeader('Access-Control-Allow-Methods', '*');
+  if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
+  const route = req.url.split('?')[0];
+  if (req.method === 'POST' && route === '/api/auth/login') {
+    const credentials = await readBody(req);
+    const account = ACCOUNTS[String(credentials.email || '').toLowerCase()];
+    if (account && credentials.password === BENCH_PASSWORD) return json(res, 200, { user: account, access_token: `bench-token:${account.id}`, refresh_token: 'bench-refresh' });
+    if (strictAuth) return json(res, 401, { message: 'bench: identifiants invalides' });
+    return json(res, 200, { user, access_token: 'bench-token', refresh_token: 'bench-refresh' });
+  }
+  const caller = accountByToken(req.headers.authorization);
+  if (strictAuth && ['/api/rendement', '/api/auth/me', '/api/users/me'].includes(route) && !caller) return json(res, 401, { message: 'bench: jeton requis' });
+  if (caller && (route === '/api/auth/me' || route === '/api/users/me')) return json(res, 200, caller);
+  const act = route.match(/^\/api\/projects\/(p\d+)\/activities$/);
+  if (act) { res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify(process.env.BENCH_ACTIVITIES === '1' ? (ACTIVITIES[act[1]] || []) : [])); }
+  if (route === '/api/clients' && process.env.BENCH_FAIL_CLIENTS === '1') { res.writeHead(500, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ message: 'bench: erreur simulée' })); }
+  if (route === '/api/clients' && delay) return setTimeout(() => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(routes[route])); }, delay);
+  if (route === '/api/rendement') {
+    if (process.env.BENCH_FAIL_RENDEMENT === '1') { res.writeHead(500, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ message: 'bench: erreur simulée' })); }
+    const send = () => {
+      const full = rendementBody(req.url);
+      const queryUserId = new URL(req.url, 'http://bench').searchParams.get('userId') || '';
+      json(res, 200, caller ? scopeRendement(full, caller, queryUserId) : full);
+    };
+    return delay ? setTimeout(send, delay) : send();
+  }
+  const body = routes[route];
+  res.writeHead(body === undefined ? 404 : 200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(body === undefined ? { message: 'bench: route non simulée' } : body));
+}).listen(PORT, () => console.log(`faux API de test sur :${PORT}`));

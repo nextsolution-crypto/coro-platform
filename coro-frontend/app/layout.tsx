@@ -3,6 +3,10 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import AuthProvider from '@/components/layout/AuthProvider';
 import 'leaflet/dist/leaflet.css';
+import '@/design-system/tokens.css';
+import '@/design-system/primitives.css';
+import { ThemeProvider } from '@/design-system/theme/ThemeProvider';
+import { ThemeInitScript } from '@/design-system/theme/ThemeInitScript';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -71,11 +75,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr">
+    <html lang="fr" data-ui="legacy" data-theme="light" suppressHydrationWarning>
+      <head>
+        <ThemeInitScript />
+      </head>
       <body className={inter.className}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

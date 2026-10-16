@@ -6,6 +6,11 @@ import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import ToastContainer from '@/components/ui/ToastContainer';
+import { useTheme } from '@/design-system/theme/ThemeProvider';
+import { createPalette } from '@/design-system/glass-palette';
+import { GlassNavIcon, GlassIcon } from '@/design-system/glass-icons';
+import { LegacyIsland } from '@/design-system/LegacyIsland';
+import { User, Timer, BarChart3 } from 'lucide-react';
 
 // ── Navigation par groupes ──────────────────────────────────
 const NAV_GROUPS = [
@@ -141,6 +146,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
   const { toasts, showToast, removeToast } = useToast();
+  // Génération d'interface : 'legacy' (défaut, rendu strictement inchangé) ou 'glass'.
+  const { ui, routeMode } = useTheme();
+  const glass = ui === 'glass';
+  const p = createPalette(glass);
+  // Glass : hauteur réelle de la barre du haut (le 57 px codé en dur du Legacy ne correspond pas à son rendu).
+  const topbarRef = useRef<HTMLDivElement>(null);
+  const [topbarH, setTopbarH] = useState(57);
+  useEffect(() => {
+    const el = topbarRef.current;
+    if (!glass || !el) return;
+    const update = () => setTopbarH(Math.round(el.getBoundingClientRect().height));
+    update();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [glass]);
+  const barH = glass ? topbarH : 57;
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -259,6 +282,56 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     };
   }, [sidebarOpen]);
 
+  // ── Glass : tiroir mobile modal (verrouillage complet, Échap, piège de focus, retour du focus) ──
+  // Les défauts corrigés ici existent aussi en Legacy (mesurés) ; ils ne sont corrigés qu'en Glass.
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const drawerMode = glass && !isDesktop;
+  const drawerOpen = drawerMode && sidebarOpen;
+  const wasDrawerOpen = useRef(false);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    // <html> a overflow-x: hidden (globals.css), donc c'est lui qui défile : body seul ne suffit pas.
+    const html = document.documentElement;
+    const previous = html.style.overflow;
+    html.style.overflow = 'hidden';
+    return () => { html.style.overflow = previous; };
+  }, [drawerOpen]);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    sidebarRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setSidebarOpen(false);
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const aside = sidebarRef.current;
+      if (!aside) return;
+      const inDrawer = Array.from(aside.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), a[href]'));
+      const cycle = [...inDrawer, toggleRef.current].filter((el): el is HTMLElement => !!el && el.getClientRects().length > 0);
+      if (cycle.length === 0) return;
+      e.preventDefault();
+      const index = cycle.indexOf(document.activeElement as HTMLElement);
+      const next = e.shiftKey
+        ? (index <= 0 ? cycle.length - 1 : index - 1)
+        : (index === -1 || index === cycle.length - 1 ? 0 : index + 1);
+      cycle[next].focus();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [drawerOpen]);
+
+  useEffect(() => {
+    if (drawerOpen) { wasDrawerOpen.current = true; return; }
+    if (wasDrawerOpen.current) {
+      wasDrawerOpen.current = false;
+      if (drawerMode) toggleRef.current?.focus();
+    }
+  }, [drawerOpen, drawerMode]);
+
   // ── Recherche globale avec debounce ──
   useEffect(() => {
     if (!searchQuery.trim()) { setSearchResults([]); setShowSearch(false); return; }
@@ -329,64 +402,77 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       ? pathname === path
       : pathname === path || pathname.startsWith(path + '/');
 
-  const NavItem = ({ item }: { item: { label: string; path: string; icon: string } }) => {
+  const renderNavItem = (item: { label: string; path: string; icon: string }) => {
     const active = isActive(item.path);
     return (
       <button
+        key={item.path}
         onClick={() => { router.push(item.path); setSidebarOpen(false); }}
-        className="w-full text-left px-3 py-2 rounded text-sm transition-colors flex items-center gap-2.5"
+        className={`w-full text-left px-3 py-2 rounded text-sm transition-colors flex items-center gap-2.5${glass ? ' min-h-[44px] lg:min-h-0' : ''}`}
         style={{
-          backgroundColor: active ? '#FDEDEC' : 'transparent',
-          color: active ? '#C0392B' : '#495057',
-          border: active ? '1px solid #F1948A' : '1px solid transparent',
+          backgroundColor: active ? p.bg('#FDEDEC') : 'transparent',
+          color: active ? p.text('#C0392B') : p.text('#495057'),
+          border: active ? `1px solid ${p.line('#F1948A')}` : '1px solid transparent',
           fontWeight: active ? '600' : '500',
+          ...(glass && active ? { boxShadow: 'inset 3px 0 0 var(--cg-accent), 0 8px 20px -12px var(--cg-glow-accent)' } : {}),
         }}
-        onMouseEnter={e => { if (!active) { e.currentTarget.style.backgroundColor = '#F8F9FA'; e.currentTarget.style.color = '#2C3E50'; } }}
-        onMouseLeave={e => { if (!active) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#495057'; } }}
+        onMouseEnter={e => { if (!active) { e.currentTarget.style.backgroundColor = p.bg('#F8F9FA'); e.currentTarget.style.color = p.text('#2C3E50'); } }}
+        onMouseLeave={e => { if (!active) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = p.text('#495057'); } }}
       >
-        <span style={{ fontSize: '14px', flexShrink: 0 }}>{item.icon}</span>
+        {glass ? <GlassNavIcon path={item.path} /> : <span style={{ fontSize: '14px', flexShrink: 0 }}>{item.icon}</span>}
         <span style={{ whiteSpace: 'nowrap' }}>{item.label}</span>
       </button>
     );
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F8F9FA' }}>
+    <div className={glass ? 'min-h-screen cg-canvas' : 'min-h-screen'} style={glass ? undefined : { backgroundColor: '#F8F9FA' }}>
 
       {/* ── Topbar ── */}
       <div
-        className="flex items-center justify-between px-3 sm:px-4 lg:px-6 py-3 sticky top-0 z-40"
+        ref={topbarRef}
+        className={`flex items-center justify-between px-3 sm:px-4 lg:px-6 py-3 sticky top-0 z-40${glass ? ' cg-chrome' : ''}`}
         style={{
-          backgroundColor: '#FFFFFF',
-          borderBottom: '1px solid #DEE2E6',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+          backgroundColor: p.bg('#FFFFFF'),
+          borderBottom: `1px solid ${p.line('#DEE2E6')}`,
+          boxShadow: glass ? undefined : '0 1px 4px rgba(0,0,0,0.06)',
         }}
       >
         <div className="flex items-center gap-2.5 min-w-0">
           <button
+            ref={toggleRef}
             type="button"
+            aria-controls={glass ? 'coro-sidebar' : undefined}
             onClick={() => setSidebarOpen(prev => !prev)}
             className="lg:hidden w-11 h-11 rounded flex items-center justify-center flex-shrink-0 transition-colors"
             style={{
-              color: '#2C3E50',
-              border: '1px solid #DEE2E6',
-              backgroundColor: '#FFFFFF',
+              color: p.text('#2C3E50'),
+              border: `1px solid ${p.line('#DEE2E6')}`,
+              backgroundColor: p.bg('#FFFFFF'),
             }}
             aria-label={sidebarOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
             aria-expanded={sidebarOpen}
           >
             <span style={{ fontSize: '20px', lineHeight: 1 }}>
-              {sidebarOpen ? '×' : '☰'}
+              {glass ? <GlassIcon name={sidebarOpen ? 'close' : 'menu'} size={22} /> : (sidebarOpen ? '×' : '☰')}
             </span>
           </button>
 
           <h1
             className="text-xl sm:text-2xl font-bold tracking-tight cursor-pointer flex-shrink-0"
-            style={{ color: '#2C3E50' }}
+            style={{ color: p.text('#2C3E50') }}
             onClick={() => router.push('/dashboard')}
           >
-            CO<span style={{ color: '#C0392B' }}>RO</span>
+            CO<span style={{ color: p.text('#C0392B') }}>RO</span>
           </h1>
+          {glass && (
+            <p
+              className="hidden lg:block text-xs font-medium uppercase leading-tight pl-3 ml-1"
+              style={{ color: 'var(--cg-text-secondary)', borderLeft: '1px solid var(--cg-border-default)', letterSpacing: '0.04em' }}
+            >
+              Bâtiments plus sûrs.<br />Organisations plus résilientes.
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-3">
@@ -394,51 +480,59 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div ref={notifRef} className="relative">
             <button
               onClick={() => setShowNotif(!showNotif)}
-              className="relative p-2 rounded transition-colors"
-              style={{ color: '#6C757D' }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+              className={`relative p-2 rounded transition-colors${glass ? ' min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 inline-flex items-center justify-center' : ''}`}
+              style={{ color: p.text('#6C757D') }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#F8F9FA')}
               onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
               title="Notifications"
             >
-              <span style={{ fontSize: '18px' }}>🔔</span>
+              {glass ? <GlassIcon name="bell" size={20} /> : <span style={{ fontSize: '18px' }}>🔔</span>}
               {totalCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-4 h-4 text-white text-xs font-bold rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: pendingApprovals.length > 0 || urgentCount > 0 ? '#C0392B' : '#F39C12', fontSize: '10px' }}>
+                  style={{
+                    backgroundColor: pendingApprovals.length > 0 || urgentCount > 0 ? p.bg('#C0392B') : p.bg('#F39C12'),
+                    fontSize: '10px',
+                    // Glass uniquement : l'état « avis » (ambre) passe en texte foncé (6,65:1 au lieu de 2,19:1 en blanc).
+                    // L'état urgent garde le blanc sur le rouge d'urgence (5,44:1). Legacy : inchangé.
+                    ...(glass && !(pendingApprovals.length > 0 || urgentCount > 0)
+                      ? { backgroundColor: 'var(--cg-notice-bg)', color: 'var(--cg-notice-fg)' }
+                      : {}),
+                  }}>
                   {totalCount}
                 </span>
               )}
             </button>
 
             {showNotif && (
-              <div className="absolute right-0 top-full mt-2 w-[calc(100vw-1.5rem)] sm:w-96 max-w-[24rem] rounded-md shadow-lg z-50"
-                style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
-                <div className="px-4 py-3" style={{ borderBottom: '1px solid #E9ECEF' }}>
-                  <p className="font-semibold text-sm" style={{ color: '#2C3E50' }}>Notifications</p>
-                  <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>Approbations et documents à renouveler</p>
+              <div className={`absolute right-0 top-full mt-2 w-[calc(100vw-1.5rem)] sm:w-96 max-w-[24rem] rounded-md shadow-lg z-50${glass ? ' cg-panel' : ''}`}
+                style={{ backgroundColor: p.panel('#FFFFFF'), border: `1px solid ${p.line('#E9ECEF')}`, boxShadow: glass ? 'var(--cg-shadow-3)' : '0 8px 24px rgba(0,0,0,0.12)' }}>
+                <div className="px-4 py-3" style={{ borderBottom: `1px solid ${p.line('#E9ECEF')}` }}>
+                  <p className="font-semibold text-sm" style={{ color: p.text('#2C3E50') }}>Notifications</p>
+                  <p className="text-xs mt-0.5" style={{ color: p.text('#ADB5BD') }}>Approbations et documents à renouveler</p>
                 </div>
                 <div className="max-h-80 overflow-y-auto">
                   {pendingApprovals.length > 0 && (
                     <div>
                       <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide"
-                        style={{ backgroundColor: '#FDEDEC', color: '#C0392B' }}>
+                        style={{ backgroundColor: p.bg('#FDEDEC'), color: p.text('#C0392B') }}>
                         ✓ Approbations en attente ({pendingApprovals.length})
                       </p>
                       {pendingApprovals.map(p => (
                         <div key={p.id}
                           onClick={() => { router.push(`/projects/${p.id}`); setShowNotif(false); }}
                           className="px-4 py-3 cursor-pointer transition-colors"
-                          style={{ borderBottom: '1px solid #F8F9FA' }}
-                          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
+                          style={{ borderBottom: `1px solid ${p.line('#F8F9FA')}` }}
+                          onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#FDEDEC')}
                           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-0.5">
-                                <span className="text-xs font-bold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: '#C0392B' }}>{p.documentType}</span>
-                                <span className="text-xs font-medium truncate" style={{ color: '#2C3E50' }}>{p.name}</span>
+                                <span className="text-xs font-bold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: p.bg('#C0392B') }}>{p.documentType}</span>
+                                <span className="text-xs font-medium truncate" style={{ color: p.text('#2C3E50') }}>{p.name}</span>
                               </div>
-                              <p className="text-xs" style={{ color: '#6C757D' }}>Soumis par {p.submittedBy?.firstName} {p.submittedBy?.lastName}</p>
+                              <p className="text-xs" style={{ color: p.text('#6C757D') }}>Soumis par {p.submittedBy?.firstName} {p.submittedBy?.lastName}</p>
                             </div>
-                            <span className="text-xs font-medium flex-shrink-0" style={{ color: '#C0392B' }}>À réviser →</span>
+                            <span className="text-xs font-medium flex-shrink-0" style={{ color: p.text('#C0392B') }}>À réviser →</span>
                           </div>
                         </div>
                       ))}
@@ -446,41 +540,41 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   )}
                   {updates.length === 0 && pendingApprovals.length === 0 ? (
                     <div className="px-4 py-6 text-center">
-                      <p className="text-sm" style={{ color: '#ADB5BD' }}>✓ Tout est à jour</p>
+                      <p className="text-sm" style={{ color: p.text('#ADB5BD') }}>✓ Tout est à jour</p>
                     </div>
                   ) : updates.map(u => (
                     <div key={u.id}
                       onClick={() => { router.push(`/projects/${u.id}`); setShowNotif(false); }}
                       className="px-4 py-3 cursor-pointer transition-colors"
-                      style={{ borderBottom: '1px solid #F8F9FA' }}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                      style={{ borderBottom: `1px solid ${p.line('#F8F9FA')}` }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#F8F9FA')}
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
                             <span className="text-xs font-bold px-1.5 py-0.5 rounded"
-                              style={{ backgroundColor: u.level === 'URGENT' ? '#FDEDEC' : '#FEF9E7', color: u.level === 'URGENT' ? '#C0392B' : '#F39C12' }}>
+                              style={{ backgroundColor: u.level === 'URGENT' ? p.bg('#FDEDEC') : p.bg('#FEF9E7'), color: u.level === 'URGENT' ? p.text('#C0392B') : p.text('#F39C12') }}>
                               {u.documentType}
                             </span>
-                            <span className="text-xs font-medium truncate" style={{ color: '#2C3E50' }}>{u.name}</span>
+                            <span className="text-xs font-medium truncate" style={{ color: p.text('#2C3E50') }}>{u.name}</span>
                           </div>
-                          <p className="text-xs truncate" style={{ color: '#6C757D' }}>{u.clientName} — {u.buildingName}</p>
+                          <p className="text-xs truncate" style={{ color: p.text('#6C757D') }}>{u.clientName} — {u.buildingName}</p>
                         </div>
                         <div className="flex-shrink-0 text-right">
-                          <p className="text-xs font-bold" style={{ color: u.level === 'URGENT' ? '#C0392B' : '#F39C12' }}>{u.monthsAgo} mois</p>
-                          <p className="text-xs" style={{ color: '#ADB5BD' }}>{u.level === 'URGENT' ? '⚠ À renouveler' : '○ Bientôt'}</p>
+                          <p className="text-xs font-bold" style={{ color: u.level === 'URGENT' ? p.text('#C0392B') : p.text('#F39C12') }}>{u.monthsAgo} mois</p>
+                          <p className="text-xs" style={{ color: p.text('#ADB5BD') }}>{u.level === 'URGENT' ? '⚠ À renouveler' : '○ Bientôt'}</p>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
-                <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderTop: '1px solid #E9ECEF' }}>
+                <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderTop: `1px solid ${p.line('#E9ECEF')}` }}>
                   <button onClick={() => { router.push('/notifications'); setShowNotif(false); }}
-                    className="text-xs font-medium" style={{ color: '#C0392B' }}>
+                    className="text-xs font-medium" style={{ color: p.text('#C0392B') }}>
                     Toutes les notifications →
                   </button>
                   <button onClick={() => { router.push('/dashboard'); setShowNotif(false); }}
-                    className="text-xs" style={{ color: '#6C757D' }}>
+                    className="text-xs" style={{ color: p.text('#6C757D') }}>
                     Tableau de bord
                   </button>
                 </div>
@@ -493,45 +587,45 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div ref={profileRef} className="relative">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="flex items-center gap-2 px-1.5 sm:px-3 py-1.5 rounded transition-colors"
+                className={`flex items-center gap-2 px-1.5 sm:px-3 py-1.5 rounded transition-colors${glass ? ' min-h-[44px] min-w-[44px] justify-center lg:min-h-0 lg:min-w-0' : ''}`}
                 style={{ border: '1px solid transparent' }}
-                onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#F8F9FA'; e.currentTarget.style.borderColor = '#DEE2E6'; }}
+                onMouseEnter={e => { e.currentTarget.style.backgroundColor = p.bg('#F8F9FA'); e.currentTarget.style.borderColor = p.line('#DEE2E6'); }}
                 onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}>
                 <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                  style={{ backgroundColor: '#C0392B' }}>
+                  style={{ backgroundColor: p.bg('#C0392B') }}>
                   {user.firstName?.[0]}{user.lastName?.[0]}
                 </div>
-                <span className="hidden md:inline text-sm font-medium" style={{ color: '#495057' }}>{user.firstName} {user.lastName}</span>
-                <span className="hidden sm:inline" style={{ color: '#ADB5BD', fontSize: '10px' }}>▼</span>
+                <span className="hidden md:inline text-sm font-medium" style={{ color: p.text('#495057') }}>{user.firstName} {user.lastName}</span>
+                <span className="hidden sm:inline" style={{ color: p.text('#ADB5BD'), fontSize: '10px' }}>{glass ? <GlassIcon name="chevron" size={14} /> : '▼'}</span>
               </button>
 
               {showProfileMenu && (
-                <div className="absolute right-0 top-full mt-2 w-56 max-w-[calc(100vw-1.5rem)] rounded-md shadow-lg z-50"
-                  style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
-                  <div className="px-4 py-3" style={{ borderBottom: '1px solid #E9ECEF' }}>
-                    <p className="text-xs font-semibold" style={{ color: '#2C3E50' }}>{user.firstName} {user.lastName}</p>
-                    <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>{user.email}</p>
+                <div className={`absolute right-0 top-full mt-2 w-56 max-w-[calc(100vw-1.5rem)] rounded-md shadow-lg z-50${glass ? ' cg-panel' : ''}`}
+                  style={{ backgroundColor: p.panel('#FFFFFF'), border: `1px solid ${p.line('#E9ECEF')}`, boxShadow: glass ? 'var(--cg-shadow-3)' : '0 8px 24px rgba(0,0,0,0.12)' }}>
+                  <div className="px-4 py-3" style={{ borderBottom: `1px solid ${p.line('#E9ECEF')}` }}>
+                    <p className="text-xs font-semibold" style={{ color: p.text('#2C3E50') }}>{user.firstName} {user.lastName}</p>
+                    <p className="text-xs mt-0.5" style={{ color: p.text('#ADB5BD') }}>{user.email}</p>
                   </div>
                   <div className="py-1">
                     {[
-                      { label: '👤 Mon profil', path: '/profile' },
-                      { label: '⏱ Mon rendement', path: '/profile/rendement' },
-                      ...((user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') ? [{ label: '📊 Rendement équipe', path: '/dashboard/rendement' }] : []),
+                      { label: '👤 Mon profil', text: 'Mon profil', Icon: User, path: '/profile' },
+                      { label: '⏱ Mon rendement', text: 'Mon rendement', Icon: Timer, path: '/profile/rendement' },
+                      ...((user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') ? [{ label: '📊 Rendement équipe', text: 'Rendement équipe', Icon: BarChart3, path: '/dashboard/rendement' }] : []),
                     ].map(item => (
                       <button key={item.path}
                         onClick={() => { router.push(item.path); setShowProfileMenu(false); }}
                         className="w-full text-left px-4 py-2 text-sm transition-colors"
-                        style={{ color: '#495057' }}
-                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                        style={{ color: p.text('#495057') }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#F8F9FA')}
                         onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                        {item.label}
+                        {glass ? <span className="flex items-center gap-2"><item.Icon size={16} strokeWidth={1.8} aria-hidden="true" />{item.text}</span> : item.label}
                       </button>
                     ))}
-                    <div style={{ borderTop: '1px solid #E9ECEF', margin: '4px 0' }} />
+                    <div style={{ borderTop: `1px solid ${p.line('#E9ECEF')}`, margin: '4px 0' }} />
                     <button onClick={() => { handleLogout(); setShowProfileMenu(false); }}
                       className="w-full text-left px-4 py-2 text-sm transition-colors"
-                      style={{ color: '#C0392B' }}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
+                      style={{ color: p.text('#C0392B') }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#FDEDEC')}
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                       Déconnexion
                     </button>
@@ -543,7 +637,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <div className="flex min-w-0 overflow-hidden">
+      <div className="flex min-w-0 overflow-hidden" style={glass ? { overflow: 'clip' } : undefined}>
         {/* ── Overlay mobile ── */}
         {sidebarOpen && (
           <button
@@ -551,20 +645,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             aria-label="Fermer le menu"
             onClick={() => setSidebarOpen(false)}
             className="fixed inset-x-0 bottom-0 top-[57px] z-40 bg-black/30 lg:hidden"
+            style={glass ? { top: barH } : undefined}
+            tabIndex={glass ? -1 : undefined}
+            aria-hidden={glass ? true : undefined}
           />
         )}
 
         {/* ── Sidebar ── */}
         <aside
           ref={sidebarRef}
-          className={`fixed lg:sticky left-0 top-[57px] z-50 lg:z-20 p-3 overflow-y-auto transition-transform duration-200 ease-out lg:translate-x-0 lg:self-start ${
+          {...(glass ? {
+            id: 'coro-sidebar',
+            'aria-label': 'Navigation principale',
+            inert: drawerMode && !sidebarOpen,
+            ...(drawerOpen ? { role: 'dialog', 'aria-modal': true, tabIndex: -1 } : {}),
+          } : {})}
+          className={`fixed lg:sticky left-0 top-[57px] z-50 lg:z-20 p-3 overflow-y-auto transition-transform duration-200 ease-out lg:translate-x-0 lg:self-start${glass ? ' cg-chrome' : ''} ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
           style={{
-            backgroundColor: '#FFFFFF',
-            borderRight: '1px solid #DEE2E6',
-            height: 'calc(100dvh - 57px)',
-            maxHeight: 'calc(100dvh - 57px)',
+            backgroundColor: p.bg('#FFFFFF'),
+            borderRight: `1px solid ${p.line('#DEE2E6')}`,
+            ...(glass ? { top: barH, overscrollBehavior: 'contain' as const, outline: 'none' } : {}),
+            height: `calc(100dvh - ${barH}px)`,
+            maxHeight: `calc(100dvh - ${barH}px)`,
             width: isDesktop ? `${sidebarWidth}px` : 'min(86vw, 320px)',
             minWidth: isDesktop ? '180px' : 'min(86vw, 320px)',
             maxWidth: isDesktop ? '400px' : '320px',
@@ -579,7 +683,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {/* Recherche globale */}
           <div ref={searchRef} className="relative mb-3">
             <div className="relative">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs" style={{ color: '#ADB5BD' }}>🔍</span>
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs" style={{ color: p.text('#ADB5BD') }}>{glass ? <GlassIcon name="search" size={14} /> : '🔍'}</span>
               <input
                 ref={searchInputRef}
                 type="text"
@@ -587,40 +691,41 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 onChange={e => setSearchQuery(e.target.value)}
                 onFocus={() => { if (searchResults.length > 0) setShowSearch(true); }}
                 placeholder="Rechercher..."
-                className="w-full pl-7 pr-3 py-2.5 text-base lg:text-xs rounded focus:outline-none"
+                className={`w-full pl-7 pr-3 py-2.5 text-base lg:text-xs rounded focus:outline-none${glass ? ' cg-input' : ''}`}
                 style={{
-                  border: '1px solid #DEE2E6',
-                  backgroundColor: '#F8F9FA',
-                  color: '#2C3E50',
+                  border: `1px solid ${p.line('#DEE2E6')}`,
+                  backgroundColor: p.bg('#F8F9FA'),
+                  color: p.text('#2C3E50'),
+                  ...(glass ? { paddingLeft: '1.75rem', paddingRight: '0.75rem' } : {}),
                 }}
-                onFocusCapture={e => e.target.style.borderColor = '#C0392B'}
-                onBlurCapture={e => e.target.style.borderColor = '#DEE2E6'}
+                onFocusCapture={e => e.target.style.borderColor = p.line('#C0392B')}
+                onBlurCapture={e => e.target.style.borderColor = p.line('#DEE2E6')}
               />
               {searchLoading && (
-                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs animate-pulse" style={{ color: '#ADB5BD' }}>⏳</span>
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs animate-pulse" style={{ color: p.text('#ADB5BD') }}>⏳</span>
               )}
             </div>
 
             {/* Résultats de recherche */}
             {showSearch && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 rounded-md shadow-lg z-50"
-                style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
+              <div className={`absolute top-full left-0 right-0 mt-1 rounded-md shadow-lg z-50${glass ? ' cg-panel' : ''}`}
+                style={{ backgroundColor: p.panel('#FFFFFF'), border: `1px solid ${p.line('#E9ECEF')}`, boxShadow: glass ? 'var(--cg-shadow-3)' : '0 8px 24px rgba(0,0,0,0.12)' }}>
                 {searchResults.map(result => (
                   <div key={`${result.type}-${result.id}`}
                     onClick={() => handleSearchSelect(result)}
                     className="flex items-center gap-2 px-3 py-2.5 cursor-pointer transition-colors"
-                    style={{ borderBottom: '1px solid #F8F9FA' }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                    style={{ borderBottom: `1px solid ${p.line('#F8F9FA')}` }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#F8F9FA')}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                     <span style={{ fontSize: '13px', flexShrink: 0 }}>{typeIcon[result.type]}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium truncate" style={{ color: '#2C3E50' }}>{result.name}</p>
+                      <p className="text-xs font-medium truncate" style={{ color: p.text('#2C3E50') }}>{result.name}</p>
                       {result.subtitle && (
-                        <p className="text-xs truncate" style={{ color: '#ADB5BD' }}>{result.subtitle}</p>
+                        <p className="text-xs truncate" style={{ color: p.text('#ADB5BD') }}>{result.subtitle}</p>
                       )}
                     </div>
                     <span className="text-xs px-1.5 py-0.5 rounded flex-shrink-0"
-                      style={{ backgroundColor: '#F8F9FA', color: '#ADB5BD' }}>
+                      style={{ backgroundColor: p.bg('#F8F9FA'), color: p.text('#ADB5BD') }}>
                       {typeLabel[result.type]}
                     </span>
                   </div>
@@ -635,46 +740,44 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <div key={gIdx}>
                 {group.label && (
                   <p className="px-3 text-xs font-semibold uppercase tracking-wide mb-1"
-                    style={{ color: '#ADB5BD' }}>
+                    style={{ color: p.text('#ADB5BD') }}>
                     {group.label}
                   </p>
                 )}
                 <div className="space-y-0.5">
-                  {group.items.map(item => (
-                    <NavItem key={item.path} item={item} />
-                  ))}
+                  {group.items.map(item => renderNavItem(item))}
                 </div>
               </div>
             ))}
 
             {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
               <div>
-                <div className="mx-1 mb-3" style={{ borderTop: '1px solid #E9ECEF' }} />
-                <p className="px-3 text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#ADB5BD' }}>
+                <div className="mx-1 mb-3" style={{ borderTop: `1px solid ${p.line('#E9ECEF')}` }} />
+                <p className="px-3 text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: p.text('#ADB5BD') }}>
                   {ADMIN_GROUP.label}
                 </p>
                 <div className="space-y-0.5">
-                  {ADMIN_GROUP.items.map(item => <NavItem key={item.path} item={item} />)}
+                  {ADMIN_GROUP.items.map(item => renderNavItem(item))}
                 </div>
               </div>
             )}
 
             {user?.role === 'SUPER_ADMIN' && (
               <div>
-                <div className="mx-1 mb-3" style={{ borderTop: '1px solid #E9ECEF' }} />
-                <p className="px-3 text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#ADB5BD' }}>
+                <div className="mx-1 mb-3" style={{ borderTop: `1px solid ${p.line('#E9ECEF')}` }} />
+                <p className="px-3 text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: p.text('#ADB5BD') }}>
                   {SUPER_ADMIN_PLATFORM_GROUP.label}
                 </p>
                 <div className="space-y-0.5">
-                  {SUPER_ADMIN_PLATFORM_GROUP.items.map(item => <NavItem key={item.path} item={item} />)}
+                  {SUPER_ADMIN_PLATFORM_GROUP.items.map(item => renderNavItem(item))}
                 </div>
                 {[SUPER_ADMIN_COMMERCIAL_GROUP, SUPER_ADMIN_COMMERCIAL_ADMIN_GROUP, SUPER_ADMIN_COMMERCIAL_ADVANCED_GROUP, SUPER_ADMIN_OTHER_GROUP].map(group => (
                   <div key={group.label} className="mt-4">
-                    <p className="px-3 text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#ADB5BD' }}>
+                    <p className="px-3 text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: p.text('#ADB5BD') }}>
                       {group.label}
                     </p>
                     <div className="space-y-0.5">
-                      {group.items.map(item => <NavItem key={item.path} item={item} />)}
+                      {group.items.map(item => renderNavItem(item))}
                     </div>
                   </div>
                 ))}
@@ -686,14 +789,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             onMouseDown={startResize}
             className="hidden lg:block absolute top-0 right-0 w-1 h-full cursor-col-resize"
             style={{ backgroundColor: 'transparent' }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#C0392B'}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#C0392B')}
             onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
           />
         </aside>
 
         {/* ── Contenu ── */}
-        <main className="flex-1 w-full min-w-0 p-4 sm:p-6 lg:p-8">
-          {children}
+        <main className="flex-1 w-full min-w-0 p-4 sm:p-6 lg:p-8" inert={drawerOpen ? true : undefined}>
+          {glass && routeMode === 'island' ? <LegacyIsland>{children}</LegacyIsland> : children}
         </main>
       </div>
       <ToastContainer toasts={toasts} removeToast={removeToast} />
