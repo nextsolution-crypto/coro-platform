@@ -33,6 +33,38 @@ backup_aws_cli() {
     aws "$@"
 }
 
+wait_for_application_ready() {
+  local container="$1" url="$2" failure_prefix="$3"
+  local timeout_seconds="${APPLICATION_READINESS_TIMEOUT_SECONDS:-120}"
+  local interval_seconds="${APPLICATION_READINESS_INTERVAL_SECONDS:-3}"
+  local started_at now curl_exit http_code restart_count
+
+  [[ "$timeout_seconds" =~ ^[1-9][0-9]*$ ]] || fail APPLICATION_READINESS_CONFIGURATION_INVALID
+  [[ "$interval_seconds" =~ ^[1-9][0-9]*$ ]] || fail APPLICATION_READINESS_CONFIGURATION_INVALID
+  started_at="$(date +%s)"
+
+  while true; do
+    [[ "$(docker inspect --format '{{.State.Running}}' "$container" 2>/dev/null)" == true ]] || fail "${failure_prefix}_CONTAINER_EXITED"
+    restart_count="$(docker inspect --format '{{.RestartCount}}' "$container" 2>/dev/null)" || fail "${failure_prefix}_CONTAINER_UNAVAILABLE"
+    [[ "$restart_count" == 0 ]] || fail "${failure_prefix}_RESTART_LOOP"
+
+    set +e
+    http_code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 10 "$url")"
+    curl_exit=$?
+    set -e
+    if [[ "$curl_exit" -eq 0 && "$http_code" =~ ^[23][0-9][0-9]$ ]]; then
+      return 0
+    fi
+    if [[ "$curl_exit" -eq 0 && ! "$http_code" =~ ^(500|502|503)$ ]]; then
+      fail "${failure_prefix}_HTTP_${http_code}"
+    fi
+
+    now="$(date +%s)"
+    (( now - started_at < timeout_seconds )) || fail "${failure_prefix}_READINESS_TIMEOUT"
+    sleep "$interval_seconds"
+  done
+}
+
 [[ "${PRODUCTION_APPROVAL:-}" == DEPLOY_PRODUCTION ]] || fail RELEASE_APPROVAL_MISSING
 [[ "${MIGRATION_COMPATIBILITY_APPROVAL:-}" == CONFIRMED_BACKWARD_COMPATIBLE ]] || fail MIGRATION_COMPATIBILITY_APPROVAL_MISSING
 [[ "${RELEASE_COMMIT:-}" =~ ^[0-9a-f]{40}$ ]] || fail RELEASE_COMMIT_INVALID
@@ -127,9 +159,9 @@ current_migration_head="$(docker compose exec -T postgres sh -ceu 'psql -U "$POS
 
 "${compose[@]}" up -d --no-build --remove-orphans || fail APPLICATION_ROLLOUT_FAILED
 docker compose exec -T postgres sh -ceu 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"' >/dev/null || fail DATABASE_HEALTH_FAILED
-curl --fail --silent --show-error --max-time 15 http://127.0.0.1:3000/ >/dev/null || fail FRONTEND_HEALTH_FAILED
-curl --fail --silent --show-error --max-time 15 http://127.0.0.1:3003/ >/dev/null || fail CLIENT_PORTAL_HEALTH_FAILED
-curl --fail --silent --show-error --max-time 15 http://127.0.0.1:3001/ >/dev/null || fail WEBSITE_HEALTH_FAILED
+wait_for_application_ready coro_frontend http://127.0.0.1:3000/ FRONTEND
+wait_for_application_ready coro_client_portal http://127.0.0.1:3003/ CLIENT_PORTAL
+wait_for_application_ready coro_website http://127.0.0.1:3001/ WEBSITE
 internal_auth_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{}' http://127.0.0.1:3002/api/auth/login)" || fail BACKEND_HEALTH_FAILED
 client_auth_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{}' http://127.0.0.1:3002/api/client-auth/login)" || fail CLIENT_AUTH_SMOKE_FAILED
 booking_guard_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 http://127.0.0.1:3002/api/planning/my-assignments)" || fail BOOKING_SMOKE_FAILED
