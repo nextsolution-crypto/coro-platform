@@ -1,0 +1,59 @@
+name: Inspect Production Read Only
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-inspection
+  cancel-in-progress: false
+
+jobs:
+  inspect-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production-inspection
+    steps:
+      - name: Configure pinned inspection SSH identity
+        env:
+          INSPECTION_SERVER_IP: ${{ secrets.INSPECTION_SERVER_IP }}
+          INSPECTION_SSH_PRIVATE_KEY: ${{ secrets.INSPECTION_SSH_PRIVATE_KEY }}
+          INSPECTION_SSH_KNOWN_HOSTS: ${{ secrets.INSPECTION_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          [[ "$INSPECTION_SERVER_IP" =~ ^[A-Za-z0-9.:-]+$ ]]
+          install -d -m 0700 "$RUNNER_TEMP/coro-inspection-ssh"
+          printf '%s\n' "$INSPECTION_SSH_PRIVATE_KEY" >"$RUNNER_TEMP/coro-inspection-ssh/key"
+          printf '%s\n' "$INSPECTION_SSH_KNOWN_HOSTS" >"$RUNNER_TEMP/coro-inspection-ssh/known_hosts"
+          chmod 0600 "$RUNNER_TEMP/coro-inspection-ssh/key" "$RUNNER_TEMP/coro-inspection-ssh/known_hosts"
+
+      - name: Execute fixed production inspection authority
+        env:
+          INSPECTION_SERVER_IP: ${{ secrets.INSPECTION_SERVER_IP }}
+        run: |
+          set -euo pipefail
+          ssh -i "$RUNNER_TEMP/coro-inspection-ssh/key" \
+            -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/coro-inspection-ssh/known_hosts" \
+            -o ClearAllForwardings=yes -o RequestTTY=no \
+            "coro-inspector@$INSPECTION_SERVER_IP" inspect \
+            >"$RUNNER_TEMP/production-inspection-report.json"
+          node -e 'const fs=require("fs");const p=process.argv[1];const r=JSON.parse(fs.readFileSync(p,"utf8"));if(r.schemaVersion!==1||!["GO","NO_GO"].includes(r.assessment))process.exit(1);if(/password|secret|token|access[_-]?key|private[_-]?key/i.test(JSON.stringify(r)))process.exit(1);' \
+            "$RUNNER_TEMP/production-inspection-report.json"
+
+      - name: Upload sanitized inspection evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-inspection-${{ github.run_id }}
+          path: ${{ runner.temp }}/production-inspection-report.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Record inspection boundary
+        if: always()
+        run: |
+          printf '%s\n' 'The remote forced command is authoritative.'
+          printf '%s\n' 'A successful SSH step does not by itself imply a GO assessment.'
