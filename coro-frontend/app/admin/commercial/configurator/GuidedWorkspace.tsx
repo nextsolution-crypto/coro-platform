@@ -19,6 +19,7 @@ import { ScenarioSidebar } from "./ScenarioSidebar";
 import { CustomerSafeReview } from "./CustomerSafeReview";
 import { ScenarioComparison } from "./ScenarioComparison";
 import { ProfessionalOfferBuilder } from "./ProfessionalOfferBuilder";
+import { ScenarioCreationDialog } from "./ScenarioCreationDialog";
 
 export function GuidedWorkspace({
   workspaceId,
@@ -60,6 +61,7 @@ export function GuidedWorkspace({
   }>();
   const [draftDirty, setDraftDirty] = useState(false);
   const [technicalMode, setTechnicalMode] = useState(false);
+  const [scenarioDialogOpen, setScenarioDialogOpen] = useState(false);
   const closePreview = useCallback(() => setPreview(undefined), []);
   const handleDirtyChange = useCallback((value: boolean) => {
     setDraftDirty(value);
@@ -139,6 +141,31 @@ export function GuidedWorkspace({
           ? apiMessage.join(" · ")
           : (apiMessage ?? "The operation could not be completed."),
       );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createScenario(name: string): Promise<string | null> {
+    if (busy) return "Une création est déjà en cours.";
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await api.post(
+        `${CONFIGURATOR_API_BASE}/workspaces/${workspaceId}/scenarios`,
+        { name },
+      );
+      await reload(response.data.id);
+      setMessage("Scenario created.");
+      setScenarioDialogOpen(false);
+      return null;
+    } catch (error) {
+      const apiMessage = (
+        error as { response?: { data?: { message?: string | string[] } } }
+      ).response?.data?.message;
+      return Array.isArray(apiMessage)
+        ? apiMessage.join(" · ")
+        : (apiMessage ?? "Le scénario n’a pas pu être créé.");
     } finally {
       setBusy(false);
     }
@@ -306,18 +333,7 @@ export function GuidedWorkspace({
             setPreview(undefined);
             setProposalResult(undefined);
           }}
-          onCreate={() => {
-            const name = window.prompt("Scenario name", "Standard");
-            if (name?.trim())
-              void action(
-                () =>
-                  api.post(
-                    `${CONFIGURATOR_API_BASE}/workspaces/${workspaceId}/scenarios`,
-                    { name: name.trim() },
-                  ),
-                "Scenario created.",
-              );
-          }}
+          onCreate={() => setScenarioDialogOpen(true)}
         />
         <main className="space-y-5">
           {(!professionalScenario || technicalMode) && (
@@ -710,6 +726,15 @@ export function GuidedWorkspace({
           )}
         </main>
       </div>
+      {scenarioDialogOpen && (
+        <ScenarioCreationDialog
+          busy={busy}
+          onCancel={() => {
+            if (!busy) setScenarioDialogOpen(false);
+          }}
+          onCreate={createScenario}
+        />
+      )}
     </div>
   );
 }
