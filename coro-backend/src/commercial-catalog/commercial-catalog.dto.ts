@@ -2,6 +2,7 @@ import {
   IsBoolean,
   IsEnum,
   IsISO8601,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -10,6 +11,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { GOVERNED_CURRENCY } from '../common/financial-currency';
 import {
   BillingPeriod,
   CapabilityLifecycle,
@@ -50,7 +52,8 @@ export class CreatePriceBookDto {
   @IsString() @Matches(/^[A-Z][A-Z0-9_]{2,63}$/) code!: string;
   @IsString() @IsNotEmpty() @MaxLength(200) name!: string;
   @IsEnum(PriceBookAudience) audience!: PriceBookAudience;
-  @IsString() @Matches(/^CAD$/) currency!: string;
+  @IsOptional() @IsString() @IsIn([GOVERNED_CURRENCY]) currency: string =
+    GOVERNED_CURRENCY;
 }
 export class UpdatePriceBookDto {
   @IsString() @IsNotEmpty() @MaxLength(200) name!: string;

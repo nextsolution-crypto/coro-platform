@@ -8,6 +8,10 @@ import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  governedCurrency,
+  governedOptionalCurrency,
+} from '../common/financial-currency';
 import { ProposalPricingEngine } from '../commercial-proposals/proposal-pricing-engine';
 import {
   CalculateScenarioDto,
@@ -432,6 +436,9 @@ export class CommercialSimulatorService {
     dto: CreateCostAssumptionVersionDto,
     actor: Actor,
   ) {
+    const currency = governedCurrency(dto.currency, {
+      defaultWhenMissing: true,
+    });
     this.validateAssumptionValues(
       'cost',
       dto.values,
@@ -448,7 +455,7 @@ export class CommercialSimulatorService {
         data: {
           setId,
           versionNumber: (latest._max.versionNumber ?? 0) + 1,
-          currency: dto.currency,
+          currency,
           methodologyCode: dto.methodologyCode,
           methodologyVersion: dto.methodologyVersion,
           createdByUserId: actor.userId,
@@ -720,6 +727,10 @@ export class CommercialSimulatorService {
     return {
       ...value,
       scopeKey: value.scopeKey ?? 'GLOBAL',
+      currency:
+        value.valueType === 'MONEY'
+          ? governedCurrency(value.currency, { defaultWhenMissing: true })
+          : governedOptionalCurrency(value.currency),
       decimalValue:
         value.decimalValue == null
           ? undefined
@@ -780,8 +791,9 @@ export class CommercialSimulatorService {
       ].filter((item) => item !== undefined).length;
       if (populated !== 1)
         throw new BadRequestException('ASSUMPTION_TYPED_VALUE_INVALID');
-      if (value.valueType === 'MONEY' && value.currency !== 'CAD')
-        throw new BadRequestException('ASSUMPTION_CURRENCY_INVALID');
+      if (value.valueType === 'MONEY')
+        governedCurrency(value.currency, { defaultWhenMissing: true });
+      else governedOptionalCurrency(value.currency);
     }
     if (kind === 'cost') {
       const compatibility = assessCostMethodologyCompatibility({
@@ -1744,6 +1756,11 @@ export class CommercialSimulatorService {
         throw new ConflictException('Scenario changed or unavailable.');
       for (const driver of dto.driverValues)
         resolveSimulatorDriver(driver.driverCode, driver.driverVersion);
+      for (const driver of dto.driverValues) {
+        if (driver.valueType === 'MONEY')
+          governedCurrency(driver.currency, { defaultWhenMissing: true });
+        else governedOptionalCurrency(driver.currency);
+      }
       await tx.commercialSimulationDriverValue.deleteMany({
         where: { scenarioId },
       });
@@ -1753,6 +1770,12 @@ export class CommercialSimulatorService {
             ...driver,
             scenarioId,
             scopeKey: driver.scopeKey ?? 'GLOBAL',
+            currency:
+              driver.valueType === 'MONEY'
+                ? governedCurrency(driver.currency, {
+                    defaultWhenMissing: true,
+                  })
+                : governedOptionalCurrency(driver.currency),
             integerValue:
               driver.integerValue == null
                 ? undefined

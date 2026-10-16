@@ -11,6 +11,10 @@ import {
 } from '@prisma/client';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  governedCurrency,
+  governedOptionalCurrency,
+} from '../common/financial-currency';
 import { StorageService } from '../storage/storage.service';
 import * as crypto from 'crypto';
 import {
@@ -834,7 +838,10 @@ export class OrganizationContractsService {
       period: d.period,
       amountMinor: d.amountMinor ? BigInt(d.amountMinor) : null,
       quantity: d.quantity ? new Prisma.Decimal(d.quantity) : null,
-      currency: d.currency,
+      currency:
+        d.amountMinor !== undefined
+          ? governedCurrency(d.currency, { defaultWhenMissing: true })
+          : governedOptionalCurrency(d.currency),
       description: d.description,
     };
   }

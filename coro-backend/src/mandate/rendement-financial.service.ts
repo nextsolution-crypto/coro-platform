@@ -9,6 +9,7 @@ import {
   WorkManagementActor,
 } from '../auth/work-management-access';
 import { PrismaService } from '../prisma/prisma.service';
+import { governedCurrency } from '../common/financial-currency';
 import {
   FinancialRendementQueryDto,
   RendementPeriodQueryDto,
@@ -338,6 +339,9 @@ export class RendementFinancialService {
     actor: FinancialActor,
   ) {
     requireTenantAdmin(actor);
+    const soldCurrency = governedCurrency(dto.soldCurrency, {
+      defaultWhenMissing: true,
+    });
     const amount = new Prisma.Decimal(dto.soldAmount);
     if (!amount.isFinite() || amount.isNegative())
       throw new ConflictException(
@@ -364,7 +368,7 @@ export class RendementFinancialService {
         },
         data: {
           soldAmountDecimal: amount,
-          soldCurrency: dto.soldCurrency,
+          soldCurrency,
           soldAt,
           soldValidatedByUserId: actor.userId,
           soldValidatedAt: new Date(),

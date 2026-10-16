@@ -9,6 +9,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { GOVERNED_CURRENCY } from '../common/financial-currency';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
@@ -32,7 +33,7 @@ export class FinancialRendementQueryDto extends RendementPeriodQueryDto {
 
 export class CreateAdvisorCostRateDto {
   @IsString() @IsNotEmpty() userId!: string;
-  @Transform(upper) @Matches(/^[A-Z]{3}$/) currency: string = 'CAD';
+  @IsIn([GOVERNED_CURRENCY]) currency: string = GOVERNED_CURRENCY;
   @Transform(trim) @Matches(/^\d+(\.\d{1,6})?$/) hourlyCost!: string;
   @Matches(/^\d{4}-\d{2}-\d{2}$/) effectiveFrom!: string;
   @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) effectiveUntil?: string | null;
@@ -46,7 +47,7 @@ export class CostRateTransitionDto {
 
 export class ValidateMandateSaleDto {
   @Transform(trim) @Matches(/^\d+(\.\d{1,2})?$/) soldAmount!: string;
-  @Transform(upper) @Matches(/^[A-Z]{3}$/) soldCurrency: string = 'CAD';
+  @IsIn([GOVERNED_CURRENCY]) soldCurrency: string = GOVERNED_CURRENCY;
   @Matches(/^\d{4}-\d{2}-\d{2}$/) soldAt!: string;
   @Transform(trim) @IsString() @IsNotEmpty() @MaxLength(1000) reason!: string;
   @IsInt() @Min(0) lockVersion!: number;

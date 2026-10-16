@@ -2,6 +2,7 @@ import { CommercialLegalFieldApplicability } from '@prisma/client';
 import {
   IsEmail,
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -10,6 +11,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { GOVERNED_CURRENCY } from '../common/financial-currency';
 
 export class UpdateLegalIssuerDraftDto {
   @IsInt() @Min(0) lockVersion!: number;
@@ -34,7 +36,8 @@ export class UpdateLegalIssuerDraftDto {
   @IsOptional() @IsString() @MaxLength(100) provincialTaxNumber?: string;
   @IsEnum(CommercialLegalFieldApplicability)
   provincialTaxApplicability!: CommercialLegalFieldApplicability;
-  @IsOptional() @Matches(/^[A-Z]{3}$/) referenceCurrency?: string;
+  @IsOptional() @IsIn([GOVERNED_CURRENCY]) referenceCurrency: string =
+    GOVERNED_CURRENCY;
   @IsOptional() @IsString() @MaxLength(300) representativeName?: string;
   @IsOptional() @IsString() @MaxLength(200) representativeTitle?: string;
   @IsOptional() @IsEmail() representativeEmail?: string;

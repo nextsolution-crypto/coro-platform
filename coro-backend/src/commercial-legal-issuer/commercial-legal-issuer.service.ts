@@ -9,6 +9,10 @@ import { Prisma } from '@prisma/client';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  GOVERNED_CURRENCY,
+  governedCurrency,
+} from '../common/financial-currency';
+import {
   LegalIssuerReasonDto,
   UpdateLegalIssuerDraftDto,
 } from './commercial-legal-issuer.dto';
@@ -49,6 +53,7 @@ export class CommercialLegalIssuerService {
         businessNumberApplicability: 'UNSPECIFIED',
         federalTaxApplicability: 'UNSPECIFIED',
         provincialTaxApplicability: 'UNSPECIFIED',
+        referenceCurrency: GOVERNED_CURRENCY,
       });
       const version = await tx.commercialLegalIssuerVersion.create({
         data: {
@@ -80,7 +85,12 @@ export class CommercialLegalIssuerService {
       const current = await this.version(tx, id);
       if (current.status !== 'DRAFT')
         throw new ConflictException('Only DRAFT issuer versions are editable.');
-      const data = this.normalize(dto);
+      const data = this.normalize({
+        ...dto,
+        referenceCurrency: governedCurrency(dto.referenceCurrency, {
+          defaultWhenMissing: true,
+        }),
+      });
       this.validateApplicability(data, false);
       const result = await tx.commercialLegalIssuerVersion.updateMany({
         where: { id, status: 'DRAFT', lockVersion: dto.lockVersion },
@@ -365,6 +375,7 @@ export class CommercialLegalIssuerService {
       throw new BadRequestException(
         'Required legal issuer fields are incomplete.',
       );
+    governedCurrency(value.referenceCurrency);
     this.validateApplicability(this.normalizedFromVersion(value), true);
   }
   private snapshotPayload(

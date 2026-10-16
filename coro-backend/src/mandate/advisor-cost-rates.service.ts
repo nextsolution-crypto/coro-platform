@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { governedCurrency } from '../common/financial-currency';
 import {
   WorkManagementActor,
   requireTenantAdmin,
@@ -43,6 +44,9 @@ export class AdvisorCostRatesService {
 
   async createDraft(dto: CreateAdvisorCostRateDto, actor: FinancialActor) {
     requireTenantAdmin(actor);
+    const currency = governedCurrency(dto.currency, {
+      defaultWhenMissing: true,
+    });
     const advisor = await this.prisma.user.findFirst({
       where: {
         id: dto.userId,
@@ -72,7 +76,7 @@ export class AdvisorCostRatesService {
           data: {
             organizationId: actor.organizationId,
             userId: advisor.id,
-            currency: dto.currency,
+            currency,
             hourlyCost,
             effectiveFrom,
             effectiveUntil,

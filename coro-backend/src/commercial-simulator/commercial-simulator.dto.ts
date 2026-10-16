@@ -16,6 +16,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { GOVERNED_CURRENCY } from '../common/financial-currency';
 
 export class CreateWorkspaceDto {
   @IsString() @Length(1, 255) title!: string;
@@ -164,7 +165,7 @@ export class DriverValueDto {
   @IsOptional() @IsString() moneyMinorValue?: string;
   @IsOptional() @IsBoolean() booleanValue?: boolean;
   @IsOptional() @IsString() textValue?: string;
-  @IsOptional() @Matches(/^[A-Z]{3}$/) currency?: string;
+  @IsOptional() @IsIn([GOVERNED_CURRENCY]) currency?: string;
   @IsOptional() @IsString() unit?: string;
   @IsOptional() @IsString() justification?: string;
 }
@@ -332,7 +333,7 @@ export class AssumptionValueDto {
   @IsOptional() @IsString() moneyMinorValue?: string;
   @IsOptional() @IsBoolean() booleanValue?: boolean;
   @IsOptional() @IsString() textValue?: string;
-  @IsOptional() @Matches(/^[A-Z]{3}$/) currency?: string;
+  @IsOptional() @IsIn([GOVERNED_CURRENCY]) currency?: string;
   @IsOptional() @IsString() unit?: string;
 }
 
@@ -343,7 +344,7 @@ export class CreateCostAssumptionSetDto {
 }
 
 export class CreateCostAssumptionVersionDto {
-  @Matches(/^[A-Z]{3}$/) currency!: string;
+  @IsOptional() @IsIn([GOVERNED_CURRENCY]) currency: string = GOVERNED_CURRENCY;
   @IsString() methodologyCode!: string;
   @IsString() methodologyVersion!: string;
   @IsArray()

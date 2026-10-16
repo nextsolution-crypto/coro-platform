@@ -3,6 +3,7 @@ import {
   ArrayUnique,
   IsArray,
   IsEnum,
+  IsIn,
   IsISO8601,
   IsInt,
   IsNotEmpty,
@@ -22,6 +23,7 @@ import {
   ContractTerritoryType,
   CommercialRevenueCategory,
 } from '@prisma/client';
+import { GOVERNED_CURRENCY } from '../common/financial-currency';
 export class AdjustmentDto {
   @IsEnum(ContractAdjustmentScope) scope!: ContractAdjustmentScope;
   @IsEnum(ContractAdjustmentType) adjustmentType!: ContractAdjustmentType;
@@ -61,7 +63,7 @@ export class CommitmentDto {
   @IsEnum(ContractCommitmentPeriod) period!: ContractCommitmentPeriod;
   @IsOptional() @IsString() @Matches(/^\d+$/) amountMinor?: string;
   @IsOptional() @IsString() @Matches(/^\d+(\.\d{1,6})?$/) quantity?: string;
-  @IsOptional() @IsString() @Matches(/^CAD$/) currency?: string;
+  @IsOptional() @IsString() @IsIn([GOVERNED_CURRENCY]) currency?: string;
   @IsOptional() @IsString() @MaxLength(2000) description?: string;
 }
 export class ContractDocumentDto {

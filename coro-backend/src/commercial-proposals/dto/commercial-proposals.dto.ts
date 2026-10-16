@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsEmail,
   IsEnum,
+  IsIn,
   IsInt,
   IsISO31661Alpha2,
   IsISO8601,
@@ -37,6 +38,7 @@ import {
   ProposalLineSource,
   TierCalculationMode,
 } from '@prisma/client';
+import { GOVERNED_CURRENCY } from '../../common/financial-currency';
 
 export class CreateProspectDto {
   @IsString() @Length(1, 100) reference!: string;
@@ -101,7 +103,7 @@ export class ProposalInputDto {
   @IsOptional() @Matches(/^\d+$/) moneyMinor?: string;
   @IsOptional() @IsBoolean() booleanValue?: boolean;
   @IsOptional() @IsString() textValue?: string;
-  @IsOptional() @IsString() currency?: string;
+  @IsOptional() @IsIn([GOVERNED_CURRENCY]) currency?: string;
   @IsOptional() @IsString() unit?: string;
   @IsString() labelFR!: string;
   @IsOptional() @IsString() labelEN?: string;
@@ -173,7 +175,7 @@ export class ProposalCommitmentDto {
   @IsEnum(ContractCommitmentPeriod) period!: ContractCommitmentPeriod;
   @IsOptional() @Matches(/^\d+$/) amountMinor?: string;
   @IsOptional() @Matches(/^\d+(\.\d{1,6})?$/) quantity?: string;
-  @IsOptional() @IsString() currency?: string;
+  @IsOptional() @IsIn([GOVERNED_CURRENCY]) currency?: string;
   @IsOptional() @IsString() unit?: string;
   @IsOptional() @IsString() description?: string;
 }
