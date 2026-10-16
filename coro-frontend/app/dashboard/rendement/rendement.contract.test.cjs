@@ -13,6 +13,9 @@ test("direction dashboard uses the governed financial projection and role gate",
   assert.match(source, /ADMIN/);
   assert.match(source, /SUPER_ADMIN/);
   assert.match(source, /Mandats incomplets/);
+  assert.match(source, /formatFinancialAmount/);
+  assert.match(source, /financialCurrencyLabel/);
+  assert.doesNotMatch(source, /currency \?\? "CAD"/);
   assert.match(source, /main-d’œuvre connue/);
 });
 

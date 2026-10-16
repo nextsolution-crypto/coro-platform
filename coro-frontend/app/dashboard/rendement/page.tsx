@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import AppLayout from "@/components/layout/AppLayout";
 import api from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
+import {
+  financialCurrencyLabel,
+  formatFinancialAmount,
+} from "./financial-money";
 
 type Total = {
   currency: string;
@@ -32,14 +36,6 @@ type FinancialResponse = {
     incompleteReasons: string[];
   }>;
 };
-
-const money = (value: string | null, currency: string | null) =>
-  value === null
-    ? "Non disponible"
-    : new Intl.NumberFormat("fr-CA", {
-        style: "currency",
-        currency: currency ?? "CAD",
-      }).format(Number(value));
 
 export default function RendementPage() {
   const router = useRouter();
@@ -134,26 +130,36 @@ export default function RendementPage() {
                 className="rounded-md border border-slate-200 bg-white p-5"
               >
                 <p className="text-xs font-semibold uppercase text-slate-500">
-                  {total.currency}
+                  {financialCurrencyLabel(total.currency)}
                 </p>
                 <dl className="mt-3 space-y-2 text-sm">
                   <div>
                     <dt className="text-slate-500">Montant vendu validé</dt>
                     <dd className="text-xl font-bold">
-                      {money(total.soldAmount, total.currency)}
+                      {formatFinancialAmount(total.soldAmount, total.currency)}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-slate-500">
                       Coût de main-d’œuvre connu
                     </dt>
-                    <dd>{money(total.knownLaborCost, total.currency)}</dd>
+                    <dd>
+                      {formatFinancialAmount(
+                        total.knownLaborCost,
+                        total.currency,
+                      )}
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-slate-500">
                       Marge des mandats complets
                     </dt>
-                    <dd>{money(total.contributionMargin, total.currency)}</dd>
+                    <dd>
+                      {formatFinancialAmount(
+                        total.contributionMargin,
+                        total.currency,
+                      )}
+                    </dd>
                   </div>
                 </dl>
               </article>
@@ -222,13 +228,19 @@ export default function RendementPage() {
                           </button>
                         </td>
                         <td className="p-3">
-                          {money(mandate.soldAmount, mandate.soldCurrency)}
+                          {formatFinancialAmount(
+                            mandate.soldAmount,
+                            mandate.soldCurrency,
+                          )}
                         </td>
                         <td className="p-3">
-                          {money(mandate.knownLaborCost, mandate.soldCurrency)}
+                          {formatFinancialAmount(
+                            mandate.knownLaborCost,
+                            mandate.soldCurrency,
+                          )}
                         </td>
                         <td className="p-3">
-                          {money(
+                          {formatFinancialAmount(
                             mandate.contributionMargin,
                             mandate.soldCurrency,
                           )}
