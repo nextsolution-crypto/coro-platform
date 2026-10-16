@@ -56,6 +56,7 @@ test('launches durable server-side work and reconciles an existing release witho
   assert.match(control, /CONCURRENT_CONTROLLER/);
   assert.match(control, /FOREIGN_RELEASE_\$\{other_state\}/);
   assert.match(control, /\$\{release_id\}\.state\.mjs/);
+  assert.match(control, /set -a\nsource "\$runtime_dir\/\$\{release_id\}\.env"\nset \+a/);
   assert.doesNotMatch(control, /ROLLBACK_APPLICATIONS/);
 });
 test('reconciliation is read-only and verifies runtime against immutable evidence', () => {

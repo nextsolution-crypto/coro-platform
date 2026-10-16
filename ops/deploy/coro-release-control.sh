@@ -79,7 +79,9 @@ set -uo pipefail
 runtime_dir="${CORO_RELEASE_RUNTIME_DIR:-/opt/coro-ops/releases/runtime}"
 state_root="${CORO_RELEASE_STATE_ROOT:-/opt/coro-ops/releases/state}"
 release_id="${RELEASE_ID:?}"
+set -a
 source "$runtime_dir/${release_id}.env"
+set +a
 patch="${runtime_dir}/${release_id}.transition.json"
 state_tool="$runtime_dir/${release_id}.state.mjs"
 node "$state_tool" transition --root "$state_root" --release-id "$release_id" --to RUNNING
