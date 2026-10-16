@@ -24,12 +24,24 @@ GRANT CONNECT ON DATABASE coro_db TO coro_inspection_reader;
 GRANT USAGE ON SCHEMA public TO coro_inspection_reader;
 GRANT SELECT ON TABLE
   public."_prisma_migrations",
-  public."PlatformAuthorityConfiguration",
-  public."PlatformPermissionGrant",
   public."Organization",
   public."User"
 TO coro_inspection_reader;
+DO $$
+BEGIN
+  IF to_regclass('public."PlatformAuthorityConfiguration"') IS NOT NULL
+     AND to_regclass('public."PlatformPermissionGrant"') IS NOT NULL THEN
+    GRANT SELECT ON TABLE
+      public."PlatformAuthorityConfiguration",
+      public."PlatformPermissionGrant"
+    TO coro_inspection_reader;
+  END IF;
+END $$;
 ```
+
+Re-run only the idempotent conditional `DO` block after migration 138 is
+deployed so the dedicated reader receives access to the new authority tables.
+If exactly one authority table exists, stop and treat the schema as inconsistent.
 
 Set the password separately using a secret-safe administrative session. Verify `SHOW default_transaction_read_only` returns `on`, a required SELECT succeeds, and an INSERT inside a fresh session is rejected.
 

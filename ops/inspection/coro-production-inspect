@@ -11,7 +11,7 @@ readonly REPORTER='/usr/local/libexec/coro/inspection-report.mjs'
 readonly REPO='/opt/coro-platform'
 readonly RELEASE_DIR='/opt/coro-ops/releases'
 readonly BACKUP_DIR='/opt/coro-ops/backups/database'
-readonly RESTORE_DIR='/opt/coro-ops/restores'
+readonly RESTORE_DIR='/opt/coro-ops/restore-drills'
 readonly LOCK_FILE='/run/lock/coro-production-deployment.lock'
 readonly BACKUP_REMOTE_CONFIG='/etc/coro-backup/spaces.env'
 
@@ -58,9 +58,12 @@ SELECT json_build_object(
   ''migrationCount'', (SELECT count(*) FROM "_prisma_migrations" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL),
   ''migrationHead'', (SELECT migration_name FROM "_prisma_migrations" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY finished_at DESC LIMIT 1),
   ''failedMigrations'', (SELECT count(*) FROM "_prisma_migrations" WHERE finished_at IS NULL OR rolled_back_at IS NOT NULL),
-  ''authority'', COALESCE((SELECT json_build_object(''status'', "status"::text, ''operatorOrganizationId'', "operatorOrganizationId", ''founderUserId'', "founderUserId") FROM "PlatformAuthorityConfiguration" WHERE "id"=''PRIMARY''), ''null''::json),
-  ''grantCount'', (SELECT count(*) FROM "PlatformPermissionGrant"),
-  ''activeCustomerGrantCount'', (SELECT count(*) FROM "PlatformPermissionGrant" g JOIN "User" u ON u.id=g."userId" JOIN "Organization" o ON o.id=u."organizationId" WHERE g."status"=''ACTIVE'' AND o."isInternal"=false),
+  ''platformAuthorityMigrationApplied'', EXISTS (SELECT 1 FROM "_prisma_migrations" WHERE migration_name=''20261024010000_platform_authority'' AND finished_at IS NOT NULL AND rolled_back_at IS NULL),
+  ''authorityTablePresent'', to_regclass(''public."PlatformAuthorityConfiguration"'') IS NOT NULL,
+  ''grantTablePresent'', to_regclass(''public."PlatformPermissionGrant"'') IS NOT NULL,
+  ''authority'', ''null''::json,
+  ''grantCount'', 0,
+  ''activeCustomerGrantCount'', 0,
   ''operator'', (SELECT json_build_object(''id'', "id", ''exists'', true, ''active'', "isActive", ''internal'', "isInternal") FROM "Organization" WHERE "id"='"'"'${CORO_OPERATOR_ORGANIZATION_ID}'"'"'),
   ''founder'', (SELECT json_build_object(''id'', "id", ''exists'', true, ''active'', "isActive", ''role'', "role"::text, ''organizationId'', "organizationId") FROM "User" WHERE "id"='"'"'${CORO_FOUNDER_USER_ID}'"'"'),
   ''activeSuperAdminCount'', (SELECT count(*) FROM "User" WHERE "role"=''SUPER_ADMIN'' AND "isActive"=true),
@@ -73,6 +76,22 @@ chmod 0600 "$work/postgres.env"
 docker exec --env-file "$work/postgres.env" coro_postgres \
   psql --no-password --username "$CORO_INSPECTION_DB_USER" --dbname "$CORO_INSPECTION_DB_NAME" \
   --tuples-only --no-align --set ON_ERROR_STOP=1 --command "$readonly_sql" >"$work/database.json" || fail DATABASE_INSPECTION_FAILED
+
+authority_schema_available="$(node -e 'const d=require(process.argv[1]);process.stdout.write(String(d.platformAuthorityMigrationApplied&&d.authorityTablePresent&&d.grantTablePresent))' "$work/database.json")" || fail DATABASE_METADATA_INVALID
+if [[ "$authority_schema_available" == 'true' ]]; then
+  authority_sql='BEGIN READ ONLY;
+SELECT json_build_object(
+  ''authority'', COALESCE((SELECT json_build_object(''status'', "status"::text, ''operatorOrganizationId'', "operatorOrganizationId", ''founderUserId'', "founderUserId") FROM "PlatformAuthorityConfiguration" WHERE "id"=''PRIMARY''), ''null''::json),
+  ''grantCount'', (SELECT count(*) FROM "PlatformPermissionGrant"),
+  ''activeCustomerGrantCount'', (SELECT count(*) FROM "PlatformPermissionGrant" g JOIN "User" u ON u.id=g."userId" JOIN "Organization" o ON o.id=u."organizationId" WHERE g."status"=''ACTIVE'' AND o."isInternal"=false)
+);
+ROLLBACK;'
+  docker exec --env-file "$work/postgres.env" coro_postgres \
+    psql --no-password --username "$CORO_INSPECTION_DB_USER" --dbname "$CORO_INSPECTION_DB_NAME" \
+    --tuples-only --no-align --set ON_ERROR_STOP=1 --command "$authority_sql" >"$work/authority.json" || fail AUTHORITY_INSPECTION_FAILED
+  node -e 'const fs=require("fs");const database=require(process.argv[1]);const authority=require(process.argv[2]);fs.writeFileSync(process.argv[1],JSON.stringify({...database,...authority}));' \
+    "$work/database.json" "$work/authority.json" || fail DATABASE_EVIDENCE_MERGE_FAILED
+fi
 
 systemctl show coro-db-backup.service coro-db-backup.timer coro-db-backup-health.service coro-db-backup-health.timer \
   --property Id,ActiveState,SubState,Result,UnitFileState,NextElapseUSecRealtime >"$work/systemd"

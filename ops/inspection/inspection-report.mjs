@@ -61,14 +61,35 @@ const authorityBindingMatches =
   db.authority?.operatorOrganizationId === db.operator?.id &&
   db.authority?.founderUserId === db.founder?.id &&
   db.founder?.organizationId === db.operator?.id;
-const platformAuthorityState = !Object.hasOwn(db, "authority")
-  ? "NOT_VERIFIED"
-  : db.authority === null
-    ? "UNCONFIGURED"
-    : ["DRAFT", "ACTIVE"].includes(db.authority?.status) &&
-        authorityBindingMatches
-      ? db.authority.status
+const prePlatformAuthorityHead =
+  db.migrationHead === "20261023010000_rendement_financial_governance";
+const platformAuthorityHead =
+  db.migrationHead === "20261024010000_platform_authority";
+const authorityTablesPresent =
+  db.authorityTablePresent === true && db.grantTablePresent === true;
+const authorityTablesAbsent =
+  db.authorityTablePresent === false && db.grantTablePresent === false;
+const schemaPhase =
+  prePlatformAuthorityHead &&
+  db.platformAuthorityMigrationApplied === false &&
+  authorityTablesAbsent
+    ? "PRE_PLATFORM_AUTHORITY"
+    : platformAuthorityHead &&
+        db.platformAuthorityMigrationApplied === true &&
+        authorityTablesPresent
+      ? "PLATFORM_AUTHORITY_AVAILABLE"
       : "INVALID";
+const platformAuthorityState =
+  schemaPhase === "INVALID"
+    ? "INVALID"
+    : !Object.hasOwn(db, "authority")
+      ? "NOT_VERIFIED"
+      : db.authority === null
+        ? "UNCONFIGURED"
+        : ["DRAFT", "ACTIVE"].includes(db.authority?.status) &&
+            authorityBindingMatches
+          ? db.authority.status
+          : "INVALID";
 
 if (
   !Object.values(containers).every(
@@ -96,6 +117,7 @@ if (
   Number(db.failedMigrations) !== 0
 )
   issues.push("MIGRATION_STATE_INVALID");
+if (schemaPhase === "INVALID") issues.push("PLATFORM_SCHEMA_INCONSISTENT");
 if (!db.operator?.exists || !db.operator.active || !db.operator.internal)
   issues.push("OPERATOR_IDENTITY_INVALID");
 if (
@@ -125,7 +147,14 @@ if (
   issues.push("REMOTE_BACKUP_INVALID");
 if (!isCurrentWithinHours(backupState.lastSuccessAt, 8))
   issues.push("REMOTE_BACKUP_STALE");
-if (!restore || restore.status !== "RESTORE_VERIFIED")
+if (
+  !restore ||
+  restore.status !== "RESTORE_VERIFIED" ||
+  !/^[a-f0-9]{64}$/.test(restore.expectedSha256 ?? "") ||
+  restore.verifiedSha256 !== restore.expectedSha256 ||
+  !restore.remoteVersionId ||
+  restore.remoteVersionId === "null"
+)
   issues.push("RESTORE_EVIDENCE_INVALID");
 if (!isCurrentWithinHours(restore?.completedAt, 45 * 24))
   issues.push("RESTORE_EVIDENCE_STALE");
@@ -199,6 +228,7 @@ const report = {
   assessment: releaseReadiness,
   inspectionExecution,
   platformAuthorityState,
+  schemaPhase,
   releaseReadiness,
   bootstrapReadiness,
   mainFreezeReadiness,

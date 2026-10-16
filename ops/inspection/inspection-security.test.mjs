@@ -46,6 +46,9 @@ function fixture(overrides = {}) {
     migrationCount: 138,
     migrationHead: "20261024010000_platform_authority",
     failedMigrations: 0,
+    platformAuthorityMigrationApplied: true,
+    authorityTablePresent: true,
+    grantTablePresent: true,
     authority: {
       status: "ACTIVE",
       operatorOrganizationId: "operator",
@@ -90,6 +93,9 @@ function fixture(overrides = {}) {
     restoreId: "restore-1",
     status: "RESTORE_VERIFIED",
     completedAt: "2026-10-16T00:00:00.000Z",
+    expectedSha256: "e".repeat(64),
+    verifiedSha256: "e".repeat(64),
+    remoteVersionId: "restore-version-1",
     ...overrides.restore,
   });
   write("latest-restore", `1 ${restore}`);
@@ -146,6 +152,7 @@ test("emits a sanitized GO report for complete coherent evidence", () => {
     assert.equal(report.assessment, "GO");
     assert.equal(report.inspectionExecution, "PASS");
     assert.equal(report.platformAuthorityState, "ACTIVE");
+    assert.equal(report.schemaPhase, "PLATFORM_AUTHORITY_AVAILABLE");
     assert.equal(report.releaseReadiness, "GO");
     assert.equal(report.bootstrapReadiness, "ALREADY_ACTIVE");
     assert.equal(report.mainFreezeReadiness, "READY");
@@ -241,6 +248,44 @@ test("fails closed for stale backup and restore evidence", () => {
   }
 });
 
+test("fails closed for invalid restore checksum evidence", () => {
+  const root = fixture({ restore: { verifiedSha256: "f".repeat(64) } });
+  try {
+    const result = run(root);
+    assert.equal(result.status, 2);
+    assert.ok(
+      JSON.parse(result.stdout).issues.includes("RESTORE_EVIDENCE_INVALID"),
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("fails closed for invalid restore VersionId evidence", () => {
+  const root = fixture({ restore: { remoteVersionId: null } });
+  try {
+    const result = run(root);
+    assert.equal(result.status, 2);
+    assert.ok(
+      JSON.parse(result.stdout).issues.includes("RESTORE_EVIDENCE_INVALID"),
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("rejects an invalid relative restore report path", () => {
+  const root = fixture();
+  fs.writeFileSync(path.join(root, "latest-restore"), "1 relative.json");
+  try {
+    const result = run(root);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /LATEST-RESTORE_PATH_INVALID/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("fails closed when durable release state disagrees with production", () => {
   const root = fixture({ releaseState: { migrationHead: "wrong" } });
   try {
@@ -311,6 +356,83 @@ test("reports UNCONFIGURED as ready for DRAFT but not ready for Main Freeze", ()
     assert.equal(report.releaseReadiness, "GO");
     assert.equal(report.bootstrapReadiness, "READY_FOR_DRAFT");
     assert.equal(report.mainFreezeReadiness, "NOT_READY");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("supports migration 137 without Platform Authority tables", () => {
+  const root = fixture({
+    database: {
+      migrationCount: 137,
+      migrationHead: "20261023010000_rendement_financial_governance",
+      platformAuthorityMigrationApplied: false,
+      authorityTablePresent: false,
+      grantTablePresent: false,
+      authority: null,
+    },
+    release: {
+      expectedMigrationHead: "20261023010000_rendement_financial_governance",
+    },
+    releaseState: {
+      migrationHead: "20261023010000_rendement_financial_governance",
+    },
+  });
+  try {
+    const result = run(root);
+    assert.equal(result.status, 0, result.stderr);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.schemaPhase, "PRE_PLATFORM_AUTHORITY");
+    assert.equal(report.platformAuthorityState, "UNCONFIGURED");
+    assert.equal(report.bootstrapReadiness, "READY_FOR_DRAFT");
+    assert.equal(report.mainFreezeReadiness, "NOT_READY");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+for (const [name, database] of [
+  [
+    "migration 138 with missing tables",
+    { authorityTablePresent: false, grantTablePresent: false },
+  ],
+  [
+    "migration 137 with unexpected tables",
+    {
+      migrationCount: 137,
+      migrationHead: "20261023010000_rendement_financial_governance",
+      platformAuthorityMigrationApplied: false,
+      authorityTablePresent: true,
+      grantTablePresent: true,
+    },
+  ],
+  ["partially present authority schema", { grantTablePresent: false }],
+  ["unknown migration head", { migrationHead: "20990101000000_unknown" }],
+]) {
+  test(`fails closed for ${name}`, () => {
+    const root = fixture({ database });
+    try {
+      const result = run(root);
+      assert.equal(result.status, 2);
+      const report = JSON.parse(result.stdout);
+      assert.equal(report.schemaPhase, "INVALID");
+      assert.equal(report.platformAuthorityState, "INVALID");
+      assert.ok(report.issues.includes("PLATFORM_SCHEMA_INCONSISTENT"));
+      assert.equal(report.releaseReadiness, "NO_GO");
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+}
+
+test("fails closed for a failed migration", () => {
+  const root = fixture({ database: { failedMigrations: 1 } });
+  try {
+    const result = run(root);
+    assert.equal(result.status, 2);
+    assert.ok(
+      JSON.parse(result.stdout).issues.includes("MIGRATION_STATE_INVALID"),
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -438,6 +560,10 @@ test("collector contract rejects arbitrary commands and uses a read-only transac
   assert.match(source, /\$#.*-eq 1.*\$1.*--forced/);
   assert.match(source, /BEGIN READ ONLY/);
   assert.match(source, /ROLLBACK;/);
+  assert.match(source, /to_regclass/);
+  assert.match(source, /authority_schema_available/);
+  assert.match(source, /\/opt\/coro-ops\/restore-drills/);
+  assert.doesNotMatch(source, /\/opt\/coro-ops\/restores/);
   assert.match(source, /docker exec --env-file/);
   assert.match(source, /sha256sum --check --status/);
   assert.doesNotMatch(source, /docker exec -e PGPASSWORD/);
@@ -471,6 +597,7 @@ test("workflow has no command input and uses the dedicated inspection identity",
   assert.match(source, /StrictHostKeyChecking=yes/);
   assert.match(source, /INSPECTION_SSH_KNOWN_HOSTS/);
   assert.match(source, /platformAuthorityState/);
+  assert.match(source, /schemaPhase/);
   assert.match(source, /mainFreezeReadiness/);
   assert.match(source, />"\$RUNNER_TEMP\/production-inspection-report\.json"/);
   assert.doesNotMatch(
