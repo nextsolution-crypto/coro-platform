@@ -30,6 +30,7 @@ const path = require("node:path");
     "ScenarioComparison.tsx",
     "CustomerSafeReview.tsx",
     "ProfessionalOfferBuilder.tsx",
+    "ScenarioCreationDialog.tsx",
   ]
     .map((file) => fs.readFileSync(path.join(__dirname, file), "utf8"))
     .join("\n");
@@ -43,6 +44,10 @@ const path = require("node:path");
   );
   const guidedWorkspace = fs.readFileSync(
     path.join(__dirname, "GuidedWorkspace.tsx"),
+    "utf8",
+  );
+  const scenarioCreationDialog = fs.readFileSync(
+    path.join(__dirname, "ScenarioCreationDialog.tsx"),
     "utf8",
   );
   const professionalBuilder = fs.readFileSync(
@@ -190,6 +195,26 @@ const path = require("node:path");
   assert.match(layout, /\/admin\/commercial\/journey/);
   assert.match(legacy, /workspace/);
   assert.match(page, /GuidedWorkspace/);
+  assert.doesNotMatch(guidedWorkspace, /window\.prompt/);
+  assert.match(guidedWorkspace, /ScenarioCreationDialog/);
+  assert.match(guidedWorkspace, /setScenarioDialogOpen\(true\)/);
+  assert.match(
+    guidedWorkspace,
+    /if \(busy\) return "Une cr.+ation est d.+j.+ en cours\."/,
+  );
+  assert.match(guidedWorkspace, /await reload\(response\.data\.id\)/);
+  assert.match(guidedWorkspace, /Le sc.+nario n.+a pas pu .+tre cr.+/);
+  assert.match(scenarioCreationDialog, /role="dialog"/);
+  assert.match(scenarioCreationDialog, /aria-modal="true"/);
+  assert.match(scenarioCreationDialog, /Nom du sc.+nario/);
+  assert.match(scenarioCreationDialog, /Le nom du sc.+nario est requis/);
+  assert.match(scenarioCreationDialog, /MAX_SCENARIO_NAME_LENGTH = 255/);
+  assert.match(scenarioCreationDialog, /event\.key === "Escape" && !busy/);
+  assert.match(scenarioCreationDialog, /event\.key !== "Tab"/);
+  assert.match(scenarioCreationDialog, /previouslyFocused\?\.focus\(\)/);
+  assert.match(scenarioCreationDialog, /if \(busy\) return/);
+  assert.match(scenarioCreationDialog, /type="submit"/);
+  assert.match(scenarioCreationDialog, /disabled=\{busy\}/);
   assert.match(page, /Configurateur d’offres/);
   assert.match(page, /Simulateur avancé \/ historique/);
   assert.match(guidedWorkspace, /Configuration guidée/);
