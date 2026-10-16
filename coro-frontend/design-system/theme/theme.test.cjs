@@ -269,6 +269,17 @@ test('repli d’accessibilité présents : transparence réduite, sans backdrop-
     'prefers-contrast: more', 'forced-colors: active']) assert.ok(css.includes(q), q);
 });
 
+test('l’écran d’initialisation d’auth (aria-busy) suit le canevas Glass, sans !important et sans toucher AuthProvider', () => {
+  const rules = parseRules(fs.readFileSync(path.join(root, 'tokens.css'), 'utf8'));
+  const hit = rules.filter((r) => r.selector.includes('aria-busy'));
+  assert.equal(hit.length, 1);
+  assert.equal(hit[0].selector, ':root[data-ui="glass"] body > div[aria-busy="true"]:empty');
+  assert.ok(hit[0].body.replace(/ /g, '').includes('background-color:var(--cg-canvas)'));
+  assert.ok(!/!important/.test(hit[0].body));
+  const auth = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'layout', 'AuthProvider.tsx'), 'utf8');
+  assert.ok(auth.includes('aria-busy="true"'));
+});
+
 test('l’urgence n’est redéfinie dans aucun thème ni repli', () => {
   const rules = parseRules(fs.readFileSync(path.join(root, 'tokens.css'), 'utf8'));
   const holders = rules.filter((r) => /--cg-emergency-/.test(r.body));

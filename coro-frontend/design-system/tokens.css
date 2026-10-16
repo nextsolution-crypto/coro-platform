@@ -253,6 +253,11 @@
   visibility: hidden;
 }
 
+/* Écran d'initialisation de l'authentification (AuthProvider : div vide, aria-busy, enfant direct de body, fond blanc Tailwind) :
+   sans cette règle, il apparaît en blanc franc en Dark pendant l'initialisation. Ciblage volontairement étroit (enfant direct de body, vide),
+   sans !important ; AuthProvider.tsx n'est pas modifié. */
+:root[data-ui="glass"] body > div[aria-busy="true"]:empty { background-color: var(--cg-canvas); }
+
 /* ───────── Replis d'accessibilité et de compatibilité ───────── */
 
 /* Transparence réduite demandée par l'utilisateur, ou navigateur sans backdrop-filter :
