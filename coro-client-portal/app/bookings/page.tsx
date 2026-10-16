@@ -48,28 +48,28 @@ const STATUS_CONFIG: Record<
   }
 > = {
   DEMANDEE: {
-    label: 'Demandée',
+    label: 'En attente de confirmation',
     color: '#2980B9',
     bg: '#EBF5FB',
     border: '#AED6F1',
     icon: '⏳',
   },
   CONFIRMEE: {
-    label: 'Confirmée',
+    label: 'Activité confirmée',
     color: '#27AE60',
     bg: '#EAFAF1',
     border: '#A9DFBF',
     icon: '✅',
   },
   REPORTEE: {
-    label: 'Reportée',
+    label: 'Modification en cours',
     color: '#F39C12',
     bg: '#FEF9E7',
     border: '#FAD7A0',
     icon: '📅',
   },
   REASSIGNEE: {
-    label: 'Réassignée',
+    label: 'Confirmation en cours',
     color: '#8E44AD',
     bg: '#F4ECF7',
     border: '#D2B4DE',
@@ -1434,10 +1434,10 @@ export default function BookingsPage() {
                         color: '#2C3E50',
                       }}
                     >
-                      {booking.assignedUser
-                        ? `${booking.assignedUser.firstName || ''} ${booking.assignedUser.lastName || ''}`.trim() ||
-                          'À confirmer'
-                        : 'À confirmer'}
+                      {booking.status === 'CONFIRMEE' ||
+                      booking.status === 'COMPLETEE'
+                        ? 'Activité confirmée'
+                        : 'Conseiller à confirmer'}
                     </p>
                   </div>
 

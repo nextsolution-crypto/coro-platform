@@ -7,6 +7,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { UsersModule } from '../users/users.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { requireJwtSecret } from './auth-security.config';
+import { MfaDeliveryService } from './mfa-delivery.service';
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { requireJwtSecret } from './auth-security.config';
     PrismaModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService],
+  providers: [AuthService, JwtStrategy, MfaDeliveryService],
+  exports: [AuthService, MfaDeliveryService],
 })
 export class AuthModule {}

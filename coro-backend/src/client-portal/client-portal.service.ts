@@ -13,6 +13,7 @@ import { ExportService } from '../export/export.service';
 import { StorageService } from '../storage/storage.service';
 import { EmailService } from './email.service';
 import { BookingsService } from '../bookings/bookings.service';
+import { toCustomerSafeBooking } from '../bookings/customer-safe-booking-projection';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PopulationService } from '../population/population.service';
 import { CreatePopulationFollowUpDto } from '../population/dto/create-population-follow-up.dto';
@@ -157,20 +158,48 @@ export class ClientPortalService {
     );
   }
 
-  async generatePopulationEvidenceReport(buildingId: string, evidenceId: string, actor: any) {
+  async generatePopulationEvidenceReport(
+    buildingId: string,
+    evidenceId: string,
+    actor: any,
+  ) {
     await this.assertBuildingAccess(buildingId, actor);
-    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_PREPARE);
-    return this.populationEvidenceReportService.generate(buildingId, actor.organizationId, evidenceId, { type: CoroActorType.CLIENT_USER, id: actor.sub! });
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_PREPARE,
+    );
+    return this.populationEvidenceReportService.generate(
+      buildingId,
+      actor.organizationId,
+      evidenceId,
+      { type: CoroActorType.CLIENT_USER, id: actor.sub! },
+    );
   }
 
-  async getPopulationEvidenceReport(buildingId: string, evidenceId: string, actor: any) {
+  async getPopulationEvidenceReport(
+    buildingId: string,
+    evidenceId: string,
+    actor: any,
+  ) {
     await this.assertBuildingAccess(buildingId, actor);
-    return this.populationEvidenceReportService.get(buildingId, actor.organizationId, evidenceId);
+    return this.populationEvidenceReportService.get(
+      buildingId,
+      actor.organizationId,
+      evidenceId,
+    );
   }
 
-  async downloadPopulationEvidenceReport(buildingId: string, evidenceId: string, actor: any) {
+  async downloadPopulationEvidenceReport(
+    buildingId: string,
+    evidenceId: string,
+    actor: any,
+  ) {
     await this.assertBuildingAccess(buildingId, actor);
-    return this.populationEvidenceReportService.download(buildingId, actor.organizationId, evidenceId);
+    return this.populationEvidenceReportService.download(
+      buildingId,
+      actor.organizationId,
+      evidenceId,
+    );
   }
 
   private async assertPopulationPermission(
@@ -1159,11 +1188,22 @@ export class ClientPortalService {
     const projectIds = projects.map((p) => p.id);
 
     return this.prisma.projectActivity.findMany({
-      where: { projectId: { in: projectIds }, organizationId, clientVisible: true },
+      where: {
+        projectId: { in: projectIds },
+        organizationId,
+        clientVisible: true,
+      },
       include: {
         bookings: {
-          where: { status: { in: ['DEMANDEE', 'CONFIRMEE', 'REPORTEE', 'REASSIGNEE'] } },
-          select: { id: true, status: true, requestedDate: true, reportedDate: true },
+          where: {
+            status: { in: ['DEMANDEE', 'CONFIRMEE', 'REPORTEE', 'REASSIGNEE'] },
+          },
+          select: {
+            id: true,
+            status: true,
+            requestedDate: true,
+            reportedDate: true,
+          },
           take: 1,
         },
         project: {
@@ -1749,15 +1789,28 @@ export class ClientPortalService {
     duration: number;
     participants?: number;
     comment?: string;
-    actor: { sub: string; clientId: string; organizationId: string; role: string; buildingIds?: string[] };
+    actor: {
+      sub: string;
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    };
   }) {
     await this.assertBookingProjectAccess(data.projectId, data.actor);
-    return this.bookingsService.createBooking(data);
+    const booking = await this.bookingsService.createBooking(data);
+    return toCustomerSafeBooking(booking);
   }
 
   async createBookingForActivity(data: {
     activityId: string;
-    actor: { sub: string; clientId: string; organizationId: string; role: string; buildingIds?: string[] };
+    actor: {
+      sub: string;
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    };
     requestedDate?: Date;
     requestedLocalDateTime?: string;
     duration: number;
@@ -1768,45 +1821,101 @@ export class ClientPortalService {
       where: { id: data.activityId, organizationId: data.actor.organizationId },
       include: { project: true },
     });
-    if (!activity || activity.project.clientId !== data.actor.clientId ||
-        (data.actor.role === 'CLIENT_MANAGER' && data.actor.buildingIds?.length &&
-          !data.actor.buildingIds.includes(activity.project.buildingId))) {
+    if (
+      !activity ||
+      activity.project.clientId !== data.actor.clientId ||
+      (data.actor.role === 'CLIENT_MANAGER' &&
+        data.actor.buildingIds?.length &&
+        !data.actor.buildingIds.includes(activity.project.buildingId))
+    ) {
       throw new ForbiddenException('Activité inaccessible');
     }
-    if (!activity.clientVisible || !activity.clientBookable || ['fait', 'termine', 'annule'].includes(activity.status)) {
+    if (
+      !activity.clientVisible ||
+      !activity.clientBookable ||
+      ['fait', 'termine', 'annule'].includes(activity.status)
+    ) {
       throw new ForbiddenException('Activité non réservable');
     }
-    return this.bookingsService.createBooking({
+    const booking = await this.bookingsService.createBooking({
       projectId: activity.projectId,
       activityId: activity.id,
       clientUserId: data.actor.sub,
-      activityType: activity.type.startsWith('exercice') ? 'exercice' :
-        activity.type.startsWith('formation') ? 'formation' :
-        activity.type === 'creation_document' ? 'revision' : 'autre',
+      activityType: activity.type.startsWith('exercice')
+        ? 'exercice'
+        : activity.type.startsWith('formation')
+          ? 'formation'
+          : activity.type === 'creation_document'
+            ? 'revision'
+            : 'autre',
       requestedDate: data.requestedDate,
       requestedLocalDateTime: data.requestedLocalDateTime,
       duration: data.duration,
       participants: data.participants,
       comment: data.comment,
     });
+    return toCustomerSafeBooking(booking);
   }
 
-  private async assertBookingProjectAccess(projectId: string, actor: { clientId: string; organizationId: string; role: string; buildingIds?: string[] }) {
-    const project = await this.getProject(projectId, actor.clientId, actor.organizationId, actor.role);
-    if (!project || (actor.role === 'CLIENT_MANAGER' && actor.buildingIds?.length && !actor.buildingIds.includes(project.buildingId))) {
+  private async assertBookingProjectAccess(
+    projectId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    const project = await this.getProject(
+      projectId,
+      actor.clientId,
+      actor.organizationId,
+      actor.role,
+    );
+    if (
+      !project ||
+      (actor.role === 'CLIENT_MANAGER' &&
+        actor.buildingIds?.length &&
+        !actor.buildingIds.includes(project.buildingId))
+    ) {
       throw new ForbiddenException('Projet inaccessible');
     }
     return project;
   }
 
-  async cancelBookingFromClient(bookingId: string, actor: { sub: string; clientId: string; organizationId: string; role: string; buildingIds?: string[] }) {
-    const booking = await this.bookingsService.getBookingForClientCancellation(bookingId, actor.sub, actor.organizationId);
+  async cancelBookingFromClient(
+    bookingId: string,
+    actor: {
+      sub: string;
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+    reason?: string,
+  ) {
+    const booking = await this.bookingsService.getBookingForClientCancellation(
+      bookingId,
+      actor.sub,
+      actor.organizationId,
+    );
     await this.assertBookingProjectAccess(booking.projectId, actor);
-    return this.bookingsService.cancelBooking(bookingId, 'client', actor.organizationId, actor.sub);
+    return this.bookingsService.cancelBooking(
+      bookingId,
+      {
+        type: 'CLIENT',
+        id: actor.sub,
+        role: actor.role,
+        organizationId: actor.organizationId,
+      },
+      reason,
+    );
   }
 
   async getBookingsForClient(clientUserId: string) {
-    return this.bookingsService.getBookingsForClient(clientUserId);
+    const bookings =
+      await this.bookingsService.getBookingsForClient(clientUserId);
+    return bookings.map(toCustomerSafeBooking);
   }
 
   // ── Historique des versions (côté portail client et côté org) ─────────────

@@ -1,13 +1,42 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+  ConflictException,
+  Optional,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { BOOKING_TRANSITIONS, OPEN_BOOKING_STATUSES, BookingStatus, effectiveBookingDate } from './booking-status';
+import {
+  BOOKING_TRANSITIONS,
+  OPEN_BOOKING_STATUSES,
+  BookingStatus,
+  effectiveBookingDate,
+} from './booking-status';
 import { Prisma } from '@prisma/client';
 import { formatBuildingDate, resolveBookingInstant } from './booking-time';
-import { SchedulingService, bookingInterval } from '../scheduling/scheduling.service';
+import {
+  SchedulingService,
+  bookingInterval,
+} from '../scheduling/scheduling.service';
+import { createCommitmentVersion } from './booking-commitment';
+import { BookingEligibilityService } from './booking-eligibility.service';
+import { toInternalBookingProjection } from './internal-booking-projection';
+
+type BookingCancellationActor = {
+  type: 'USER' | 'CLIENT';
+  id: string;
+  role: string;
+  organizationId: string;
+};
 
 @Injectable()
 export class BookingsService {
-  constructor(private prisma: PrismaService, private readonly scheduling: SchedulingService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly scheduling: SchedulingService,
+    @Optional() private readonly eligibility?: BookingEligibilityService,
+  ) {}
 
   async createBooking(data: {
     projectId: string;
@@ -29,8 +58,65 @@ export class BookingsService {
     });
     if (!project) throw new NotFoundException('Projet introuvable');
     const timeZone = project.building?.timeZone ?? 'America/Toronto';
-    const requestedDate = resolveBookingInstant({ iso: data.requestedDate, localDateTime: data.requestedLocalDateTime }, timeZone);
-    const create = async (tx: Prisma.TransactionClient | PrismaService) => {
+    const requestedDate = resolveBookingInstant(
+      { iso: data.requestedDate, localDateTime: data.requestedLocalDateTime },
+      timeZone,
+    );
+    const create = async (tx: Prisma.TransactionClient) => {
+      const eligibility =
+        this.eligibility ?? new BookingEligibilityService(this.prisma);
+      const eligible = await eligibility.resolveEligible(tx, {
+        organizationId: project.organizationId,
+        projectId: project.id,
+        activityId: data.activityId,
+      });
+      if (!eligible.length) {
+        throw new ConflictException({
+          message: 'Aucun conseiller explicitement admissible',
+          blocker: 'NO_ELIGIBLE_ADVISOR',
+        });
+      }
+      const advisorIds = [
+        ...new Set(eligible.map((item) => item.advisorUserId)),
+      ];
+      await this.scheduling.lockUsers(tx, project.organizationId, advisorIds);
+      const revalidated = await eligibility.resolveEligible(tx, {
+        organizationId: project.organizationId,
+        projectId: project.id,
+        activityId: data.activityId,
+      });
+      const requestedEnd = new Date(
+        requestedDate.getTime() + data.duration * 60_000,
+      );
+      const availability = await this.scheduling.analyzeUsers(
+        {
+          organizationId: project.organizationId,
+          userIds: revalidated.map((item) => item.advisorUserId),
+          startUtc: requestedDate,
+          endUtc: requestedEnd,
+          targetBuildingId: project.buildingId,
+        },
+        tx,
+      );
+      const ordered = [...revalidated].sort((left, right) => {
+        const leftLead = left.advisorUserId === project.userId ? 0 : 1;
+        const rightLead = right.advisorUserId === project.userId ? 0 : 1;
+        return (
+          leftLead - rightLead ||
+          left.priority - right.priority ||
+          left.advisorUserId.localeCompare(right.advisorUserId)
+        );
+      });
+      const selected = ordered.find(
+        (item) => availability.get(item.advisorUserId)?.status === 'AVAILABLE',
+      );
+      if (!selected) {
+        throw new ConflictException({
+          message: 'Aucune capacité admissible disponible',
+          blocker: 'ELIGIBLE_CAPACITY_EXHAUSTED',
+        });
+      }
+      const selectedAdvisorId = selected.advisorUserId;
       let linkedActivity: { type: string } | null = null;
       if (data.activityId) {
         const locked = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
@@ -39,41 +125,102 @@ export class BookingsService {
             AND "organizationId" = ${project.organizationId}
           FOR UPDATE
         `);
-        if (!locked.length) throw new BadRequestException('ActivitÃ© non rÃ©servable');
-        linkedActivity = await tx.projectActivity.findFirst({ where: {
-          id: data.activityId, projectId: data.projectId, organizationId: project.organizationId,
-          clientVisible: true, clientBookable: true, status: { notIn: ['fait', 'termine', 'annule'] },
-        } });
-        if (!linkedActivity) throw new BadRequestException('ActivitÃ© non rÃ©servable');
-        const open = await tx.booking.findFirst({ where: {
-          activityId: data.activityId, status: { in: OPEN_BOOKING_STATUSES },
-        } });
-        if (open) throw new ConflictException('Cette activitÃ© possÃ¨de dÃ©jÃ  une rÃ©servation ouverte');
+        if (!locked.length)
+          throw new BadRequestException('ActivitÃ© non rÃ©servable');
+        linkedActivity = await tx.projectActivity.findFirst({
+          where: {
+            id: data.activityId,
+            projectId: data.projectId,
+            organizationId: project.organizationId,
+            clientVisible: true,
+            clientBookable: true,
+            status: { notIn: ['fait', 'termine', 'annule'] },
+          },
+        });
+        if (!linkedActivity)
+          throw new BadRequestException('ActivitÃ© non rÃ©servable');
+        const open = await tx.booking.findFirst({
+          where: {
+            activityId: data.activityId,
+            status: { in: OPEN_BOOKING_STATUSES },
+          },
+        });
+        if (open)
+          throw new ConflictException(
+            'Cette activitÃ© possÃ¨de dÃ©jÃ  une rÃ©servation ouverte',
+          );
       }
-      return tx.booking.create({ data: {
-        projectId: data.projectId,
+      const booking = await tx.booking.create({
+        data: {
+          projectId: data.projectId,
+          activityId: data.activityId,
+          organizationId: project.organizationId,
+          clientUserId: data.clientUserId,
+          assignedUserId: selectedAdvisorId,
+          activityType: linkedActivity?.type ?? data.activityType,
+          requestedDate,
+          duration: data.duration,
+          participants: data.participants,
+          comment: data.comment,
+          status: 'DEMANDEE',
+        },
+      });
+      const commitment = await createCommitmentVersion(tx, {
+        bookingId: booking.id,
+        projectId: project.id,
         activityId: data.activityId,
-        organizationId: project.organizationId,
-        clientUserId: data.clientUserId,
-        assignedUserId: project.userId,
-        activityType: linkedActivity?.type ?? data.activityType,
-        requestedDate,
-        duration: data.duration,
-        participants: data.participants,
-        comment: data.comment,
-        status: 'DEMANDEE',
-        assignments: { create: { userId: project.userId, role: 'LEAD', status: 'ACCEPTED', respondedAt: new Date() } },
-      }, include: {
-        project: { include: { client: true, building: true } },
-        assignedUser: true,
-        clientUser: true,
-      } });
+        buildingId: project.buildingId,
+        advisorId: selectedAdvisorId,
+        startAt: requestedDate,
+        durationMinutes: data.duration,
+        changeType: 'INITIAL_REQUEST',
+        proposedByActorType: 'CLIENT',
+        proposedByActorId: data.clientUserId,
+        customerRequested: true,
+      });
+      await tx.bookingAssignment.create({
+        data: {
+          bookingId: booking.id,
+          userId: selectedAdvisorId,
+          role: 'LEAD',
+          status: 'PENDING',
+          commitmentVersionId: commitment.id,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          clientUserId: data.clientUserId,
+          organizationId: project.organizationId,
+          projectId: project.id,
+          action: 'BOOKING_REQUESTED',
+          entityType: 'Booking',
+          entityId: booking.id,
+          description: 'Demande de réservation créée et capacité retenue.',
+          metadata: {
+            activityId: data.activityId ?? null,
+            commitmentVersionId: commitment.id,
+            advisorEligibilityId: selected.id,
+            holdStatus: 'HELD',
+          },
+        },
+      });
+      return tx.booking.update({
+        where: { id: booking.id },
+        data: {
+          pendingCommitmentVersionId: commitment.id,
+          commitmentLockVersion: { increment: 1 },
+        },
+        include: {
+          project: { include: { client: true, building: true } },
+          assignedUser: true,
+          clientUser: true,
+          pendingCommitmentVersion: true,
+        },
+      });
     };
-    const booking = data.activityId
-      ? await this.prisma.$transaction(tx => create(tx), {
-          isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
-        })
-      : await create(this.prisma);
+    const booking = await this.prisma.$transaction((tx) => create(tx), {
+      isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+    });
     // Notifier le conseiller par courriel
     await this.sendBookingEmail({
       to: booking.assignedUser.email,
@@ -99,38 +246,79 @@ export class BookingsService {
   }
 
   async getBookingsForProject(projectId: string, organizationId: string) {
-    const project = await this.prisma.project.findFirst({ where: { id: projectId, organizationId } });
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, organizationId },
+    });
     if (!project) throw new NotFoundException('Projet introuvable');
     return this.prisma.booking.findMany({
       where: { projectId, organizationId },
       include: {
-        clientUser: { select: { firstName: true, lastName: true, email: true } },
-        assignedUser: { select: { firstName: true, lastName: true, email: true } },
+        clientUser: {
+          select: { firstName: true, lastName: true, email: true },
+        },
+        assignedUser: {
+          select: { firstName: true, lastName: true, email: true },
+        },
       },
       orderBy: { requestedDate: 'asc' },
     });
   }
 
-  async getBookingsForOrganization(organizationId: string, actor: { userId: string; role: string }) {
-    if (!['ADMIN', 'SUPER_ADMIN', 'OPERATOR'].includes(actor?.role)) throw new ForbiddenException('Accès interdit');
-    return this.prisma.booking.findMany({
-      where: { organizationId, ...(actor.role === 'OPERATOR' ? { OR: [
-        { project: { userId: actor.userId } },
-        { assignedUserId: actor.userId },
-        { assignments: { some: { userId: actor.userId, status: { in: ['PENDING', 'ACCEPTED'] } } } },
-      ] } : {}) },
+  async getBookingsForOrganization(
+    organizationId: string,
+    actor: { userId: string; role: string },
+  ) {
+    if (!['ADMIN', 'SUPER_ADMIN', 'OPERATOR'].includes(actor?.role))
+      throw new ForbiddenException('Accès interdit');
+    const bookings = await this.prisma.booking.findMany({
+      where: {
+        organizationId,
+        ...(actor.role === 'OPERATOR'
+          ? {
+              OR: [
+                { project: { userId: actor.userId } },
+                { assignedUserId: actor.userId },
+                {
+                  assignments: {
+                    some: {
+                      userId: actor.userId,
+                      status: { in: ['PENDING', 'ACCEPTED'] },
+                    },
+                  },
+                },
+              ],
+            }
+          : {}),
+      },
       include: {
         project: { include: { client: true, building: true } },
-        clientUser: { select: { firstName: true, lastName: true, email: true } },
-        assignedUser: { select: { firstName: true, lastName: true, email: true } },
+        clientUser: {
+          select: { firstName: true, lastName: true, email: true },
+        },
+        assignedUser: {
+          select: { firstName: true, lastName: true, email: true },
+        },
         assignments: {
           where: { status: { in: ['PENDING', 'ACCEPTED'] } },
-          include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } },
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+            commitmentVersion: true,
+          },
           orderBy: { assignedAt: 'asc' },
         },
       },
       orderBy: { requestedDate: 'asc' },
     });
+    return bookings.map((booking) =>
+      toInternalBookingProjection(booking, actor.userId),
+    );
   }
 
   async getBookingsForClient(clientUserId: string) {
@@ -138,26 +326,210 @@ export class BookingsService {
       where: { clientUserId },
       include: {
         project: { include: { client: true, building: true } },
-        assignedUser: { select: { firstName: true, lastName: true, email: true } },
+        assignedUser: {
+          select: { firstName: true, lastName: true, email: true },
+        },
       },
       orderBy: { requestedDate: 'asc' },
     });
   }
 
-  async getBookingForClientCancellation(bookingId: string, clientUserId: string, organizationId: string) {
-    const booking = await this.prisma.booking.findFirst({ where: { id: bookingId, clientUserId, organizationId }, select: { projectId: true } });
+  async getBookingForClientCancellation(
+    bookingId: string,
+    clientUserId: string,
+    organizationId: string,
+  ) {
+    const booking = await this.prisma.booking.findFirst({
+      where: { id: bookingId, clientUserId, organizationId },
+      select: { projectId: true },
+    });
     if (!booking) throw new NotFoundException('Réservation introuvable');
     return booking;
   }
 
-  async updateBookingStatus(bookingId: string, data: {
-    status: string;
-    refuseReason?: string;
-    reportedDate?: Date;
-    reportedLocalDateTime?: string;
-    newUserId?: string;
-    allowConflict?: boolean;
-  }, organizationId: string, actor?: { userId: string; role: string }) {
+  private async proposeCommitmentChange(
+    bookingId: string,
+    organizationId: string,
+    input: {
+      changeType: 'REASSIGNMENT' | 'RESCHEDULE';
+      advisorId?: string;
+      startAt?: Date;
+    },
+    actor: { userId: string; role: string },
+  ) {
+    if (!['ADMIN', 'SUPER_ADMIN'].includes(actor.role)) {
+      throw new ForbiddenException(
+        'Modification d’engagement réservée aux administrateurs',
+      );
+    }
+    return this.prisma.$transaction(
+      async (tx) => {
+        await this.scheduling.lockBooking(tx, organizationId, bookingId);
+        const booking = await tx.booking.findFirst({
+          where: { id: bookingId, organizationId },
+          include: {
+            project: { include: { building: true } },
+            pendingCommitmentVersion: true,
+          },
+        });
+        if (!booking) throw new NotFoundException('Réservation introuvable');
+        if (!OPEN_BOOKING_STATUSES.includes(booking.status as BookingStatus)) {
+          throw new BadRequestException(
+            'Cette réservation ne peut plus être modifiée',
+          );
+        }
+        const advisorId = input.advisorId ?? booking.assignedUserId;
+        await this.scheduling.lockUsers(tx, organizationId, [advisorId]);
+        const advisor = await tx.user.findFirst({
+          where: { id: advisorId, organizationId, isActive: true },
+        });
+        if (!advisor) throw new BadRequestException('Conseiller invalide');
+        const startAt = input.startAt ?? effectiveBookingDate(booking);
+        const endAt = new Date(startAt.getTime() + booking.duration * 60_000);
+        const availability = await this.scheduling.analyzeUser(
+          {
+            organizationId,
+            userId: advisorId,
+            startUtc: startAt,
+            endUtc: endAt,
+            excludeBookingId: bookingId,
+            targetBuildingId: booking.project.buildingId,
+          },
+          tx,
+        );
+        if (availability.status === 'BLOCKED') {
+          throw new BadRequestException({
+            message: 'Conflit confirmé pour la proposition',
+            availabilityStatus: availability.status,
+            conflicts: availability.conflicts,
+            warnings: availability.warnings,
+          });
+        }
+        if (booking.pendingCommitmentVersion) {
+          await tx.bookingCommitmentVersion.update({
+            where: { id: booking.pendingCommitmentVersion.id },
+            data: { status: 'SUPERSEDED', supersededAt: new Date() },
+          });
+          await tx.bookingAssignment.updateMany({
+            where: {
+              bookingId,
+              commitmentVersionId: booking.pendingCommitmentVersion.id,
+              status: 'PENDING',
+            },
+            data: { status: 'REPLACED', endedAt: new Date() },
+          });
+        }
+        const commitment = await createCommitmentVersion(tx, {
+          bookingId,
+          projectId: booking.projectId,
+          activityId: booking.activityId,
+          buildingId: booking.project.buildingId,
+          advisorId,
+          startAt,
+          durationMinutes: booking.duration,
+          changeType: input.changeType,
+          proposedByActorType: 'USER',
+          proposedByActorId: actor.userId,
+        });
+        const assignment = await tx.bookingAssignment.create({
+          data: {
+            bookingId,
+            userId: advisorId,
+            role: 'LEAD',
+            status: 'PENDING',
+            assignedByUserId: actor.userId,
+            commitmentVersionId: commitment.id,
+          },
+        });
+        await tx.booking.update({
+          where: { id: bookingId },
+          data: {
+            pendingCommitmentVersionId: commitment.id,
+            commitmentLockVersion: { increment: 1 },
+          },
+        });
+        await tx.auditLog.create({
+          data: {
+            action:
+              input.changeType === 'RESCHEDULE'
+                ? 'BOOKING_RESCHEDULE_PROPOSED'
+                : 'BOOKING_REASSIGNMENT_PROPOSED',
+            entityType: 'Booking',
+            entityId: bookingId,
+            projectId: booking.projectId,
+            description:
+              'Nouvelle version d’engagement proposée; l’engagement confirmé demeure inchangé.',
+            metadata: {
+              commitmentVersionId: commitment.id,
+              canonicalFingerprint: commitment.canonicalFingerprint,
+              assignmentId: assignment.id,
+              previousCommitmentVersionId: booking.currentCommitmentVersionId,
+            },
+            userId: actor.userId,
+            organizationId,
+          },
+        });
+        return tx.booking.findUniqueOrThrow({
+          where: { id: bookingId },
+          include: {
+            pendingCommitmentVersion: true,
+            currentCommitmentVersion: true,
+          },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
+  }
+
+  async updateBookingStatus(
+    bookingId: string,
+    data: {
+      status: string;
+      refuseReason?: string;
+      reportedDate?: Date;
+      reportedLocalDateTime?: string;
+      newUserId?: string;
+      allowConflict?: boolean;
+    },
+    organizationId: string,
+    actor?: { userId: string; role: string },
+  ) {
+    if (data.status === 'CONFIRMEE') {
+      const scoped = await this.prisma.booking.findFirst({
+        where: { id: bookingId, organizationId },
+      });
+      if (!scoped) throw new NotFoundException('Réservation introuvable');
+      throw new BadRequestException(
+        'La confirmation exige l’acceptation personnelle du conseiller',
+      );
+    }
+    if (data.status === 'REASSIGNEE' && data.newUserId) {
+      if (!actor) throw new ForbiddenException('Acteur authentifié requis');
+      return this.proposeCommitmentChange(
+        bookingId,
+        organizationId,
+        { changeType: 'REASSIGNMENT', advisorId: data.newUserId },
+        actor,
+      );
+    }
+    if (data.status === 'REPORTEE') {
+      if (!actor) throw new ForbiddenException('Acteur authentifié requis');
+      const scoped = await this.prisma.booking.findFirst({
+        where: { id: bookingId, organizationId },
+        include: { project: { include: { building: true } } },
+      });
+      if (!scoped) throw new NotFoundException('Réservation introuvable');
+      const startAt = resolveBookingInstant(
+        { iso: data.reportedDate, localDateTime: data.reportedLocalDateTime },
+        scoped.project.building?.timeZone ?? 'America/Toronto',
+      );
+      return this.proposeCommitmentChange(
+        bookingId,
+        organizationId,
+        { changeType: 'RESCHEDULE', startAt },
+        actor,
+      );
+    }
     let booking = await this.prisma.booking.findFirst({
       where: { id: bookingId, organizationId },
       include: {
@@ -168,60 +540,126 @@ export class BookingsService {
     });
     if (!booking) throw new NotFoundException('Réservation introuvable');
     const timeZone = booking.project.building?.timeZone ?? 'America/Toronto';
-    const reportedDate = data.status === 'REPORTEE'
-      ? resolveBookingInstant({ iso: data.reportedDate, localDateTime: data.reportedLocalDateTime }, timeZone)
-      : undefined;
+    const reportedDate =
+      data.status === 'REPORTEE'
+        ? resolveBookingInstant(
+            {
+              iso: data.reportedDate,
+              localDateTime: data.reportedLocalDateTime,
+            },
+            timeZone,
+          )
+        : undefined;
 
-    if (!(data.status in BOOKING_TRANSITIONS) || !BOOKING_TRANSITIONS[booking.status as BookingStatus]?.includes(data.status as BookingStatus)) {
+    if (
+      !(data.status in BOOKING_TRANSITIONS) ||
+      !BOOKING_TRANSITIONS[booking.status as BookingStatus]?.includes(
+        data.status as BookingStatus,
+      )
+    ) {
       throw new BadRequestException('Transition de réservation non autorisée');
     }
-    if (data.status !== 'REPORTEE' && (data.reportedDate || data.reportedLocalDateTime)) throw new BadRequestException('Date de report non permise');
-    if (data.status === 'REASSIGNEE' && !data.newUserId) throw new BadRequestException('Conseiller requis');
-    if (data.newUserId && data.status !== 'REASSIGNEE') throw new BadRequestException('Conseiller seulement permis pour une réassignation');
-    if (data.status === 'REFUSEE' && !data.refuseReason?.trim()) throw new BadRequestException('Motif de refus requis');
+    if (
+      data.status !== 'REPORTEE' &&
+      (data.reportedDate || data.reportedLocalDateTime)
+    )
+      throw new BadRequestException('Date de report non permise');
+    if (data.status === 'REASSIGNEE' && !data.newUserId)
+      throw new BadRequestException('Conseiller requis');
+    if (data.newUserId && data.status !== 'REASSIGNEE')
+      throw new BadRequestException(
+        'Conseiller seulement permis pour une réassignation',
+      );
+    if (data.status === 'REFUSEE' && !data.refuseReason?.trim())
+      throw new BadRequestException('Motif de refus requis');
     if (data.newUserId) {
-      const user = await this.prisma.user.findFirst({ where: { id: data.newUserId, organizationId, isActive: true } });
+      const user = await this.prisma.user.findFirst({
+        where: { id: data.newUserId, organizationId, isActive: true },
+      });
       if (!user) throw new BadRequestException('Conseiller invalide');
     }
-    if (data.status === 'REASSIGNEE' && actor?.role !== 'ADMIN' && actor?.role !== 'SUPER_ADMIN') {
-      throw new ForbiddenException('Réassignation réservée aux administrateurs');
+    if (
+      data.status === 'REASSIGNEE' &&
+      actor?.role !== 'ADMIN' &&
+      actor?.role !== 'SUPER_ADMIN'
+    ) {
+      throw new ForbiddenException(
+        'Réassignation réservée aux administrateurs',
+      );
     }
-    if (data.allowConflict && actor?.role !== 'ADMIN' && actor?.role !== 'SUPER_ADMIN') {
+    if (
+      data.allowConflict &&
+      actor?.role !== 'ADMIN' &&
+      actor?.role !== 'SUPER_ADMIN'
+    ) {
       throw new ForbiddenException('Override réservé aux administrateurs');
     }
 
     let schedulingWarnings: string[] = [];
     let overriddenUserIds: string[] = [];
     if (data.status === 'CONFIRMEE' || data.status === 'REPORTEE') {
-      const interval = bookingInterval({ ...booking, reportedDate: reportedDate ?? booking.reportedDate });
-      const assignments = await this.prisma.bookingAssignment.findMany({ where: { bookingId,
-        status: { in: ['ACCEPTED', 'PENDING'] } }, select: { userId: true, status: true } });
-      const userIds = [...new Set(assignments.map(a => a.userId))];
-      const analyses = await this.scheduling.analyzeUsers({ organizationId, userIds, startUtc: interval.startUtc,
-        endUtc: interval.endUtc, excludeBookingId: bookingId, targetBuildingId: booking.project.buildingId });
+      const interval = bookingInterval({
+        ...booking,
+        reportedDate: reportedDate ?? booking.reportedDate,
+      });
+      const assignments = await this.prisma.bookingAssignment.findMany({
+        where: { bookingId, status: { in: ['ACCEPTED', 'PENDING'] } },
+        select: { userId: true, status: true },
+      });
+      const userIds = [...new Set(assignments.map((a) => a.userId))];
+      const analyses = await this.scheduling.analyzeUsers({
+        organizationId,
+        userIds,
+        startUtc: interval.startUtc,
+        endUtc: interval.endUtc,
+        excludeBookingId: bookingId,
+        targetBuildingId: booking.project.buildingId,
+      });
       for (const assignment of assignments) {
         const analysis = analyses.get(assignment.userId);
         if (!analysis) continue;
         if (assignment.status === 'ACCEPTED' && analysis.status === 'BLOCKED') {
-          if (!data.allowConflict) throw new BadRequestException({ message: 'Conflit confirmé sur une affectation acceptée',
-            availabilityStatus: 'BLOCKED', userId: assignment.userId, conflicts: analysis.conflicts, warnings: analysis.warnings });
+          if (!data.allowConflict)
+            throw new BadRequestException({
+              message: 'Conflit confirmé sur une affectation acceptée',
+              availabilityStatus: 'BLOCKED',
+              userId: assignment.userId,
+              conflicts: analysis.conflicts,
+              warnings: analysis.warnings,
+            });
           overriddenUserIds.push(assignment.userId);
         }
         schedulingWarnings.push(...analysis.warnings);
-        if (analysis.conflicts.length) schedulingWarnings.push(`${assignment.userId} : ${analysis.conflicts.map(c => c.reason).join(', ')}`);
+        if (analysis.conflicts.length)
+          schedulingWarnings.push(
+            `${assignment.userId} : ${analysis.conflicts.map((c) => c.reason).join(', ')}`,
+          );
       }
     }
     if (data.status === 'REASSIGNEE' && data.newUserId) {
       const interval = bookingInterval(booking);
-      const analysis = await this.scheduling.analyzeUser({ organizationId, userId: data.newUserId,
-        startUtc: interval.startUtc, endUtc: interval.endUtc, excludeBookingId: bookingId,
-        targetBuildingId: booking.project.buildingId });
-      if (analysis.status === 'BLOCKED' && !data.allowConflict) throw new BadRequestException({
-        message: 'Conflit confirmé pour le remplaçant', availabilityStatus: 'BLOCKED',
-        userId: data.newUserId, conflicts: analysis.conflicts, warnings: analysis.warnings });
+      const analysis = await this.scheduling.analyzeUser({
+        organizationId,
+        userId: data.newUserId,
+        startUtc: interval.startUtc,
+        endUtc: interval.endUtc,
+        excludeBookingId: bookingId,
+        targetBuildingId: booking.project.buildingId,
+      });
+      if (analysis.status === 'BLOCKED' && !data.allowConflict)
+        throw new BadRequestException({
+          message: 'Conflit confirmé pour le remplaçant',
+          availabilityStatus: 'BLOCKED',
+          userId: data.newUserId,
+          conflicts: analysis.conflicts,
+          warnings: analysis.warnings,
+        });
       if (analysis.status === 'BLOCKED') overriddenUserIds.push(data.newUserId);
       schedulingWarnings.push(...analysis.warnings);
-      if (analysis.conflicts.length) schedulingWarnings.push(`${data.newUserId} : ${analysis.conflicts.map(c => c.reason).join(', ')}`);
+      if (analysis.conflicts.length)
+        schedulingWarnings.push(
+          `${data.newUserId} : ${analysis.conflicts.map((c) => c.reason).join(', ')}`,
+        );
     }
 
     const updateData: any = { status: data.status };
@@ -236,91 +674,198 @@ export class BookingsService {
     } as const;
     const recordOverride = async (tx: Prisma.TransactionClient) => {
       if (!overriddenUserIds.length || !actor) return;
-      await tx.notification.create({ data: {
-        userId: actor.userId, organizationId, projectId: booking!.projectId,
-        type: 'BOOKING_SCHEDULING_OVERRIDE', title: 'Conflit Booking contourné',
-        message: `Booking ${bookingId} : conflit confirmé contourné pour ${overriddenUserIds.join(', ')} par ${actor.userId}`,
-      } });
+      await tx.notification.create({
+        data: {
+          userId: actor.userId,
+          organizationId,
+          projectId: booking!.projectId,
+          type: 'BOOKING_SCHEDULING_OVERRIDE',
+          title: 'Conflit Booking contourné',
+          message: `Booking ${bookingId} : conflit confirmé contourné pour ${overriddenUserIds.join(', ')} par ${actor.userId}`,
+        },
+      });
     };
     const recheckScheduling = async (tx: Prisma.TransactionClient) => {
       await this.scheduling.lockBooking(tx, organizationId, bookingId);
-      const current = await tx.booking.findFirst({ where: { id: bookingId, organizationId }, include });
+      const current = await tx.booking.findFirst({
+        where: { id: bookingId, organizationId },
+        include,
+      });
       if (!current) throw new NotFoundException('Réservation introuvable');
-      if (!BOOKING_TRANSITIONS[current.status as BookingStatus]?.includes(data.status as BookingStatus)) {
-        throw new BadRequestException('Transition de réservation non autorisée');
+      if (
+        !BOOKING_TRANSITIONS[current.status as BookingStatus]?.includes(
+          data.status as BookingStatus,
+        )
+      ) {
+        throw new BadRequestException(
+          'Transition de réservation non autorisée',
+        );
       }
       booking = current;
       schedulingWarnings = [];
       overriddenUserIds = [];
       if (data.status === 'CONFIRMEE' || data.status === 'REPORTEE') {
-        const assignments = await tx.bookingAssignment.findMany({ where: { bookingId,
-          status: { in: ['ACCEPTED', 'PENDING'] } }, select: { userId: true, status: true } });
-        const userIds = [...new Set(assignments.map(a => a.userId))];
+        const assignments = await tx.bookingAssignment.findMany({
+          where: { bookingId, status: { in: ['ACCEPTED', 'PENDING'] } },
+          select: { userId: true, status: true },
+        });
+        const userIds = [...new Set(assignments.map((a) => a.userId))];
         await this.scheduling.lockUsers(tx, organizationId, userIds);
-        const interval = bookingInterval({ ...current, reportedDate: reportedDate ?? current.reportedDate });
-        const analyses = await this.scheduling.analyzeUsers({ organizationId, userIds, startUtc: interval.startUtc,
-          endUtc: interval.endUtc, excludeBookingId: bookingId, targetBuildingId: current.project.buildingId }, tx);
+        const interval = bookingInterval({
+          ...current,
+          reportedDate: reportedDate ?? current.reportedDate,
+        });
+        const analyses = await this.scheduling.analyzeUsers(
+          {
+            organizationId,
+            userIds,
+            startUtc: interval.startUtc,
+            endUtc: interval.endUtc,
+            excludeBookingId: bookingId,
+            targetBuildingId: current.project.buildingId,
+          },
+          tx,
+        );
         for (const assignment of assignments) {
           const analysis = analyses.get(assignment.userId);
           if (!analysis) continue;
-          if (assignment.status === 'ACCEPTED' && analysis.status === 'BLOCKED') {
-            if (!data.allowConflict) throw new BadRequestException({ message: 'Conflit confirmé sur une affectation acceptée',
-              availabilityStatus: 'BLOCKED', userId: assignment.userId, conflicts: analysis.conflicts, warnings: analysis.warnings });
+          if (
+            assignment.status === 'ACCEPTED' &&
+            analysis.status === 'BLOCKED'
+          ) {
+            if (!data.allowConflict)
+              throw new BadRequestException({
+                message: 'Conflit confirmé sur une affectation acceptée',
+                availabilityStatus: 'BLOCKED',
+                userId: assignment.userId,
+                conflicts: analysis.conflicts,
+                warnings: analysis.warnings,
+              });
             overriddenUserIds.push(assignment.userId);
           }
           schedulingWarnings.push(...analysis.warnings);
-          if (analysis.conflicts.length) schedulingWarnings.push(`${assignment.userId} : ${analysis.conflicts.map(c => c.reason).join(', ')}`);
+          if (analysis.conflicts.length)
+            schedulingWarnings.push(
+              `${assignment.userId} : ${analysis.conflicts.map((c) => c.reason).join(', ')}`,
+            );
         }
       } else if (data.status === 'REASSIGNEE' && data.newUserId) {
         await this.scheduling.lockUsers(tx, organizationId, [data.newUserId]);
         const interval = bookingInterval(current);
-        const analysis = await this.scheduling.analyzeUser({ organizationId, userId: data.newUserId,
-          startUtc: interval.startUtc, endUtc: interval.endUtc, excludeBookingId: bookingId,
-          targetBuildingId: current.project.buildingId }, tx);
-        if (analysis.status === 'BLOCKED' && !data.allowConflict) throw new BadRequestException({
-          message: 'Conflit confirmé pour le remplaçant', availabilityStatus: 'BLOCKED',
-          userId: data.newUserId, conflicts: analysis.conflicts, warnings: analysis.warnings });
-        if (analysis.status === 'BLOCKED') overriddenUserIds.push(data.newUserId);
+        const analysis = await this.scheduling.analyzeUser(
+          {
+            organizationId,
+            userId: data.newUserId,
+            startUtc: interval.startUtc,
+            endUtc: interval.endUtc,
+            excludeBookingId: bookingId,
+            targetBuildingId: current.project.buildingId,
+          },
+          tx,
+        );
+        if (analysis.status === 'BLOCKED' && !data.allowConflict)
+          throw new BadRequestException({
+            message: 'Conflit confirmé pour le remplaçant',
+            availabilityStatus: 'BLOCKED',
+            userId: data.newUserId,
+            conflicts: analysis.conflicts,
+            warnings: analysis.warnings,
+          });
+        if (analysis.status === 'BLOCKED')
+          overriddenUserIds.push(data.newUserId);
         schedulingWarnings.push(...analysis.warnings);
-        if (analysis.conflicts.length) schedulingWarnings.push(`${data.newUserId} : ${analysis.conflicts.map(c => c.reason).join(', ')}`);
+        if (analysis.conflicts.length)
+          schedulingWarnings.push(
+            `${data.newUserId} : ${analysis.conflicts.map((c) => c.reason).join(', ')}`,
+          );
       }
       return current;
     };
-    const updated = data.status === 'REASSIGNEE' && data.newUserId
-      ? await this.prisma.$transaction(async tx => {
-          await recheckScheduling(tx);
-          const previous = await tx.bookingAssignment.findFirst({ where: { bookingId, role: 'LEAD', status: { in: ['PENDING', 'ACCEPTED'] } } });
-          if (previous?.userId === data.newUserId) throw new BadRequestException('Conseiller déjà affecté');
-          const now = new Date();
-          if (previous) await tx.bookingAssignment.update({ where: { id: previous.id }, data: { status: 'REPLACED', endedAt: now } });
-          const next = await tx.bookingAssignment.create({ data: {
-            bookingId, userId: data.newUserId!, role: 'LEAD', status: 'ACCEPTED',
-            assignedAt: now, respondedAt: now, assignedByUserId: actor?.userId,
-          } });
-          if (previous) await tx.bookingAssignment.update({ where: { id: previous.id }, data: { replacedByAssignmentId: next.id } });
-          const result = await tx.booking.update({ where: { id: bookingId }, data: updateData, include });
-          await recordOverride(tx);
-          return result;
-        }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted })
-      : (data.status === 'CONFIRMEE' || data.status === 'REPORTEE')
-        ? await this.prisma.$transaction(async tx => {
-            const current = await recheckScheduling(tx);
-            const result = await tx.booking.update({ where: { id: bookingId }, data: updateData, include });
-            if (current.activityId) {
-              const effectiveDate = effectiveBookingDate(result);
-              await tx.projectActivity.update({ where: { id: current.activityId }, data: {
-                scheduledDate: effectiveDate,
-                ...(data.status === 'REPORTEE' ? { reportedDate: effectiveDate } : {}),
-              } });
-            }
-            await recordOverride(tx);
-            return result;
-          }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted })
-        : await this.prisma.booking.update({ where: { id: bookingId }, data: updateData, include });
+    const updated =
+      data.status === 'REASSIGNEE' && data.newUserId
+        ? await this.prisma.$transaction(
+            async (tx) => {
+              await recheckScheduling(tx);
+              const previous = await tx.bookingAssignment.findFirst({
+                where: {
+                  bookingId,
+                  role: 'LEAD',
+                  status: { in: ['PENDING', 'ACCEPTED'] },
+                },
+              });
+              if (previous?.userId === data.newUserId)
+                throw new BadRequestException('Conseiller déjà affecté');
+              const now = new Date();
+              if (previous)
+                await tx.bookingAssignment.update({
+                  where: { id: previous.id },
+                  data: { status: 'REPLACED', endedAt: now },
+                });
+              const next = await tx.bookingAssignment.create({
+                data: {
+                  bookingId,
+                  userId: data.newUserId!,
+                  role: 'LEAD',
+                  status: 'PENDING',
+                  assignedAt: now,
+                  assignedByUserId: actor?.userId,
+                },
+              });
+              if (previous)
+                await tx.bookingAssignment.update({
+                  where: { id: previous.id },
+                  data: { replacedByAssignmentId: next.id },
+                });
+              const result = await tx.booking.update({
+                where: { id: bookingId },
+                data: updateData,
+                include,
+              });
+              await recordOverride(tx);
+              return result;
+            },
+            { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+          )
+        : data.status === 'CONFIRMEE' || data.status === 'REPORTEE'
+          ? await this.prisma.$transaction(
+              async (tx) => {
+                const current = await recheckScheduling(tx);
+                const result = await tx.booking.update({
+                  where: { id: bookingId },
+                  data: updateData,
+                  include,
+                });
+                if (current.activityId) {
+                  const effectiveDate = effectiveBookingDate(result);
+                  await tx.projectActivity.update({
+                    where: { id: current.activityId },
+                    data: {
+                      scheduledDate: effectiveDate,
+                      ...(data.status === 'REPORTEE'
+                        ? { reportedDate: effectiveDate }
+                        : {}),
+                    },
+                  });
+                }
+                await recordOverride(tx);
+                return result;
+              },
+              {
+                isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+              },
+            )
+          : await this.prisma.booking.update({
+              where: { id: bookingId },
+              data: updateData,
+              include,
+            });
 
     // Notifier le client selon le statut
     const actLabel = this.activityLabel(booking.activityType);
-    const dateLabel = formatBuildingDate(effectiveBookingDate(booking), timeZone);
+    const dateLabel = formatBuildingDate(
+      effectiveBookingDate(booking),
+      timeZone,
+    );
 
     if (data.status === 'CONFIRMEE') {
       const icsContent = this.generateIcs({
@@ -352,7 +897,10 @@ export class BookingsService {
           </div>
           <p style="color:#6C757D;font-size:13px;">Vous recevrez un rappel 7 jours et 24 heures avant la date.</p>
         `,
-        ics: { content: icsContent, filename: `reservation-${actLabel.replace(/[^a-z0-9]/gi, '-')}.ics` },
+        ics: {
+          content: icsContent,
+          filename: `reservation-${actLabel.replace(/[^a-z0-9]/gi, '-')}.ics`,
+        },
       });
 
       // Envoyer au conseiller aussi
@@ -370,7 +918,10 @@ export class BookingsService {
             <p style="margin:0;"><strong>Projet :</strong> ${booking.project.name}</p>
           </div>
         `,
-        ics: { content: icsContent, filename: `reservation-${actLabel.replace(/[^a-z0-9]/gi, '-')}.ics` },
+        ics: {
+          content: icsContent,
+          filename: `reservation-${actLabel.replace(/[^a-z0-9]/gi, '-')}.ics`,
+        },
       });
     } else if (data.status === 'REFUSEE') {
       await this.sendBookingEmail({
@@ -416,7 +967,10 @@ export class BookingsService {
             <p style="margin:0;color:#F39C12;font-weight:700;"><strong>Nouvelle date :</strong> ${newDateLabel}</p>
           </div>
         `,
-        ics: { content: icsReport, filename: `reservation-reportee-${actLabel.replace(/[^a-z0-9]/gi, '-')}.ics` },
+        ics: {
+          content: icsReport,
+          filename: `reservation-reportee-${actLabel.replace(/[^a-z0-9]/gi, '-')}.ics`,
+        },
       });
 
       await this.sendBookingEmail({
@@ -432,10 +986,15 @@ export class BookingsService {
             <p style="margin:8px 0 0;"><strong>Client :</strong> ${booking.clientUser.firstName} ${booking.clientUser.lastName}</p>
           </div>
         `,
-        ics: { content: icsReport, filename: `reservation-reportee-${actLabel.replace(/[^a-z0-9]/gi, '-')}.ics` },
+        ics: {
+          content: icsReport,
+          filename: `reservation-reportee-${actLabel.replace(/[^a-z0-9]/gi, '-')}.ics`,
+        },
       });
     } else if (data.status === 'REASSIGNEE' && data.newUserId) {
-      const newUser = await this.prisma.user.findUnique({ where: { id: data.newUserId } });
+      const newUser = await this.prisma.user.findUnique({
+        where: { id: data.newUserId },
+      });
       if (newUser) {
         await this.sendBookingEmail({
           to: booking.clientUser.email,
@@ -456,34 +1015,125 @@ export class BookingsService {
     return { ...updated, schedulingWarnings };
   }
 
-  async cancelBooking(bookingId: string, cancelledBy: 'client' | 'conseiller', organizationId: string, clientUserId?: string) {
+  async cancelBooking(
+    bookingId: string,
+    actor: BookingCancellationActor,
+    reason?: string,
+  ) {
+    const normalizedReason = reason?.trim() || undefined;
     const booking = await this.prisma.booking.findFirst({
-      where: { id: bookingId, organizationId, ...(clientUserId ? { clientUserId } : {}) },
-      include: { clientUser: true, assignedUser: true, project: { include: { building: true } } },
+      where: {
+        id: bookingId,
+        organizationId: actor.organizationId,
+        ...(actor.type === 'CLIENT' ? { clientUserId: actor.id } : {}),
+      },
+      include: {
+        clientUser: true,
+        assignedUser: true,
+        project: { include: { building: true } },
+      },
     });
     if (!booking) throw new NotFoundException('Réservation introuvable');
-    if (!BOOKING_TRANSITIONS[booking.status as BookingStatus]?.includes('ANNULEE')) throw new BadRequestException('Annulation non autorisée');
+    if (
+      !BOOKING_TRANSITIONS[booking.status as BookingStatus]?.includes('ANNULEE')
+    )
+      throw new BadRequestException('Annulation non autorisée');
 
-    await this.prisma.booking.update({
-      where: { id: bookingId },
-      data: { status: 'ANNULEE' },
-    });
+    await this.prisma.$transaction(
+      async (tx) => {
+        await this.scheduling.lockBooking(tx, actor.organizationId, bookingId);
+        const current = await tx.booking.findFirst({
+          where: {
+            id: bookingId,
+            organizationId: actor.organizationId,
+            ...(actor.type === 'CLIENT' ? { clientUserId: actor.id } : {}),
+          },
+        });
+        if (
+          !current ||
+          !BOOKING_TRANSITIONS[current.status as BookingStatus]?.includes(
+            'ANNULEE',
+          )
+        ) {
+          throw new BadRequestException('Annulation non autorisée');
+        }
+        const now = new Date();
+        if (current.pendingCommitmentVersionId) {
+          await tx.bookingCommitmentVersion.updateMany({
+            where: {
+              id: current.pendingCommitmentVersionId,
+              status: 'PROPOSED',
+            },
+            data: { status: 'CANCELLED', cancelledAt: now },
+          });
+          await tx.bookingAssignment.updateMany({
+            where: {
+              bookingId,
+              commitmentVersionId: current.pendingCommitmentVersionId,
+              status: 'PENDING',
+            },
+            data: { status: 'REMOVED', endedAt: now },
+          });
+        }
+        await tx.booking.update({
+          where: { id: bookingId },
+          data: {
+            status: 'ANNULEE',
+            pendingCommitmentVersionId: null,
+            commitmentLockVersion: { increment: 1 },
+          },
+        });
+        await tx.auditLog.create({
+          data: {
+            action: 'BOOKING_CANCELLED',
+            entityType: 'Booking',
+            entityId: bookingId,
+            projectId: current.projectId,
+            description: 'Réservation annulée; capacité libérée.',
+            metadata: {
+              actorType: actor.type,
+              actorRole: actor.role,
+              previousStatus: current.status,
+              newStatus: 'ANNULEE',
+              reason: normalizedReason ?? null,
+              commitmentVersionId:
+                current.pendingCommitmentVersionId ??
+                current.currentCommitmentVersionId ??
+                null,
+              holdReleased: Boolean(current.pendingCommitmentVersionId),
+            },
+            organizationId: actor.organizationId,
+            ...(actor.type === 'CLIENT'
+              ? { clientUserId: actor.id }
+              : { userId: actor.id }),
+          },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
 
     const actLabel = this.activityLabel(booking.activityType);
-    const dateLabel = formatBuildingDate(effectiveBookingDate(booking), booking.project.building?.timeZone ?? 'America/Toronto');
+    const dateLabel = formatBuildingDate(
+      effectiveBookingDate(booking),
+      booking.project.building?.timeZone ?? 'America/Toronto',
+    );
 
     // Notifier l'autre partie
-    const notifyEmail = cancelledBy === 'client' ? booking.assignedUser.email : booking.clientUser.email;
-    const notifyName = cancelledBy === 'client'
-      ? `${booking.assignedUser.firstName} ${booking.assignedUser.lastName}`
-      : `${booking.clientUser.firstName} ${booking.clientUser.lastName}`;
+    const notifyEmail =
+      actor.type === 'CLIENT'
+        ? booking.assignedUser.email
+        : booking.clientUser.email;
+    const notifyName =
+      actor.type === 'CLIENT'
+        ? `${booking.assignedUser.firstName} ${booking.assignedUser.lastName}`
+        : `${booking.clientUser.firstName} ${booking.clientUser.lastName}`;
 
     await this.sendBookingEmail({
       to: notifyEmail,
       toName: notifyName,
       subject: `❌ Réservation annulée — ${actLabel}`,
       content: this.safeHtml`
-        <p>La réservation suivante a été <strong>annulée</strong> par ${cancelledBy === 'client' ? 'le client' : 'le conseiller'}.</p>
+        <p>La réservation suivante a été <strong>annulée</strong> par ${actor.type === 'CLIENT' ? 'le client' : 'le conseiller'}.</p>
         <div style="background:#FDEDEC;border:1px solid #F1948A;padding:16px;border-radius:8px;margin:16px 0;">
           <p style="margin:0 0 8px;"><strong>Activité :</strong> ${actLabel}</p>
           <p style="margin:0;"><strong>Date :</strong> ${dateLabel}</p>
@@ -496,7 +1146,7 @@ export class BookingsService {
 
   private activityLabel(type: string): string {
     const labels: Record<string, string> = {
-      exercice: 'Exercice d\'évacuation',
+      exercice: "Exercice d'évacuation",
       formation: 'Formation',
       visite: 'Visite de suivi',
       revision: 'Révision documentaire',
@@ -506,13 +1156,37 @@ export class BookingsService {
   }
 
   private escapeHtml(value: unknown): string {
-    return String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
+    return String(value).replace(
+      /[&<>"']/g,
+      (character) =>
+        ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;',
+        })[character]!,
+    );
   }
 
-  private trustedHtml(value: string): { html: string } { return { html: value }; }
+  private trustedHtml(value: string): { html: string } {
+    return { html: value };
+  }
 
   private safeHtml(parts: TemplateStringsArray, ...values: unknown[]): string {
-    return parts.reduce((result, part, index) => result + part + (index < values.length ? (typeof values[index] === 'object' && values[index] !== null && 'html' in values[index] ? (values[index] as { html: string }).html : this.escapeHtml(values[index])) : ''), '');
+    return parts.reduce(
+      (result, part, index) =>
+        result +
+        part +
+        (index < values.length
+          ? typeof values[index] === 'object' &&
+            values[index] !== null &&
+            'html' in values[index]
+            ? (values[index] as { html: string }).html
+            : this.escapeHtml(values[index])
+          : ''),
+      '',
+    );
   }
 
   private generateIcs(data: {
@@ -530,9 +1204,11 @@ export class BookingsService {
   }): string {
     const pad = (n: number) => String(n).padStart(2, '0');
     const formatDate = (d: Date) => {
-      return `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
+      return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
     };
-    const endDate = new Date(data.startDate.getTime() + data.durationMinutes * 60000);
+    const endDate = new Date(
+      data.startDate.getTime() + data.durationMinutes * 60000,
+    );
     const uid = `${data.bookingId}@getcoro.io`;
     const now = formatDate(new Date());
 
@@ -556,7 +1232,9 @@ export class BookingsService {
       `SEQUENCE:${data.sequence}`,
       'END:VEVENT',
       'END:VCALENDAR',
-    ].filter(Boolean).join('\r\n');
+    ]
+      .filter(Boolean)
+      .join('\r\n');
   }
 
   private async sendBookingEmail(data: {
@@ -578,13 +1256,17 @@ export class BookingsService {
             </div>
             <div style="background:#FFFFFF;padding:32px;border:1px solid #E9ECEF;border-radius:0 0 8px 8px;">
               ${data.content}
-              ${data.ics ? `
+              ${
+                data.ics
+                  ? `
               <div style="margin-top:24px;padding:16px;background:#F8F9FA;border-radius:8px;border:1px solid #E9ECEF;">
                 <p style="margin:0;font-size:13px;color:#6C757D;">
                   📅 <strong>Ajouter à votre calendrier</strong> — Un fichier calendrier (.ics) est joint à ce courriel. 
                   Ouvrez-le pour ajouter automatiquement cet événement à Outlook, Google Calendar ou Apple Calendar.
                 </p>
-              </div>` : ''}
+              </div>`
+                  : ''
+              }
             </div>
             <div style="text-align:center;padding:16px;font-size:12px;color:#ADB5BD;">
               © 2026 CORO — <a href="https://getcoro.io" style="color:#ADB5BD;">getcoro.io</a>
@@ -594,18 +1276,28 @@ export class BookingsService {
       };
 
       if (data.ics) {
-        body.attachment = [{
-          name: data.ics.filename,
-          content: Buffer.from(data.ics.content).toString('base64'),
-        }];
+        body.attachment = [
+          {
+            name: data.ics.filename,
+            content: Buffer.from(data.ics.content).toString('base64'),
+          },
+        ];
       }
 
       const response = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'api-key': process.env.BREVO_API_KEY || '' },
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': process.env.BREVO_API_KEY || '',
+        },
         body: JSON.stringify(body),
       });
-      if (!response.ok) console.error(`Erreur email réservation Brevo: HTTP ${response.status}`);
-    } catch (e) { console.error('Erreur email réservation:', e); }
+      if (!response.ok)
+        console.error(
+          `Erreur email réservation Brevo: HTTP ${response.status}`,
+        );
+    } catch (e) {
+      console.error('Erreur email réservation:', e);
+    }
   }
 }

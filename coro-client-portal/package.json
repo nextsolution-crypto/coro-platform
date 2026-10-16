@@ -14,7 +14,8 @@
     "test:sentinelle-auth": "node app/sentinelle/sentinelleAuth.contract.test.mjs",
     "test:population-sharing": "node \"app/sentinelle/[buildingId]/population/publicPortalSharing.test.mjs\"",
     "test:population-identity": "node app/population/populationIdentity.contract.test.mjs",
-    "test:population-profile": "node app/population/populationContactProfile.contract.test.mjs"
+    "test:population-profile": "node app/population/populationContactProfile.contract.test.mjs",
+    "test:bookings": "node app/bookings/bookings.contract.test.mjs"
   },
   "dependencies": {
     "html5-qrcode": "^2.3.8",
