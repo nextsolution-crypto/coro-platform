@@ -15,6 +15,7 @@ import { CorrectiveActionEvidenceService } from '../occupancy/corrective-action-
 import { NotificationsModule } from '../notifications/notifications.module';
 import { PopulationModule } from '../population/population.module';
 import { requireJwtSecret } from '../auth/auth-security.config';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -25,13 +26,20 @@ import { requireJwtSecret } from '../auth/auth-security.config';
     OccupancyModule,
     NotificationsModule,
     PopulationModule,
+    AuthModule,
     JwtModule.register({
       secret: requireJwtSecret(),
       signOptions: { expiresIn: '7d' },
     }),
   ],
   controllers: [ClientPortalController, ClientAuthController],
-  providers: [ClientPortalService, ClientAuthService, EmailService, CorrectiveActionsService, CorrectiveActionEvidenceService],
+  providers: [
+    ClientPortalService,
+    ClientAuthService,
+    EmailService,
+    CorrectiveActionsService,
+    CorrectiveActionEvidenceService,
+  ],
   exports: [ClientPortalService, EmailService],
 })
 export class ClientPortalModule {}

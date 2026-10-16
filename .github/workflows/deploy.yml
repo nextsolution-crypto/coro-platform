@@ -1,8 +1,25 @@
-name: Deploy to Production
+name: Validate and Release Production
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      release_commit:
+        description: Full 40-character commit SHA already present on main
+        required: true
+        type: string
+      production_approval:
+        description: Type DEPLOY_PRODUCTION to authorize the protected release job
+        required: true
+        type: string
+      migration_compatibility_approval:
+        description: Type CONFIRMED_BACKWARD_COMPATIBLE after reviewing migrations against the running release
+        required: true
+        type: string
+
+permissions:
+  contents: read
 
 env:
   REGISTRY: ghcr.io
@@ -18,6 +35,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_commit || github.sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -62,6 +81,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_commit || github.sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -93,6 +114,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_commit || github.sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -109,17 +132,32 @@ jobs:
         working-directory: coro-client-portal
         run: npm run build
 
-  build-and-push:
+  build-images:
+    if: github.event_name == 'workflow_dispatch'
     needs: [typecheck, backend-tests, client-portal-build]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
       contents: read
       packages: write
+    outputs:
+      backend_digest: ${{ steps.backend.outputs.digest }}
+      frontend_digest: ${{ steps.frontend.outputs.digest }}
+      client_portal_digest: ${{ steps.client-portal.outputs.digest }}
+      website_digest: ${{ steps.website.outputs.digest }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_commit }}
+
+      - name: Validate release request
+        env:
+          RELEASE_COMMIT: ${{ inputs.release_commit }}
+          PRODUCTION_APPROVAL: ${{ inputs.production_approval }}
+          MIGRATION_COMPATIBILITY_APPROVAL: ${{ inputs.migration_compatibility_approval }}
+        run: node ops/deploy/release-policy.mjs request
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -129,61 +167,107 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Build and push backend
+        id: backend
         uses: docker/build-push-action@v5
         with:
           context: ./coro-backend
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/coro-backend:latest
+          platforms: linux/amd64
+          tags: ghcr.io/${{ github.repository_owner }}/coro-backend:${{ inputs.release_commit }}
 
       - name: Build and push frontend
+        id: frontend
         uses: docker/build-push-action@v5
         with:
           context: ./coro-frontend
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/coro-frontend:latest
+          platforms: linux/amd64
+          tags: ghcr.io/${{ github.repository_owner }}/coro-frontend:${{ inputs.release_commit }}
           build-args: |
             NEXT_PUBLIC_API_URL=https://api.getcoro.io/api
 
       - name: Build and push website
+        id: website
         uses: docker/build-push-action@v5
         with:
           context: ./coro-website
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/coro-website:latest
+          platforms: linux/amd64
+          tags: ghcr.io/${{ github.repository_owner }}/coro-website:${{ inputs.release_commit }}
 
       - name: Build and push client-portal
+        id: client-portal
         uses: docker/build-push-action@v5
         with:
           context: ./coro-client-portal
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/coro-client-portal:latest
+          platforms: linux/amd64
+          tags: ghcr.io/${{ github.repository_owner }}/coro-client-portal:${{ inputs.release_commit }}
           build-args: |
             NEXT_PUBLIC_API_URL=https://api.getcoro.io/api
             NEXT_PUBLIC_CLIENT_PORTAL_URL=https://client.getcoro.io
 
-  deploy:
+      - name: Verify complete immutable image set
+        env:
+          BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-backend@${{ steps.backend.outputs.digest }}
+          FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-frontend@${{ steps.frontend.outputs.digest }}
+          CLIENT_PORTAL_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-client-portal@${{ steps.client-portal.outputs.digest }}
+          WEBSITE_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-website@${{ steps.website.outputs.digest }}
+        run: node ops/deploy/release-policy.mjs images
+
+  production-release:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    needs: build-and-push
-    timeout-minutes: 10
+    needs: build-images
+    timeout-minutes: 60
+    environment: production
+    concurrency:
+      group: coro-production-deployment
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: read
 
     steps:
-      - name: Deploy to server
+      - name: Checkout approved release
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_commit }}
+
+      - name: Validate immutable release evidence
+        env:
+          RELEASE_COMMIT: ${{ inputs.release_commit }}
+          PRODUCTION_APPROVAL: ${{ inputs.production_approval }}
+          MIGRATION_COMPATIBILITY_APPROVAL: ${{ inputs.migration_compatibility_approval }}
+          BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-backend@${{ needs.build-images.outputs.backend_digest }}
+          FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-frontend@${{ needs.build-images.outputs.frontend_digest }}
+          CLIENT_PORTAL_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-client-portal@${{ needs.build-images.outputs.client_portal_digest }}
+          WEBSITE_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-website@${{ needs.build-images.outputs.website_digest }}
+        run: node ops/deploy/release-policy.mjs all
+
+      - name: Run fail-closed production release
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          RELEASE_COMMIT: ${{ inputs.release_commit }}
+          PRODUCTION_APPROVAL: ${{ inputs.production_approval }}
+          MIGRATION_COMPATIBILITY_APPROVAL: ${{ inputs.migration_compatibility_approval }}
+          RELEASE_OPERATOR: ${{ github.actor }}
+          BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-backend@${{ needs.build-images.outputs.backend_digest }}
+          FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-frontend@${{ needs.build-images.outputs.frontend_digest }}
+          CLIENT_PORTAL_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-client-portal@${{ needs.build-images.outputs.client_portal_digest }}
+          WEBSITE_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-website@${{ needs.build-images.outputs.website_digest }}
         with:
           host: ${{ secrets.SERVER_IP }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 10m
+          command_timeout: 60m
+          envs: RELEASE_COMMIT,PRODUCTION_APPROVAL,MIGRATION_COMPATIBILITY_APPROVAL,RELEASE_OPERATOR,BACKEND_IMAGE,FRONTEND_IMAGE,CLIENT_PORTAL_IMAGE,WEBSITE_IMAGE
           script: |
-            set -eu
-            cd /opt/coro-platform
-            test "$(git branch --show-current)" = "main"
-            if [ -n "$(git status --porcelain)" ]; then
-              echo "Deployment aborted: production working tree is not clean." >&2
-              exit 1
-            fi
-            git pull --ff-only origin main
-            printf '%s' '${{ secrets.GHCR_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
-            docker compose pull
-            docker compose up -d
-            docker compose exec -T backend node -e "const{execSync}=require('child_process');execSync('npx prisma@6.19.3 migrate deploy --schema=/app/prisma/schema.prisma',{stdio:'inherit',env:{...process.env,npm_config_yes:'true'}})"
+            set -euo pipefail
+            trap 'rm -f /tmp/coro-production-release.sh' EXIT
+            test -d /opt/coro-platform/.git
+            git -C /opt/coro-platform fetch --quiet origin main
+            test "$(git -C /opt/coro-platform rev-parse origin/main)" = "$RELEASE_COMMIT"
+            git -C /opt/coro-platform show "$RELEASE_COMMIT:ops/deploy/coro-production-release.sh" > /tmp/coro-production-release.sh
+            chmod 0700 /tmp/coro-production-release.sh
+            /tmp/coro-production-release.sh

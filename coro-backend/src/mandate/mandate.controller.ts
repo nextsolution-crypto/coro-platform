@@ -1,8 +1,23 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, Request, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+  Request,
+  Res,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { MandateService } from './mandate.service';
 import type { Response } from 'express';
-import { requireInternal, requireTenantAdmin } from '../auth/work-management-access';
+import {
+  requireInternal,
+  requireTenantAdmin,
+} from '../auth/work-management-access';
 import { MandateServicesService } from './mandate-services.service';
 import { SaveMandateServicesDto } from './mandate-services.dto';
 import { MandateOperationsPreviewService } from './mandate-operations-preview.service';
@@ -14,32 +29,52 @@ import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 @Controller('projects/:projectId')
 @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class MandateController {
-  constructor(private readonly service: MandateService, private readonly mandateServices: MandateServicesService,
+  constructor(
+    private readonly service: MandateService,
+    private readonly mandateServices: MandateServicesService,
     private readonly operationsPreview: MandateOperationsPreviewService,
-    private readonly operationsApply: MandateOperationsApplyService) {}
+    private readonly operationsApply: MandateOperationsApplyService,
+  ) {}
 
   @Get('mandate/services')
-  getMandateServices(@Param('projectId') projectId: string, @Request() req: any) {
+  getMandateServices(
+    @Param('projectId') projectId: string,
+    @Request() req: any,
+  ) {
     requireInternal(req.user);
     return this.mandateServices.list(projectId, req.user);
   }
 
   @Put('mandate/services')
-  saveMandateServices(@Param('projectId') projectId: string, @Body() dto: SaveMandateServicesDto, @Request() req: any) {
+  saveMandateServices(
+    @Param('projectId') projectId: string,
+    @Body() dto: SaveMandateServicesDto,
+    @Request() req: any,
+  ) {
     requireTenantAdmin(req.user);
     return this.mandateServices.save(projectId, req.user, dto);
   }
 
   @Post('mandate/services/operations/preview')
-  previewMandateServiceOperations(@Param('projectId') projectId: string, @Body() dto: MandateOperationsPreviewDto,
-    @Request() req: any) {
+  previewMandateServiceOperations(
+    @Param('projectId') projectId: string,
+    @Body() dto: MandateOperationsPreviewDto,
+    @Request() req: any,
+  ) {
     requireInternal(req.user);
-    return this.operationsPreview.preview(projectId, req.user, dto.expectedRevision);
+    return this.operationsPreview.preview(
+      projectId,
+      req.user,
+      dto.expectedRevision,
+    );
   }
 
   @Post('mandate/services/operations/apply')
-  applyMandateServiceOperations(@Param('projectId') projectId: string, @Body() dto: ApplyMandateOperationsDto,
-    @Request() req: any) {
+  applyMandateServiceOperations(
+    @Param('projectId') projectId: string,
+    @Body() dto: ApplyMandateOperationsDto,
+    @Request() req: any,
+  ) {
     requireTenantAdmin(req.user);
     return this.operationsApply.apply(projectId, req.user, dto);
   }
@@ -58,7 +93,11 @@ export class MandateController {
   }
 
   @Put('mandate')
-  saveMandate(@Param('projectId') projectId: string, @Body() dto: any, @Request() req: any) {
+  saveMandate(
+    @Param('projectId') projectId: string,
+    @Body() dto: any,
+    @Request() req: any,
+  ) {
     requireTenantAdmin(req.user);
     return this.service.saveMandate(projectId, req.user, dto);
   }
@@ -71,19 +110,37 @@ export class MandateController {
   }
 
   @Post('comments')
-  addComment(@Param('projectId') projectId: string, @Body() dto: any, @Request() req: any) {
+  addComment(
+    @Param('projectId') projectId: string,
+    @Body() dto: any,
+    @Request() req: any,
+  ) {
     requireInternal(req.user);
     return this.service.addComment(projectId, req.user, dto.contenu);
   }
 
   @Put('comments/:commentId')
-  updateComment(@Param('projectId') projectId: string, @Param('commentId') commentId: string, @Body() dto: any, @Request() req: any) {
+  updateComment(
+    @Param('projectId') projectId: string,
+    @Param('commentId') commentId: string,
+    @Body() dto: any,
+    @Request() req: any,
+  ) {
     requireInternal(req.user);
-    return this.service.updateComment(projectId, commentId, req.user, dto.contenu);
+    return this.service.updateComment(
+      projectId,
+      commentId,
+      req.user,
+      dto.contenu,
+    );
   }
 
   @Delete('comments/:commentId')
-  deleteComment(@Param('projectId') projectId: string, @Param('commentId') commentId: string, @Request() req: any) {
+  deleteComment(
+    @Param('projectId') projectId: string,
+    @Param('commentId') commentId: string,
+    @Request() req: any,
+  ) {
     requireInternal(req.user);
     return this.service.deleteComment(projectId, commentId, req.user);
   }
@@ -96,19 +153,36 @@ export class MandateController {
   }
 
   @Post('tasks/init')
-  initTasks(@Param('projectId') projectId: string, @Body() dto: any, @Request() req: any) {
+  initTasks(
+    @Param('projectId') projectId: string,
+    @Body() dto: any,
+    @Request() req: any,
+  ) {
     requireInternal(req.user);
-    return this.service.initTasksFromTemplate(projectId, req.user, dto.documentType);
+    return this.service.initTasksFromTemplate(
+      projectId,
+      req.user,
+      dto.documentType,
+    );
   }
 
   @Post('tasks')
-  createTask(@Param('projectId') projectId: string, @Body() dto: any, @Request() req: any) {
+  createTask(
+    @Param('projectId') projectId: string,
+    @Body() dto: any,
+    @Request() req: any,
+  ) {
     requireInternal(req.user);
     return this.service.createTask(projectId, dto, req.user);
   }
 
   @Put('tasks/:taskId')
-  updateTask(@Param('projectId') projectId: string, @Param('taskId') taskId: string, @Body() dto: any, @Request() req: any) {
+  updateTask(
+    @Param('projectId') projectId: string,
+    @Param('taskId') taskId: string,
+    @Body() dto: any,
+    @Request() req: any,
+  ) {
     requireInternal(req.user);
     return this.service.updateTask(projectId, taskId, req.user, dto);
   }
@@ -121,18 +195,32 @@ export class MandateController {
     @Request() req: any,
   ) {
     requireInternal(req.user);
-    return this.service.setTaskActivity(projectId, taskId, dto.activityId ?? null, req.user);
+    return this.service.setTaskActivity(
+      projectId,
+      taskId,
+      dto.activityId ?? null,
+      req.user,
+    );
   }
 
   // Entrées de temps
   @Post('tasks/:taskId/time')
-  addTimeEntry(@Param('projectId') projectId: string, @Param('taskId') taskId: string, @Body() dto: any, @Request() req: any) {
+  addTimeEntry(
+    @Param('projectId') projectId: string,
+    @Param('taskId') taskId: string,
+    @Body() dto: any,
+    @Request() req: any,
+  ) {
     requireInternal(req.user);
     return this.service.addTimeEntry(projectId, taskId, req.user, dto);
   }
 
   @Delete('time/:entryId')
-  deleteTimeEntry(@Param('projectId') projectId: string, @Param('entryId') entryId: string, @Request() req: any) {
+  deleteTimeEntry(
+    @Param('projectId') projectId: string,
+    @Param('entryId') entryId: string,
+    @Request() req: any,
+  ) {
     requireInternal(req.user);
     return this.service.deleteTimeEntry(projectId, entryId, req.user);
   }
@@ -157,14 +245,23 @@ export class MandateController {
     @Request() req: any,
     @Res() res: Response,
   ) {
-    requireInternal(req.user);
-    const html = await this.service.exportTimesheetPdf(projectId, req.user, from, to);
-    
+    requireTenantAdmin(req.user);
+    const html = await this.service.exportTimesheetPdf(
+      projectId,
+      req.user,
+      from,
+      to,
+    );
+
     const puppeteer = require('puppeteer');
     const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
-    const pdf = await page.pdf({ format: 'Letter', printBackground: true, margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' } });
+    const pdf = await page.pdf({
+      format: 'Letter',
+      printBackground: true,
+      margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' },
+    });
     await browser.close();
 
     res.set({

@@ -22,6 +22,7 @@
     "test:rendement-glass": "node app/profile/rendement/rendement-glass.contract.test.cjs",
     "test:rendement-equipe-glass": "node app/dashboard/rendement/rendement-equipe-glass.contract.test.cjs",
     "test:planning": "node app/planning/planning.test.cjs",
+    "test:bookings": "node app/bookings/booking-commitment.contract.test.mjs",
     "test:organization360": "node app/admin/organizations/[organizationId]/organization360.contract.test.cjs",
     "test:commercial-catalog": "node app/admin/product-catalog/product-catalog.contract.test.cjs",
     "test:organization-contracts": "node app/admin/organizations/[organizationId]/organization-contracts.contract.test.cjs",

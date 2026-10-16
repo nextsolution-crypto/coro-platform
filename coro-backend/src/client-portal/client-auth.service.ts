@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -10,13 +11,17 @@ import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { EmailService } from './email.service';
 import { validateClientPassword } from './client-password-policy';
+import { MfaDeliveryService } from '../auth/mfa-delivery.service';
 
 const RESET_LIFETIME_MS = 30 * 60 * 1000;
 const RESET_WINDOW_MS = 15 * 60 * 1000;
 const RESET_WINDOW_LIMIT = 3;
-const RESET_RESPONSE = { message: 'Si un compte actif correspond à cette adresse, un lien de réinitialisation vous sera envoyé.' };
-const INVALID_RESET = 'Ce lien de réinitialisation est invalide ou n’est plus disponible.';
-
+const RESET_RESPONSE = {
+  message:
+    'Si un compte actif correspond à cette adresse, un lien de réinitialisation vous sera envoyé.',
+};
+const INVALID_RESET =
+  'Ce lien de réinitialisation est invalide ou n’est plus disponible.';
 
 @Injectable()
 export class ClientAuthService {
@@ -26,10 +31,13 @@ export class ClientAuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private emailService: EmailService,
+    @Optional()
+    private mfaDelivery: MfaDeliveryService = new MfaDeliveryService(),
   ) {}
 
   private async findClientByEmail(email: string) {
-    const normalized = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const normalized =
+      typeof email === 'string' ? email.trim().toLowerCase() : '';
     if (!normalized || normalized.length > 320) return null;
     const matches = await this.prisma.clientUser.findMany({
       where: { email: { equals: normalized, mode: 'insensitive' } },
@@ -41,12 +49,17 @@ export class ClientAuthService {
 
   private clientToken(clientUser: any) {
     return this.jwt.sign({
-      sub: clientUser.id, email: clientUser.email, role: clientUser.role,
-      clientId: clientUser.clientId, organizationId: clientUser.organizationId,
-      buildingIds: clientUser.buildingIds, populationPermissions: clientUser.populationPermissions,
+      sub: clientUser.id,
+      email: clientUser.email,
+      role: clientUser.role,
+      clientId: clientUser.clientId,
+      organizationId: clientUser.organizationId,
+      buildingIds: clientUser.buildingIds,
+      populationPermissions: clientUser.populationPermissions,
       operationalReviewPermissions: clientUser.operationalReviewPermissions,
       correctiveActionPermissions: clientUser.correctiveActionPermissions,
-      sessionVersion: clientUser.sessionVersion, type: 'CLIENT',
+      sessionVersion: clientUser.sessionVersion,
+      type: 'CLIENT',
     });
   }
 
@@ -55,7 +68,8 @@ export class ClientAuthService {
       where: { id: clientUserId, organizationId, isActive: true },
       include: { client: { select: { name: true } } },
     });
-    if (!clientUser) throw new UnauthorizedException('Session client invalide.');
+    if (!clientUser)
+      throw new UnauthorizedException('Session client invalide.');
     return {
       id: clientUser.id,
       email: clientUser.email,
@@ -107,7 +121,8 @@ export class ClientAuthService {
             clientName: clientUser.client.name,
             organizationId: clientUser.organizationId,
             populationPermissions: clientUser.populationPermissions,
-            operationalReviewPermissions: clientUser.operationalReviewPermissions,
+            operationalReviewPermissions:
+              clientUser.operationalReviewPermissions,
             correctiveActionPermissions: clientUser.correctiveActionPermissions,
           },
         };
@@ -125,22 +140,11 @@ export class ClientAuthService {
       data: { mfaCode, mfaCodeExpiry: mfaExpiry } as any,
     });
 
-    await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'api-key': process.env.BREVO_API_KEY || '',
-      },
-      body: JSON.stringify({
-        sender: { name: 'CORO', email: 'info@getcoro.io' },
-        to: [
-          {
-            email: clientUser.email,
-            name: `${clientUser.firstName} ${clientUser.lastName}`,
-          },
-        ],
-        subject: `${mfaCode} — Votre code de connexion CORO`,
-        htmlContent: `
+    await this.mfaDelivery.send({
+      to: clientUser.email,
+      recipientName: `${clientUser.firstName} ${clientUser.lastName}`,
+      subject: `${mfaCode} — Votre code de connexion CORO`,
+      htmlContent: `
           <div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;">
             <div style="background:#2C3E50;padding:24px;border-radius:8px 8px 0 0;text-align:center;">
               <span style="color:#FFFFFF;font-size:28px;font-weight:900;">CO<span style="color:#C0392B;">RO</span></span>
@@ -155,7 +159,6 @@ export class ClientAuthService {
             </div>
           </div>
         `,
-      }),
     });
 
     return { mfaRequired: true, email: clientUser.email };
@@ -163,7 +166,8 @@ export class ClientAuthService {
 
   async verifyMfa(email: string, code: string) {
     const clientUser = await this.findClientByEmail(email);
-    if (!clientUser || !clientUser.isActive) throw new UnauthorizedException('Identifiants invalides.');
+    if (!clientUser || !clientUser.isActive)
+      throw new UnauthorizedException('Identifiants invalides.');
 
     const userData = clientUser as any;
     if (!userData.mfaCode || !userData.mfaCodeExpiry)
@@ -264,14 +268,23 @@ export class ClientAuthService {
       if (!clientUser?.isActive) return RESET_RESPONSE;
 
       const rawToken = crypto.randomBytes(32).toString('base64url');
-      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+      const tokenHash = crypto
+        .createHash('sha256')
+        .update(rawToken)
+        .digest('hex');
       const now = new Date();
       const created = await this.prisma.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT id FROM "ClientUser" WHERE id = ${clientUser.id} FOR UPDATE`;
-        const current = await tx.clientUser.findUnique({ where: { id: clientUser.id }, select: { isActive: true } });
+        const current = await tx.clientUser.findUnique({
+          where: { id: clientUser.id },
+          select: { isActive: true },
+        });
         if (!current?.isActive) return false;
         const count = await tx.clientPasswordResetToken.count({
-          where: { clientUserId: clientUser.id, createdAt: { gt: new Date(now.getTime() - RESET_WINDOW_MS) } },
+          where: {
+            clientUserId: clientUser.id,
+            createdAt: { gt: new Date(now.getTime() - RESET_WINDOW_MS) },
+          },
         });
         if (count >= RESET_WINDOW_LIMIT) return false;
         await tx.clientPasswordResetToken.updateMany({
@@ -279,24 +292,36 @@ export class ClientAuthService {
           data: { usedAt: now },
         });
         await tx.clientPasswordResetToken.create({
-          data: { clientUserId: clientUser.id, tokenHash, expiresAt: new Date(now.getTime() + RESET_LIFETIME_MS) },
+          data: {
+            clientUserId: clientUser.id,
+            tokenHash,
+            expiresAt: new Date(now.getTime() + RESET_LIFETIME_MS),
+          },
         });
         await tx.clientSecurityAuditEvent.create({
-          data: { clientUserId: clientUser.id, organizationId: clientUser.organizationId, eventType: 'PASSWORD_RESET_REQUESTED' },
+          data: {
+            clientUserId: clientUser.id,
+            organizationId: clientUser.organizationId,
+            eventType: 'PASSWORD_RESET_REQUESTED',
+          },
         });
         return true;
       });
       if (created) {
         const resetUrl = `https://client.getcoro.io/reset-password?token=${encodeURIComponent(rawToken)}`;
         const sent = await this.emailService.sendClientPasswordReset({
-          toEmail: clientUser.email, toName: clientUser.firstName, resetUrl,
+          toEmail: clientUser.email,
+          toName: clientUser.firstName,
+          resetUrl,
         });
         if (!sent.success) this.logger.warn('[CLIENT-AUTH] Echec envoi reset');
       }
     } catch {
       this.logger.warn('[CLIENT-AUTH] Demande reset non traitee');
     } finally {
-      await new Promise((resolve) => setTimeout(resolve, Math.max(0, 600 - (Date.now() - startedAt))));
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.max(0, 600 - (Date.now() - startedAt))),
+      );
     }
     return RESET_RESPONSE;
   }
@@ -308,7 +333,9 @@ export class ClientAuthService {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await this.prisma.$transaction(async (tx) => {
-      const record = await tx.clientPasswordResetToken.findUnique({ where: { tokenHash } });
+      const record = await tx.clientPasswordResetToken.findUnique({
+        where: { tokenHash },
+      });
       if (!record) throw new BadRequestException(INVALID_RESET);
       const now = new Date();
       const claim = await tx.clientPasswordResetToken.updateMany({
@@ -316,20 +343,41 @@ export class ClientAuthService {
         data: { usedAt: now },
       });
       if (claim.count !== 1) throw new BadRequestException(INVALID_RESET);
-      const user = await tx.clientUser.findUnique({ where: { id: record.clientUserId }, select: { organizationId: true, isActive: true } });
+      const user = await tx.clientUser.findUnique({
+        where: { id: record.clientUserId },
+        select: { organizationId: true, isActive: true },
+      });
       if (!user?.isActive) throw new BadRequestException(INVALID_RESET);
       await tx.clientUser.update({
         where: { id: record.clientUserId },
-        data: { password: hashedPassword, sessionVersion: { increment: 1 }, mfaCode: null, mfaCodeExpiry: null },
+        data: {
+          password: hashedPassword,
+          sessionVersion: { increment: 1 },
+          mfaCode: null,
+          mfaCodeExpiry: null,
+        },
       });
-      await tx.clientTrustedDevice.deleteMany({ where: { userId: record.clientUserId } });
-      await tx.magicLink.updateMany({ where: { userId: record.clientUserId, usedAt: null }, data: { usedAt: now } });
+      await tx.clientTrustedDevice.deleteMany({
+        where: { userId: record.clientUserId },
+      });
+      await tx.magicLink.updateMany({
+        where: { userId: record.clientUserId, usedAt: null },
+        data: { usedAt: now },
+      });
       await tx.clientPasswordResetToken.updateMany({
-        where: { clientUserId: record.clientUserId, id: { not: record.id }, usedAt: null },
+        where: {
+          clientUserId: record.clientUserId,
+          id: { not: record.id },
+          usedAt: null,
+        },
         data: { usedAt: now },
       });
       await tx.clientSecurityAuditEvent.create({
-        data: { clientUserId: record.clientUserId, organizationId: user.organizationId, eventType: 'PASSWORD_RESET_COMPLETED' },
+        data: {
+          clientUserId: record.clientUserId,
+          organizationId: user.organizationId,
+          eventType: 'PASSWORD_RESET_COMPLETED',
+        },
       });
     });
     return { success: true };

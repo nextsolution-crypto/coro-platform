@@ -1,0 +1,42 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import test from 'node:test';
+
+const workflow = fs.readFileSync(new URL('../../.github/workflows/deploy.yml', import.meta.url), 'utf8').replaceAll('\r\n', '\n');
+const release = fs.readFileSync(new URL('./coro-production-release.sh', import.meta.url), 'utf8');
+
+test('push validates but cannot build or deploy', () => {
+  assert.match(workflow, /build-images:\n\s+if: github\.event_name == 'workflow_dispatch'/);
+  assert.match(workflow, /production-release:\n\s+if: github\.event_name == 'workflow_dispatch'/);
+});
+test('requires manual approval, environment and two concurrency locks', () => {
+  assert.match(workflow, /production_approval:/);
+  assert.match(workflow, /environment: production/);
+  assert.match(workflow, /group: coro-production-deployment/);
+  assert.match(workflow, /cancel-in-progress: false/);
+  assert.match(release, /flock --nonblock/);
+});
+test('uses a complete immutable image set', () => {
+  assert.doesNotMatch(workflow, /coro-(backend|frontend|website|client-portal):latest/);
+  for (const value of ['BACKEND_IMAGE', 'FRONTEND_IMAGE', 'CLIENT_PORTAL_IMAGE', 'WEBSITE_IMAGE']) assert.match(workflow, new RegExp(value));
+  assert.match(release, /docker image inspect/);
+});
+test('fails closed through backup, remote evidence and restore gates', () => {
+  for (const value of ['REMOTE_VERIFIED', 'VersionId', 'sha256', 'RESTORE_VERIFIED']) assert.match(release, new RegExp(value));
+  assert.match(release, /coro-db-backup-health\.service/);
+  assert.match(release, /coro-db-backup\.service/);
+  assert.match(release, /coro-db-restore-run\.sh/);
+});
+test('migrates and verifies migration head before application rollout', () => {
+  const migrate = release.indexOf('migrate deploy');
+  const rollout = release.indexOf('up -d --no-build');
+  assert.ok(migrate > 0 && rollout > migrate);
+  assert.match(release, /MIGRATION_HEAD_MISMATCH/);
+});
+test('requires health, smoke, restart and log checks', () => {
+  for (const value of ['BACKEND_HEALTH_FAILED', 'CLIENT_AUTH_SMOKE_FAILED', 'BOOKING_SMOKE_FAILED', 'FRONTEND_HEALTH_FAILED', 'CLIENT_PORTAL_HEALTH_FAILED', 'WEBSITE_HEALTH_FAILED', 'RESTART_COUNT_NONZERO', 'CRITICAL_LOGS_FOUND', 'MFA_QA_CAPTURE_ENABLED']) assert.match(release, new RegExp(value));
+});
+test('records rollback and release evidence without automatic database restore', () => {
+  for (const value of ['previousCommit', 'previousImages', 'previousCompose', 'previousMigrationHead', 'backupVersionId', 'healthChecks']) assert.match(release, new RegExp(value));
+  assert.doesNotMatch(release, /prisma migrate reset|dropdb|pg_restore.*coro_db/);
+});

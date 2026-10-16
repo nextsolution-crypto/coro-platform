@@ -23,7 +23,11 @@ import { UpdatePopulationAlertDraftDto } from '../population/dto/update-populati
 import { ClosePopulationOperationalEventDto } from '../population/dto/close-population-operational-event.dto';
 import { PopulationAlertType } from '@prisma/client';
 import { ClientJwtGuard } from './client-jwt.guard';
-import { CreateBookingDto, CreateActivityBookingDto } from '../bookings/booking.dto';
+import {
+  CancelBookingDto,
+  CreateBookingDto,
+  CreateActivityBookingDto,
+} from '../bookings/booking.dto';
 import { IncidentService } from '../occupancy/incident.service';
 import { OccupancyEmployeesService } from '../occupancy/occupancy-employees.service';
 import { OccupancyService } from '../occupancy/occupancy.service';
@@ -38,7 +42,16 @@ import {
 } from '../occupancy/dto/corrective-action.dto';
 import { CorrectiveActionActor } from '../occupancy/corrective-actions.service';
 import { CorrectiveActionEvidenceService } from '../occupancy/corrective-action-evidence.service';
-import { CloseCorrectiveActionDto, CompleteCorrectiveActionDto, CreateFileEvidenceDto, CreateLinkEvidenceDto, CreateNoteEvidenceDto, CreateSystemReferenceEvidenceDto, VerifyCorrectiveActionDto, WithdrawEvidenceDto } from '../occupancy/dto/corrective-action-evidence.dto';
+import {
+  CloseCorrectiveActionDto,
+  CompleteCorrectiveActionDto,
+  CreateFileEvidenceDto,
+  CreateLinkEvidenceDto,
+  CreateNoteEvidenceDto,
+  CreateSystemReferenceEvidenceDto,
+  VerifyCorrectiveActionDto,
+  WithdrawEvidenceDto,
+} from '../occupancy/dto/corrective-action-evidence.dto';
 
 interface CorrectiveActionRequest {
   clientUser: CorrectiveActionActor;
@@ -103,7 +116,10 @@ export class ClientPortalController {
     @Param('buildingId') buildingId: string,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    await this.clientPortalService.assertBuildingAccess(
+      buildingId,
+      req.clientUser,
+    );
     return this.occupancyService.getOrCreateKioskToken(
       buildingId,
       req.clientUser.organizationId,
@@ -115,7 +131,10 @@ export class ClientPortalController {
     @Param('buildingId') buildingId: string,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    await this.clientPortalService.assertBuildingAccess(
+      buildingId,
+      req.clientUser,
+    );
     return this.occupancyService.getOrCreateAlarmToken(
       buildingId,
       req.clientUser.organizationId,
@@ -127,7 +146,10 @@ export class ClientPortalController {
     @Param('buildingId') buildingId: string,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    await this.clientPortalService.assertBuildingAccess(
+      buildingId,
+      req.clientUser,
+    );
     return this.occupancyService.regenerateAlarmToken(
       buildingId,
       req.clientUser.organizationId,
@@ -139,7 +161,10 @@ export class ClientPortalController {
     @Param('buildingId') buildingId: string,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    await this.clientPortalService.assertBuildingAccess(
+      buildingId,
+      req.clientUser,
+    );
     return this.occupancyService.getActiveEvacuation(
       buildingId,
       req.clientUser.organizationId,
@@ -152,7 +177,10 @@ export class ClientPortalController {
     @Body() body: Omit<TriggerEvacuationDto, 'buildingId'>,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    await this.clientPortalService.assertBuildingAccess(
+      buildingId,
+      req.clientUser,
+    );
     return this.occupancyService.triggerEvacuation(
       { ...body, buildingId },
       req.clientUser.organizationId,
@@ -199,7 +227,10 @@ export class ClientPortalController {
     @Param('buildingId') buildingId: string,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    await this.clientPortalService.assertBuildingAccess(
+      buildingId,
+      req.clientUser,
+    );
     return this.occupancyService.getEvacuationHistory(
       buildingId,
       req.clientUser.organizationId,
@@ -228,7 +259,10 @@ export class ClientPortalController {
     @Param('buildingId') buildingId: string,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    await this.clientPortalService.assertBuildingAccess(
+      buildingId,
+      req.clientUser,
+    );
     return this.occupancyEmployeesService.getEmployees(
       buildingId,
       req.clientUser.organizationId,
@@ -241,7 +275,10 @@ export class ClientPortalController {
     @Body() body: any,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    await this.clientPortalService.assertBuildingAccess(
+      buildingId,
+      req.clientUser,
+    );
     return this.occupancyEmployeesService.createEmployee(
       { ...body, buildingId },
       req.clientUser.organizationId,
@@ -289,7 +326,10 @@ export class ClientPortalController {
     @Param('buildingId') buildingId: string,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    await this.clientPortalService.assertBuildingAccess(
+      buildingId,
+      req.clientUser,
+    );
     return this.occupancyEmployeesService.getInvitations(
       buildingId,
       req.clientUser.organizationId,
@@ -302,7 +342,10 @@ export class ClientPortalController {
     @Body() body: any,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    await this.clientPortalService.assertBuildingAccess(
+      buildingId,
+      req.clientUser,
+    );
     return this.occupancyEmployeesService.createInvitation(
       { ...body, buildingId },
       req.clientUser.organizationId,
@@ -491,7 +534,9 @@ export class ClientPortalController {
       projectId: id,
       clientUserId: req.clientUser.sub,
       activityType: body.activityType,
-      requestedDate: body.requestedDate ? new Date(body.requestedDate) : undefined,
+      requestedDate: body.requestedDate
+        ? new Date(body.requestedDate)
+        : undefined,
       requestedLocalDateTime: body.requestedLocalDateTime,
       duration: body.duration,
       participants: body.participants,
@@ -509,7 +554,9 @@ export class ClientPortalController {
     return this.clientPortalService.createBookingForActivity({
       activityId,
       actor: req.clientUser,
-      requestedDate: body.requestedDate ? new Date(body.requestedDate) : undefined,
+      requestedDate: body.requestedDate
+        ? new Date(body.requestedDate)
+        : undefined,
       requestedLocalDateTime: body.requestedLocalDateTime,
       duration: body.duration,
       participants: body.participants,
@@ -518,8 +565,16 @@ export class ClientPortalController {
   }
 
   @Put('bookings/:id/cancel')
-  async cancelBooking(@Param('id') id: string, @Request() req: any) {
-    return this.clientPortalService.cancelBookingFromClient(id, req.clientUser);
+  async cancelBooking(
+    @Param('id') id: string,
+    @Body() body: CancelBookingDto,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.cancelBookingFromClient(
+      id,
+      req.clientUser,
+      body.reason,
+    );
   }
 
   @Get('bookings')
@@ -976,18 +1031,44 @@ export class ClientPortalController {
   }
 
   @Post('buildings/:buildingId/population/evidence/:evidenceId/report')
-  generatePopulationEvidenceReport(@Param('buildingId') buildingId: string, @Param('evidenceId') evidenceId: string, @Request() req: any) {
-    return this.clientPortalService.generatePopulationEvidenceReport(buildingId, evidenceId, req.clientUser);
+  generatePopulationEvidenceReport(
+    @Param('buildingId') buildingId: string,
+    @Param('evidenceId') evidenceId: string,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.generatePopulationEvidenceReport(
+      buildingId,
+      evidenceId,
+      req.clientUser,
+    );
   }
 
   @Get('buildings/:buildingId/population/evidence/:evidenceId/report')
-  getPopulationEvidenceReport(@Param('buildingId') buildingId: string, @Param('evidenceId') evidenceId: string, @Request() req: any) {
-    return this.clientPortalService.getPopulationEvidenceReport(buildingId, evidenceId, req.clientUser);
+  getPopulationEvidenceReport(
+    @Param('buildingId') buildingId: string,
+    @Param('evidenceId') evidenceId: string,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.getPopulationEvidenceReport(
+      buildingId,
+      evidenceId,
+      req.clientUser,
+    );
   }
 
   @Get('buildings/:buildingId/population/evidence/:evidenceId/report/download')
-  async downloadPopulationEvidenceReport(@Param('buildingId') buildingId: string, @Param('evidenceId') evidenceId: string, @Request() req: any, @Res() res: Response) {
-    const report = await this.clientPortalService.downloadPopulationEvidenceReport(buildingId, evidenceId, req.clientUser);
+  async downloadPopulationEvidenceReport(
+    @Param('buildingId') buildingId: string,
+    @Param('evidenceId') evidenceId: string,
+    @Request() req: any,
+    @Res() res: Response,
+  ) {
+    const report =
+      await this.clientPortalService.downloadPopulationEvidenceReport(
+        buildingId,
+        evidenceId,
+        req.clientUser,
+      );
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Length': String(report.bytes.length),
@@ -1239,17 +1320,26 @@ export class ClientPortalController {
   }
 
   @Get('corrective-actions/:id')
-  getCorrectiveAction(@Param('id') id: string, @Request() req: CorrectiveActionRequest) {
+  getCorrectiveAction(
+    @Param('id') id: string,
+    @Request() req: CorrectiveActionRequest,
+  ) {
     return this.correctiveActionsService.getSafe(id, req.clientUser);
   }
 
-  @Get('buildings/:buildingId/population/operational-events/:eventId/corrective-actions')
+  @Get(
+    'buildings/:buildingId/population/operational-events/:eventId/corrective-actions',
+  )
   getPopulationOperationalEventCorrectiveActions(
     @Param('buildingId') buildingId: string,
     @Param('eventId') eventId: string,
     @Request() req: CorrectiveActionRequest,
   ) {
-    return this.correctiveActionsService.getForPopulationEvent(buildingId, eventId, req.clientUser);
+    return this.correctiveActionsService.getForPopulationEvent(
+      buildingId,
+      eventId,
+      req.clientUser,
+    );
   }
 
   @Post('corrective-actions')
@@ -1278,61 +1368,137 @@ export class ClientPortalController {
   }
 
   @Post('corrective-actions/:id/complete')
-  completeCorrectiveAction(@Param('id') id: string, @Body() body: CompleteCorrectiveActionDto, @Request() req: CorrectiveActionRequest) {
+  completeCorrectiveAction(
+    @Param('id') id: string,
+    @Body() body: CompleteCorrectiveActionDto,
+    @Request() req: CorrectiveActionRequest,
+  ) {
     return this.correctiveActionsService.complete(id, body, req.clientUser);
   }
 
   @Post('corrective-actions/:id/verify')
-  verifyCorrectiveAction(@Param('id') id: string, @Body() body: VerifyCorrectiveActionDto, @Request() req: CorrectiveActionRequest) {
+  verifyCorrectiveAction(
+    @Param('id') id: string,
+    @Body() body: VerifyCorrectiveActionDto,
+    @Request() req: CorrectiveActionRequest,
+  ) {
     return this.correctiveActionsService.verify(id, body, req.clientUser);
   }
 
   @Post('corrective-actions/:id/close')
-  closeCorrectiveAction(@Param('id') id: string, @Body() body: CloseCorrectiveActionDto, @Request() req: CorrectiveActionRequest) {
+  closeCorrectiveAction(
+    @Param('id') id: string,
+    @Body() body: CloseCorrectiveActionDto,
+    @Request() req: CorrectiveActionRequest,
+  ) {
     return this.correctiveActionsService.close(id, body, req.clientUser);
   }
 
   @Get('corrective-actions/:id/verifications')
-  getCorrectiveActionVerifications(@Param('id') id: string, @Request() req: CorrectiveActionRequest) {
+  getCorrectiveActionVerifications(
+    @Param('id') id: string,
+    @Request() req: CorrectiveActionRequest,
+  ) {
     return this.correctiveActionsService.getVerifications(id, req.clientUser);
   }
 
   @Get('corrective-actions/:id/evidence')
-  getCorrectiveActionEvidence(@Param('id') id: string, @Request() req: CorrectiveActionRequest) {
+  getCorrectiveActionEvidence(
+    @Param('id') id: string,
+    @Request() req: CorrectiveActionRequest,
+  ) {
     return this.correctiveActionEvidenceService.list(id, req.clientUser);
   }
 
   @Post('corrective-actions/:id/evidence/note')
-  addCorrectiveActionNote(@Param('id') id: string, @Body() body: CreateNoteEvidenceDto, @Request() req: CorrectiveActionRequest) {
-    return this.correctiveActionEvidenceService.addNote(id, body, req.clientUser);
+  addCorrectiveActionNote(
+    @Param('id') id: string,
+    @Body() body: CreateNoteEvidenceDto,
+    @Request() req: CorrectiveActionRequest,
+  ) {
+    return this.correctiveActionEvidenceService.addNote(
+      id,
+      body,
+      req.clientUser,
+    );
   }
 
   @Post('corrective-actions/:id/evidence/link')
-  addCorrectiveActionLink(@Param('id') id: string, @Body() body: CreateLinkEvidenceDto, @Request() req: CorrectiveActionRequest) {
-    return this.correctiveActionEvidenceService.addLink(id, body, req.clientUser);
+  addCorrectiveActionLink(
+    @Param('id') id: string,
+    @Body() body: CreateLinkEvidenceDto,
+    @Request() req: CorrectiveActionRequest,
+  ) {
+    return this.correctiveActionEvidenceService.addLink(
+      id,
+      body,
+      req.clientUser,
+    );
   }
 
   @Post('corrective-actions/:id/evidence/system-reference')
-  addCorrectiveActionSystemReference(@Param('id') id: string, @Body() body: CreateSystemReferenceEvidenceDto, @Request() req: CorrectiveActionRequest) {
-    return this.correctiveActionEvidenceService.addSystemReference(id, body, req.clientUser);
+  addCorrectiveActionSystemReference(
+    @Param('id') id: string,
+    @Body() body: CreateSystemReferenceEvidenceDto,
+    @Request() req: CorrectiveActionRequest,
+  ) {
+    return this.correctiveActionEvidenceService.addSystemReference(
+      id,
+      body,
+      req.clientUser,
+    );
   }
 
   @Post('corrective-actions/:id/evidence/file')
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
-  addCorrectiveActionFile(@Param('id') id: string, @Body() body: CreateFileEvidenceDto, @UploadedFile() file: Express.Multer.File, @Request() req: CorrectiveActionRequest) {
-    return this.correctiveActionEvidenceService.addFile(id, body, file, req.clientUser);
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }),
+  )
+  addCorrectiveActionFile(
+    @Param('id') id: string,
+    @Body() body: CreateFileEvidenceDto,
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req: CorrectiveActionRequest,
+  ) {
+    return this.correctiveActionEvidenceService.addFile(
+      id,
+      body,
+      file,
+      req.clientUser,
+    );
   }
 
   @Post('corrective-actions/:id/evidence/:evidenceId/withdraw')
-  withdrawCorrectiveActionEvidence(@Param('id') id: string, @Param('evidenceId') evidenceId: string, @Body() body: WithdrawEvidenceDto, @Request() req: CorrectiveActionRequest) {
-    return this.correctiveActionEvidenceService.withdraw(id, evidenceId, body, req.clientUser);
+  withdrawCorrectiveActionEvidence(
+    @Param('id') id: string,
+    @Param('evidenceId') evidenceId: string,
+    @Body() body: WithdrawEvidenceDto,
+    @Request() req: CorrectiveActionRequest,
+  ) {
+    return this.correctiveActionEvidenceService.withdraw(
+      id,
+      evidenceId,
+      body,
+      req.clientUser,
+    );
   }
 
   @Get('corrective-actions/:id/evidence/:evidenceId/download')
-  async downloadCorrectiveActionEvidence(@Param('id') id: string, @Param('evidenceId') evidenceId: string, @Request() req: CorrectiveActionRequest, @Res() res: Response) {
-    const file = await this.correctiveActionEvidenceService.download(id, evidenceId, req.clientUser);
+  async downloadCorrectiveActionEvidence(
+    @Param('id') id: string,
+    @Param('evidenceId') evidenceId: string,
+    @Request() req: CorrectiveActionRequest,
+    @Res() res: Response,
+  ) {
+    const file = await this.correctiveActionEvidenceService.download(
+      id,
+      evidenceId,
+      req.clientUser,
+    );
     res.setHeader('Content-Type', file.mimeType);
-    res.setHeader('Content-Disposition', `attachment; filename="${file.fileName.replace(/["\\\r\n]/g, '_')}"`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${file.fileName.replace(/["\\\r\n]/g, '_')}"`,
+    );
     res.setHeader('Cache-Control', 'private, no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.send(file.bytes);

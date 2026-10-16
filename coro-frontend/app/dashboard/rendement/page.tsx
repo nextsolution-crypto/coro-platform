@@ -1,270 +1,268 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/stores/auth.store';
-import api from '@/lib/api';
-import AppLayout from '@/components/layout/AppLayout';
-// GLASS:begin — vue Liquid Glass (route bêta du registre). Hors des blocs GLASS, ce fichier est le code Legacy d'origine, inchangé.
-import { useTheme } from '@/design-system/theme/ThemeProvider';
-import RendementEquipeGlassView from './RendementEquipeGlassView';
-// GLASS:end
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import AppLayout from "@/components/layout/AppLayout";
+import api from "@/lib/api";
+import { useAuthStore } from "@/stores/auth.store";
+
+type Total = {
+  currency: string;
+  soldAmount: string;
+  knownLaborCost: string;
+  contributionMargin: string;
+  completeMandates: number;
+  incompleteMandates: number;
+  uniqueLossMakingMandates: number;
+};
+
+type FinancialResponse = {
+  totals: Total[];
+  mandates: Array<{
+    mandateId: string;
+    projectId: string;
+    projectName: string;
+    clientName: string;
+    soldAmount: string | null;
+    soldCurrency: string | null;
+    knownLaborCost: string;
+    contributionMargin: string | null;
+    contributionMarginPercent: string | null;
+    completeness: string;
+    incompleteReasons: string[];
+  }>;
+};
+
+const money = (value: string | null, currency: string | null) =>
+  value === null
+    ? "Non disponible"
+    : new Intl.NumberFormat("fr-CA", {
+        style: "currency",
+        currency: currency ?? "CAD",
+      }).format(Number(value));
 
 export default function RendementPage() {
   const router = useRouter();
-  const { user } = useAuthStore();
-  // GLASS:begin
-  const { ui, routeMode } = useTheme();
-  // GLASS:end
-
-  const [data, setData] = useState<any>(null);
+  const { user, isInitialized, initAuth } = useAuthStore();
+  const [data, setData] = useState<FinancialResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'month' | 'year' | 'custom'>('month');
-  const [filterUser, setFilterUser] = useState('');
-  const [customFrom, setCustomFrom] = useState(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
-  );
-  const [customTo, setCustomTo] = useState(
-    new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
-  );
-  const [expandedUser, setExpandedUser] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
-  const getDateRange = () => {
-    const now = new Date();
-    if (viewMode === 'month') {
-      return {
-        from: new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0],
-        to: new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0],
-      };
-    } else if (viewMode === 'year') {
-      return {
-        from: new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0],
-        to: new Date(now.getFullYear(), 11, 31).toISOString().split('T')[0],
-      };
+  useEffect(() => {
+    void initAuth();
+  }, [initAuth]);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+    if (!user || !["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+      router.replace("/profile/rendement");
+      return;
     }
-    return { from: customFrom, to: customTo };
-  };
+    let active = true;
+    api
+      .get<FinancialResponse>("/rendement/financial", {
+        params: { view: "cumulative" },
+      })
+      .then((response) => {
+        if (active) {
+          setData(response.data);
+          setError("");
+        }
+      })
+      .catch(
+        () =>
+          active &&
+          setError("Les indicateurs financiers ne peuvent pas être chargés."),
+      )
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
+  }, [isInitialized, router, user]);
 
-  useEffect(() => { fetchData(); }, [viewMode, customFrom, customTo, filterUser]);
+  const summary = useMemo(
+    () => ({
+      incomplete:
+        data?.totals.reduce(
+          (sum, total) => sum + total.incompleteMandates,
+          0,
+        ) ?? 0,
+      lossMaking:
+        data?.totals.reduce(
+          (sum, total) => sum + total.uniqueLossMakingMandates,
+          0,
+        ) ?? 0,
+    }),
+    [data],
+  );
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const { from, to } = getDateRange();
-      const params: any = { from, to };
-      if (filterUser) params.userId = filterUser;
-      const res = await api.get('/rendement', { params });
-      setData(res.data);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  };
-
-  if (!user) return null;
-
-  const VIEW_MODES = [
-    { id: 'month', label: 'Ce mois' },
-    { id: 'year', label: 'Cette année' },
-    { id: 'custom', label: 'Personnalisé' },
-  ];
-
-  // GLASS:begin
-  // Vue Liquid Glass : uniquement si Glass est actif ET que la route est rendue en Glass (bêta activée, ou ga au registre).
-  // Sinon (Legacy, ou île Legacy tant que la bêta n'est pas activée), le rendu d'origine ci-dessous est utilisé tel quel.
-  // Période, chargement de /rendement (et donc la portée des données décidée par le backend), dépliage et ouverture d'un mandat
-  // restent calculés ICI, une seule fois, pour les deux rendus. Le garde « utilisateur absent » ci-dessus s'applique aux deux.
-  if (ui === 'glass' && routeMode === 'glass') {
-    return (
-      <AppLayout>
-        <RendementEquipeGlassView
-          loading={loading}
-          data={data}
-          modes={VIEW_MODES}
-          viewMode={viewMode}
-          onViewMode={id => setViewMode(id as 'month' | 'year' | 'custom')}
-          customFrom={customFrom}
-          onCustomFrom={setCustomFrom}
-          customTo={customTo}
-          onCustomTo={setCustomTo}
-          expandedUser={expandedUser}
-          onToggleUser={userId => setExpandedUser(expandedUser === userId ? null : userId)}
-          onOpen={projectId => router.push(`/projects/${projectId}/mandate`)}
-        />
-      </AppLayout>
-    );
-  }
-  // GLASS:end
   return (
     <AppLayout>
-      {/* En-tête */}
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#ADB5BD' }}>
-            Administration
-          </p>
-          <h1 className="text-2xl font-black" style={{ color: '#2C3E50' }}>
-            Rendement & Rentabilité
-          </h1>
-          <div className="h-1 w-16 mt-2" style={{ backgroundColor: '#C0392B' }} />
-        </div>
-      </div>
+      <header className="mb-6">
+        <p className="mb-1 text-xs font-bold uppercase tracking-widest text-slate-500">
+          Direction
+        </p>
+        <h1 className="text-2xl font-black text-slate-800">
+          Rendement et rentabilité
+        </h1>
+        <p className="mt-2 max-w-3xl text-sm text-slate-600">
+          Vue cumulative gouvernée. Les coûts couvrent uniquement la
+          main-d’œuvre connue; un mandat incomplet ne produit pas de marge
+          présentée comme certaine.
+        </p>
+      </header>
 
-      {/* Contrôles */}
-      <div className="flex items-center gap-3 mb-6 flex-wrap">
-        {VIEW_MODES.map(m => (
-          <button key={m.id} onClick={() => setViewMode(m.id as any)}
-            className="px-3 py-1.5 rounded text-sm font-medium transition-colors"
-            style={{
-              backgroundColor: viewMode === m.id ? '#2C3E50' : '#F8F9FA',
-              color: viewMode === m.id ? '#FFFFFF' : '#6C757D',
-              border: `1px solid ${viewMode === m.id ? '#2C3E50' : '#DEE2E6'}`,
-            }}>
-            {m.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Dates personnalisées */}
-      {viewMode === 'custom' && (
-        <div className="flex gap-4 mb-6 p-4 rounded-md" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-          <div>
-            <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Du</label>
-            <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
-              className="px-3 py-2 text-sm rounded"
-              style={{ border: '1px solid #CED4DA', color: '#2C3E50' }} />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Au</label>
-            <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
-              className="px-3 py-2 text-sm rounded"
-              style={{ border: '1px solid #CED4DA', color: '#2C3E50' }} />
-          </div>
-        </div>
+      {loading && <p role="status">Chargement des indicateurs…</p>}
+      {error && (
+        <p
+          role="alert"
+          className="rounded border border-red-200 bg-red-50 p-4 text-red-800"
+        >
+          {error}
+        </p>
       )}
 
-      {loading ? (
-        <div className="flex items-center justify-center py-24">
-          <p className="text-sm animate-pulse" style={{ color: '#ADB5BD' }}>Chargement...</p>
-        </div>
-      ) : !data ? null : (
+      {!loading && !error && data && (
         <>
-          {/* Stats équipe globale */}
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            {[
-              { label: 'Heures équipe', value: `${data.teamStats.heuresTotal.toFixed(1)}h`, color: '#2980B9' },
-              { label: 'Revenus équipe', value: data.teamStats.revenusTotal > 0 ? `${data.teamStats.revenusTotal.toFixed(0)} $` : '—', color: '#27AE60' },
-              { label: 'Mandats déficitaires', value: data.teamStats.mandatsDeficitaires, color: data.teamStats.mandatsDeficitaires > 0 ? '#C0392B' : '#27AE60' },
-            ].map(stat => (
-              <div key={stat.label} className="rounded-md p-5"
-                style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-                <p className="text-xs font-medium mb-1" style={{ color: '#6C757D' }}>{stat.label}</p>
-                <p className="text-2xl font-black" style={{ color: stat.color }}>{stat.value}</p>
-              </div>
+          <section
+            aria-label="Synthèse financière"
+            className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4"
+          >
+            {data.totals.map((total) => (
+              <article
+                key={total.currency}
+                className="rounded-md border border-slate-200 bg-white p-5"
+              >
+                <p className="text-xs font-semibold uppercase text-slate-500">
+                  {total.currency}
+                </p>
+                <dl className="mt-3 space-y-2 text-sm">
+                  <div>
+                    <dt className="text-slate-500">Montant vendu validé</dt>
+                    <dd className="text-xl font-bold">
+                      {money(total.soldAmount, total.currency)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">
+                      Coût de main-d’œuvre connu
+                    </dt>
+                    <dd>{money(total.knownLaborCost, total.currency)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">
+                      Marge des mandats complets
+                    </dt>
+                    <dd>{money(total.contributionMargin, total.currency)}</dd>
+                  </div>
+                </dl>
+              </article>
             ))}
-          </div>
+            <article className="rounded-md border border-slate-200 bg-white p-5">
+              <p className="text-sm text-slate-500">
+                Mandats déficitaires uniques
+              </p>
+              <p className="text-2xl font-black text-red-700">
+                {summary.lossMaking}
+              </p>
+            </article>
+            <article className="rounded-md border border-slate-200 bg-white p-5">
+              <p className="text-sm text-slate-500">Mandats incomplets</p>
+              <p className="text-2xl font-black text-amber-700">
+                {summary.incomplete}
+              </p>
+            </article>
+          </section>
 
-          {/* Tableau par conseiller */}
-          {data.conseillers.length === 0 ? (
-            <div className="text-center py-16 rounded-md" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-              <p className="text-3xl mb-4">⏱</p>
-              <p className="text-sm" style={{ color: '#ADB5BD' }}>Aucune heure saisie pour cette période</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {data.conseillers.map((conseiller: any) => (
-                <div key={conseiller.userId} className="rounded-md overflow-hidden"
-                  style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-
-                  {/* Header conseiller */}
-                  <button
-                    onClick={() => setExpandedUser(expandedUser === conseiller.userId ? null : conseiller.userId)}
-                    className="w-full flex items-center justify-between px-5 py-4 transition-colors"
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                    <div className="flex items-center gap-4">
-                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold"
-                        style={{ backgroundColor: '#C0392B' }}>
-                        {conseiller.userName.split(' ').map((n: string) => n[0]).join('')}
-                      </div>
-                      <div className="text-left">
-                        <p className="font-semibold text-sm" style={{ color: '#2C3E50' }}>{conseiller.userName}</p>
-                        <p className="text-xs" style={{ color: '#ADB5BD' }}>
-                          {conseiller.mandatsCount} mandat{conseiller.mandatsCount > 1 ? 's' : ''} · {conseiller.heuresTotal.toFixed(1)}h
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-6">
-                      <div className="text-right">
-                        <p className="text-xs" style={{ color: '#ADB5BD' }}>Heures</p>
-                        <p className="font-black" style={{ color: '#2980B9' }}>{conseiller.heuresTotal.toFixed(1)}h</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs" style={{ color: '#ADB5BD' }}>Revenus</p>
-                        <p className="font-black" style={{ color: '#27AE60' }}>
-                          {conseiller.revenusTotal > 0 ? `${conseiller.revenusTotal.toFixed(0)} $` : '—'}
-                        </p>
-                      </div>
-                      {conseiller.mandatsDeficitaires > 0 && (
-                        <span className="text-xs px-2 py-1 rounded-full font-medium"
-                          style={{ backgroundColor: '#FDEDEC', color: '#C0392B', border: '1px solid #F1948A' }}>
-                          ⚠ {conseiller.mandatsDeficitaires} déficitaire{conseiller.mandatsDeficitaires > 1 ? 's' : ''}
-                        </span>
-                      )}
-                      <span style={{ color: '#ADB5BD', fontSize: '12px' }}>
-                        {expandedUser === conseiller.userId ? '▲' : '▼'}
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Détail mandats */}
-                  {expandedUser === conseiller.userId && (
-                    <div style={{ borderTop: '1px solid #E9ECEF' }}>
-                      <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
-                        <thead>
-                          <tr style={{ backgroundColor: '#F8F9FA' }}>
-                            {['Client', 'Mandat', 'Heures', 'Budget', 'Montant vendu', 'Coût réel', 'Marge'].map(col => (
-                              <th key={col} className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide"
-                                style={{ color: '#ADB5BD', borderBottom: '1px solid #E9ECEF' }}>
-                                {col}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {conseiller.mandatsList.map((mandat: any, idx: number) => (
-                            <tr key={mandat.projectId}
-                              onClick={() => router.push(`/projects/${mandat.projectId}/mandate`)}
-                              className="cursor-pointer transition-colors"
-                              style={{ borderBottom: idx < conseiller.mandatsList.length - 1 ? '1px solid #F8F9FA' : 'none' }}
-                              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-                              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                              <td className="px-4 py-3 text-xs" style={{ color: '#6C757D' }}>{mandat.clientName}</td>
-                              <td className="px-4 py-3 text-xs font-medium" style={{ color: '#2C3E50' }}>{mandat.projectName}</td>
-                              <td className="px-4 py-3 text-xs font-bold" style={{ color: '#2980B9' }}>{mandat.heures.toFixed(1)}h</td>
-                              <td className="px-4 py-3 text-xs" style={{ color: '#ADB5BD' }}>
-                                {mandat.heuresBudgetees > 0 ? `${mandat.heuresBudgetees}h` : '—'}
-                              </td>
-                              <td className="px-4 py-3 text-xs" style={{ color: '#2C3E50' }}>
-                                {mandat.montantVendu > 0 ? `${mandat.montantVendu.toFixed(0)} $` : '—'}
-                              </td>
-                              <td className="px-4 py-3 text-xs" style={{ color: '#2C3E50' }}>
-                                {mandat.coutReel > 0 ? `${mandat.coutReel.toFixed(0)} $` : '—'}
-                              </td>
-                              <td className="px-4 py-3 text-xs font-bold"
-                                style={{ color: mandat.marge >= 0 ? '#27AE60' : '#C0392B' }}>
-                                {mandat.montantVendu > 0
-                                  ? `${mandat.marge.toFixed(0)} $ (${mandat.margePct}%)`
-                                  : '—'}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          <section
+            aria-labelledby="mandates-heading"
+            className="overflow-hidden rounded-md border border-slate-200 bg-white"
+          >
+            <h2
+              id="mandates-heading"
+              className="border-b border-slate-200 px-5 py-4 font-bold"
+            >
+              Rentabilité cumulative par mandat
+            </h2>
+            {data.mandates.length === 0 ? (
+              <p className="p-8 text-center text-slate-500">
+                Aucun mandat financier dans ce périmètre.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[900px] text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                    <tr>
+                      <th className="p-3">Client / mandat</th>
+                      <th className="p-3">Vendu</th>
+                      <th className="p-3">Coût connu</th>
+                      <th className="p-3">Marge</th>
+                      <th className="p-3">Complétude</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.mandates.map((mandate) => (
+                      <tr
+                        key={mandate.mandateId}
+                        className="border-t border-slate-100"
+                      >
+                        <td className="p-3">
+                          <button
+                            className="text-left font-semibold text-red-700 underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2"
+                            onClick={() =>
+                              router.push(
+                                `/projects/${mandate.projectId}/mandate`,
+                              )
+                            }
+                          >
+                            {mandate.clientName}
+                            <span className="block font-normal text-slate-600">
+                              {mandate.projectName}
+                            </span>
+                          </button>
+                        </td>
+                        <td className="p-3">
+                          {money(mandate.soldAmount, mandate.soldCurrency)}
+                        </td>
+                        <td className="p-3">
+                          {money(mandate.knownLaborCost, mandate.soldCurrency)}
+                        </td>
+                        <td className="p-3">
+                          {money(
+                            mandate.contributionMargin,
+                            mandate.soldCurrency,
+                          )}
+                          {mandate.contributionMarginPercent && (
+                            <span className="block text-xs text-slate-500">
+                              {mandate.contributionMarginPercent} %
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          <span
+                            className={
+                              mandate.completeness === "COMPLETE"
+                                ? "text-green-700"
+                                : "text-amber-700"
+                            }
+                          >
+                            {mandate.completeness === "COMPLETE"
+                              ? "Complet"
+                              : "Incomplet"}
+                          </span>
+                          {mandate.incompleteReasons.length > 0 && (
+                            <span className="block max-w-xs text-xs text-slate-500">
+                              {mandate.incompleteReasons.join(", ")}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
         </>
       )}
     </AppLayout>
