@@ -9,6 +9,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { PlatformPermission } from '@prisma/client';
+import { RequirePlatformPermission } from '../auth/platform-permission.decorator';
 import { SuperAdminOnly } from '../auth/platform-roles.decorator';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
 import {
@@ -23,6 +25,10 @@ type Req = { user: { userId: string } };
 @Controller('admin/v1/organizations/:organizationId/contracts')
 @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
 @SuperAdminOnly()
+@RequirePlatformPermission(
+  PlatformPermission.COMMERCIAL_CONTRACT_PREPARE,
+  'organizationId',
+)
 export class OrganizationContractsController {
   constructor(private readonly service: OrganizationContractsService) {}
   @Get() list(@Param('organizationId') organizationId: string) {
@@ -60,7 +66,12 @@ export class OrganizationContractsController {
   ) {
     return this.service.contractTransition(o, c, 'approve', d, r.user);
   }
-  @Post(':contractId/activate') activate(
+  @RequirePlatformPermission(
+    PlatformPermission.COMMERCIAL_CONTRACT_ACTIVATE,
+    'organizationId',
+  )
+  @Post(':contractId/activate')
+  activate(
     @Param('organizationId') o: string,
     @Param('contractId') c: string,
     @Body() d: ContractReasonDto,

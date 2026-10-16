@@ -10,6 +10,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { UserRole } from '@prisma/client';
 import request from 'supertest';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
+import { legacyPlatformAuthorityTestProvider } from '../auth/platform-authority.test-provider';
 import {
   CommercialProposalsController,
   CommercialProspectsController,
@@ -92,6 +93,7 @@ describe('Commercial proposals effective HTTP RBAC', () => {
       providers: [
         Reflector,
         PlatformRolesGuard,
+        legacyPlatformAuthorityTestProvider,
         { provide: CommercialProposalsService, useValue: service },
         { provide: ProposalPdfService, useValue: pdf },
       ],

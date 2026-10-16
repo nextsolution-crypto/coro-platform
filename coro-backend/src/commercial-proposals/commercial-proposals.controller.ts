@@ -12,6 +12,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { PlatformPermission } from '@prisma/client';
+import { RequirePlatformPermission } from '../auth/platform-permission.decorator';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
 import { SuperAdminOnly } from '../auth/platform-roles.decorator';
 import { CommercialProposalsService } from './commercial-proposals.service';
@@ -36,6 +38,7 @@ type Req = { user: { userId: string } };
 @Controller('admin/v1/commercial/proposals')
 @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
 @SuperAdminOnly()
+@RequirePlatformPermission(PlatformPermission.COMMERCIAL_PROPOSAL_PREPARE)
 export class CommercialProposalsController {
   constructor(
     private service: CommercialProposalsService,
@@ -141,7 +144,9 @@ export class CommercialProposalsController {
   ) {
     return this.service.transition(id, 'READY', d, r.user);
   }
-  @Post(':id/revisions/:revisionId/generate-pdf') generate(
+  @RequirePlatformPermission(PlatformPermission.COMMERCIAL_PROPOSAL_ISSUE)
+  @Post(':id/revisions/:revisionId/generate-pdf')
+  generate(
     @Param('revisionId') id: string,
     @Body() d: GenerateProposalPdfDto,
     @Request() r: Req,
@@ -160,14 +165,18 @@ export class CommercialProposalsController {
       disposition: `attachment; filename="${document.fileName.replace(/["\r\n]/g, '_')}"`,
     });
   }
-  @Post(':id/revisions/:revisionId/mark-sent') sent(
+  @RequirePlatformPermission(PlatformPermission.COMMERCIAL_PROPOSAL_ISSUE)
+  @Post(':id/revisions/:revisionId/mark-sent')
+  sent(
     @Param('revisionId') id: string,
     @Body() d: TransitionProposalDto,
     @Request() r: Req,
   ) {
     return this.service.transition(id, 'SENT', d, r.user);
   }
-  @Post(':id/revisions/:revisionId/accept') accept(
+  @RequirePlatformPermission(PlatformPermission.COMMERCIAL_PROPOSAL_ISSUE)
+  @Post(':id/revisions/:revisionId/accept')
+  accept(
     @Param('revisionId') id: string,
     @Body() d: TransitionProposalDto,
     @Request() r: Req,
@@ -195,7 +204,9 @@ export class CommercialProposalsController {
   ) {
     return this.service.transition(id, 'SUPERSEDED', d, r.user);
   }
-  @Post(':id/revisions/:revisionId/create-contract') contract(
+  @RequirePlatformPermission(PlatformPermission.COMMERCIAL_CONTRACT_PREPARE)
+  @Post(':id/revisions/:revisionId/create-contract')
+  contract(
     @Param('revisionId') id: string,
     @Body() d: CreateContractFromProposalDto,
     @Request() r: Req,

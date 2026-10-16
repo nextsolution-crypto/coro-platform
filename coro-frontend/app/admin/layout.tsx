@@ -1,42 +1,41 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import { useAuthStore } from '@/stores/auth.store';
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuthStore } from "@/stores/auth.store";
+import { usePlatformAuthority } from "@/hooks/usePlatformAuthority";
 
-const ORGANIZATION_ADMIN_ROUTES = ['/admin/capacity', '/admin/mandates'];
+const ORGANIZATION_ADMIN_ROUTES = ["/admin/capacity", "/admin/mandates"];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
-  const [checked, setChecked] = useState(false);
+  const { user, isAuthenticated, isInitialized } = useAuthStore();
+  const platform = usePlatformAuthority(isAuthenticated);
+  const organizationAdminRoute = ORGANIZATION_ADMIN_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+  const allowed = organizationAdminRoute
+    ? user?.role === "ADMIN" || user?.role === "SUPER_ADMIN"
+    : platform.hasAnyPlatformAccess;
 
   useEffect(() => {
-    const token = sessionStorage.getItem('coro_token') || localStorage.getItem('coro_token');
-    const storedUser = sessionStorage.getItem('coro_user') || localStorage.getItem('coro_user');
-    const effectiveUser = user || (storedUser ? JSON.parse(storedUser) : null);
-
-    if (!token && !isAuthenticated) {
-      router.replace('/login');
+    if (!isInitialized) return;
+    if (!isAuthenticated) {
+      router.replace("/login");
       return;
     }
-
-    const organizationAdminRoute = ORGANIZATION_ADMIN_ROUTES.some(
-      (route) => pathname === route || pathname.startsWith(`${route}/`),
-    );
-    const allowed = organizationAdminRoute
-      ? effectiveUser?.role === 'ADMIN' || effectiveUser?.role === 'SUPER_ADMIN'
-      : effectiveUser?.role === 'SUPER_ADMIN';
-
+    if (platform.loading) return;
     if (!allowed) {
-      router.replace('/dashboard');
-      return;
+      router.replace("/dashboard");
     }
-    setChecked(true);
-  }, [isAuthenticated, pathname, router, user]);
+  }, [allowed, isAuthenticated, isInitialized, platform.loading, router]);
 
-  if (!checked) {
+  if (!isInitialized || !allowed || platform.loading) {
     return <div className="min-h-screen bg-slate-50" aria-busy="true" />;
   }
 

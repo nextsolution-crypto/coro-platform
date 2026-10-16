@@ -11,6 +11,7 @@ import { UserRole } from '@prisma/client';
 import type { Server } from 'node:http';
 import request from 'supertest';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
+import { legacyPlatformAuthorityTestProvider } from '../auth/platform-authority.test-provider';
 import { CommercialLegalIssuerController } from './commercial-legal-issuer.controller';
 import { CommercialLegalIssuerService } from './commercial-legal-issuer.service';
 
@@ -39,6 +40,7 @@ describe('Commercial legal issuer HTTP RBAC', () => {
       providers: [
         Reflector,
         PlatformRolesGuard,
+        legacyPlatformAuthorityTestProvider,
         { provide: CommercialLegalIssuerService, useValue: service },
       ],
     })

@@ -41,12 +41,15 @@ const mandate = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe('RendementFinancialService', () => {
+  const authority = {
+    requirePermission: jest.fn().mockResolvedValue(undefined),
+  };
   const prisma = {
     projectMandate: { findMany: jest.fn() },
     advisorInternalCostRate: { findMany: jest.fn() },
     taskTimeEntry: { findMany: jest.fn() },
   } as any;
-  const service = new RendementFinancialService(prisma);
+  const service = new RendementFinancialService(prisma, authority as never);
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -161,6 +164,7 @@ describe('RendementFinancialService', () => {
   });
 
   it('rejects OPERATOR and cross-tenant financial access before querying', async () => {
+    authority.requirePermission.mockRejectedValueOnce(new ForbiddenException());
     await expect(
       service.financial(actor('OPERATOR'), { view: 'cumulative' }),
     ).rejects.toBeInstanceOf(ForbiddenException);

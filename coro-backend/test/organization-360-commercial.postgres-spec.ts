@@ -9,6 +9,7 @@ import { randomUUID } from 'crypto';
 import request from 'supertest';
 import { JwtStrategy } from '../src/auth/jwt.strategy';
 import { PlatformRolesGuard } from '../src/auth/platform-roles.guard';
+import { legacyPlatformAuthorityTestProvider } from '../src/auth/platform-authority.test-provider';
 import { Organization360Controller } from '../src/organization-360/organization-360.controller';
 import { Organization360Service } from '../src/organization-360/organization-360.service';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -297,6 +298,7 @@ describe('Organization 360 commercial HTTP PostgreSQL', () => {
       providers: [
         Reflector,
         PlatformRolesGuard,
+        legacyPlatformAuthorityTestProvider,
         JwtStrategy,
         Organization360Service,
         { provide: PrismaService, useValue: prisma },

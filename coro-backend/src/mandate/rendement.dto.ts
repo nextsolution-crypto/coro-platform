@@ -23,6 +23,7 @@ export class RendementPeriodQueryDto {
 }
 
 export class FinancialRendementQueryDto extends RendementPeriodQueryDto {
+  @IsOptional() @IsString() @IsNotEmpty() organizationId?: string;
   @IsOptional()
   @IsIn(['cumulative', 'work-period', 'sold-portfolio'])
   view: 'cumulative' | 'work-period' | 'sold-portfolio' = 'cumulative';
@@ -32,6 +33,7 @@ export class FinancialRendementQueryDto extends RendementPeriodQueryDto {
 }
 
 export class CreateAdvisorCostRateDto {
+  @IsOptional() @IsString() @IsNotEmpty() organizationId?: string;
   @IsString() @IsNotEmpty() userId!: string;
   @IsIn([GOVERNED_CURRENCY]) currency: string = GOVERNED_CURRENCY;
   @Transform(trim) @Matches(/^\d+(\.\d{1,6})?$/) hourlyCost!: string;

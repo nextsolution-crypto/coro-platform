@@ -14,9 +14,15 @@ import { ActivitiesModule } from '../activities/activities.module';
 import { AdvisorCostRatesController } from './advisor-cost-rates.controller';
 import { AdvisorCostRatesService } from './advisor-cost-rates.service';
 import { RendementFinancialService } from './rendement-financial.service';
+import { PlatformAuthorizationModule } from '../auth/platform-authorization.module';
 
 @Module({
-  imports: [PrismaModule, ActivityTypesModule, ActivitiesModule],
+  imports: [
+    PrismaModule,
+    PlatformAuthorizationModule,
+    ActivityTypesModule,
+    ActivitiesModule,
+  ],
   controllers: [
     MandateController,
     RendementController,

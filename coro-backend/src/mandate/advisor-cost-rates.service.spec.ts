@@ -3,6 +3,9 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { AdvisorCostRatesService } from './advisor-cost-rates.service';
 
 describe('AdvisorCostRatesService', () => {
+  const authority = {
+    requirePermission: jest.fn().mockResolvedValue(undefined),
+  };
   it.each(['USD', 'EUR', 'GBP', 'CHF', 'ZZZ', null])(
     'rejects unsupported new rate currency %p before database access',
     async (currency) => {
@@ -10,7 +13,7 @@ describe('AdvisorCostRatesService', () => {
       const prisma = {
         user: { findFirst: userFindFirst },
       } as any;
-      const service = new AdvisorCostRatesService(prisma);
+      const service = new AdvisorCostRatesService(prisma, authority as never);
 
       await expect(
         service.createDraft(
@@ -44,9 +47,12 @@ describe('AdvisorCostRatesService', () => {
       },
     };
     const prisma = {
+      advisorInternalCostRate: {
+        findUnique: jest.fn().mockResolvedValue({ organizationId: 'org-a' }),
+      },
       $transaction: jest.fn((callback) => callback(transaction)),
     } as any;
-    const service = new AdvisorCostRatesService(prisma);
+    const service = new AdvisorCostRatesService(prisma, authority as never);
 
     await expect(
       service.approve(

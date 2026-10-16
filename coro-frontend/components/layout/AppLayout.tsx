@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import ToastContainer from '@/components/ui/ToastContainer';
+import { usePlatformAuthority } from '@/hooks/usePlatformAuthority';
 
 // ── Navigation par groupes ──────────────────────────────────
 const NAV_GROUPS = [
@@ -140,6 +141,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
+  const platform = usePlatformAuthority(Boolean(user));
   const { toasts, showToast, removeToast } = useToast();
 
   useEffect(() => {
@@ -659,7 +661,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
             )}
 
-            {user?.role === 'SUPER_ADMIN' && (
+            {platform.hasAnyPlatformAccess && (
               <div>
                 <div className="mx-1 mb-3" style={{ borderTop: '1px solid #E9ECEF' }} />
                 <p className="px-3 text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#ADB5BD' }}>
@@ -668,7 +670,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <div className="space-y-0.5">
                   {SUPER_ADMIN_PLATFORM_GROUP.items.map(item => <NavItem key={item.path} item={item} />)}
                 </div>
-                {[SUPER_ADMIN_COMMERCIAL_GROUP, SUPER_ADMIN_COMMERCIAL_ADMIN_GROUP, SUPER_ADMIN_COMMERCIAL_ADVANCED_GROUP, SUPER_ADMIN_OTHER_GROUP].map(group => (
+                {[SUPER_ADMIN_COMMERCIAL_GROUP, SUPER_ADMIN_COMMERCIAL_ADMIN_GROUP, SUPER_ADMIN_COMMERCIAL_ADVANCED_GROUP, ...(platform.isFounder ? [SUPER_ADMIN_OTHER_GROUP] : [])].map(group => (
                   <div key={group.label} className="mt-4">
                     <p className="px-3 text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#ADB5BD' }}>
                       {group.label}

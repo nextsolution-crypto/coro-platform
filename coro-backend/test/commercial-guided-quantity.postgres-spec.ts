@@ -22,6 +22,7 @@ import request from 'supertest';
 import { AdminAuditService } from '../src/admin-audit/admin-audit.service';
 import { SuperAdminOnly } from '../src/auth/platform-roles.decorator';
 import { PlatformRolesGuard } from '../src/auth/platform-roles.guard';
+import { legacyPlatformAuthorityTestProvider } from '../src/auth/platform-authority.test-provider';
 import { CommercialProposalsService } from '../src/commercial-proposals/commercial-proposals.service';
 import { ProposalPricingEngine } from '../src/commercial-proposals/proposal-pricing-engine';
 import { TransitionProposalDto } from '../src/commercial-proposals/dto/commercial-proposals.dto';
@@ -119,6 +120,7 @@ describe('guided commercial quantity provenance PostgreSQL lifecycle', () => {
       providers: [
         Reflector,
         PlatformRolesGuard,
+        legacyPlatformAuthorityTestProvider,
         { provide: CommercialProposalsService, useValue: proposals },
       ],
     })

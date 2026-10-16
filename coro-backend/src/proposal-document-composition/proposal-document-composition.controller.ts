@@ -9,6 +9,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { PlatformPermission } from '@prisma/client';
+import { RequirePlatformPermission } from '../auth/platform-permission.decorator';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
 import { SuperAdminOnly } from '../auth/platform-roles.decorator';
 import {
@@ -23,6 +25,7 @@ type RequestWithUser = { user: { userId: string } };
 @Controller('admin/v1/commercial/proposals')
 @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
 @SuperAdminOnly()
+@RequirePlatformPermission(PlatformPermission.COMMERCIAL_PROPOSAL_PREPARE)
 export class ProposalDocumentCompositionController {
   constructor(
     private readonly composition: ProposalDocumentCompositionService,

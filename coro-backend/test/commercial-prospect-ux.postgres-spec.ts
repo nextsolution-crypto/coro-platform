@@ -16,6 +16,7 @@ import request from 'supertest';
 jest.mock('puppeteer', () => ({ __esModule: true, default: {} }));
 import { AdminAuditService } from '../src/admin-audit/admin-audit.service';
 import { PlatformRolesGuard } from '../src/auth/platform-roles.guard';
+import { legacyPlatformAuthorityTestProvider } from '../src/auth/platform-authority.test-provider';
 import { CommercialProspectsController } from '../src/commercial-proposals/commercial-proposals.controller';
 import { CommercialProposalsService } from '../src/commercial-proposals/commercial-proposals.service';
 import { ProposalPricingEngine } from '../src/commercial-proposals/proposal-pricing-engine';
@@ -84,6 +85,7 @@ describe('Founder Prospect UX PostgreSQL HTTP acceptance', () => {
       providers: [
         Reflector,
         PlatformRolesGuard,
+        legacyPlatformAuthorityTestProvider,
         { provide: CommercialProposalsService, useValue: proposals },
         { provide: CommercialSimulatorService, useValue: simulator },
       ],

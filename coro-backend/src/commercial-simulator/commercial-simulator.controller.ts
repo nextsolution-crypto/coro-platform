@@ -10,6 +10,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { PlatformPermission } from '@prisma/client';
+import { RequirePlatformPermission } from '../auth/platform-permission.decorator';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
 import { SuperAdminOnly } from '../auth/platform-roles.decorator';
 import { CommercialSimulatorService } from './commercial-simulator.service';
@@ -41,6 +43,7 @@ type RequestWithUser = { user: { userId: string } };
 @Controller('admin/v1/commercial/simulator')
 @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
 @SuperAdminOnly()
+@RequirePlatformPermission(PlatformPermission.COMMERCIAL_WORKSPACE_MANAGE)
 export class CommercialSimulatorController {
   constructor(private readonly service: CommercialSimulatorService) {}
   @Get('configurator/bootstrap') configuratorBootstrap() {

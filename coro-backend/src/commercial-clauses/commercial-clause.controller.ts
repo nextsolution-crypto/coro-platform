@@ -9,6 +9,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { PlatformPermission } from '@prisma/client';
+import { RequirePlatformPermission } from '../auth/platform-permission.decorator';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
 import { SuperAdminOnly } from '../auth/platform-roles.decorator';
 import {
@@ -24,6 +26,7 @@ type AuthenticatedRequest = { user: { userId: string } };
 @Controller('admin/v1/commercial/clauses')
 @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
 @SuperAdminOnly()
+@RequirePlatformPermission(PlatformPermission.COMMERCIAL_CONTENT_MANAGE)
 export class CommercialClauseController {
   constructor(private readonly service: CommercialClauseService) {}
 

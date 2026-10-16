@@ -25,9 +25,10 @@ export class AdvisorCostRatesController {
   @Get()
   list(
     @Query('userId') userId: string | undefined,
+    @Query('organizationId') organizationId: string | undefined,
     @Request() req: { user: WorkManagementActor },
   ) {
-    return this.service.list(req.user, userId);
+    return this.service.list(req.user, userId, organizationId);
   }
 
   @Post()

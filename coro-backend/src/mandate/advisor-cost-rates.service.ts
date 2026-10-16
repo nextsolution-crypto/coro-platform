@@ -5,13 +5,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { PlatformPermission, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { governedCurrency } from '../common/financial-currency';
-import {
-  WorkManagementActor,
-  requireTenantAdmin,
-} from '../auth/work-management-access';
+import { WorkManagementActor } from '../auth/work-management-access';
+import { PlatformAuthorityService } from '../auth/platform-authority.service';
 import {
   CostRateTransitionDto,
   CreateAdvisorCostRateDto,
@@ -25,13 +23,25 @@ type FinancialActor = WorkManagementActor & {
 
 @Injectable()
 export class AdvisorCostRatesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly platformAuthority: PlatformAuthorityService,
+  ) {}
 
-  list(actor: FinancialActor, userId?: string) {
-    requireTenantAdmin(actor);
+  async list(
+    actor: FinancialActor,
+    userId?: string,
+    targetOrganizationId?: string,
+  ) {
+    const organizationId = targetOrganizationId ?? actor.organizationId;
+    await this.platformAuthority.requirePermission(
+      actor,
+      PlatformPermission.FINANCIAL_ADVISOR_COST_MANAGE,
+      organizationId,
+    );
     return this.prisma.advisorInternalCostRate.findMany({
       where: {
-        organizationId: actor.organizationId,
+        organizationId,
         ...(userId ? { userId } : {}),
       },
       orderBy: [
@@ -43,14 +53,19 @@ export class AdvisorCostRatesService {
   }
 
   async createDraft(dto: CreateAdvisorCostRateDto, actor: FinancialActor) {
-    requireTenantAdmin(actor);
+    const organizationId = dto.organizationId ?? actor.organizationId;
+    await this.platformAuthority.requirePermission(
+      actor,
+      PlatformPermission.FINANCIAL_ADVISOR_COST_MANAGE,
+      organizationId,
+    );
     const currency = governedCurrency(dto.currency, {
       defaultWhenMissing: true,
     });
     const advisor = await this.prisma.user.findFirst({
       where: {
         id: dto.userId,
-        organizationId: actor.organizationId,
+        organizationId,
         isActive: true,
       },
       select: { id: true },
@@ -74,7 +89,7 @@ export class AdvisorCostRatesService {
       return await this.prisma.$transaction(async (tx) => {
         const created = await tx.advisorInternalCostRate.create({
           data: {
-            organizationId: actor.organizationId,
+            organizationId,
             userId: advisor.id,
             currency,
             hourlyCost,
@@ -107,12 +122,12 @@ export class AdvisorCostRatesService {
   }
 
   async approve(id: string, dto: CostRateTransitionDto, actor: FinancialActor) {
-    requireTenantAdmin(actor);
+    const organizationId = await this.requireRatePermission(id, actor);
     try {
       return await this.prisma.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${id}, 0))`;
         const current = await tx.advisorInternalCostRate.findFirst({
-          where: { id, organizationId: actor.organizationId },
+          where: { id, organizationId },
         });
         if (!current) throw new NotFoundException('Taux introuvable.');
         if (current.status !== 'PROPOSED')
@@ -130,7 +145,7 @@ export class AdvisorCostRatesService {
           const replaced = await tx.advisorInternalCostRate.updateMany({
             where: {
               id: current.supersedesRateId,
-              organizationId: actor.organizationId,
+              organizationId,
               userId: current.userId,
               currency: current.currency,
               status: 'APPROVED',
@@ -189,11 +204,11 @@ export class AdvisorCostRatesService {
     dto: CostRateTransitionDto,
     actor: FinancialActor,
   ) {
-    requireTenantAdmin(actor);
+    const organizationId = await this.requireRatePermission(id, actor);
     return this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${id}, 0))`;
       const current = await tx.advisorInternalCostRate.findFirst({
-        where: { id, organizationId: actor.organizationId },
+        where: { id, organizationId },
       });
       if (!current) throw new NotFoundException('Taux introuvable.');
       if (
@@ -239,6 +254,20 @@ export class AdvisorCostRatesService {
     return new Date(`${assertCivilDate(value, field)}T00:00:00.000Z`);
   }
 
+  private async requireRatePermission(id: string, actor: FinancialActor) {
+    const rate = await this.prisma.advisorInternalCostRate.findUnique({
+      where: { id },
+      select: { organizationId: true },
+    });
+    if (!rate) throw new NotFoundException('Taux introuvable.');
+    await this.platformAuthority.requirePermission(
+      actor,
+      PlatformPermission.FINANCIAL_ADVISOR_COST_MANAGE,
+      rate.organizationId,
+    );
+    return rate.organizationId;
+  }
+
   private civilValue(value: Date) {
     return value.toISOString().slice(0, 10);
   }
@@ -261,7 +290,9 @@ export class AdvisorCostRatesService {
         action,
         targetType: 'AdvisorInternalCostRate',
         targetId,
-        organizationId: actor.organizationId,
+        organizationId:
+          (afterData as { organizationId?: string } | null)?.organizationId ??
+          actor.organizationId,
         beforeData: beforeData as Prisma.InputJsonValue,
         afterData: afterData as Prisma.InputJsonValue,
       },
