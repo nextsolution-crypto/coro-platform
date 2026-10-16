@@ -3,8 +3,9 @@
  * Banc de validation Liquid Glass — couche navigateur.
  * Pilote un Chrome réel (headless) via le protocole DevTools. Aucune dépendance : WebSocket natif de Node 22.
  * Variables d'environnement : CHROME_PATH, BENCH_BASE_URL (défaut http://localhost:3010), BENCH_API_PORT (défaut 3002).
+ * BENCH_TMPDIR : dossier parent des profils Chrome jetables (défaut : répertoire temporaire du système) ; chaque profil est supprimé à la fermeture, à la sortie et à l'interruption.
  */
-const { spawn } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 const http = require('node:http');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -35,16 +36,88 @@ const VIEWPORTS = {
   1600: { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false },
 };
 
-/** Lance Chrome avec un profil jetable ; renvoie { close(), port }. */
+/**
+ * Répertoire parent des profils jetables : BENCH_TMPDIR si défini (p. ex. D:\CORO-Workspace\temp), sinon le répertoire temporaire du système.
+ * Ne jamais y placer autre chose que des profils créés par ce module : seuls les dossiers « cg-bench-* » créés par l'exécution courante sont supprimés.
+ */
+function profileBase() { return process.env.BENCH_TMPDIR || os.tmpdir(); }
+
+/** Instances Chrome lancées par CE processus (seules concernées par le nettoyage de sortie). */
+const LIVE = new Set();
+
+/**
+ * Arrête Chrome. Le processus lancé par spawn() est un lanceur qui peut se terminer après avoir démarré le vrai navigateur (re-parentage) :
+ * tuer son arbre ne suffit pas (mesuré : profils verrouillés et Chrome orphelins). On arrête donc aussi, par ligne de commande, les processus
+ * qui référencent le profil unique créé par CETTE exécution (« cg-bench-XXXXXX ») : jamais d'autre processus Chrome. Synchrone (sortie du processus).
+ */
+function killTree(proc, dir) {
+  const name = dir ? path.basename(dir) : '';
+  try {
+    if (proc && proc.pid && process.platform === 'win32') spawnSync('taskkill', ['/PID', String(proc.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
+    else if (proc && proc.pid) process.kill(proc.pid, 'SIGKILL');
+  } catch { /* déjà arrêté */ }
+  if (!/^cg-bench-[A-Za-z0-9]+$/.test(name)) return;
+  try {
+    if (process.platform === 'win32') {
+      const ps = "Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\" | Where-Object { $_.CommandLine -like ('*' + $env:CG_BENCH_PROFILE + '*') } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }";
+      spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', ps], { stdio: 'ignore', windowsHide: true, env: { ...process.env, CG_BENCH_PROFILE: name } });
+    } else spawnSync('pkill', ['-9', '-f', name], { stdio: 'ignore' });
+  } catch { /* ignoré */ }
+}
+
+/** Supprime le profil de cette instance (uniquement s'il a été créé par elle) ; réessaie tant que Chrome libère ses verrous. */
+function removeProfile(inst, attempts = 20) {
+  const dir = inst.dir;
+  if (!dir || !path.basename(dir).startsWith('cg-bench-') || path.dirname(dir) !== inst.base) return false;
+  for (let i = 0; i < attempts; i++) {
+    try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* verrou : nouvel essai */ }
+    if (!fs.existsSync(dir)) return true;
+    try { spawnSync(process.execPath, ['-e', 'setTimeout(()=>{},150)'], { stdio: 'ignore' }); } catch { /* ignoré */ }
+  }
+  return !fs.existsSync(dir);
+}
+
+/** Nettoyage synchrone d'une instance : processus puis profil. Idempotent. */
+function disposeSync(inst) {
+  if (inst.disposed) return;
+  inst.disposed = true;
+  killTree(inst.proc, inst.dir);
+  removeProfile(inst);
+  LIVE.delete(inst);
+}
+
+let hooksInstalled = false;
+function installExitHooks() {
+  if (hooksInstalled) return;
+  hooksInstalled = true;
+  // Sortie normale, process.exit() ou exception non gérée : l'événement « exit » est toujours émis.
+  process.on('exit', () => { for (const inst of [...LIVE]) disposeSync(inst); });
+  // Interruption contrôlée (Ctrl+C, arrêt demandé) : nettoyer puis quitter avec le code conventionnel.
+  for (const [sig, code] of [['SIGINT', 130], ['SIGTERM', 143], ['SIGBREAK', 149]]) {
+    try { process.on(sig, () => { for (const inst of [...LIVE]) disposeSync(inst); process.exit(code); }); } catch { /* signal non pris en charge */ }
+  }
+}
+
+/** Lance Chrome avec un profil jetable ; renvoie { close(), port, dir, pid }. Le profil et tous les processus sont supprimés par close(), à la sortie, ou à l'interruption. */
 async function launch() {
   const port = 9300 + Math.floor(Math.random() * 600);
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cg-bench-'));
+  const base = profileBase();
+  fs.mkdirSync(base, { recursive: true });
+  const dir = fs.mkdtempSync(path.join(base, 'cg-bench-'));
   const proc = spawn(CHROME, [`--headless=new`, `--remote-debugging-port=${port}`, `--user-data-dir=${dir}`,
-    '--hide-scrollbars', '--no-first-run', '--disable-gpu-vsync', 'about:blank'], { stdio: 'ignore' });
-  for (let i = 0; i < 60; i++) { try { await getJson(`http://127.0.0.1:${port}/json/version`); break; } catch { await sleep(250); } }
+    '--hide-scrollbars', '--no-first-run', '--disable-gpu-vsync', 'about:blank'], { stdio: 'ignore', windowsHide: true });
+  const inst = { proc, dir, base, disposed: false };
+  let spawnError = null; proc.on('error', (e) => { spawnError = e; });
+  LIVE.add(inst);
+  installExitHooks();
+  try {
+    let ready = false;
+    for (let i = 0; i < 60 && !ready && !spawnError; i++) { try { await getJson(`http://127.0.0.1:${port}/json/version`); ready = true; } catch { await sleep(250); } }
+    if (!ready) throw new Error(spawnError ? `Chrome n'a pas pu démarrer : ${spawnError.message}` : `Chrome n'a pas répondu sur le port ${port}`);
+  } catch (e) { disposeSync(inst); throw e; }
   return {
-    port,
-    async close() { try { proc.kill(); } catch { /* déjà arrêté */ } await sleep(300); try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* profil verrouillé : sans importance */ } },
+    port, dir, pid: proc.pid,
+    async close() { disposeSync(inst); },
   };
 }
 
@@ -128,9 +201,9 @@ async function openSession(port, { ui, theme, viewport, colorScheme = 'light', w
       await evaluate(`(()=>{const s=document.createElement('style');s.setAttribute('data-bench','freeze');s.textContent='*,*::before,*::after{transition:none!important;animation:none!important;caret-color:transparent!important}';document.head.appendChild(s)})()`);
       await sleep(400);
     },
-    async close() { try { ws.close(); } catch { /* ignoré */ } },
+    async close() { try { ws.close(); } catch { /* ignoré */ } try { await getJson(`http://127.0.0.1:${port}/json/close/${target.id}`); } catch { /* onglet déjà fermé */ } },
   };
   return session;
 }
 
-module.exports = { launch, openSession, sleep, VIEWPORTS, BASE };
+module.exports = { launch, openSession, sleep, VIEWPORTS, BASE, profileBase };

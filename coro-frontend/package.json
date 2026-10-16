@@ -10,7 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:design-system": "node design-system/theme/theme.test.cjs && node design-system/glass-palette.test.cjs && node design-system/routes/route-registry.test.cjs && node design-system/routes/production-safety.test.cjs && node app/settings/settings-glass.contract.test.cjs && node app/activities/portfolio/portfolio-glass.contract.test.cjs && node design-system/kit/kit.test.cjs && node design-system/bench/bench.test.cjs && node design-system/bench/preprod.test.cjs",
+    "test:design-system": "node design-system/theme/theme.test.cjs && node design-system/glass-palette.test.cjs && node design-system/routes/route-registry.test.cjs && node design-system/routes/production-safety.test.cjs && node app/settings/settings-glass.contract.test.cjs && node app/activities/portfolio/portfolio-glass.contract.test.cjs && node design-system/kit/kit.test.cjs && node design-system/bench/bench.test.cjs && node design-system/bench/preprod.test.cjs && node design-system/bench/cdp-lifecycle.test.cjs",
     "glass:inventory": "node design-system/tools/route-scanner.cjs",
     "glass:bench": "node design-system/bench/cli.cjs",
     "glass:verify-production": "node design-system/tools/production-check.cjs",
