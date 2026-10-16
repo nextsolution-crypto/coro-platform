@@ -136,7 +136,8 @@ run_backend_auth_smoke() {
 [[ "${MIGRATION_COMPATIBILITY_APPROVAL:-}" == CONFIRMED_BACKWARD_COMPATIBLE ]] || fail MIGRATION_COMPATIBILITY_APPROVAL_MISSING
 [[ "${RELEASE_COMMIT:-}" =~ ^[0-9a-f]{40}$ ]] || fail RELEASE_COMMIT_INVALID
 [[ "${RELEASE_OPERATOR:-}" =~ ^[A-Za-z0-9_.-]+$ ]] || fail RELEASE_OPERATOR_INVALID
-export RELEASE_ID="production-${RELEASE_COMMIT}-$(date -u +%Y%m%dT%H%M%SZ)"
+export RELEASE_ID="${RELEASE_ID:-production-${RELEASE_COMMIT}-$(date -u +%Y%m%dT%H%M%SZ)}"
+[[ "$RELEASE_ID" =~ ^production-[0-9a-f]{40}(-[0-9]{8}T[0-9]{6}Z)?$ ]] || fail RELEASE_ID_INVALID
 mkdir -p "$RELEASE_DIR"
 chmod 0700 "$RELEASE_DIR"
 for variable in BACKEND_IMAGE FRONTEND_IMAGE CLIENT_PORTAL_IMAGE WEBSITE_IMAGE; do

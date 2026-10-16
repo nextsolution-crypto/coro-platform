@@ -264,10 +264,16 @@ jobs:
           envs: RELEASE_COMMIT,PRODUCTION_APPROVAL,MIGRATION_COMPATIBILITY_APPROVAL,RELEASE_OPERATOR,BACKEND_IMAGE,FRONTEND_IMAGE,CLIENT_PORTAL_IMAGE,WEBSITE_IMAGE
           script: |
             set -euo pipefail
-            trap 'rm -f /tmp/coro-production-release.sh' EXIT
+            trap 'rm -f /tmp/coro-production-release.sh /tmp/coro-release-control.sh /tmp/coro-release-reconcile.sh /tmp/release-state.mjs' EXIT
             test -d /opt/coro-platform/.git
             git -C /opt/coro-platform fetch --quiet origin main
             test "$(git -C /opt/coro-platform rev-parse origin/main)" = "$RELEASE_COMMIT"
             git -C /opt/coro-platform show "$RELEASE_COMMIT:ops/deploy/coro-production-release.sh" > /tmp/coro-production-release.sh
-            chmod 0700 /tmp/coro-production-release.sh
-            /tmp/coro-production-release.sh
+            git -C /opt/coro-platform show "$RELEASE_COMMIT:ops/deploy/coro-release-control.sh" > /tmp/coro-release-control.sh
+            git -C /opt/coro-platform show "$RELEASE_COMMIT:ops/deploy/coro-release-reconcile.sh" > /tmp/coro-release-reconcile.sh
+            git -C /opt/coro-platform show "$RELEASE_COMMIT:ops/deploy/release-state.mjs" > /tmp/release-state.mjs
+            chmod 0700 /tmp/coro-production-release.sh /tmp/coro-release-control.sh /tmp/coro-release-reconcile.sh /tmp/release-state.mjs
+            CORO_RELEASE_SCRIPT_SOURCE=/tmp/coro-production-release.sh \
+            CORO_RELEASE_STATE_SOURCE=/tmp/release-state.mjs \
+            CORO_RELEASE_RECONCILE_SOURCE=/tmp/coro-release-reconcile.sh \
+            /tmp/coro-release-control.sh
