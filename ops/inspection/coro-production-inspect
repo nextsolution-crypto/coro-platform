@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+umask 077
+
+readonly PATH='/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+export PATH
+unset BASH_ENV ENV CDPATH GLOBIGNORE
+
+readonly CONFIG='/etc/coro-inspection/inspection.env'
+readonly REPORTER='/usr/local/libexec/coro/inspection-report.mjs'
+readonly REPO='/opt/coro-platform'
+readonly RELEASE_DIR='/opt/coro-ops/releases'
+readonly BACKUP_DIR='/opt/coro-ops/backups/database'
+readonly RESTORE_DIR='/opt/coro-ops/restore-drills'
+readonly LOCK_FILE='/run/lock/coro-production-deployment.lock'
+readonly BACKUP_REMOTE_CONFIG='/etc/coro-backup/spaces.env'
+
+fail() { printf '{"schemaVersion":1,"assessment":"NO_GO","collectorError":"%s"}\n' "$1"; exit 1; }
+
+[[ "$#" -eq 1 && "$1" == '--forced' ]] || fail INVOCATION_FORBIDDEN
+[[ "$(id -u)" -eq 0 ]] || fail ROOT_WRAPPER_REQUIRED
+[[ -f "$CONFIG" && ! -L "$CONFIG" ]] || fail CONFIG_INVALID
+[[ "$(stat -c '%u:%a' "$CONFIG")" == '0:600' ]] || fail CONFIG_PERMISSIONS_INVALID
+[[ -f "$REPORTER" && ! -L "$REPORTER" ]] || fail REPORTER_INVALID
+[[ "$(stat -c '%u' "$REPORTER")" == '0' ]] || fail REPORTER_OWNER_INVALID
+
+set -a
+# shellcheck disable=SC1090
+source "$CONFIG"
+set +a
+
+: "${CORO_INSPECTION_DB_USER:?}"
+: "${CORO_INSPECTION_DB_PASSWORD:?}"
+: "${CORO_INSPECTION_DB_NAME:?}"
+: "${CORO_OPERATOR_ORGANIZATION_ID:?}"
+: "${CORO_FOUNDER_USER_ID:?}"
+[[ "$CORO_OPERATOR_ORGANIZATION_ID" =~ ^[0-9a-fA-F-]{36}$ ]] || fail OPERATOR_ID_INVALID
+[[ "$CORO_FOUNDER_USER_ID" =~ ^[0-9a-fA-F-]{36}$ ]] || fail FOUNDER_ID_INVALID
+
+work="$(mktemp -d /tmp/coro-production-inspection.XXXXXX)"
+cleanup() { rm -rf -- "$work"; }
+trap cleanup EXIT
+
+git -C "$REPO" rev-parse HEAD >"$work/commit"
+sha256sum "$REPO/docker-compose.yml" | cut -d' ' -f1 >"$work/compose-sha256"
+df -Pk /opt >"$work/disk"
+lslocks --json >"$work/locks.json"
+
+for container in coro_backend coro_frontend coro_client_portal coro_website coro_postgres; do
+  docker inspect --format '{{json .}}' "$container" >"$work/${container}.json" || fail CONTAINER_INSPECTION_FAILED
+  image_id="$(docker inspect --format '{{.Image}}' "$container")"
+  docker image inspect --format '{{json .}}' "$image_id" >"$work/${container}.image.json" || fail IMAGE_INSPECTION_FAILED
+done
+
+readonly_sql="BEGIN READ ONLY;
+SELECT json_build_object(
+  'postgresVersion', current_setting('server_version'),
+  'migrationCount', (SELECT count(*) FROM \"_prisma_migrations\" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL),
+  'migrationHead', (SELECT migration_name FROM \"_prisma_migrations\" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY finished_at DESC LIMIT 1),
+  'failedMigrations', (SELECT count(*) FROM \"_prisma_migrations\" WHERE finished_at IS NULL AND rolled_back_at IS NULL),
+  'platformAuthorityMigrationApplied', EXISTS (SELECT 1 FROM \"_prisma_migrations\" WHERE migration_name='20261024010000_platform_authority' AND finished_at IS NOT NULL AND rolled_back_at IS NULL),
+  'authorityTablePresent', to_regclass('public.\"PlatformAuthorityConfiguration\"') IS NOT NULL,
+  'grantTablePresent', to_regclass('public.\"PlatformPermissionGrant\"') IS NOT NULL,
+  'authorityRecordCount', 0,
+  'authority', 'null'::json,
+  'grantCount', 0,
+  'activeCustomerGrantCount', 0,
+  'operator', (SELECT json_build_object('id', \"id\", 'exists', true, 'active', \"isActive\", 'internal', \"isInternal\") FROM \"Organization\" WHERE \"id\"='${CORO_OPERATOR_ORGANIZATION_ID}'),
+  'founder', (SELECT json_build_object('id', \"id\", 'exists', true, 'active', \"isActive\", 'role', \"role\"::text, 'organizationId', \"organizationId\") FROM \"User\" WHERE \"id\"='${CORO_FOUNDER_USER_ID}'),
+  'activeSuperAdminCount', (SELECT count(*) FROM \"User\" WHERE \"role\"='SUPER_ADMIN' AND \"isActive\"=true),
+  'customerSuperAdminCount', (SELECT count(*) FROM \"User\" u JOIN \"Organization\" o ON o.id=u.\"organizationId\" WHERE u.\"role\"='SUPER_ADMIN' AND u.\"isActive\"=true AND o.\"isInternal\"=false)
+);
+ROLLBACK;"
+
+printf 'PGPASSWORD=%s\n' "$CORO_INSPECTION_DB_PASSWORD" >"$work/postgres.env"
+chmod 0600 "$work/postgres.env"
+docker exec --env-file "$work/postgres.env" coro_postgres \
+  psql --no-password --username "$CORO_INSPECTION_DB_USER" --dbname "$CORO_INSPECTION_DB_NAME" \
+    --quiet --tuples-only --no-align --set ON_ERROR_STOP=1 --command "$readonly_sql" >"$work/database.json" || fail DATABASE_INSPECTION_FAILED
+
+authority_schema_available="$(node -e 'const d=require(process.argv[1]);process.stdout.write(String(d.platformAuthorityMigrationApplied&&d.authorityTablePresent&&d.grantTablePresent))' "$work/database.json")" || fail DATABASE_METADATA_INVALID
+if [[ "$authority_schema_available" == 'true' ]]; then
+  authority_sql="BEGIN READ ONLY;
+SELECT json_build_object(
+  'authorityRecordCount', (SELECT count(*) FROM \"PlatformAuthorityConfiguration\"),
+  'authority', COALESCE((SELECT json_build_object('id', \"id\", 'status', \"status\"::text, 'operatorOrganizationId', \"operatorOrganizationId\", 'founderUserId', \"founderUserId\", 'lockVersion', \"lockVersion\") FROM \"PlatformAuthorityConfiguration\" WHERE \"id\"='PRIMARY'), 'null'::json),
+  'grantCount', (SELECT count(*) FROM \"PlatformPermissionGrant\"),
+  'activeCustomerGrantCount', (SELECT count(*) FROM \"PlatformPermissionGrant\" g JOIN \"User\" u ON u.id=g.\"userId\" JOIN \"Organization\" o ON o.id=u.\"organizationId\" WHERE g.\"status\"='ACTIVE' AND o.\"isInternal\"=false)
+);
+ROLLBACK;"
+  docker exec --env-file "$work/postgres.env" coro_postgres \
+    psql --no-password --username "$CORO_INSPECTION_DB_USER" --dbname "$CORO_INSPECTION_DB_NAME" \
+    --quiet --tuples-only --no-align --set ON_ERROR_STOP=1 --command "$authority_sql" >"$work/authority.json" || fail AUTHORITY_INSPECTION_FAILED
+  node -e 'const fs=require("fs");const database=require(process.argv[1]);const authority=require(process.argv[2]);fs.writeFileSync(process.argv[1],JSON.stringify({...database,...authority}));' \
+    "$work/database.json" "$work/authority.json" || fail DATABASE_EVIDENCE_MERGE_FAILED
+fi
+
+systemctl show coro-db-backup.service coro-db-backup.timer coro-db-backup-health.service coro-db-backup-health.timer \
+  --property Id,ActiveState,SubState,Result,UnitFileState,NextElapseUSecRealtime >"$work/systemd"
+
+[[ -f "$BACKUP_DIR/backup-state.json" && ! -L "$BACKUP_DIR/backup-state.json" ]] || fail BACKUP_STATE_MISSING
+cp -- "$BACKUP_DIR/backup-state.json" "$work/backup-state.json"
+
+find "$BACKUP_DIR" -maxdepth 1 -type f -name '*.remote.manifest.json' -printf '%T@ %p\n' | sort -nr | sed -n '1p' >"$work/latest-backup"
+find "$RESTORE_DIR" -maxdepth 2 -type f -name '*.restore-report.json' -printf '%T@ %p\n' | sort -nr | sed -n '1p' >"$work/latest-restore"
+find "$RELEASE_DIR" -maxdepth 1 -type f -name 'production-*.json' -printf '%T@ %p\n' | sort -nr | sed -n '1p' >"$work/latest-release"
+find "$RELEASE_DIR/state" -maxdepth 1 -type f -name 'production-*.state.json' -printf '%T@ %p\n' | sort -nr | sed -n '1p' >"$work/latest-release-state"
+
+latest_backup_manifest="$(cut -d' ' -f2- "$work/latest-backup")"
+[[ -f "$latest_backup_manifest" && ! -L "$latest_backup_manifest" ]] || fail BACKUP_MANIFEST_MISSING
+[[ -f "$BACKUP_REMOTE_CONFIG" && ! -L "$BACKUP_REMOTE_CONFIG" ]] || fail BACKUP_REMOTE_CONFIG_INVALID
+[[ "$(stat -c '%u:%a' "$BACKUP_REMOTE_CONFIG")" == '0:600' ]] || fail BACKUP_REMOTE_CONFIG_PERMISSIONS_INVALID
+set -a
+# shellcheck disable=SC1090
+source "$BACKUP_REMOTE_CONFIG"
+set +a
+: "${CORO_BACKUP_SPACES_ACCESS_KEY:?}"
+: "${CORO_BACKUP_SPACES_SECRET_KEY:?}"
+: "${CORO_BACKUP_SPACES_ENDPOINT:?}"
+: "${CORO_BACKUP_SPACES_REGION:?}"
+backup_bucket="$(node -e 'const m=require(process.argv[1]);if(!m.remoteBucket)process.exit(1);process.stdout.write(m.remoteBucket)' "$latest_backup_manifest")" || fail BACKUP_REMOTE_IDENTITY_INVALID
+backup_key="$(node -e 'const m=require(process.argv[1]);if(!m.remoteObjectKey)process.exit(1);process.stdout.write(m.remoteObjectKey)' "$latest_backup_manifest")" || fail BACKUP_REMOTE_IDENTITY_INVALID
+unset AWS_SESSION_TOKEN AWS_PROFILE AWS_DEFAULT_PROFILE AWS_SHARED_CREDENTIALS_FILE AWS_CONFIG_FILE
+export AWS_ACCESS_KEY_ID="$CORO_BACKUP_SPACES_ACCESS_KEY"
+export AWS_SECRET_ACCESS_KEY="$CORO_BACKUP_SPACES_SECRET_KEY"
+export AWS_EC2_METADATA_DISABLED=true
+aws --endpoint-url "$CORO_BACKUP_SPACES_ENDPOINT" --region "$CORO_BACKUP_SPACES_REGION" \
+  s3api head-object --bucket "$backup_bucket" --key "$backup_key" --output json >"$work/remote-head.json" || fail BACKUP_REMOTE_UNAVAILABLE
+
+latest_release_manifest="$(cut -d' ' -f2- "$work/latest-release")"
+[[ -f "$latest_release_manifest" && ! -L "$latest_release_manifest" ]] || fail RELEASE_MANIFEST_MISSING
+sha256sum "$latest_release_manifest" | cut -d' ' -f1 >"$work/release-manifest-sha256"
+latest_release_state="$(cut -d' ' -f2- "$work/latest-release-state")"
+[[ -f "$latest_release_state" && ! -L "$latest_release_state" ]] || fail RELEASE_STATE_MISSING
+release_state_checksum="${latest_release_state%.json}.sha256"
+[[ -f "$release_state_checksum" && ! -L "$release_state_checksum" ]] || fail RELEASE_STATE_CHECKSUM_MISSING
+(cd "$(dirname "$latest_release_state")" && sha256sum --check --status "$(basename "$release_state_checksum")") || fail RELEASE_STATE_CHECKSUM_INVALID
+node -e 'const m=require(process.argv[1]);for(const i of m.previousImages||[])if(i)console.log(i)' "$latest_release_manifest" >"$work/rollback-images"
+rollback_available=0
+while IFS= read -r image; do
+  [[ "$image" =~ ^ghcr\.io/[a-z0-9_.-]+/[a-z0-9_.-]+@sha256:[0-9a-f]{64}$ ]] || fail ROLLBACK_IMAGE_INVALID
+  docker image inspect "$image" >/dev/null || fail ROLLBACK_IMAGE_UNAVAILABLE
+  rollback_available=$((rollback_available + 1))
+done <"$work/rollback-images"
+printf '%s\n' "$rollback_available" >"$work/rollback-available-count"
+
+node "$REPORTER" "$work"

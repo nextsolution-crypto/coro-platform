@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+set -eu
+
+PATH='/usr/sbin:/usr/bin:/sbin:/bin'
+export PATH
+
+if [ "$#" -ne 0 ] || [ "${SSH_ORIGINAL_COMMAND:-}" != 'inspect' ]; then
+  printf '%s\n' '{"schemaVersion":1,"assessment":"NO_GO","collectorError":"ORIGINAL_COMMAND_FORBIDDEN"}'
+  exit 1
+fi
+
+exec /usr/bin/sudo -n /usr/local/sbin/coro-production-inspect --forced
