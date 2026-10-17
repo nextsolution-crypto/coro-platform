@@ -126,7 +126,7 @@ async function launch() {
 }
 
 /** Ouvre un onglet et renvoie une session { send, eval, key, click, goto, ... }. */
-async function openSession(port, { ui, theme, viewport, colorScheme = 'light', width, beta = false, role = 'SUPER_ADMIN', authority }) {
+async function openSession(port, { ui, theme, viewport, colorScheme = 'light', width, beta = false, role = 'SUPER_ADMIN', authority, real }) {
   const target = await getJson(`http://127.0.0.1:${port}/json/new?about:blank`, 'PUT');
   const ws = new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((resolve) => (ws.onopen = resolve));
@@ -149,10 +149,13 @@ async function openSession(port, { ui, theme, viewport, colorScheme = 'light', w
   // Préférences et session factice posées avant tout script de l'application (déterminisme : le résultat ne dépend
   // ni de l'ordre des routes ni d'une connexion antérieure partagée par le profil Chrome). Faux API local uniquement.
   const fakeUser = { id: 'bench-user', email: 'bench@example.test', firstName: 'Alex', lastName: 'Démo', role, organizationId: 'bench-org' };
+  // `real` ({ access, user }) : session RÉELLE obtenue d'un vrai backend de test (acceptation) ; aucun jeton factice, aucun jeton de rafraîchissement.
+  const tokenValue = real ? real.access : `bench-token:role:${role}${authority ? ':authority:' + authority : ''}`;
+  const userValue = real ? real.user : fakeUser;
   const seed = `try{` +
-    `var u=${JSON.stringify(JSON.stringify(fakeUser))};` +
-    `localStorage.setItem('coro_token','bench-token:role:${role}${authority ? ':authority:' + authority : ''}');localStorage.setItem('coro_user',u);` +
-    `sessionStorage.setItem('coro_token','bench-token:role:${role}${authority ? ':authority:' + authority : ''}');sessionStorage.setItem('coro_user',u);` +
+    `var u=${JSON.stringify(JSON.stringify(userValue))};var t=${JSON.stringify(tokenValue)};` +
+    `localStorage.setItem('coro_token',t);localStorage.setItem('coro_user',u);` +
+    `sessionStorage.setItem('coro_token',t);sessionStorage.setItem('coro_user',u);` +
     (ui ? `localStorage.setItem('coro-ui-generation','${ui}');` : '') +
     (theme ? `localStorage.setItem('coro-theme-preference','${theme}');` : '') +
     (beta ? `localStorage.setItem('coro-glass-beta','on');` : '') +

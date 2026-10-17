@@ -95,6 +95,7 @@ const COMPLETENESS = ['COMPLETE', 'INCOMPLETE', 'NOT_AVAILABLE'];
 
 const keysDeep = (value, out = new Set()) => { if (Array.isArray(value)) value.forEach((v) => keysDeep(v, out)); else if (value && typeof value === 'object') for (const [k, v] of Object.entries(value)) { out.add(k); keysDeep(v, out); } return out; };
 function verdict(ok, detail) { return { status: ok ? 'ok' : 'ko', detail }; }
+const noAuthority = (r) => r.status === 403 || (r.status === 200 && r.json && r.json.founder === false && Array.isArray(r.json.grants) && r.json.grants.length === 0);
 
 /** Forme de la réponse opérationnelle (contrat de main) ; renvoie la liste des anomalies. */
 function operationalShapeIssues(json) {
@@ -190,8 +191,9 @@ const API_CHECKS = [
     const f = financialValid(await c.get('SUPER_ADMIN', 'financial')); const o = operationalValid(await c.get('SUPER_ADMIN', 'operational'));
     return verdict(f.status === 'ok' && o.status === 'ok', `financier : ${f.detail} ; opérationnel : ${o.detail}`);
   } },
-  { id: 'PERM-API-16', title: 'ADMIN client : GET /admin/v1/platform-authority/me → refusé (403)', role: 'ADMIN', run: async (c) => { const r = await c.raw('ADMIN', '/admin/v1/platform-authority/me'); return verdict(r.status === 403, `HTTP ${r.status}`); } },
-  { id: 'PERM-API-17', title: 'CONSEILLER : GET /admin/v1/platform-authority/me → refusé (403)', role: 'CONSEILLER', run: async (c) => { const r = await c.raw('CONSEILLER', '/admin/v1/platform-authority/me'); return verdict(r.status === 403, `HTTP ${r.status}`); } },
+  // Contrat réel de main (constaté Phase 41 sur le vrai backend) : /me n'est pas refusé à un compte client, il renvoie une vue SANS autorité (founder=false, grants=[]).
+  { id: 'PERM-API-16', title: 'ADMIN client : GET /admin/v1/platform-authority/me → aucune autorité révélée (403, ou 200 avec founder=false et grants=[])', role: 'ADMIN', run: async (c) => { const r = await c.raw('ADMIN', '/admin/v1/platform-authority/me'); return verdict(noAuthority(r), `HTTP ${r.status}${r.status === 200 ? ' — founder=' + (r.json && r.json.founder) + ', grants=' + ((r.json && r.json.grants || []).length) : ''}`); } },
+  { id: 'PERM-API-17', title: 'CONSEILLER : GET /admin/v1/platform-authority/me → aucune autorité révélée (403, ou 200 avec founder=false et grants=[])', role: 'CONSEILLER', run: async (c) => { const r = await c.raw('CONSEILLER', '/admin/v1/platform-authority/me'); return verdict(noAuthority(r), `HTTP ${r.status}${r.status === 200 ? ' — founder=' + (r.json && r.json.founder) + ', grants=' + ((r.json && r.json.grants || []).length) : ''}`); } },
   { id: 'PERM-API-18', title: 'ADMIN client : GET /admin/v1/platform-authority/grants → refusé (403), aucune liste de grants', role: 'ADMIN', run: async (c) => { const r = await c.raw('ADMIN', '/admin/v1/platform-authority/grants'); return verdict(r.status === 403, `HTTP ${r.status}${r.status === 200 ? ' — GRANTS RENVOYÉS À UN ADMIN CLIENT' : ''}`); } },
   { id: 'PERM-API-19', title: 'SUPER_ADMIN : GET /admin/v1/platform-authority/me → 200, forme conforme (authorityStatus, founder, grants)', role: 'SUPER_ADMIN', run: async (c) => {
     const r = await c.raw('SUPER_ADMIN', '/admin/v1/platform-authority/me'); const j = r.json || {};

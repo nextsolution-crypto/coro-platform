@@ -164,7 +164,7 @@ const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'a
 const RENDEMENT_ROUTES = ['/api/rendement', '/api/rendement/operational', '/api/rendement/financial'];
 
 // ───────── Autorité de plateforme CORO (contrat de main : a3e23921, 79e6d604, 87ecb925) ─────────
-//  Reproduit la FORME du contrat, pas le backend : GET /admin/v1/platform-authority/me (SUPER_ADMIN seulement ; un ADMIN client ou un conseiller → 403),
+//  Reproduit la FORME du contrat, pas le backend : GET /admin/v1/platform-authority/me (tout compte actif ; un ADMIN client ou un conseiller reçoit 200 avec founder=false et grants=[] : contrat réel constaté en Phase 41),
 //  grants Founder-only (liste / création / révocation), et /rendement/financial réservé à la permission FINANCIAL_RENDEMENT_READ (Founder ou délégation).
 //  Mode d'autorité d'une session SUPER_ADMIN, porté par le jeton « bench-token:role:SUPER_ADMIN:authority:<mode> » :
 //    founder (défaut) : founder = true ;  delegated : employé CORO avec permissions déléguées ;  none : employé CORO sans permission.

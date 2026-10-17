@@ -1,6 +1,6 @@
 # Plan d'acceptation sur le vrai backend — Platform Authority × Liquid Glass
 
-> **Statut : plan préparé (Phase 13), non exécuté.** À lancer après la confirmation du SHA de gel fonctionnel de `main` et la réconciliation finale.
+> **Statut : exécuté en Phase 41** sur le vrai backend de `main` (SHA gelé `a91a76f9`) avec une base PostgreSQL jetable : voir « Résultats (Phase 41) » en fin de document.
 > Les validations de Liquid Glass s'appuient aujourd'hui sur un **faux API** (`bench/mock-api.cjs`) qui reproduit seulement la *forme* du contrat de `main` : il ne prouve rien sur le vrai backend, ni sur l'isolation entre organisations, ni sur la révocation immédiate. Ce plan comble cet écart.
 > **Règle : le code métier et les autorités de `main` font autorité.** Aucun changement de backend, de Prisma, de garde ou de contrat API n'est permis pour faciliter l'intégration du design.
 
@@ -76,3 +76,21 @@ Pour **chaque profil** et chaque thème (Classic, Glass clair, Glass sombre) :
 - **Go** : tous les AC-01 à AC-28 passent, aucune donnée d'une autre organisation visible, aucune donnée financière pour un profil non autorisé, révocation effective immédiatement, aucune erreur console critique.
 - **No-Go** : tout refus manquant (un client voit de l'administration plateforme ou du financier), toute fuite entre organisations, toute révocation non immédiate, tout repli sur le rôle SUPER_ADMIN seul.
 - Un défaut de `main` constaté pendant l'acceptation est **signalé à l'équipe backend** ; Liquid Glass ne le contourne pas.
+
+## 7. Environnement local jetable (utilisé en Phase 41)
+Aucune donnée de production, aucun port 3002, aucun service Windows touché :
+- **PostgreSQL 18 jetable** : `initdb` dans un dossier de travail dédié (D:), écoute sur `127.0.0.1:54329`, base `coro_p41`, mot de passe aléatoire local.
+- **Backend de `main` compilé tel quel** (`npm ci`, `prisma migrate deploy` = 138 migrations, `nest build`), démarré avec `node -r <préchargement> dist/src/main.js`. Le `main.ts` écoute en dur sur 3002 et n'autorise en CORS que les ports 3000/3001/3003 : un petit script de préchargement **hors dépôt** redirige le port d'écoute (3052) et ajoute l'origine du frontend de test. Aucun fichier du backend n'est modifié.
+- **MFA** : le backend de `main` impose un code par courriel aux comptes plateforme. On utilise sa **capture QA officielle** (`MFA_QA_CAPTURE_ENABLED`, dossier dans le répertoire temporaire, domaine synthétique réservé `p41.test`, aucune clé Brevo) : aucun courriel n'est envoyé.
+- **Amorçage** (script hors dépôt) : trois organisations (opérateur interne + clients A et B), 9 comptes, autorité créée par le chemin légitime du backend (`createDraft` → `activate` → `createGrant`), mandats CAD complet / sans vente validée, taux de coût approuvés par un second administrateur, un **second SUPER_ADMIN créé après l'activation** (profil `ROLE_ONLY_SUPER_ADMIN`, doit rester sans accès).
+- **Limitation de débit de `main` conservée** : 5 connexions par minute et 120 requêtes par minute par IP. Les scripts espacent les connexions et rejouent une session que la limitation a empêchée de s'établir.
+- **Frontend** : build de préproduction (`NEXT_PUBLIC_GLASS_BETA=production-preview`, `NEXT_PUBLIC_API_URL=http://localhost:3052/api`).
+
+Commandes (variables `ACC_*` décrites dans l'en-tête de chaque script) :
+`npm run glass:acceptance-api` (API, AC-00 à AC-28) puis `npm run glass:acceptance-browser` (navigateur, session réelle injectée sans jeton de rafraîchissement). Les deux scripts refusent la production, le port 3002 et tout hôte non local (test `acceptance-guards.test.cjs`).
+
+## 8. Résultats (Phase 41)
+- **API (vrai backend)** : 75 contrôles, 0 échec — Founder, employé délégué (grants exacts), employé sans permission, SUPER_ADMIN créé après activation (aucun repli sur le rôle), ADMIN A / ADMIN B / CONSEILLER A / CONSEILLER B, anonyme ; isolation interorganisation (opérationnel, utilisateurs, projets, fiche d'organisation, financier) ; octroi ORGANIZATION et GLOBAL, **révocation immédiate** sans nouvelle connexion ; organisation cible inexistante, octroi à un client ou à un SUPER_ADMIN refusés ; jetons invalide, expiré, autre secret, `alg=none`, charge utile altérée.
+- **Navigateur (vrai backend, 7 profils × Classic / Glass clair / Glass sombre / Glass système)** : menus, accès direct aux écrans plateforme et commerciaux, redirections sans flash de contenu sensible (observateur DOM), rendement financier, F5, absence de débordement à 5 largeurs, tiroir mobile, octroi / révocation par l'interface (confirmations, case GLOBAL, annulation), sessions expirée / falsifiée / absurde renvoyées vers `/login`.
+- **Écart de contrat constaté** (corrigé côté banc, pas côté application) : `GET /admin/v1/platform-authority/me` ne renvoie **pas** 403 à un compte client ; il renvoie 200 avec `founder: false` et `grants: []` (aucune autorité révélée). Le faux API et les contrôles `PERM-API-16/17` de la Phase 12 supposaient à tort un 403 ; ils vérifient maintenant « aucune autorité révélée » (403 ou 200 vide). Aucune règle de sécurité n'est assouplie : /grants reste refusé (403) et le financier reste refusé.
+- **Limite restante** : environnement unique, données synthétiques, MFA par capture QA ; la préproduction réelle (PostgreSQL gérée, données de recette) n'a pas été utilisée.
