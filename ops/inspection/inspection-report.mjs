@@ -61,6 +61,17 @@ const authorityBindingMatches =
   db.authority?.operatorOrganizationId === db.operator?.id &&
   db.authority?.founderUserId === db.founder?.id &&
   db.founder?.organizationId === db.operator?.id;
+const authorityEvidencePresent =
+  Object.hasOwn(db, "authority") && Object.hasOwn(db, "authorityRecordCount");
+const authorityRecordValid =
+  db.authority === null
+    ? db.authorityRecordCount === 0
+    : db.authorityRecordCount === 1 &&
+      db.authority?.id === "PRIMARY" &&
+      ["DRAFT", "ACTIVE"].includes(db.authority?.status) &&
+      Number.isInteger(db.authority?.lockVersion) &&
+      db.authority.lockVersion >= 0 &&
+      authorityBindingMatches;
 const prePlatformAuthorityHead =
   db.migrationHead === "20261023010000_rendement_financial_governance";
 const platformAuthorityHead =
@@ -82,14 +93,13 @@ const schemaPhase =
 const platformAuthorityState =
   schemaPhase === "INVALID"
     ? "INVALID"
-    : !Object.hasOwn(db, "authority")
+    : !authorityEvidencePresent
       ? "NOT_VERIFIED"
-      : db.authority === null
-        ? "UNCONFIGURED"
-        : ["DRAFT", "ACTIVE"].includes(db.authority?.status) &&
-            authorityBindingMatches
-          ? db.authority.status
-          : "INVALID";
+      : !authorityRecordValid
+        ? "INVALID"
+        : db.authority === null
+          ? "UNCONFIGURED"
+          : db.authority.status;
 
 if (
   !Object.values(containers).every(

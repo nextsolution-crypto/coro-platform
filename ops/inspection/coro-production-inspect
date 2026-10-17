@@ -61,6 +61,7 @@ SELECT json_build_object(
   'platformAuthorityMigrationApplied', EXISTS (SELECT 1 FROM \"_prisma_migrations\" WHERE migration_name='20261024010000_platform_authority' AND finished_at IS NOT NULL AND rolled_back_at IS NULL),
   'authorityTablePresent', to_regclass('public.\"PlatformAuthorityConfiguration\"') IS NOT NULL,
   'grantTablePresent', to_regclass('public.\"PlatformPermissionGrant\"') IS NOT NULL,
+  'authorityRecordCount', 0,
   'authority', 'null'::json,
   'grantCount', 0,
   'activeCustomerGrantCount', 0,
@@ -81,7 +82,8 @@ authority_schema_available="$(node -e 'const d=require(process.argv[1]);process.
 if [[ "$authority_schema_available" == 'true' ]]; then
   authority_sql="BEGIN READ ONLY;
 SELECT json_build_object(
-  'authority', COALESCE((SELECT json_build_object('status', \"status\"::text, 'operatorOrganizationId', \"operatorOrganizationId\", 'founderUserId', \"founderUserId\") FROM \"PlatformAuthorityConfiguration\" WHERE \"id\"='PRIMARY'), 'null'::json),
+  'authorityRecordCount', (SELECT count(*) FROM \"PlatformAuthorityConfiguration\"),
+  'authority', COALESCE((SELECT json_build_object('id', \"id\", 'status', \"status\"::text, 'operatorOrganizationId', \"operatorOrganizationId\", 'founderUserId', \"founderUserId\", 'lockVersion', \"lockVersion\") FROM \"PlatformAuthorityConfiguration\" WHERE \"id\"='PRIMARY'), 'null'::json),
   'grantCount', (SELECT count(*) FROM \"PlatformPermissionGrant\"),
   'activeCustomerGrantCount', (SELECT count(*) FROM \"PlatformPermissionGrant\" g JOIN \"User\" u ON u.id=g.\"userId\" JOIN \"Organization\" o ON o.id=u.\"organizationId\" WHERE g.\"status\"='ACTIVE' AND o.\"isInternal\"=false)
 );

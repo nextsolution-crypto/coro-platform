@@ -49,10 +49,13 @@ function fixture(overrides = {}) {
     platformAuthorityMigrationApplied: true,
     authorityTablePresent: true,
     grantTablePresent: true,
+    authorityRecordCount: 1,
     authority: {
+      id: "PRIMARY",
       status: "ACTIVE",
       operatorOrganizationId: "operator",
       founderUserId: "founder",
+      lockVersion: 0,
     },
     grantCount: 0,
     activeCustomerGrantCount: 0,
@@ -183,7 +186,7 @@ test("fails closed for invalid remote backup evidence", () => {
 
 test("no pre-activation authority state bypasses backup evidence", () => {
   const root = fixture({
-    database: { authority: null },
+    database: { authorityRecordCount: 0, authority: null },
     backup: { status: "LOCAL_VERIFIED", remoteVerification: "FAILED" },
   });
   try {
@@ -346,7 +349,9 @@ test("rejects malformed inspection evidence instead of inventing a state", () =>
 });
 
 test("reports UNCONFIGURED as ready for DRAFT but not ready for Main Freeze", () => {
-  const root = fixture({ database: { authority: null } });
+  const root = fixture({
+    database: { authorityRecordCount: 0, authority: null },
+  });
   try {
     const result = run(root);
     assert.equal(result.status, 0, result.stderr);
@@ -369,6 +374,7 @@ test("supports migration 137 without Platform Authority tables", () => {
       platformAuthorityMigrationApplied: false,
       authorityTablePresent: false,
       grantTablePresent: false,
+      authorityRecordCount: 0,
       authority: null,
     },
     release: {
@@ -442,9 +448,11 @@ test("reports a correctly bound DRAFT without treating it as ACTIVE", () => {
   const root = fixture({
     database: {
       authority: {
+        id: "PRIMARY",
         status: "DRAFT",
         operatorOrganizationId: "operator",
         founderUserId: "founder",
+        lockVersion: 7,
       },
     },
   });
@@ -453,6 +461,7 @@ test("reports a correctly bound DRAFT without treating it as ACTIVE", () => {
     assert.equal(result.status, 0, result.stderr);
     const report = JSON.parse(result.stdout);
     assert.equal(report.platformAuthorityState, "DRAFT");
+    assert.equal(report.production.database.authority.lockVersion, 7);
     assert.equal(report.bootstrapReadiness, "DRAFT_PRESENT");
     assert.equal(report.mainFreezeReadiness, "NOT_READY");
   } finally {
@@ -464,9 +473,11 @@ test("fails closed for invalid authority binding", () => {
   const root = fixture({
     database: {
       authority: {
+        id: "PRIMARY",
         status: "DRAFT",
         operatorOrganizationId: "wrong-operator",
         founderUserId: "wrong-founder",
+        lockVersion: 0,
       },
     },
   });
@@ -502,6 +513,76 @@ test("reports missing authority evidence as NOT_VERIFIED and UNKNOWN", () => {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+for (const [name, database] of [
+  ["duplicate canonical authority evidence", { authorityRecordCount: 2 }],
+  [
+    "an inconsistent missing authority",
+    { authorityRecordCount: 1, authority: null },
+  ],
+  ["an inconsistent present authority", { authorityRecordCount: 0 }],
+  [
+    "a non-canonical authority identity",
+    {
+      authority: {
+        id: "SECONDARY",
+        status: "DRAFT",
+        operatorOrganizationId: "operator",
+        founderUserId: "founder",
+        lockVersion: 0,
+      },
+    },
+  ],
+  [
+    "a negative lockVersion",
+    {
+      authority: {
+        id: "PRIMARY",
+        status: "DRAFT",
+        operatorOrganizationId: "operator",
+        founderUserId: "founder",
+        lockVersion: -1,
+      },
+    },
+  ],
+  [
+    "a fractional lockVersion",
+    {
+      authority: {
+        id: "PRIMARY",
+        status: "DRAFT",
+        operatorOrganizationId: "operator",
+        founderUserId: "founder",
+        lockVersion: 1.5,
+      },
+    },
+  ],
+  [
+    "a textual lockVersion",
+    {
+      authority: {
+        id: "PRIMARY",
+        status: "DRAFT",
+        operatorOrganizationId: "operator",
+        founderUserId: "founder",
+        lockVersion: "1",
+      },
+    },
+  ],
+]) {
+  test(`fails closed for ${name}`, () => {
+    const root = fixture({ database });
+    try {
+      const result = run(root);
+      assert.equal(result.status, 2);
+      const report = JSON.parse(result.stdout);
+      assert.equal(report.platformAuthorityState, "INVALID");
+      assert.ok(report.issues.includes("PLATFORM_AUTHORITY_INVALID"));
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+}
 
 test("fails closed for unexpected SUPER_ADMIN inventory", () => {
   const root = fixture({ database: { activeSuperAdminCount: 2 } });
@@ -562,18 +643,14 @@ test("collector contract rejects arbitrary commands and uses a read-only transac
   assert.match(source, /ROLLBACK;/);
   assert.match(source, /to_regclass/);
   assert.match(source, /authority_schema_available/);
+  assert.match(source, /'authorityRecordCount'/);
+  assert.ok(source.includes("'lockVersion', \\\"lockVersion\\\""));
   assert.match(source, /\/opt\/coro-ops\/restore-drills/);
   assert.doesNotMatch(source, /\/opt\/coro-ops\/restores/);
   assert.match(source, /docker exec --env-file/);
   assert.equal(source.match(/--quiet --tuples-only --no-align/g)?.length, 2);
-  assert.match(
-    source,
-    /migration_name='20261024010000_platform_authority'/,
-  );
-  assert.match(
-    source,
-    /finished_at IS NULL AND rolled_back_at IS NULL/,
-  );
+  assert.match(source, /migration_name='20261024010000_platform_authority'/);
+  assert.match(source, /finished_at IS NULL AND rolled_back_at IS NULL/);
   assert.doesNotMatch(
     source,
     /finished_at IS NULL OR rolled_back_at IS NOT NULL/,
