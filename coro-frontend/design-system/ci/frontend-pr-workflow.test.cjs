@@ -61,12 +61,13 @@ test('chaque script npm référencé existe', () => {
   for (const n of names) assert.ok(pkg.scripts[n], `script absent de package.json : ${n}`);
 });
 
-test('« continue-on-error » réservé au job de l’échec connu de main (1 contrat), jamais au job bloquant', () => {
-  assert.equal((code.match(/continue-on-error/g) || []).length, 1);
+test('échec connu de main : exécuté à chaque PR, signalé par une annotation, jamais masqué dans le job bloquant', () => {
+  assert.ok(!code.includes('continue-on-error'), 'aucun continue-on-error');
+  assert.ok(!code.includes('|| true'), 'aucun masquage par « || true »');
   const blocking = code.split('known-main-failures:')[0];
-  assert.ok(!blocking.includes('continue-on-error'));
   const known = code.split('known-main-failures:')[1];
-  assert.equal((known.match(/run: node /g) || []).length, 1);
-  assert.ok(known.includes('commercial-navigation.contract.test.cjs'));
+  assert.ok(known.includes('if node components/layout/commercial-navigation.contract.test.cjs; then'));
+  assert.ok(known.includes('::warning') && known.includes('::notice'));
+  assert.ok(!blocking.includes('commercial-navigation.contract'), 'le contrat en échec sur main n’est pas dans le job bloquant');
   assert.ok(blocking.includes('journey.contract.test.cjs'), 'le contrat journey passe sous Linux : il doit être bloquant');
 });

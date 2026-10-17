@@ -94,13 +94,12 @@ jobs:
         run: node design-system/tools/production-check.cjs
 
   # Un contrat échoue déjà sur `main` (a91a76f9) : le menu de `main` n'a pas l'entrée « Configurateur d'offres » que le test exige.
-  # Il est exécuté pour rester visible, sans bloquer la PR.
+  # Il est exécuté à chaque PR et son échec est signalé par une annotation (avertissement), sans bloquer la PR ni afficher un faux échec de la PR.
   # À corriger dans `main`, puis à déplacer dans le job bloquant.
   known-main-failures:
     name: Known failures on main (non-blocking)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    continue-on-error: true
     defaults:
       run:
         working-directory: coro-frontend
@@ -114,4 +113,9 @@ jobs:
         with:
           node-version: 22
       - name: Commercial navigation contract (fails on main)
-        run: node components/layout/commercial-navigation.contract.test.cjs
+        run: |
+          if node components/layout/commercial-navigation.contract.test.cjs; then
+            echo "::notice title=Known failure fixed::commercial-navigation.contract now passes: move it to the blocking job."
+          else
+            echo "::warning title=Known failure inherited from main::commercial-navigation.contract fails on main (a91a76f9) and on this branch; not caused by this PR."
+          fi

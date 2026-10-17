@@ -41,6 +41,6 @@ Non inclus : les scénarios navigateur (faux API, Chrome) et l'acceptation sur l
 | `components/workScheduleEditor` | passe | **bloquant** (`test:ui-units`) |
 | `app/admin/commercial/journey/journey.contract` | **passe sous Linux (CI)** ; échoue dans une copie Windows en CRLF (le test attend des `
 `) : artefact d'environnement, pas un défaut de `main` | **bloquant en CI** (étape dédiée, hors script npm pour ne pas faire échouer les copies Windows) |
-| `components/layout/commercial-navigation.contract` | **échoue sur `main` (a91a76f9), vérifié en CI Linux** : `AppLayout` de `main` n'a pas l'entrée « Configurateur d'offres » que le test exige | **non bloquant** : job `Known failures on main`, à corriger dans `main` avant application |
+| `components/layout/commercial-navigation.contract` | **échoue sur `main` (a91a76f9), vérifié en CI Linux** : `AppLayout` de `main` n'a pas l'entrée « Configurateur d'offres » que le test exige | **non bloquant** : job `Known failures on main` (le test est exécuté à chaque PR ; son échec est signalé par une annotation d'avertissement), à corriger dans `main` avant application |
 
 Aucun test lié à la sécurité ou à la finance n'est exclu. Le seul échec réel est un défaut de `main`, non corrigé ici (Liquid Glass ne corrige pas `main`) ; il reste visible à chaque PR. Quand `main` le corrige, déplacer le test dans le job bloquant.
