@@ -1,0 +1,116 @@
+name: Frontend PR Checks
+
+# Validation seulement : aucune publication, aucun déploiement, aucun secret, aucun accès à la production.
+# Déclenché par les Pull Requests qui touchent le frontend (le code de la PR s'exécute avec le jeton en lecture seule).
+on:
+  pull_request:
+    paths:
+      - "coro-frontend/**"
+      - ".github/workflows/frontend-pr-checks.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  frontend-checks:
+    name: Frontend checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: coro-frontend
+    steps:
+      - name: Checkout (read-only, no persisted credentials)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: coro-frontend/package-lock.json
+
+      - name: Install dependencies (lockfile)
+        run: npm ci
+
+      - name: TypeScript
+        run: npx tsc --noEmit --incremental false
+
+      - name: Design System (tokens, theme, route registry, kit, bench, CI guard)
+        run: npm run test:design-system
+
+      - name: Glass page contracts (settings, portfolio)
+        run: |
+          npm run test:settings-glass
+          npm run test:portfolio-glass
+
+      - name: Platform Authority and session contracts
+        run: |
+          npm run test:platform-permission-grants
+          npm run test:auth-hydration
+
+      - name: Rendement and governed financial display (CAD-only, UNKNOWN-safe)
+        run: npm run test:rendement
+
+      - name: Booking and Planning contracts
+        run: |
+          npm run test:bookings
+          npm run test:planning
+
+      - name: Commercial contracts
+        run: |
+          npm run test:commercial-catalog
+          npm run test:commercial-configurator
+          npm run test:commercial-proposals
+          npm run test:commercial-simulator
+          npm run test:commercial-assumptions
+          npm run test:commercial-content
+          npm run test:commercial-legal-issuer
+          npm run test:commercial-clauses
+          npm run test:organization-contracts
+          npm run test:organization360
+          npm run test:capability-entitlements
+          npm run test:metering
+          npm run test:commercial-contracts
+
+      - name: Control center and settings units
+        run: |
+          npm run test:control-center
+          npm run test:ui-units
+
+      - name: Liquid Glass production safety (build without beta token)
+        run: node design-system/tools/production-check.cjs
+
+  # Deux contrats échouent déjà sur `main` (a91a76f9) : ils sont exécutés pour rester visibles, sans bloquer la PR.
+  # À corriger dans `main`, puis à déplacer dans le job bloquant.
+  known-main-failures:
+    name: Known failures on main (non-blocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: coro-frontend
+    steps:
+      - name: Checkout (read-only, no persisted credentials)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Commercial journey contract (fails on main)
+        run: node app/admin/commercial/journey/journey.contract.test.cjs
+      - name: Commercial navigation contract (fails on main)
+        run: node components/layout/commercial-navigation.contract.test.cjs

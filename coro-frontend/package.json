@@ -10,7 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:design-system": "node design-system/theme/theme.test.cjs && node design-system/glass-palette.test.cjs && node design-system/routes/route-registry.test.cjs && node design-system/routes/production-safety.test.cjs && node app/settings/settings-glass.contract.test.cjs && node app/activities/portfolio/portfolio-glass.contract.test.cjs && node design-system/kit/kit.test.cjs && node design-system/bench/bench.test.cjs && node design-system/bench/preprod.test.cjs && node design-system/bench/cdp-lifecycle.test.cjs && node design-system/bench/acceptance-guards.test.cjs",
+    "test:design-system": "node design-system/theme/theme.test.cjs && node design-system/glass-palette.test.cjs && node design-system/routes/route-registry.test.cjs && node design-system/routes/production-safety.test.cjs && node app/settings/settings-glass.contract.test.cjs && node app/activities/portfolio/portfolio-glass.contract.test.cjs && node design-system/kit/kit.test.cjs && node design-system/bench/bench.test.cjs && node design-system/bench/preprod.test.cjs && node design-system/bench/cdp-lifecycle.test.cjs && node design-system/bench/acceptance-guards.test.cjs && node design-system/ci/frontend-pr-workflow.test.cjs",
     "glass:inventory": "node design-system/tools/route-scanner.cjs",
     "glass:bench": "node design-system/bench/cli.cjs",
     "glass:verify-production": "node design-system/tools/production-check.cjs",
@@ -35,7 +35,12 @@
     "test:commercial-content": "node app/admin/commercial/content/content.contract.test.cjs",
     "test:commercial-legal-issuer": "node app/admin/commercial/legal-issuer/legal-issuer.contract.test.cjs",
     "test:commercial-clauses": "node app/admin/commercial/clauses/clauses.contract.test.cjs",
-    "test:platform-permission-grants": "node app/admin/platform-permission-grants/platform-permission-grants.contract.test.cjs"
+    "test:platform-permission-grants": "node app/admin/platform-permission-grants/platform-permission-grants.contract.test.cjs",
+    "test:rendement": "node app/dashboard/rendement/rendement.contract.test.cjs && node app/dashboard/rendement/financial-money.test.cjs",
+    "test:auth-hydration": "node components/layout/auth-hydration.contract.test.cjs",
+    "test:commercial-contracts": "node app/admin/commercial/commercial-center.contract.test.cjs && node app/admin/commercial/configuration/configuration.contract.test.cjs && node app/admin/commercial/dossier/dossier.contract.test.cjs && node app/admin/commercial/entitlements/capability-operations.contract.test.cjs && node app/admin/commercial/journey/target-pagination.test.mjs && node \"app/admin/commercial/proposals/[proposalId]/proposal-document-workspace.contract.test.cjs\" && node app/admin/commercial/prospects/prospects.contract.test.cjs",
+    "test:control-center": "node app/admin/control-center/control-center.contract.test.cjs",
+    "test:ui-units": "node app/settings/activity-types/activity-types.test.cjs && node components/workScheduleEditor.test.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
