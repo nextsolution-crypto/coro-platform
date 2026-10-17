@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react';
 import api from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import ToastContainer from '@/components/ui/ToastContainer';
@@ -12,6 +12,16 @@ import { GlassNavIcon, GlassIcon } from '@/design-system/glass-icons';
 import { LegacyIsland } from '@/design-system/LegacyIsland';
 import { User, Timer, BarChart3 } from 'lucide-react';
 import { usePlatformAuthority } from '@/hooks/usePlatformAuthority';
+import {
+  clampSidebarWidth,
+  getGlassSidebarWidthServerSnapshot,
+  getGlassSidebarWidthSnapshot,
+  LEGACY_SIDEBAR_DEFAULT_WIDTH,
+  setGlassSidebarWidthPreference,
+  SIDEBAR_MAX_WIDTH,
+  SIDEBAR_MIN_WIDTH,
+  subscribeToGlassSidebarWidth,
+} from './sidebar-width';
 
 // ── Navigation par groupes ──────────────────────────────────
 const NAV_GROUPS = [
@@ -186,7 +196,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(240);
+  const [legacySidebarWidth, setLegacySidebarWidth] = useState(
+    LEGACY_SIDEBAR_DEFAULT_WIDTH,
+  );
+  const glassSidebarWidth = useSyncExternalStore(
+    subscribeToGlassSidebarWidth,
+    getGlassSidebarWidthSnapshot,
+    getGlassSidebarWidthServerSnapshot,
+  );
   const [isDesktop, setIsDesktop] = useState(false);
   const isResizing = useRef(false);
   const sidebarRef = useRef<HTMLElement>(null);
@@ -200,8 +217,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleResize = (e: MouseEvent) => {
     if (!isResizing.current) return;
-    const newWidth = Math.min(Math.max(e.clientX, 180), 400);
-    setSidebarWidth(newWidth);
+    const newWidth = clampSidebarWidth(e.clientX);
+    if (glass) {
+      setGlassSidebarWidthPreference(newWidth);
+    } else {
+      setLegacySidebarWidth(newWidth);
+    }
   };
 
   const stopResize = () => {
@@ -676,9 +697,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             ...(glass ? { top: barH, overscrollBehavior: 'contain' as const, outline: 'none' } : {}),
             height: `calc(100dvh - ${barH}px)`,
             maxHeight: `calc(100dvh - ${barH}px)`,
-            width: isDesktop ? `${sidebarWidth}px` : 'min(86vw, 320px)',
-            minWidth: isDesktop ? '180px' : 'min(86vw, 320px)',
-            maxWidth: isDesktop ? '400px' : '320px',
+            width: isDesktop
+              ? `${glass ? glassSidebarWidth : legacySidebarWidth}px`
+              : 'min(86vw, 320px)',
+            minWidth: isDesktop ? `${SIDEBAR_MIN_WIDTH}px` : 'min(86vw, 320px)',
+            maxWidth: isDesktop ? `${SIDEBAR_MAX_WIDTH}px` : '320px',
             flexShrink: 0,
             boxShadow:
               !isDesktop && sidebarOpen
