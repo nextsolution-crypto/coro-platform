@@ -45,7 +45,8 @@ test('toute règle de teinte épargne les feuilles de document [data-cg-paper]',
   let tinted = 0;
   root.walkRules((r) => {
     const onlyTokens = r.nodes.every((d) => d.type === 'decl' && d.prop.startsWith('--'));
-    if (!onlyTokens && !r.selector.includes(NOT_PAPER) && !r.selector.includes('[data-cg-paper]') && !/::|:focus-visible/.test(r.selector)) {
+    // body est la racine du document : il ne peut pas se trouver dans une feuille de document.
+    if (!onlyTokens && !/ body$/.test(r.selector.trim()) && !r.selector.includes(NOT_PAPER) && !r.selector.includes('[data-cg-paper]') && !/::|:focus-visible/.test(r.selector)) {
       assert.fail('règle sans exemption de document : ' + r.selector.slice(0, 100));
     }
     if (r.selector.includes(NOT_PAPER)) tinted++;
@@ -82,7 +83,7 @@ test('surfaces positionnées (menus, tiroirs, en-têtes collants) et contenu de 
 });
 
 test('jetons de teinte définis en Light ET en Dark', () => {
-  for (const token of ['--cg-skin-surface', '--cg-skin-fill-1', '--cg-skin-fill-2', '--cg-skin-navy']) {
+  for (const token of ['--cg-skin-bg-surface', '--cg-skin-bg-fill1', '--cg-skin-bg-fill2', '--cg-skin-bg-navy', '--cg-skin-text-primary', '--cg-skin-border-default']) {
     assert.ok(new RegExp(token + ':').test(css), token);
   }
   assert.ok(/data-theme="dark"\]\[data-cg-mode="skin"\]/.test(css), 'surcharge Dark absente');
@@ -140,6 +141,31 @@ test('Classique : la feuille n’est référencée par aucun CSS global ni layou
   };
   walk(ROOT);
   assert.deepEqual(users.sort(), ['design-system/theme/ThemeProvider.tsx']);
+});
+
+test('noyau Glass partagé avec coro-client-portal synchronisé (jetons, thème, routes, chargeur) ; le site vitrine n’en fait pas partie', () => {
+  const sync = require('../tools/sync-portal.cjs');
+  assert.deepEqual(sync.diff(), [], 'lancer node design-system/tools/sync-portal.cjs');
+  assert.ok(!fs.existsSync(path.join(ROOT, '..', 'coro-website', 'design-system')), 'coro-website ne reçoit aucun fichier Glass');
+});
+
+test('modules CSS : replis var(--cg-skin-*, #hex) à jour, toujours avec repli, et la valeur de repli est la couleur d’origine', () => {
+  const tok = require('../tools/tokenize-css.cjs');
+  assert.deepEqual(tok.status(), [], 'modules CSS non reconvertis (lancer node design-system/tools/tokenize-css.cjs)');
+  const files = [...tok.TARGETS, ...tok.PARTIAL.map(([f]) => f)];
+  let wrapped = 0;
+  for (const rel of files) {
+    const src = tok.read(rel);
+    // Aucune utilisation d'un jeton de teinte sans repli : hors teinte, la couleur Legacy doit s'appliquer.
+    assert.ok(!/var\(--cg-skin-[a-z0-9-]+\)/.test(src), `${rel} : var(--cg-skin-*) sans repli`);
+    for (const m of src.matchAll(/var\(--cg-skin-(bg|text|border)-([a-z0-9]+),\s*(#[0-9A-Fa-f]{3,6})\)/g)) {
+      wrapped++;
+      assert.ok(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(m[3]), `${rel} : repli invalide ${m[3]}`);
+    }
+    // Les jetons génériques --cg-* (définis par tokens.css en Glass natif) ne sont jamais employés par un module CSS : seul --cg-skin-* l'est.
+    assert.ok(!/var\(--cg-(?!skin-)/.test(src), `${rel} : jeton --cg-* non préfixé skin dans un module CSS`);
+  }
+  assert.ok(wrapped > 300, 'conversion attendue sur plusieurs centaines de couleurs : ' + wrapped);
 });
 
 test('la teinte ne s’exécute que sous data-ui="glass" : aucune règle ne cible html sans cet attribut', () => {

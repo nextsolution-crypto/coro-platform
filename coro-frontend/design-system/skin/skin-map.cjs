@@ -13,41 +13,48 @@
  *  - les feuilles de document (aperçus, PDF) restent claires : sous [data-cg-paper] aucune règle ne s'applique.
  */
 
-/** Rôles de fond. Valeur = expression CSS finale. */
-const BG_ROLES = {
-  surface: 'var(--cg-skin-surface)',
-  fill1: 'var(--cg-skin-fill-1)',
-  fill2: 'var(--cg-skin-fill-2)',
-  success: 'var(--cg-success-bg)',
-  warning: 'var(--cg-warning-bg)',
-  danger: 'var(--cg-danger-bg)',
-  info: 'var(--cg-info-bg)',
-  purple: 'var(--cg-purple-bg)',
-  navy: 'var(--cg-skin-navy)',
-};
+/**
+ * Rôles → expression CSS finale. Tous passent par des jetons alias --cg-skin-<type>-<rôle> (définis par la feuille de teinte, donc
+ * inexistants hors modes skin/canvas) : les replis var(--cg-skin-…, #hex) des modules CSS restent ainsi identiques au Legacy partout ailleurs.
+ */
+const alias = (kind, role) => `var(--cg-skin-${kind}-${role})`;
+const BG_ROLES = Object.fromEntries(['surface', 'fill1', 'fill2', 'success', 'warning', 'danger', 'info', 'purple', 'navy'].map((r) => [r, alias('bg', r)]));
+const TEXT_ROLES = Object.fromEntries(['primary', 'secondary', 'muted', 'accent', 'success', 'warning', 'danger', 'info', 'purple'].map((r) => [r, alias('text', r)]));
+const BORDER_ROLES = Object.fromEntries(['subtle', 'default', 'success', 'warning', 'danger', 'info', 'purple'].map((r) => [r, alias('border', r)]));
 
-/** Rôles de texte. */
-const TEXT_ROLES = {
-  primary: 'var(--cg-text-primary)',
-  secondary: 'var(--cg-text-secondary)',
-  muted: 'var(--cg-text-muted)',
-  accent: 'var(--cg-accent-text)',
-  success: 'var(--cg-success-fg)',
-  warning: 'var(--cg-warning-fg)',
-  danger: 'var(--cg-danger-fg)',
-  info: 'var(--cg-info-fg)',
-  purple: 'var(--cg-purple-fg)',
+/** Définition des alias : rôle → jeton Glass sous-jacent (suit le thème Light/Dark). */
+const ALIAS_DEFS = {
+  'bg-surface': 'var(--cg-glass-bg-strong)',
+  'bg-fill1': 'rgba(40, 72, 120, 0.05)',
+  'bg-fill2': 'rgba(40, 72, 120, 0.12)',
+  'bg-success': 'var(--cg-success-bg)',
+  'bg-warning': 'var(--cg-warning-bg)',
+  'bg-danger': 'var(--cg-danger-bg)',
+  'bg-info': 'var(--cg-info-bg)',
+  'bg-purple': 'var(--cg-purple-bg)',
+  'bg-navy': '#2C3E50',
+  'text-primary': 'var(--cg-text-primary)',
+  'text-secondary': 'var(--cg-text-secondary)',
+  'text-muted': 'var(--cg-text-muted)',
+  'text-accent': 'var(--cg-accent-text)',
+  'text-success': 'var(--cg-success-fg)',
+  'text-warning': 'var(--cg-warning-fg)',
+  'text-danger': 'var(--cg-danger-fg)',
+  'text-info': 'var(--cg-info-fg)',
+  'text-purple': 'var(--cg-purple-fg)',
+  'border-subtle': 'var(--cg-border-subtle)',
+  'border-default': 'var(--cg-border-default)',
+  'border-success': 'var(--cg-success-border)',
+  'border-warning': 'var(--cg-warning-border)',
+  'border-danger': 'var(--cg-danger-border)',
+  'border-info': 'var(--cg-info-border)',
+  'border-purple': 'var(--cg-purple-border)',
 };
-
-/** Rôles de bordure. */
-const BORDER_ROLES = {
-  subtle: 'var(--cg-border-subtle)',
-  default: 'var(--cg-border-default)',
-  success: 'var(--cg-success-border)',
-  warning: 'var(--cg-warning-border)',
-  danger: 'var(--cg-danger-border)',
-  info: 'var(--cg-info-border)',
-  purple: 'var(--cg-purple-border)',
+/** Surcharges Dark des alias qui ne suivent pas déjà un jeton thématisé. */
+const ALIAS_DARK = {
+  'bg-fill1': 'rgba(255, 255, 255, 0.045)',
+  'bg-fill2': 'rgba(255, 255, 255, 0.11)',
+  'bg-navy': '#3B516B',
 };
 
 /** Couleurs hex Legacy (6 chiffres, majuscules) → rôle. */
@@ -124,7 +131,7 @@ const TW_BORDER = {
 const TW_HOVER_BG = ['gray-50', 'gray-100', 'slate-50', 'slate-100', 'white', 'gray-200', 'slate-200'];
 
 module.exports = {
-  BG_ROLES, TEXT_ROLES, BORDER_ROLES,
+  BG_ROLES, TEXT_ROLES, BORDER_ROLES, ALIAS_DEFS, ALIAS_DARK,
   BG_HEX, TEXT_HEX, BORDER_HEX, ACCENT_BORDERS,
   TW_BG, TW_TEXT, TW_BORDER, TW_HOVER_BG,
 };

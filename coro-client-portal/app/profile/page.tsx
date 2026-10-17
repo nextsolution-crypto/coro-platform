@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getUser, clearAuth } from '../store/auth';
 import { toast } from '../store/toast';
 import PortalLayout from '../components/PortalLayout';
+import AppearanceSection from '../components/AppearanceSection';
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
@@ -324,6 +325,9 @@ export default function ProfilePage() {
             </p>
           </div>
         </section>
+
+        {/* Apparence (aperçu de préproduction uniquement : invisible dans le portail livré) */}
+        <AppearanceSection />
 
         {/* Mot de passe */}
         <section

@@ -97,11 +97,11 @@ function hsl(h) {
     hue = (hue * 60 + 360) % 360;
   }
   const lin = [r, g, b].map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
-  return { h: hue, s, l, lum: 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2] };
+  return { h: hue, s, l, chroma: d, lum: 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2] };
 }
 /** Famille de teinte : danger | warning | success | info | purple | neutral. */
 function family(c) {
-  if (c.s < 0.14) return 'neutral';
+  if (c.chroma < 0.075) return 'neutral';
   if (c.h >= 345 || c.h < 18) return 'danger';
   if (c.h < 72) return 'warning';
   if (c.h < 170) return 'success';
@@ -137,20 +137,17 @@ function extendedMaps() {
 }
 
 function tokens() {
-  return `/* Jetons propres à la couche de teinte (le reste vient de tokens.css). */
-${SCOPE},
+  const NL = String.fromCharCode(10);
+  const light = Object.entries(M.ALIAS_DEFS).map(([k, v]) => `  --cg-skin-${k}: ${v};`).join(NL);
+  const dark = Object.entries(M.ALIAS_DARK).map(([k, v]) => `  --cg-skin-${k}: ${v};`).join(NL);
+  return `/* Jetons alias de la couche de teinte (le reste vient de tokens.css). Inexistants hors modes skin/canvas. */
 :root[data-ui="glass"][data-cg-mode="skin"],
 :root[data-ui="glass"][data-cg-mode="canvas"] {
-  --cg-skin-surface: var(--cg-glass-bg-strong);
-  --cg-skin-fill-1: rgba(40, 72, 120, 0.05);
-  --cg-skin-fill-2: rgba(40, 72, 120, 0.12);
-  --cg-skin-navy: #2C3E50;
+${light}
 }
 :root[data-ui="glass"][data-theme="dark"][data-cg-mode="skin"],
 :root[data-ui="glass"][data-theme="dark"][data-cg-mode="canvas"] {
-  --cg-skin-fill-1: rgba(255, 255, 255, 0.045);
-  --cg-skin-fill-2: rgba(255, 255, 255, 0.11);
-  --cg-skin-navy: #3B516B;
+${dark}
 }
 `;
 }
@@ -196,7 +193,8 @@ function build() {
   const surfaceSel = [...M.BG_HEX.surface.flatMap(bgSelectors), ...twBg(M.TW_BG.surface)];
   const opaqueSelf = POSITIONED.flatMap((pos) => surfaceSel.map((s) => (pos.startsWith('.') ? `${s}${pos}` : `${s}${pos}`)));
   const opaqueInFixed = FIXED_ANCESTORS.flatMap((anc) => surfaceSel.map((s) => `${anc} ${s}`));
-  out.push(rule([...opaqueSelf, ...opaqueInFixed], 'background-color: var(--cg-panel-bg) !important;'));
+  // `.cg-chrome` (barre en verre dense, avec flou) reste translucide : c'est une surface de chrome, pas un menu flottant.
+  out.push(rule([...opaqueSelf, ...opaqueInFixed], 'background-color: var(--cg-panel-bg) !important;', ':not(.cg-chrome)'));
 
   // Finition « verre » des cartes : reflet interne, arête, élévation douce. Jamais sur les champs ni les boutons.
   const radii = ['6px', '8px', '10px', '12px'];
@@ -213,6 +211,8 @@ function build() {
   ];
   out.push(rule(pageWrap, 'background-color: transparent !important; background-image: none;'));
 
+  // Couleur de texte par défaut du document (le portail la pose en dur sur body).
+  out.push(`${SCOPE} body { color: var(--cg-text-primary); }`);
   // Champs : curseur, sélection, texte d'aide.
   out.push(`${SCOPE} ::placeholder { color: var(--cg-text-muted); opacity: 1; }`);
   out.push(`${SCOPE} ::selection { background: var(--cg-accent-soft); }`);
@@ -267,5 +267,5 @@ function main() {
   if (bad) process.exit(1);
 }
 
-module.exports = { build, SCOPE, NOT_PAPER, TARGETS };
+module.exports = { build, extendedMaps, SCOPE, NOT_PAPER, TARGETS };
 if (require.main === module) main();
