@@ -656,6 +656,8 @@ test("collector contract rejects arbitrary commands and uses a read-only transac
     /finished_at IS NULL OR rolled_back_at IS NOT NULL/,
   );
   assert.match(source, /sha256sum --check --status/);
+  assert.equal(source.match(/sort -nr \| sed -n '1p'/g)?.length, 4);
+  assert.doesNotMatch(source, /sort -nr \| head -n 1/);
   assert.doesNotMatch(source, /docker exec -e PGPASSWORD/);
   assert.doesNotMatch(source, /env .*AWS_ACCESS_KEY_ID=/);
   assert.doesNotMatch(

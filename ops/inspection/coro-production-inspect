@@ -101,10 +101,10 @@ systemctl show coro-db-backup.service coro-db-backup.timer coro-db-backup-health
 [[ -f "$BACKUP_DIR/backup-state.json" && ! -L "$BACKUP_DIR/backup-state.json" ]] || fail BACKUP_STATE_MISSING
 cp -- "$BACKUP_DIR/backup-state.json" "$work/backup-state.json"
 
-find "$BACKUP_DIR" -maxdepth 1 -type f -name '*.remote.manifest.json' -printf '%T@ %p\n' | sort -nr | head -n 1 >"$work/latest-backup"
-find "$RESTORE_DIR" -maxdepth 2 -type f -name '*.restore-report.json' -printf '%T@ %p\n' | sort -nr | head -n 1 >"$work/latest-restore"
-find "$RELEASE_DIR" -maxdepth 1 -type f -name 'production-*.json' -printf '%T@ %p\n' | sort -nr | head -n 1 >"$work/latest-release"
-find "$RELEASE_DIR/state" -maxdepth 1 -type f -name 'production-*.state.json' -printf '%T@ %p\n' | sort -nr | head -n 1 >"$work/latest-release-state"
+find "$BACKUP_DIR" -maxdepth 1 -type f -name '*.remote.manifest.json' -printf '%T@ %p\n' | sort -nr | sed -n '1p' >"$work/latest-backup"
+find "$RESTORE_DIR" -maxdepth 2 -type f -name '*.restore-report.json' -printf '%T@ %p\n' | sort -nr | sed -n '1p' >"$work/latest-restore"
+find "$RELEASE_DIR" -maxdepth 1 -type f -name 'production-*.json' -printf '%T@ %p\n' | sort -nr | sed -n '1p' >"$work/latest-release"
+find "$RELEASE_DIR/state" -maxdepth 1 -type f -name 'production-*.state.json' -printf '%T@ %p\n' | sort -nr | sed -n '1p' >"$work/latest-release-state"
 
 latest_backup_manifest="$(cut -d' ' -f2- "$work/latest-backup")"
 [[ -f "$latest_backup_manifest" && ! -L "$latest_backup_manifest" ]] || fail BACKUP_MANIFEST_MISSING
