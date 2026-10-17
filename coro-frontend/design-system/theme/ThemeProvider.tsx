@@ -14,6 +14,8 @@ import {
   setUiGeneration,
   subscribe,
 } from './theme-store';
+import { SKIN_HREF } from '../skin/skin-asset';
+import { skinNeeded, syncSkinStylesheet } from '../skin/skin-loader';
 
 export interface ThemeContextValue {
   /** Préférence choisie : LIGHT, DARK ou SYSTEM. */
@@ -59,8 +61,24 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Le HTML serveur est toujours rendu en Legacy. On signale « prêt » (data-ui-ready) seulement
   // quand le rendu React correspond au rendu effectif réel ; tokens.css masque la page en Glass
   // tant que ce n'est pas le cas, ce qui supprime le flash Legacy. Aucun effet en Legacy.
+  // En mode skin / canvas, la page reste masquée tant que la feuille de teinte n'est pas chargée (sinon flash Legacy illisible en Dark).
   useLayoutEffect(() => {
-    if (snapshot.effectiveUi === getSnapshot().effectiveUi) document.documentElement.setAttribute('data-ui-ready', '');
+    const matchesActualRender = snapshot.effectiveUi === getSnapshot().effectiveUi;
+    if (!matchesActualRender) return;
+    const root = document.documentElement;
+    const pending = syncSkinStylesheet(skinNeeded(snapshot.effectiveUi, snapshot.routeMode), SKIN_HREF);
+    if (!pending) {
+      root.setAttribute('data-ui-ready', '');
+      return;
+    }
+    root.removeAttribute('data-ui-ready');
+    let cancelled = false;
+    pending.then(() => {
+      if (!cancelled) root.setAttribute('data-ui-ready', '');
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [snapshot]);
 
   const setPreference = useCallback((preference: ThemePreference) => setThemePreference(preference), []);

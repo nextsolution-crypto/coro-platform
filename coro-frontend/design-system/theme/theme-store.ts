@@ -114,6 +114,14 @@ export function applyToDocument(snapshot: ThemeSnapshot): void {
   const root = document.documentElement;
   if (root.getAttribute('data-ui') !== snapshot.effectiveUi) root.setAttribute('data-ui', snapshot.effectiveUi);
   if (root.getAttribute('data-theme') !== snapshot.resolvedTheme) root.setAttribute('data-theme', snapshot.resolvedTheme);
+  // Mode de rendu de la route (skin | canvas | glass | island | bare) : pilote la couche de teinte (design-system/skin).
+  // Absent en Legacy : aucune règle Glass ne peut alors s'appliquer.
+  const mode = snapshot.effectiveUi === 'glass' ? snapshot.routeMode : null;
+  if (mode === null) {
+    if (root.hasAttribute('data-cg-mode')) root.removeAttribute('data-cg-mode');
+  } else if (root.getAttribute('data-cg-mode') !== mode) {
+    root.setAttribute('data-cg-mode', mode);
+  }
 }
 
 function refresh(): void {

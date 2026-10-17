@@ -64,8 +64,18 @@ export function resolveTheme(preference: ThemePreference, systemPrefersDark: boo
   return systemPrefersDark ? 'dark' : 'light';
 }
 
-/** Table [source RegExp, shell 1|0], de la route la plus spécifique à la moins spécifique (voir route-matcher.shellTable). */
-export type ShellTable = ReadonlyArray<readonly [string, 0 | 1]>;
+/**
+ * Table [source RegExp, drapeau], de la route la plus spécifique à la moins spécifique (voir route-matcher.shellTable).
+ * 1 : shell Glass ; 2 : écran plein écran re-teinté, Glass seulement si la bêta est activée ; 0 : entièrement Legacy.
+ */
+export type ShellTable = ReadonlyArray<readonly [string, 0 | 1 | 2]>;
+
+export interface ThemeInitOptions {
+  /** NEXT_PUBLIC_GLASS_BETA a la valeur exacte du jeton de préproduction dans ce build. */
+  betaBuild?: boolean;
+  /** Développement uniquement : la clé locale coro-glass-beta = 'on' active aussi la bêta. Jamais en production. */
+  storageBeta?: boolean;
+}
 
 /**
  * Script anti-flash (ES5, exécuté pendant le parsing HTML, avant le premier rendu).
@@ -73,12 +83,14 @@ export type ShellTable = ReadonlyArray<readonly [string, 0 | 1]>;
  * parseUiGeneration / resolveTheme — la parité est vérifiée par theme.test.cjs.
  * Tout échec (localStorage bloqué, matchMedia absent) retombe sur legacy + light.
  */
-export function buildThemeInitScript(shellTable?: ShellTable): string {
+export function buildThemeInitScript(shellTable?: ShellTable, options: ThemeInitOptions = {}): string {
+  const betaExpr = (options.betaBuild ? 'true' : 'false') + (options.storageBeta ? '||g(' + JSON.stringify(GLASS_BETA_STORAGE_KEY) + ")==='on'" : '');
   // Sans table (tests, autres applications) : la préférence est appliquée telle quelle.
   // Avec table : une route sans shell Glass (inconnue, plein écran, authentification) reste entièrement Legacy.
   const routeGate = shellTable
     ? 'var t=' + JSON.stringify(shellTable) + ";var q=((window.location&&window.location.pathname)||'/').replace(/\\/+$/,'')||'/';var sh=false;" +
-      'for(var i=0;i<t.length;i++){if(new RegExp(t[i][0]).test(q)){sh=t[i][1]===1;break}}' +
+      'var bo=' + betaExpr + ';' +
+      'for(var i=0;i<t.length;i++){if(new RegExp(t[i][0]).test(q)){sh=t[i][1]===1||(t[i][1]===2&&bo);break}}' +
       "if(!sh)u='legacy';"
     : '';
   return (

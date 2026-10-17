@@ -39,6 +39,8 @@ function makeBrowser({ storage = {}, dark = false, storageThrows = false, noMatc
   const documentElement = {
     getAttribute: (k) => (k in attrs ? attrs[k] : null),
     setAttribute: (k, v) => { attrs[k] = v; },
+    hasAttribute: (k) => k in attrs,
+    removeAttribute: (k) => { delete attrs[k]; },
   };
   const window = {
     localStorage,

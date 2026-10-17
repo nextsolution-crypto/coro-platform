@@ -6,12 +6,18 @@ import type { RouteEntry } from './route-registry';
  * réutilisables dans le script anti-flash, les tests et le portail client.
  *
  * Modes :
- *  - 'glass'  : contenu Glass (route 'ga', ou 'beta' avec activation de développement)
+ *  - 'glass'  : contenu Glass natif (route 'ga', ou 'beta' avec activation de développement)
+ *  - 'skin'   : shell Glass + contenu métier existant re-teinté Glass (route `render: 'skin'` active)
+ *  - 'canvas' : écran plein écran (sans shell) re-teinté sur le canevas Glass (route `render: 'skin'` active, shell: 'none')
  *  - 'island' : shell Glass + contenu Legacy enveloppé dans un îlot clair
  *  - 'bare'   : shell Glass + contenu Legacy NON enveloppé (island: false)
  *  - 'legacy' : document entièrement Legacy (route inconnue ou sans shell)
  */
-export type RouteMode = 'glass' | 'island' | 'bare' | 'legacy';
+export type RouteMode = 'glass' | 'skin' | 'canvas' | 'island' | 'bare' | 'legacy';
+
+/** Modes qui rendent du Glass (tout sauf legacy, îlot et nu). */
+export const GLASS_CONTENT_MODES: readonly RouteMode[] = ['glass', 'skin', 'canvas'];
+export const isGlassContentMode = (mode: RouteMode): boolean => GLASS_CONTENT_MODES.includes(mode);
 
 export interface RouteResolution {
   entry: RouteEntry | null;
@@ -75,9 +81,12 @@ export function resolveRoute(pathname: string, options: ResolveOptions = {}): Ro
   const entry = findRouteEntry(pathname, options.entries);
   if (!entry) return { entry: null, mode: 'legacy' };
   if (entry.devOnly && options.production) return { entry: null, mode: 'legacy' };
-  if (entry.shell !== 'app') return { entry, mode: 'legacy' };
-  if (entry.status === 'ga') return { entry, mode: 'glass' };
-  if (entry.status === 'beta' && options.betaEnabled) return { entry, mode: 'glass' };
+  const active = entry.status === 'ga' || (entry.status === 'beta' && options.betaEnabled === true);
+  if (entry.shell !== 'app') {
+    // Sans shell : Glass uniquement pour un écran re-teinté (render: 'skin') activé ; sinon document entièrement Legacy.
+    return { entry, mode: active && entry.render === 'skin' ? 'canvas' : 'legacy' };
+  }
+  if (active) return { entry, mode: entry.render === 'skin' ? 'skin' : 'glass' };
   return { entry, mode: entry.island === false ? 'bare' : 'island' };
 }
 
@@ -87,11 +96,21 @@ export function isShellRoute(pathname: string, options: ResolveOptions = {}): bo
 }
 
 /**
- * Table [source RegExp, shell 1|0] ordonnée de la plus spécifique à la moins spécifique : le premier motif
+ * Table [source RegExp, drapeau] ordonnée de la plus spécifique à la moins spécifique : le premier motif
  * qui correspond décide. Consommée par le script anti-flash (ES5, sans import) ; reproduit findRouteEntry.
+ *  - 1 : shell Glass (toute route à shell) ;
+ *  - 2 : écran plein écran re-teinté (render: 'skin') — Glass seulement si la bêta est activée, sinon entièrement Legacy ;
+ *        une route 'ga' de ce type vaut 1 ;
+ *  - 0 : document entièrement Legacy.
  */
-export function shellTable(options: { production?: boolean; entries?: readonly RouteEntry[] } = {}): Array<[string, 0 | 1]> {
+export function shellTable(options: { production?: boolean; entries?: readonly RouteEntry[] } = {}): Array<[string, 0 | 1 | 2]> {
   return compile((options.entries ?? ROUTE_REGISTRY).filter((e) => !(e.devOnly && options.production)))
     .sort((a, b) => a.dynamic - b.dynamic || b.depth - a.depth)
-    .map((c): [string, 0 | 1] => [patternToSource(c.entry.pattern), c.entry.shell === 'app' ? 1 : 0]);
+    .map((c): [string, 0 | 1 | 2] => {
+      const e = c.entry;
+      if (e.shell === 'app') return [patternToSource(e.pattern), 1];
+      if (e.render === 'skin' && e.status === 'ga') return [patternToSource(e.pattern), 1];
+      if (e.render === 'skin' && e.status === 'beta') return [patternToSource(e.pattern), 2];
+      return [patternToSource(e.pattern), 0];
+    });
 }
