@@ -126,7 +126,7 @@ async function launch() {
 }
 
 /** Ouvre un onglet et renvoie une session { send, eval, key, click, goto, ... }. */
-async function openSession(port, { ui, theme, viewport, colorScheme = 'light', width, beta = false, role = 'SUPER_ADMIN', authority, real }) {
+async function openSession(port, { ui, theme, viewport, colorScheme = 'light', width, beta = false, role = 'SUPER_ADMIN', authority, real, anon = false }) {
   const target = await getJson(`http://127.0.0.1:${port}/json/new?about:blank`, 'PUT');
   const ws = new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((resolve) => (ws.onopen = resolve));
@@ -152,10 +152,15 @@ async function openSession(port, { ui, theme, viewport, colorScheme = 'light', w
   // `real` ({ access, user }) : session RÉELLE obtenue d'un vrai backend de test (acceptation) ; aucun jeton factice, aucun jeton de rafraîchissement.
   const tokenValue = real ? real.access : `bench-token:role:${role}${authority ? ':authority:' + authority : ''}`;
   const userValue = real ? real.user : fakeUser;
+  // Session du PORTAIL CLIENT : clés propres (coro_client_*) ; aucune clé de l'application interne n'est posée.
+  const portalSession = !!(real && real.portal);
+  // `anon` : visiteur sans session (écrans publics : connexion, lien magique, bornes, population) — aucune clé d'authentification n'est posée.
   const seed = `try{` +
     `var u=${JSON.stringify(JSON.stringify(userValue))};var t=${JSON.stringify(tokenValue)};` +
-    `localStorage.setItem('coro_token',t);localStorage.setItem('coro_user',u);` +
-    `sessionStorage.setItem('coro_token',t);sessionStorage.setItem('coro_user',u);` +
+    (anon ? '' : portalSession
+      ? `localStorage.setItem('coro_client_token',t);localStorage.setItem('coro_client_user',u);`
+      : `localStorage.setItem('coro_token',t);localStorage.setItem('coro_user',u);` +
+        `sessionStorage.setItem('coro_token',t);sessionStorage.setItem('coro_user',u);`) +
     (ui ? `localStorage.setItem('coro-ui-generation','${ui}');` : '') +
     (theme ? `localStorage.setItem('coro-theme-preference','${theme}');` : '') +
     (beta ? `localStorage.setItem('coro-glass-beta','on');` : '') +

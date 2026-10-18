@@ -195,7 +195,7 @@ export default function MapPage() {
   if (loading || !user) {
     return (
       <PortalLayout>
-        <div style={{
+        <div data-cg-keep="" style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           minHeight: 400, backgroundColor: '#0F1923', borderRadius: 12,
         }}>
@@ -220,7 +220,7 @@ export default function MapPage() {
   };
 
   const mapContent = (
-    <div style={{
+    <div data-cg-keep="" style={{
       position: 'relative',
       height: fullscreen ? '100vh' : 'calc(100vh - 220px)',
       minHeight: 500,
@@ -595,7 +595,7 @@ export default function MapPage() {
   );
 
   return fullscreen ? (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#0F1923' }}>
+    <div data-cg-keep="" style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#0F1923' }}>
       {mapContent}
     </div>
   ) : (
@@ -623,7 +623,7 @@ export default function MapPage() {
       </header>
 
       {withCoords.length === 0 ? (
-        <div style={{
+        <div data-cg-keep="" style={{
           backgroundColor: '#0F1923', borderRadius: 12,
           border: '1px solid rgba(255,255,255,0.06)',
           padding: 64, textAlign: 'center',

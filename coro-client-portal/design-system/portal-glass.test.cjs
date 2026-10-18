@@ -134,3 +134,15 @@ test('modules CSS du portail : replis var(--cg-skin-*, #hex) à jour', () => {
   const tok = require(path.join(REPO, 'coro-frontend', 'design-system', 'tools', 'tokenize-css.cjs'));
   assert.deepEqual(tok.status(), []);
 });
+
+test('production : aucun fichier du portail n’importe un test, le chargeur de test ou un outil de développement', () => {
+  for (const p of walk(ROOT)) {
+    if (!/\.(tsx|ts)$/.test(p) || /node_modules|\.next/.test(p) || /\.test\./.test(p)) continue;
+    const src = fs.readFileSync(p, 'utf8');
+    assert.ok(!/from ['"][^'"]*(test-loader|\.test|bench|mock-api|sync-portal|build-skin|tokenize-css)[^'"]*['"]/.test(src), `${path.relative(ROOT, p)} importe un outil de développement`);
+  }
+  // Le portail ne contient ni banc ni outils : ils vivent dans coro-frontend/design-system et ne sont jamais livrés.
+  assert.ok(!fs.existsSync(path.join(ROOT, 'design-system', 'bench')) && !fs.existsSync(path.join(ROOT, 'design-system', 'tools')));
+  // Aucune route de développement (équivalent de /glass-kit) dans le portail.
+  assert.ok(!walk(path.join(ROOT, 'app')).some((p) => /page\.dev\.tsx$/.test(p)));
+});

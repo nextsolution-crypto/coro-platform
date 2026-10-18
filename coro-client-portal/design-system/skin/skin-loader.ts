@@ -13,9 +13,11 @@ export function skinNeeded(effectiveUi: string, routeMode: string): boolean {
 
 /**
  * Aligne le document sur le besoin. Retourne une promesse seulement si une feuille vient d'être ajoutée et n'est pas encore
- * chargée (l'appelant attend avant de révéler la page) ; sinon retourne null.
+ * chargée (l'appelant attend avant de révéler la page) ; sinon retourne null. La promesse vaut `true` si la feuille est chargée,
+ * `false` si elle a échoué (réseau coupé, fichier absent, délai dépassé) : l'appelant bascule alors la page en Classique,
+ * jamais en « Glass sans teinte » (texte sombre sur fond sombre).
  */
-export function syncSkinStylesheet(needed: boolean, href: string): Promise<void> | null {
+export function syncSkinStylesheet(needed: boolean, href: string): Promise<boolean> | null {
   if (typeof document === 'undefined') return null;
   const existing = document.getElementById(SKIN_LINK_ID) as HTMLLinkElement | null;
   if (!needed) {
@@ -35,17 +37,22 @@ export function syncSkinStylesheet(needed: boolean, href: string): Promise<void>
   return waitFor(link);
 }
 
-function waitFor(link: HTMLLinkElement): Promise<void> {
+function waitFor(link: HTMLLinkElement): Promise<boolean> {
   return new Promise((resolve) => {
-    if (link.sheet) return resolve();
-    const done = () => {
-      link.removeEventListener('load', done);
-      link.removeEventListener('error', done);
-      resolve();
+    if (link.sheet) return resolve(true);
+    let settled = false;
+    const finish = (ok: boolean) => {
+      if (settled) return;
+      settled = true;
+      link.removeEventListener('load', onLoad);
+      link.removeEventListener('error', onError);
+      resolve(ok);
     };
-    link.addEventListener('load', done);
-    link.addEventListener('error', done);
-    // Garde-fou : ne jamais laisser la page masquée si le réseau est muet.
-    setTimeout(done, 3000);
+    const onLoad = () => finish(true);
+    const onError = () => finish(false);
+    link.addEventListener('load', onLoad);
+    link.addEventListener('error', onError);
+    // Garde-fou : ne jamais laisser la page masquée si le réseau est muet (échec : retour au Classique).
+    setTimeout(() => finish(Boolean(link.sheet)), 3000);
   });
 }

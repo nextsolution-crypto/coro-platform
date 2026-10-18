@@ -35,7 +35,8 @@ const ALIAS_DEFS = {
   'bg-navy': '#2C3E50',
   'text-primary': 'var(--cg-text-primary)',
   'text-secondary': 'var(--cg-text-secondary)',
-  'text-muted': 'var(--cg-text-muted)',
+  // Plus sombre que --cg-text-muted en Light : un texte atténué posé directement sur le canevas (zones bleutées du dégradé) doit garder 4,5:1.
+  'text-muted': '#4C5E74',
   'text-accent': 'var(--cg-accent-text)',
   'text-success': 'var(--cg-success-fg)',
   'text-warning': 'var(--cg-warning-fg)',
@@ -54,7 +55,8 @@ const ALIAS_DEFS = {
 const ALIAS_DARK = {
   'bg-fill1': 'rgba(255, 255, 255, 0.045)',
   'bg-fill2': 'rgba(255, 255, 255, 0.11)',
-  'bg-navy': '#3B516B',
+  'bg-navy': '#2F435B',
+  'text-muted': 'var(--cg-text-muted)',
 };
 
 /** Couleurs hex Legacy (6 chiffres, majuscules) → rôle. */

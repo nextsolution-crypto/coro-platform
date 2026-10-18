@@ -14,6 +14,8 @@
  *
  * --ids : JSON { "/projects/[id]": "/projects/abc" } pour les routes dynamiques (sinon identifiant factice « x1 »).
  * --real : JSON { access, user } d'une session RÉELLE d'un backend de test (voir acceptation 41) ; sinon session factice du faux API.
+ * --anon : visiteur sans session (routes publiques).
+ * --sessions FILE --profile NOM : sessions réelles (bench/real-session.cjs login), rafraîchies avant chaque route ; ACC_API requis.
  * Codes de sortie : 0 = aucun défaut bloquant ; 1 = défauts (voir le résumé).
  */
 const fs = require('node:fs');
@@ -21,7 +23,11 @@ const path = require('node:path');
 require('../test-loader.cjs');
 const { launch, openSession, sleep } = require('./cdp.cjs');
 const { CONTRAST } = require('./probes.cjs');
-const { ROUTE_REGISTRY } = require('../routes/route-registry.ts');
+// --app portal : balaye le portail client (registre et sessions du portail) ; par défaut l'application interne.
+const APP = process.argv.includes('--app') ? process.argv[process.argv.indexOf('--app') + 1] : 'app';
+const { ROUTE_REGISTRY } = APP === 'portal'
+  ? require('../../../coro-client-portal/design-system/routes/route-registry.ts')
+  : require('../routes/route-registry.ts');
 
 function args(argv) {
   const out = {};
@@ -43,7 +49,8 @@ const COVERAGE = String.raw`(() => {
   const leaks = [];
   let surfaces = 0;
   for (const el of document.body.querySelectorAll('*')) {
-    if (el.closest('nextjs-portal') || el.closest('[data-bench]') || el.closest('[data-cg-paper]') || el.closest('.leaflet-container') || el.closest('canvas,svg,video,iframe,img')) continue;
+    // Sont exclus des « fuites » : feuilles de document, urgences, écrans conçus pour le sombre, cartes, médias et contrôles désactivés (gris d'état).
+    if (el.disabled || el.closest('nextjs-portal') || el.closest('[data-bench]') || el.closest('[data-cg-paper],[data-cg-emergency],[data-cg-keep]') || el.closest('.leaflet-container') || el.closest('canvas,svg,video,iframe,img')) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility !== 'visible' || cs.display === 'none') continue;
     const r = el.getBoundingClientRect();
@@ -83,7 +90,17 @@ async function main() {
   if (!o.out) throw new Error('--out requis');
   const outDir = o.out; fs.mkdirSync(outDir, { recursive: true });
   const ids = o.ids ? JSON.parse(fs.readFileSync(o.ids, 'utf8')) : {};
-  const real = o.real ? JSON.parse(fs.readFileSync(o.real, 'utf8')) : undefined;
+  // Session réelle d'un backend de test jetable : --sessions FILE (+ --profile NOM). Rafraîchie avant chaque route (jeton d'accès de 15 minutes).
+  const sessionsFile = o.sessions || null; const profile = o.profile || 'FOUNDER';
+  const liveReal = async () => {
+    if (!sessionsFile) return o.real ? JSON.parse(fs.readFileSync(o.real, 'utf8')) : undefined;
+    const rs = require('./real-session.cjs');
+    const all = JSON.parse(fs.readFileSync(sessionsFile, 'utf8'));
+    if (all[profile].portal) return { access: all[profile].token, user: all[profile].user, portal: true };
+    all[profile] = await rs.refresh(all[profile]);
+    fs.writeFileSync(sessionsFile, JSON.stringify(all, null, 2));
+    return { access: all[profile].token, user: all[profile].user };
+  };
   const themes = list(o.themes, ['LIGHT', 'DARK']);
   const viewports = list(o.viewports, ['320', '390', '768', '1600']).map(Number);
   const role = o.role || 'SUPER_ADMIN';
@@ -96,16 +113,29 @@ async function main() {
       const route = sample(e.pattern, ids);
       if (only && !only.includes(e.pattern) && !only.includes(route)) continue;
       const row = { pattern: e.pattern, route, status: 'ok', issues: [], measures: [] };
+      const real = await liveReal();
       // Référence Legacy (Light, 1600) : contraste déjà défaillant en Classique.
       let baseline = new Set();
       try {
-        const legacy = await openSession(chrome.port, { ui: 'legacy', theme: 'LIGHT', viewport: 1600, role, real });
+        const legacy = await openSession(chrome.port, { ui: 'legacy', theme: 'LIGHT', viewport: 1600, role, real, anon: o.anon === 'true' });
         try {
           const how = await legacy.goto(route);
-          if (!how.startsWith('ECHEC')) { await legacy.freeze(); baseline = new Set(JSON.parse(await legacy.eval(CONTRAST)).items.map(key)); }
+          if (!how.startsWith('ECHEC')) {
+            await legacy.freeze();
+            const con0 = JSON.parse(await legacy.eval(CONTRAST));
+            baseline = new Set(con0.items.map(key));
+            row.legacyExceptions = legacy.consoleErrors.length;
+            // Captures Classiques « avant » (dossier d'acceptation) : 1600 puis 390 px.
+            if (o.shots) {
+              const base = path.join(outDir, 'shots', `${route.replace(/^\//, '').replace(/[^A-Za-z0-9]+/g, '_') || 'root'}__LEGACY`);
+              await legacy.screenshot(`${base}__1600.png`);
+              await legacy.send('Emulation.setDeviceMetricsOverride', require('./cdp.cjs').VIEWPORTS[390]); await sleep(500);
+              await legacy.screenshot(`${base}__390.png`);
+            }
+          }
         } finally { await legacy.close(); }
       } catch (err) { row.issues.push('référence Legacy : ' + err.message); }
-      const session = await openSession(chrome.port, { ui: 'glass', theme: 'LIGHT', viewport: viewports[0], beta: true, role, real });
+      const session = await openSession(chrome.port, { ui: 'glass', theme: 'LIGHT', viewport: viewports[0], beta: true, role, real, anon: o.anon === 'true' });
       try {
         const how = await session.goto(route);
         row.how = how;
@@ -124,7 +154,10 @@ async function main() {
           if (regress.length) row.issues.push(`${theme}/${vp} : ${regress.length} régression(s) de contraste (ex. « ${regress[0].text} » ${regress[0].ratio}:1)`);
           if (!cov.skinSheet) row.issues.push(`${theme}/${vp} : feuille de teinte absente`);
         }
-        if (session.consoleErrors.length) row.issues.push(`${session.consoleErrors.length} exception(s) JavaScript : ${session.consoleErrors[0].slice(0, 120)}`);
+        // Exceptions : seules celles qui s'ajoutent à la référence Classique comptent (un 404 déjà présent en Classique n'est pas une régression).
+        const extra = session.consoleErrors.length - (row.legacyExceptions || 0);
+        if (extra > 0) row.issues.push(`${extra} exception(s) JavaScript de plus qu'en Classique : ${session.consoleErrors[0].slice(0, 120)}`);
+        row.exceptions = { glass: session.consoleErrors.length, legacy: row.legacyExceptions ?? null };
       } finally { await session.close(); }
       row.status = row.issues.length ? 'defauts' : 'ok';
       rows.push(row);

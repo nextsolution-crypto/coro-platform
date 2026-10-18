@@ -10,6 +10,7 @@ import {
   getSnapshot,
   reapplyCurrentTheme,
   setActivePathname,
+  setSkinFailed,
   setThemePreference,
   setUiGeneration,
   subscribe,
@@ -73,8 +74,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
     root.removeAttribute('data-ui-ready');
     let cancelled = false;
-    pending.then(() => {
-      if (!cancelled) root.setAttribute('data-ui-ready', '');
+    pending.then((loaded) => {
+      if (cancelled) return;
+      // Feuille absente (hors ligne, fichier manquant) : retour au Classique plutôt qu'un Glass non teinté illisible.
+      if (!loaded) setSkinFailed(true);
+      root.setAttribute('data-ui-ready', '');
     });
     return () => {
       cancelled = true;

@@ -24,7 +24,9 @@ const TARGETS = [
 ];
 
 const SCOPE = ':root[data-ui="glass"]:is([data-cg-mode="skin"],[data-cg-mode="canvas"])';
-const NOT_PAPER = ':not([data-cg-paper] *)';
+// Zones préservées à l'identique du Classique : feuilles de document ([data-cg-paper]), surfaces d'urgence ([data-cg-emergency]) et écrans
+// conçus d'origine pour le sombre — cartes, bornes ([data-cg-keep]) : leurs textes clairs ne doivent pas être réassignés à des surfaces claires.
+const NOT_PAPER = ':not([data-cg-paper] *):not([data-cg-emergency] *):not([data-cg-emergency]):not([data-cg-keep] *):not([data-cg-keep])';
 
 const rgb = (h) => `rgb(${parseInt(h.slice(0, 2), 16)}, ${parseInt(h.slice(2, 4), 16)}, ${parseInt(h.slice(4, 6), 16)})`;
 const forms = (h) => [`#${h}`, rgb(h)];
@@ -51,9 +53,37 @@ const esc = (cls) => cls.replace(/[:/.[\]#%]/g, (c) => '\\' + c);
 const twBg = (names) => names.map((n) => `.bg-${esc(n)}`);
 const twText = (names) => names.map((n) => `.text-${esc(n)}`);
 const twBorder = (names) => names.map((n) => `.border-${esc(n)}`);
+// Valeurs arbitraires Tailwind (text-[#6C757D], bg-[#F8F9FA], border-[#CED4DA]) : sélecteurs d'attribut sur la classe.
+const twArbitrary = (prefix, hexes) => hexes.map((h) => `[class*=${q(prefix + '-[#' + h + ']')} i]`);
+// Variantes avec opacité (bg-white/70, bg-emerald-50/40) : même rôle que la classe pleine ; jamais pour les voiles sombres (bg-black/30, bg-slate-950/50).
+const twBgOpacity = (names) => names.filter((n) => !/^(black|slate-900|slate-950|gray-800|gray-900|slate-800)$/.test(n)).map((n) => `[class*=${q('bg-' + n + '/')}]`);
 const twDivide = (names) => names.map((n) => `.divide-${esc(n)} > :not(:last-child)`);
 
 const accentBorderGuard = M.ACCENT_BORDERS.flatMap((h) => [`:not([style*=${q('solid ' + ssr(h))} i])`, `:not([style*=${q('solid ' + dom(h))} i])`]).join('');
+
+/** Fonds d'origine très sombres (luminance < 0,08), détectés dans le code (hex) + classes Tailwind sombres : panneaux, bornes, cartes. */
+function darkPanelSelectors() {
+  const hexes = sourceHexes().filter((h) => hsl(h).lum < 0.08 && h !== '000000');
+  const bg = hexes.flatMap(bgSelectors);
+  const tw = ['slate-900', 'slate-950', 'gray-800', 'gray-900', 'black', 'slate-800'].map((n) => `.bg-${esc(n)}`);
+  return [...new Set([...bg, ...tw])];
+}
+
+/** Fonds blancs translucides (alpha ≥ 0,7) posés en ligne : surfaces de contenu (pastilles sur photo, voiles). Les voiles faibles (< 0,7) restent. */
+function whiteAlphaSelectors() {
+  const alphas = new Set();
+  for (const root of SCAN_ROOTS) for (const f of walkSources(root)) {
+    for (const m of fs.readFileSync(f, 'utf8').matchAll(/rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*(0?\.[0-9]+)\s*\)/g)) if (Number(m[1]) >= 0.7) alphas.add(m[1]);
+  }
+  const sel = [];
+  for (const a of [...alphas].sort()) {
+    const n = String(Number(a)); // forme normalisée par le navigateur (0.92 → 0.92 ; .9 → 0.9)
+    for (const prop of ['background', 'background-color']) {
+      sel.push(`[style*=${q(prop + ':rgba(255,255,255,' + a + ')')} i]`, `[style*=${q(prop + ': rgba(255, 255, 255, ' + n + ')')} i]`);
+    }
+  }
+  return sel;
+}
 
 const rule = (selectors, decl, extraSuffix = '') => {
   const list = [...new Set(selectors)];
@@ -160,18 +190,27 @@ function build() {
   const X = extendedMaps();
   // Fonds
   for (const [role, hexes] of Object.entries(X.bg)) {
-    const sel = [...hexes.flatMap(bgSelectors), ...twBg(M.TW_BG[role] || [])];
+    const sel = [...hexes.flatMap(bgSelectors), ...twBg(M.TW_BG[role] || []), ...twBgOpacity(M.TW_BG[role] || []), ...twArbitrary('bg', hexes)];
     out.push(rule(sel, `background-color: ${M.BG_ROLES[role]} !important;`));
   }
-  // Textes
-  for (const [role, hexes] of Object.entries(X.tx)) {
-    const sel = [...hexes.flatMap(textSelectors), ...twText(M.TW_TEXT[role] || [])];
-    out.push(rule(sel, `color: ${M.TEXT_ROLES[role]} !important;`));
+  // Fonds blancs translucides en ligne (≥ 0,7) : même rôle que le blanc plein.
+  out.push(rule(whiteAlphaSelectors(), `background-color: ${M.BG_ROLES.surface} !important;`));
+  // Textes. Les gris (primaire, secondaire, atténué) sont des textes pensés pour une surface CLAIRE : posés sur un panneau sombre d'origine
+  // (marine, noir de carte ou de borne), ils ne sont pas réassignés (sinon gris foncé sur fond sombre).
+  const darkPanels = darkPanelSelectors();
+  // Rôles de texte : union des couleurs hex ET des classes Tailwind (le rôle « danger » n'existe que côté Tailwind).
+  const textRoles = [...new Set([...Object.keys(X.tx), ...Object.keys(M.TW_TEXT)])];
+  for (const role of textRoles) {
+    const hexes = X.tx[role] || [];
+    const sel = [...hexes.flatMap(textSelectors), ...twText(M.TW_TEXT[role] || []), ...twArbitrary('text', hexes)];
+    const onLightOnly = ['primary', 'secondary', 'muted'].includes(role);
+    // L'élément lui-même (fond sombre + texte gris sur le même nœud) et ses descendants sont exclus.
+    out.push(rule(sel, `color: ${M.TEXT_ROLES[role]} !important;`, onLightOnly ? `:not(:is(${darkPanels.join(', ')})):not(:is(${darkPanels.join(', ')}) *)` : ''));
   }
   // Bordures : les neutres épargnent un élément qui porte un liséré d'état coloré.
   for (const [role, hexes] of Object.entries(X.bd)) {
     const neutral = role === 'subtle' || role === 'default';
-    const sel = [...hexes.flatMap(borderSelectors), ...twBorder(M.TW_BORDER[role] || [])];
+    const sel = [...hexes.flatMap(borderSelectors), ...twBorder(M.TW_BORDER[role] || []), ...twArbitrary('border', hexes)];
     out.push(rule(sel, `border-color: ${M.BORDER_ROLES[role]} !important;`, neutral ? accentBorderGuard : ''));
   }
   out.push(rule(twDivide(M.TW_BORDER.default), `border-color: ${M.BORDER_ROLES.default} !important;`));
@@ -222,7 +261,7 @@ function build() {
   out.push(`${SCOPE} :focus-visible { outline: var(--cg-focus-width) solid var(--cg-focus-ring); outline-offset: var(--cg-focus-offset); }`);
 
   // Feuille de document : toujours claire, quel que soit le thème (aperçus, PDF).
-  out.push(`:root[data-ui="glass"] [data-cg-paper] {
+  out.push(`:root[data-ui="glass"] :is([data-cg-paper], [data-cg-emergency], [data-cg-keep]) {
   color-scheme: light;
   --text-primary: #2C3E50;
   --text-secondary: #6C757D;

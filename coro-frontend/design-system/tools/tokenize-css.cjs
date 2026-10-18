@@ -31,12 +31,12 @@ const PARTIAL = [['coro-client-portal/app/globals.css', '.authReset {']];
 const X = extendedMaps();
 const lookup = (maps) => { const m = new Map(); for (const [role, hexes] of Object.entries(maps)) for (const h of hexes) m.set(h, role); return m; };
 const BG = lookup(X.bg), TX = lookup(X.tx), BD = lookup(X.bd);
-const normHex = (h) => { h = h.replace('#', '').toUpperCase(); return h.length === 3 ? h.split('').map((c) => c + c).join('') : h; };
+const normHex = (h) => { if (h.toLowerCase() === 'white') return 'FFFFFF'; h = h.replace('#', '').toUpperCase(); return h.length === 3 ? h.split('').map((c) => c + c).join('') : h; };
 
 const wrap = (kind, role, original) => `var(--cg-skin-${kind}-${role}, ${original})`;
-const HEX = /#(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})\b/g;
+const HEX = new RegExp(String.raw`#(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})\b|\bwhite\b`, 'gi');
 const DECL = new RegExp(String.raw`([{;]\s*)([a-zA-Z-]+)(\s*:\s*)([^;{}]*?)(\s*!important)?(\s*)(?=[;}])`, 'g');
-const UNWRAP = /var\(--cg-skin-(?:bg|text|border)-[a-z0-9]+,\s*(#[0-9A-Fa-f]{3,6})\)/g;
+const UNWRAP = new RegExp(String.raw`var\(--cg-skin-(?:bg|text|border)-[a-z0-9]+,\s*(#[0-9A-Fa-f]{3,6}|white)\)`, 'gi');
 
 function convertValue(prop, value) {
   const p = prop.toLowerCase();
@@ -48,6 +48,8 @@ function convertValue(prop, value) {
   // Valeurs composées (dégradés, images) : jamais touchées.
   if (/gradient|url\(/i.test(value)) return value;
   return value.replace(HEX, (hex) => {
+    // Le mot « white » n'est une couleur de fond ou de bordure que dans ces contextes ; un texte blanc reste blanc.
+    if (kind === 'text' && hex.toLowerCase() === 'white') return hex;
     const role = table.get(normHex(hex));
     return role ? wrap(kind, role, hex) : hex;
   });

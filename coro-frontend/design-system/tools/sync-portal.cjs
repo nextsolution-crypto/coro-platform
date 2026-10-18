@@ -26,6 +26,10 @@ const SHARED = [
   'theme/ThemeInitScript.tsx',
   'routes/route-matcher.ts',
   'skin/skin-loader.ts',
+  // Kit de primitives (identique dans les deux applications).
+  'kit/index.ts', 'kit/kit.css', 'kit/GlassTable.tsx', 'kit/GlassModal.tsx', 'kit/GlassField.tsx', 'kit/StatusBadge.tsx', 'kit/PageHeader.tsx',
+  'kit/GlassButton.tsx', 'kit/GlassCard.tsx', 'kit/GlassPanel.tsx', 'kit/StatCard.tsx', 'kit/StateViews.tsx', 'kit/FilterBar.tsx', 'kit/DataCards.tsx',
+  'kit/PeriodSelector.tsx',
 ];
 
 const lf = (p) => fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n');

@@ -16,7 +16,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const APP = path.join(ROOT, 'app');
 const SHELL_FILE = path.join(ROOT, 'components', 'layout', 'AppLayout.tsx');
 const EXTS = ['.tsx', '.ts', '.mjs', '.js', '.css'];
-const TW_COLOR = /\b(?:bg|text|border|ring|from|to|via|divide|outline|fill|stroke)-(?:white|black|slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)(?:-\d{2,3})?\b/g;
+const TW_COLOR = /(?<![\w-])\b(?:bg|text|border|ring|from|to|via|divide|outline|fill|stroke)-(?:white|black|slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)(?:-\d{2,3})?\b/g;
 
 const walk = (dir, out = []) => {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {

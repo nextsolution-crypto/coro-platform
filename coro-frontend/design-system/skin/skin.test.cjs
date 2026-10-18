@@ -34,7 +34,7 @@ test('chaque règle est scopée aux modes skin/canvas (ou aux feuilles de docume
     rules++;
     for (const sel of r.selectors) {
       const s = sel.trim();
-      const ok = s.startsWith(SCOPE) || s.startsWith(':root[data-ui="glass"][data-cg-mode=') || s.startsWith(':root[data-ui="glass"][data-theme="dark"][data-cg-mode=') || s.startsWith(':root[data-ui="glass"] [data-cg-paper]');
+      const ok = s.startsWith(SCOPE) || s.startsWith(':root[data-ui="glass"][data-cg-mode=') || s.startsWith(':root[data-ui="glass"][data-theme="dark"][data-cg-mode=') || s.startsWith(':root[data-ui="glass"] [data-cg-paper]') || s.startsWith(':root[data-ui="glass"] :is([data-cg-paper], [data-cg-emergency], [data-cg-keep])');
       assert.ok(ok, 'sélecteur non scopé : ' + s.slice(0, 120));
     }
   });
@@ -46,7 +46,7 @@ test('toute règle de teinte épargne les feuilles de document [data-cg-paper]',
   root.walkRules((r) => {
     const onlyTokens = r.nodes.every((d) => d.type === 'decl' && d.prop.startsWith('--'));
     // body est la racine du document : il ne peut pas se trouver dans une feuille de document.
-    if (!onlyTokens && !/ body$/.test(r.selector.trim()) && !r.selector.includes(NOT_PAPER) && !r.selector.includes('[data-cg-paper]') && !/::|:focus-visible/.test(r.selector)) {
+    if (!onlyTokens && !/ body$/.test(r.selector.trim()) && !r.selector.includes(NOT_PAPER) && !r.selector.includes('[data-cg-paper]') && !r.selector.includes('[data-cg-emergency]') && !r.selector.includes('[data-cg-keep]') && !/::|:focus-visible/.test(r.selector)) {
       assert.fail('règle sans exemption de document : ' + r.selector.slice(0, 100));
     }
     if (r.selector.includes(NOT_PAPER)) tinted++;
@@ -91,6 +91,8 @@ test('jetons de teinte définis en Light ET en Dark', () => {
 
 test('feuille de document : toujours claire, quel que soit le thème', () => {
   assert.ok(/\[data-cg-paper\][^{]*\{[^}]*color-scheme:\s*light/.test(css));
+  assert.ok(/\[data-cg-emergency\][^{]*\{[^}]*color-scheme:\s*light/.test(css), 'les surfaces d’urgence gardent aussi leur rendu Classique');
+  assert.ok(/\[data-cg-keep\][^{]*\{[^}]*color-scheme:\s*light/.test(css), 'les écrans conçus pour le sombre gardent leur rendu d’origine');
 });
 
 test('chargeur : la feuille n’est liée qu’en mode skin/canvas, retirée ensuite, jamais en Classique', async () => {
@@ -118,9 +120,14 @@ test('chargeur : la feuille n’est liée qu’en mode skin/canvas, retirée ens
     const pending = loader.syncSkinStylesheet(true, '/a.css');
     assert.ok(pending instanceof Promise && nodes.size === 1);
     nodes.get(loader.SKIN_LINK_ID).listeners.load();
-    await pending;
+    assert.equal(await pending, true, 'feuille chargée');
     assert.equal(loader.syncSkinStylesheet(false, '/a.css'), null);
     assert.equal(nodes.size, 0, 'retirée en quittant une route re-teintée');
+    // Échec (fichier absent, hors ligne) : la promesse vaut false → la page repasse en Classique.
+    const failing = loader.syncSkinStylesheet(true, '/missing.css');
+    nodes.get(loader.SKIN_LINK_ID).listeners.error();
+    assert.equal(await failing, false, 'échec de chargement signalé');
+    loader.syncSkinStylesheet(false, '/missing.css');
   } finally {
     delete global.document;
   }
