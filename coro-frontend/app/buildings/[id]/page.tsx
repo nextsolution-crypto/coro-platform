@@ -624,8 +624,7 @@ export default function BuildingDetailPage() {
                   onBlur={e => e.target.style.borderColor = '#CED4DA'}
                 >
                   {documentTypes.map(t => (
-                    <option key={t.value} value={t.value} disabled={!t.available}
-                      style={{ color: t.available ? '#2C3E50' : '#ADB5BD' }}>
+                    <option key={t.value} value={t.value} disabled={!t.available}>
                       {t.label}{!t.available ? ' (bientôt disponible)' : ''}
                     </option>
                   ))}

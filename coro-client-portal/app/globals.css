@@ -51,6 +51,11 @@ select optgroup {
   color: #2C3E50;
 }
 
+select option:disabled {
+  color: #4C5E74 !important;
+  opacity: 1;
+}
+
 /* Évite certains débordements dans les layouts flex/grid */
 main,
 section,

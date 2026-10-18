@@ -87,6 +87,11 @@ select optgroup {
   color: #2C3E50;
 }
 
+select option:disabled {
+  color: #4C5E74 !important;
+  opacity: 1;
+}
+
 /* Permet aux tableaux complexes de rester utilisables
    sans forcer toute la page à dépasser horizontalement. */
 .responsive-table {

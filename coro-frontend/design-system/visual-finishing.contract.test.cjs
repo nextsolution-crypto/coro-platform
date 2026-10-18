@@ -59,11 +59,28 @@ test("les menus natifs et personnalisés ont une palette explicite dans les deux
       /select option,[\s\S]*?background-color:\s*#FFFFFF;[\s\S]*?color:\s*#2C3E50/,
     );
     assert.match(
+      globals,
+      /select option:disabled[\s\S]*?color:\s*#4C5E74\s*!important;[\s\S]*?opacity:\s*1/,
+    );
+    assert.match(primitives, /data-ui="glass"\]\s+select\s*\{\s*color-scheme:\s*light/);
+    assert.doesNotMatch(
       primitives,
       /data-theme="dark"\]\s+select\s*\{\s*color-scheme:\s*dark/,
     );
-    assert.match(primitives, /select option,[\s\S]*?--cg-surface-solid/);
+    assert.match(
+      primitives,
+      /select option,[\s\S]*?background-color:\s*#FFFFFF;[\s\S]*?color:\s*#1B2A3B/,
+    );
+    assert.match(
+      primitives,
+      /select option:disabled[\s\S]*?color:\s*#4C5E74\s*!important;[\s\S]*?opacity:\s*1/,
+    );
     assert.match(primitives, /\[role="option"\]\[aria-selected="true"\]/);
+  }
+
+  for (const page of ["app/projects/page.tsx", "app/buildings/[id]/page.tsx"]) {
+    const source = read(page);
+    assert.doesNotMatch(source, /style=\{\{\s*color:\s*t\.available/);
   }
 });
 

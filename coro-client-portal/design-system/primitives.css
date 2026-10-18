@@ -182,11 +182,16 @@
 :root[data-ui="glass"] select {
   color-scheme: light;
 }
-:root[data-ui="glass"][data-theme="dark"] select {
-  color-scheme: dark;
-}
 :root[data-ui="glass"] select option,
-:root[data-ui="glass"] select optgroup,
+:root[data-ui="glass"] select optgroup {
+  background-color: #FFFFFF;
+  color: #1B2A3B;
+}
+:root[data-ui="glass"] select option:disabled {
+  background-color: #FFFFFF;
+  color: #4C5E74 !important;
+  opacity: 1;
+}
 :root[data-ui="glass"] [role="listbox"],
 :root[data-ui="glass"] [role="menu"] {
   background-color: var(--cg-surface-solid);
