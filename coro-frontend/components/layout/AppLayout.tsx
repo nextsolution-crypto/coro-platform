@@ -12,6 +12,7 @@ import { GlassNavIcon, GlassIcon } from '@/design-system/glass-icons';
 import { LegacyIsland } from '@/design-system/LegacyIsland';
 import { User, Timer, BarChart3 } from 'lucide-react';
 import { usePlatformAuthority } from '@/hooks/usePlatformAuthority';
+import { resolveActiveNavigationPath } from './active-navigation';
 import {
   clampSidebarWidth,
   getGlassSidebarWidthServerSnapshot,
@@ -425,10 +426,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     building: 'Bâtiment',
   };
 
-  const isActive = (path: string) =>
-    path === '/dashboard'
-      ? pathname === path
-      : pathname === path || pathname.startsWith(path + '/');
+  const activeNavigationPath = resolveActiveNavigationPath(pathname, [
+    ...NAV_GROUPS.flatMap(group => group.items),
+    ...ADMIN_GROUP.items,
+    ...SUPER_ADMIN_PLATFORM_GROUP.items,
+    ...SUPER_ADMIN_COMMERCIAL_GROUP.items,
+    ...SUPER_ADMIN_COMMERCIAL_ADMIN_GROUP.items,
+    ...SUPER_ADMIN_COMMERCIAL_ADVANCED_GROUP.items,
+    ...(platform.isFounder ? SUPER_ADMIN_OTHER_GROUP.items : []),
+  ]);
+
+  const isActive = (path: string) => path === activeNavigationPath;
 
   const renderNavItem = (item: { label: string; path: string; icon: string }) => {
     const active = isActive(item.path);

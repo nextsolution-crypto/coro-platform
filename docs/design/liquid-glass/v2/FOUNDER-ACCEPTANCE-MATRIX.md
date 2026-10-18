@@ -79,11 +79,11 @@ Total : 84 routes application, 36 routes portail (site vitrine exclu).
 | `/admin/organizations/[organizationId]` | identique à la référence (0 écart mesuré) | auto OK | auto OK | 320 / 390 / 768 / 1600 : sans débordement | Réservé Founder / délégués ; ouvrir une fiche, une modale, vérifier les montants et l’absence de régression de contenu ; refus pour un ADMIN client. | Financier / juridique ; Accès restreint (rôles) | `app__admin_organizations_1a48c528_4b34_4579_bfd7_d19568eb2f6e__LEGACY__1600.png`<br>`app__admin_organizations_1a48c528_4b34_4579_bfd7_d19568eb2f6e__LIGHT__1600.png`<br>`app__admin_organizations_1a48c528_4b34_4579_bfd7_d19568eb2f6e__DARK__1600.png`<br>`app__admin_organizations_1a48c528_4b34_4579_bfd7_d19568eb2f6e__DARK__390.png` | ☐ À approuver |  |
 | `/admin/organizations/[organizationId]/clients/[clientId]` | identique à la référence (0 écart mesuré) | auto OK | auto OK | 320 / 390 / 768 / 1600 : sans débordement | Réservé Founder / délégués ; ouvrir une fiche, une modale, vérifier les montants et l’absence de régression de contenu ; refus pour un ADMIN client. | Financier / juridique ; Accès restreint (rôles) | `app__admin_organizations_1a48c528_4b34_4579_bfd7_d19568eb2f6e_clients_7368c92e_3ce9_48e4_bf7c_56e1f774b9ae__LEGACY__1600.png`<br>`app__admin_organizations_1a48c528_4b34_4579_bfd7_d19568eb2f6e_clients_7368c92e_3ce9_48e4_bf7c_56e1f774b9ae__LIGHT__1600.png`<br>`app__admin_organizations_1a48c528_4b34_4579_bfd7_d19568eb2f6e_clients_7368c92e_3ce9_48e4_bf7c_56e1f774b9ae__DARK__1600.png`<br>`app__admin_organizations_1a48c528_4b34_4579_bfd7_d19568eb2f6e_clients_7368c92e_3ce9_48e4_bf7c_56e1f774b9ae__DARK__390.png` | ☐ À approuver |  |
 
-### Permissions de plateforme (EXCLUE)
+### Permissions de plateforme
 
 | Route | Classique | Glass Clair | Glass Sombre | Responsive | Contrôles fonctionnels | Opérations sensibles | Captures | Approbation | Exclusions / notes |
 |---|---|---|---|---|---|---|---|---|---|
-| `/admin/platform-permission-grants` | Classique (inchangé) | — | — | non mesuré | Tableaux, formulaires, enregistrement ; confirmations conservées. | Action destructive (confirmation) ; Financier / juridique ; Accès restreint (rôles) | — | ☐ À approuver | EXCLUE : reste Classique (décision de sécurité) |
+| `/admin/platform-permission-grants` | À vérifier | À vérifier | À vérifier | 1920 / 1440 / 768 / 430 / 390 / 320 | Founder uniquement ; refus ADMIN client ; aucun grant implicite ; portées ORGANIZATION/GLOBAL ; confirmations accessibles. | Action destructive (confirmation) ; Financier / juridique ; Accès restreint (rôles) | — | ☐ À approuver | Glass complet autorisé par amendement 27 ; sécurité inchangée |
 
 ### Catalogue commercial
 

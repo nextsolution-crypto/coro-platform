@@ -54,7 +54,7 @@ n’est conservée que dans le navigateur de l’utilisateur (`coro-ui-generatio
 
 Founder / Platform Authority et délégations ; refus des ADMIN clients ; défaut Classique ; Glass Light / Dark / System ; `/settings` et `/activities/portfolio` en bêta native ;
 rendement (opérationnel et financier) : contenu et contrats inchangés, CAD seul, UNKNOWN sans erreur ; Commercial, Booking, Planning ; garde-fous de retour arrière et de livraison existants.
-La page `/admin/platform-permission-grants` reste **legacy-only** (exception de sécurité documentée) : sa migration exige une décision Founder distincte et une revalidation RBAC sur un vrai backend.
+La page `/admin/platform-permission-grants` est couverte par Glass conformément à l'amendement Founder 27. Sa publication reste conditionnée à la revalidation RBAC sur un vrai backend et ne modifie aucune autorité.
 
 ## 6. Risques résiduels à connaître avant la revue
 

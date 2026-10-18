@@ -20,8 +20,6 @@ const byPattern = new Map(ROUTE_REGISTRY.map((e) => [e.pattern, e]));
 const GA_ALLOWLIST = ['/dashboard', '/profile', '/glass-kit'];
 // Écrans Glass NATIFS en bêta (réécrits pour le Glass). Les écrans re-teintés (`render: 'skin'`) ne figurent pas ici : voir plus bas.
 const BETA_ALLOWLIST = ['/activities/portfolio', '/settings'];
-// Routes qu'aucune migration V2 ne peut activer sans décision Founder distincte (exception de sécurité documentée).
-const NEVER_MIGRATED = ['/admin/platform-permission-grants'];
 const SENSITIVE_KINDS = ['emergency-content', 'documents', 'financial-legal', 'auth', 'permissions'];
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
 
@@ -71,11 +69,7 @@ test('routes sensibles : jamais ga ; bêta seulement re-teintée, avec tests de 
   }
 });
 
-test('exceptions de sécurité : aucune route à exception ni NEVER_MIGRATED n’est activée', () => {
-  for (const p of NEVER_MIGRATED) {
-    const e = byPattern.get(p);
-    assert.ok(e, p); assert.equal(e.status, 'legacy-only', p); assert.equal(e.render, undefined, p);
-  }
+test('exceptions de sécurité : toute route portant encore une exception reste legacy-only', () => {
   for (const e of ROUTE_REGISTRY.filter((x) => x.exception)) assert.equal(e.status, 'legacy-only', e.pattern);
 });
 
@@ -212,14 +206,14 @@ test('îlot Legacy : sélecteurs limités à l’îlot (aucun style global sur m
   }
 });
 
-test('exception de sécurité : /admin/platform-permission-grants reste legacy-only, documentée, jamais bêta ni GA', () => {
+test('amendement 27 : /admin/platform-permission-grants est re-teintée sans affaiblir ses validations', () => {
   const e = byPattern.get('/admin/platform-permission-grants');
   assert.ok(e, 'route absente du registre');
-  assert.equal(e.status, 'legacy-only');
+  assert.equal(e.status, 'beta');
+  assert.equal(e.render, 'skin');
   assert.ok(e.sensitivity.includes('permissions'));
-  assert.ok(typeof e.exception === 'string' && e.exception.length > 100, 'exception non documentée');
-  for (const word of ['Founder', 'ORGANIZATION', 'GLOBAL', 'révocation', 'provenance', 'ADMIN clients', 'bêta ni GA']) assert.ok(e.exception.includes(word), 'exception : mot manquant « ' + word + ' »');
-  assert.ok(!BETA_ALLOWLIST.includes(e.pattern) && !GA_ALLOWLIST.includes(e.pattern), 'une route sensible ne peut figurer dans aucune liste d’activation');
-  // Toute route portant une exception doit rester legacy-only.
-  for (const x of ROUTE_REGISTRY.filter((r) => r.exception)) assert.equal(x.status, 'legacy-only', x.pattern);
+  assert.ok(e.sensitivity.includes('financial-legal'));
+  assert.deepEqual(e.validation, ['test:platform-permission-grants', 'test:skin', 'test:design-system']);
+  assert.equal(e.exception, undefined);
+  assert.ok(!GA_ALLOWLIST.includes(e.pattern), 'la route sensible ne devient pas GA automatiquement');
 });

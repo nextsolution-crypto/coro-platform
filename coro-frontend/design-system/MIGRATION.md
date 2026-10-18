@@ -77,4 +77,4 @@ libellé ni le moment** de la confirmation.
 La section 7 (« Hors périmètre ») est **remplacée** : le module commercial, le portail client et les écrans de rendement entrent dans la migration, par **re-teinte** (couche de teinte, sans réécriture des composants métier). Voir `docs/design/liquid-glass/v2/` :
 `ARCHITECTURE.md` (modes `skin` et `canvas`, feuille générée, exemptions `data-cg-paper` / `data-cg-emergency` / `data-cg-keep`), `coverage-matrix.md` (page par page),
 `ACCEPTANCE-PACKAGE.md` (preuves et limites), `ROLLBACK-AND-RELEASE-DOSSIER.md`. Rappels : les routes sensibles ne sont jamais `ga` et exigent une liste `validation` de scripts existants ;
-`/admin/platform-permission-grants` reste `legacy-only` ; le site vitrine est exclu. Après toute modification de la carte de teinte : `npm run glass:skin`, `npm run glass:tokenize-css`, `npm run glass:sync-portal`.
+`/admin/platform-permission-grants` est re-teintée en Glass par décision Founder (amendement 27), avec ses contrats RBAC inchangés ; le site vitrine est exclu. Après toute modification de la carte de teinte : `npm run glass:skin`, `npm run glass:tokenize-css`, `npm run glass:sync-portal`.

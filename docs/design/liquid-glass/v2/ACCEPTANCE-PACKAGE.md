@@ -7,10 +7,10 @@ Pièces : `coverage-matrix.md` (page par page), `ARCHITECTURE.md`, `FOUNDER-ACCE
 
 | | Routes | Actives en Glass (préproduction) | Validées | Couverture |
 |---|---:|---:|---:|---:|
-| Application CORO | 83 (hors outil `/glass-kit`) | 82 | 82 | **98,8 %** |
+| Application CORO | 83 (hors outil `/glass-kit`) | 83 | 82 | **100 % couvert ; acceptation Founder de la page Permissions en attente** |
 | Portail client | 36 | 35 | 35 | **97,2 %** |
 
-Détail application : 2 pilotes GA (`/dashboard`, `/profile`), 2 bêtas natives (`/settings`, `/activities/portfolio`), 77 re-teintées, 3 redirections sans interface, **1 exclue** (`/admin/platform-permission-grants`, exception de sécurité : reste Classique).
+Détail application : 2 pilotes GA (`/dashboard`, `/profile`), 2 bêtas natives (`/settings`, `/activities/portfolio`), 78 re-teintées, 3 redirections sans interface. L'amendement Founder 27 retire l'exception visuelle de `/admin/platform-permission-grants` sans modifier ses autorités.
 Détail portail : 32 écrans re-teintés, 3 redirections sans interface (`/`, `/magic`, `/kiosk/qr/[token]`), **1 non vérifiée** (`/files/[id]` : aucune pièce jointe dans les données de test, donc jamais rendue).
 Site vitrine : **exclu**, aucun fichier modifié.
 
@@ -26,7 +26,7 @@ Site vitrine : **exclu**, aucun fichier modifié.
 | Balayage visuel réel Light/Dark × 320/390/768/1600 px | application : 0 défaut restant ; portail : 0 défaut (4 redirections et 1 emoji, faux positifs) |
 | Scénarios réels (barre latérale 350 px, Classique, chargement paresseux, apparence Clair/Sombre/Système, clavier, modale) | tous satisfaits (application et portail) |
 | Accessibilité (axe-core, Classique contre Glass) | portail : 0 nouvelle violation ; application : aucune violation introduite par la teinte |
-| Builds de production : sans jeton, jeton accidentel `1`, jeton exact | OK ; routes migrées Glass **seulement** avec le jeton exact ; `/admin/platform-permission-grants` toujours Classique |
+| Builds de production : sans jeton, jeton accidentel `1`, jeton exact | OK ; routes migrées Glass **seulement** avec le jeton exact ; `/admin/platform-permission-grants` suit désormais le même gate Glass |
 | Outils de développement absents de la production | 32 / 32 + 29 / 29 contrôles |
 | Retour au Classique si la feuille de teinte ne se charge pas | testé (unitaire et en navigateur) |
 

@@ -203,12 +203,14 @@
       "route": "/admin/commercial/assumptions/cost",
       "layout": "AppLayout",
       "style": [
-        "tailwind"
+        "inline-hex",
+        "tailwind",
+        "css-module"
       ],
-      "components": 0,
+      "components": 16,
       "forms": 2,
       "tables": 0,
-      "modals": 0,
+      "modals": 1,
       "destructive": 0,
       "responsive": 2,
       "sensitivity": [
@@ -1511,12 +1513,30 @@
         "financial-legal",
         "permissions"
       ],
-      "registryStatus": "legacy-only",
-      "render": "Legacy",
-      "tests": [],
-      "status": "EXCLUE",
-      "exception": true,
-      "visual": null,
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:platform-permission-grants",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 12
+      },
       "localTests": [
         "app/admin/platform-permission-grants/platform-permission-grants.contract.test.cjs"
       ]

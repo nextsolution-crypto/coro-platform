@@ -26,7 +26,7 @@ Cette revue se fait sur un **build de préproduction privé** (jeton `NEXT_PUBLI
 | 11 | Portail client — usage | Tableau de bord, bâtiments, documents (et lecture/validation), activités, carte, notifications, profil | Mobile d’abord (320 / 390 px) : pas de défilement horizontal. |
 | 12 | Portail — Sentinelle | Accueil bâtiment, employés, invitations, historique, rapports, résilience, population, **incident et évacuation** | Les contrôles d’urgence restent rouges, opaques et explicites ; le bouton panique et sa fenêtre de résultat gardent leur rendu Classique exact. |
 | 13 | Écrans publics et bornes | Borne, QR, présence, intervention, population publique | Les couleurs d’état plein écran (rouge urgence, ambre, vert) sont inchangées. |
-| 14 | Exclu | Permissions de plateforme (`/admin/platform-permission-grants`) | Reste **Classique** par décision de sécurité : à ne pas migrer sans décision distincte. |
+| 14 | Gouvernance | Permissions de plateforme (`/admin/platform-permission-grants`) | Vérifier Classique, Glass Clair/Sombre/Système, confirmations, responsive et refus des ADMIN clients. |
 
 ## Contrôles transverses à chaque page
 

@@ -30,7 +30,7 @@ function getJson(url, method = 'GET') {
 
 /** Viewports normalisés du banc. */
 const VIEWPORTS = {
-  320: { width: 320, height: 640, deviceScaleFactor: 2, mobile: true },
+  320: { width: 320, height: 700, deviceScaleFactor: 2, mobile: true },
   390: { width: 390, height: 844, deviceScaleFactor: 2, mobile: true },
   768: { width: 768, height: 1024, deviceScaleFactor: 2, mobile: true },
   1600: { width: 1600, height: 900, deviceScaleFactor: 1, mobile: false },

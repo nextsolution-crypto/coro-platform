@@ -59,8 +59,9 @@ const PAGES = {
   'rendement-op': { route: '/profile/rendement', beta: false, scenarioPrefix: 'rendement-op', states: stateSet({ BENCH_RENDEMENT: '1' }, { BENCH_FAIL_RENDEMENT: '1' }) },
   'rendement-fin': { route: '/dashboard/rendement', beta: false, scenarioPrefix: 'rendement-fin', states: { ...stateSet({ BENCH_RENDEMENT: '1' }, { BENCH_FAIL_RENDEMENT: '1' }, ['role-conseiller']), currencies: { env: { BENCH_RENDEMENT: '1', BENCH_FINANCIAL_UNKNOWN_CURRENCY: '1' }, kinds: ['unknown-currency'] } } },
 };
-// Platform Authority (Phase 12) : les 11 écrans Founder de la QA de main et les accès par autorité effective. Routes legacy-only (aucune vue Glass).
-PAGES.founder = { route: '/admin/platform-permission-grants', beta: false, scenarioPrefix: 'founder', states: { data: { env: { BENCH_RENDEMENT: '1' }, kinds: ['grants', 'commercial', 'catalog', 'pricebooks', 'configurator', 'proposals', 'contracts', 'entitlements', 'org360', 'legal', 'rendement'] } } };
+// Platform Authority (Phase 12) : les 11 écrans Founder de la QA de main et les accès par autorité effective.
+// La page des permissions est couverte par Glass depuis l'amendement Founder 27 ; ses autorités restent inchangées.
+PAGES.founder = { route: '/admin/platform-permission-grants', beta: true, scenarioPrefix: 'founder', states: { data: { env: { BENCH_RENDEMENT: '1' }, kinds: ['grants', 'commercial', 'catalog', 'pricebooks', 'configurator', 'proposals', 'contracts', 'entitlements', 'org360', 'legal', 'rendement'] } } };
 PAGES['founder-rbac'] = { route: '/dashboard', beta: false, scenarioPrefix: 'rbac', states: { data: { env: { BENCH_RENDEMENT: '1' }, kinds: ['founder', 'delegated', 'employee-none', 'customer-admin'] } } };
 /** Pages voisines surveillées contre toute régression (leur rendu ne doit pas changer). */
 const REGRESSION_ROUTES = { plain: ['/dashboard', '/profile'], beta: [] };

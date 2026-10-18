@@ -28,7 +28,7 @@ les rôles, les permissions, les calculs et les confirmations ne sont pas modifi
 * Les routes migrées V2 sont **bêta** : elles ne rendent du Glass que si le build porte le jeton exact `NEXT_PUBLIC_GLASS_BETA=production-preview`.
   Ni `1`, ni `true`, ni le stockage local d'un utilisateur ne l'active en production. Un build de production *sans* jeton est donc inchangé (îlot Legacy / Classique).
 * Aucune route sensible n'est `ga`. Une route sensible n'est `bêta` que si elle est `render: 'skin'` **et** porte une liste `validation` de scripts de test existants
-  (`route-registry.test.cjs`). L'exception de sécurité `/admin/platform-permission-grants` reste **legacy-only** (décision Founder distincte requise).
+  (`route-registry.test.cjs`). `/admin/platform-permission-grants` est désormais couverte par Glass (amendement Founder 27), sans changement de son autorité backend ni de ses contrôles RBAC.
 * `/glass-kit` (outil de développement) reste absent d'un build de production.
 
 ## 4. La couche de teinte

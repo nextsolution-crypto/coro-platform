@@ -5,6 +5,14 @@ const layout = fs.readFileSync(
   path.join(__dirname, "../../../components/layout/AppLayout.tsx"),
   "utf8",
 );
+const styles = fs.readFileSync(
+  path.join(__dirname, "platform-permission-grants.module.css"),
+  "utf8",
+);
+const registry = fs.readFileSync(
+  path.join(__dirname, "../../../design-system/routes/route-registry.ts"),
+  "utf8",
+);
 
 for (const token of [
   "/admin/v1/platform-authority/grants",
@@ -18,7 +26,9 @@ for (const token of [
   "revocationReason",
   "authority.isFounder",
   'router.replace("/dashboard")',
-  "window.confirm",
+  "GlassModal",
+  "persistGrant",
+  "persistRevocation",
 ])
   if (!page.includes(token)) throw new Error(`grants UI missing ${token}`);
 
@@ -31,6 +41,42 @@ for (const forbidden of [
 ])
   if (page.includes(forbidden))
     throw new Error(`grants UI crossed boundary: ${forbidden}`);
+
+for (const primitive of [
+  "PageHeader",
+  "GlassCard",
+  "GlassButton",
+  "StatusBadge",
+  "LoadingState",
+  "EmptyState",
+  "GlassModal",
+  "cgx-input",
+])
+  if (!page.includes(primitive))
+    throw new Error(`grants Glass presentation missing ${primitive}`);
+
+for (const token of [
+  "--cg-text-primary",
+  "--cg-glass-bg",
+  "--cg-border-default",
+  "--cg-focus-ring",
+  "--cg-warning-bg",
+])
+  if (!styles.includes(token))
+    throw new Error(`grants Glass tokens missing ${token}`);
+
+if (!registry.includes("pattern: '/admin/platform-permission-grants'"))
+  throw new Error("grants route missing from registry");
+if (
+  !/platform-permission-grants'[\s\S]{0,220}status: 'beta'[\s\S]{0,80}render: 'skin'/.test(
+    registry,
+  )
+)
+  throw new Error("grants route is not enabled for governed Glass rendering");
+if (
+  /platform-permission-grants'[\s\S]{0,220}status: 'legacy-only'/.test(registry)
+)
+  throw new Error("grants Classic-only exception still present");
 
 if (!layout.includes("/admin/platform-permission-grants"))
   throw new Error("Founder navigation is missing the grants route");

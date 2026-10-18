@@ -3,7 +3,7 @@
 /**
  * Vérifie, sur un serveur DÉJÀ lancé (build de production de test ou serveur de dev), quel moteur rend chacune des deux routes bêta natives
  * (/settings et /activities/portfolio), quelques routes re-teintées (dont les deux routes de rendement) et que la route de contrôle
- * legacy-only (page des permissions de plateforme) n'est JAMAIS rendue en Glass, même avec le jeton exact. OUTIL DE TEST UNIQUEMENT.
+ * la page des permissions de plateforme suit le gate Glass bêta depuis l'amendement Founder 27. OUTIL DE TEST UNIQUEMENT.
  *
  *   BENCH_BASE_URL=http://localhost:3031 node design-system/bench/beta-routes-check.cjs --expect-beta off|on
  *
@@ -20,9 +20,9 @@ const http = require('node:http');
 const BETA_ROUTES = ['/settings', '/activities/portfolio'];
 // Écrans re-teintés (mandat 49, migration V2 : le contenu métier est inchangé, seule l'identité visuelle change). Le rendement en fait partie
 // depuis la décision Founder de migration complète ; il n'est jamais rendu en Glass NATIF.
-const SKIN_ROUTES = ['/projects', '/clients', '/profile/rendement', '/dashboard/rendement'];
-// Routes de contrôle : legacy-only, TOUJOURS Legacy (exception de sécurité documentée, décision Founder distincte requise).
-const CONTROL_ROUTES = ['/admin/platform-permission-grants'];
+const SKIN_ROUTES = ['/projects', '/clients', '/profile/rendement', '/dashboard/rendement', '/admin/platform-permission-grants'];
+// Aucune exception visuelle ne subsiste après l'amendement Founder 27.
+const CONTROL_ROUTES = [];
 /**
  * Moteur de rendu observé : 'skin' | 'canvas' si html[data-cg-mode] l'indique ; sinon le contenu de <main> est Glass natif si une carte
  * `.cg-glass` ou une primitive `.cgx-*` y figure ; sinon Legacy (îlot compris).

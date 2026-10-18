@@ -116,7 +116,7 @@ test('campagne : le plan couvre TOUS les scénarios enregistrés du Lot 1 et ne 
 
 test('campagne : états, variables du faux API et pages sont cohérents avec le faux API', () => {
   assert.deepEqual(Object.keys(campaign.PAGES).sort(), ['founder', 'founder-rbac', 'portfolio', 'rendement-fin', 'rendement-op', 'settings']);
-  for (const [key, p] of Object.entries(campaign.PAGES)) assert.equal(p.beta, ['portfolio', 'settings'].includes(key), `${key} : seules /settings et /activities/portfolio sont bêta`);
+  for (const [key, p] of Object.entries(campaign.PAGES)) assert.equal(p.beta, ['founder', 'portfolio', 'settings'].includes(key), `${key} : les pages bêta incluent les permissions de plateforme depuis l'amendement 27`);
   const plan = campaign.buildPlan({});
   const env = (page, state) => plan.find((g) => g.page === page && g.state === state).env;
   assert.deepEqual(env('rendement-fin', 'data'), { BENCH_RENDEMENT: '1' });
@@ -134,11 +134,12 @@ test('campagne : les modes restreints produisent des noms de scénarios restrein
 });
 
 // ───────── Vérification des routes bêta ─────────
-test('beta-routes-check : sans jeton tout reste Legacy ; avec jeton, natives en Glass, re-teintées en skin (préférence Glass seulement) ; la route à exception reste Legacy', () => {
+test('beta-routes-check : sans jeton tout reste Legacy ; avec jeton, natives en Glass et routes autorisées re-teintées en skin', () => {
   const off = beta.expectations('off'); const on = beta.expectations('on');
   assert.deepEqual(beta.BETA_ROUTES, ['/settings', '/activities/portfolio']);
   for (const r of ['/profile/rendement', '/dashboard/rendement']) assert.ok(beta.SKIN_ROUTES.includes(r), r + ' : re-teinté (jamais natif)');
-  assert.deepEqual(beta.CONTROL_ROUTES, ['/admin/platform-permission-grants']);
+  assert.ok(beta.SKIN_ROUTES.includes('/admin/platform-permission-grants'));
+  assert.deepEqual(beta.CONTROL_ROUTES, []);
   assert.ok(off.every((r) => r.expected === 'legacy'));
   assert.deepEqual(on.filter((r) => r.expected === 'glass').map((r) => `${r.route}|${r.ui}`).sort(), beta.BETA_ROUTES.map((r) => `${r}|glass`).sort());
   assert.deepEqual(on.filter((r) => r.expected === 'skin').map((r) => `${r.route}|${r.ui}`).sort(), beta.SKIN_ROUTES.map((r) => `${r}|glass`).sort());

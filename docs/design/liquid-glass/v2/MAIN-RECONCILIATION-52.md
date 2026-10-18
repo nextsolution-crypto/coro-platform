@@ -25,7 +25,7 @@
 | Builds de production : application sans jeton / jeton accidentel `1` / jeton exact ; portail sans jeton et avec jeton | OK ; Glass uniquement avec le jeton exact |
 | Outils de développement absents de la production ; `/glass-kit` introuvable | 32 / 32 + 29 / 29 |
 | Registres de routes (application 84, portail 36) | tests de cohérence OK |
-| Sensibilité : `/admin/platform-permission-grants` toujours Classique ; aucune route sensible `ga` | OK |
+| Sensibilité : `/admin/platform-permission-grants` couverte par Glass selon l'amendement 27 ; aucune route sensible `ga` | OK |
 
 Note : les captures d'écran du dossier d'acceptation ont été prises avant la fusion ; la fusion n'a touché que le tableau de bord et le menu de notifications, dont le rendu a été recontrôlé (balayage et scénarios post-fusion).
 
