@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-const root = new URL(".", import.meta.url).pathname.slice(1);
+// fileURLToPath fonctionne sous Windows et sous Linux (l'ancien « pathname.slice(1) » retirait la « / » initiale d'un chemin Linux).
+const root = fileURLToPath(new URL(".", import.meta.url));
 
 function sourceFiles(directory) {
   return readdirSync(directory).flatMap((entry) => {
