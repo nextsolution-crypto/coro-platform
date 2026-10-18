@@ -67,7 +67,7 @@ Générée par `design-system/tools/build-matrix.cjs` à partir de l’inventair
 | `/clients/[id]/portfolio` | skin + shell Glass | inline-hex+tailwind | 2 | 1 | 0 | — | OK | — | **MIGRÉE** |
 | `/configurator/[projectId]` | skin (plein écran) | inline-hex+tailwind | 3 | 1 | 1 | destructive, documents, emergency-content | OK | test:skin: PASS<br>test:design-system: PASS | **MIGRÉE** |
 | `/configurator/pca/[projectId]` | skin + shell Glass | inline-hex+tailwind | 1 | 0 | 0 | destructive, documents, emergency-content | OK | test:skin: PASS<br>test:design-system: PASS | **MIGRÉE** |
-| `/dashboard` | Glass natif | inline-hex+tailwind | 0 | 1 | 0 | — | OK | — | **GA (pilote)** |
+| `/dashboard` | Glass natif | inline-hex+tailwind | 0 | 1 | 0 | — | OK | tests locaux | **GA (pilote)** |
 | `/dashboard/rendement` | skin + shell Glass | tailwind | 0 | 1 | 0 | financial-legal, permissions | OK | test:rendement: PASS<br>test:skin: PASS<br>test:design-system: PASS | **MIGRÉE** |
 | `/editor/[projectId]` | skin (plein écran) | inline-hex+tailwind | 15 | 16 | 5 | destructive, documents, emergency-content | OK | test:skin: PASS<br>test:design-system: PASS | **MIGRÉE** |
 | `/editor/[projectId]/procedures/[procedureId]` | skin (plein écran) | inline-hex+tailwind | 1 | 0 | 0 | destructive, documents, emergency-content | OK | test:skin: PASS<br>test:design-system: PASS | **MIGRÉE** |

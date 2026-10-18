@@ -1858,7 +1858,7 @@
       "inline-hex",
       "tailwind"
     ],
-    "lines": 1241,
+    "lines": 1242,
     "hex": 193,
     "tailwindColors": 7,
     "inlineStyles": 123,
@@ -1871,7 +1871,9 @@
       "components/ui/Typography.tsx"
     ],
     "sensitivity": [],
-    "tests": [],
+    "tests": [
+      "app/dashboard/pending-approvals.contract.test.cjs"
+    ],
     "registry": {
       "status": "ga",
       "render": null,
@@ -1903,6 +1905,7 @@
       "permissions"
     ],
     "tests": [
+      "app/dashboard/pending-approvals.contract.test.cjs",
       "app/dashboard/rendement/financial-money.test.cjs",
       "app/dashboard/rendement/rendement.contract.test.cjs"
     ],

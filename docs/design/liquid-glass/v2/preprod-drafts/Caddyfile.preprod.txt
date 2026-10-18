@@ -1,0 +1,50 @@
+# BROUILLON — Caddy de préproduction. Les trois hôtes sont protégés EN AMONT par Cloudflare Access (ou Tailscale) ; ceci est la seconde barrière.
+{
+  email {$PREPROD_ACME_EMAIL}
+}
+
+(securite) {
+  header {
+    X-Robots-Tag "noindex, nofollow, noarchive"
+    X-Content-Type-Options nosniff
+    Referrer-Policy no-referrer
+    -Server
+  }
+}
+
+preprod-app.{$PREPROD_DOMAIN} {
+  import securite
+  reverse_proxy frontend:3000
+}
+
+preprod-client.{$PREPROD_DOMAIN} {
+  import securite
+  reverse_proxy client-portal:3003
+}
+
+preprod-api.{$PREPROD_DOMAIN} {
+  import securite
+  # CORS posé par le proxy pour les DEUX origines de préproduction (le backend n'en autorise qu'une) ; l'en-tête du backend est retiré.
+  @cors_ok header Origin https://preprod-app.{$PREPROD_DOMAIN} https://preprod-client.{$PREPROD_DOMAIN}
+  handle @cors_ok {
+    header Access-Control-Allow-Origin "{http.request.header.Origin}"
+    header Vary Origin
+    header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+    header Access-Control-Allow-Headers "Content-Type, Authorization"
+    @preflight method OPTIONS
+    respond @preflight 204
+    reverse_proxy backend:3002 {
+      header_down -Access-Control-Allow-Origin
+    }
+  }
+  handle {
+    reverse_proxy backend:3002 {
+      header_down -Access-Control-Allow-Origin
+    }
+  }
+}
+
+preprod-mfa.{$PREPROD_DOMAIN} {
+  import securite
+  reverse_proxy mfa-viewer:8080
+}

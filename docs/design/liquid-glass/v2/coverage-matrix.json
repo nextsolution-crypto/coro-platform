@@ -37,7 +37,7 @@
       "exception": false,
       "visual": {
         "status": "inaccessible",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [
           "inaccessible (ECHEC:/dashboard) — redirection ou erreur"
         ],
@@ -66,7 +66,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-native2",
+        "profile": "app-native",
         "issues": [],
         "measures": 8
       },
@@ -107,7 +107,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -147,7 +147,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -190,7 +190,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -239,7 +239,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -289,7 +289,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -339,7 +339,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -386,7 +386,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -436,7 +436,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -486,7 +486,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -536,7 +536,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -582,7 +582,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -632,7 +632,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -682,7 +682,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -728,7 +728,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final2-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -779,7 +779,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -829,7 +829,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -880,7 +880,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -931,7 +931,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -977,7 +977,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1023,7 +1023,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1072,7 +1072,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1118,7 +1118,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1159,7 +1159,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1198,7 +1198,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1238,7 +1238,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -1276,7 +1276,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1320,7 +1320,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1375,7 +1375,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1427,7 +1427,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1483,7 +1483,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1555,7 +1555,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1596,7 +1596,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1637,7 +1637,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1680,7 +1680,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1725,7 +1725,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1771,7 +1771,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1811,7 +1811,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1850,7 +1850,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1888,7 +1888,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1928,7 +1928,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-founder",
+        "profile": "app-founder",
         "issues": [],
         "measures": 8
       },
@@ -1958,7 +1958,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -1988,7 +1988,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2018,7 +2018,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2062,7 +2062,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2094,7 +2094,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2122,7 +2122,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2150,7 +2150,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2177,7 +2177,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2207,7 +2207,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2246,7 +2246,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2274,7 +2274,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2315,7 +2315,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2356,7 +2356,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2384,11 +2384,13 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-native2",
+        "profile": "app-native",
         "issues": [],
         "measures": 8
       },
-      "localTests": []
+      "localTests": [
+        "app/dashboard/pending-approvals.contract.test.cjs"
+      ]
     },
     {
       "app": "app",
@@ -2427,11 +2429,12 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
       "localTests": [
+        "app/dashboard/pending-approvals.contract.test.cjs",
         "app/dashboard/rendement/financial-money.test.cjs",
         "app/dashboard/rendement/rendement.contract.test.cjs"
       ]
@@ -2471,7 +2474,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2512,7 +2515,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2572,7 +2575,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2615,7 +2618,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2644,7 +2647,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2674,7 +2677,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2706,7 +2709,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-native2",
+        "profile": "app-native",
         "issues": [],
         "measures": 8
       },
@@ -2744,7 +2747,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2774,7 +2777,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2814,7 +2817,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2845,7 +2848,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2885,7 +2888,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2925,7 +2928,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2953,7 +2956,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -2996,7 +2999,7 @@
       "exception": false,
       "visual": {
         "status": "inaccessible",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [
           "inaccessible (ECHEC:/login) — redirection ou erreur"
         ],
@@ -3027,7 +3030,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-native2",
+        "profile": "app-native",
         "issues": [],
         "measures": 8
       },
@@ -3060,7 +3063,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -3091,7 +3094,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -3121,7 +3124,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -3163,7 +3166,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -3192,7 +3195,7 @@
       "exception": false,
       "visual": {
         "status": "inaccessible",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [
           "inaccessible (ECHEC:/profile) — redirection ou erreur"
         ],
@@ -3226,7 +3229,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -3258,7 +3261,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -3300,7 +3303,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -3332,7 +3335,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-app-demo",
+        "profile": "app-demo",
         "issues": [],
         "measures": 8
       },
@@ -3359,7 +3362,7 @@
       "exception": false,
       "visual": {
         "status": "inaccessible",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [
           "inaccessible (ECHEC:/dashboard) — redirection ou erreur"
         ],
@@ -3388,7 +3391,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -3427,7 +3430,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -3456,7 +3459,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -3483,7 +3486,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -3515,7 +3518,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -3547,7 +3550,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -3579,7 +3582,7 @@
       "exception": false,
       "visual": {
         "status": "inaccessible",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [
           "inaccessible (ECHEC:/login) — redirection ou erreur"
         ],
@@ -3615,7 +3618,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -3642,7 +3645,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -3676,7 +3679,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -3711,7 +3714,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -3745,7 +3748,7 @@
       "exception": false,
       "visual": {
         "status": "inaccessible",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [
           "inaccessible (ECHEC:/dashboard) — redirection ou erreur"
         ],
@@ -3781,7 +3784,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -3816,7 +3819,7 @@
       "exception": false,
       "visual": {
         "status": "inaccessible",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [
           "inaccessible (ECHEC:/login) — redirection ou erreur"
         ],
@@ -3845,7 +3848,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -3872,7 +3875,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -3899,7 +3902,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -3950,7 +3953,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -3987,7 +3990,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -4014,7 +4017,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -4048,7 +4051,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -4089,7 +4092,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -4131,7 +4134,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -4172,7 +4175,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -4213,7 +4216,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -4253,7 +4256,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -4294,7 +4297,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -4334,7 +4337,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -4374,7 +4377,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -4414,7 +4417,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -4468,7 +4471,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -4523,7 +4526,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -4578,7 +4581,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -4620,7 +4623,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },
@@ -4660,7 +4663,7 @@
       "exception": false,
       "visual": {
         "status": "ok",
-        "profile": "final-portal",
+        "profile": "portal",
         "issues": [],
         "measures": 8
       },

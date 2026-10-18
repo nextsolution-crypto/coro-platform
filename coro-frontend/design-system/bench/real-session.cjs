@@ -66,7 +66,9 @@ async function loginPortal(email) {
 
 /** Échange le jeton de rafraîchissement : renvoie une nouvelle session (le jeton de rafraîchissement précédent est révoqué). */
 async function refresh(session) {
-  const r = await call('POST', '/auth/refresh', null, { refresh_token: session.refresh });
+  let r = await call('POST', '/auth/refresh', null, { refresh_token: session.refresh });
+  // Limite de débit du backend (429) : attendre et réessayer plutôt que d'interrompre une longue campagne.
+  for (let i = 0; i < 6 && r.status === 429; i++) { await new Promise((res) => setTimeout(res, 15000)); r = await call('POST', '/auth/refresh', null, { refresh_token: session.refresh }); }
   if (r.status >= 300) throw new Error('refresh refusé : ' + r.status);
   return { ...session, token: r.json.access_token, refresh: r.json.refresh_token };
 }

@@ -42,14 +42,14 @@ Site vitrine : **exclu**, aucun fichier modifié.
 
 | # | Gravité | Point |
 |---|---|---|
-| 1 | **P1 hérité de `main`** (non corrigé, hors périmètre) | `/dashboard` plante (« This page couldn't load ») dès qu'un projet attend une approbation : `pendingApprovals.map(p => …)` (ligne 270) masque la palette `p` puis appelle `p.bg(…)`. Reproduit à l'identique sur la référence `ad9f86e2` en Classique. Correctif trivial (renommer la variable) à décider séparément. |
+| 1 | P1 hérité de `main` — CORRIGÉ par `3fca7996` (mandat 52) | `/dashboard` plante (« This page couldn't load ») dès qu'un projet attend une approbation : `pendingApprovals.map(p => …)` (ligne 270) masque la palette `p` puis appelle `p.bg(…)`. Reproduit à l'identique sur la référence `ad9f86e2` en Classique. Correctif trivial (renommer la variable) à décider séparément. |
 | 2 | P2 | La barre du shell Glass V1 contient un `<p>` hors région (axe `region`) : présent aussi en mode îlot, antérieur à la V2. |
 | 3 | P2 | `/files/[id]` du portail non vérifiée avec des données. |
 | 4 | P2 | Navigateur Chrome émulé uniquement (320/390/768/1600) : pas de Safari, de Firefox ni d'appareil mobile réel ; états rares (erreurs réseau, modales profondes) couverts par la revue manuelle. |
 | 5 | Information | La production actuelle (Dockerfile / `deploy.yml`) ne transmet pas le jeton de bêta : la revue du Founder exige un build de préproduction privé (décision séparée, voir `ROLLBACK-AND-RELEASE-DOSSIER.md`). Le portail n'a pas de CI frontend. |
 | 6 | Information | La feuille de teinte pèse ≈ 316 Ko (≈ 27 Ko gzippée), chargée uniquement sur les routes re-teintées. |
 
-**P0 ouverts : 0. P1 ouverts : 1 (hérité de `main`).**
+**P0 ouverts : 0. P1 ouverts : 0 (le P1 hérité est corrigé dans `main` `3fca7996`, fusionné dans V2 : voir `MAIN-RECONCILIATION-52.md`).**
 
 ## 5. Reproduire
 
