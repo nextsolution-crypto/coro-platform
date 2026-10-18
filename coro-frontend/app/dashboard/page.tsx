@@ -267,18 +267,18 @@ export default function DashboardPage() {
                   ✓ {pendingApprovals.length} document{pendingApprovals.length > 1 ? 's' : ''} en attente d'approbation
                 </p>
                 <div className="space-y-2">
-                  {pendingApprovals.map(p => (
-                    <div key={p.id}
-                      onClick={() => router.push(`/projects/${p.id}`)}
+                  {pendingApprovals.map(approval => (
+                    <div key={approval.id}
+                      onClick={() => router.push(`/projects/${approval.id}`)}
                       className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded cursor-pointer transition-colors"
                       style={{ backgroundColor: p.bg('#FFFFFF'), border: `1px solid ${p.line('#F1948A')}` }}
                       onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#FEF9E7')}
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = p.bg('#FFFFFF')}>
                       <div className="flex flex-wrap items-center gap-2 min-w-0">
                         <span className="text-xs font-bold px-2 py-0.5 rounded text-white flex-shrink-0"
-                          style={{ backgroundColor: p.bg('#C0392B') }}>{p.documentType}</span>
-                        <span className="text-sm font-medium break-words" style={{ color: p.text('#2C3E50') }}>{p.name}</span>
-                        <span className="text-xs break-words" style={{ color: p.text('#6C757D') }}>— {p.client?.name}</span>
+                          style={{ backgroundColor: p.bg('#C0392B') }}>{approval.documentType}</span>
+                        <span className="text-sm font-medium break-words" style={{ color: p.text('#2C3E50') }}>{approval.name}</span>
+                        <span className="text-xs break-words" style={{ color: p.text('#6C757D') }}>— {approval.client?.name}</span>
                       </div>
                       <span className="text-xs font-medium" style={{ color: p.text('#C0392B') }}>Réviser →</span>
                     </div>
