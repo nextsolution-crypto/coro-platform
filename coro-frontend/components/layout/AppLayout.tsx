@@ -23,6 +23,11 @@ import {
   SIDEBAR_MIN_WIDTH,
   subscribeToGlassSidebarWidth,
 } from './sidebar-width';
+import {
+  getScrollTopForVisibleItem,
+  persistSidebarScrollPosition,
+  readSidebarScrollPosition,
+} from './sidebar-scroll';
 
 // ── Navigation par groupes ──────────────────────────────────
 const NAV_GROUPS = [
@@ -214,6 +219,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isDesktop, setIsDesktop] = useState(false);
   const isResizing = useRef(false);
   const sidebarRef = useRef<HTMLElement>(null);
+  const activeNavigationRef = useRef<HTMLButtonElement>(null);
 
   const startResize = (e: React.MouseEvent) => {
     isResizing.current = true;
@@ -445,11 +451,39 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const isActive = (path: string) => path === activeNavigationPath;
 
+  // La barre latérale est un conteneur de défilement indépendant. Sa position
+  // est conservée dans l'onglet courant, y compris après F5, sans déplacer la page.
+  useEffect(() => {
+    if (!isDesktop) return;
+    const sidebar = sidebarRef.current;
+    if (!sidebar) return;
+    sidebar.scrollTop = readSidebarScrollPosition();
+  }, [isDesktop]);
+
+  // Après une navigation (y compris précédent/suivant), ne défile que si la
+  // destination canonique est hors champ et seulement de la distance nécessaire.
+  useEffect(() => {
+    if (!isDesktop || !activeNavigationPath) return;
+    const frame = window.requestAnimationFrame(() => {
+      const sidebar = sidebarRef.current;
+      const activeDestination = activeNavigationRef.current;
+      if (!sidebar || !activeDestination) return;
+
+      sidebar.scrollTop = getScrollTopForVisibleItem(
+        sidebar.scrollTop,
+        sidebar.getBoundingClientRect(),
+        activeDestination.getBoundingClientRect(),
+      );
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeNavigationPath, isDesktop, platform.loading]);
+
   const renderNavItem = (item: { label: string; path: string; icon: string }) => {
     const active = isActive(item.path);
     return (
       <button
         key={item.path}
+        ref={active ? activeNavigationRef : undefined}
         aria-current={active ? 'page' : undefined}
         onClick={() => { router.push(item.path); setSidebarOpen(false); }}
         className={`w-full text-left px-3 py-2 rounded text-sm transition-colors flex items-center gap-2.5${glass ? ' min-h-[44px] lg:min-h-0' : ''}`}
@@ -698,6 +732,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* ── Sidebar ── */}
         <aside
           ref={sidebarRef}
+          onScroll={event => {
+            if (isDesktop) persistSidebarScrollPosition(event.currentTarget.scrollTop);
+          }}
           {...(glass ? {
             id: 'coro-sidebar',
             'aria-label': 'Navigation principale',

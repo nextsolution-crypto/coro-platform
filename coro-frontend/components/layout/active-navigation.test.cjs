@@ -83,6 +83,13 @@ test("le rendu applique aria-current seulement au résultat canonique", () => {
   assert.match(layout, /path: '\/admin\/commercial\/prospects', matchPaths: \['\/admin\/commercial\/dossier'\]/);
 });
 
+test("la destination active pilote sa visibilité sans déplacer le contenu principal", () => {
+  assert.match(layout, /ref=\{active \? activeNavigationRef : undefined\}/);
+  assert.match(layout, /getScrollTopForVisibleItem\(/);
+  assert.match(layout, /persistSidebarScrollPosition\(event\.currentTarget\.scrollTop\)/);
+  assert.doesNotMatch(layout, /scrollIntoView\(/);
+});
+
 test("les 83 pages applicatives réelles ont au plus une destination active", () => {
   const appRoot = path.resolve(__dirname, "../../app");
   const pages = [];
