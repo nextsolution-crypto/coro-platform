@@ -18,6 +18,7 @@ import {
   Map,
   Shield,
 } from 'lucide-react';
+import { resolveActivePortalNavigationPath } from './active-navigation';
 
 export default function PortalLayout({
   children,
@@ -95,8 +96,11 @@ export default function PortalLayout({
     item.path === '/notifications' ? { ...item, badge: notifCount } : item
   );
 
-  const isActive = (path: string) =>
-    pathname === path || pathname.startsWith(`${path}/`);
+  const activeNavigationPath = resolveActivePortalNavigationPath(
+    pathname,
+    navItemsWithBadge,
+  );
+  const isActive = (path: string) => path === activeNavigationPath;
 
   if (sessionError) {
     return (
@@ -169,6 +173,7 @@ export default function PortalLayout({
               const active = isActive(item.path);
               return (
                 <button key={item.path} type="button"
+                  aria-current={active ? 'page' : undefined}
                   onClick={() => router.push(item.path)}
                   title={item.label}              /* tooltip sur icône seule */
                   style={{
@@ -280,6 +285,7 @@ export default function PortalLayout({
               const active = isActive(item.path);
               return (
                 <button key={item.path} type="button"
+                  aria-current={active ? 'page' : undefined}
                   onClick={() => { router.push(item.path); setMenuOpen(false); }}
                   style={{ display: 'flex', alignItems: 'center', gap: 12,
                     width: '100%', minHeight: 52, padding: '14px 20px',

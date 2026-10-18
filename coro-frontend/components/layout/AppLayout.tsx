@@ -139,6 +139,12 @@ const SUPER_ADMIN_OTHER_GROUP = {
   ],
 };
 
+const NAVIGATION_ALIASES = [
+  { path: '/projects', matchPaths: ['/editor', '/configurator'] },
+  { path: '/admin/commercial/journey', matchPaths: ['/admin/commercial/configurator'] },
+  { path: '/admin/commercial/prospects', matchPaths: ['/admin/commercial/dossier'] },
+];
+
 interface UpcomingUpdate {
   id: string;
   name: string;
@@ -434,6 +440,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     ...SUPER_ADMIN_COMMERCIAL_ADMIN_GROUP.items,
     ...SUPER_ADMIN_COMMERCIAL_ADVANCED_GROUP.items,
     ...(platform.isFounder ? SUPER_ADMIN_OTHER_GROUP.items : []),
+    ...NAVIGATION_ALIASES,
   ]);
 
   const isActive = (path: string) => path === activeNavigationPath;
@@ -443,6 +450,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return (
       <button
         key={item.path}
+        aria-current={active ? 'page' : undefined}
         onClick={() => { router.push(item.path); setSidebarOpen(false); }}
         className={`w-full text-left px-3 py-2 rounded text-sm transition-colors flex items-center gap-2.5${glass ? ' min-h-[44px] lg:min-h-0' : ''}`}
         style={{

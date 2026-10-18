@@ -150,6 +150,7 @@ test('beta-routes-check : sans jeton tout reste Legacy ; avec jeton, natives en 
   assert.deepEqual(ROUTE_REGISTRY.filter((e) => e.status === 'beta' && !e.render).map((e) => e.pattern).sort(), [...beta.BETA_ROUTES].sort());
   for (const r of beta.SKIN_ROUTES) { const e = ROUTE_REGISTRY.find((x) => x.pattern === r); assert.equal(e.status, 'beta', r); assert.equal(e.render, 'skin', r); }
   for (const c of beta.CONTROL_ROUTES) assert.equal(ROUTE_REGISTRY.find((e) => e.pattern === c).status, 'legacy-only', c);
+  assert.match(beta.RENDERER_PROBE, /getAttribute\('data-ui'\)!=='glass'\)return 'legacy'/);
 });
 
 // ───────── Matrice et document ─────────

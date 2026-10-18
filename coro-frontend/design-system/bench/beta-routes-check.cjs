@@ -27,7 +27,7 @@ const CONTROL_ROUTES = [];
  * Moteur de rendu observé : 'skin' | 'canvas' si html[data-cg-mode] l'indique ; sinon le contenu de <main> est Glass natif si une carte
  * `.cg-glass` ou une primitive `.cgx-*` y figure ; sinon Legacy (îlot compris).
  */
-const RENDERER_PROBE = `(()=>{const mode=document.documentElement.getAttribute('data-cg-mode');if(mode==='skin'||mode==='canvas')return mode;const m=document.querySelector('main');if(!m)return 'aucun-main';return m.querySelector('.cg-glass,[class*="cgx-"]')?'glass':'legacy'})()`;
+const RENDERER_PROBE = `(()=>{const root=document.documentElement;if(root.getAttribute('data-ui')!=='glass')return 'legacy';const mode=root.getAttribute('data-cg-mode');if(mode==='skin'||mode==='canvas')return mode;const m=document.querySelector('main');if(!m)return 'aucun-main';return m.querySelector('.cg-glass,[class*="cgx-"]')?'glass':'legacy'})()`;
 
 /** Matrice attendue : { route, ui, expected }. Fonction pure (testée). */
 function expectations(expectBeta) {

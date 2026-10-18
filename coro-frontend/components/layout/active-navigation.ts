@@ -1,4 +1,8 @@
-export type NavigationDestination = { path: string };
+export type NavigationDestination = {
+  path: string;
+  /** Nested workflows whose stable sidebar destination is this item. */
+  matchPaths?: readonly string[];
+};
 
 const normalizePathname = (pathname: string) => {
   const path = pathname.split(/[?#]/, 1)[0] || "/";
@@ -13,14 +17,22 @@ export function resolveActiveNavigationPath(
 ): string | null {
   const current = normalizePathname(pathname);
   const matches = destinations
-    .map(({ path }) => normalizePathname(path))
+    .flatMap(({ path, matchPaths = [] }) =>
+      [path, ...matchPaths].map((matchPath) => ({
+        destination: normalizePathname(path),
+        matchPath: normalizePathname(matchPath),
+      })),
+    )
     .filter(
-      (path) =>
-        current === path || (path !== "/" && current.startsWith(`${path}/`)),
+      ({ matchPath }) =>
+        current === matchPath ||
+        (matchPath !== "/" && current.startsWith(`${matchPath}/`)),
     )
     .sort(
-      (left, right) => right.length - left.length || left.localeCompare(right),
+      (left, right) =>
+        right.matchPath.length - left.matchPath.length ||
+        left.destination.localeCompare(right.destination),
     );
 
-  return matches[0] ?? null;
+  return matches[0]?.destination ?? null;
 }
