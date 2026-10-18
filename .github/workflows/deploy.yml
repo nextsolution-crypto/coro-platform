@@ -185,6 +185,7 @@ jobs:
           tags: ghcr.io/${{ github.repository_owner }}/coro-frontend:${{ inputs.release_commit }}
           build-args: |
             NEXT_PUBLIC_API_URL=https://api.getcoro.io/api
+            NEXT_PUBLIC_GLASS_BETA=production-preview
 
       - name: Build and push website
         id: website
@@ -206,6 +207,7 @@ jobs:
           build-args: |
             NEXT_PUBLIC_API_URL=https://api.getcoro.io/api
             NEXT_PUBLIC_CLIENT_PORTAL_URL=https://client.getcoro.io
+            NEXT_PUBLIC_GLASS_BETA=production-preview
 
       - name: Verify complete immutable image set
         env:

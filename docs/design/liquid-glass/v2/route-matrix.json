@@ -1,0 +1,3743 @@
+[
+  {
+    "app": "app",
+    "route": "/",
+    "file": "app/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "none"
+    ],
+    "lines": 275,
+    "hex": 0,
+    "tailwindColors": 0,
+    "inlineStyles": 0,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/activities/portfolio",
+    "file": "app/activities/portfolio/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 1106,
+    "hex": 94,
+    "tailwindColors": 0,
+    "inlineStyles": 70,
+    "forms": 3,
+    "tables": 2,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 12,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [
+      "app/activities/portfolio/portfolio-glass.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": null,
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/capacity",
+    "file": "app/admin/capacity/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 531,
+    "hex": 76,
+    "tailwindColors": 2,
+    "inlineStyles": 41,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 30,
+    "sharedComponents": [],
+    "sensitivity": [
+      "permissions"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/changelog",
+    "file": "app/admin/changelog/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 640,
+    "hex": 30,
+    "tailwindColors": 2,
+    "inlineStyles": 23,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 1,
+    "destructiveFiles": 1,
+    "responsiveHints": 17,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "permissions"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/commercial",
+    "file": "app/admin/commercial/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 396,
+    "hex": 0,
+    "tailwindColors": 39,
+    "inlineStyles": 1,
+    "forms": 0,
+    "tables": 1,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 1,
+    "sharedComponents": [
+      "components/admin/control-center/ControlCenterComponents.tsx"
+    ],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/commercial/commercial-center.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/commercial/assumptions/cost",
+    "file": "app/admin/commercial/assumptions/cost/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 127,
+    "hex": 0,
+    "tailwindColors": 12,
+    "inlineStyles": 0,
+    "forms": 2,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 2,
+    "sharedComponents": [],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/commercial/assumptions/assumptions.contract.test.cjs",
+      "app/admin/commercial/commercial-center.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/commercial/assumptions/value",
+    "file": "app/admin/commercial/assumptions/value/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 127,
+    "hex": 0,
+    "tailwindColors": 12,
+    "inlineStyles": 0,
+    "forms": 2,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 2,
+    "sharedComponents": [],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/commercial/assumptions/assumptions.contract.test.cjs",
+      "app/admin/commercial/commercial-center.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/commercial/clauses",
+    "file": "app/admin/commercial/clauses/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 783,
+    "hex": 0,
+    "tailwindColors": 31,
+    "inlineStyles": 0,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 6,
+    "sharedComponents": [],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/commercial/clauses/clauses.contract.test.cjs",
+      "app/admin/commercial/commercial-center.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/commercial/configuration",
+    "file": "app/admin/commercial/configuration/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 620,
+    "hex": 0,
+    "tailwindColors": 24,
+    "inlineStyles": 0,
+    "forms": 0,
+    "tables": 1,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 4,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/commercial/commercial-center.contract.test.cjs",
+      "app/admin/commercial/configuration/configuration.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/commercial/configurator",
+    "file": "app/admin/commercial/configurator/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 3872,
+    "hex": 0,
+    "tailwindColors": 202,
+    "inlineStyles": 0,
+    "forms": 5,
+    "tables": 2,
+    "modalFiles": 2,
+    "destructiveFiles": 0,
+    "responsiveHints": 31,
+    "sharedComponents": [],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/commercial/commercial-center.contract.test.cjs",
+      "app/admin/commercial/configurator/configurator.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/commercial/content",
+    "file": "app/admin/commercial/content/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 1088,
+    "hex": 0,
+    "tailwindColors": 82,
+    "inlineStyles": 0,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 9,
+    "sharedComponents": [],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/commercial/commercial-center.contract.test.cjs",
+      "app/admin/commercial/content/content.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/commercial/contracts",
+    "file": "app/admin/commercial/contracts/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 373,
+    "hex": 0,
+    "tailwindColors": 35,
+    "inlineStyles": 1,
+    "forms": 0,
+    "tables": 1,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [
+      "components/admin/control-center/ControlCenterComponents.tsx"
+    ],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/commercial/commercial-center.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/commercial/dossier/[targetType]/[targetId]",
+    "file": "app/admin/commercial/dossier/[targetType]/[targetId]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 1447,
+    "hex": 0,
+    "tailwindColors": 68,
+    "inlineStyles": 0,
+    "forms": 2,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 12,
+    "sharedComponents": [
+      "components/admin/capability-operations/CapabilityOperationsWorkspace.tsx"
+    ],
+    "sensitivity": [
+      "destructive",
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/commercial/commercial-center.contract.test.cjs",
+      "app/admin/commercial/dossier/dossier.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/commercial/entitlements",
+    "file": "app/admin/commercial/entitlements/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 374,
+    "hex": 0,
+    "tailwindColors": 35,
+    "inlineStyles": 1,
+    "forms": 0,
+    "tables": 1,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [
+      "components/admin/control-center/ControlCenterComponents.tsx"
+    ],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/commercial/commercial-center.contract.test.cjs",
+      "app/admin/commercial/entitlements/capability-operations.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/commercial/entitlements/[organizationId]",
+    "file": "app/admin/commercial/entitlements/[organizationId]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 630,
+    "hex": 0,
+    "tailwindColors": 18,
+    "inlineStyles": 0,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 3,
+    "sharedComponents": [
+      "components/admin/capability-operations/CapabilityOperationsWorkspace.tsx"
+    ],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/commercial/commercial-center.contract.test.cjs",
+      "app/admin/commercial/entitlements/capability-operations.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/commercial/journey",
+    "file": "app/admin/commercial/journey/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 539,
+    "hex": 0,
+    "tailwindColors": 35,
+    "inlineStyles": 0,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 8,
+    "sharedComponents": [],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/commercial/commercial-center.contract.test.cjs",
+      "app/admin/commercial/journey/journey.contract.test.cjs",
+      "app/admin/commercial/journey/target-pagination.test.mjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/commercial/legal-issuer",
+    "file": "app/admin/commercial/legal-issuer/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 407,
+    "hex": 0,
+    "tailwindColors": 8,
+    "inlineStyles": 0,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 2,
+    "sharedComponents": [],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/commercial/commercial-center.contract.test.cjs",
+      "app/admin/commercial/legal-issuer/legal-issuer.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/commercial/proposals",
+    "file": "app/admin/commercial/proposals/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 356,
+    "hex": 0,
+    "tailwindColors": 15,
+    "inlineStyles": 0,
+    "forms": 1,
+    "tables": 1,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 1,
+    "sharedComponents": [],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/commercial/commercial-center.contract.test.cjs",
+      "app/admin/commercial/proposals/commercial-proposals.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/commercial/proposals/[proposalId]",
+    "file": "app/admin/commercial/proposals/[proposalId]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 2397,
+    "hex": 0,
+    "tailwindColors": 86,
+    "inlineStyles": 0,
+    "forms": 1,
+    "tables": 2,
+    "modalFiles": 1,
+    "destructiveFiles": 1,
+    "responsiveHints": 26,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/commercial/commercial-center.contract.test.cjs",
+      "app/admin/commercial/proposals/[proposalId]/proposal-document-workspace.contract.test.cjs",
+      "app/admin/commercial/proposals/commercial-proposals.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/commercial/proposals/new",
+    "file": "app/admin/commercial/proposals/new/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 939,
+    "hex": 0,
+    "tailwindColors": 24,
+    "inlineStyles": 0,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 1,
+    "sharedComponents": [],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/commercial/commercial-center.contract.test.cjs",
+      "app/admin/commercial/proposals/commercial-proposals.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/commercial/prospects",
+    "file": "app/admin/commercial/prospects/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 661,
+    "hex": 0,
+    "tailwindColors": 40,
+    "inlineStyles": 0,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 2,
+    "sharedComponents": [],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/commercial/commercial-center.contract.test.cjs",
+      "app/admin/commercial/prospects/prospects.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/commercial/reconciliation",
+    "file": "app/admin/commercial/reconciliation/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 373,
+    "hex": 0,
+    "tailwindColors": 35,
+    "inlineStyles": 1,
+    "forms": 0,
+    "tables": 1,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [
+      "components/admin/control-center/ControlCenterComponents.tsx"
+    ],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/commercial/commercial-center.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/commercial/simulator",
+    "file": "app/admin/commercial/simulator/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 552,
+    "hex": 0,
+    "tailwindColors": 25,
+    "inlineStyles": 0,
+    "forms": 5,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 7,
+    "sharedComponents": [],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/commercial/commercial-center.contract.test.cjs",
+      "app/admin/commercial/simulator/simulator.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/control-center",
+    "file": "app/admin/control-center/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 466,
+    "hex": 0,
+    "tailwindColors": 38,
+    "inlineStyles": 1,
+    "forms": 0,
+    "tables": 1,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 5,
+    "sharedComponents": [
+      "components/admin/control-center/ControlCenterComponents.tsx"
+    ],
+    "sensitivity": [
+      "permissions",
+      "supervision"
+    ],
+    "tests": [
+      "app/admin/control-center/control-center.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/feedback",
+    "file": "app/admin/feedback/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 690,
+    "hex": 39,
+    "tailwindColors": 0,
+    "inlineStyles": 16,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 9,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "permissions"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/health",
+    "file": "app/admin/health/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 1113,
+    "hex": 51,
+    "tailwindColors": 0,
+    "inlineStyles": 29,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 31,
+    "sharedComponents": [],
+    "sensitivity": [
+      "permissions",
+      "supervision"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/mandates",
+    "file": "app/admin/mandates/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 747,
+    "hex": 127,
+    "tailwindColors": 2,
+    "inlineStyles": 65,
+    "forms": 1,
+    "tables": 1,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 8,
+    "sharedComponents": [],
+    "sensitivity": [
+      "emergency-content",
+      "permissions"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/map",
+    "file": "app/admin/map/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 744,
+    "hex": 72,
+    "tailwindColors": 0,
+    "inlineStyles": 73,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 1,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "permissions"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/metering",
+    "file": "app/admin/metering/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 168,
+    "hex": 0,
+    "tailwindColors": 9,
+    "inlineStyles": 0,
+    "forms": 1,
+    "tables": 1,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 1,
+    "sharedComponents": [],
+    "sensitivity": [
+      "financial-legal",
+      "permissions",
+      "supervision"
+    ],
+    "tests": [
+      "app/admin/metering/metering.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/organizations",
+    "file": "app/admin/organizations/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 1560,
+    "hex": 143,
+    "tailwindColors": 5,
+    "inlineStyles": 76,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 1,
+    "destructiveFiles": 1,
+    "responsiveHints": 17,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/organizations/[organizationId]",
+    "file": "app/admin/organizations/[organizationId]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 1190,
+    "hex": 8,
+    "tailwindColors": 51,
+    "inlineStyles": 28,
+    "forms": 1,
+    "tables": 2,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 8,
+    "sharedComponents": [
+      "components/admin/control-center/ControlCenterComponents.tsx"
+    ],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/organizations/[organizationId]/capability-entitlements.contract.test.cjs",
+      "app/admin/organizations/[organizationId]/organization-contracts.contract.test.cjs",
+      "app/admin/organizations/[organizationId]/organization360.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/organizations/[organizationId]/clients/[clientId]",
+    "file": "app/admin/organizations/[organizationId]/clients/[clientId]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 383,
+    "hex": 24,
+    "tailwindColors": 1,
+    "inlineStyles": 15,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 3,
+    "sharedComponents": [],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/organizations/[organizationId]/capability-entitlements.contract.test.cjs",
+      "app/admin/organizations/[organizationId]/organization-contracts.contract.test.cjs",
+      "app/admin/organizations/[organizationId]/organization360.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/platform-permission-grants",
+    "file": "app/admin/platform-permission-grants/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 799,
+    "hex": 0,
+    "tailwindColors": 25,
+    "inlineStyles": 0,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 11,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/platform-permission-grants/platform-permission-grants.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "legacy-only",
+      "render": null,
+      "exception": true
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/procedures",
+    "file": "app/admin/procedures/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 534,
+    "hex": 56,
+    "tailwindColors": 2,
+    "inlineStyles": 32,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 1,
+    "destructiveFiles": 0,
+    "responsiveHints": 15,
+    "sharedComponents": [],
+    "sensitivity": [
+      "emergency-content",
+      "permissions"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/procedures/[id]",
+    "file": "app/admin/procedures/[id]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 791,
+    "hex": 93,
+    "tailwindColors": 1,
+    "inlineStyles": 55,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 30,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "emergency-content",
+      "permissions"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/procedures/custom",
+    "file": "app/admin/procedures/custom/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 788,
+    "hex": 111,
+    "tailwindColors": 6,
+    "inlineStyles": 60,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 1,
+    "destructiveFiles": 1,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "emergency-content",
+      "permissions"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/product-catalog",
+    "file": "app/admin/product-catalog/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 43,
+    "hex": 0,
+    "tailwindColors": 4,
+    "inlineStyles": 0,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 1,
+    "sharedComponents": [],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/product-catalog/product-catalog.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/product-catalog/capabilities",
+    "file": "app/admin/product-catalog/capabilities/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 214,
+    "hex": 0,
+    "tailwindColors": 8,
+    "inlineStyles": 0,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/product-catalog/product-catalog.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/product-catalog/price-books",
+    "file": "app/admin/product-catalog/price-books/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 924,
+    "hex": 0,
+    "tailwindColors": 25,
+    "inlineStyles": 0,
+    "forms": 3,
+    "tables": 1,
+    "modalFiles": 1,
+    "destructiveFiles": 1,
+    "responsiveHints": 4,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/admin/product-catalog/product-catalog.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/projects",
+    "file": "app/admin/projects/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 423,
+    "hex": 39,
+    "tailwindColors": 0,
+    "inlineStyles": 17,
+    "forms": 1,
+    "tables": 1,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "permissions"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/referrals",
+    "file": "app/admin/referrals/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 1415,
+    "hex": 75,
+    "tailwindColors": 0,
+    "inlineStyles": 32,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 17,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "permissions"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/rex-reports",
+    "file": "app/admin/rex-reports/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 342,
+    "hex": 3,
+    "tailwindColors": 0,
+    "inlineStyles": 14,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "permissions"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/admin/task-templates",
+    "file": "app/admin/task-templates/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 379,
+    "hex": 64,
+    "tailwindColors": 3,
+    "inlineStyles": 33,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 16,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "permissions"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/blog",
+    "file": "app/blog/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 440,
+    "hex": 47,
+    "tailwindColors": 2,
+    "inlineStyles": 18,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 8,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/blog/[id]/edit",
+    "file": "app/blog/[id]/edit/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 800,
+    "hex": 145,
+    "tailwindColors": 4,
+    "inlineStyles": 77,
+    "forms": 2,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 5,
+    "sharedComponents": [
+      "components/ui/DragDropUpload.tsx"
+    ],
+    "sensitivity": [
+      "destructive"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/blog/new",
+    "file": "app/blog/new/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 715,
+    "hex": 130,
+    "tailwindColors": 3,
+    "inlineStyles": 73,
+    "forms": 2,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 5,
+    "sharedComponents": [
+      "components/ui/DragDropUpload.tsx"
+    ],
+    "sensitivity": [
+      "destructive"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/bookings",
+    "file": "app/bookings/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 1839,
+    "hex": 146,
+    "tailwindColors": 13,
+    "inlineStyles": 83,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 1,
+    "destructiveFiles": 1,
+    "responsiveHints": 57,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "emergency-content"
+    ],
+    "tests": [
+      "app/bookings/booking-commitment.contract.test.mjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/buildings",
+    "file": "app/buildings/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 1017,
+    "hex": 104,
+    "tailwindColors": 4,
+    "inlineStyles": 52,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 1,
+    "destructiveFiles": 1,
+    "responsiveHints": 17,
+    "sharedComponents": [
+      "components/ui/Typography.tsx"
+    ],
+    "sensitivity": [
+      "destructive"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/buildings/[id]",
+    "file": "app/buildings/[id]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 930,
+    "hex": 136,
+    "tailwindColors": 4,
+    "inlineStyles": 65,
+    "forms": 2,
+    "tables": 0,
+    "modalFiles": 1,
+    "destructiveFiles": 0,
+    "responsiveHints": 23,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/buildings/compliance",
+    "file": "app/buildings/compliance/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 701,
+    "hex": 88,
+    "tailwindColors": 2,
+    "inlineStyles": 46,
+    "forms": 1,
+    "tables": 1,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 8,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/buildings/map",
+    "file": "app/buildings/map/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 758,
+    "hex": 71,
+    "tailwindColors": 0,
+    "inlineStyles": 68,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 1,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/clients",
+    "file": "app/clients/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 788,
+    "hex": 97,
+    "tailwindColors": 3,
+    "inlineStyles": 55,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 1,
+    "destructiveFiles": 1,
+    "responsiveHints": 19,
+    "sharedComponents": [
+      "components/ui/Typography.tsx"
+    ],
+    "sensitivity": [
+      "destructive"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/clients/[id]",
+    "file": "app/clients/[id]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 789,
+    "hex": 87,
+    "tailwindColors": 4,
+    "inlineStyles": 45,
+    "forms": 2,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 19,
+    "sharedComponents": [],
+    "sensitivity": [
+      "permissions"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/clients/[id]/portfolio",
+    "file": "app/clients/[id]/portfolio/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 732,
+    "hex": 92,
+    "tailwindColors": 1,
+    "inlineStyles": 46,
+    "forms": 2,
+    "tables": 1,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 14,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/configurator/[projectId]",
+    "file": "app/configurator/[projectId]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 2479,
+    "hex": 382,
+    "tailwindColors": 9,
+    "inlineStyles": 181,
+    "forms": 3,
+    "tables": 1,
+    "modalFiles": 1,
+    "destructiveFiles": 2,
+    "responsiveHints": 49,
+    "sharedComponents": [
+      "components/MapPicker.tsx",
+      "components/configurator/DangerousSubstanceSearch.tsx"
+    ],
+    "sensitivity": [
+      "destructive",
+      "documents",
+      "emergency-content"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/configurator/pca/[projectId]",
+    "file": "app/configurator/pca/[projectId]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 3360,
+    "hex": 372,
+    "tailwindColors": 5,
+    "inlineStyles": 132,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 37,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "documents",
+      "emergency-content"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/dashboard",
+    "file": "app/dashboard/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 1242,
+    "hex": 193,
+    "tailwindColors": 7,
+    "inlineStyles": 123,
+    "forms": 0,
+    "tables": 1,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 70,
+    "sharedComponents": [
+      "components/ui/Typography.tsx"
+    ],
+    "sensitivity": [],
+    "tests": [
+      "app/dashboard/pending-approvals.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "ga",
+      "render": null,
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/dashboard/rendement",
+    "file": "app/dashboard/rendement/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 593,
+    "hex": 0,
+    "tailwindColors": 33,
+    "inlineStyles": 0,
+    "forms": 0,
+    "tables": 1,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 2,
+    "sharedComponents": [],
+    "sensitivity": [
+      "financial-legal",
+      "permissions"
+    ],
+    "tests": [
+      "app/dashboard/pending-approvals.contract.test.cjs",
+      "app/dashboard/rendement/financial-money.test.cjs",
+      "app/dashboard/rendement/rendement.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/editor/[projectId]",
+    "file": "app/editor/[projectId]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 10534,
+    "hex": 963,
+    "tailwindColors": 299,
+    "inlineStyles": 562,
+    "forms": 15,
+    "tables": 16,
+    "modalFiles": 5,
+    "destructiveFiles": 7,
+    "responsiveHints": 41,
+    "sharedComponents": [
+      "components/editor/Module2PhoneTable.tsx",
+      "components/editor/Module2Section.tsx",
+      "components/editor/Module3MemberTable.tsx",
+      "components/editor/Module3OrgChart.tsx",
+      "components/editor/Module3Section.tsx",
+      "components/editor/Module4Library.tsx",
+      "components/editor/Module4PcaSection.tsx",
+      "components/editor/Module4ProcedureCard.tsx",
+      "components/editor/Module4Section.tsx",
+      "components/editor/Module6PcaContacts.tsx",
+      "components/editor/Module6Section.tsx",
+      "components/editor/Module7Section.tsx",
+      "components/editor/Module8Section.tsx",
+      "components/editor/Module8Section10.tsx",
+      "components/editor/SpellCheckedTextarea.tsx",
+      "components/editor/VersionHistory.tsx"
+    ],
+    "sensitivity": [
+      "destructive",
+      "documents",
+      "emergency-content"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/editor/[projectId]/procedures/[procedureId]",
+    "file": "app/editor/[projectId]/procedures/[procedureId]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 838,
+    "hex": 105,
+    "tailwindColors": 1,
+    "inlineStyles": 59,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 37,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "documents",
+      "emergency-content"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/glass-kit",
+    "file": "app/glass-kit/page.dev.tsx",
+    "dynamic": false,
+    "devOnly": true,
+    "layout": "AppLayout",
+    "styling": [
+      "none"
+    ],
+    "lines": 21,
+    "hex": 0,
+    "tailwindColors": 0,
+    "inlineStyles": 0,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [],
+    "registry": {
+      "status": "ga",
+      "render": null,
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/library",
+    "file": "app/library/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 581,
+    "hex": 58,
+    "tailwindColors": 0,
+    "inlineStyles": 33,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 21,
+    "sharedComponents": [],
+    "sensitivity": [
+      "emergency-content"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/login",
+    "file": "app/login/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 936,
+    "hex": 58,
+    "tailwindColors": 5,
+    "inlineStyles": 31,
+    "forms": 3,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 12,
+    "sharedComponents": [],
+    "sensitivity": [
+      "auth"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/notifications",
+    "file": "app/notifications/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 605,
+    "hex": 35,
+    "tailwindColors": 0,
+    "inlineStyles": 18,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 8,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/planning",
+    "file": "app/planning/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "css-module"
+    ],
+    "lines": 2514,
+    "hex": 178,
+    "tailwindColors": 0,
+    "inlineStyles": 13,
+    "forms": 7,
+    "tables": 0,
+    "modalFiles": 2,
+    "destructiveFiles": 2,
+    "responsiveHints": 4,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive"
+    ],
+    "tests": [
+      "app/planning/planning.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/profile",
+    "file": "app/profile/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 636,
+    "hex": 117,
+    "tailwindColors": 8,
+    "inlineStyles": 35,
+    "forms": 2,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 22,
+    "sharedComponents": [
+      "components/WorkScheduleEditorPanel.tsx",
+      "components/workScheduleEditor.ts"
+    ],
+    "sensitivity": [
+      "destructive"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "ga",
+      "render": null,
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/profile/rendement",
+    "file": "app/profile/rendement/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "tailwind"
+    ],
+    "lines": 455,
+    "hex": 0,
+    "tailwindColors": 34,
+    "inlineStyles": 0,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 2,
+    "sharedComponents": [],
+    "sensitivity": [
+      "financial-legal"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/projects",
+    "file": "app/projects/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 1173,
+    "hex": 181,
+    "tailwindColors": 8,
+    "inlineStyles": 87,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 1,
+    "destructiveFiles": 1,
+    "responsiveHints": 0,
+    "sharedComponents": [
+      "components/ui/Typography.tsx"
+    ],
+    "sensitivity": [
+      "destructive"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/projects/[id]",
+    "file": "app/projects/[id]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 4479,
+    "hex": 534,
+    "tailwindColors": 16,
+    "inlineStyles": 286,
+    "forms": 3,
+    "tables": 0,
+    "modalFiles": 3,
+    "destructiveFiles": 2,
+    "responsiveHints": 29,
+    "sharedComponents": [
+      "components/EngagementPanel.tsx",
+      "components/ExportModal.tsx",
+      "components/ProjectFiles.tsx",
+      "components/ui/Typography.tsx"
+    ],
+    "sensitivity": [
+      "destructive",
+      "documents"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/projects/[id]/activities",
+    "file": "app/projects/[id]/activities/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "inline-hex",
+      "tailwind",
+      "css-module"
+    ],
+    "lines": 1256,
+    "hex": 278,
+    "tailwindColors": 3,
+    "inlineStyles": 61,
+    "forms": 3,
+    "tables": 0,
+    "modalFiles": 1,
+    "destructiveFiles": 1,
+    "responsiveHints": 3,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/projects/[id]/mandate",
+    "file": "app/projects/[id]/mandate/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 2958,
+    "hex": 295,
+    "tailwindColors": 76,
+    "inlineStyles": 168,
+    "forms": 7,
+    "tables": 1,
+    "modalFiles": 3,
+    "destructiveFiles": 4,
+    "responsiveHints": 22,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "emergency-content"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/projects/[id]/procedures",
+    "file": "app/projects/[id]/procedures/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 710,
+    "hex": 100,
+    "tailwindColors": 6,
+    "inlineStyles": 53,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 1,
+    "destructiveFiles": 1,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "emergency-content"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/referrals",
+    "file": "app/referrals/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 1541,
+    "hex": 112,
+    "tailwindColors": 1,
+    "inlineStyles": 73,
+    "forms": 0,
+    "tables": 1,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 18,
+    "sharedComponents": [
+      "components/ui/Typography.tsx"
+    ],
+    "sensitivity": [],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/reset-password",
+    "file": "app/reset-password/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 535,
+    "hex": 32,
+    "tailwindColors": 3,
+    "inlineStyles": 19,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 10,
+    "sharedComponents": [],
+    "sensitivity": [
+      "auth"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/settings",
+    "file": "app/settings/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 750,
+    "hex": 18,
+    "tailwindColors": 0,
+    "inlineStyles": 14,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 15,
+    "sharedComponents": [],
+    "sensitivity": [
+      "permissions"
+    ],
+    "tests": [
+      "app/settings/settings-glass.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": null,
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/settings/activity-types",
+    "file": "app/settings/activity-types/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 384,
+    "hex": 84,
+    "tailwindColors": 8,
+    "inlineStyles": 2,
+    "forms": 2,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 9,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "permissions"
+    ],
+    "tests": [
+      "app/settings/activity-types/activity-types.test.cjs",
+      "app/settings/settings-glass.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/settings/feedback",
+    "file": "app/settings/feedback/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 433,
+    "hex": 28,
+    "tailwindColors": 1,
+    "inlineStyles": 17,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 3,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [
+      "app/settings/settings-glass.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/settings/module1-template",
+    "file": "app/settings/module1-template/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 306,
+    "hex": 49,
+    "tailwindColors": 3,
+    "inlineStyles": 23,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 3,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [
+      "app/settings/settings-glass.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/settings/organization",
+    "file": "app/settings/organization/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 1225,
+    "hex": 67,
+    "tailwindColors": 3,
+    "inlineStyles": 40,
+    "forms": 2,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 28,
+    "sharedComponents": [
+      "components/ui/DragDropUpload.tsx"
+    ],
+    "sensitivity": [
+      "destructive",
+      "permissions"
+    ],
+    "tests": [
+      "app/settings/settings-glass.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/settings/profile",
+    "file": "app/settings/profile/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "none"
+    ],
+    "lines": 11,
+    "hex": 0,
+    "tailwindColors": 0,
+    "inlineStyles": 0,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [
+      "app/settings/settings-glass.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/settings/task-templates",
+    "file": "app/settings/task-templates/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 459,
+    "hex": 92,
+    "tailwindColors": 3,
+    "inlineStyles": 44,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 19,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive"
+    ],
+    "tests": [
+      "app/settings/settings-glass.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/settings/timelog-categories",
+    "file": "app/settings/timelog-categories/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 352,
+    "hex": 37,
+    "tailwindColors": 3,
+    "inlineStyles": 24,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 18,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive"
+    ],
+    "tests": [
+      "app/settings/settings-glass.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/settings/users",
+    "file": "app/settings/users/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 723,
+    "hex": 111,
+    "tailwindColors": 9,
+    "inlineStyles": 40,
+    "forms": 2,
+    "tables": 1,
+    "modalFiles": 1,
+    "destructiveFiles": 2,
+    "responsiveHints": 19,
+    "sharedComponents": [
+      "components/WorkScheduleEditorPanel.tsx",
+      "components/workScheduleEditor.ts"
+    ],
+    "sensitivity": [
+      "destructive",
+      "permissions"
+    ],
+    "tests": [
+      "app/settings/settings-glass.contract.test.cjs"
+    ],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "app",
+    "route": "/timelog",
+    "file": "app/timelog/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "AppLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 921,
+    "hex": 159,
+    "tailwindColors": 5,
+    "inlineStyles": 96,
+    "forms": 1,
+    "tables": 1,
+    "modalFiles": 1,
+    "destructiveFiles": 1,
+    "responsiveHints": 20,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive"
+    ],
+    "tests": [],
+    "registry": {
+      "status": "beta",
+      "render": "skin",
+      "exception": false
+    }
+  },
+  {
+    "app": "portal",
+    "route": "/",
+    "file": "app/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 247,
+    "hex": 2,
+    "tailwindColors": 0,
+    "inlineStyles": 2,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/activities",
+    "file": "app/activities/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 751,
+    "hex": 38,
+    "tailwindColors": 0,
+    "inlineStyles": 28,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/bookings",
+    "file": "app/bookings/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 1700,
+    "hex": 104,
+    "tailwindColors": 1,
+    "inlineStyles": 55,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 20,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive"
+    ],
+    "tests": [
+      "app/bookings/bookings.contract.test.mjs"
+    ],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/buildings",
+    "file": "app/buildings/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 366,
+    "hex": 37,
+    "tailwindColors": 0,
+    "inlineStyles": 36,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/dashboard",
+    "file": "app/dashboard/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 537,
+    "hex": 81,
+    "tailwindColors": 0,
+    "inlineStyles": 62,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/documents",
+    "file": "app/documents/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 716,
+    "hex": 49,
+    "tailwindColors": 0,
+    "inlineStyles": 25,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/documents/[id]",
+    "file": "app/documents/[id]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 2410,
+    "hex": 214,
+    "tailwindColors": 0,
+    "inlineStyles": 157,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 1,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/files/[id]",
+    "file": "app/files/[id]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 1502,
+    "hex": 58,
+    "tailwindColors": 0,
+    "inlineStyles": 31,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 1,
+    "destructiveFiles": 0,
+    "responsiveHints": 22,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/forgot-password",
+    "file": "app/forgot-password/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "none"
+    ],
+    "lines": 44,
+    "hex": 0,
+    "tailwindColors": 0,
+    "inlineStyles": 0,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "auth"
+    ],
+    "tests": [],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/intelligence",
+    "file": "app/intelligence/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 659,
+    "hex": 123,
+    "tailwindColors": 0,
+    "inlineStyles": 108,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/intervention/[token]",
+    "file": "app/intervention/[token]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 197,
+    "hex": 43,
+    "tailwindColors": 0,
+    "inlineStyles": 35,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "emergency-content"
+    ],
+    "tests": [],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/kiosk/[token]",
+    "file": "app/kiosk/[token]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 636,
+    "hex": 72,
+    "tailwindColors": 0,
+    "inlineStyles": 83,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "emergency-content"
+    ],
+    "tests": [],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/kiosk/qr/[token]",
+    "file": "app/kiosk/qr/[token]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 200,
+    "hex": 16,
+    "tailwindColors": 0,
+    "inlineStyles": 8,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "emergency-content"
+    ],
+    "tests": [],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/login",
+    "file": "app/login/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 453,
+    "hex": 44,
+    "tailwindColors": 0,
+    "inlineStyles": 33,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "auth"
+    ],
+    "tests": [],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/magic",
+    "file": "app/magic/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "inline-hex",
+      "tailwind"
+    ],
+    "lines": 289,
+    "hex": 11,
+    "tailwindColors": 2,
+    "inlineStyles": 9,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 5,
+    "sharedComponents": [],
+    "sensitivity": [
+      "auth"
+    ],
+    "tests": [],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/map",
+    "file": "app/map/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 848,
+    "hex": 71,
+    "tailwindColors": 0,
+    "inlineStyles": 71,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 1,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/notifications",
+    "file": "app/notifications/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 367,
+    "hex": 24,
+    "tailwindColors": 0,
+    "inlineStyles": 23,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/offline",
+    "file": "app/offline/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 38,
+    "hex": 7,
+    "tailwindColors": 0,
+    "inlineStyles": 7,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [],
+    "tests": [],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/population/[publicSlug]",
+    "file": "app/population/[publicSlug]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "inline-hex",
+      "css-module"
+    ],
+    "lines": 4517,
+    "hex": 117,
+    "tailwindColors": 0,
+    "inlineStyles": 6,
+    "forms": 7,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 2,
+    "sharedComponents": [],
+    "sensitivity": [
+      "emergency-content"
+    ],
+    "tests": [
+      "app/population/populationContactProfile.contract.test.mjs",
+      "app/population/populationIdentity.contract.test.mjs"
+    ],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/presence/[kioskToken]",
+    "file": "app/presence/[kioskToken]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 188,
+    "hex": 20,
+    "tailwindColors": 0,
+    "inlineStyles": 21,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "emergency-content"
+    ],
+    "tests": [],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/profile",
+    "file": "app/profile/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 842,
+    "hex": 51,
+    "tailwindColors": 0,
+    "inlineStyles": 37,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [
+      "app/components/AppearanceSection.tsx"
+    ],
+    "sensitivity": [],
+    "tests": [],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/reset-password",
+    "file": "app/reset-password/page.tsx",
+    "dynamic": false,
+    "devOnly": false,
+    "layout": "aucun (plein écran)",
+    "styling": [
+      "none"
+    ],
+    "lines": 101,
+    "hex": 0,
+    "tailwindColors": 0,
+    "inlineStyles": 0,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "auth"
+    ],
+    "tests": [
+      "app/reset-password/passwordPolicy.test.mjs"
+    ],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/sentinelle/[buildingId]",
+    "file": "app/sentinelle/[buildingId]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 956,
+    "hex": 125,
+    "tailwindColors": 0,
+    "inlineStyles": 92,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 1,
+    "destructiveFiles": 1,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "emergency-content"
+    ],
+    "tests": [
+      "app/sentinelle/sentinelleAuth.contract.test.mjs"
+    ],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/sentinelle/[buildingId]/corrective-actions/[actionId]",
+    "file": "app/sentinelle/[buildingId]/corrective-actions/[actionId]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex",
+      "css-module"
+    ],
+    "lines": 602,
+    "hex": 41,
+    "tailwindColors": 0,
+    "inlineStyles": 0,
+    "forms": 2,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 1,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "emergency-content"
+    ],
+    "tests": [
+      "app/sentinelle/sentinelleAuth.contract.test.mjs"
+    ],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/sentinelle/[buildingId]/employes",
+    "file": "app/sentinelle/[buildingId]/employes/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 916,
+    "hex": 187,
+    "tailwindColors": 0,
+    "inlineStyles": 137,
+    "forms": 1,
+    "tables": 1,
+    "modalFiles": 1,
+    "destructiveFiles": 1,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "emergency-content"
+    ],
+    "tests": [
+      "app/sentinelle/sentinelleAuth.contract.test.mjs"
+    ],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/sentinelle/[buildingId]/evacuation",
+    "file": "app/sentinelle/[buildingId]/evacuation/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 527,
+    "hex": 58,
+    "tailwindColors": 0,
+    "inlineStyles": 44,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "emergency-content"
+    ],
+    "tests": [
+      "app/sentinelle/sentinelleAuth.contract.test.mjs"
+    ],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/sentinelle/[buildingId]/historique",
+    "file": "app/sentinelle/[buildingId]/historique/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 416,
+    "hex": 52,
+    "tailwindColors": 0,
+    "inlineStyles": 45,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "emergency-content"
+    ],
+    "tests": [
+      "app/sentinelle/sentinelleAuth.contract.test.mjs"
+    ],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/sentinelle/[buildingId]/incident",
+    "file": "app/sentinelle/[buildingId]/incident/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 799,
+    "hex": 154,
+    "tailwindColors": 0,
+    "inlineStyles": 96,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "emergency-content"
+    ],
+    "tests": [
+      "app/sentinelle/sentinelleAuth.contract.test.mjs"
+    ],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/sentinelle/[buildingId]/incidents",
+    "file": "app/sentinelle/[buildingId]/incidents/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 378,
+    "hex": 39,
+    "tailwindColors": 0,
+    "inlineStyles": 31,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "emergency-content"
+    ],
+    "tests": [
+      "app/sentinelle/sentinelleAuth.contract.test.mjs"
+    ],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/sentinelle/[buildingId]/incidents/[incidentId]",
+    "file": "app/sentinelle/[buildingId]/incidents/[incidentId]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 730,
+    "hex": 119,
+    "tailwindColors": 0,
+    "inlineStyles": 63,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "emergency-content"
+    ],
+    "tests": [
+      "app/sentinelle/sentinelleAuth.contract.test.mjs"
+    ],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/sentinelle/[buildingId]/invitations",
+    "file": "app/sentinelle/[buildingId]/invitations/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 386,
+    "hex": 40,
+    "tailwindColors": 0,
+    "inlineStyles": 35,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "emergency-content"
+    ],
+    "tests": [
+      "app/sentinelle/sentinelleAuth.contract.test.mjs"
+    ],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/sentinelle/[buildingId]/population",
+    "file": "app/sentinelle/[buildingId]/population/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex",
+      "css-module"
+    ],
+    "lines": 9964,
+    "hex": 572,
+    "tailwindColors": 0,
+    "inlineStyles": 356,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 2,
+    "destructiveFiles": 1,
+    "responsiveHints": 11,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "emergency-content"
+    ],
+    "tests": [
+      "app/sentinelle/[buildingId]/population/publicPortalSharing.test.mjs",
+      "app/sentinelle/sentinelleAuth.contract.test.mjs"
+    ],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/sentinelle/[buildingId]/population/evidence/[evidenceId]",
+    "file": "app/sentinelle/[buildingId]/population/evidence/[evidenceId]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex",
+      "css-module"
+    ],
+    "lines": 457,
+    "hex": 42,
+    "tailwindColors": 0,
+    "inlineStyles": 0,
+    "forms": 0,
+    "tables": 2,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 3,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "emergency-content"
+    ],
+    "tests": [
+      "app/sentinelle/[buildingId]/population/publicPortalSharing.test.mjs",
+      "app/sentinelle/sentinelleAuth.contract.test.mjs"
+    ],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/sentinelle/[buildingId]/population/reviews/[reviewId]",
+    "file": "app/sentinelle/[buildingId]/population/reviews/[reviewId]/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex",
+      "css-module"
+    ],
+    "lines": 1586,
+    "hex": 38,
+    "tailwindColors": 0,
+    "inlineStyles": 0,
+    "forms": 1,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 1,
+    "responsiveHints": 1,
+    "sharedComponents": [],
+    "sensitivity": [
+      "destructive",
+      "emergency-content"
+    ],
+    "tests": [
+      "app/sentinelle/[buildingId]/population/publicPortalSharing.test.mjs",
+      "app/sentinelle/[buildingId]/population/reviews/trackingPresentation.test.mjs",
+      "app/sentinelle/sentinelleAuth.contract.test.mjs"
+    ],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/sentinelle/[buildingId]/rapports",
+    "file": "app/sentinelle/[buildingId]/rapports/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 469,
+    "hex": 57,
+    "tailwindColors": 0,
+    "inlineStyles": 37,
+    "forms": 0,
+    "tables": 2,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "emergency-content"
+    ],
+    "tests": [
+      "app/sentinelle/sentinelleAuth.contract.test.mjs"
+    ],
+    "registry": null
+  },
+  {
+    "app": "portal",
+    "route": "/sentinelle/[buildingId]/resilience",
+    "file": "app/sentinelle/[buildingId]/resilience/page.tsx",
+    "dynamic": true,
+    "devOnly": false,
+    "layout": "PortalLayout",
+    "styling": [
+      "inline-hex"
+    ],
+    "lines": 817,
+    "hex": 172,
+    "tailwindColors": 0,
+    "inlineStyles": 144,
+    "forms": 0,
+    "tables": 0,
+    "modalFiles": 0,
+    "destructiveFiles": 0,
+    "responsiveHints": 0,
+    "sharedComponents": [],
+    "sensitivity": [
+      "emergency-content"
+    ],
+    "tests": [
+      "app/sentinelle/sentinelleAuth.contract.test.mjs"
+    ],
+    "registry": null
+  }
+]

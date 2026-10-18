@@ -1,0 +1,67 @@
+name: Client Portal PR Checks
+
+# Validation seulement : aucune publication, aucun déploiement, aucun secret, aucun accès à la production.
+# Déclenché par les Pull Requests qui touchent le portail client, la garde du jeton Liquid Glass ou ce workflow.
+on:
+  pull_request:
+    paths:
+      - "coro-client-portal/**"
+      - "ops/deploy/glass-preview-token.test.mjs"
+      - ".github/workflows/portal-pr-checks.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: portal-pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  portal-checks:
+    name: Client Portal checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: coro-client-portal
+    steps:
+      - name: Checkout (read-only, no persisted credentials)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: coro-client-portal/package-lock.json
+
+      - name: Install dependencies (lockfile)
+        run: npm ci
+
+      - name: TypeScript
+        run: npx tsc --noEmit --incremental false
+
+      - name: Liquid Glass portal (shared core sync, registry, Classic by default, isolation)
+        run: npm run test:skin
+
+      - name: Sentinelle, population, SMS and booking contracts
+        run: |
+          npm run test:sms-compliance
+          npm run test:sentinelle-auth
+          npm run test:population-sharing
+          npm run test:population-identity
+          npm run test:population-profile
+          npm run test:bookings
+
+      - name: Production build (without the Glass preview token)
+        run: npm run build
+
+      - name: Glass preview token guard (repository root)
+        working-directory: .
+        run: node --test ops/deploy/glass-preview-token.test.mjs

@@ -75,8 +75,13 @@ test('vue Glass : chaque destination Legacy a une teinte (aucune route oubliée)
   for (const p of legacyPaths) assert.ok(view.includes(`'${p}':`), 'teinte manquante pour ' + p);
 });
 
-test('registre : /settings est en bêta (jamais ga), ses sous-pages restent legacy-only', () => {
+test('registre : /settings est en bêta native (jamais ga) ; ses sous-pages ne sont jamais Glass natifs ni ga (au plus re-teintées)', () => {
   const byPattern = new Map(ROUTE_REGISTRY.map((e) => [e.pattern, e]));
   assert.equal(byPattern.get('/settings').status, 'beta');
-  for (const e of ROUTE_REGISTRY) if (e.pattern.startsWith('/settings/')) assert.equal(e.status, 'legacy-only', e.pattern);
+  assert.equal(byPattern.get('/settings').render, undefined, '/settings est un écran Glass natif');
+  for (const e of ROUTE_REGISTRY) {
+    if (!e.pattern.startsWith('/settings/')) continue;
+    assert.notEqual(e.status, 'ga', e.pattern);
+    assert.ok(e.status === 'legacy-only' || e.render === 'skin', `${e.pattern} : sous-page uniquement legacy-only ou re-teintée, jamais native`);
+  }
 });

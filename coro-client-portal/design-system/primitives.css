@@ -1,0 +1,258 @@
+/*
+ * CORO Liquid Glass — fondations des primitives (recettes CSS uniquement).
+ *
+ * Aucun composant React ici et AUCUN usage dans l'application à ce stade : ces classes
+ * (.cg-*) n'existent pour aucune page tant qu'un écran ne les adopte pas, et chaque règle
+ * est scopée sous :root[data-ui="glass"]. Elles préparent GlassCard, GlassPanel,
+ * GlassButton, GlassInput et StatusBadge.
+ */
+
+:root[data-ui="glass"] .cg-canvas {
+  position: relative;
+  isolation: isolate;
+  background: var(--cg-canvas-gradient);
+  color: var(--cg-text-primary);
+  font-family: var(--cg-font-family);
+}
+
+/* Façade vitrée abstraite : meneaux très discrets en haut à droite, estompés par un masque.
+   Couche purement décorative (CSS), fixe, sans image ni requête réseau, derrière tout le contenu. */
+:root[data-ui="glass"] .cg-canvas::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(115deg, transparent 38%, var(--cg-facade-sheen) 47%, transparent 56%),
+    repeating-linear-gradient(90deg, var(--cg-grid-line) 0 1px, transparent 1px 72px),
+    repeating-linear-gradient(0deg, var(--cg-grid-line) 0 1px, transparent 1px 96px);
+  -webkit-mask-image: radial-gradient(75% 62% at 92% 0%, #000 0%, transparent 74%);
+  mask-image: radial-gradient(75% 62% at 92% 0%, #000 0%, transparent 74%);
+}
+
+/* Recette de verre commune : reflet interne, arête lumineuse, anneau fin, élévation douce.
+   Le flou est volontairement léger (surfaces de contenu) ; il est renforcé sur .cg-chrome et .cg-panel. */
+:root[data-ui="glass"] .cg-glass {
+  background-color: var(--cg-glass-bg);
+  background-image: var(--cg-sheen);
+  color: var(--cg-text-primary);
+  border: 1px solid var(--cg-edge);
+  border-radius: var(--cg-radius-lg);
+  box-shadow:
+    inset 0 1px 0 var(--cg-glass-highlight),
+    0 0 0 1px var(--cg-ring),
+    var(--cg-shadow-card);
+  -webkit-backdrop-filter: blur(var(--cg-blur-sm)) saturate(var(--cg-glass-saturate));
+  backdrop-filter: blur(var(--cg-blur-sm)) saturate(var(--cg-glass-saturate));
+}
+/* Les écrans existants posent des bordures inline : l'arête lumineuse doit les surclasser. */
+:root[data-ui="glass"] .cg-glass { border-color: var(--cg-edge) !important; }
+
+/* Carte cliquable : léger soulèvement (désactivé si mouvement réduit via durées à 0). */
+:root[data-ui="glass"] .cg-lift {
+  transition: transform var(--cg-duration-base) var(--cg-ease), box-shadow var(--cg-duration-base) var(--cg-ease);
+}
+:root[data-ui="glass"] .cg-lift:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 var(--cg-glass-highlight),
+    0 0 0 1px var(--cg-ring),
+    0 18px 38px -16px var(--cg-ring),
+    var(--cg-shadow-card);
+}
+
+/* Chrome de l'application (barre du haut, menu latéral) : verre plus dense, sans anneau ni rayon. */
+:root[data-ui="glass"] .cg-chrome {
+  background-color: var(--cg-glass-bg);
+  background-image: var(--cg-sheen);
+  border: 0 solid var(--cg-border-default);
+  box-shadow: inset 0 -1px 0 var(--cg-glass-highlight), 0 12px 32px -22px var(--cg-ring);
+  -webkit-backdrop-filter: blur(var(--cg-blur-lg)) saturate(var(--cg-glass-saturate));
+  backdrop-filter: blur(var(--cg-blur-lg)) saturate(var(--cg-glass-saturate));
+}
+
+/* GlassCard : surface de contenu. */
+:root[data-ui="glass"] .cg-card {
+  padding: var(--cg-space-4);
+}
+
+/* GlassPanel : surface flottante (menus, tiroirs, modales). Quasi opaque : la lisibilité prime. */
+:root[data-ui="glass"] .cg-panel {
+  background-color: var(--cg-panel-bg);
+  background-image: var(--cg-sheen);
+  border: 1px solid var(--cg-edge);
+  border-radius: var(--cg-radius-lg);
+  box-shadow:
+    inset 0 1px 0 var(--cg-glass-highlight),
+    0 0 0 1px var(--cg-ring),
+    var(--cg-shadow-3);
+  -webkit-backdrop-filter: blur(var(--cg-blur-lg)) saturate(var(--cg-glass-saturate));
+  backdrop-filter: blur(var(--cg-blur-lg)) saturate(var(--cg-glass-saturate));
+}
+:root[data-ui="glass"] .cg-panel { border-color: var(--cg-edge) !important; }
+
+/* Tuile d'icône (cartes KPI) : volume interne et halo de la couleur du pictogramme. */
+:root[data-ui="glass"] .cg-tile {
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 60%);
+  box-shadow: inset 0 1px 0 var(--cg-glass-highlight), 0 10px 20px -12px currentColor;
+}
+
+/* Bouton d'action principal et bouton secondaire en verre. */
+:root[data-ui="glass"] .cg-cta {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0) 58%);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38), 0 10px 22px -10px var(--cg-glow-accent);
+  transition: box-shadow var(--cg-duration-base) var(--cg-ease), filter var(--cg-duration-fast) var(--cg-ease);
+}
+:root[data-ui="glass"] .cg-cta:hover { filter: brightness(1.04); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 14px 26px -10px var(--cg-glow-accent); }
+:root[data-ui="glass"] .cg-btn {
+  background-color: var(--cg-glass-bg);
+  background-image: var(--cg-sheen);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 var(--cg-glass-highlight), var(--cg-shadow-1);
+  transition: background-color var(--cg-duration-fast) var(--cg-ease);
+}
+:root[data-ui="glass"] .cg-btn:hover { background-color: var(--cg-glass-bg-strong) !important; }
+
+/* Pastille pleine (type de document) : léger relief. */
+:root[data-ui="glass"] .cg-pill-solid {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 60%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 3px 8px -3px var(--cg-glow-accent);
+}
+
+/* GlassButton */
+:root[data-ui="glass"] .cg-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--cg-space-2);
+  min-height: 40px;
+  padding: 0 var(--cg-space-4);
+  border: 1px solid var(--cg-border-default);
+  border-radius: var(--cg-radius-sm);
+  background: var(--cg-glass-bg);
+  color: var(--cg-text-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--cg-duration-fast) var(--cg-ease);
+}
+:root[data-ui="glass"] .cg-button:hover { background: var(--cg-glass-bg-strong); }
+:root[data-ui="glass"] .cg-button--primary {
+  background: var(--cg-accent);
+  border-color: var(--cg-accent);
+  color: var(--cg-text-on-accent);
+}
+:root[data-ui="glass"] .cg-button--primary:hover { background: var(--cg-accent-hover); }
+:root[data-ui="glass"] .cg-button--primary:active { background: var(--cg-accent-active); }
+:root[data-ui="glass"] .cg-button:disabled,
+:root[data-ui="glass"] .cg-button[aria-disabled="true"] {
+  background: var(--cg-disabled-bg);
+  border-color: var(--cg-disabled-border);
+  color: var(--cg-disabled-fg);
+  cursor: not-allowed;
+}
+
+/* GlassInput */
+:root[data-ui="glass"] .cg-input {
+  min-height: 40px;
+  padding: 0 var(--cg-space-3);
+  border: 1px solid var(--cg-border-strong);
+  border-radius: var(--cg-radius-sm);
+  background: var(--cg-glass-bg-strong);
+  color: var(--cg-text-primary);
+  font: inherit;
+}
+:root[data-ui="glass"] .cg-input::placeholder { color: var(--cg-text-muted); }
+:root[data-ui="glass"] .cg-input:disabled {
+  background: var(--cg-disabled-bg);
+  border-color: var(--cg-disabled-border);
+  color: var(--cg-disabled-fg);
+  cursor: not-allowed;
+}
+
+/* StatusBadge : tone = success | warning | danger | info | neutral */
+:root[data-ui="glass"] .cg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cg-space-1);
+  padding: 2px var(--cg-space-2);
+  border: 1px solid var(--cg-neutral-border);
+  border-radius: var(--cg-radius-pill);
+  background: var(--cg-neutral-bg);
+  color: var(--cg-neutral-fg);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+:root[data-ui="glass"] .cg-badge[data-tone="success"] { background: var(--cg-success-bg); border-color: var(--cg-success-border); color: var(--cg-success-fg); }
+:root[data-ui="glass"] .cg-badge[data-tone="warning"] { background: var(--cg-warning-bg); border-color: var(--cg-warning-border); color: var(--cg-warning-fg); }
+:root[data-ui="glass"] .cg-badge[data-tone="danger"]  { background: var(--cg-danger-bg);  border-color: var(--cg-danger-border);  color: var(--cg-danger-fg); }
+:root[data-ui="glass"] .cg-badge[data-tone="info"]    { background: var(--cg-info-bg);    border-color: var(--cg-info-border);    color: var(--cg-info-fg); }
+/* Urgence : opaque, identique dans tous les thèmes et replis. */
+:root[data-ui="glass"] .cg-badge[data-tone="emergency"] {
+  background: var(--cg-emergency-bg);
+  border-color: var(--cg-emergency-border);
+  color: var(--cg-emergency-fg);
+}
+
+/* Focus clavier visible sur toute surface Glass. */
+:root[data-ui="glass"] .cg-canvas :focus-visible,
+:root[data-ui="glass"] .cg-glass:focus-visible,
+:root[data-ui="glass"] .cg-button:focus-visible,
+:root[data-ui="glass"] .cg-input:focus-visible {
+  outline: var(--cg-focus-width) solid var(--cg-focus-ring);
+  outline-offset: var(--cg-focus-offset);
+}
+
+/*
+ * Îlot Legacy : contenu d'un écran non migré affiché dans le shell Glass.
+ * Redonne au contenu son environnement d'origine (fond clair, couleurs historiques, color-scheme: light).
+ *
+ * INTERDIT ICI (vérifié par route-registry.test.cjs) : transform, filter, backdrop-filter, isolation, z-index, overflow,
+ * contain, will-change, perspective, position, opacity. Ces propriétés créeraient un bloc conteneur ou un contexte
+ * d'empilement qui piégerait les modales à position fixe et les menus flottants de l'écran sous le shell.
+ * Aucun sélecteur global : seuls les descendants de l'îlot sont concernés.
+ */
+:root[data-ui="glass"] .cg-legacy-island {
+  /* Variables de globals.css que le pont Glass redéfinit (tokens.css) : valeurs d'origine rétablies. */
+  --text-primary: #2C3E50;
+  --text-secondary: #6C757D;
+  --text-muted: #ADB5BD;
+  --foreground: #2C3E50;
+  color-scheme: light;
+  color: #2C3E50;
+  background-color: #F8F9FA;
+  border: 1px solid var(--cg-edge);
+  border-radius: var(--cg-radius-lg);
+  box-shadow: var(--cg-shadow-card);
+  padding: var(--cg-space-4);
+  min-width: 0;
+}
+@media (min-width: 640px) {
+  :root[data-ui="glass"] .cg-legacy-island { padding: var(--cg-space-5); }
+}
+
+/*
+ * Zone re-teintée (.cg-skinzone) : composant partagé écrit en classes Tailwind à couleurs arbitraires (p. ex. l'éditeur d'horaire du profil), affiché
+ * dans un écran Glass NATIF où la feuille de teinte globale n'est pas chargée. Seules les couleurs réellement employées par ce composant sont remappées.
+ * Inactive en Classique et en îlot Legacy (le contenu y garde son fond clair d'origine).
+ */
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone { background-color: var(--cg-glass-bg-strong) !important; border-color: var(--cg-border-default) !important; color: var(--cg-text-primary); }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone .bg-white { background-color: var(--cg-glass-bg-strong) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="bg-[#F8F9FA]"] { background-color: var(--cg-hover-overlay) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="bg-[#FCEFED]"] { background-color: var(--cg-danger-bg) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="bg-[#EAF7EE]"] { background-color: var(--cg-success-bg) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="text-[#2C3E50]"] { color: var(--cg-text-primary) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="text-[#45515C]"] { color: var(--cg-text-secondary) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="text-[#6C757D]"] { color: var(--cg-text-muted) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="text-[#ADB5BD]"] { color: var(--cg-text-muted) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="text-[#922B21]"] { color: var(--cg-danger-fg) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="text-[#A93226]"] { color: var(--cg-danger-fg) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="text-[#9A6700]"] { color: var(--cg-warning-fg) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="text-[#277245]"] { color: var(--cg-success-fg) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="text-[#2471A3]"] { color: var(--cg-info-fg) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="border-[#E1E5E8]"] { border-color: var(--cg-border-default) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="border-[#D7DEE3]"] { border-color: var(--cg-border-default) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="border-[#CED4DA]"] { border-color: var(--cg-border-default) !important; }

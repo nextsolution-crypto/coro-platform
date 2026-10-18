@@ -165,7 +165,7 @@ export default function BuildingsMapPage() {
   const selectedStatus = selected ? getBuildingStatus(selected) : null;
 
   const mapContent = (
-    <div style={{
+    <div data-cg-keep="" style={{
       position: 'relative',
       height: fullscreen ? '100vh' : 'calc(100vh - 180px)',
       minHeight: 500,
@@ -449,14 +449,14 @@ export default function BuildingsMapPage() {
 
   if (loading) return (
     <AppLayout>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400, backgroundColor: '#0F1923', borderRadius: 12 }}>
+      <div data-cg-keep="" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400, backgroundColor: '#0F1923', borderRadius: 12 }}>
         <p className="animate-pulse" style={{ margin: 0, color: '#4A5568', fontSize: 14 }}>Chargement de la carte...</p>
       </div>
     </AppLayout>
   );
 
   return fullscreen ? (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#0F1923' }}>
+    <div data-cg-keep="" style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#0F1923' }}>
       {mapContent}
     </div>
   ) : (

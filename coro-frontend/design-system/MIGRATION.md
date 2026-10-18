@@ -71,3 +71,10 @@ libellé ni le moment** de la confirmation.
 - Module commercial Tailwind (`/admin/commercial/*`, catalogue) : Legacy dans un îlot.
 - Aperçus et feuilles de documents (éditeurs, export PDF) : toujours clairs, quel que soit le thème.
 - Portail client, site vitrine, backend, API, permissions, exports PDF.
+
+## 8. Migration V2 complète (mandat 49)
+
+La section 7 (« Hors périmètre ») est **remplacée** : le module commercial, le portail client et les écrans de rendement entrent dans la migration, par **re-teinte** (couche de teinte, sans réécriture des composants métier). Voir `docs/design/liquid-glass/v2/` :
+`ARCHITECTURE.md` (modes `skin` et `canvas`, feuille générée, exemptions `data-cg-paper` / `data-cg-emergency` / `data-cg-keep`), `coverage-matrix.md` (page par page),
+`ACCEPTANCE-PACKAGE.md` (preuves et limites), `ROLLBACK-AND-RELEASE-DOSSIER.md`. Rappels : les routes sensibles ne sont jamais `ga` et exigent une liste `validation` de scripts existants ;
+`/admin/platform-permission-grants` reste `legacy-only` ; le site vitrine est exclu. Après toute modification de la carte de teinte : `npm run glass:skin`, `npm run glass:tokenize-css`, `npm run glass:sync-portal`.

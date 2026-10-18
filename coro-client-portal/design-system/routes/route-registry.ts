@@ -1,0 +1,75 @@
+/**
+ * Registre des routes Liquid Glass du PORTAIL CLIENT (mandat 49).
+ *
+ * Le portail n'a pas de shell Glass natif : sa barre (PortalLayout) fait partie du contenu et reçoit l'identité Liquid Glass par la couche
+ * de teinte (design-system/skin). Toutes ses routes sont donc « shell: 'none' » + « render: 'skin' » : en mode 'canvas', Glass seulement si
+ * (1) le client a choisi Glass dans « Mon profil » ET (2) la bêta est activée par le jeton exact de build `NEXT_PUBLIC_GLASS_BETA=production-preview`.
+ * Sans le jeton, aucune route ne quitte le Legacy : le portail livré aux clients est strictement inchangé.
+ *
+ * Règles de sécurité (mêmes que l'application interne) :
+ *  - une route absente de ce registre reste entièrement Legacy ;
+ *  - une route sensible ne peut jamais être 'ga' ; en bêta elle exige des tests de validation nommés et existants (package.json) ;
+ *  - le portail n'hérite d'aucune navigation ni permission de l'application interne : ce registre ne change ni routes, ni guards, ni API.
+ *
+ * Cohérence avec le code : portal-glass.test.cjs compare ce fichier aux fichiers page.tsx de app/.
+ */
+
+export type GlassStatus = 'legacy-only' | 'beta' | 'ga';
+export type RouteShell = 'app' | 'none';
+export type RouteFamily = 'auth' | 'portal' | 'sentinelle' | 'public';
+export type RouteStyling = 'inline-hex' | 'tailwind' | 'css-module' | 'none';
+export type RouteSensitivity = 'documents' | 'emergency-content' | 'auth';
+
+export interface RouteEntry {
+  pattern: string;
+  family: RouteFamily;
+  shell: RouteShell;
+  status: GlassStatus;
+  styling: RouteStyling[];
+  sensitivity?: RouteSensitivity[];
+  island?: boolean;
+  devOnly?: boolean;
+  exception?: string;
+  render?: 'skin';
+  /** Scripts npm de coro-client-portal dont le passage conditionne la migration d'une route sensible. */
+  validation?: readonly string[];
+}
+
+export const ROUTE_REGISTRY: readonly RouteEntry[] = [
+  { pattern: '/', family: 'public', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'] },
+  { pattern: '/activities', family: 'portal', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'] },
+  { pattern: '/bookings', family: 'portal', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'], sensitivity: ['emergency-content'], validation: ['test:skin', 'test:bookings'] },
+  { pattern: '/buildings', family: 'portal', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'] },
+  { pattern: '/dashboard', family: 'portal', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'] },
+  { pattern: '/documents', family: 'portal', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['documents'], validation: ['test:skin'] },
+  { pattern: '/documents/[id]', family: 'portal', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['documents'], validation: ['test:skin'] },
+  { pattern: '/files/[id]', family: 'portal', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['documents'], validation: ['test:skin'] },
+  { pattern: '/forgot-password', family: 'auth', shell: 'none', status: 'beta', render: 'skin', styling: ['none'], sensitivity: ['auth'], validation: ['test:skin'] },
+  { pattern: '/intelligence', family: 'portal', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'] },
+  { pattern: '/intervention/[token]', family: 'public', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['emergency-content'], validation: ['test:skin'] },
+  { pattern: '/kiosk/[token]', family: 'public', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['emergency-content'], validation: ['test:skin'] },
+  { pattern: '/kiosk/qr/[token]', family: 'public', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['emergency-content'], validation: ['test:skin'] },
+  { pattern: '/login', family: 'auth', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['auth'], validation: ['test:skin'] },
+  { pattern: '/magic', family: 'auth', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'], sensitivity: ['auth'], validation: ['test:skin'] },
+  { pattern: '/map', family: 'portal', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'] },
+  { pattern: '/notifications', family: 'portal', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'] },
+  { pattern: '/offline', family: 'public', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'] },
+  { pattern: '/population/[publicSlug]', family: 'public', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex', 'css-module'], sensitivity: ['emergency-content'], validation: ['test:skin', 'test:population-identity', 'test:population-profile', 'test:population-sharing', 'test:sms-compliance'] },
+  { pattern: '/presence/[kioskToken]', family: 'public', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['emergency-content'], validation: ['test:skin'] },
+  { pattern: '/profile', family: 'portal', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'] },
+  { pattern: '/reset-password', family: 'auth', shell: 'none', status: 'beta', render: 'skin', styling: ['none'], sensitivity: ['auth'], validation: ['test:skin'] },
+  { pattern: '/sentinelle/[buildingId]', family: 'sentinelle', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['emergency-content'], validation: ['test:skin', 'test:sentinelle-auth'] },
+  { pattern: '/sentinelle/[buildingId]/corrective-actions/[actionId]', family: 'sentinelle', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex', 'css-module'], sensitivity: ['emergency-content'], validation: ['test:skin', 'test:sentinelle-auth'] },
+  { pattern: '/sentinelle/[buildingId]/employes', family: 'sentinelle', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['emergency-content'], validation: ['test:skin', 'test:sentinelle-auth'] },
+  { pattern: '/sentinelle/[buildingId]/evacuation', family: 'sentinelle', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['emergency-content'], validation: ['test:skin', 'test:sentinelle-auth'] },
+  { pattern: '/sentinelle/[buildingId]/historique', family: 'sentinelle', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['emergency-content'], validation: ['test:skin', 'test:sentinelle-auth'] },
+  { pattern: '/sentinelle/[buildingId]/incident', family: 'sentinelle', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['emergency-content'], validation: ['test:skin', 'test:sentinelle-auth'] },
+  { pattern: '/sentinelle/[buildingId]/incidents', family: 'sentinelle', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['emergency-content'], validation: ['test:skin', 'test:sentinelle-auth'] },
+  { pattern: '/sentinelle/[buildingId]/incidents/[incidentId]', family: 'sentinelle', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['emergency-content'], validation: ['test:skin', 'test:sentinelle-auth'] },
+  { pattern: '/sentinelle/[buildingId]/invitations', family: 'sentinelle', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['emergency-content'], validation: ['test:skin', 'test:sentinelle-auth'] },
+  { pattern: '/sentinelle/[buildingId]/population', family: 'sentinelle', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex', 'css-module'], sensitivity: ['emergency-content'], validation: ['test:skin', 'test:sentinelle-auth', 'test:population-sharing', 'test:population-identity', 'test:population-profile'] },
+  { pattern: '/sentinelle/[buildingId]/population/evidence/[evidenceId]', family: 'sentinelle', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex', 'css-module'], sensitivity: ['emergency-content'], validation: ['test:skin', 'test:sentinelle-auth', 'test:population-sharing', 'test:population-identity', 'test:population-profile'] },
+  { pattern: '/sentinelle/[buildingId]/population/reviews/[reviewId]', family: 'sentinelle', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex', 'css-module'], sensitivity: ['emergency-content'], validation: ['test:skin', 'test:sentinelle-auth', 'test:population-sharing', 'test:population-identity', 'test:population-profile'] },
+  { pattern: '/sentinelle/[buildingId]/rapports', family: 'sentinelle', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['emergency-content'], validation: ['test:skin', 'test:sentinelle-auth'] },
+  { pattern: '/sentinelle/[buildingId]/resilience', family: 'sentinelle', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['emergency-content'], validation: ['test:skin', 'test:sentinelle-auth'] },
+];

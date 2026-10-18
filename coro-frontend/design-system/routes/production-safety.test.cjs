@@ -145,25 +145,39 @@ test('/settings et /activities/portfolio (seules routes bêta) : îlot Legacy en
   assert.equal(matcher.resolveRoute('/activities/portfolio', prod).mode, 'island');
   assert.equal(matcher.resolveRoute('/activities/portfolio', { ...prod, betaEnabled: core.resolveBetaEnabled({ production: true, envValue: 'true', storageValue: 'on' }) }).mode, 'island', 'activation accidentelle');
   assert.equal(matcher.resolveRoute('/activities/portfolio', { ...prod, betaEnabled: core.resolveBetaEnabled({ production: true, envValue: 'production-preview' }) }).mode, 'glass');
-  // Rendement (modèle gouverné operational / financial de main) : legacy-only. Ces routes ne sont JAMAIS rendues en Glass, quelle que soit
-  // l'activation : ni en production par défaut, ni avec le jeton exact, ni en développement avec la bêta activée. /dashboard (ga) et /profile
-  // (ga) ne les rendent pas Glass par héritage. Une future re-migration devra modifier ce test et la liste BETA_ALLOWLIST, explicitement.
+  // Rendement (modèle gouverné operational / financial de main). Décision Founder du mandat 49 : migration visuelle COMPLÈTE, donc ces routes
+  // sont désormais re-teintées (jamais réécrites : « skin », le contenu et les contrats financiers sont inchangés). Garde-fous conservés :
+  //  - production sans jeton exact : îlot Legacy, comme avant ;
+  //  - jamais ga, jamais Glass NATIF (mode 'glass') : la couche de teinte ne change aucune donnée, aucun calcul, aucune permission ;
+  //  - validation nommée : les contrats rendement / montants (CAD, UNKNOWN sûr) doivent passer.
   for (const route of ['/dashboard/rendement', '/profile/rendement']) {
     assert.equal(matcher.resolveRoute(route, prod).mode, 'island', route + ' : production, sans activation');
-    assert.equal(matcher.resolveRoute(route, { ...prod, betaEnabled: core.resolveBetaEnabled({ production: true, envValue: 'production-preview' }) }).mode, 'island', route + ' : jeton exact — reste Legacy');
-    assert.equal(matcher.resolveRoute(route, { betaEnabled: true }).mode, 'island', route + ' : développement, bêta activée — reste Legacy');
-    assert.equal(ROUTE_REGISTRY.find((e) => e.pattern === route).status, 'legacy-only', route);
+    assert.equal(matcher.resolveRoute(route, { ...prod, betaEnabled: core.resolveBetaEnabled({ production: true, envValue: '1', storageValue: 'on' }) }).mode, 'island', route + ' : activation accidentelle — reste Legacy');
+    assert.equal(matcher.resolveRoute(route, { ...prod, betaEnabled: core.resolveBetaEnabled({ production: true, envValue: 'production-preview' }) }).mode, 'skin', route + ' : jeton exact — re-teintée, jamais native');
+    assert.equal(matcher.resolveRoute(route, { betaEnabled: true }).mode, 'skin', route + ' : développement, bêta activée');
+    const e = ROUTE_REGISTRY.find((x) => x.pattern === route);
+    assert.equal(e.status, 'beta', route); assert.equal(e.render, 'skin', route);
+    assert.ok(e.validation.includes('test:rendement'), route + ' : le contrat rendement conditionne la migration');
   }
   // L'écran de direction manipule des indicateurs financiers et n'est accessible qu'aux administrateurs : sensibilité déclarée.
   assert.deepEqual([...ROUTE_REGISTRY.find((e) => e.pattern === '/dashboard/rendement').sensitivity].sort(), ['financial-legal', 'permissions']);
-  // Ses sous-pages ne sont PAS migrées : elles restent en îlot, bêta activée ou non.
+  // Les sous-pages de réglages ne sont jamais rendues en Glass NATIF (au plus re-teintées).
   for (const sub of ['/settings/users', '/settings/organization', '/settings/task-templates', '/settings/profile']) {
     const r = matcher.resolveRoute(sub, { betaEnabled: true });
     assert.notEqual(r.mode, 'glass', sub);
   }
 });
 
-test('registre : aucune route bêta ni ga en dehors des listes validées ; routes inconnues restent Legacy', () => {
-  assert.deepEqual(ROUTE_REGISTRY.filter((e) => e.status === 'beta').map((e) => e.pattern).sort(), ['/activities/portfolio', '/settings']);
+test('registre : aucune route bêta native ni ga en dehors des listes validées ; routes inconnues restent Legacy', () => {
+  assert.deepEqual(ROUTE_REGISTRY.filter((e) => e.status === 'beta' && !e.render).map((e) => e.pattern).sort(), ['/activities/portfolio', '/settings']);
+  // Les routes re-teintées ne rendent du Glass qu'avec le jeton de préproduction : sans lui, aucune ne quitte l'îlot ni le Legacy.
+  for (const e of ROUTE_REGISTRY.filter((x) => x.render === 'skin')) {
+    const sample = e.pattern.replace(/\[[^\]]+\]/g, 'x1');
+    for (const production of [true, false]) {
+      const m = matcher.resolveRoute(sample, { production, betaEnabled: false }).mode;
+      assert.ok(m === 'island' || m === 'bare' || m === 'legacy', `${e.pattern} (production=${production}) : ${m} sans bêta`);
+    }
+    assert.ok(['skin', 'canvas'].includes(matcher.resolveRoute(sample, { production: true, betaEnabled: true }).mode), e.pattern);
+  }
   for (const p of ['/nouveau-lot', '/projects/1/inconnu', '/admin/zzz']) assert.equal(matcher.resolveRoute(p, { production: true, betaEnabled: true }).mode, 'legacy', p);
 });

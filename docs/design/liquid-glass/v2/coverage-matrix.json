@@ -1,0 +1,4675 @@
+{
+  "summary": {
+    "app": {
+      "total": 83,
+      "active": 82,
+      "validated": 82,
+      "activePct": 98.8,
+      "validatedPct": 98.8
+    },
+    "portal": {
+      "total": 36,
+      "active": 35,
+      "validated": 35,
+      "activePct": 97.2,
+      "validatedPct": 97.2
+    }
+  },
+  "rows": [
+    {
+      "app": "app",
+      "route": "/",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "none"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [],
+      "status": "MIGRÉE (redirection, sans interface)",
+      "exception": false,
+      "visual": {
+        "status": "inaccessible",
+        "profile": "app-demo",
+        "issues": [
+          "inaccessible (ECHEC:/dashboard) — redirection ou erreur"
+        ],
+        "measures": 0
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/activities/portfolio",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 3,
+      "tables": 2,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 12,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "Glass natif",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-native",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/activities/portfolio/portfolio-glass.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/capacity",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 30,
+      "sensitivity": [
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/admin/changelog",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 1,
+      "destructive": 1,
+      "responsive": 17,
+      "sensitivity": [
+        "destructive",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/admin/commercial",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 1,
+      "forms": 0,
+      "tables": 1,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 1,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/commercial/commercial-center.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/commercial/assumptions/cost",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 2,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 2,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:commercial-assumptions",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/commercial/assumptions/assumptions.contract.test.cjs",
+        "app/admin/commercial/commercial-center.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/commercial/assumptions/value",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 2,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 2,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:commercial-assumptions",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/commercial/assumptions/assumptions.contract.test.cjs",
+        "app/admin/commercial/commercial-center.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/commercial/clauses",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 6,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:commercial-clauses",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/commercial/clauses/clauses.contract.test.cjs",
+        "app/admin/commercial/commercial-center.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/commercial/configuration",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 1,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 4,
+      "sensitivity": [
+        "destructive",
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/commercial/commercial-center.contract.test.cjs",
+        "app/admin/commercial/configuration/configuration.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/commercial/configurator",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 5,
+      "tables": 2,
+      "modals": 2,
+      "destructive": 0,
+      "responsive": 31,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:commercial-configurator",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/commercial/commercial-center.contract.test.cjs",
+        "app/admin/commercial/configurator/configurator.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/commercial/content",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 9,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:commercial-content",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/commercial/commercial-center.contract.test.cjs",
+        "app/admin/commercial/content/content.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/commercial/contracts",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 1,
+      "forms": 0,
+      "tables": 1,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:organization-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/commercial/commercial-center.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/commercial/dossier/[targetType]/[targetId]",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 1,
+      "forms": 2,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 12,
+      "sensitivity": [
+        "destructive",
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/commercial/commercial-center.contract.test.cjs",
+        "app/admin/commercial/dossier/dossier.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/commercial/entitlements",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 1,
+      "forms": 0,
+      "tables": 1,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:capability-entitlements",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/commercial/commercial-center.contract.test.cjs",
+        "app/admin/commercial/entitlements/capability-operations.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/commercial/entitlements/[organizationId]",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "tailwind"
+      ],
+      "components": 1,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 3,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:commercial-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:capability-entitlements",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/commercial/commercial-center.contract.test.cjs",
+        "app/admin/commercial/entitlements/capability-operations.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/commercial/journey",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 8,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/commercial/commercial-center.contract.test.cjs",
+        "app/admin/commercial/journey/journey.contract.test.cjs",
+        "app/admin/commercial/journey/target-pagination.test.mjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/commercial/legal-issuer",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 2,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:commercial-legal-issuer",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/commercial/commercial-center.contract.test.cjs",
+        "app/admin/commercial/legal-issuer/legal-issuer.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/commercial/proposals",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 1,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 1,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:commercial-proposals",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/commercial/commercial-center.contract.test.cjs",
+        "app/admin/commercial/proposals/commercial-proposals.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/commercial/proposals/[proposalId]",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 2,
+      "modals": 1,
+      "destructive": 1,
+      "responsive": 26,
+      "sensitivity": [
+        "destructive",
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:commercial-proposals",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/commercial/commercial-center.contract.test.cjs",
+        "app/admin/commercial/proposals/[proposalId]/proposal-document-workspace.contract.test.cjs",
+        "app/admin/commercial/proposals/commercial-proposals.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/commercial/proposals/new",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 1,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:commercial-proposals",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/commercial/commercial-center.contract.test.cjs",
+        "app/admin/commercial/proposals/commercial-proposals.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/commercial/prospects",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 2,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/commercial/commercial-center.contract.test.cjs",
+        "app/admin/commercial/prospects/prospects.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/commercial/reconciliation",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 1,
+      "forms": 0,
+      "tables": 1,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/commercial/commercial-center.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/commercial/simulator",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 5,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 7,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:commercial-simulator",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/commercial/commercial-center.contract.test.cjs",
+        "app/admin/commercial/simulator/simulator.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/control-center",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 1,
+      "forms": 0,
+      "tables": 1,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 5,
+      "sensitivity": [
+        "permissions",
+        "supervision"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:control-center",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/control-center/control-center.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/feedback",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 9,
+      "sensitivity": [
+        "destructive",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/admin/health",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 31,
+      "sensitivity": [
+        "permissions",
+        "supervision"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/admin/mandates",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 1,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 8,
+      "sensitivity": [
+        "emergency-content",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/admin/map",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 1,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/admin/metering",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 1,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 1,
+      "sensitivity": [
+        "financial-legal",
+        "permissions",
+        "supervision"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:metering",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/metering/metering.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/organizations",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 1,
+      "destructive": 1,
+      "responsive": 17,
+      "sensitivity": [
+        "destructive",
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:organization360",
+          "result": "PASS"
+        },
+        {
+          "script": "test:organization-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:capability-entitlements",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/admin/organizations/[organizationId]",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 1,
+      "forms": 1,
+      "tables": 2,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 8,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:organization360",
+          "result": "PASS"
+        },
+        {
+          "script": "test:organization-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:capability-entitlements",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/organizations/[organizationId]/capability-entitlements.contract.test.cjs",
+        "app/admin/organizations/[organizationId]/organization-contracts.contract.test.cjs",
+        "app/admin/organizations/[organizationId]/organization360.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/organizations/[organizationId]/clients/[clientId]",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 3,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:organization360",
+          "result": "PASS"
+        },
+        {
+          "script": "test:organization-contracts",
+          "result": "PASS"
+        },
+        {
+          "script": "test:capability-entitlements",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/organizations/[organizationId]/capability-entitlements.contract.test.cjs",
+        "app/admin/organizations/[organizationId]/organization-contracts.contract.test.cjs",
+        "app/admin/organizations/[organizationId]/organization360.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/platform-permission-grants",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 11,
+      "sensitivity": [
+        "destructive",
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "legacy-only",
+      "render": "Legacy",
+      "tests": [],
+      "status": "EXCLUE",
+      "exception": true,
+      "visual": null,
+      "localTests": [
+        "app/admin/platform-permission-grants/platform-permission-grants.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/procedures",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 1,
+      "destructive": 0,
+      "responsive": 15,
+      "sensitivity": [
+        "emergency-content",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/admin/procedures/[id]",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 30,
+      "sensitivity": [
+        "destructive",
+        "emergency-content",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/admin/procedures/custom",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 1,
+      "destructive": 1,
+      "responsive": 0,
+      "sensitivity": [
+        "destructive",
+        "emergency-content",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/admin/product-catalog",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 1,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-catalog",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/product-catalog/product-catalog.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/product-catalog/capabilities",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-catalog",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/product-catalog/product-catalog.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/product-catalog/price-books",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 3,
+      "tables": 1,
+      "modals": 1,
+      "destructive": 1,
+      "responsive": 4,
+      "sensitivity": [
+        "destructive",
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:commercial-catalog",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/admin/product-catalog/product-catalog.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/admin/projects",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 1,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/admin/referrals",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 17,
+      "sensitivity": [
+        "destructive",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/admin/rex-reports",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/admin/task-templates",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 16,
+      "sensitivity": [
+        "destructive",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-founder",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/blog",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 8,
+      "sensitivity": [
+        "destructive"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/blog/[id]/edit",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 1,
+      "forms": 2,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 5,
+      "sensitivity": [
+        "destructive"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/blog/new",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 1,
+      "forms": 2,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 5,
+      "sensitivity": [
+        "destructive"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/bookings",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 1,
+      "destructive": 1,
+      "responsive": 57,
+      "sensitivity": [
+        "destructive",
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:bookings",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/bookings/booking-commitment.contract.test.mjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/buildings",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 1,
+      "forms": 1,
+      "tables": 0,
+      "modals": 1,
+      "destructive": 1,
+      "responsive": 17,
+      "sensitivity": [
+        "destructive"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/buildings/[id]",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 2,
+      "tables": 0,
+      "modals": 1,
+      "destructive": 0,
+      "responsive": 23,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/buildings/compliance",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 1,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 8,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/buildings/map",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 1,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/clients",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 1,
+      "forms": 1,
+      "tables": 0,
+      "modals": 1,
+      "destructive": 1,
+      "responsive": 19,
+      "sensitivity": [
+        "destructive"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/clients/[id]",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 2,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 19,
+      "sensitivity": [
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/clients/[id]/portfolio",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 2,
+      "tables": 1,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 14,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/configurator/[projectId]",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 2,
+      "forms": 3,
+      "tables": 1,
+      "modals": 1,
+      "destructive": 2,
+      "responsive": 49,
+      "sensitivity": [
+        "destructive",
+        "documents",
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/configurator/pca/[projectId]",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 37,
+      "sensitivity": [
+        "destructive",
+        "documents",
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/dashboard",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 1,
+      "forms": 0,
+      "tables": 1,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 70,
+      "sensitivity": [],
+      "registryStatus": "ga",
+      "render": "Glass natif",
+      "tests": [],
+      "status": "GA (pilote)",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-native",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/dashboard/pending-approvals.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/dashboard/rendement",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 1,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 2,
+      "sensitivity": [
+        "financial-legal",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:rendement",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/dashboard/pending-approvals.contract.test.cjs",
+        "app/dashboard/rendement/financial-money.test.cjs",
+        "app/dashboard/rendement/rendement.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/editor/[projectId]",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 16,
+      "forms": 15,
+      "tables": 16,
+      "modals": 5,
+      "destructive": 7,
+      "responsive": 41,
+      "sensitivity": [
+        "destructive",
+        "documents",
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/editor/[projectId]/procedures/[procedureId]",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 37,
+      "sensitivity": [
+        "destructive",
+        "documents",
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/glass-kit",
+      "layout": "AppLayout",
+      "style": [
+        "none"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [],
+      "registryStatus": "ga",
+      "render": "Glass natif",
+      "tests": [],
+      "status": "OUTIL DE DÉVELOPPEMENT",
+      "exception": false,
+      "visual": null,
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/library",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 21,
+      "sensitivity": [
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/login",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 3,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 12,
+      "sensitivity": [
+        "auth"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:auth-hydration",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/notifications",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 8,
+      "sensitivity": [
+        "destructive"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/planning",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "css-module"
+      ],
+      "components": 0,
+      "forms": 7,
+      "tables": 0,
+      "modals": 2,
+      "destructive": 2,
+      "responsive": 4,
+      "sensitivity": [
+        "destructive"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/planning/planning.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/profile",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 2,
+      "forms": 2,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 22,
+      "sensitivity": [
+        "destructive"
+      ],
+      "registryStatus": "ga",
+      "render": "Glass natif",
+      "tests": [],
+      "status": "GA (pilote)",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-native",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/profile/rendement",
+      "layout": "AppLayout",
+      "style": [
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 2,
+      "sensitivity": [
+        "financial-legal"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:rendement",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/projects",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 1,
+      "forms": 1,
+      "tables": 0,
+      "modals": 1,
+      "destructive": 1,
+      "responsive": 0,
+      "sensitivity": [
+        "destructive"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/projects/[id]",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 4,
+      "forms": 3,
+      "tables": 0,
+      "modals": 3,
+      "destructive": 2,
+      "responsive": 29,
+      "sensitivity": [
+        "destructive",
+        "documents"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/projects/[id]/activities",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "inline-hex",
+        "tailwind",
+        "css-module"
+      ],
+      "components": 0,
+      "forms": 3,
+      "tables": 0,
+      "modals": 1,
+      "destructive": 1,
+      "responsive": 3,
+      "sensitivity": [
+        "destructive"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/projects/[id]/mandate",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 7,
+      "tables": 1,
+      "modals": 3,
+      "destructive": 4,
+      "responsive": 22,
+      "sensitivity": [
+        "destructive",
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/projects/[id]/procedures",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 1,
+      "destructive": 1,
+      "responsive": 0,
+      "sensitivity": [
+        "destructive",
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/referrals",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 1,
+      "forms": 0,
+      "tables": 1,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 18,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/reset-password",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 10,
+      "sensitivity": [
+        "auth"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:auth-hydration",
+          "result": "PASS"
+        },
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE (redirection, sans interface)",
+      "exception": false,
+      "visual": {
+        "status": "inaccessible",
+        "profile": "app-demo",
+        "issues": [
+          "inaccessible (ECHEC:/login) — redirection ou erreur"
+        ],
+        "measures": 0
+      },
+      "localTests": []
+    },
+    {
+      "app": "app",
+      "route": "/settings",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 15,
+      "sensitivity": [
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "Glass natif",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-native",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/settings/settings-glass.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/settings/activity-types",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 2,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 9,
+      "sensitivity": [
+        "destructive",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/settings/activity-types/activity-types.test.cjs",
+        "app/settings/settings-glass.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/settings/feedback",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 3,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/settings/settings-glass.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/settings/module1-template",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 3,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/settings/settings-glass.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/settings/organization",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 1,
+      "forms": 2,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 28,
+      "sensitivity": [
+        "destructive",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/settings/settings-glass.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/settings/profile",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "none"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [],
+      "status": "MIGRÉE (redirection, sans interface)",
+      "exception": false,
+      "visual": {
+        "status": "inaccessible",
+        "profile": "app-demo",
+        "issues": [
+          "inaccessible (ECHEC:/profile) — redirection ou erreur"
+        ],
+        "measures": 0
+      },
+      "localTests": [
+        "app/settings/settings-glass.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/settings/task-templates",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 19,
+      "sensitivity": [
+        "destructive"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/settings/settings-glass.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/settings/timelog-categories",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 18,
+      "sensitivity": [
+        "destructive"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/settings/settings-glass.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/settings/users",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 2,
+      "forms": 2,
+      "tables": 1,
+      "modals": 1,
+      "destructive": 2,
+      "responsive": 19,
+      "sensitivity": [
+        "destructive",
+        "permissions"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:design-system",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/settings/settings-glass.contract.test.cjs"
+      ]
+    },
+    {
+      "app": "app",
+      "route": "/timelog",
+      "layout": "AppLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 1,
+      "modals": 1,
+      "destructive": 1,
+      "responsive": 20,
+      "sensitivity": [
+        "destructive"
+      ],
+      "registryStatus": "beta",
+      "render": "skin + shell Glass",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "app-demo",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [],
+      "status": "MIGRÉE (redirection, sans interface)",
+      "exception": false,
+      "visual": {
+        "status": "inaccessible",
+        "profile": "portal",
+        "issues": [
+          "inaccessible (ECHEC:/dashboard) — redirection ou erreur"
+        ],
+        "measures": 0
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/activities",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/bookings",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 20,
+      "sensitivity": [
+        "destructive"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:bookings",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/bookings/bookings.contract.test.mjs"
+      ]
+    },
+    {
+      "app": "portal",
+      "route": "/buildings",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/dashboard",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/documents",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/documents/[id]",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 1,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/files/[id]",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 1,
+      "destructive": 0,
+      "responsive": 22,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        }
+      ],
+      "status": "NON VALIDÉE",
+      "exception": false,
+      "visual": {
+        "status": "inaccessible",
+        "profile": "portal",
+        "issues": [
+          "inaccessible (ECHEC:/login) — redirection ou erreur"
+        ],
+        "measures": 0
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/forgot-password",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "none"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [
+        "auth"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/intelligence",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/intervention/[token]",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/kiosk/[token]",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 0,
+      "sensitivity": [
+        "destructive",
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/kiosk/qr/[token]",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE (redirection, sans interface)",
+      "exception": false,
+      "visual": {
+        "status": "inaccessible",
+        "profile": "portal",
+        "issues": [
+          "inaccessible (ECHEC:/dashboard) — redirection ou erreur"
+        ],
+        "measures": 0
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/login",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [
+        "auth"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/magic",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "inline-hex",
+        "tailwind"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 5,
+      "sensitivity": [
+        "auth"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE (redirection, sans interface)",
+      "exception": false,
+      "visual": {
+        "status": "inaccessible",
+        "profile": "portal",
+        "issues": [
+          "inaccessible (ECHEC:/login) — redirection ou erreur"
+        ],
+        "measures": 0
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/map",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 1,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/notifications",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/offline",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/population/[publicSlug]",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "inline-hex",
+        "css-module"
+      ],
+      "components": 0,
+      "forms": 7,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 2,
+      "sensitivity": [
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:population-identity",
+          "result": "PASS"
+        },
+        {
+          "script": "test:population-profile",
+          "result": "PASS"
+        },
+        {
+          "script": "test:population-sharing",
+          "result": "PASS"
+        },
+        {
+          "script": "test:sms-compliance",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/population/populationContactProfile.contract.test.mjs",
+        "app/population/populationIdentity.contract.test.mjs"
+      ]
+    },
+    {
+      "app": "portal",
+      "route": "/presence/[kioskToken]",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/profile",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 1,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": []
+    },
+    {
+      "app": "portal",
+      "route": "/reset-password",
+      "layout": "aucun (plein écran)",
+      "style": [
+        "none"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [
+        "auth"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/reset-password/passwordPolicy.test.mjs"
+      ]
+    },
+    {
+      "app": "portal",
+      "route": "/sentinelle/[buildingId]",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 1,
+      "destructive": 1,
+      "responsive": 0,
+      "sensitivity": [
+        "destructive",
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:sentinelle-auth",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/sentinelle/sentinelleAuth.contract.test.mjs"
+      ]
+    },
+    {
+      "app": "portal",
+      "route": "/sentinelle/[buildingId]/corrective-actions/[actionId]",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex",
+        "css-module"
+      ],
+      "components": 0,
+      "forms": 2,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 1,
+      "sensitivity": [
+        "destructive",
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:sentinelle-auth",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/sentinelle/sentinelleAuth.contract.test.mjs"
+      ]
+    },
+    {
+      "app": "portal",
+      "route": "/sentinelle/[buildingId]/employes",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 1,
+      "modals": 1,
+      "destructive": 1,
+      "responsive": 0,
+      "sensitivity": [
+        "destructive",
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:sentinelle-auth",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/sentinelle/sentinelleAuth.contract.test.mjs"
+      ]
+    },
+    {
+      "app": "portal",
+      "route": "/sentinelle/[buildingId]/evacuation",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 0,
+      "sensitivity": [
+        "destructive",
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:sentinelle-auth",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/sentinelle/sentinelleAuth.contract.test.mjs"
+      ]
+    },
+    {
+      "app": "portal",
+      "route": "/sentinelle/[buildingId]/historique",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:sentinelle-auth",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/sentinelle/sentinelleAuth.contract.test.mjs"
+      ]
+    },
+    {
+      "app": "portal",
+      "route": "/sentinelle/[buildingId]/incident",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 0,
+      "sensitivity": [
+        "destructive",
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:sentinelle-auth",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/sentinelle/sentinelleAuth.contract.test.mjs"
+      ]
+    },
+    {
+      "app": "portal",
+      "route": "/sentinelle/[buildingId]/incidents",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:sentinelle-auth",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/sentinelle/sentinelleAuth.contract.test.mjs"
+      ]
+    },
+    {
+      "app": "portal",
+      "route": "/sentinelle/[buildingId]/incidents/[incidentId]",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:sentinelle-auth",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/sentinelle/sentinelleAuth.contract.test.mjs"
+      ]
+    },
+    {
+      "app": "portal",
+      "route": "/sentinelle/[buildingId]/invitations",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:sentinelle-auth",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/sentinelle/sentinelleAuth.contract.test.mjs"
+      ]
+    },
+    {
+      "app": "portal",
+      "route": "/sentinelle/[buildingId]/population",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex",
+        "css-module"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 2,
+      "destructive": 1,
+      "responsive": 11,
+      "sensitivity": [
+        "destructive",
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:sentinelle-auth",
+          "result": "PASS"
+        },
+        {
+          "script": "test:population-sharing",
+          "result": "PASS"
+        },
+        {
+          "script": "test:population-identity",
+          "result": "PASS"
+        },
+        {
+          "script": "test:population-profile",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/sentinelle/[buildingId]/population/publicPortalSharing.test.mjs",
+        "app/sentinelle/sentinelleAuth.contract.test.mjs"
+      ]
+    },
+    {
+      "app": "portal",
+      "route": "/sentinelle/[buildingId]/population/evidence/[evidenceId]",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex",
+        "css-module"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 2,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 3,
+      "sensitivity": [
+        "destructive",
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:sentinelle-auth",
+          "result": "PASS"
+        },
+        {
+          "script": "test:population-sharing",
+          "result": "PASS"
+        },
+        {
+          "script": "test:population-identity",
+          "result": "PASS"
+        },
+        {
+          "script": "test:population-profile",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/sentinelle/[buildingId]/population/publicPortalSharing.test.mjs",
+        "app/sentinelle/sentinelleAuth.contract.test.mjs"
+      ]
+    },
+    {
+      "app": "portal",
+      "route": "/sentinelle/[buildingId]/population/reviews/[reviewId]",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex",
+        "css-module"
+      ],
+      "components": 0,
+      "forms": 1,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 1,
+      "responsive": 1,
+      "sensitivity": [
+        "destructive",
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:sentinelle-auth",
+          "result": "PASS"
+        },
+        {
+          "script": "test:population-sharing",
+          "result": "PASS"
+        },
+        {
+          "script": "test:population-identity",
+          "result": "PASS"
+        },
+        {
+          "script": "test:population-profile",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/sentinelle/[buildingId]/population/publicPortalSharing.test.mjs",
+        "app/sentinelle/[buildingId]/population/reviews/trackingPresentation.test.mjs",
+        "app/sentinelle/sentinelleAuth.contract.test.mjs"
+      ]
+    },
+    {
+      "app": "portal",
+      "route": "/sentinelle/[buildingId]/rapports",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 2,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:sentinelle-auth",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/sentinelle/sentinelleAuth.contract.test.mjs"
+      ]
+    },
+    {
+      "app": "portal",
+      "route": "/sentinelle/[buildingId]/resilience",
+      "layout": "PortalLayout",
+      "style": [
+        "inline-hex"
+      ],
+      "components": 0,
+      "forms": 0,
+      "tables": 0,
+      "modals": 0,
+      "destructive": 0,
+      "responsive": 0,
+      "sensitivity": [
+        "emergency-content"
+      ],
+      "registryStatus": "beta",
+      "render": "skin (plein écran)",
+      "tests": [
+        {
+          "script": "test:skin",
+          "result": "PASS"
+        },
+        {
+          "script": "test:sentinelle-auth",
+          "result": "PASS"
+        }
+      ],
+      "status": "MIGRÉE",
+      "exception": false,
+      "visual": {
+        "status": "ok",
+        "profile": "portal",
+        "issues": [],
+        "measures": 8
+      },
+      "localTests": [
+        "app/sentinelle/sentinelleAuth.contract.test.mjs"
+      ]
+    }
+  ]
+}

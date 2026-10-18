@@ -710,7 +710,7 @@ export default function SentinelleDashboard() {
 
       {/* ── Modal résultat panique ── */}
       {panicMode && panicResult && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div data-cg-emergency="" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ backgroundColor: '#FFFFFF', borderRadius: 16, maxWidth: 440, width: '100%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.3)' }}>
             <div style={{ backgroundColor: '#C0392B', padding: '24px 28px', textAlign: 'center' }}>
               <p style={{ margin: 0, fontSize: 48 }}>🚨</p>

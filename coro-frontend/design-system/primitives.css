@@ -233,3 +233,26 @@
 @media (min-width: 640px) {
   :root[data-ui="glass"] .cg-legacy-island { padding: var(--cg-space-5); }
 }
+
+/*
+ * Zone re-teintée (.cg-skinzone) : composant partagé écrit en classes Tailwind à couleurs arbitraires (p. ex. l'éditeur d'horaire du profil), affiché
+ * dans un écran Glass NATIF où la feuille de teinte globale n'est pas chargée. Seules les couleurs réellement employées par ce composant sont remappées.
+ * Inactive en Classique et en îlot Legacy (le contenu y garde son fond clair d'origine).
+ */
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone { background-color: var(--cg-glass-bg-strong) !important; border-color: var(--cg-border-default) !important; color: var(--cg-text-primary); }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone .bg-white { background-color: var(--cg-glass-bg-strong) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="bg-[#F8F9FA]"] { background-color: var(--cg-hover-overlay) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="bg-[#FCEFED]"] { background-color: var(--cg-danger-bg) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="bg-[#EAF7EE]"] { background-color: var(--cg-success-bg) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="text-[#2C3E50]"] { color: var(--cg-text-primary) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="text-[#45515C]"] { color: var(--cg-text-secondary) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="text-[#6C757D]"] { color: var(--cg-text-muted) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="text-[#ADB5BD]"] { color: var(--cg-text-muted) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="text-[#922B21]"] { color: var(--cg-danger-fg) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="text-[#A93226]"] { color: var(--cg-danger-fg) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="text-[#9A6700]"] { color: var(--cg-warning-fg) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="text-[#277245]"] { color: var(--cg-success-fg) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="text-[#2471A3]"] { color: var(--cg-info-fg) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="border-[#E1E5E8]"] { border-color: var(--cg-border-default) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="border-[#D7DEE3]"] { border-color: var(--cg-border-default) !important; }
+:root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone [class~="border-[#CED4DA]"] { border-color: var(--cg-border-default) !important; }

@@ -18,7 +18,12 @@ const byPattern = new Map(ROUTE_REGISTRY.map((e) => [e.pattern, e]));
 
 // Routes autorisées à rendre du Glass. Toute activation d'une nouvelle route doit modifier CETTE liste : décision explicite et relue.
 const GA_ALLOWLIST = ['/dashboard', '/profile', '/glass-kit'];
+// Écrans Glass NATIFS en bêta (réécrits pour le Glass). Les écrans re-teintés (`render: 'skin'`) ne figurent pas ici : voir plus bas.
 const BETA_ALLOWLIST = ['/activities/portfolio', '/settings'];
+// Routes qu'aucune migration V2 ne peut activer sans décision Founder distincte (exception de sécurité documentée).
+const NEVER_MIGRATED = ['/admin/platform-permission-grants'];
+const SENSITIVE_KINDS = ['emergency-content', 'documents', 'financial-legal', 'auth', 'permissions'];
+const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
 
 const sample = (pattern) => pattern.replace(/\[\.\.\.[^\]]+\]/g, 'a/b').replace(/\[[^\]]+\]/g, 'abc123');
 
@@ -43,19 +48,50 @@ test('shell, styles et actions destructives du registre = analyse des imports', 
   }
 });
 
-test('statuts : seules les routes validées sont ga ; aucune bêta tant qu’aucun écran n’est prêt', () => {
+test('statuts : seules les routes validées sont ga ; la bêta native est figée ; la bêta re-teintée est explicite', () => {
   const ga = ROUTE_REGISTRY.filter((e) => e.status === 'ga').map((e) => e.pattern).sort();
   assert.deepEqual(ga, [...GA_ALLOWLIST].sort());
-  assert.deepEqual(ROUTE_REGISTRY.filter((e) => e.status === 'beta').map((e) => e.pattern).sort(), BETA_ALLOWLIST);
+  assert.deepEqual(ROUTE_REGISTRY.filter((e) => e.status === 'beta' && !e.render).map((e) => e.pattern).sort(), BETA_ALLOWLIST);
   for (const e of ROUTE_REGISTRY) assert.ok(['legacy-only', 'beta', 'ga'].includes(e.status));
+  for (const e of ROUTE_REGISTRY) assert.ok(e.render === undefined || e.render === 'skin', `${e.pattern} : render inconnu`);
+  // `render: 'skin'` n'a de sens qu'en bêta (jamais GA tant que la validation de version privée n'a pas eu lieu).
+  for (const e of ROUTE_REGISTRY.filter((x) => x.render)) assert.equal(e.status, 'beta', `${e.pattern} : un écran re-teinté est bêta`);
 });
 
-test('routes sensibles : jamais ga ni bêta, et jamais sans validation distincte', () => {
+test('routes sensibles : jamais ga ; bêta seulement re-teintée, avec tests de validation nommés et existants (décision Founder, mandat 49)', () => {
   for (const e of ROUTE_REGISTRY) {
-    if ((e.sensitivity || []).some((s) => ['emergency-content', 'documents', 'financial-legal', 'auth'].includes(s))) {
-      assert.equal(e.status, 'legacy-only', `${e.pattern} est sensible et doit rester legacy-only`);
-    }
+    const kinds = (e.sensitivity || []).filter((s) => SENSITIVE_KINDS.includes(s));
+    if (!kinds.length) continue;
+    assert.notEqual(e.status, 'ga', `${e.pattern} est sensible : jamais ga`);
+    if (e.status === 'legacy-only') continue;
+    // Bêta : uniquement la migration V2 « skin » (le contenu métier n'est pas réécrit) et seulement si des tests la valident.
+    assert.equal(e.render, 'skin', `${e.pattern} : une route sensible en bêta doit être re-teintée (render: 'skin'), pas réécrite`);
+    assert.ok(Array.isArray(e.validation) && e.validation.length > 0, `${e.pattern} : liste « validation » obligatoire`);
+    for (const script of e.validation) assert.ok(pkg.scripts[script], `${e.pattern} : script de validation inexistant « ${script} »`);
   }
+});
+
+test('exceptions de sécurité : aucune route à exception ni NEVER_MIGRATED n’est activée', () => {
+  for (const p of NEVER_MIGRATED) {
+    const e = byPattern.get(p);
+    assert.ok(e, p); assert.equal(e.status, 'legacy-only', p); assert.equal(e.render, undefined, p);
+  }
+  for (const e of ROUTE_REGISTRY.filter((x) => x.exception)) assert.equal(e.status, 'legacy-only', e.pattern);
+});
+
+test('les écrans re-teintés sans shell sont des écrans plein écran connus (mode canvas) ; les routes à shell restent en mode skin', () => {
+  const entries = [
+    { pattern: '/s', family: 'work', shell: 'app', status: 'beta', render: 'skin', styling: ['none'] },
+    { pattern: '/c', family: 'auth', shell: 'none', status: 'beta', render: 'skin', styling: ['none'] },
+    { pattern: '/n', family: 'auth', shell: 'none', status: 'beta', styling: ['none'] },
+  ];
+  assert.equal(matcher.resolveRoute('/s', { entries }).mode, 'island');
+  assert.equal(matcher.resolveRoute('/s', { entries, betaEnabled: true }).mode, 'skin');
+  assert.equal(matcher.resolveRoute('/c', { entries }).mode, 'legacy');
+  assert.equal(matcher.resolveRoute('/c', { entries, betaEnabled: false }).mode, 'legacy');
+  assert.equal(matcher.resolveRoute('/c', { entries, betaEnabled: true }).mode, 'canvas');
+  // Sans re-teinte, un écran sans shell reste Legacy même en bêta (rien à rendre en Glass natif).
+  assert.equal(matcher.resolveRoute('/n', { entries, betaEnabled: true }).mode, 'legacy');
 });
 
 test('routes inconnues : legacy-only, document entièrement Legacy (aucun shell Glass)', () => {
@@ -104,16 +140,35 @@ test('bêta : Glass seulement avec activation explicite ; île sinon ; island:fa
 test('script anti-flash : décision de shell identique à la résolution TypeScript, pour toutes les routes et des inconnues', () => {
   const table = matcher.shellTable();
   const paths = [...ROUTE_REGISTRY.map((e) => sample(e.pattern)), '/inconnue', '/projects/1/zzz', '/dashboard/', '/'];
-  for (const p of paths) {
-    const attrs = {};
-    const ctx = {
-      window: { localStorage: { getItem: (k) => (k === 'coro-ui-generation' ? 'glass' : null) }, matchMedia: () => ({ matches: false }), location: { pathname: p }, setTimeout: () => 0 },
-      document: { documentElement: { setAttribute: (k, v) => { attrs[k] = v; } } },
-    };
-    vm.runInNewContext(buildThemeInitScript(table), ctx);
-    const expected = matcher.isShellRoute(p) ? 'glass' : 'legacy';
-    assert.equal(attrs['data-ui'], expected, p);
+  for (const betaBuild of [false, true]) {
+    for (const p of paths) {
+      const attrs = {};
+      const ctx = {
+        window: { localStorage: { getItem: (k) => (k === 'coro-ui-generation' ? 'glass' : null) }, matchMedia: () => ({ matches: false }), location: { pathname: p }, setTimeout: () => 0 },
+        document: { documentElement: { setAttribute: (k, v) => { attrs[k] = v; } } },
+      };
+      vm.runInNewContext(buildThemeInitScript(table, { betaBuild }), ctx);
+      const expected = matcher.isShellRoute(p, { betaEnabled: betaBuild }) ? 'glass' : 'legacy';
+      assert.equal(attrs['data-ui'], expected, `${p} (bêta ${betaBuild})`);
+    }
   }
+});
+
+test('script anti-flash : la clé locale de bêta n’active les écrans plein écran qu’en développement, jamais en production', () => {
+  const entries = [{ pattern: '/c', family: 'auth', shell: 'none', status: 'beta', render: 'skin', styling: ['none'] }];
+  const table = matcher.shellTable({ entries });
+  const run = (options, storage) => {
+    const attrs = {};
+    vm.runInNewContext(buildThemeInitScript(table, options), {
+      window: { localStorage: { getItem: (k) => (k === 'coro-ui-generation' ? 'glass' : k === 'coro-glass-beta' ? storage : null) }, matchMedia: () => ({ matches: false }), location: { pathname: '/c' }, setTimeout: () => 0 },
+      document: { documentElement: { setAttribute: (k, v) => { attrs[k] = v; } } },
+    });
+    return attrs['data-ui'];
+  };
+  assert.equal(run({ betaBuild: false, storageBeta: false }, 'on'), 'legacy', 'production : la clé locale ne doit rien activer');
+  assert.equal(run({ betaBuild: false, storageBeta: true }, 'on'), 'glass', 'développement : clé locale active');
+  assert.equal(run({ betaBuild: false, storageBeta: true }, null), 'legacy');
+  assert.equal(run({ betaBuild: true, storageBeta: false }, null), 'glass', 'jeton de build');
 });
 
 test('script anti-flash sans table : comportement historique inchangé (préférence appliquée telle quelle)', () => {

@@ -1,0 +1,79 @@
+# BROUILLON — non exécutable par la CI (extension .txt volontaire). Projet Compose isolé : docker compose -p coro-preprod -f compose.preprod.yml up -d
+# Aucun port hôte publié sauf Caddy. Aucun secret ici : les valeurs viennent de /etc/coro-preprod/preprod.env (root:root, 0600).
+name: coro-preprod
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: coro_preprod_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PREPROD_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${PREPROD_POSTGRES_PASSWORD}
+      POSTGRES_DB: coro_preprod
+    volumes:
+      - coro_preprod_pg:/var/lib/postgresql/data
+    networks: [coro_preprod_internal]
+
+  backend:
+    image: ghcr.io/nextsolution-crypto/coro-backend:${PREPROD_TAG}        # étiquette preprod-<sha>, jamais « latest »
+    container_name: coro_preprod_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${PREPROD_POSTGRES_USER}:${PREPROD_POSTGRES_PASSWORD}@postgres:5432/coro_preprod
+      JWT_SECRET: ${PREPROD_JWT_SECRET}
+      PLATFORM_MFA_SECRET: ${PREPROD_PLATFORM_MFA_SECRET}
+      NODE_ENV: staging                       # la capture MFA de test est INTERDITE en production
+      MFA_QA_CAPTURE_ENABLED: "true"
+      MFA_QA_NETWORK_ISOLATED: "true"
+      MFA_QA_CAPTURE_DIR: /tmp/mfa-capture
+      MFA_QA_ALLOWED_RECIPIENT_SUFFIXES: preprod.test
+      FRONTEND_URL: https://preprod-app.${PREPROD_DOMAIN}
+      PORT: "3002"
+      # Volontairement ABSENTS : BREVO_*, DO_SPACES_*, ANTHROPIC_API_KEY, MAPBOX_*, POPULATION_*_SECRET de production.
+    volumes:
+      - mfa_capture:/tmp/mfa-capture
+    networks: [coro_preprod_internal]
+    # Sortie réseau coupée : coro_preprod_internal est un réseau « internal » (sans passerelle), donc aucun appel sortant possible.
+
+  frontend:
+    image: ghcr.io/nextsolution-crypto/coro-frontend-preview:${PREPROD_TAG}   # construit avec NEXT_PUBLIC_GLASS_BETA=production-preview
+    container_name: coro_preprod_frontend
+    restart: unless-stopped
+    environment: { NODE_ENV: production }
+    networks: [coro_preprod_internal]
+
+  client-portal:
+    image: ghcr.io/nextsolution-crypto/coro-client-portal-preview:${PREPROD_TAG}
+    container_name: coro_preprod_portal
+    restart: unless-stopped
+    environment: { NODE_ENV: production }
+    networks: [coro_preprod_internal]
+
+  mfa-viewer:                                # lecture seule du dernier code MFA capturé (derrière Cloudflare Access)
+    image: ghcr.io/nextsolution-crypto/coro-preprod-mfa-viewer:${PREPROD_TAG}     # ~50 lignes, à écrire (hors dépôt applicatif)
+    container_name: coro_preprod_mfa_viewer
+    restart: unless-stopped
+    volumes:
+      - mfa_capture:/data:ro
+    networks: [coro_preprod_internal]
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: coro_preprod_caddy
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]              # SEUL point d'entrée ; pare-feu limité aux plages Cloudflare
+    networks: [coro_preprod_edge, coro_preprod_internal]
+    volumes:
+      - ./Caddyfile.preprod:/etc/caddy/Caddyfile:ro
+      - coro_preprod_caddy_data:/data
+
+networks:
+  coro_preprod_edge: {}                      # seul Caddy y est relié (ACME / entrée)
+  coro_preprod_internal:
+    internal: true                            # aucune sortie vers Internet pour postgres, backend, frontends, visualiseur
+
+volumes:
+  coro_preprod_pg:
+  coro_preprod_caddy_data:
+  mfa_capture:

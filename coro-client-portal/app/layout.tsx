@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import '../design-system/tokens.css';
+import '../design-system/primitives.css';
+import { ThemeProvider } from '../design-system/theme/ThemeProvider';
+import { ThemeInitScript } from '../design-system/theme/ThemeInitScript';
 
 export const metadata: Metadata = {
   title: 'CORO Client — Portail client',
@@ -66,10 +70,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr">
+    // data-ui / data-theme : Classique par défaut ; le script anti-flash n'applique Glass que sur les routes re-teintées ET si la bêta
+    // de préproduction est activée par le jeton de build (voir design-system/routes/route-registry.ts).
+    <html lang="fr" data-ui="legacy" data-theme="light" suppressHydrationWarning>
+      <head>
+        <ThemeInitScript />
+      </head>
       <body>
-        <ServiceWorkerRegister />
-        {children}
+        <ThemeProvider>
+          <ServiceWorkerRegister />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

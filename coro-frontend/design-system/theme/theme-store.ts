@@ -54,6 +54,11 @@ let initialized = false;
 let detach: (() => void) | null = null;
 /** Route active ; null tant qu'elle n'est pas connue (aucun filtrage par route). */
 let activePath: string | null = null;
+/**
+ * La feuille de teinte n'a pas pu être chargée sur la route active : on rend du Classique (jamais du Glass non teinté). Remis à faux à chaque
+ * navigation (nouvelle tentative) ; ne concerne que les routes skin/canvas.
+ */
+let skinFailed = false;
 
 function readStorage(key: string): string | null {
   try {
@@ -100,7 +105,8 @@ function compute(overrides?: Partial<Pick<ThemeSnapshot, 'preference' | 'ui'>>):
   const routeMode: RouteMode = activePath === null
     ? (ui === 'glass' ? 'glass' : 'legacy')
     : resolveRoute(activePath, { betaEnabled: isBetaEnabled(), production: IS_PRODUCTION }).mode;
-  const effectiveUi: UiGeneration = ui === 'glass' && routeMode !== 'legacy' ? 'glass' : 'legacy';
+  const needsSkin = routeMode === 'skin' || routeMode === 'canvas';
+  const effectiveUi: UiGeneration = ui === 'glass' && routeMode !== 'legacy' && !(skinFailed && needsSkin) ? 'glass' : 'legacy';
   return { preference, ui, effectiveUi, routeMode, resolvedTheme: resolveTheme(preference, systemPrefersDark()) };
 }
 
@@ -114,6 +120,14 @@ export function applyToDocument(snapshot: ThemeSnapshot): void {
   const root = document.documentElement;
   if (root.getAttribute('data-ui') !== snapshot.effectiveUi) root.setAttribute('data-ui', snapshot.effectiveUi);
   if (root.getAttribute('data-theme') !== snapshot.resolvedTheme) root.setAttribute('data-theme', snapshot.resolvedTheme);
+  // Mode de rendu de la route (skin | canvas | glass | island | bare) : pilote la couche de teinte (design-system/skin).
+  // Absent en Legacy : aucune règle Glass ne peut alors s'appliquer.
+  const mode = snapshot.effectiveUi === 'glass' ? snapshot.routeMode : null;
+  if (mode === null) {
+    if (root.hasAttribute('data-cg-mode')) root.removeAttribute('data-cg-mode');
+  } else if (root.getAttribute('data-cg-mode') !== mode) {
+    root.setAttribute('data-cg-mode', mode);
+  }
 }
 
 function refresh(): void {
@@ -135,6 +149,15 @@ export function setActivePathname(pathname: string): void {
   if (typeof window === 'undefined') return;
   if (activePath === pathname) return;
   activePath = pathname;
+  skinFailed = false;
+  refresh();
+}
+
+/** Signale l'échec (ou le rétablissement) du chargement de la feuille de teinte : la page bascule en Classique tant que l'échec dure. */
+export function setSkinFailed(failed: boolean): void {
+  if (typeof window === 'undefined') return;
+  if (skinFailed === failed) return;
+  skinFailed = failed;
   refresh();
 }
 
@@ -220,4 +243,5 @@ export function __resetThemeStoreForTests(): void {
   current = SERVER_THEME_SNAPSHOT;
   initialized = false;
   activePath = null;
+  skinFailed = false;
 }

@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { apiGet, getToken, setAuth, clearAuth } from '../store/auth';
 import { useToast } from '../store/useToast';
 import ToastContainer from './ToastContainer';
+import { useTheme } from '../../design-system/theme/ThemeProvider';
 import {
   LayoutDashboard,
   FileText,
@@ -25,6 +26,8 @@ export default function PortalLayout({
 }) {
   const router   = useRouter();
   const pathname = usePathname();
+  // Glass (préproduction) : la barre devient du verre dense ; en Classique, aucune classe n'est ajoutée (rendu inchangé).
+  const { ui } = useTheme();
 
   const [user, setUser]           = useState<any>(null);
   const [sessionError, setSessionError] = useState(false);
@@ -123,7 +126,7 @@ export default function PortalLayout({
     <div style={{ minHeight: '100vh', backgroundColor: '#F8F9FA' }}>
 
       {/* ── Topbar ── */}
-      <header style={{
+      <header className={ui === 'glass' ? 'cg-chrome' : undefined} style={{
         position: 'sticky', top: 0, zIndex: 100,
         backgroundColor: '#FFFFFF',
         borderBottom: '1px solid #E9ECEF',

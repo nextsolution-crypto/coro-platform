@@ -617,7 +617,7 @@ export default function EditorPage() {
             </div>
           </div>
         ) : (
-          <div className="rounded-md p-4 sm:p-6 lg:p-8 overflow-x-auto"
+          <div className="rounded-md p-4 sm:p-6 lg:p-8 overflow-x-auto" data-cg-paper=""
             style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
             <div dangerouslySetInnerHTML={{ __html: formatContent(currentSection?.content || '') }} />
           </div>

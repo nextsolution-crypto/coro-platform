@@ -134,16 +134,20 @@ test('campagne : les modes restreints produisent des noms de scénarios restrein
 });
 
 // ───────── Vérification des routes bêta ─────────
-test('beta-routes-check : attentes — sans jeton les 2 routes bêta restent Legacy ; avec jeton elles sont Glass seulement pour la préférence Glass ; le rendement reste Legacy', () => {
+test('beta-routes-check : sans jeton tout reste Legacy ; avec jeton, natives en Glass, re-teintées en skin (préférence Glass seulement) ; la route à exception reste Legacy', () => {
   const off = beta.expectations('off'); const on = beta.expectations('on');
   assert.deepEqual(beta.BETA_ROUTES, ['/settings', '/activities/portfolio']);
-  for (const r of ['/profile/rendement', '/dashboard/rendement']) assert.ok(beta.CONTROL_ROUTES.includes(r), r + ' : route de contrôle (toujours Legacy)');
+  for (const r of ['/profile/rendement', '/dashboard/rendement']) assert.ok(beta.SKIN_ROUTES.includes(r), r + ' : re-teinté (jamais natif)');
+  assert.deepEqual(beta.CONTROL_ROUTES, ['/admin/platform-permission-grants']);
   assert.ok(off.every((r) => r.expected === 'legacy'));
   assert.deepEqual(on.filter((r) => r.expected === 'glass').map((r) => `${r.route}|${r.ui}`).sort(), beta.BETA_ROUTES.map((r) => `${r}|glass`).sort());
-  assert.ok(on.filter((r) => beta.CONTROL_ROUTES.includes(r.route)).every((r) => r.expected === 'legacy'), 'routes de contrôle toujours Legacy');
-  // Cohérence avec le registre réel : ce sont exactement les routes bêta.
+  assert.deepEqual(on.filter((r) => r.expected === 'skin').map((r) => `${r.route}|${r.ui}`).sort(), beta.SKIN_ROUTES.map((r) => `${r}|glass`).sort());
+  assert.ok(on.filter((r) => r.ui === 'legacy').every((r) => r.expected === 'legacy'), 'préférence Classique : toujours Legacy');
+  assert.ok(on.filter((r) => beta.CONTROL_ROUTES.includes(r.route)).every((r) => r.expected === 'legacy'), 'route de contrôle toujours Legacy');
+  // Cohérence avec le registre réel.
   const { ROUTE_REGISTRY } = require('../routes/route-registry.ts');
-  assert.deepEqual(ROUTE_REGISTRY.filter((e) => e.status === 'beta').map((e) => e.pattern).sort(), [...beta.BETA_ROUTES].sort());
+  assert.deepEqual(ROUTE_REGISTRY.filter((e) => e.status === 'beta' && !e.render).map((e) => e.pattern).sort(), [...beta.BETA_ROUTES].sort());
+  for (const r of beta.SKIN_ROUTES) { const e = ROUTE_REGISTRY.find((x) => x.pattern === r); assert.equal(e.status, 'beta', r); assert.equal(e.render, 'skin', r); }
   for (const c of beta.CONTROL_ROUTES) assert.equal(ROUTE_REGISTRY.find((e) => e.pattern === c).status, 'legacy-only', c);
 });
 

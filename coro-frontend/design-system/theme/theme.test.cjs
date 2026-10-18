@@ -39,6 +39,8 @@ function makeBrowser({ storage = {}, dark = false, storageThrows = false, noMatc
   const documentElement = {
     getAttribute: (k) => (k in attrs ? attrs[k] : null),
     setAttribute: (k, v) => { attrs[k] = v; },
+    hasAttribute: (k) => k in attrs,
+    removeAttribute: (k) => { delete attrs[k]; },
   };
   const window = {
     localStorage,
@@ -347,3 +349,35 @@ for (const theme of ['light', 'dark']) {
     assert.deepEqual(failures, []);
   });
 }
+
+// ───────── Modes skin / canvas (mandat 49) ─────────
+test('data-cg-mode : posé seulement en Glass effectif, retiré en Classique (aucune règle de teinte ne peut s’appliquer)', () => {
+  const b = makeBrowser({ storage: { [core.UI_STORAGE_KEY]: 'glass', [core.GLASS_BETA_STORAGE_KEY]: 'on' } });
+  const store = loadStore(b);
+  store.setActivePathname('/projects');
+  assert.equal(b.attrs['data-ui'], 'glass');
+  assert.equal(b.attrs['data-cg-mode'], 'skin', 'route re-teintée activée par la clé de bêta (développement)');
+  store.setActivePathname('/dashboard');
+  assert.equal(b.attrs['data-cg-mode'], 'glass');
+  store.setUiGeneration('legacy');
+  assert.equal(b.attrs['data-ui'], 'legacy');
+  assert.ok(!('data-cg-mode' in b.attrs), 'Classique : aucun data-cg-mode');
+  cleanup();
+});
+
+test('échec de chargement de la feuille de teinte : retour au Classique (jamais de Glass non teinté), nouvelle tentative à la navigation', () => {
+  const b = makeBrowser({ storage: { [core.UI_STORAGE_KEY]: 'glass', [core.GLASS_BETA_STORAGE_KEY]: 'on' } });
+  const store = loadStore(b);
+  store.setActivePathname('/projects');
+  assert.equal(store.getSnapshot().effectiveUi, 'glass');
+  store.setSkinFailed(true);
+  assert.equal(store.getSnapshot().effectiveUi, 'legacy', 'la teinte a échoué : Classique');
+  assert.equal(b.attrs['data-ui'], 'legacy');
+  assert.ok(!('data-cg-mode' in b.attrs));
+  assert.equal(store.getSnapshot().ui, 'glass', 'la préférence de l’utilisateur n’est pas modifiée');
+  store.setActivePathname('/dashboard'); // navigation : nouvelle tentative, et /dashboard (Glass natif) n'a pas besoin de la teinte
+  assert.equal(store.getSnapshot().effectiveUi, 'glass');
+  store.setSkinFailed(true);
+  assert.equal(store.getSnapshot().effectiveUi, 'glass', 'un écran Glass natif ne dépend pas de la feuille de teinte');
+  cleanup();
+});

@@ -13,6 +13,11 @@ COPY . .
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
+# Présentation Liquid Glass V2 : active les écrans migrés (valeur exacte fixée par le workflow de release, vide par défaut = Classique partout).
+# Ce n'est PAS un mécanisme d'authentification ni d'autorisation : aucun droit n'en dépend (voir docs/design/liquid-glass/v2/).
+ARG NEXT_PUBLIC_GLASS_BETA=""
+ENV NEXT_PUBLIC_GLASS_BETA=$NEXT_PUBLIC_GLASS_BETA
+
 RUN npm run build
 
 # ── Production stage ─────────────────────────────────

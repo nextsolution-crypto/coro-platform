@@ -98,8 +98,13 @@ test('vue Glass : libellés Legacy conservés (statistiques, filtres, en-têtes,
   for (const col of ['Client', 'Bâtiment', 'Activité', 'Mode', 'Date prévue', 'Statut']) assert.ok(view.includes(`'${col}'`), 'en-tête manquant : ' + col);
 });
 
-test('registre : /activities/portfolio est en bêta (jamais ga) ; les sous-pages et autres routes de travail restent legacy-only', () => {
+test('registre : /activities/portfolio est en bêta native (jamais ga) ; les autres routes de travail ne sont ni natives ni ga (au plus re-teintées)', () => {
   const byPattern = new Map(ROUTE_REGISTRY.map((e) => [e.pattern, e]));
   assert.equal(byPattern.get('/activities/portfolio').status, 'beta');
-  for (const p of ['/projects', '/projects/[id]/activities', '/timelog', '/planning', '/notifications']) assert.equal(byPattern.get(p).status, 'legacy-only', p);
+  assert.equal(byPattern.get('/activities/portfolio').render, undefined, 'écran Glass natif');
+  for (const p of ['/projects', '/projects/[id]/activities', '/timelog', '/planning', '/notifications']) {
+    const e = byPattern.get(p);
+    assert.notEqual(e.status, 'ga', p);
+    assert.ok(e.status === 'legacy-only' || e.render === 'skin', `${p} : jamais Glass natif`);
+  }
 });

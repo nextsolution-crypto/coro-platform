@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-const root = new URL(".", import.meta.url).pathname.slice(1);
+// fileURLToPath fonctionne sous Windows et sous Linux (l'ancien « pathname.slice(1) » retirait la « / » initiale d'un chemin Linux).
+const root = fileURLToPath(new URL(".", import.meta.url));
 
 function sourceFiles(directory) {
   return readdirSync(directory).flatMap((entry) => {
@@ -37,14 +39,14 @@ test("authenticated Sentinelle pages use Client Portal facades for protected ope
 });
 
 test("public token-based Sentinelle operations remain explicit", () => {
-  const landing = sources.find(({ path }) => path.endsWith("[buildingId]\\page.tsx"))?.source ?? "";
+  const landing = sources.find(({ path }) => path.split("\\").join("/").endsWith("[buildingId]/page.tsx"))?.source ?? "";
   assert.match(landing, /\/occupancy\/buildings\/\$\{buildingId\}\/current-public\?token=/);
   assert.match(landing, /\/occupancy\/alarm-trigger\/\$\{alarmToken\}/);
 });
 
 test("dashboard and direct Sentinelle entry remain authenticated Client Portal surfaces", () => {
   const dashboard = readFileSync(join(root, "..", "dashboard", "page.tsx"), "utf8");
-  const landing = sources.find(({ path }) => path.endsWith("[buildingId]\\page.tsx"))?.source ?? "";
+  const landing = sources.find(({ path }) => path.split("\\").join("/").endsWith("[buildingId]/page.tsx"))?.source ?? "";
   assert.match(dashboard, /router\.push\(`\/sentinelle\/\$\{b\.id\}`\)/);
   assert.match(landing, /<PortalLayout>/);
   assert.match(landing, /\/client-portal\/buildings\/\$\{buildingId\}\/sentinelle\/kiosk-token/);

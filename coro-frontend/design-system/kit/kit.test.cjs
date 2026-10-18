@@ -117,3 +117,82 @@ test('GlassTable : conteneur défilant focalisable par défaut, retirable (focus
   assert.match(html(h(kit.GlassTable, { label: 'L', minWidth: 900 }, body)), /style="min-width:900px"/);
   assert.ok(!/min-width/.test(html(h(kit.GlassTable, { label: 'L' }, body))));
 });
+
+// ───────── Primitives V2 (mandat 49) ─────────
+test('GlassCard : section par défaut, tons et espacements exposés, nom accessible', () => {
+  const out = html(h(kit.GlassCard, { label: 'Résumé', tone: 'warning', padding: 'lg' }, 'x'));
+  assert.match(out, /^<section class="cgx-card"/); assert.match(out, /data-tone="warning"/); assert.match(out, /data-padding="lg"/); assert.match(out, /aria-label="Résumé"/);
+  assert.match(html(h(kit.GlassCard, { as: 'article' }, 'x')), /^<article /);
+  assert.ok(!/aria-label/.test(html(h(kit.GlassCard, { as: 'div', label: 'ignoré' }, 'x'))), 'un div n’a pas de nom accessible');
+});
+
+test('GlassPanel : surface flottante nommée (rôle explicite)', () => {
+  const out = html(h(kit.GlassPanel, { role: 'menu', label: 'Actions' }, 'x'));
+  assert.match(out, /class="cgx-panel"/); assert.match(out, /role="menu"/); assert.match(out, /aria-label="Actions"/);
+  assert.match(html(h(kit.GlassPanel, { label: 'Zone' }, 'x')), /role="group"/);
+});
+
+test('StatCard : libellé, valeur et aide ; pictogramme décoratif masqué aux lecteurs d’écran', () => {
+  const out = html(h(kit.StatCard, { label: 'Validés', value: '12', helper: 'ce mois', icon: h('i', null, '*'), tone: 'success' }));
+  assert.match(out, />Validés</); assert.match(out, />12</); assert.match(out, /ce mois/); assert.match(out, /aria-hidden="true"/); assert.match(out, /data-tone="success"/);
+  assert.ok(!/cgx-stat__helper/.test(html(h(kit.StatCard, { label: 'a', value: 'b' }))));
+});
+
+test('états : vide (titre + action), chargement (status poli, occupé), erreur (alert) ; jamais muets', () => {
+  const empty = html(h(kit.EmptyState, { title: 'Aucun projet', description: 'Créez-en un.', action: h('button', null, 'Créer') }));
+  assert.match(empty, /data-kind="empty"/); assert.match(empty, /Aucun projet/); assert.match(empty, /Créer/);
+  const loading = html(h(kit.LoadingState, { lines: 3 }));
+  assert.match(loading, /role="status"/); assert.match(loading, /aria-live="polite"/); assert.match(loading, /aria-busy="true"/); assert.match(loading, /Chargement/);
+  assert.equal((loading.match(/cgx-skeleton__line/g) || []).length, 3); assert.match(loading, /class="cgx-skeleton" aria-hidden="true"/);
+  const error = html(h(kit.ErrorState, { message: 'Réseau indisponible', action: h('button', null, 'Réessayer') }));
+  assert.match(error, /role="alert"/); assert.match(error, /data-kind="error"/); assert.match(error, /Une erreur est survenue/); assert.match(error, /Réseau indisponible/); assert.match(error, /Réessayer/);
+});
+
+test('FilterBar : région « search » nommée, action de réinitialisation optionnelle', () => {
+  const out = html(h(kit.FilterBar, { label: 'Filtrer les projets', reset: h('button', null, 'Réinitialiser') }, h('input', null)));
+  assert.match(out, /role="search"/); assert.match(out, /aria-label="Filtrer les projets"/); assert.match(out, /Réinitialiser/);
+  assert.ok(!/cgx-filter-bar__reset/.test(html(h(kit.FilterBar, { label: 'x' }, 'y'))));
+});
+
+test('ResponsiveDataCards : même contenu en tableau et en cartes, colonne principale = titre de carte, état vide nommé', () => {
+  const columns = [
+    { key: 'n', header: 'Nom', render: (r) => r.n, primary: true },
+    { key: 's', header: 'Statut', render: (r) => r.s },
+  ];
+  const out = html(h(kit.ResponsiveDataCards, { label: 'Projets', columns, rows: [{ id: '1', n: 'Alpha', s: 'Actif' }, { id: '2', n: 'Bêta', s: 'Archivé' }], getRowKey: (r) => r.id }));
+  assert.equal((out.match(/<th scope="col"/g) || []).length, 2); assert.equal((out.match(/<tr>/g) || []).length, 3);
+  assert.equal((out.match(/cgx-datacard__title/g) || []).length, 2); assert.match(out, /<dt>Statut<\/dt><dd>Actif<\/dd>/);
+  assert.match(out, /<ul class="cgx-datacards__list" aria-label="Projets"/); assert.match(out, /role="region" aria-label="Projets"/);
+  const empty = html(h(kit.ResponsiveDataCards, { label: 'Projets', columns, rows: [], getRowKey: (r) => r.id, emptyMessage: 'Rien' }));
+  assert.match(empty, /Rien/); assert.ok(!/<table/.test(empty));
+  // Le CSS passe aux cartes à 720 px et masque l'autre rendu (display: none : retiré de l'arbre d'accessibilité).
+  assert.match(css, /@media \(max-width: 720px\)\s*\{[^}]*\.cgx-datacards__table \{ display: none; \}[^}]*\.cgx-datacards__list \{ display: grid; \}/);
+  assert.match(css, /\.cgx-datacards__list \{ display: none;/);
+});
+
+test('PeriodSelector : champs date nommés, période inversée signalée, préréglage actif exposé (aria-pressed), jamais de lecture d’horloge', () => {
+  const preset = { id: 'm', label: 'Ce mois', range: () => ({ from: '2026-10-01', to: '2026-10-31' }) };
+  const ok = html(h(kit.PeriodSelector, { legend: 'Période', value: { from: '2026-10-01', to: '2026-10-31' }, onChange: () => {}, presets: [preset] }));
+  assert.match(ok, /<legend class="cgx-period__legend">Période<\/legend>/); assert.match(ok, /type="date"/); assert.equal((ok.match(/<label /g) || []).length, 2);
+  assert.match(ok, /aria-pressed="true"/); assert.ok(!/role="alert"/.test(ok)); assert.match(ok, /max="2026-10-31"/); assert.match(ok, /min="2026-10-01"/);
+  const bad = html(h(kit.PeriodSelector, { legend: 'Période', value: { from: '2026-11-01', to: '2026-10-01' }, onChange: () => {}, presets: [preset] }));
+  assert.match(bad, /role="alert"/); assert.match(bad, /aria-invalid="true"/); assert.match(bad, /aria-pressed="false"/);
+  const src = fs.readFileSync(path.join(__dirname, 'PeriodSelector.tsx'), 'utf8');
+  assert.ok(!/new Date\(|Date\.now\(/.test(src), 'le composant ne lit jamais l’horloge (le fuseau appartient à l’écran)');
+  assert.ok(/if \(next\.from && next\.to && next\.from > next\.to\) return;/.test(src), 'une période inversée n’est jamais transmise');
+});
+
+test('primitives V2 : aucun écran existant ne les emploie encore (aucun effet sur le rendu actuel) hors terrain d’essai', () => {
+  const root = path.join(__dirname, '..', '..');
+  const users = [];
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (['node_modules', '.next', 'design-system', 'public'].includes(e.name)) continue;
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (/\.tsx$/.test(e.name) && /design-system\/kit/.test(fs.readFileSync(p, 'utf8'))) users.push(path.relative(root, p).replace(/\\/g, '/'));
+    }
+  };
+  walk(path.join(root, 'app')); walk(path.join(root, 'components'));
+  for (const u of users) assert.ok(/^app\/(glass-kit|settings|activities\/portfolio|dashboard|profile)/.test(u) || /^components\//.test(u), 'emploi inattendu du kit : ' + u);
+});
