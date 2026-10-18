@@ -26,6 +26,22 @@ const routes = {
   '/api/notifications': [],
   '/api/clients': [{ id: 'c-p1', name: 'Organisation Démo A', city: 'Montréal' }, { id: 'c-p2', name: 'Organisation Démo B', city: 'Québec' }, { id: 'c-p3', name: 'Organisation Démo C', city: 'Laval' }],
   '/api/users/me': user, '/api/auth/me': user,
+  // Pièce synthétique autorisée pour valider la route portail `/files/[id]` sans document client réel.
+  '/api/client-portal/projects/p1': projects[0],
+  '/api/project-files/project/p1': [
+    {
+      id: 'file-bench-1',
+      name: 'plan-evacuation-synthetique.pdf',
+      originalName: 'Plan évacuation — synthétique.pdf',
+      category: 'plans_evacuation',
+      visibility: 'shared',
+      size: 24576,
+      uploadedAt: '2026-10-18T12:00:00.000Z',
+      uploadedBy: { firstName: 'Alex', lastName: 'Démo' },
+      comment: 'Pièce synthétique de validation visuelle.',
+      url: 'https://example.invalid/qa/plan-evacuation-synthetique.pdf',
+    },
+  ],
 };
 
 // ───────── États simulables pour /activities/portfolio (variables d'environnement, tout désactivé par défaut) ─────────

@@ -40,6 +40,17 @@ select {
   font: inherit;
 }
 
+/* Le menu natif est rendu par Chrome/OS en dehors de la boîte du select. */
+select {
+  color-scheme: light;
+}
+
+select option,
+select optgroup {
+  background-color: #FFFFFF;
+  color: #2C3E50;
+}
+
 /* Évite certains débordements dans les layouts flex/grid */
 main,
 section,

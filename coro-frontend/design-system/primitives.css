@@ -172,6 +172,37 @@
   cursor: not-allowed;
 }
 
+/* Sélections natives et listes personnalisées : le menu déroulé possède sa
+   propre surface opaque et ne doit jamais hériter d'un texte atténué. */
+:root[data-ui="glass"] select {
+  color-scheme: light;
+}
+:root[data-ui="glass"][data-theme="dark"] select {
+  color-scheme: dark;
+}
+:root[data-ui="glass"] select option,
+:root[data-ui="glass"] select optgroup,
+:root[data-ui="glass"] [role="listbox"],
+:root[data-ui="glass"] [role="menu"] {
+  background-color: var(--cg-surface-solid);
+  color: var(--cg-text-primary);
+}
+:root[data-ui="glass"] [role="option"] {
+  background-color: var(--cg-surface-solid);
+  color: var(--cg-text-primary);
+}
+:root[data-ui="glass"] [role="option"]:hover,
+:root[data-ui="glass"] [role="option"][data-highlighted],
+:root[data-ui="glass"] [role="option"][aria-selected="true"] {
+  background-color: var(--cg-hover-overlay);
+  color: var(--cg-text-primary);
+}
+:root[data-ui="glass"] select:disabled,
+:root[data-ui="glass"] [role="option"][aria-disabled="true"] {
+  color: var(--cg-disabled-fg);
+  cursor: not-allowed;
+}
+
 /* StatusBadge : tone = success | warning | danger | info | neutral */
 :root[data-ui="glass"] .cg-badge {
   display: inline-flex;

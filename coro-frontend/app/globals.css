@@ -75,6 +75,18 @@ textarea {
   max-width: 100%;
 }
 
+/* Les menus natifs sont peints par le navigateur/OS hors de la surface du
+   contrôle. Leur palette doit donc être explicite, même en mode Classique. */
+select {
+  color-scheme: light;
+}
+
+select option,
+select optgroup {
+  background-color: #FFFFFF;
+  color: #2C3E50;
+}
+
 /* Permet aux tableaux complexes de rester utilisables
    sans forcer toute la page à dépasser horizontalement. */
 .responsive-table {

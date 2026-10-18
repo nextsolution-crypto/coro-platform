@@ -209,7 +209,9 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        <WorkScheduleEditorPanel manager={false} />
+        <div style={{ marginBottom: 'var(--cg-space-5)' }}>
+          <WorkScheduleEditorPanel manager={false} />
+        </div>
 
         {/* Apparence (prototype Liquid Glass — préférence propre à cet appareil) */}
         <div className={`rounded-md p-4 sm:p-6 mb-4${gc}`} style={{ backgroundColor: p.bg('#FFFFFF'), border: `1px solid ${p.line('#E9ECEF')}` }}>

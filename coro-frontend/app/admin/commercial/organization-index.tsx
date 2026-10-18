@@ -54,7 +54,7 @@ export default function CommercialOrganizationIndex({
               <CommercialRelationshipBadge value={o.commercialRelationship} />
             </Link>
           ))}
-          {!data && <p className="p-4">Loading…</p>}
+          {!data && <p className="p-4">Chargement…</p>}
         </div>
       </div>
     </AppLayout>

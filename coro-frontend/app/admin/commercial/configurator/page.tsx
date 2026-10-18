@@ -319,7 +319,7 @@ export default function CommercialConfiguratorPage() {
                         }}
                         className={`rounded-lg border px-3 py-2 text-sm ${targetType === type ? "bg-slate-900 text-white" : "bg-white"}`}
                       >
-                        {type === "ORGANIZATION" ? "Organization" : "Prospect"}
+                        {type === "ORGANIZATION" ? "Organisation" : "Prospect"}
                       </button>
                     ))}
                   </div>
@@ -336,7 +336,7 @@ export default function CommercialConfiguratorPage() {
                       className="mt-1 w-full rounded-lg border p-3"
                       placeholder={
                         targetType === "ORGANIZATION"
-                          ? "Organization name"
+                          ? "Nom de l’organisation"
                           : "Prospect name or reference"
                       }
                     />
@@ -361,26 +361,32 @@ export default function CommercialConfiguratorPage() {
                           </span>
                           <span className="ml-2 text-xs">{item.status}</span>
                           {item.secondaryLabel && (
-                            <p className="text-xs text-slate-500">
+                            <p
+                              className="text-xs"
+                              style={{ color: "var(--cg-text-secondary, #475569)" }}
+                            >
                               {item.secondaryLabel}
                             </p>
                           )}
                           {item.convertedOrganizationId && (
                             <p className="text-xs text-amber-700">
-                              Converted — use the Organization for new work.
+                              Converti — utilisez l’organisation pour les nouveaux travaux.
                             </p>
                           )}
                         </button>
                       ))
                     ) : (
-                      <p className="p-3 text-sm text-slate-500">
-                        No matching target.
+                      <p
+                        className="p-3 text-sm"
+                        style={{ color: "var(--cg-text-secondary, #475569)" }}
+                      >
+                        Aucune cible correspondante.
                       </p>
                     )}
                   </div>
                   {target && (
                     <p className="mt-3 rounded bg-emerald-50 p-3 text-sm">
-                      <strong>Selected:</strong> {target.displayName} ·{" "}
+                      <strong>Sélection :</strong> {target.displayName} ·{" "}
                       {target.status}
                     </p>
                   )}
@@ -480,7 +486,7 @@ export default function CommercialConfiguratorPage() {
                     </label>
                   )}
                   <label className="mt-4 block text-sm font-medium">
-                    Active price book
+                    Catalogue tarifaire actif
                     <select
                       required
                       disabled={!target || !books.length}

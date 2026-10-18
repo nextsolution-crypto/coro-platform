@@ -174,7 +174,7 @@ export function GuidedWorkspace({
   if (!workspace)
     return (
       <p className="mt-6 rounded border bg-white p-4">
-        Loading guided workspace…
+        Chargement de l’espace de configuration…
       </p>
     );
   const scenario = workspace.scenarios.find((item) => item.id === activeId);
