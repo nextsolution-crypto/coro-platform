@@ -176,7 +176,7 @@ export default function ProfilePage() {
               onFocus={e => e.target.style.borderColor = p.line('#C0392B')}
               onBlur={e => e.target.style.borderColor = p.line('#CED4DA')} />
           </div>
-          <div>
+          <div style={{ marginBottom: 'var(--cg-space-4)' }}>
             <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: p.text('#6C757D') }}>
               Horaire de base
             </label>

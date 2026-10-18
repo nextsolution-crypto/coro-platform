@@ -10,6 +10,10 @@ const read = (relative) => fs.readFileSync(path.join(ROOT, relative), "utf8");
 test("le Profil espace les cartes principales avec un jeton du Design System", () => {
   const profile = read("app/profile/page.tsx");
   assert.match(profile, /marginBottom:\s*['"]var\(--cg-space-5\)['"]/);
+  assert.match(
+    profile,
+    /marginBottom:\s*['"]var\(--cg-space-4\)['"][\s\S]*?Horaire de base[\s\S]*?Sauvegarder/,
+  );
   assert.match(profile, /<WorkScheduleEditorPanel manager=\{false\}/);
 });
 
