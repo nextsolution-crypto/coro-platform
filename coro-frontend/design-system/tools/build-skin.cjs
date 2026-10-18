@@ -207,6 +207,13 @@ function build() {
     // L'élément lui-même (fond sombre + texte gris sur le même nœud) et ses descendants sont exclus.
     out.push(rule(sel, `color: ${M.TEXT_ROLES[role]} !important;`, onLightOnly ? `:not(:is(${darkPanels.join(', ')})):not(:is(${darkPanels.join(', ')}) *)` : ''));
   }
+  // Un élément qui est LUI-MÊME une surface claire (bg-white, #FFF) posée sur un panneau sombre (bouton blanc sur carte noire) reprend la teinte
+  // du texte : la surface devient translucide/sombre en Dark, le texte doit suivre (le garde de panneau sombre ne le concerne pas).
+  const surfaceSelf = [...M.BG_HEX.surface.flatMap(bgSelectors), '.bg-white'];
+  for (const role of ['primary', 'secondary', 'muted']) {
+    const ts = [...(M.TEXT_HEX[role] || []).flatMap(textSelectors), ...twText(M.TW_TEXT[role] || [])];
+    out.push(rule(surfaceSelf.flatMap((s) => ts.map((t) => `${s}${t}`)), `color: ${M.TEXT_ROLES[role]} !important;`));
+  }
   // Bordures : les neutres épargnent un élément qui porte un liséré d'état coloré.
   for (const [role, hexes] of Object.entries(X.bd)) {
     const neutral = role === 'subtle' || role === 'default';
@@ -258,7 +265,7 @@ function build() {
   out.push(`${SCOPE} ::-webkit-scrollbar-track { background: transparent; }`);
   out.push(`${SCOPE} ::-webkit-scrollbar-thumb { background: var(--cg-border-default); }`);
   out.push(`${SCOPE} ::-webkit-scrollbar-thumb:hover { background: var(--cg-border-strong); }`);
-  out.push(`${SCOPE} :focus-visible { outline: var(--cg-focus-width) solid var(--cg-focus-ring); outline-offset: var(--cg-focus-offset); }`);
+  out.push(`${SCOPE} :focus-visible { outline: var(--cg-focus-width) solid var(--cg-focus-ring) !important; outline-offset: var(--cg-focus-offset); }`);
 
   // Feuille de document : toujours claire, quel que soit le thème (aperçus, PDF).
   out.push(`:root[data-ui="glass"] :is([data-cg-paper], [data-cg-emergency], [data-cg-keep]) {

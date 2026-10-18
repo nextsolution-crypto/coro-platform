@@ -49,6 +49,10 @@ const rows = buildAll().map((row) => {
   else if (registry.status === 'legacy-only') status = 'EXCLUE';
   else if (registry.devOnly) status = 'OUTIL DE DÉVELOPPEMENT';
   else if (registry.status === 'ga') status = 'GA (pilote)';
+  else if (sweep && sweep.status === 'inaccessible' && /ECHEC:\/(login|dashboard|profile|kiosk\/)/.test(sweep.issues.join(' ')) && /^\/(magic|reset-password|kiosk\/qr|settings\/profile)|^\/$/.test(row.route.replace(/\/[0-9a-f-]{20,}$/, ''))) {
+    // Route qui ne fait que rediriger (aucune interface propre) : la page de destination est elle-même balayée ; les tests de la route passent.
+    status = testsOk ? 'MIGRÉE (redirection, sans interface)' : 'NON VALIDÉE';
+  }
   else if (!sweep || sweep.status === 'inaccessible') status = 'NON VALIDÉE';
   else if (!testsOk) status = 'NON VALIDÉE';
   else status = sweep.status === 'ok' ? 'MIGRÉE' : 'MIGRÉE (À REVOIR)';
@@ -65,8 +69,8 @@ const rows = buildAll().map((row) => {
 
 const pct = (app) => {
   const list = rows.filter((r) => r.app === app && r.status !== 'OUTIL DE DÉVELOPPEMENT');
-  const active = list.filter((r) => ['MIGRÉE', 'MIGRÉE (À REVOIR)', 'GA (pilote)'].includes(r.status));
-  const validated = list.filter((r) => ['MIGRÉE', 'GA (pilote)'].includes(r.status));
+  const active = list.filter((r) => ['MIGRÉE', 'MIGRÉE (À REVOIR)', 'GA (pilote)', 'MIGRÉE (redirection, sans interface)'].includes(r.status));
+  const validated = list.filter((r) => ['MIGRÉE', 'GA (pilote)', 'MIGRÉE (redirection, sans interface)'].includes(r.status));
   return { total: list.length, active: active.length, validated: validated.length, activePct: Math.round((1000 * active.length) / list.length) / 10, validatedPct: Math.round((1000 * validated.length) / list.length) / 10 };
 };
 const summary = { app: pct('app'), portal: pct('portal') };

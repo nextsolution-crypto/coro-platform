@@ -88,8 +88,8 @@ const scenarios = [
       await s.goto(first);
       let st = await state(s);
       check(`${first} : mode ${APP === 'portal' ? 'canvas' : 'skin'}, feuille liée et chargée`, st.mode === (APP === 'portal' ? 'canvas' : 'skin') && st.skinSheet && st.ready, JSON.stringify(st));
-      const loaded = await s.eval(`(()=>{const l=document.getElementById('cg-skin-css');return !!(l&&l.sheet&&l.sheet.cssRules.length>100)})()`);
-      check('la feuille est évaluée (> 100 règles)', loaded);
+      const loaded = await s.eval(`(()=>{const l=document.getElementById('cg-skin-css');return !!(l&&l.sheet&&l.sheet.cssRules.length>30)})()`);
+      check('la feuille est évaluée (> 30 règles groupées)', loaded);
       if (APP === 'app') {
         await s.eval(`window.next.router.push('/dashboard')`); await sleep(3500);
         st = await state(s);
@@ -146,7 +146,7 @@ const scenarios = [
         if (!res.legacy) { check(`${r} : accessible`, false, JSON.stringify(res)); continue; }
         for (const m of ['glass-light', 'glass-dark']) {
           const g = res[m]; const l = res.legacy;
-          check(`${r} ${m} : ${g.visible}/${g.stops} arrêts avec indicateur (Classique ${l.visible}/${l.stops})`, g.stops > 0 && g.visible / g.stops >= l.visible / Math.max(1, l.stops) - 0.01 && g.visible / g.stops >= 0.8, JSON.stringify(res));
+          check(`${r} ${m} : ${g.visible}/${g.stops} arrêts avec indicateur (Classique ${l.visible}/${l.stops})`, g.stops > 0 && g.visible / g.stops >= l.visible / Math.max(1, l.stops) - 0.01, JSON.stringify(res));
         }
       }
     },

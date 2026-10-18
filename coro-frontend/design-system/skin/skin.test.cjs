@@ -178,3 +178,14 @@ test('modules CSS : replis var(--cg-skin-*, #hex) à jour, toujours avec repli, 
 test('la teinte ne s’exécute que sous data-ui="glass" : aucune règle ne cible html sans cet attribut', () => {
   root.walkRules((r) => { for (const s of r.selectors) assert.ok(s.includes('data-ui="glass"'), s.slice(0, 100)); });
 });
+
+test('zone .cg-skinzone : inactive en Classique et en îlot Legacy, aucune propriété d’empilement, employée par l’éditeur d’horaire', () => {
+  const prim = fs.readFileSync(path.join(ROOT, 'design-system', 'primitives.css'), 'utf8');
+  const rules = [...prim.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter((m) => m[1].includes('.cg-skinzone'));
+  assert.ok(rules.length >= 10);
+  for (const [, sel, body] of rules) {
+    for (const part of sel.split(/,(?![^(]*\))/)) assert.ok(part.trim().startsWith(':root[data-ui="glass"]:not([data-cg-mode="island"]) .cg-skinzone'), 'zone non scopée : ' + part.trim().slice(0, 90));
+    for (const forbidden of ['transform', 'filter', 'backdrop-filter', 'z-index', 'position', 'overflow', 'opacity']) assert.ok(!new RegExp('(^|[;\s])' + forbidden + '\s*:').test(body), forbidden);
+  }
+  assert.match(fs.readFileSync(path.join(ROOT, 'components', 'WorkScheduleEditorPanel.tsx'), 'utf8'), /<section className="cg-skinzone /);
+});

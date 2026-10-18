@@ -37,10 +37,11 @@ const ALIAS_DEFS = {
   'text-secondary': 'var(--cg-text-secondary)',
   // Plus sombre que --cg-text-muted en Light : un texte atténué posé directement sur le canevas (zones bleutées du dégradé) doit garder 4,5:1.
   'text-muted': '#4C5E74',
-  'text-accent': 'var(--cg-accent-text)',
+  // Light : rouge plus profond que --cg-accent-text pour tenir 4,5:1 sur les fonds teintés rosés (alerte).
+  'text-accent': '#932B21',
   'text-success': 'var(--cg-success-fg)',
   'text-warning': 'var(--cg-warning-fg)',
-  'text-danger': 'var(--cg-danger-fg)',
+  'text-danger': '#932B21',
   'text-info': 'var(--cg-info-fg)',
   'text-purple': 'var(--cg-purple-fg)',
   'border-subtle': 'var(--cg-border-subtle)',
@@ -57,6 +58,8 @@ const ALIAS_DARK = {
   'bg-fill2': 'rgba(255, 255, 255, 0.11)',
   'bg-navy': '#2F435B',
   'text-muted': 'var(--cg-text-muted)',
+  'text-accent': 'var(--cg-accent-text)',
+  'text-danger': 'var(--cg-danger-fg)',
 };
 
 /** Couleurs hex Legacy (6 chiffres, majuscules) → rôle. */
@@ -128,6 +131,26 @@ const TW_BORDER = {
   info: ['blue-200', 'blue-300', 'sky-200'],
   purple: ['purple-200', 'purple-300'],
 };
+
+// ── Extension systématique : toutes les familles de teinte et nuances Tailwind (50–950) reçoivent un rôle, pour qu'aucune classe ne reste hors carte. ──
+const NEUTRALS = ['slate', 'gray', 'zinc', 'neutral', 'stone'];
+const HUES = { danger: ['red', 'rose'], warning: ['orange', 'amber', 'yellow'], success: ['green', 'emerald', 'lime', 'teal'], info: ['blue', 'sky', 'cyan', 'indigo'], purple: ['violet', 'purple', 'fuchsia', 'pink'] };
+const add = (map, role, name) => { (map[role] = map[role] || []); if (!map[role].includes(name)) map[role].push(name); };
+for (const n of NEUTRALS) {
+  for (const s of [50, 100]) add(TW_BG, 'fill1', `${n}-${s}`);
+  add(TW_BG, 'fill2', `${n}-200`);
+  for (const s of [800, 900, 950]) add(TW_BG, 'navy', `${n}-${s}`);
+  for (const s of [800, 900, 950]) add(TW_TEXT, 'primary', `${n}-${s}`);
+  for (const s of [600, 700]) add(TW_TEXT, 'secondary', `${n}-${s}`);
+  for (const s of [400, 500]) add(TW_TEXT, 'muted', `${n}-${s}`);
+  add(TW_BORDER, 'subtle', `${n}-100`);
+  for (const s of [200, 300]) add(TW_BORDER, 'default', `${n}-${s}`);
+}
+for (const [role, names] of Object.entries(HUES)) for (const n of names) {
+  for (const s of [50, 100]) add(TW_BG, role, `${n}-${s}`);
+  for (const s of [600, 700, 800, 900, 950]) add(TW_TEXT, role, `${n}-${s}`);
+  for (const s of [200, 300]) add(TW_BORDER, role, `${n}-${s}`);
+}
 
 /** Variantes de survol Tailwind (fond) → recouvrement de survol Glass. */
 const TW_HOVER_BG = ['gray-50', 'gray-100', 'slate-50', 'slate-100', 'white', 'gray-200', 'slate-200'];

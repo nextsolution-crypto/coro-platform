@@ -104,7 +104,9 @@ async function main() {
   const themes = list(o.themes, ['LIGHT', 'DARK']);
   const viewports = list(o.viewports, ['320', '390', '768', '1600']).map(Number);
   const role = o.role || 'SUPER_ADMIN';
-  const entries = ROUTE_REGISTRY.filter((e) => e.render === 'skin' && (!o.routes || list(o.routes).some((r) => e.pattern === r || sample(e.pattern, ids) === r)));
+  // --native : balaye les écrans Glass NATIFS (bêta natives et pilotes GA) au lieu des écrans re-teintés ; le mode attendu est alors « glass ».
+  const wantNative = o.native === 'true';
+  const entries = ROUTE_REGISTRY.filter((e) => (wantNative ? (!e.render && !e.devOnly && (e.status === 'beta' || e.status === 'ga')) : e.render === 'skin') && (!o.routes || list(o.routes).some((r) => e.pattern === r || sample(e.pattern, ids) === r)));
   const only = o.routes ? list(o.routes) : null;
   const rows = [];
   const chrome = await launch();
@@ -148,11 +150,11 @@ async function main() {
           const regress = con.items.filter((i) => !baseline.has(key(i)));
           const m = { theme, vp, mode: cov.mode, overflowX: cov.overflowX, leakCount: cov.leakCount, leaks: cov.leaks.slice(0, 5), contrastTotal: con.total, contrastFail: con.failures, contrastRegress: regress.length, regressItems: regress.slice(0, 8), textLen: cov.textLen };
           row.measures.push(m);
-          if (!['skin', 'canvas'].includes(cov.mode)) row.issues.push(`${theme}/${vp} : mode « ${cov.mode} » (attendu skin|canvas)`);
+          if (!(wantNative ? ['glass'] : ['skin', 'canvas']).includes(cov.mode)) row.issues.push(`${theme}/${vp} : mode « ${cov.mode} » (attendu ${wantNative ? 'glass' : 'skin|canvas'})`);
           if (cov.overflowX) row.issues.push(`${theme}/${vp} : débordement horizontal (${cov.scrollWidth} > ${cov.innerWidth})`);
           if (theme === 'DARK' && cov.leakCount) row.issues.push(`${theme}/${vp} : ${cov.leakCount} surface(s) claire(s) opaque(s) en Dark (ex. ${cov.leaks[0].sel})`);
           if (regress.length) row.issues.push(`${theme}/${vp} : ${regress.length} régression(s) de contraste (ex. « ${regress[0].text} » ${regress[0].ratio}:1)`);
-          if (!cov.skinSheet) row.issues.push(`${theme}/${vp} : feuille de teinte absente`);
+          if (!wantNative && !cov.skinSheet) row.issues.push(`${theme}/${vp} : feuille de teinte absente`);
         }
         // Exceptions : seules celles qui s'ajoutent à la référence Classique comptent (un 404 déjà présent en Classique n'est pas une régression).
         const extra = session.consoleErrors.length - (row.legacyExceptions || 0);
