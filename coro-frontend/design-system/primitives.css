@@ -99,13 +99,18 @@
 }
 
 /* Bouton d'action principal et bouton secondaire en verre. */
+:root[data-ui="glass"] .cg-primary-action,
 :root[data-ui="glass"] .cg-cta {
   background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0) 58%);
   border-radius: 8px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38), 0 10px 22px -10px var(--cg-glow-accent);
   transition: box-shadow var(--cg-duration-base) var(--cg-ease), filter var(--cg-duration-fast) var(--cg-ease);
 }
+:root[data-ui="glass"] .cg-primary-action:hover,
 :root[data-ui="glass"] .cg-cta:hover { filter: brightness(1.04); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 14px 26px -10px var(--cg-glow-accent); }
+:root[data-ui="glass"] [data-cg-no-schedule] {
+  background: repeating-linear-gradient(135deg, var(--cg-surface-sunken), var(--cg-surface-sunken) 7px, var(--cg-glass-bg-strong) 7px, var(--cg-glass-bg-strong) 14px);
+}
 :root[data-ui="glass"] .cg-btn {
   background-color: var(--cg-glass-bg);
   background-image: var(--cg-sheen);

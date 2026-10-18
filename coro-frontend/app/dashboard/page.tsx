@@ -164,7 +164,7 @@ export default function DashboardPage() {
           </div>
         )}
         <button onClick={() => router.push('/projects')}
-          className={`${glass ? 'self-start' : 'w-full'} sm:w-auto text-white text-sm font-medium px-4 py-2.5 rounded flex items-center justify-center gap-2 flex-shrink-0${glass ? ' cg-cta' : ''}`}
+          className={`${glass ? 'self-start' : 'w-full'} sm:w-auto text-white text-sm font-medium px-4 py-2.5 rounded flex items-center justify-center gap-2 flex-shrink-0 cg-primary-action`}
           style={{ backgroundColor: p.bg('#C0392B') }}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#A93226')}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = p.bg('#C0392B')}>

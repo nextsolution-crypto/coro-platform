@@ -66,3 +66,32 @@ test("les menus natifs et personnalisés ont une palette explicite dans les deux
     assert.match(primitives, /\[role="option"\]\[aria-selected="true"\]/);
   }
 });
+
+test("le Dashboard et Projets partagent l'action primaire canonique sans modifier le bouton destructif", () => {
+  const dashboard = read("app/dashboard/page.tsx");
+  const projects = read("app/projects/page.tsx");
+  const primitives = read("design-system/primitives.css");
+  const portalPrimitives = fs.readFileSync(
+    path.resolve(ROOT, "../coro-client-portal/design-system/primitives.css"),
+    "utf8",
+  );
+
+  assert.match(dashboard, /cg-primary-action[\s\S]*Nouveau projet/);
+  assert.match(projects, /cg-primary-action[\s\S]*Nouveau projet/);
+  const bulkDelete = projects.match(/setShowBulkDelete[\s\S]*?Supprimer \(/)?.[0] ?? "";
+  assert.doesNotMatch(bulkDelete, /cg-primary-action/);
+  for (const css of [primitives, portalPrimitives]) {
+    assert.match(css, /\.cg-primary-action,/);
+    assert.match(css, /\.cg-cta/);
+    assert.match(css, /var\(--cg-glow-accent\)/);
+  }
+});
+
+test("le quadrillage hors horaire du Planificateur suit les surfaces Glass sans changer le repli Classique", () => {
+  const planning = read("app/planning/planning.module.css");
+  const timeline = read("app/planning/ResourceTimeline.tsx");
+  const primitives = read("design-system/primitives.css");
+  assert.match(planning, /\.noSchedule\s*\{[^}]*#f5f6f8[^}]*#eceff2/);
+  assert.match(timeline, /data-cg-no-schedule=\{work\.length \? undefined : ''\}/);
+  assert.match(primitives, /\[data-cg-no-schedule\][\s\S]*var\(--cg-surface-sunken\)[\s\S]*var\(--cg-glass-bg-strong\)/);
+});

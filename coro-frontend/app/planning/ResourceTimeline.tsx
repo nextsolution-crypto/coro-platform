@@ -79,7 +79,7 @@ export default function ResourceTimeline({ data, days, onSelect, onCreate }: {
           const events = (eventsByUser.get(user.id) ?? []).map(event => ({ event,
             segment: segmentForDay(event, day, timeZone, hours) })).filter(item => item.segment);
           const weekend = days.length === 7 && days.indexOf(day) >= 5;
-          return <div className={`${styles.dayTrack} ${work.length ? '' : styles.noSchedule} ${weekend ? styles.weekend : ''}`} key={day}
+          return <div className={`${styles.dayTrack} ${work.length ? '' : styles.noSchedule} ${weekend ? styles.weekend : ''}`} key={day} data-cg-no-schedule={work.length ? undefined : ''}
             style={{ minHeight: `${Math.max(128, 14 + events.length * 38)}px`, gridColumn: layout.dayColumns[dayIndex], gridRow: layout.resourceRows[rowIndex] }}
             aria-label={`${user.name}, ${formatDay(day)}. Cliquer pour créer une activité.`} role="gridcell" tabIndex={0}
             onClick={event => {

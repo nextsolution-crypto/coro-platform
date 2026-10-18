@@ -248,7 +248,7 @@ export default function ProjectsPage() {
           <button
             onClick={() => setShowModal(true)}
             disabled={maxProjects !== null && projects.filter(p => p.status !== 'ARCHIVED').length >= maxProjects}
-            className="text-white text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-white text-sm font-medium px-4 py-2.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed cg-primary-action"
             style={{ backgroundColor: '#C0392B' }}
             onMouseEnter={e => { if (!(maxProjects !== null && projects.filter(p => p.status !== 'ARCHIVED').length >= maxProjects)) e.currentTarget.style.backgroundColor = '#A93226'; }}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
