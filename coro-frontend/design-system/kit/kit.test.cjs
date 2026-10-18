@@ -182,7 +182,7 @@ test('PeriodSelector : champs date nommés, période inversée signalée, prér�
   assert.ok(/if \(next\.from && next\.to && next\.from > next\.to\) return;/.test(src), 'une période inversée n’est jamais transmise');
 });
 
-test('primitives V2 : aucun écran existant ne les emploie encore (aucun effet sur le rendu actuel) hors terrain d’essai', () => {
+test('primitives V2 : seuls les écrans explicitement migrés les emploient', () => {
   const root = path.join(__dirname, '..', '..');
   const users = [];
   const walk = (dir) => {
@@ -194,5 +194,5 @@ test('primitives V2 : aucun écran existant ne les emploie encore (aucun effet s
     }
   };
   walk(path.join(root, 'app')); walk(path.join(root, 'components'));
-  for (const u of users) assert.ok(/^app\/(glass-kit|settings|activities\/portfolio|dashboard|profile)/.test(u) || /^components\//.test(u), 'emploi inattendu du kit : ' + u);
+  for (const u of users) assert.ok(/^app\/(glass-kit|settings|activities\/portfolio|dashboard|profile|admin\/platform-permission-grants)/.test(u) || /^components\//.test(u), 'emploi inattendu du kit : ' + u);
 });

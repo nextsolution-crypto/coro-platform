@@ -6,6 +6,16 @@ import AppLayout from "@/components/layout/AppLayout";
 import { usePlatformAuthority } from "@/hooks/usePlatformAuthority";
 import api from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
+import {
+  EmptyState,
+  GlassButton,
+  GlassCard,
+  GlassModal,
+  LoadingState,
+  PageHeader,
+  StatusBadge,
+} from "@/design-system/kit";
+import styles from "./platform-permission-grants.module.css";
 
 const PERMISSIONS = [
   "COMMERCIAL_CATALOG_MANAGE",
@@ -79,6 +89,9 @@ function GrantsAdministration() {
   const [revocationReasons, setRevocationReasons] = useState<
     Record<string, string>
   >({});
+  const [confirmation, setConfirmation] = useState<
+    { kind: "global" } | { kind: "revoke"; grant: Grant } | null
+  >(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -139,37 +152,9 @@ function GrantsAdministration() {
     [organizations],
   );
 
-  async function createGrant(event: FormEvent) {
-    event.preventDefault();
+  async function persistGrant() {
     if (busy) return;
-    if (!userId || reason.trim().length < 10) {
-      setFeedback({
-        error: true,
-        text: "Sélectionnez un employé et fournissez une justification d’au moins 10 caractères.",
-      });
-      return;
-    }
-    if (scope === "ORGANIZATION" && !targetOrganizationId) {
-      setFeedback({
-        error: true,
-        text: "Sélectionnez explicitement l’organisation cliente ciblée.",
-      });
-      return;
-    }
-    if (
-      scope === "GLOBAL" &&
-      (!globalAcknowledged ||
-        !window.confirm(
-          "Confirmer ce droit GLOBAL sur toutes les organisations?",
-        ))
-    ) {
-      if (!globalAcknowledged)
-        setFeedback({
-          error: true,
-          text: "Confirmez la portée globale avant de continuer.",
-        });
-      return;
-    }
+    setConfirmation(null);
     setBusy(true);
     setFeedback(undefined);
     try {
@@ -194,7 +179,38 @@ function GrantsAdministration() {
     }
   }
 
-  async function revoke(grant: Grant) {
+  async function createGrant(event: FormEvent) {
+    event.preventDefault();
+    if (busy) return;
+    if (!userId || reason.trim().length < 10) {
+      setFeedback({
+        error: true,
+        text: "Sélectionnez un employé et fournissez une justification d’au moins 10 caractères.",
+      });
+      return;
+    }
+    if (scope === "ORGANIZATION" && !targetOrganizationId) {
+      setFeedback({
+        error: true,
+        text: "Sélectionnez explicitement l’organisation cliente ciblée.",
+      });
+      return;
+    }
+    if (scope === "GLOBAL") {
+      if (!globalAcknowledged) {
+        setFeedback({
+          error: true,
+          text: "Confirmez la portée globale avant de continuer.",
+        });
+        return;
+      }
+      setConfirmation({ kind: "global" });
+      return;
+    }
+    await persistGrant();
+  }
+
+  function revoke(grant: Grant) {
     if (busy) return;
     const revokeReason = revocationReasons[grant.id]?.trim() ?? "";
     if (revokeReason.length < 10) {
@@ -204,7 +220,12 @@ function GrantsAdministration() {
       });
       return;
     }
-    if (!window.confirm(`Révoquer immédiatement ${grant.permission}?`)) return;
+    setConfirmation({ kind: "revoke", grant });
+  }
+
+  async function persistRevocation(grant: Grant) {
+    const revokeReason = revocationReasons[grant.id]?.trim() ?? "";
+    setConfirmation(null);
     setBusy(true);
     setFeedback(undefined);
     try {
@@ -227,41 +248,37 @@ function GrantsAdministration() {
   if (authority.loading || !authority.isFounder)
     return <div className="min-h-48" aria-busy="true" />;
   return (
-    <main className="mx-auto max-w-7xl space-y-6">
-      <header className="space-y-1">
-        <p className="text-sm font-medium text-red-700">
-          Administration plateforme
-        </p>
-        <h1 className="text-3xl font-semibold text-slate-900">
-          Permissions plateforme
-        </h1>
-        <p className="max-w-3xl text-sm text-slate-600">
-          Autorité : <strong>{authority.view?.authorityStatus}</strong>. Les
-          droits sont accordés uniquement par le Founder et validés par le
-          backend.
-        </p>
-      </header>
+    <main className={`${styles.root} mx-auto max-w-7xl space-y-6`}>
+      <PageHeader
+        eyebrow="Administration plateforme"
+        title="Permissions plateforme"
+        subtitle={
+          <>
+            Autorité : <strong>{authority.view?.authorityStatus}</strong>. Les
+            droits sont accordés uniquement par le Founder et validés par le
+            backend.
+          </>
+        }
+      />
       {feedback && (
         <p
           role={feedback.error ? "alert" : "status"}
-          className={`rounded border p-3 text-sm ${feedback.error ? "border-red-300 bg-red-50 text-red-800" : "border-emerald-300 bg-emerald-50 text-emerald-800"}`}
+          className={styles.feedback}
+          data-error={feedback.error ? "true" : "false"}
         >
           {feedback.text}
         </p>
       )}
-      <section
-        className="rounded-lg border border-slate-200 bg-white p-4 sm:p-6"
-        aria-labelledby="grant-title"
-      >
+      <GlassCard padding="lg" label="Accorder une permission">
         <h2 id="grant-title" className="text-xl font-semibold">
           Accorder une permission
         </h2>
         <form className="mt-4 grid gap-4 lg:grid-cols-2" onSubmit={createGrant}>
-          <label className="text-sm font-medium">
-            Employé CORO admissible
+          <label className="cgx-field">
+            <span className="cgx-field__label">Employé CORO admissible</span>
             <select
               aria-label="Employé CORO admissible"
-              className="mt-1 w-full rounded border p-2"
+              className="cgx-input"
               value={userId}
               onChange={(event) => setUserId(event.target.value)}
               required
@@ -274,11 +291,11 @@ function GrantsAdministration() {
               ))}
             </select>
           </label>
-          <label className="text-sm font-medium">
-            Permission
+          <label className="cgx-field">
+            <span className="cgx-field__label">Permission</span>
             <select
               aria-label="Permission plateforme"
-              className="mt-1 w-full rounded border p-2"
+              className="cgx-input"
               value={permission}
               onChange={(event) =>
                 setPermission(
@@ -291,8 +308,8 @@ function GrantsAdministration() {
               ))}
             </select>
           </label>
-          <fieldset className="rounded border p-3">
-            <legend className="px-1 text-sm font-medium">Portée</legend>
+          <fieldset className={styles.scope}>
+            <legend className="cgx-field__label">Portée</legend>
             <div className="flex flex-wrap gap-4">
               {(["ORGANIZATION", "GLOBAL"] as Scope[]).map((value) => (
                 <label key={value} className="flex items-center gap-2 text-sm">
@@ -311,11 +328,11 @@ function GrantsAdministration() {
             </div>
           </fieldset>
           {scope === "ORGANIZATION" ? (
-            <label className="text-sm font-medium">
-              Organisation cliente
+            <label className="cgx-field">
+              <span className="cgx-field__label">Organisation cliente</span>
               <select
                 aria-label="Organisation cliente"
-                className="mt-1 w-full rounded border p-2"
+                className="cgx-input"
                 value={targetOrganizationId}
                 onChange={(event) =>
                   setTargetOrganizationId(event.target.value)
@@ -331,7 +348,7 @@ function GrantsAdministration() {
               </select>
             </label>
           ) : (
-            <label className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            <label className={styles.globalWarning}>
               <strong className="block">Attention : portée GLOBAL</strong>
               <span className="mt-1 flex items-start gap-2">
                 <input
@@ -347,11 +364,11 @@ function GrantsAdministration() {
               </span>
             </label>
           )}
-          <label className="text-sm font-medium lg:col-span-2">
-            Justification obligatoire
+          <label className="cgx-field lg:col-span-2">
+            <span className="cgx-field__label">Justification obligatoire</span>
             <textarea
               aria-label="Justification du grant"
-              className="mt-1 min-h-24 w-full rounded border p-2"
+              className="cgx-input"
               value={reason}
               onChange={(event) => setReason(event.target.value)}
               minLength={10}
@@ -359,45 +376,45 @@ function GrantsAdministration() {
             />
           </label>
           <div className="lg:col-span-2">
-            <button
+            <GlassButton
               type="submit"
+              variant="primary"
               disabled={busy || loading}
-              className="rounded bg-red-700 px-4 py-2 font-medium text-white disabled:opacity-50"
             >
               {busy ? "Validation…" : "Accorder après validation"}
-            </button>
+            </GlassButton>
           </div>
         </form>
-      </section>
-      <section
-        className="rounded-lg border border-slate-200 bg-white p-4 sm:p-6"
-        aria-labelledby="existing-title"
-      >
+      </GlassCard>
+      <GlassCard padding="lg" label="Permissions existantes">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="existing-title" className="text-xl font-semibold">
             Permissions existantes
           </h2>
-          <button
+          <GlassButton
             type="button"
             onClick={() => void load()}
             disabled={busy || loading}
-            className="rounded border px-3 py-2 text-sm"
           >
             Actualiser
-          </button>
+          </GlassButton>
         </div>
         {loading ? (
-          <p className="mt-4 text-sm" aria-live="polite">
-            Chargement des permissions…
-          </p>
+          <LoadingState label="Chargement des permissions…" lines={3} />
         ) : grants.length === 0 ? (
-          <p className="mt-4 rounded bg-slate-50 p-4 text-sm">
-            Aucune permission déléguée.
-          </p>
+          <EmptyState
+            title="Aucune permission déléguée"
+            description="Les délégations explicites apparaîtront ici après validation du serveur."
+          />
         ) : (
           <div className="mt-4 grid gap-4">
             {grants.map((grant) => (
-              <article key={grant.id} className="min-w-0 rounded border p-4">
+              <GlassCard
+                key={grant.id}
+                as="article"
+                padding="md"
+                label={grant.permission}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
                     <h3 className="break-words font-semibold">
@@ -408,11 +425,11 @@ function GrantsAdministration() {
                         `Utilisateur ${grant.userId}`}
                     </p>
                   </div>
-                  <span
-                    className={`rounded px-2 py-1 text-xs font-semibold ${grant.status === "ACTIVE" ? "bg-emerald-100 text-emerald-800" : "bg-slate-200"}`}
+                  <StatusBadge
+                    tone={grant.status === "ACTIVE" ? "success" : "neutral"}
                   >
                     {grant.status}
-                  </span>
+                  </StatusBadge>
                 </div>
                 <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
                   <div>
@@ -452,11 +469,13 @@ function GrantsAdministration() {
                 </dl>
                 {grant.status === "ACTIVE" && (
                   <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
-                    <label className="flex-1 text-sm font-medium">
-                      Justification de révocation
+                    <label className="cgx-field flex-1">
+                      <span className="cgx-field__label">
+                        Justification de révocation
+                      </span>
                       <input
                         aria-label={`Justification de révocation ${grant.permission}`}
-                        className="mt-1 w-full rounded border p-2"
+                        className="cgx-input"
                         value={revocationReasons[grant.id] ?? ""}
                         onChange={(event) =>
                           setRevocationReasons((current) => ({
@@ -467,21 +486,64 @@ function GrantsAdministration() {
                         minLength={10}
                       />
                     </label>
-                    <button
+                    <GlassButton
                       type="button"
+                      variant="danger"
                       disabled={busy}
                       onClick={() => void revoke(grant)}
-                      className="rounded border border-red-300 px-4 py-2 text-sm font-medium text-red-700"
                     >
                       Révoquer
-                    </button>
+                    </GlassButton>
                   </div>
                 )}
-              </article>
+              </GlassCard>
             ))}
           </div>
         )}
-      </section>
+      </GlassCard>
+      <GlassModal
+        open={confirmation !== null}
+        onClose={() => setConfirmation(null)}
+        title={
+          confirmation?.kind === "revoke"
+            ? "Confirmer la révocation"
+            : "Confirmer la portée GLOBAL"
+        }
+        description={
+          confirmation?.kind === "revoke"
+            ? `La permission ${confirmation.grant.permission} sera révoquée immédiatement après validation du serveur.`
+            : "Cette permission s’appliquera à toutes les organisations. Le backend demeure l’autorité finale."
+        }
+        tone={confirmation?.kind === "revoke" ? "danger" : "default"}
+        dismissOnBackdrop={!busy}
+        dismissOnEscape={!busy}
+        footer={
+          <>
+            <GlassButton
+              type="button"
+              variant="ghost"
+              disabled={busy}
+              onClick={() => setConfirmation(null)}
+            >
+              Annuler
+            </GlassButton>
+            <GlassButton
+              type="button"
+              variant={confirmation?.kind === "revoke" ? "danger" : "primary"}
+              disabled={busy}
+              onClick={() => {
+                if (confirmation?.kind === "revoke") {
+                  void persistRevocation(confirmation.grant);
+                } else if (confirmation?.kind === "global") {
+                  void persistGrant();
+                }
+              }}
+            >
+              {busy ? "Validation…" : "Confirmer"}
+            </GlassButton>
+          </>
+        }
+      />
     </main>
   );
 }

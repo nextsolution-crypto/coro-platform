@@ -38,7 +38,7 @@ Générée par `npm run glass:inventory-v2 -- --write` (lecture seule du code). 
 | `/admin/organizations` | AppLayout | inline-hex+tailwind | 1 | 0 | 1 | destructive, financial-legal, permissions | beta/skin |
 | `/admin/organizations/[organizationId]` | AppLayout | inline-hex+tailwind | 1 | 2 | 0 | financial-legal, permissions | beta/skin |
 | `/admin/organizations/[organizationId]/clients/[clientId]` | AppLayout | inline-hex+tailwind | 1 | 0 | 0 | financial-legal, permissions | beta/skin |
-| `/admin/platform-permission-grants` | AppLayout | tailwind | 1 | 0 | 0 | destructive, financial-legal, permissions | legacy-only |
+| `/admin/platform-permission-grants` | AppLayout | inline-hex+tailwind+css-module | 1 | 16 | 1 | destructive, financial-legal, permissions | beta / skin |
 | `/admin/procedures` | AppLayout | inline-hex+tailwind | 1 | 0 | 1 | emergency-content, permissions | beta/skin |
 | `/admin/procedures/[id]` | AppLayout | inline-hex+tailwind | 1 | 0 | 0 | destructive, emergency-content, permissions | beta/skin |
 | `/admin/procedures/custom` | AppLayout | inline-hex+tailwind | 1 | 0 | 1 | destructive, emergency-content, permissions | beta/skin |

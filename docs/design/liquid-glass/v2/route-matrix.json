@@ -1109,9 +1109,9 @@
       "app/admin/platform-permission-grants/platform-permission-grants.contract.test.cjs"
     ],
     "registry": {
-      "status": "legacy-only",
-      "render": null,
-      "exception": true
+      "status": "beta",
+      "render": "skin",
+      "exception": false
     }
   },
   {

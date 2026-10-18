@@ -1,0 +1,72 @@
+.root {
+  color: var(--cg-text-primary, #2c3e50);
+}
+
+.root h2,
+.root h3,
+.root dt {
+  color: var(--cg-text-primary, #2c3e50);
+}
+
+.root dd,
+.root article p {
+  color: var(--cg-text-secondary, #495057);
+}
+
+.feedback {
+  border: 1px solid var(--cg-success-border, #a9dfbf);
+  border-radius: var(--cg-radius-md, 6px);
+  background: var(--cg-success-bg, #eafaf1);
+  color: var(--cg-success-fg, #1b6e3f);
+  padding: 12px;
+  font-size: 14px;
+}
+
+.feedback[data-error="true"] {
+  border-color: var(--cg-danger-border, #f1948a);
+  background: var(--cg-danger-bg, #fdedec);
+  color: var(--cg-danger-fg, #a93226);
+}
+
+.scope {
+  min-width: 0;
+  border: 1px solid var(--cg-border-default, #ced4da);
+  border-radius: var(--cg-radius-md, 6px);
+  padding: 12px;
+  background: var(--cg-glass-bg, #ffffff);
+}
+
+.scope legend {
+  padding: 0 4px;
+}
+
+.root input[type="radio"],
+.root input[type="checkbox"] {
+  accent-color: var(--cg-accent, #c0392b);
+}
+
+.root input[type="radio"]:focus-visible,
+.root input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--cg-focus-ring, #1f6fb2);
+  outline-offset: 2px;
+}
+
+.globalWarning {
+  display: block;
+  border: 1px solid var(--cg-warning-border, #fad7a0);
+  border-radius: var(--cg-radius-md, 6px);
+  background: var(--cg-warning-bg, #fef9e7);
+  color: var(--cg-warning-fg, #8a5300);
+  padding: 12px;
+  font-size: 14px;
+}
+
+@media (max-width: 639px) {
+  .root :global(.cgx-card[data-padding="lg"]) {
+    padding: 16px;
+  }
+
+  .root :global(.cgx-button) {
+    width: 100%;
+  }
+}

@@ -13,7 +13,7 @@ Portée : application CORO et portail client. **Exclu** : `coro-website`.
 
 ## Exceptions explicites
 
-* `/admin/platform-permission-grants` reste **Classique** (exception de sécurité documentée).
+* `/admin/platform-permission-grants` est couverte par Glass conformément à l'amendement Founder 27 ; son contrat de sécurité demeure inchangé.
 * Écrans d'urgence : bouton panique et fenêtre de résultat gardent leur rendu Classique exact ; bornes : couleurs d'état plein écran inchangées ; feuille de document de l'éditeur toujours claire ; cartes : rendu sombre d'origine.
 * Le Glass repose sur une couche de **re-teinte** des écrans existants, pas sur une réécriture native de tous les composants. Couverture mesurée : application 82/83, portail 35/36 (`coverage-matrix.md`).
 * `/files/[id]` (portail) non vérifiée avec des données.

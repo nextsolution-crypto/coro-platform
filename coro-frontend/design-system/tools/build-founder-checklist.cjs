@@ -22,7 +22,7 @@ const MODULES_APP = [
   [/^\/dashboard\/rendement|^\/profile\/rendement/, 'Rendement (opérationnel et financier)'],
   [/^\/dashboard|^\/profile$|^\/settings$/, 'Pilotes natifs'],
   [/^\/admin\/commercial/, 'Commercial'], [/^\/admin\/product-catalog/, 'Catalogue commercial'], [/^\/admin\/organizations/, 'Organisations'],
-  [/^\/admin\/(control-center|metering|health)/, 'Supervision plateforme'], [/^\/admin\/platform-permission-grants/, 'Permissions de plateforme (EXCLUE)'],
+  [/^\/admin\/(control-center|metering|health)/, 'Supervision plateforme'], [/^\/admin\/platform-permission-grants/, 'Permissions de plateforme'],
   [/^\/admin\//, 'Administration'], [/^\/settings\//, 'Réglages'], [/^\/bookings/, 'Réservations (Booking)'], [/^\/planning/, 'Planification'],
   [/^\/(configurator|editor)/, 'Documents : configurateurs et éditeur'], [/^\/library/, 'Bibliothèque'],
   [/^\/projects/, 'Projets'], [/^\/activities|^\/timelog|^\/notifications/, 'Travail courant'], [/^\/(clients|buildings|referrals)/, 'Portefeuille'],
