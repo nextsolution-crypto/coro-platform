@@ -545,9 +545,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         style={{ backgroundColor: p.bg('#FDEDEC'), color: p.text('#C0392B') }}>
                         ✓ Approbations en attente ({pendingApprovals.length})
                       </p>
-                      {pendingApprovals.map(p => (
-                        <div key={p.id}
-                          onClick={() => { router.push(`/projects/${p.id}`); setShowNotif(false); }}
+                      {pendingApprovals.map(approval => (
+                        <div key={approval.id}
+                          onClick={() => { router.push(`/projects/${approval.id}`); setShowNotif(false); }}
                           className="px-4 py-3 cursor-pointer transition-colors"
                           style={{ borderBottom: `1px solid ${p.line('#F8F9FA')}` }}
                           onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#FDEDEC')}
@@ -555,10 +555,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-0.5">
-                                <span className="text-xs font-bold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: p.bg('#C0392B') }}>{p.documentType}</span>
-                                <span className="text-xs font-medium truncate" style={{ color: p.text('#2C3E50') }}>{p.name}</span>
+                                <span className="text-xs font-bold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: p.bg('#C0392B') }}>{approval.documentType}</span>
+                                <span className="text-xs font-medium truncate" style={{ color: p.text('#2C3E50') }}>{approval.name}</span>
                               </div>
-                              <p className="text-xs" style={{ color: p.text('#6C757D') }}>Soumis par {p.submittedBy?.firstName} {p.submittedBy?.lastName}</p>
+                              <p className="text-xs" style={{ color: p.text('#6C757D') }}>Soumis par {approval.submittedBy?.firstName} {approval.submittedBy?.lastName}</p>
                             </div>
                             <span className="text-xs font-medium flex-shrink-0" style={{ color: p.text('#C0392B') }}>À réviser →</span>
                           </div>

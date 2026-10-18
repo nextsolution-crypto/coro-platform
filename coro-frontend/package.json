@@ -51,7 +51,7 @@
     "test:auth-hydration": "node components/layout/auth-hydration.contract.test.cjs",
     "test:commercial-contracts": "node app/admin/commercial/commercial-center.contract.test.cjs && node app/admin/commercial/configuration/configuration.contract.test.cjs && node app/admin/commercial/dossier/dossier.contract.test.cjs && node app/admin/commercial/entitlements/capability-operations.contract.test.cjs && node app/admin/commercial/journey/target-pagination.test.mjs && node \"app/admin/commercial/proposals/[proposalId]/proposal-document-workspace.contract.test.cjs\" && node app/admin/commercial/prospects/prospects.contract.test.cjs",
     "test:control-center": "node app/admin/control-center/control-center.contract.test.cjs",
-    "test:ui-units": "node app/settings/activity-types/activity-types.test.cjs && node components/workScheduleEditor.test.cjs"
+    "test:ui-units": "node app/settings/activity-types/activity-types.test.cjs && node components/workScheduleEditor.test.cjs && node app/dashboard/pending-approvals.contract.test.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
