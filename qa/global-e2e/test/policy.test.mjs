@@ -22,6 +22,17 @@ test("confines artifacts to D QA root", () => {
   assert.doesNotThrow(() => assertUnderQaRoot("D:\\CORO-QA\\runs\\x"));
   assert.throws(() => assertUnderQaRoot("D:\\outside"));
 });
+
+test("accepts only the fixed container evidence mount", () => {
+  const previous = process.env.CORO_QA_CONTAINERIZED;
+  process.env.CORO_QA_CONTAINERIZED = "true";
+  try {
+    assert.equal(assertSafeEnvironment(), true);
+  } finally {
+    if (previous === undefined) delete process.env.CORO_QA_CONTAINERIZED;
+    else process.env.CORO_QA_CONTAINERIZED = previous;
+  }
+});
 test("redacts nested sensitive values", () =>
   assert.deepEqual(redact({ token: "x", nested: { password: "y", ok: 1 } }), {
     token: "[REDACTED]",

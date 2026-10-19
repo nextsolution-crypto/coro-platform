@@ -13,7 +13,7 @@ services:
         target: /qa
         read_only: true
     restart: "no"
-    networks: [isolated]
+    networks: [isolated, host-loopback]
   postgres:
     image: postgres:16-alpine
     environment:
@@ -32,9 +32,14 @@ services:
       timeout: 3s
       retries: 30
     restart: "no"
-    networks: [isolated]
+    networks: [isolated, host-loopback]
 networks:
   isolated:
-    # No default Internet route. Host access remains loopback-only.
+    # Application containers use only this network and have no Internet route.
     driver: bridge
     internal: true
+  host-loopback:
+    # Credential-free infrastructure fakes also join this bridge because
+    # Docker Desktop/Windows otherwise does not publish internal-network ports.
+    # Application containers must never join this network.
+    driver: bridge

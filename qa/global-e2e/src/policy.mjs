@@ -14,7 +14,9 @@ const productionMarkers = [
 ];
 
 export function assertSafeEnvironment(env = process.env) {
-  if (!isAbsolute(QA_ROOT) || !/^D:\\/i.test(QA_ROOT)) {
+  const containerEvidence =
+    env.CORO_QA_CONTAINERIZED === "true" && QA_ROOT === resolve("/evidence");
+  if (!isAbsolute(QA_ROOT) || (!/^D:\\/i.test(QA_ROOT) && !containerEvidence)) {
     throw new Error("CORO QA root must be an absolute path on D:.");
   }
   if (productionMarkers.some((name) => String(env[name] || "").trim())) {

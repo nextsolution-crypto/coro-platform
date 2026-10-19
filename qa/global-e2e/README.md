@@ -37,6 +37,11 @@ stage journal under `D:\CORO-QA`, stops on the first failing stage and supports
 an explicit `--from`/`--through` resume range. Infrastructure setup and teardown
 remain explicit so an application failure cannot be hidden by automatic retries.
 
+When the backend is intentionally not published to the Windows host,
+`internal-runner.mjs` runs one of three allowlisted API scripts in the backend
+network namespace and exposes a fixed loopback-only 3155→3002 proxy there. It
+does not accept commands, hosts or ports from user input.
+
 The Compose network is Docker `internal`; it has no default Internet route and
 all published ports bind only to loopback. Application containers additionally
 use `--dns 127.0.0.1`: Docker service names stay local while external DNS fails
