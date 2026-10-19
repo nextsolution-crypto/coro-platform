@@ -191,6 +191,60 @@ test("emits a sanitized GO report for complete coherent evidence", () => {
   }
 });
 
+test("allows validated public migration identifiers containing secret-like words", () => {
+  const passwordMigration = migration(
+    "20260817221759_add_reset_token_to_user",
+    "5",
+  );
+  const history = [
+    ...migrations138.slice(0, -1),
+    passwordMigration,
+    migration138,
+  ];
+  const root = fixture({
+    sourceMigrations: history,
+    database: {
+      migrationCount: history.length,
+      migrationHistory: history,
+    },
+  });
+  try {
+    const result = run(root);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(JSON.parse(result.stdout).inspectionExecution, "PASS");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("fails closed when a real secret pattern appears outside migration identifiers", () => {
+  const root = fixture();
+  fs.writeFileSync(
+    path.join(root, "systemd"),
+    "Id=coro-db-backup.timer\nActiveState=active\npassword=synthetic-test-value",
+  );
+  try {
+    const result = run(root);
+    assert.notEqual(result.status, 0);
+    assert.equal(result.stdout, "");
+    assert.match(result.stderr, /REPORT_SECRET_PATTERN_DETECTED/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("fails closed when a sensitive field is injected into database evidence", () => {
+  const root = fixture({ database: { accessKey: "synthetic-test-value" } });
+  try {
+    const result = run(root);
+    assert.notEqual(result.status, 0);
+    assert.equal(result.stdout, "");
+    assert.match(result.stderr, /REPORT_SECRET_PATTERN_DETECTED/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("fails closed for invalid remote backup evidence", () => {
   const root = fixture({
     backup: { status: "LOCAL_VERIFIED", remoteVerification: "FAILED" },
