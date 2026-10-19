@@ -830,3 +830,31 @@ test("workflow has no command input and uses the dedicated inspection identity",
     /username: root|production-release|docker compose/,
   );
 });
+
+test("maintenance workflow is pinned to two inspector files and has no remote command input", () => {
+  const source = fs.readFileSync(
+    new URL(
+      "../../.github/workflows/production-inspector-maintenance.yml",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(source, /environment: production/);
+  assert.match(
+    source,
+    /AUTHORIZED_SOURCE_SHA: 3018f6b303968c912fef6d60b1eab62aace2b1b2/,
+  );
+  assert.match(source, /fingerprint:.*SERVER_SSH_HOST_FINGERPRINT/);
+  assert.match(source, /UPDATE_PRODUCTION_INSPECTOR/);
+  assert.match(source, /coro-production-inspect/);
+  assert.match(source, /inspection-report\.mjs/);
+  assert.match(source, /BACKUP_ALREADY_EXISTS/);
+  assert.match(source, /mv -T/);
+  assert.match(source, /root:root:755/);
+  assert.match(source, /root:root:644/);
+  assert.doesNotMatch(
+    source,
+    /migrate deploy|docker compose (up|down|restart)/,
+  );
+  assert.doesNotMatch(source, /command:.*inputs|script:.*inputs/);
+});

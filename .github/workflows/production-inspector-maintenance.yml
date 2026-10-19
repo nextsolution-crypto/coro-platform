@@ -1,0 +1,147 @@
+name: Maintain Production Inspector
+
+on:
+  workflow_dispatch:
+    inputs:
+      maintenance_approval:
+        description: Type UPDATE_PRODUCTION_INSPECTOR to authorize the fixed update
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-inspector-maintenance
+  cancel-in-progress: false
+
+env:
+  AUTHORIZED_SOURCE_SHA: 3018f6b303968c912fef6d60b1eab62aace2b1b2
+
+jobs:
+  validate-maintenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      collector_sha256: ${{ steps.hashes.outputs.collector_sha256 }}
+      reporter_sha256: ${{ steps.hashes.outputs.reporter_sha256 }}
+    steps:
+      - name: Validate fixed maintenance request
+        env:
+          MAINTENANCE_APPROVAL: ${{ inputs.maintenance_approval }}
+        run: |
+          set -euo pipefail
+          [[ "$MAINTENANCE_APPROVAL" == UPDATE_PRODUCTION_INSPECTOR ]]
+          [[ "$AUTHORIZED_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+
+      - name: Checkout exact authorized source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.AUTHORIZED_SOURCE_SHA }}
+          persist-credentials: false
+
+      - name: Validate source and compute hashes
+        id: hashes
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "$AUTHORIZED_SOURCE_SHA" ]]
+          bash -n ops/inspection/coro-production-inspect
+          node --check ops/inspection/inspection-report.mjs
+          node --test ops/inspection/inspection-security.test.mjs
+          printf 'collector_sha256=%s\n' "$(sha256sum ops/inspection/coro-production-inspect | cut -d' ' -f1)" >>"$GITHUB_OUTPUT"
+          printf 'reporter_sha256=%s\n' "$(sha256sum ops/inspection/inspection-report.mjs | cut -d' ' -f1)" >>"$GITHUB_OUTPUT"
+
+  update-production-inspector:
+    needs: validate-maintenance
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - name: Install exact inspector files atomically
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ env.AUTHORIZED_SOURCE_SHA }}
+          COLLECTOR_SHA256: ${{ needs.validate-maintenance.outputs.collector_sha256 }}
+          REPORTER_SHA256: ${{ needs.validate-maintenance.outputs.reporter_sha256 }}
+          MAINTENANCE_RUN_ID: ${{ github.run_id }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_HOST_FINGERPRINT }}
+          command_timeout: 10m
+          envs: SOURCE_SHA,COLLECTOR_SHA256,REPORTER_SHA256,MAINTENANCE_RUN_ID
+          script: |
+            set -Eeuo pipefail
+            umask 077
+
+            repo=/opt/coro-platform
+            collector=/usr/local/sbin/coro-production-inspect
+            reporter=/usr/local/libexec/coro/inspection-report.mjs
+            backup_root=/opt/coro-ops/inspection-maintenance
+            backup_dir="$backup_root/$MAINTENANCE_RUN_ID"
+            collector_tmp="${collector}.tmp-${MAINTENANCE_RUN_ID}"
+            reporter_tmp="${reporter}.tmp-${MAINTENANCE_RUN_ID}"
+            replaced_collector=false
+            replaced_reporter=false
+
+            fail() { printf 'INSPECTOR_MAINTENANCE_FAILED code=%s\n' "$1" >&2; exit 1; }
+            rollback() {
+              status=$?
+              rm -f -- "$collector_tmp" "$reporter_tmp"
+              if [[ "$status" -ne 0 ]]; then
+                $replaced_collector && install -o root -g root -m 0755 -T "$backup_dir/coro-production-inspect" "$collector"
+                $replaced_reporter && install -o root -g root -m 0644 -T "$backup_dir/inspection-report.mjs" "$reporter"
+              fi
+              exit "$status"
+            }
+            trap rollback EXIT
+
+            [[ "$SOURCE_SHA" == 3018f6b303968c912fef6d60b1eab62aace2b1b2 ]] || fail SOURCE_SHA_INVALID
+            [[ "$COLLECTOR_SHA256" =~ ^[0-9a-f]{64}$ ]] || fail COLLECTOR_HASH_INVALID
+            [[ "$REPORTER_SHA256" =~ ^[0-9a-f]{64}$ ]] || fail REPORTER_HASH_INVALID
+            [[ "$MAINTENANCE_RUN_ID" =~ ^[0-9]+$ ]] || fail RUN_ID_INVALID
+            [[ -d "$repo/.git" ]] || fail REPOSITORY_MISSING
+            [[ -f "$collector" && ! -L "$collector" ]] || fail COLLECTOR_TARGET_INVALID
+            [[ -f "$reporter" && ! -L "$reporter" ]] || fail REPORTER_TARGET_INVALID
+            [[ "$(stat -c '%U:%G:%a' "$collector")" == root:root:755 ]] || fail COLLECTOR_PERMISSIONS_INVALID
+            [[ "$(stat -c '%U:%G:%a' "$reporter")" == root:root:644 ]] || fail REPORTER_PERMISSIONS_INVALID
+            [[ ! -e "$backup_dir" ]] || fail BACKUP_ALREADY_EXISTS
+
+            exec 9>/run/lock/coro-production-deployment.lock
+            flock --nonblock 9 || fail DEPLOYMENT_LOCK_BUSY
+            containers_before="$(for name in coro_backend coro_frontend coro_client_portal coro_website coro_postgres; do docker inspect --format '{{.Id}} {{.RestartCount}} {{.State.Running}}' "$name"; done)" || fail CONTAINER_PREFLIGHT_FAILED
+            [[ "$(printf '%s\n' "$containers_before" | wc -l)" -eq 5 ]] || fail CONTAINER_PREFLIGHT_INVALID
+            [[ "$(printf '%s\n' "$containers_before" | grep -c ' true$')" -eq 5 ]] || fail CONTAINER_NOT_RUNNING
+
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" cat-file -e "$SOURCE_SHA^{commit}" || fail SOURCE_COMMIT_MISSING
+            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main || fail SOURCE_NOT_PUBLISHED_ON_MAIN
+            mkdir -p -m 0700 "$backup_root" "$backup_dir"
+            install -o root -g root -m 0755 -T "$collector" "$backup_dir/coro-production-inspect"
+            install -o root -g root -m 0644 -T "$reporter" "$backup_dir/inspection-report.mjs"
+            sha256sum "$collector" "$reporter" | sed 's#  /usr/local/[^ ]*#  [installed-before]#'
+
+            git -C "$repo" show "$SOURCE_SHA:ops/inspection/coro-production-inspect" >"$collector_tmp"
+            git -C "$repo" show "$SOURCE_SHA:ops/inspection/inspection-report.mjs" >"$reporter_tmp"
+            [[ "$(sha256sum "$collector_tmp" | cut -d' ' -f1)" == "$COLLECTOR_SHA256" ]] || fail COLLECTOR_SOURCE_HASH_MISMATCH
+            [[ "$(sha256sum "$reporter_tmp" | cut -d' ' -f1)" == "$REPORTER_SHA256" ]] || fail REPORTER_SOURCE_HASH_MISMATCH
+            bash -n "$collector_tmp" || fail COLLECTOR_SYNTAX_INVALID
+            node --check "$reporter_tmp" || fail REPORTER_SYNTAX_INVALID
+
+            install -o root -g root -m 0755 -T "$collector_tmp" "${collector_tmp}.installed"
+            mv -T -- "${collector_tmp}.installed" "$collector"
+            replaced_collector=true
+            install -o root -g root -m 0644 -T "$reporter_tmp" "${reporter_tmp}.installed"
+            mv -T -- "${reporter_tmp}.installed" "$reporter"
+            replaced_reporter=true
+
+            [[ "$(sha256sum "$collector" | cut -d' ' -f1)" == "$COLLECTOR_SHA256" ]] || fail COLLECTOR_INSTALLED_HASH_MISMATCH
+            [[ "$(sha256sum "$reporter" | cut -d' ' -f1)" == "$REPORTER_SHA256" ]] || fail REPORTER_INSTALLED_HASH_MISMATCH
+            [[ "$(stat -c '%U:%G:%a' "$collector")" == root:root:755 ]] || fail COLLECTOR_FINAL_PERMISSIONS_INVALID
+            [[ "$(stat -c '%U:%G:%a' "$reporter")" == root:root:644 ]] || fail REPORTER_FINAL_PERMISSIONS_INVALID
+            bash -n "$collector"
+            node --check "$reporter"
+            containers_after="$(for name in coro_backend coro_frontend coro_client_portal coro_website coro_postgres; do docker inspect --format '{{.Id}} {{.RestartCount}} {{.State.Running}}' "$name"; done)" || fail CONTAINER_POSTCHECK_FAILED
+            [[ "$containers_after" == "$containers_before" ]] || fail CONTAINERS_CHANGED
+            printf 'INSPECTOR_MAINTENANCE_SUCCESS source=%s backup=%s\n' "$SOURCE_SHA" "$backup_dir"
