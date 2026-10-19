@@ -85,7 +85,7 @@ export default function ProjectFilesClientPage() {
           ),
 
           apiGet(
-            `/project-files/project/${projectId}?visibility=shared`
+            `/project-files/client/${projectId}?visibility=shared`
           ),
         ]);
 
@@ -217,23 +217,31 @@ export default function ProjectFilesClientPage() {
     }
   };
 
-  const handleView = (file: any) => {
-    window.open(
-      file.url,
-      '_blank',
-      'noopener,noreferrer'
-    );
-  };
-
-  const handleDownload = (
+  const openFile = async (
     file: any
   ) => {
-    window.open(
-      file.url,
-      '_blank',
-      'noopener,noreferrer'
-    );
+    if (file.url !== 'private:project-file') {
+      window.open(file.url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('coro_client_token');
+      const response = await fetch(
+        `${API_URL}/project-files/client/file/${file.id}/content`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (!response.ok) throw new Error('Erreur telechargement');
+      const url = URL.createObjectURL(await response.blob());
+      window.open(url, '_blank', 'noopener,noreferrer');
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors du telechargement.');
+    }
   };
+
+  const handleView = openFile;
+  const handleDownload = openFile;
 
   const handleAnnotatedUpload = () => {
     setCategory('fichiers_client');

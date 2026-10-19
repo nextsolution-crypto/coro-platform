@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UploadedFile,
   Query,
+  StreamableFile,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -73,5 +74,18 @@ export class ProjectFilesController {
   @EvidenceReadAccess()
   getDownloadUrl(@Param('id') id: string, @Request() req: any) {
     return this.projectFilesService.getSignedUrl(id, req.user.organizationId);
+  }
+
+  @Get(':id/content')
+  @EvidenceReadAccess()
+  async downloadPrivate(@Param('id') id: string, @Request() req: any) {
+    const file = await this.projectFilesService.downloadPrivateFile(
+      id,
+      req.user.organizationId,
+    );
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: `attachment; filename="${file.name.replace(/["\r\n]/g, '_')}"`,
+    });
   }
 }

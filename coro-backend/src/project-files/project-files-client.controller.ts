@@ -9,6 +9,7 @@ import {
   UseInterceptors,
   UploadedFile,
   Query,
+  StreamableFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ClientJwtGuard } from '../client-portal/client-jwt.guard';
@@ -55,6 +56,21 @@ export class ProjectFilesClientController {
       visibility: 'shared',
       uploadedByClientId: req.clientUser.sub,
       permittedBuildingIds: req.clientUser.buildingIds,
+    });
+  }
+
+  @Get('file/:id/content')
+  @EvidenceReadAccess()
+  async downloadPrivate(@Param('id') id: string, @Request() req: any) {
+    const file = await this.projectFilesService.downloadPrivateFile(
+      id,
+      req.clientUser.organizationId,
+      req.clientUser.buildingIds,
+      true,
+    );
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: `attachment; filename="${file.name.replace(/["\r\n]/g, '_')}"`,
     });
   }
 }

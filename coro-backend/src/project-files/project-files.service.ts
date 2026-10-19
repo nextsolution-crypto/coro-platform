@@ -2,6 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { randomUUID } from 'crypto';
+
+const PRIVATE_PROJECT_FILE_URL = 'private:project-file';
 
 @Injectable()
 export class ProjectFilesService {
@@ -29,7 +32,7 @@ export class ProjectFilesService {
       where: {
         id: data.projectId,
         organizationId: data.organizationId,
-        ...(data.permittedBuildingIds?.length
+        ...(data.permittedBuildingIds !== undefined
           ? { buildingId: { in: data.permittedBuildingIds } }
           : {}),
       },
@@ -57,20 +60,21 @@ export class ProjectFilesService {
       }
     }
 
-    // Upload vers Spaces
-    const timestamp = Date.now();
+    // Store new project documents through the canonical private authority.
+    // The legacy public URL remains on historical rows only.
+    const id = randomUUID();
     const safeName = data.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const storageKey = `projects/${data.projectId}/files/${timestamp}_${safeName}`;
+    const storageKey = `tenant-${data.organizationId}/project-files/${data.projectId}/${id}/${safeName}`;
 
-    const url = await this.storage.uploadFile(
+    await this.storage.uploadPrivateImmutable(
       data.buffer,
-      `${timestamp}_${safeName}`,
-      `projects/${data.projectId}/files`,
+      storageKey,
       data.mimeType,
     );
 
     const file = await this.prisma.projectFile.create({
       data: {
+        id,
         projectId: data.projectId,
         organizationId: data.organizationId,
         name: data.name,
@@ -78,7 +82,7 @@ export class ProjectFilesService {
         size: data.size,
         mimeType: data.mimeType,
         storageKey,
-        url,
+        url: PRIVATE_PROJECT_FILE_URL,
         version,
         parentId: parentId || null,
         uploadedById: data.uploadedById || null,
@@ -110,7 +114,7 @@ export class ProjectFilesService {
       });
     }
 
-    return file;
+    return this.safeFile(file);
   }
 
   async getFilesForProject(
@@ -123,7 +127,7 @@ export class ProjectFilesService {
       where: {
         id: projectId,
         organizationId,
-        ...(permittedBuildingIds?.length
+        ...(permittedBuildingIds !== undefined
           ? { buildingId: { in: permittedBuildingIds } }
           : {}),
       },
@@ -153,7 +157,7 @@ export class ProjectFilesService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return files;
+    return files.map((file) => this.safeFile(file));
   }
 
   async validateFile(fileId: string, organizationId: string) {
@@ -189,5 +193,49 @@ export class ProjectFilesService {
     if (!file) throw new NotFoundException('Fichier introuvable');
     // Retourner l'URL directe (déjà publique via Spaces)
     return { url: file.url, name: file.name };
+  }
+
+  async downloadPrivateFile(
+    fileId: string,
+    organizationId: string,
+    permittedBuildingIds?: string[],
+    sharedOnly = false,
+  ) {
+    const file = await this.prisma.projectFile.findFirst({
+      where: {
+        id: fileId,
+        organizationId,
+        ...(sharedOnly ? { visibility: 'shared' } : {}),
+        project: {
+          organizationId,
+          ...(permittedBuildingIds !== undefined
+            ? { buildingId: { in: permittedBuildingIds } }
+            : {}),
+        },
+      },
+    });
+    if (!file || file.url !== PRIVATE_PROJECT_FILE_URL)
+      throw new NotFoundException('Fichier prive introuvable');
+    return {
+      buffer: await this.storage.downloadPrivate(file.storageKey),
+      mimeType: file.mimeType,
+      name: file.name,
+    };
+  }
+
+  private safeFile<T extends Record<string, any>>(
+    file: T,
+  ): Omit<T, 'storageKey'> {
+    const { storageKey: _storageKey, versions, ...safe } = file;
+    return {
+      ...safe,
+      ...(versions
+        ? {
+            versions: versions.map((version: Record<string, any>) =>
+              this.safeFile(version),
+            ),
+          }
+        : {}),
+    } as Omit<T, 'storageKey'>;
   }
 }

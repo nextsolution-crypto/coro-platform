@@ -225,14 +225,24 @@ export default function ProjectFiles({
     }
   };
 
-  const handleDownload = (
+  const handleDownload = async (
     file: ProjectFile
   ) => {
-    window.open(
-      file.url,
-      '_blank',
-      'noopener,noreferrer'
-    );
+    if (file.url !== 'private:project-file') {
+      window.open(file.url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    try {
+      const response = await api.get(`/project-files/${file.id}/content`, {
+        responseType: 'blob',
+      });
+      const url = URL.createObjectURL(response.data);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors du telechargement.');
+    }
   };
 
   const toggleVersions = (
