@@ -36,40 +36,49 @@ export class PlatformAuthorityService {
       | 'COMPOSITION_SNAPSHOT'
       | 'ENTITLEMENT',
     resourceId: string,
-  ): Promise<string> {
+  ): Promise<string | undefined> {
     let organizationId: string | null | undefined;
+    let prospectId: string | null | undefined;
     switch (kind) {
       case 'WORKSPACE':
-        organizationId = (
-          await this.prisma.commercialSimulationWorkspace.findUnique({
+        ({ organizationId, prospectId } =
+          (await this.prisma.commercialSimulationWorkspace.findUnique({
             where: { id: resourceId },
-            select: { organizationId: true },
-          })
-        )?.organizationId;
+            select: { organizationId: true, prospectId: true },
+          })) ?? {});
         break;
       case 'SCENARIO':
-        organizationId = (
-          await this.prisma.commercialSimulationScenario.findUnique({
-            where: { id: resourceId },
-            select: { workspace: { select: { organizationId: true } } },
-          })
-        )?.workspace.organizationId;
+        ({ organizationId, prospectId } =
+          (
+            await this.prisma.commercialSimulationScenario.findUnique({
+              where: { id: resourceId },
+              select: {
+                workspace: {
+                  select: { organizationId: true, prospectId: true },
+                },
+              },
+            })
+          )?.workspace ?? {});
         break;
       case 'PROPOSAL':
-        organizationId = (
-          await this.prisma.commercialProposal.findUnique({
+        ({ organizationId, prospectId } =
+          (await this.prisma.commercialProposal.findUnique({
             where: { id: resourceId },
-            select: { organizationId: true },
-          })
-        )?.organizationId;
+            select: { organizationId: true, prospectId: true },
+          })) ?? {});
         break;
       case 'PROPOSAL_REVISION':
-        organizationId = (
-          await this.prisma.commercialProposalRevision.findUnique({
-            where: { id: resourceId },
-            select: { proposal: { select: { organizationId: true } } },
-          })
-        )?.proposal.organizationId;
+        ({ organizationId, prospectId } =
+          (
+            await this.prisma.commercialProposalRevision.findUnique({
+              where: { id: resourceId },
+              select: {
+                proposal: {
+                  select: { organizationId: true, prospectId: true },
+                },
+              },
+            })
+          )?.proposal ?? {});
         break;
       case 'CONTRACT':
         organizationId = (
@@ -88,16 +97,21 @@ export class PlatformAuthorityService {
         )?.contract.organizationId;
         break;
       case 'COMPOSITION_SNAPSHOT':
-        organizationId = (
-          await this.prisma.proposalDocumentCompositionSnapshot.findUnique({
-            where: { id: resourceId },
-            select: {
-              proposalRevision: {
-                select: { proposal: { select: { organizationId: true } } },
+        ({ organizationId, prospectId } =
+          (
+            await this.prisma.proposalDocumentCompositionSnapshot.findUnique({
+              where: { id: resourceId },
+              select: {
+                proposalRevision: {
+                  select: {
+                    proposal: {
+                      select: { organizationId: true, prospectId: true },
+                    },
+                  },
+                },
               },
-            },
-          })
-        )?.proposalRevision.proposal.organizationId;
+            })
+          )?.proposalRevision.proposal ?? {});
         break;
       case 'ENTITLEMENT':
         organizationId = (
@@ -108,12 +122,11 @@ export class PlatformAuthorityService {
         )?.organizationId;
         break;
     }
-    if (!organizationId) {
-      throw new ForbiddenException(
-        'Organisation de la ressource introuvable ou ambiguÃ«.',
-      );
-    }
-    return organizationId;
+    if (organizationId && !prospectId) return organizationId;
+    if (!organizationId && prospectId) return undefined;
+    throw new ForbiddenException(
+      'Organisation de la ressource introuvable ou ambiguÃ«.',
+    );
   }
 
   async requirePermission(

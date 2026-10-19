@@ -40,23 +40,39 @@ describe('PlatformAuthorityService', () => {
 
   it('resolves the canonical organization from a commercial resource', async () => {
     prisma.commercialProposalRevision.findUnique.mockResolvedValue({
-      proposal: { organizationId: 'customer-org' },
+      proposal: { organizationId: 'customer-org', prospectId: null },
     });
     await expect(
       service.resolveTargetOrganization('PROPOSAL_REVISION', 'revision-1'),
     ).resolves.toBe('customer-org');
     expect(prisma.commercialProposalRevision.findUnique).toHaveBeenCalledWith({
       where: { id: 'revision-1' },
-      select: { proposal: { select: { organizationId: true } } },
+      select: {
+        proposal: {
+          select: { organizationId: true, prospectId: true },
+        },
+      },
     });
   });
 
-  it('fails closed for a missing resource organization', async () => {
+  it('resolves a prospect workspace as GLOBAL-only', async () => {
     prisma.commercialSimulationWorkspace.findUnique.mockResolvedValue({
       organizationId: null,
+      prospectId: 'prospect-1',
     });
     await expect(
       service.resolveTargetOrganization('WORKSPACE', 'prospect-workspace'),
+    ).resolves.toBeUndefined();
+  });
+
+  it.each([
+    ['missing', null],
+    ['unbound', { organizationId: null, prospectId: null }],
+    ['ambiguous', { organizationId: 'customer-org', prospectId: 'prospect-1' }],
+  ])('fails closed for a %s commercial resource', async (_label, resource) => {
+    prisma.commercialSimulationWorkspace.findUnique.mockResolvedValue(resource);
+    await expect(
+      service.resolveTargetOrganization('WORKSPACE', 'invalid-workspace'),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
@@ -142,6 +158,39 @@ describe('PlatformAuthorityService', () => {
         // Jest asymmetric matchers are intentionally dynamic at this boundary.
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         where: expect.objectContaining({ status: 'ACTIVE' }),
+      }),
+    );
+  });
+
+  it('requires an explicit GLOBAL grant for a Prospect resource', async () => {
+    prisma.platformAuthorityConfiguration.findUnique.mockResolvedValue(
+      activeAuthority,
+    );
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'employee',
+      role: UserRole.ADMIN,
+      organizationId: 'operator-org',
+      isActive: true,
+      organization: { isActive: true, isInternal: true },
+    });
+    prisma.platformPermissionGrant.findFirst.mockResolvedValue({
+      id: 'global-grant',
+      scope: 'GLOBAL',
+      targetOrganizationId: null,
+    });
+    await expect(
+      service.requirePermission(
+        { userId: 'employee' },
+        PlatformPermission.COMMERCIAL_WORKSPACE_MANAGE,
+      ),
+    ).resolves.toMatchObject({ kind: 'DELEGATED' });
+    expect(prisma.platformPermissionGrant.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        // Jest asymmetric matchers are intentionally dynamic at this boundary.
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        where: expect.objectContaining({
+          OR: [{ scope: 'GLOBAL' }],
+        }),
       }),
     );
   });
