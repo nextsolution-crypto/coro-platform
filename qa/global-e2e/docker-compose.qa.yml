@@ -1,0 +1,40 @@
+name: coro-global-e2e
+services:
+  provider-fake:
+    image: node:22-alpine
+    command: ["node", "/qa/provider-container.mjs"]
+    environment:
+      QA_PROVIDER_PORT: "34641"
+    ports:
+      - "127.0.0.1:${CORO_QA_PROVIDER_PORT:-34641}:34641"
+    volumes:
+      - type: bind
+        source: ./src
+        target: /qa
+        read_only: true
+    restart: "no"
+    networks: [isolated]
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: coro_qa_global_e2e
+      POSTGRES_USER: coro_qa
+      POSTGRES_PASSWORD: ${CORO_QA_DB_PASSWORD:?required}
+    ports:
+      - "127.0.0.1:${CORO_QA_POSTGRES_PORT:-55439}:5432"
+    volumes:
+      - type: bind
+        source: ${CORO_QA_POSTGRES_DATA:?D-drive path required}
+        target: /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coro_qa -d coro_qa_global_e2e"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: "no"
+    networks: [isolated]
+networks:
+  isolated:
+    # No default Internet route. Host access remains loopback-only.
+    driver: bridge
+    internal: true

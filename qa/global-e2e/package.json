@@ -1,0 +1,14 @@
+{
+  "name": "@coro/global-e2e-harness",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node src/cli.mjs check",
+    "test": "node --test test/*.test.mjs",
+    "smoke": "node src/cli.mjs smoke",
+    "business-smoke": "node src/business-smoke.mjs",
+    "campaign:plan": "node src/campaign.mjs --plan",
+    "campaign": "node src/campaign.mjs",
+    "cleanup": "node src/cli.mjs cleanup"
+  }
+}
