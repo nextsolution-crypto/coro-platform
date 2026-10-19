@@ -844,7 +844,18 @@ test("maintenance workflow is pinned to two inspector files and has no remote co
     source,
     /AUTHORIZED_SOURCE_SHA: 3018f6b303968c912fef6d60b1eab62aace2b1b2/,
   );
-  assert.match(source, /fingerprint:.*SERVER_SSH_HOST_FINGERPRINT/);
+  assert.match(source, /uses: appleboy\/ssh-action@v1\.0\.3/);
+  assert.match(source, /Validate pinned ECDSA host fingerprint/);
+  assert.match(source, /HOST_FINGERPRINT:.*SERVER_SSH_ECDSA_HOST_FINGERPRINT/);
+  assert.ok(
+    source.includes('[[ "$HOST_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]'),
+  );
+  assert.match(source, /fingerprint:.*SERVER_SSH_ECDSA_HOST_FINGERPRINT/);
+  assert.doesNotMatch(source, /SERVER_SSH_HOST_FINGERPRINT/);
+  assert.doesNotMatch(
+    source,
+    /InsecureIgnoreHostKey|StrictHostKeyChecking=no|ssh-keyscan/,
+  );
   assert.match(source, /UPDATE_PRODUCTION_INSPECTOR/);
   assert.match(source, /coro-production-inspect/);
   assert.match(source, /inspection-report\.mjs/);

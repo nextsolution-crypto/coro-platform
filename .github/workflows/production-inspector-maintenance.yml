@@ -57,6 +57,16 @@ jobs:
     timeout-minutes: 10
     environment: production
     steps:
+      # ssh-action v1.0.3 uses x/crypto/ssh v0.17.0, whose first server key
+      # algorithm supported by this host is ECDSA P-256. The action does not
+      # expose HostKeyAlgorithms, so pin that independently verified key.
+      - name: Validate pinned ECDSA host fingerprint
+        env:
+          HOST_FINGERPRINT: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+          [[ "$HOST_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]
+
       - name: Install exact inspector files atomically
         uses: appleboy/ssh-action@v1.0.3
         env:
@@ -68,7 +78,7 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          fingerprint: ${{ secrets.SERVER_SSH_HOST_FINGERPRINT }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
           command_timeout: 10m
           envs: SOURCE_SHA,COLLECTOR_SHA256,REPORTER_SHA256,MAINTENANCE_RUN_ID
           script: |
