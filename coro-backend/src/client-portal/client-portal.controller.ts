@@ -96,6 +96,7 @@ export class ClientPortalController {
       req.clientUser.clientId,
       req.clientUser.organizationId,
       req.clientUser.role,
+      req.clientUser.buildingIds,
     );
   }
 
@@ -389,6 +390,7 @@ export class ClientPortalController {
       req.clientUser.clientId,
       req.clientUser.organizationId,
       req.clientUser.role,
+      req.clientUser.buildingIds,
     );
 
     if (!project) {

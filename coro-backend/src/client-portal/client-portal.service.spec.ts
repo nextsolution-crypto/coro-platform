@@ -22,6 +22,14 @@ describe('ClientPortalService - Sentinelle Population', () => {
     },
     building: {
       findFirst: jest.fn(),
+      findMany: jest.fn(),
+    },
+    project: {
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+    },
+    projectActivity: {
+      findMany: jest.fn(),
     },
     rueFacilityProfile: {
       findUnique: jest.fn(),
@@ -67,7 +75,9 @@ describe('ClientPortalService - Sentinelle Population', () => {
     verify: jest.fn(),
   };
   const populationEvidenceReportService = {
-    generate: jest.fn(), get: jest.fn(), download: jest.fn(),
+    generate: jest.fn(),
+    get: jest.fn(),
+    download: jest.fn(),
   };
 
   beforeEach(() => {
@@ -115,12 +125,24 @@ describe('ClientPortalService - Sentinelle Population', () => {
     });
 
     it('transmet toujours le tenant et le bâtiment pour générer et lire', async () => {
-      populationEvidenceService.generateV1.mockResolvedValue({ id: 'evidence-1' });
-      populationEvidenceService.getForEvent.mockResolvedValue({ id: 'evidence-1' });
+      populationEvidenceService.generateV1.mockResolvedValue({
+        id: 'evidence-1',
+      });
+      populationEvidenceService.getForEvent.mockResolvedValue({
+        id: 'evidence-1',
+      });
       populationEvidenceService.getById.mockResolvedValue({ id: 'evidence-1' });
       await service.generatePopulationEvidence('building-1', 'event-1', actor);
-      await service.getPopulationEvidenceForEvent('building-1', 'event-1', actor);
-      await service.getPopulationEvidenceById('building-1', 'evidence-1', actor);
+      await service.getPopulationEvidenceForEvent(
+        'building-1',
+        'event-1',
+        actor,
+      );
+      await service.getPopulationEvidenceById(
+        'building-1',
+        'evidence-1',
+        actor,
+      );
       expect(populationEvidenceService.generateV1).toHaveBeenCalledWith(
         'building-1',
         'org-1',
@@ -140,11 +162,25 @@ describe('ClientPortalService - Sentinelle Population', () => {
     });
 
     it('scope également génération, lecture et vérification du manifest', async () => {
-      populationEvidenceService.generateManifestV1.mockResolvedValue({ id: 'manifest-1' });
-      populationEvidenceService.getManifest.mockResolvedValue({ id: 'manifest-1' });
-      populationEvidenceService.verify.mockResolvedValue({ status: 'VERIFIED' });
-      await service.generatePopulationEvidenceManifest('building-1', 'evidence-1', actor);
-      await service.getPopulationEvidenceManifest('building-1', 'evidence-1', actor);
+      populationEvidenceService.generateManifestV1.mockResolvedValue({
+        id: 'manifest-1',
+      });
+      populationEvidenceService.getManifest.mockResolvedValue({
+        id: 'manifest-1',
+      });
+      populationEvidenceService.verify.mockResolvedValue({
+        status: 'VERIFIED',
+      });
+      await service.generatePopulationEvidenceManifest(
+        'building-1',
+        'evidence-1',
+        actor,
+      );
+      await service.getPopulationEvidenceManifest(
+        'building-1',
+        'evidence-1',
+        actor,
+      );
       await service.verifyPopulationEvidence('building-1', 'evidence-1', actor);
       expect(populationEvidenceService.generateManifestV1).toHaveBeenCalledWith(
         'building-1',
@@ -225,10 +261,10 @@ describe('ClientPortalService - Sentinelle Population', () => {
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
-    it('limite un CLIENT_MANAGER sans buildingIds aux bâtiments de son client', async () => {
+    it('refuse un CLIENT_MANAGER sans buildingIds même pour un bâtiment de son client', async () => {
       prisma.building.findFirst.mockResolvedValue({
         id: 'building-2',
-        clientId: 'client-2',
+        clientId: 'client-1',
       });
 
       await expect(
@@ -239,6 +275,46 @@ describe('ClientPortalService - Sentinelle Population', () => {
           buildingIds: [],
         }),
       ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+  });
+
+  describe('CLIENT_MANAGER building list scope', () => {
+    beforeEach(() => {
+      prisma.project.findMany.mockResolvedValue([]);
+      prisma.building.findMany.mockResolvedValue([]);
+    });
+
+    it.each([
+      ['zero', [], []],
+      ['one', ['building-1'], ['building-1']],
+      ['multiple', ['building-1', 'building-2'], ['building-1', 'building-2']],
+    ])(
+      'applies the explicit %s-building scope',
+      async (_label, buildingIds, expected) => {
+        await service.getProjects(
+          'client-1',
+          'org-1',
+          'CLIENT_MANAGER',
+          buildingIds,
+        );
+
+        expect(prisma.project.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: {
+              organizationId: 'org-1',
+              buildingId: { in: expected },
+            },
+          }),
+        );
+      },
+    );
+
+    it('preserves CLIENT_CORPORATE organization-wide project access', async () => {
+      await service.getProjects('client-1', 'org-1', 'CLIENT_CORPORATE', []);
+
+      expect(prisma.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { organizationId: 'org-1' } }),
+      );
     });
   });
 

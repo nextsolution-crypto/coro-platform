@@ -63,7 +63,7 @@ model Organization {
   commercialSimulationWorkspaces CommercialSimulationWorkspace[]
   advisorInternalCostRates       AdvisorInternalCostRate[]
   platformAuthority              PlatformAuthorityConfiguration? @relation("PlatformOperatorOrganization")
-  platformPermissionScopes       PlatformPermissionGrant[]        @relation("PlatformPermissionTargetOrganization")
+  platformPermissionScopes       PlatformPermissionGrant[]       @relation("PlatformPermissionTargetOrganization")
 }
 
 model User {
@@ -162,38 +162,40 @@ model User {
   authVersion      Int       @default(1)
 
   bookings                              Booking[]
-  bookingAssignments                    BookingAssignment[]         @relation("BookingAssignee")
-  bookingAssignmentsCreated             BookingAssignment[]         @relation("BookingAssignmentActor")
-  projectAdvisorEligibilities           ProjectAdvisorEligibility[] @relation("EligibleAdvisor")
-  projectAdvisorEligibilitiesAuthorized ProjectAdvisorEligibility[] @relation("EligibilityAuthorizer")
-  uploadedFiles                         ProjectFile[]               @relation("FileUploader")
-  referralsCreated                      Referral[]                  @relation("ReferralCreator")
-  exerciseReportsCreated                ExerciseReport[]            @relation("ExerciseReportCreator")
-  exerciseReportsFinalized              ExerciseReport[]            @relation("ExerciseReportFinalizer")
+  bookingAssignments                    BookingAssignment[]              @relation("BookingAssignee")
+  bookingAssignmentsCreated             BookingAssignment[]              @relation("BookingAssignmentActor")
+  projectAdvisorEligibilities           ProjectAdvisorEligibility[]      @relation("EligibleAdvisor")
+  projectAdvisorEligibilitiesAuthorized ProjectAdvisorEligibility[]      @relation("EligibilityAuthorizer")
+  uploadedFiles                         ProjectFile[]                    @relation("FileUploader")
+  referralsCreated                      Referral[]                       @relation("ReferralCreator")
+  exerciseReportsCreated                ExerciseReport[]                 @relation("ExerciseReportCreator")
+  exerciseReportsFinalized              ExerciseReport[]                 @relation("ExerciseReportFinalizer")
   exerciseReportVersions                ExerciseReportVersion[]
-  exerciseReportImportsReviewed         ExerciseReportImport[]      @relation("ExerciseReportImportReviewer")
-  exerciseParticipantsValidated         ExerciseParticipant[]       @relation("ExerciseParticipantValidator")
-  exerciseTimelineValidated             ExerciseTimelineEntry[]     @relation("ExerciseTimelineValidator")
-  exerciseFindingsValidated             ExerciseFinding[]           @relation("ExerciseFindingValidator")
-  exerciseRecommendationsValidated      ExerciseRecommendation[]    @relation("ExerciseRecommendationValidator")
-  exerciseActionItemsValidated          ExerciseActionItem[]        @relation("ExerciseActionItemValidator")
-  mandateServicesCreated                ProjectMandateService[]     @relation("MandateServiceCreator")
-  mandateServicesUpdated                ProjectMandateService[]     @relation("MandateServiceUpdater")
-  mandateServicesRemoved                ProjectMandateService[]     @relation("MandateServiceRemover")
-  mandateServiceOperations              MandateServiceOperation[]   @relation("MandateServiceOperationCreator")
-  meteringResultsCreated                MeteringResult[]            @relation("MeteringResultCreator")
-  advisorInternalCostRates              AdvisorInternalCostRate[]   @relation("AdvisorInternalCostRateAdvisor")
-  advisorCostRatesProposed              AdvisorInternalCostRate[]   @relation("AdvisorInternalCostRateProposer")
-  advisorCostRatesApproved              AdvisorInternalCostRate[]   @relation("AdvisorInternalCostRateApprover")
-  advisorCostRatesRejected              AdvisorInternalCostRate[]   @relation("AdvisorInternalCostRateRejector")
-  advisorCostRatesSuperseded            AdvisorInternalCostRate[]   @relation("AdvisorInternalCostRateSuperseder")
-  mandateSalesValidated                 ProjectMandate[]            @relation("ProjectMandateSaleValidator")
-  platformAuthorityFounder              PlatformAuthorityConfiguration? @relation("PlatformAuthorityFounder")
+  exerciseReportImportsReviewed         ExerciseReportImport[]           @relation("ExerciseReportImportReviewer")
+  exerciseParticipantsValidated         ExerciseParticipant[]            @relation("ExerciseParticipantValidator")
+  exerciseTimelineValidated             ExerciseTimelineEntry[]          @relation("ExerciseTimelineValidator")
+  exerciseFindingsValidated             ExerciseFinding[]                @relation("ExerciseFindingValidator")
+  exerciseRecommendationsValidated      ExerciseRecommendation[]         @relation("ExerciseRecommendationValidator")
+  exerciseActionItemsValidated          ExerciseActionItem[]             @relation("ExerciseActionItemValidator")
+  mandateServicesCreated                ProjectMandateService[]          @relation("MandateServiceCreator")
+  mandateServicesUpdated                ProjectMandateService[]          @relation("MandateServiceUpdater")
+  mandateServicesRemoved                ProjectMandateService[]          @relation("MandateServiceRemover")
+  mandateServiceOperations              MandateServiceOperation[]        @relation("MandateServiceOperationCreator")
+  meteringResultsCreated                MeteringResult[]                 @relation("MeteringResultCreator")
+  advisorInternalCostRates              AdvisorInternalCostRate[]        @relation("AdvisorInternalCostRateAdvisor")
+  advisorCostRatesProposed              AdvisorInternalCostRate[]        @relation("AdvisorInternalCostRateProposer")
+  advisorCostRatesApproved              AdvisorInternalCostRate[]        @relation("AdvisorInternalCostRateApprover")
+  advisorCostRatesRejected              AdvisorInternalCostRate[]        @relation("AdvisorInternalCostRateRejector")
+  advisorCostRatesSuperseded            AdvisorInternalCostRate[]        @relation("AdvisorInternalCostRateSuperseder")
+  mandateSalesValidated                 ProjectMandate[]                 @relation("ProjectMandateSaleValidator")
+  platformAuthorityFounder              PlatformAuthorityConfiguration?  @relation("PlatformAuthorityFounder")
   platformAuthoritiesCreated            PlatformAuthorityConfiguration[] @relation("PlatformAuthorityCreator")
   platformAuthoritiesActivated          PlatformAuthorityConfiguration[] @relation("PlatformAuthorityActivator")
   platformPermissionGrants              PlatformPermissionGrant[]        @relation("PlatformPermissionSubject")
   platformPermissionGrantsIssued        PlatformPermissionGrant[]        @relation("PlatformPermissionIssuer")
   platformPermissionGrantsRevoked       PlatformPermissionGrant[]        @relation("PlatformPermissionRevoker")
+
+  @@unique([id, organizationId])
 }
 
 model UserWorkSchedule {
@@ -339,6 +341,149 @@ model PlatformPermissionGrant {
 
   @@index([userId, permission, status])
   @@index([targetOrganizationId, permission, status])
+}
+
+enum CustomerNetworkAuthorityStatus {
+  DRAFT
+  ACTIVE
+  REVOKED
+}
+
+enum CustomerPortfolioAssignmentSubjectType {
+  INTERNAL_USER
+  CLIENT_USER
+}
+
+enum CustomerPortfolioAssignmentScope {
+  PORTFOLIO
+  REGION
+  BUILDING
+}
+
+enum CustomerNetworkPermission {
+  NETWORK_SUPERVISION_READ
+  NETWORK_HIERARCHY_MANAGE
+  NETWORK_ASSIGNMENT_MANAGE
+}
+
+enum CustomerPortfolioAssignmentStatus {
+  ACTIVE
+  REVOKED
+}
+
+model CustomerNetworkAuthorityConfiguration {
+  id                       String                         @id @default(uuid())
+  organizationId           String                         @unique
+  initialResponsibleUserId String
+  responsibleUserId        String
+  status                   CustomerNetworkAuthorityStatus @default(DRAFT)
+  mandateReference         String
+  creationReason           String
+  lockVersion              Int                            @default(0)
+  createdByUserId          String
+  createdAt                DateTime                       @default(now())
+  activatedByUserId        String?
+  activatedAt              DateTime?
+  activationReason         String?
+  revokedByUserId          String?
+  revokedAt                DateTime?
+  revocationReason         String?
+  updatedAt                DateTime                       @updatedAt
+
+  @@index([organizationId, status])
+  @@index([responsibleUserId, status])
+}
+
+model CustomerPortfolio {
+  id              String   @id @default(uuid())
+  organizationId  String
+  code            String
+  name            String
+  description     String?
+  isActive        Boolean  @default(true)
+  lockVersion     Int      @default(0)
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([organizationId, code])
+  @@unique([id, organizationId])
+  @@index([organizationId, isActive, name])
+}
+
+model CustomerPortfolioRegion {
+  id              String   @id @default(uuid())
+  organizationId  String
+  code            String
+  name            String
+  description     String?
+  isActive        Boolean  @default(true)
+  lockVersion     Int      @default(0)
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([organizationId, code])
+  @@unique([id, organizationId])
+  @@index([organizationId, isActive, name])
+}
+
+model CustomerPortfolioRegionLink {
+  id              String   @id @default(uuid())
+  organizationId  String
+  portfolioId     String
+  regionId        String
+  createdByUserId String
+  createdAt       DateTime @default(now())
+
+  @@unique([portfolioId, regionId])
+  @@index([organizationId, portfolioId])
+  @@index([organizationId, regionId])
+}
+
+model CustomerPortfolioBuildingMembership {
+  id              String   @id @default(uuid())
+  organizationId  String
+  portfolioId     String
+  regionId        String
+  buildingId      String
+  createdByUserId String
+  createdAt       DateTime @default(now())
+
+  @@unique([portfolioId, buildingId])
+  @@index([organizationId, portfolioId, regionId])
+  @@index([organizationId, buildingId])
+}
+
+model CustomerPortfolioAssignment {
+  id               String                                 @id @default(uuid())
+  organizationId   String
+  subjectType      CustomerPortfolioAssignmentSubjectType
+  userId           String?
+  clientUserId     String?
+  scope            CustomerPortfolioAssignmentScope
+  portfolioId      String?
+  regionId         String?
+  buildingId       String?
+  permissions      CustomerNetworkPermission[]            @default([])
+  status           CustomerPortfolioAssignmentStatus      @default(ACTIVE)
+  effectiveFrom    DateTime                               @default(now())
+  effectiveUntil   DateTime?
+  grantedByUserId  String
+  grantReason      String
+  revokedAt        DateTime?
+  revokedByUserId  String?
+  revocationReason String?
+  lockVersion      Int                                    @default(0)
+  createdAt        DateTime                               @default(now())
+  updatedAt        DateTime                               @updatedAt
+
+  @@index([organizationId, status, effectiveFrom, effectiveUntil])
+  @@index([userId, status])
+  @@index([clientUserId, status])
+  @@index([portfolioId, status])
+  @@index([regionId, status])
+  @@index([buildingId, status])
 }
 
 enum CommercialRelationship {
@@ -2026,6 +2171,7 @@ model Building {
   populationEvidenceReports   PopulationEvidenceReport[]
 
   @@unique([id, clientId, organizationId])
+  @@unique([id, organizationId])
 }
 
 model Project {
@@ -2902,6 +3048,8 @@ model ClientUser {
   securityAuditEvents          ClientSecurityAuditEvent[]
   auditLogs                    AuditLog[]                    @relation("AuditLogClientActor")
   sessionVersion               Int                           @default(0)
+
+  @@unique([id, organizationId])
 }
 
 model AdminAuditEvent {

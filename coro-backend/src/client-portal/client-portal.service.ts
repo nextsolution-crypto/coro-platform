@@ -230,9 +230,9 @@ export class ClientPortalService {
    *
    * Sécurité :
    * - le bâtiment doit appartenir à la même organisation;
-   * - un CLIENT_MANAGER limité à des buildingIds ne peut accéder
-   *   qu'aux bâtiments explicitement autorisés;
-   * - un CLIENT_MANAGER sans buildingIds est limité à son client;
+   * - un CLIENT_MANAGER ne peut accéder qu'aux bâtiments explicitement
+   *   autorisés dans buildingIds;
+   * - un CLIENT_MANAGER sans buildingIds ne peut accéder à aucun bâtiment;
    * - aucune donnée métier du bâtiment n'est retournée avant validation.
    */
   async assertBuildingAccess(
@@ -260,11 +260,7 @@ export class ClientPortalService {
     }
 
     if (actor.role === 'CLIENT_MANAGER') {
-      if (actor.buildingIds?.length) {
-        if (!actor.buildingIds.includes(building.id)) {
-          throw new ForbiddenException('Accès refusé à ce bâtiment');
-        }
-      } else if (building.clientId !== actor.clientId) {
+      if (!(actor.buildingIds ?? []).includes(building.id)) {
         throw new ForbiddenException('Accès refusé à ce bâtiment');
       }
     }
@@ -1109,11 +1105,7 @@ export class ClientPortalService {
   ) {
     const where: any = { organizationId };
 
-    if (role === 'CLIENT_MANAGER' && buildingIds && buildingIds.length > 0) {
-      where.buildingId = { in: buildingIds };
-    } else if (role === 'CLIENT_MANAGER') {
-      where.clientId = clientId;
-    }
+    if (role === 'CLIENT_MANAGER') where.buildingId = { in: buildingIds ?? [] };
 
     const projects = await this.prisma.project.findMany({
       where,
@@ -1142,12 +1134,15 @@ export class ClientPortalService {
     clientId: string,
     organizationId: string,
     role: string,
+    buildingIds?: string[],
   ) {
     const project = await this.prisma.project.findFirst({
       where: {
         id: projectId,
         organizationId,
-        ...(role === 'CLIENT_MANAGER' ? { clientId } : {}),
+        ...(role === 'CLIENT_MANAGER'
+          ? { clientId, buildingId: { in: buildingIds ?? [] } }
+          : {}),
       },
       include: {
         client: true,
@@ -1178,8 +1173,8 @@ export class ClientPortalService {
       where: {
         organizationId,
         clientId,
-        ...(role === 'CLIENT_MANAGER' && buildingIds?.length
-          ? { buildingId: { in: buildingIds } }
+        ...(role === 'CLIENT_MANAGER'
+          ? { buildingId: { in: buildingIds ?? [] } }
           : {}),
       },
       select: { id: true },
@@ -1632,10 +1627,8 @@ export class ClientPortalService {
     );
 
     // Récupérer les bâtiments accessibles
-    const buildingWhere: any = { clientId };
-    if (role === 'CLIENT_MANAGER' && buildingIds?.length) {
-      buildingWhere.id = { in: buildingIds };
-    }
+    const buildingWhere: any = { clientId, organizationId };
+    if (role === 'CLIENT_MANAGER') buildingWhere.id = { in: buildingIds ?? [] };
     const buildings = await this.prisma.building.findMany({
       where: buildingWhere,
       select: {
@@ -1825,8 +1818,7 @@ export class ClientPortalService {
       !activity ||
       activity.project.clientId !== data.actor.clientId ||
       (data.actor.role === 'CLIENT_MANAGER' &&
-        data.actor.buildingIds?.length &&
-        !data.actor.buildingIds.includes(activity.project.buildingId))
+        !(data.actor.buildingIds ?? []).includes(activity.project.buildingId))
     ) {
       throw new ForbiddenException('Activité inaccessible');
     }
@@ -1871,12 +1863,12 @@ export class ClientPortalService {
       actor.clientId,
       actor.organizationId,
       actor.role,
+      actor.buildingIds,
     );
     if (
       !project ||
       (actor.role === 'CLIENT_MANAGER' &&
-        actor.buildingIds?.length &&
-        !actor.buildingIds.includes(project.buildingId))
+        !(actor.buildingIds ?? []).includes(project.buildingId))
     ) {
       throw new ForbiddenException('Projet inaccessible');
     }
@@ -1952,11 +1944,7 @@ export class ClientPortalService {
     buildingIds?: string[],
   ) {
     const where: any = { organizationId };
-    if (role === 'CLIENT_MANAGER' && buildingIds?.length) {
-      where.id = { in: buildingIds };
-    } else if (role === 'CLIENT_MANAGER') {
-      where.clientId = clientId;
-    }
+    if (role === 'CLIENT_MANAGER') where.id = { in: buildingIds ?? [] };
     const buildings = await this.prisma.building.findMany({
       where,
       include: {
@@ -2005,11 +1993,7 @@ export class ClientPortalService {
     buildingIds?: string[],
   ) {
     const where: any = { organizationId };
-    if (role === 'CLIENT_MANAGER' && buildingIds?.length) {
-      where.id = { in: buildingIds };
-    } else if (role === 'CLIENT_MANAGER') {
-      where.clientId = clientId;
-    }
+    if (role === 'CLIENT_MANAGER') where.id = { in: buildingIds ?? [] };
 
     const buildings = await this.prisma.building.findMany({
       where,
@@ -2110,10 +2094,8 @@ export class ClientPortalService {
     buildingIds?: string[],
   ) {
     const where: any = { organizationId };
-    if (role === 'CLIENT_MANAGER' && buildingIds?.length) {
-      where.buildingId = { in: buildingIds };
-    } else if (role === 'CLIENT_MANAGER') {
-      where.clientId = clientId;
+    if (role === 'CLIENT_MANAGER') {
+      where.buildingId = { in: buildingIds ?? [] };
     }
 
     const projects = await this.prisma.project.findMany({
