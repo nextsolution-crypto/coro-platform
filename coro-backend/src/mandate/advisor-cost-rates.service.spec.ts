@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument */
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { AdvisorCostRatesService } from './advisor-cost-rates.service';
 
 describe('AdvisorCostRatesService', () => {
@@ -68,5 +69,39 @@ describe('AdvisorCostRatesService', () => {
     expect(
       transaction.advisorInternalCostRate.updateMany,
     ).not.toHaveBeenCalled();
+  });
+
+  it('maps only the governed database authorization marker to a stable forbidden error', async () => {
+    const databaseError = new Error(
+      'PostgreSQL 23514: FINANCIAL_ACTOR_NOT_AUTHORIZED',
+    );
+    Object.setPrototypeOf(
+      databaseError,
+      Prisma.PrismaClientUnknownRequestError.prototype,
+    );
+    const prisma = {
+      advisorInternalCostRate: {
+        findUnique: jest.fn().mockResolvedValue({ organizationId: 'org-a' }),
+      },
+      $transaction: jest.fn().mockRejectedValue(databaseError),
+    } as any;
+    const service = new AdvisorCostRatesService(prisma, authority as never);
+
+    const rejection = service.submit(
+      'rate-a',
+      { lockVersion: 0, reason: 'Governed proposal' },
+      {
+        userId: 'founder-a',
+        organizationId: 'operator-a',
+        role: 'SUPER_ADMIN',
+      },
+    );
+    await expect(rejection).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(rejection).rejects.toMatchObject({
+      response: {
+        code: 'FINANCIAL_ACTOR_NOT_AUTHORIZED',
+        message: 'Autorisation financiÃ¨re requise.',
+      },
+    });
   });
 });

@@ -3,9 +3,97 @@ import { createBookingFixture } from './booking-postgres-fixture';
 import { AdvisorCostRatesService } from '../src/mandate/advisor-cost-rates.service';
 import { RendementFinancialService } from '../src/mandate/rendement-financial.service';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { randomUUID } from 'crypto';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 const describePostgres = databaseUrl ? describe : describe.skip;
+
+async function financialRateActors(
+  prisma: PrismaService,
+  targetOrganizationId: string,
+  legacyProposerId: string,
+  legacyApproverId: string,
+) {
+  const authority = await prisma.platformAuthorityConfiguration.findUnique({
+    where: { id: 'PRIMARY' },
+  });
+  if (!authority || authority.status === 'DRAFT') {
+    const [proposer, approver] = await Promise.all([
+      prisma.user.update({
+        where: { id: legacyProposerId },
+        data: { role: 'SUPER_ADMIN' },
+      }),
+      prisma.user.update({
+        where: { id: legacyApproverId },
+        data: { role: 'SUPER_ADMIN' },
+      }),
+    ]);
+    return { proposer, approver };
+  }
+  const founder = await prisma.user.findUniqueOrThrow({
+    where: { id: authority.founderUserId },
+  });
+  const approver = await prisma.user.create({
+    data: {
+      organizationId: authority.operatorOrganizationId,
+      email: `${randomUUID()}@financial-rate.invalid`,
+      password: 'synthetic-only',
+      firstName: 'Financial',
+      lastName: 'Approver',
+      role: 'ADMIN',
+    },
+  });
+  await prisma.platformPermissionGrant.create({
+    data: {
+      userId: approver.id,
+      permission: 'FINANCIAL_ADVISOR_COST_MANAGE',
+      scope: 'ORGANIZATION',
+      targetOrganizationId,
+      grantedByUserId: founder.id,
+      grantReason: 'Synthetic financial PostgreSQL regression',
+    },
+  });
+  return { proposer: founder, approver };
+}
+
+async function financialSaleActor(
+  prisma: PrismaService,
+  targetOrganizationId: string,
+  legacyActorId: string,
+) {
+  const authority = await prisma.platformAuthorityConfiguration.findUnique({
+    where: { id: 'PRIMARY' },
+  });
+  if (!authority || authority.status === 'DRAFT')
+    return prisma.user.update({
+      where: { id: legacyActorId },
+      data: { role: 'SUPER_ADMIN' },
+    });
+  const founder = await prisma.user.findUniqueOrThrow({
+    where: { id: authority.founderUserId },
+  });
+  const validator = await prisma.user.create({
+    data: {
+      organizationId: authority.operatorOrganizationId,
+      email: `${randomUUID()}@financial-sale.invalid`,
+      password: 'synthetic-only',
+      firstName: 'Financial',
+      lastName: 'Sale Validator',
+      role: 'ADMIN',
+    },
+  });
+  await prisma.platformPermissionGrant.create({
+    data: {
+      userId: validator.id,
+      permission: 'FINANCIAL_SALE_VALIDATE',
+      scope: 'ORGANIZATION',
+      targetOrganizationId,
+      grantedByUserId: founder.id,
+      grantReason: 'Synthetic mandate sale PostgreSQL regression',
+    },
+  });
+  return validator;
+}
 
 describePostgres('Governed rendement financial authority on PostgreSQL', () => {
   const authority = {
@@ -22,19 +110,36 @@ describePostgres('Governed rendement financial authority on PostgreSQL', () => {
 
   it('governs rates, supersession, sold amount, aggregation, isolation and direct DB protections', async () => {
     const fixture = await createBookingFixture(prisma, true);
-    const secondAdmin = await prisma.user.update({
-      where: { id: fixture.colleague.id },
-      data: { role: 'ADMIN' },
-    });
+    const rateActors = await financialRateActors(
+      prisma,
+      fixture.org.id,
+      fixture.admin.id,
+      fixture.colleague.id,
+    );
     const proposer = {
-      userId: fixture.admin.id,
-      organizationId: fixture.org.id,
-      role: 'ADMIN',
+      userId: rateActors.proposer.id,
+      organizationId: rateActors.proposer.organizationId,
+      role: rateActors.proposer.role,
     } as const;
     const approver = {
-      userId: secondAdmin.id,
+      userId: rateActors.approver.id,
+      organizationId: rateActors.approver.organizationId,
+      role: rateActors.approver.role,
+    } as const;
+    const localFinancialAdmin = await financialSaleActor(
+      prisma,
+      fixture.org.id,
+      fixture.colleague.id,
+    );
+    const saleApprover = {
+      userId: localFinancialAdmin.id,
+      organizationId: localFinancialAdmin.organizationId,
+      role: localFinancialAdmin.role,
+    } as const;
+    const financialReadActor = {
+      userId: fixture.admin.id,
       organizationId: fixture.org.id,
-      role: 'ADMIN',
+      role: fixture.admin.role,
     } as const;
     const rates = new AdvisorCostRatesService(prisma, authority as never);
     const financial = new RendementFinancialService(prisma, authority as never);
@@ -78,7 +183,7 @@ describePostgres('Governed rendement financial authority on PostgreSQL', () => {
             reason: 'Synthetic currency rejection',
             lockVersion: 0,
           },
-          approver,
+          saleApprover,
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
     }
@@ -116,7 +221,13 @@ describePostgres('Governed rendement financial authority on PostgreSQL', () => {
 
     const createAndApprove = async (userId: string, hourlyCost: string) => {
       const draft = await rates.createDraft(
-        { userId, currency: 'CAD', hourlyCost, effectiveFrom: '2026-01-01' },
+        {
+          organizationId: fixture.org.id,
+          userId,
+          currency: 'CAD',
+          hourlyCost,
+          effectiveFrom: '2026-01-01',
+        },
         proposer,
       );
       const proposed = await rates.submit(
@@ -144,10 +255,10 @@ describePostgres('Governed rendement financial authority on PostgreSQL', () => {
         reason: 'Synthetic sale validation',
         lockVersion: 0,
       },
-      approver,
+      saleApprover,
     );
 
-    const projection = await financial.financial(approver, {
+    const projection = await financial.financial(financialReadActor, {
       view: 'cumulative',
     });
     expect(projection.totals).toEqual([
@@ -162,6 +273,7 @@ describePostgres('Governed rendement financial authority on PostgreSQL', () => {
 
     const replacement = await rates.createDraft(
       {
+        organizationId: fixture.org.id,
         userId: fixture.owner.id,
         currency: 'CAD',
         hourlyCost: '90',
@@ -225,25 +337,28 @@ describePostgres('Governed rendement financial authority on PostgreSQL', () => {
 
   it('serializes concurrent approvals so only one overlapping rate is approved', async () => {
     const fixture = await createBookingFixture(prisma);
-    const secondAdmin = await prisma.user.update({
-      where: { id: fixture.colleague.id },
-      data: { role: 'ADMIN' },
-    });
+    const rateActors = await financialRateActors(
+      prisma,
+      fixture.org.id,
+      fixture.admin.id,
+      fixture.colleague.id,
+    );
     const proposer = {
-      userId: fixture.admin.id,
-      organizationId: fixture.org.id,
-      role: 'ADMIN',
+      userId: rateActors.proposer.id,
+      organizationId: rateActors.proposer.organizationId,
+      role: rateActors.proposer.role,
     } as const;
     const approver = {
-      userId: secondAdmin.id,
-      organizationId: fixture.org.id,
-      role: 'ADMIN',
+      userId: rateActors.approver.id,
+      organizationId: rateActors.approver.organizationId,
+      role: rateActors.approver.role,
     } as const;
     const rates = new AdvisorCostRatesService(prisma, authority as never);
     const proposed: Array<{ id: string; lockVersion: number }> = [];
     for (const effectiveFrom of ['2026-01-01', '2026-02-01']) {
       const draft = await rates.createDraft(
         {
+          organizationId: fixture.org.id,
           userId: fixture.owner.id,
           currency: 'CAD',
           hourlyCost: '75',

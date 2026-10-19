@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -365,73 +366,85 @@ export class RendementFinancialService {
     const soldAt = new Date(
       `${assertCivilDate(dto.soldAt, 'soldAt')}T00:00:00.000Z`,
     );
-    return this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${mandateId}, 0))`;
-      const before = await tx.projectMandate.findFirst({
-        where: { id: mandateId, organizationId: mandateScope.organizationId },
-      });
-      if (!before) throw new NotFoundException('Mandat introuvable.');
-      if (before.financialLockVersion !== dto.lockVersion)
-        throw new ConflictException(
-          'Les conditions financières ont été modifiées.',
-        );
-      const updated = await tx.projectMandate.updateMany({
-        where: {
-          id: mandateId,
-          organizationId: mandateScope.organizationId,
-          financialLockVersion: dto.lockVersion,
-        },
-        data: {
-          soldAmountDecimal: amount,
-          soldCurrency,
-          soldAt,
-          soldValidatedByUserId: actor.userId,
-          soldValidatedAt: new Date(),
-          soldValidationReason: dto.reason,
-          financialLockVersion: { increment: 1 },
-        },
-      });
-      if (updated.count !== 1)
-        throw new ConflictException('Conflit de validation financière.');
-      const after = await tx.projectMandate.findUniqueOrThrow({
-        where: { id: mandateId },
-      });
-      const beforeJson = this.saleSnapshot(before);
-      const afterJson = this.saleSnapshot(after);
-      await tx.adminAuditEvent.create({
-        data: {
-          actorUserId: actor.userId,
-          actorDisplayName:
-            `${actor.firstName ?? ''} ${actor.lastName ?? ''}`.trim() ||
-            actor.userId,
-          actorRole: actor.role,
-          action: 'PROJECT_MANDATE_SALE_VALIDATED',
-          targetType: 'ProjectMandate',
-          targetId: mandateId,
-          organizationId: mandateScope.organizationId,
-          reason: dto.reason,
-          beforeData: beforeJson,
-          afterData: afterJson,
-        },
-      });
-      await tx.auditLog.create({
-        data: {
-          action: 'MANDATE_SALE_VALIDATED',
-          entityType: 'ProjectMandate',
-          entityId: mandateId,
-          projectId: before.projectId,
-          description: 'Conditions financières gouvernées validées.',
-          metadata: {
-            before: beforeJson,
-            after: afterJson,
-            reason: dto.reason,
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${mandateId}, 0))`;
+        const before = await tx.projectMandate.findFirst({
+          where: { id: mandateId, organizationId: mandateScope.organizationId },
+        });
+        if (!before) throw new NotFoundException('Mandat introuvable.');
+        if (before.financialLockVersion !== dto.lockVersion)
+          throw new ConflictException(
+            'Les conditions financières ont été modifiées.',
+          );
+        const updated = await tx.projectMandate.updateMany({
+          where: {
+            id: mandateId,
+            organizationId: mandateScope.organizationId,
+            financialLockVersion: dto.lockVersion,
           },
-          userId: actor.userId,
-          organizationId: mandateScope.organizationId,
-        },
+          data: {
+            soldAmountDecimal: amount,
+            soldCurrency,
+            soldAt,
+            soldValidatedByUserId: actor.userId,
+            soldValidatedAt: new Date(),
+            soldValidationReason: dto.reason,
+            financialLockVersion: { increment: 1 },
+          },
+        });
+        if (updated.count !== 1)
+          throw new ConflictException('Conflit de validation financière.');
+        const after = await tx.projectMandate.findUniqueOrThrow({
+          where: { id: mandateId },
+        });
+        const beforeJson = this.saleSnapshot(before);
+        const afterJson = this.saleSnapshot(after);
+        await tx.adminAuditEvent.create({
+          data: {
+            actorUserId: actor.userId,
+            actorDisplayName:
+              `${actor.firstName ?? ''} ${actor.lastName ?? ''}`.trim() ||
+              actor.userId,
+            actorRole: actor.role,
+            action: 'PROJECT_MANDATE_SALE_VALIDATED',
+            targetType: 'ProjectMandate',
+            targetId: mandateId,
+            organizationId: mandateScope.organizationId,
+            reason: dto.reason,
+            beforeData: beforeJson,
+            afterData: afterJson,
+          },
+        });
+        await tx.auditLog.create({
+          data: {
+            action: 'MANDATE_SALE_VALIDATED',
+            entityType: 'ProjectMandate',
+            entityId: mandateId,
+            projectId: before.projectId,
+            description: 'Conditions financières gouvernées validées.',
+            metadata: {
+              before: beforeJson,
+              after: afterJson,
+              reason: dto.reason,
+            },
+            userId: actor.userId,
+            organizationId: mandateScope.organizationId,
+          },
+        });
+        return afterJson;
       });
-      return afterJson;
-    });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientUnknownRequestError &&
+        error.message.includes('FINANCIAL_SALE_ACTOR_NOT_AUTHORIZED')
+      )
+        throw new ForbiddenException({
+          code: 'FINANCIAL_SALE_ACTOR_NOT_AUTHORIZED',
+          message: 'Autorisation de validation financière requise.',
+        });
+      throw error;
+    }
   }
 
   private civilRange(from?: string, to?: string) {

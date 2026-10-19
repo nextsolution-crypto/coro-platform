@@ -205,49 +205,60 @@ export class AdvisorCostRatesService {
     actor: FinancialActor,
   ) {
     const organizationId = await this.requireRatePermission(id, actor);
-    return this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${id}, 0))`;
-      const current = await tx.advisorInternalCostRate.findFirst({
-        where: { id, organizationId },
-      });
-      if (!current) throw new NotFoundException('Taux introuvable.');
-      if (
-        current.status !== expected ||
-        current.lockVersion !== dto.lockVersion
-      )
-        throw new ConflictException(
-          `Un taux ${expected} à la version attendue est requis.`,
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${id}, 0))`;
+        const current = await tx.advisorInternalCostRate.findFirst({
+          where: { id, organizationId },
+        });
+        if (!current) throw new NotFoundException('Taux introuvable.');
+        if (
+          current.status !== expected ||
+          current.lockVersion !== dto.lockVersion
+        )
+          throw new ConflictException(
+            `Un taux ${expected} à la version attendue est requis.`,
+          );
+        const now = new Date();
+        const result = await tx.advisorInternalCostRate.updateMany({
+          where: { id, status: expected, lockVersion: dto.lockVersion },
+          data:
+            target === 'PROPOSED'
+              ? {
+                  status: target,
+                  proposedByUserId: actor.userId,
+                  proposedAt: now,
+                  lockVersion: { increment: 1 },
+                }
+              : {
+                  status: target,
+                  rejectedByUserId: actor.userId,
+                  rejectedAt: now,
+                  rejectionReason: dto.reason,
+                  lockVersion: { increment: 1 },
+                },
+        });
+        if (result.count !== 1)
+          throw new ConflictException('Conflit de transition du taux.');
+        const after = await tx.advisorInternalCostRate.findUniqueOrThrow({
+          where: { id },
+        });
+        await this.audit(
+          tx,
+          actor,
+          `ADVISOR_COST_RATE_${target}`,
+          id,
+          current,
+          {
+            ...after,
+            reason: dto.reason,
+          },
         );
-      const now = new Date();
-      const result = await tx.advisorInternalCostRate.updateMany({
-        where: { id, status: expected, lockVersion: dto.lockVersion },
-        data:
-          target === 'PROPOSED'
-            ? {
-                status: target,
-                proposedByUserId: actor.userId,
-                proposedAt: now,
-                lockVersion: { increment: 1 },
-              }
-            : {
-                status: target,
-                rejectedByUserId: actor.userId,
-                rejectedAt: now,
-                rejectionReason: dto.reason,
-                lockVersion: { increment: 1 },
-              },
+        return after;
       });
-      if (result.count !== 1)
-        throw new ConflictException('Conflit de transition du taux.');
-      const after = await tx.advisorInternalCostRate.findUniqueOrThrow({
-        where: { id },
-      });
-      await this.audit(tx, actor, `ADVISOR_COST_RATE_${target}`, id, current, {
-        ...after,
-        reason: dto.reason,
-      });
-      return after;
-    });
+    } catch (error) {
+      this.rethrowConflict(error);
+    }
   }
 
   private civil(value: string, field: string) {
@@ -307,6 +318,14 @@ export class AdvisorCostRatesService {
       error instanceof NotFoundException
     )
       throw error;
+    if (
+      error instanceof Prisma.PrismaClientUnknownRequestError &&
+      error.message.includes('FINANCIAL_ACTOR_NOT_AUTHORIZED')
+    )
+      throw new ForbiddenException({
+        code: 'FINANCIAL_ACTOR_NOT_AUTHORIZED',
+        message: 'Autorisation financiÃ¨re requise.',
+      });
     if (error instanceof Prisma.PrismaClientKnownRequestError)
       throw new ConflictException(
         'Conflit de période, de version ou d’intégrité du taux.',

@@ -184,4 +184,43 @@ describe('RendementFinancialService', () => {
       }),
     );
   });
+
+  it('maps only the governed sale authorization marker to a stable forbidden error', async () => {
+    const databaseError = new Error(
+      'PostgreSQL 23514: FINANCIAL_SALE_ACTOR_NOT_AUTHORIZED',
+    );
+    Object.setPrototypeOf(
+      databaseError,
+      Prisma.PrismaClientUnknownRequestError.prototype,
+    );
+    const isolatedPrisma = {
+      projectMandate: {
+        findUnique: jest.fn().mockResolvedValue({ organizationId: 'org-a' }),
+      },
+      $transaction: jest.fn().mockRejectedValue(databaseError),
+    } as any;
+    const isolatedService = new RendementFinancialService(
+      isolatedPrisma,
+      authority as never,
+    );
+
+    const rejection = isolatedService.validateSale(
+      'mandate-a',
+      {
+        soldAmount: '100.00',
+        soldCurrency: 'CAD',
+        soldAt: '2026-01-01',
+        reason: 'Governed sale validation',
+        lockVersion: 0,
+      },
+      actor('SUPER_ADMIN', 'operator-a'),
+    );
+    await expect(rejection).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(rejection).rejects.toMatchObject({
+      response: {
+        code: 'FINANCIAL_SALE_ACTOR_NOT_AUTHORIZED',
+        message: 'Autorisation de validation financière requise.',
+      },
+    });
+  });
 });
