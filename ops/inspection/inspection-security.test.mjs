@@ -896,7 +896,7 @@ test("maintenance workflow is pinned to two inspector files and has no remote co
   assert.match(source, /environment: production/);
   assert.match(
     source,
-    /AUTHORIZED_SOURCE_SHA: 3018f6b303968c912fef6d60b1eab62aace2b1b2/,
+    /AUTHORIZED_SOURCE_SHA: c65a750fe89a29fde0a6ef7409a49467a7c0d947/,
   );
   assert.match(source, /uses: appleboy\/ssh-action@v1\.0\.3/);
   assert.match(source, /Validate pinned ECDSA host fingerprint/);

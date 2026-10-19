@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  AUTHORIZED_SOURCE_SHA: 3018f6b303968c912fef6d60b1eab62aace2b1b2
+  AUTHORIZED_SOURCE_SHA: c65a750fe89a29fde0a6ef7409a49467a7c0d947
 
 jobs:
   validate-maintenance:
@@ -109,7 +109,7 @@ jobs:
             }
             trap rollback EXIT
 
-            [[ "$SOURCE_SHA" == 3018f6b303968c912fef6d60b1eab62aace2b1b2 ]] || fail SOURCE_SHA_INVALID
+            [[ "$SOURCE_SHA" == c65a750fe89a29fde0a6ef7409a49467a7c0d947 ]] || fail SOURCE_SHA_INVALID
             [[ "$COLLECTOR_SHA256" =~ ^[0-9a-f]{64}$ ]] || fail COLLECTOR_HASH_INVALID
             [[ "$REPORTER_SHA256" =~ ^[0-9a-f]{64}$ ]] || fail REPORTER_HASH_INVALID
             [[ "$MAINTENANCE_RUN_ID" =~ ^[0-9]+$ ]] || fail RUN_ID_INVALID
