@@ -91,7 +91,9 @@ jobs:
             backup_root=/opt/coro-ops/inspection-maintenance
             backup_dir="$backup_root/$MAINTENANCE_RUN_ID"
             collector_tmp="${collector}.tmp-${MAINTENANCE_RUN_ID}"
-            reporter_tmp="${reporter}.tmp-${MAINTENANCE_RUN_ID}"
+            # Keep .mjs as the final suffix so Node 22 can resolve the module
+            # format while performing the pre-installation syntax check.
+            reporter_tmp="${reporter%.mjs}.tmp-${MAINTENANCE_RUN_ID}.mjs"
             replaced_collector=false
             replaced_reporter=false
 

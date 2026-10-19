@@ -860,6 +860,14 @@ test("maintenance workflow is pinned to two inspector files and has no remote co
   assert.match(source, /coro-production-inspect/);
   assert.match(source, /inspection-report\.mjs/);
   assert.match(source, /BACKUP_ALREADY_EXISTS/);
+  assert.match(
+    source,
+    /reporter_tmp="\$\{reporter%\.mjs\}\.tmp-\$\{MAINTENANCE_RUN_ID\}\.mjs"/,
+  );
+  assert.doesNotMatch(
+    source,
+    /reporter_tmp="\$\{reporter\}\.tmp-\$\{MAINTENANCE_RUN_ID\}"/,
+  );
   assert.match(source, /mv -T/);
   assert.match(source, /root:root:755/);
   assert.match(source, /root:root:644/);
