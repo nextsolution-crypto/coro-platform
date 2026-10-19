@@ -390,7 +390,7 @@ describePostgres('Customer Network authority on PostgreSQL 16', () => {
           organizationId: data.organization.id,
           type: 'OTHER',
           triggeredBy: 'QA Network',
-          occupantsSnapshot: {},
+          occupantsSnapshot: [{ id: 'snapshot-occupant' }],
           teamSnapshot: {},
         },
       }),
@@ -443,11 +443,18 @@ describePostgres('Customer Network authority on PostgreSQL 16', () => {
     const observed = result.items.find(({ id }) => id === observedBuilding.id)!;
     expect(observed.incidentSummary).toMatchObject({
       count: 1,
+      active: 1,
+      resolved: 0,
       freshness: 'CURRENT',
     });
     expect(observed.occupancySummary).toMatchObject({
       present: 1,
       freshness: 'CURRENT',
+    });
+    const unknown = result.items.find(({ id }) => id !== observedBuilding.id)!;
+    expect(unknown.occupancySummary).toMatchObject({
+      present: null,
+      freshness: 'UNKNOWN',
     });
     expect(observed.documentSummary).toMatchObject({
       required: 1,
@@ -458,6 +465,41 @@ describePostgres('Customer Network authority on PostgreSQL 16', () => {
       open: 1,
       freshness: 'CURRENT',
     });
+    const incident = await prisma.incidentEvent.findFirstOrThrow({
+      where: { buildingId: observedBuilding.id },
+    });
+    await prisma.$transaction([
+      prisma.incidentEvent.update({
+        where: { id: incident.id },
+        data: { status: 'RESOLVED', isActive: false, resolvedAt: new Date() },
+      }),
+      prisma.occupancyRecord.updateMany({
+        where: { buildingId: observedBuilding.id, status: 'IN' },
+        data: { status: 'OUT', checkedOutAt: new Date() },
+      }),
+    ]);
+    const refreshed = await service.supervision(
+      { sub: data.portalUser.id, organizationId: data.organization.id },
+      { page: 1, pageSize: 100 },
+    );
+    const refreshedBuilding = refreshed.items.find(
+      ({ id }) => id === observedBuilding.id,
+    )!;
+    expect(refreshedBuilding.incidentSummary).toMatchObject({
+      count: 0,
+      active: 0,
+      resolved: 1,
+      freshness: 'CURRENT',
+    });
+    expect(refreshedBuilding.occupancySummary).toMatchObject({
+      present: 0,
+      freshness: 'CURRENT',
+    });
+    expect(
+      await prisma.incidentEvent.findUniqueOrThrow({
+        where: { id: incident.id },
+      }),
+    ).toMatchObject({ occupantsSnapshot: [{ id: 'snapshot-occupant' }] });
     expect(performance.now() - started).toBeLessThan(2000);
 
     const other = await fixture('other-tenant', 1);

@@ -864,57 +864,81 @@ export class CustomerNetworkService {
       }),
     ]);
     const ids = buildings.map((b) => b.id);
-    const [incidents, occupancy, requirements, evidence, actions] =
-      await Promise.all([
-        this.prisma.incidentEvent.groupBy({
-          by: ['buildingId'],
-          where: {
-            organizationId: actor.organizationId,
-            buildingId: { in: ids },
-          },
-          _count: { _all: true },
-          _max: { updatedAt: true },
-        }),
-        this.prisma.occupancyRecord.groupBy({
-          by: ['buildingId'],
-          where: {
-            organizationId: actor.organizationId,
-            buildingId: { in: ids },
-            status: 'IN',
-          },
-          _count: { _all: true },
-          _max: { checkedInAt: true },
-        }),
-        this.prisma.buildingRequirement.groupBy({
-          by: ['buildingId'],
-          where: { buildingId: { in: ids }, isRequired: true },
-          _count: { _all: true },
-          _max: { updatedAt: true },
-        }),
-        this.prisma.complianceEvidence.groupBy({
-          by: ['buildingId'],
-          where: {
-            organizationId: actor.organizationId,
-            buildingId: { in: ids },
-          },
-          _count: { _all: true },
-          _max: { updatedAt: true },
-        }),
-        this.prisma.correctiveAction.groupBy({
-          by: ['buildingId'],
-          where: {
-            organizationId: actor.organizationId,
-            buildingId: { in: ids },
-            status: { notIn: ['COMPLETED', 'CANCELLED'] },
-          },
-          _count: { _all: true },
-          _max: { updatedAt: true },
-        }),
-      ]);
+    const [
+      incidents,
+      occupancy,
+      occupancyHistory,
+      requirements,
+      evidence,
+      actions,
+    ] = await Promise.all([
+      this.prisma.incidentEvent.findMany({
+        where: {
+          organizationId: actor.organizationId,
+          buildingId: { in: ids },
+        },
+        orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
+        select: {
+          id: true,
+          buildingId: true,
+          type: true,
+          status: true,
+          isActive: true,
+          triggeredAt: true,
+          updatedAt: true,
+          resolvedAt: true,
+          occupantsSnapshot: true,
+        },
+      }),
+      this.prisma.occupancyRecord.groupBy({
+        by: ['buildingId'],
+        where: {
+          organizationId: actor.organizationId,
+          buildingId: { in: ids },
+          status: 'IN',
+        },
+        _count: { _all: true },
+        _max: { checkedInAt: true },
+      }),
+      this.prisma.occupancyRecord.groupBy({
+        by: ['buildingId'],
+        where: {
+          organizationId: actor.organizationId,
+          buildingId: { in: ids },
+        },
+        _count: { _all: true },
+        _max: { checkedInAt: true, checkedOutAt: true },
+      }),
+      this.prisma.buildingRequirement.groupBy({
+        by: ['buildingId'],
+        where: { buildingId: { in: ids }, isRequired: true },
+        _count: { _all: true },
+        _max: { updatedAt: true },
+      }),
+      this.prisma.complianceEvidence.groupBy({
+        by: ['buildingId'],
+        where: {
+          organizationId: actor.organizationId,
+          buildingId: { in: ids },
+        },
+        _count: { _all: true },
+        _max: { updatedAt: true },
+      }),
+      this.prisma.correctiveAction.groupBy({
+        by: ['buildingId'],
+        where: {
+          organizationId: actor.organizationId,
+          buildingId: { in: ids },
+          status: { notIn: ['COMPLETED', 'CANCELLED'] },
+        },
+        _count: { _all: true },
+        _max: { updatedAt: true },
+      }),
+    ]);
     const by = <T extends { buildingId: string | null }>(rows: T[]) =>
       new Map(rows.filter((r) => r.buildingId).map((r) => [r.buildingId!, r]));
-    const incidentBy = by(incidents);
     const occupancyBy = by(occupancy);
+    const occupancyHistoryBy = by(occupancyHistory);
     const requirementBy = by(requirements);
     const evidenceBy = by(evidence);
     const actionBy = by(actions);
@@ -932,22 +956,53 @@ export class CustomerNetworkService {
       pageSize: query.pageSize,
       total,
       items: buildings.map((building) => {
-        const incident = incidentBy.get(building.id);
+        const buildingIncidents = incidents.filter(
+          (incident) => incident.buildingId === building.id,
+        );
+        const activeIncidents = buildingIncidents.filter(
+          (incident) =>
+            incident.isActive &&
+            ['PRE_ALERT', 'ACTIVE', 'CONTAINED'].includes(incident.status),
+        );
+        const latestIncident = buildingIncidents[0];
         const present = occupancyBy.get(building.id);
+        const occupancyObserved = occupancyHistoryBy.get(building.id);
         const required = requirementBy.get(building.id);
         const documented = evidenceBy.get(building.id);
         const action = actionBy.get(building.id);
         return {
           ...building,
           incidentSummary: {
-            count: incident?._count._all ?? 0,
-            observedAt: incident?._max.updatedAt ?? null,
-            freshness: this.freshness(incident?._max.updatedAt),
+            // Keep the original aggregate field as an active-incident alias for
+            // consumers compiled against the P-1.1 response contract.
+            count: activeIncidents.length,
+            active: activeIncidents.length,
+            resolved: buildingIncidents.filter(
+              (incident) => incident.status === 'RESOLVED',
+            ).length,
+            observedAt: latestIncident?.updatedAt ?? null,
+            freshness: this.freshness(latestIncident?.updatedAt),
+            items: activeIncidents.map((incident) => ({
+              id: incident.id,
+              type: incident.type,
+              status: incident.status,
+              triggeredAt: incident.triggeredAt,
+              updatedAt: incident.updatedAt,
+              occupancySnapshotCount: Array.isArray(incident.occupantsSnapshot)
+                ? incident.occupantsSnapshot.length
+                : null,
+            })),
           },
           occupancySummary: {
-            present: present?._count._all ?? 0,
-            observedAt: present?._max.checkedInAt ?? null,
-            freshness: this.freshness(present?._max.checkedInAt),
+            present: occupancyObserved ? (present?._count._all ?? 0) : null,
+            observedAt:
+              occupancyObserved?._max.checkedOutAt ??
+              occupancyObserved?._max.checkedInAt ??
+              null,
+            freshness: this.freshness(
+              occupancyObserved?._max.checkedOutAt ??
+                occupancyObserved?._max.checkedInAt,
+            ),
           },
           documentSummary: {
             required: required?._count._all ?? 0,

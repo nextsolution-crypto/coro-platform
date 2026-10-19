@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -15,8 +15,9 @@ import styles from "./network.module.css";
 
 type Freshness = "CURRENT" | "STALE" | "UNKNOWN" | "NOT_APPLICABLE";
 type Summary = {
-  count?: number;
-  present?: number;
+  active?: number;
+  resolved?: number;
+  present?: number | null;
   required?: number;
   evidence?: number;
   open?: number;
@@ -52,28 +53,31 @@ export default function NetworkPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
+  const [requestVersion, setRequestVersion] = useState(0);
   const [data, setData] = useState<Response | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const suffix = search ? `?search=${encodeURIComponent(search)}` : "";
-      setData(await apiGet(`/client-portal/network/supervision${suffix}`));
-    } catch {
-      setError(
-        "La supervision Network est indisponible ou hors de votre périmètre.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [search]);
-
   useEffect(() => {
-    void load();
-  }, [load]);
+    let active = true;
+    const suffix = search ? `?search=${encodeURIComponent(search)}` : "";
+    void apiGet(`/client-portal/network/supervision${suffix}`)
+      .then((result) => {
+        if (active) setData(result);
+      })
+      .catch(() => {
+        if (active)
+          setError(
+            "La supervision Network est indisponible ou hors de votre périmètre.",
+          );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [search, requestVersion]);
 
   return (
     <PortalLayout>
@@ -102,7 +106,7 @@ export default function NetworkPage() {
             <span>Incidents</span>
             <strong>
               {data?.items.reduce(
-                (sum, item) => sum + (item.incidentSummary.count ?? 0),
+                (sum, item) => sum + (item.incidentSummary.active ?? 0),
                 0,
               ) ?? 0}
             </strong>
@@ -111,10 +115,14 @@ export default function NetworkPage() {
             <Users aria-hidden="true" />
             <span>Occupants présents</span>
             <strong>
-              {data?.items.reduce(
-                (sum, item) => sum + (item.occupancySummary.present ?? 0),
-                0,
-              ) ?? 0}
+              {data?.items.some(
+                (item) => item.occupancySummary.present !== null,
+              )
+                ? data.items.reduce(
+                    (sum, item) => sum + (item.occupancySummary.present ?? 0),
+                    0,
+                  )
+                : "—"}
             </strong>
           </article>
           <article>
@@ -133,7 +141,10 @@ export default function NetworkPage() {
           className={styles.search}
           onSubmit={(event) => {
             event.preventDefault();
+            setLoading(true);
+            setError("");
             setSearch(query.trim());
+            setRequestVersion((version) => version + 1);
           }}
         >
           <label htmlFor="network-search">Rechercher un bâtiment</label>
@@ -178,10 +189,11 @@ export default function NetworkPage() {
                 </span>
                 <span className={styles.metrics}>
                   <span>
-                    Incidents <b>{building.incidentSummary.count ?? 0}</b>
+                    Incidents actifs{" "}
+                    <b>{building.incidentSummary.active ?? 0}</b>
                   </span>
                   <span>
-                    Présents <b>{building.occupancySummary.present ?? 0}</b>
+                    Présents <b>{building.occupancySummary.present ?? "—"}</b>
                   </span>
                   <span>
                     Documents{" "}

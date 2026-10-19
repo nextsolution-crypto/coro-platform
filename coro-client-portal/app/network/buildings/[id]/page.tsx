@@ -8,13 +8,21 @@ import { apiGet } from "../../../store/auth";
 import styles from "../../network.module.css";
 
 type Metric = {
-  count?: number;
-  present?: number;
+  active?: number;
+  resolved?: number;
+  present?: number | null;
   required?: number;
   evidence?: number;
   open?: number;
   freshness: string;
   observedAt?: string | null;
+  items?: Array<{
+    id: string;
+    type: string;
+    status: string;
+    triggeredAt: string;
+    occupancySnapshotCount: number | null;
+  }>;
 };
 type BuildingDetail = {
   id: string;
@@ -51,13 +59,13 @@ export default function NetworkBuildingPage() {
   const metrics = building
     ? ([
         [
-          "Incidents",
-          building.incidentSummary.count ?? 0,
+          "Incidents actifs",
+          building.incidentSummary.active ?? 0,
           building.incidentSummary,
         ],
         [
           "Occupants présents",
-          building.occupancySummary.present ?? 0,
+          building.occupancySummary.present ?? "—",
           building.occupancySummary,
         ],
         [
@@ -110,6 +118,30 @@ export default function NetworkBuildingPage() {
                 </article>
               ))}
             </section>
+            {building.incidentSummary.items?.length ? (
+              <section aria-labelledby="active-incidents-heading">
+                <h2 id="active-incidents-heading">Incidents actifs</h2>
+                <div className={styles.grid}>
+                  {building.incidentSummary.items.map((incident) => (
+                    <Link
+                      key={incident.id}
+                      className={styles.card}
+                      href={`/sentinelle/${building.id}/incidents/${incident.id}`}
+                    >
+                      <span className={styles.cardTitle}>{incident.type}</span>
+                      <span className={styles.address}>
+                        {incident.status} · Déclenché le{" "}
+                        {new Date(incident.triggeredAt).toLocaleString("fr-CA")}
+                      </span>
+                      <span>
+                        Occupants figés au déclenchement :{" "}
+                        {incident.occupancySnapshotCount ?? "inconnu"}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </>
         ) : null}
       </main>
