@@ -42,3 +42,7 @@ The report keeps five independent dimensions:
 Valid `UNCONFIGURED` and `DRAFT` evidence can therefore pass inspection without being misreported as final Main Freeze readiness.
 
 When the Platform Authority schema is available, sanitized database evidence also includes the canonical record count and the `PRIMARY` record identity, state, Founder/operator bindings, and non-negative integer `lockVersion`. The report fails closed if the record is missing inconsistently, duplicated, non-canonical, in an unexpected state, or carries an invalid lock version. The value is read inside the existing fixed `BEGIN READ ONLY` transaction and is associated with the report's `generatedAt` timestamp; no additional database privilege or application endpoint is required.
+
+## Governed migration-chain verification
+
+The collector hashes every versioned `migration.sql` from the exact deployed Git commit and compares that ordered source chain with the active Prisma migration names and checksums read from PostgreSQL. The report accepts post-Platform-Authority migrations only when the complete chains match, the Platform Authority migration and schema invariants remain present, and the database head agrees with both the release manifest and durable release state. Unknown migrations, missing migrations, checksum drift, partial or failed migrations, and source/database mismatches fail closed. Rolled-back historical attempts are counted separately and are not treated as active failures when the active applied chain remains complete.

@@ -46,6 +46,25 @@ sha256sum "$REPO/docker-compose.yml" | cut -d' ' -f1 >"$work/compose-sha256"
 df -Pk /opt >"$work/disk"
 lslocks --json >"$work/locks.json"
 
+node - "$REPO/coro-backend/prisma/migrations" >"$work/source-migrations.json" <<'NODE'
+const crypto = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
+const root = process.argv[2];
+const migrations = fs
+  .readdirSync(root, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => {
+    const sql = fs.readFileSync(path.join(root, entry.name, "migration.sql"));
+    return {
+      name: entry.name,
+      checksum: crypto.createHash("sha256").update(sql).digest("hex"),
+    };
+  })
+  .sort((left, right) => left.name.localeCompare(right.name));
+process.stdout.write(JSON.stringify(migrations));
+NODE
+
 for container in coro_backend coro_frontend coro_client_portal coro_website coro_postgres; do
   docker inspect --format '{{json .}}' "$container" >"$work/${container}.json" || fail CONTAINER_INSPECTION_FAILED
   image_id="$(docker inspect --format '{{.Image}}' "$container")"
@@ -56,8 +75,10 @@ readonly_sql="BEGIN READ ONLY;
 SELECT json_build_object(
   'postgresVersion', current_setting('server_version'),
   'migrationCount', (SELECT count(*) FROM \"_prisma_migrations\" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL),
-  'migrationHead', (SELECT migration_name FROM \"_prisma_migrations\" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY finished_at DESC LIMIT 1),
+  'migrationHead', (SELECT migration_name FROM \"_prisma_migrations\" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY migration_name DESC LIMIT 1),
+  'migrationHistory', COALESCE((SELECT json_agg(json_build_object('name', migration_name, 'checksum', checksum) ORDER BY migration_name) FROM \"_prisma_migrations\" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL), '[]'::json),
   'failedMigrations', (SELECT count(*) FROM \"_prisma_migrations\" WHERE finished_at IS NULL AND rolled_back_at IS NULL),
+  'rolledBackMigrations', (SELECT count(*) FROM \"_prisma_migrations\" WHERE rolled_back_at IS NOT NULL),
   'platformAuthorityMigrationApplied', EXISTS (SELECT 1 FROM \"_prisma_migrations\" WHERE migration_name='20261024010000_platform_authority' AND finished_at IS NOT NULL AND rolled_back_at IS NULL),
   'authorityTablePresent', to_regclass('public.\"PlatformAuthorityConfiguration\"') IS NOT NULL,
   'grantTablePresent', to_regclass('public.\"PlatformPermissionGrant\"') IS NOT NULL,

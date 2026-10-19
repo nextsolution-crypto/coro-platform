@@ -11,6 +11,25 @@ const reporter = fileURLToPath(
   new URL("./inspection-report.mjs", import.meta.url),
 );
 const digest = `ghcr.io/example/app@sha256:${"a".repeat(64)}`;
+const migration = (name, checksumSeed) => ({
+  name,
+  checksum: checksumSeed.repeat(64),
+});
+const historicalMigrations = Array.from({ length: 136 }, (_, index) =>
+  migration(`1900010100${String(index).padStart(4, "0")}_historical`, "1"),
+);
+const migration137 = migration(
+  "20261023010000_rendement_financial_governance",
+  "2",
+);
+const migration138 = migration("20261024010000_platform_authority", "3");
+const migration139 = migration(
+  "20261025010000_financial_platform_authority_alignment",
+  "4",
+);
+const migrations137 = [...historicalMigrations, migration137];
+const migrations138 = [...migrations137, migration138];
+const migrations139 = [...migrations138, migration139];
 
 function fixture(overrides = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "coro-inspection-test-"));
@@ -27,6 +46,7 @@ function fixture(overrides = {}) {
   );
   write("locks.json", { locks: [] });
   write("systemd", "Id=coro-db-backup.timer\nActiveState=active");
+  write("source-migrations.json", overrides.sourceMigrations ?? migrations138);
   for (const name of [
     "coro_backend",
     "coro_frontend",
@@ -45,7 +65,9 @@ function fixture(overrides = {}) {
     postgresVersion: "16",
     migrationCount: 138,
     migrationHead: "20261024010000_platform_authority",
+    migrationHistory: migrations138,
     failedMigrations: 0,
+    rolledBackMigrations: 0,
     platformAuthorityMigrationApplied: true,
     authorityTablePresent: true,
     grantTablePresent: true,
@@ -368,9 +390,11 @@ test("reports UNCONFIGURED as ready for DRAFT but not ready for Main Freeze", ()
 
 test("supports migration 137 without Platform Authority tables", () => {
   const root = fixture({
+    sourceMigrations: migrations137,
     database: {
       migrationCount: 137,
       migrationHead: "20261023010000_rendement_financial_governance",
+      migrationHistory: migrations137,
       platformAuthorityMigrationApplied: false,
       authorityTablePresent: false,
       grantTablePresent: false,
@@ -392,6 +416,115 @@ test("supports migration 137 without Platform Authority tables", () => {
     assert.equal(report.platformAuthorityState, "UNCONFIGURED");
     assert.equal(report.bootstrapReadiness, "READY_FOR_DRAFT");
     assert.equal(report.mainFreezeReadiness, "NOT_READY");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("supports governed migration 139 after Platform Authority", () => {
+  const root = fixture({
+    sourceMigrations: migrations139,
+    database: {
+      migrationCount: 139,
+      migrationHead: "20261025010000_financial_platform_authority_alignment",
+      migrationHistory: migrations139,
+    },
+    release: {
+      expectedMigrationHead:
+        "20261025010000_financial_platform_authority_alignment",
+    },
+    releaseState: {
+      migrationHead: "20261025010000_financial_platform_authority_alignment",
+    },
+  });
+  try {
+    const result = run(root);
+    assert.equal(result.status, 0, result.stderr);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.schemaPhase, "PLATFORM_AUTHORITY_AVAILABLE");
+    assert.equal(report.platformAuthorityState, "ACTIVE");
+    assert.equal(report.releaseReadiness, "GO");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("fails closed for migration 139 with missing Platform Authority tables", () => {
+  const root = fixture({
+    sourceMigrations: migrations139,
+    database: {
+      migrationCount: 139,
+      migrationHead: "20261025010000_financial_platform_authority_alignment",
+      migrationHistory: migrations139,
+      authorityTablePresent: false,
+      grantTablePresent: false,
+    },
+    release: {
+      expectedMigrationHead:
+        "20261025010000_financial_platform_authority_alignment",
+    },
+    releaseState: {
+      migrationHead: "20261025010000_financial_platform_authority_alignment",
+    },
+  });
+  try {
+    const result = run(root);
+    assert.equal(result.status, 2);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.schemaPhase, "INVALID");
+    assert.ok(report.issues.includes("PLATFORM_SCHEMA_INCONSISTENT"));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("accepts rolled-back historical attempts when the active chain is intact", () => {
+  const root = fixture({ database: { rolledBackMigrations: 1 } });
+  try {
+    const result = run(root);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(JSON.parse(result.stdout).releaseReadiness, "GO");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("fails closed for a migration checksum mismatch", () => {
+  const drifted = migrations138.map((entry, index) =>
+    index === migrations138.length - 1
+      ? { ...entry, checksum: "f".repeat(64) }
+      : entry,
+  );
+  const root = fixture({ database: { migrationHistory: drifted } });
+  try {
+    const result = run(root);
+    assert.equal(result.status, 2);
+    const report = JSON.parse(result.stdout);
+    assert.ok(report.issues.includes("MIGRATION_STATE_INVALID"));
+    assert.ok(report.issues.includes("PLATFORM_SCHEMA_INCONSISTENT"));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("fails closed for an unknown migration absent from deployed source", () => {
+  const unknown = migration("20990101000000_unknown", "9");
+  const databaseMigrations = [...migrations138, unknown];
+  const root = fixture({
+    database: {
+      migrationCount: 139,
+      migrationHead: unknown.name,
+      migrationHistory: databaseMigrations,
+    },
+    release: { expectedMigrationHead: unknown.name },
+    releaseState: { migrationHead: unknown.name },
+  });
+  try {
+    const result = run(root);
+    assert.equal(result.status, 2);
+    const report = JSON.parse(result.stdout);
+    assert.ok(report.issues.includes("MIGRATION_STATE_INVALID"));
+    assert.equal(report.schemaPhase, "INVALID");
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

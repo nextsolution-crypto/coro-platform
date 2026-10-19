@@ -31,6 +31,7 @@ const container = (name) => {
 };
 
 const db = json("database.json");
+const sourceMigrations = json("source-migrations.json");
 const backupState = json("backup-state.json");
 const backup = nullableLatest("latest-backup");
 const remoteHead = json("remote-head.json");
@@ -72,10 +73,28 @@ const authorityRecordValid =
       Number.isInteger(db.authority?.lockVersion) &&
       db.authority.lockVersion >= 0 &&
       authorityBindingMatches;
+const migrationEntryValid = (entry) =>
+  entry !== null &&
+  typeof entry === "object" &&
+  /^[0-9]{14}_[a-z0-9_]+$/.test(entry.name ?? "") &&
+  /^[a-f0-9]{64}$/.test(entry.checksum ?? "");
+const migrationHistoryValid =
+  Array.isArray(db.migrationHistory) &&
+  Array.isArray(sourceMigrations) &&
+  db.migrationHistory.length > 0 &&
+  db.migrationHistory.length === db.migrationCount &&
+  sourceMigrations.length === db.migrationCount &&
+  db.migrationHistory.every(migrationEntryValid) &&
+  sourceMigrations.every(migrationEntryValid) &&
+  JSON.stringify(db.migrationHistory) === JSON.stringify(sourceMigrations) &&
+  db.migrationHead === db.migrationHistory.at(-1)?.name;
+const platformAuthorityMigrationApplied =
+  db.migrationHistory?.some(
+    (entry) => entry.name === "20261024010000_platform_authority",
+  ) === true && db.platformAuthorityMigrationApplied === true;
 const prePlatformAuthorityHead =
+  migrationHistoryValid &&
   db.migrationHead === "20261023010000_rendement_financial_governance";
-const platformAuthorityHead =
-  db.migrationHead === "20261024010000_platform_authority";
 const authorityTablesPresent =
   db.authorityTablePresent === true && db.grantTablePresent === true;
 const authorityTablesAbsent =
@@ -85,8 +104,8 @@ const schemaPhase =
   db.platformAuthorityMigrationApplied === false &&
   authorityTablesAbsent
     ? "PRE_PLATFORM_AUTHORITY"
-    : platformAuthorityHead &&
-        db.platformAuthorityMigrationApplied === true &&
+    : migrationHistoryValid &&
+        platformAuthorityMigrationApplied &&
         authorityTablesPresent
       ? "PLATFORM_AUTHORITY_AVAILABLE"
       : "INVALID";
@@ -124,6 +143,7 @@ if (
 if (
   !Number.isInteger(db.migrationCount) ||
   !db.migrationHead ||
+  !migrationHistoryValid ||
   Number(db.failedMigrations) !== 0
 )
   issues.push("MIGRATION_STATE_INVALID");
