@@ -426,6 +426,9 @@ describePostgres('Customer Network authority on PostgreSQL 16', () => {
           buildingId: observedBuilding.id,
           category: 'GENERAL',
           title: 'Action QA Network',
+          priority: 'CRITICAL',
+          assignedTo: 'Responsable QA',
+          dueDate: new Date(Date.now() - 86_400_000),
         },
       }),
     ]);
@@ -463,7 +466,39 @@ describePostgres('Customer Network authority on PostgreSQL 16', () => {
     });
     expect(observed.actionSummary).toMatchObject({
       open: 1,
+      overdue: 1,
+      completed: 0,
+      closed: 0,
       freshness: 'CURRENT',
+    });
+    const detail = await service.supervision(
+      { sub: data.portalUser.id, organizationId: data.organization.id },
+      { page: 1, pageSize: 1 },
+      observedBuilding.id,
+    );
+    expect(detail.items[0].actionSummary.items).toEqual([
+      expect.objectContaining({
+        title: 'Action QA Network',
+        status: 'PLANNED',
+        priority: 'CRITICAL',
+        responsible: 'Responsable QA',
+        overdue: true,
+        source: 'DIRECT',
+      }),
+    ]);
+    await prisma.correctiveAction.updateMany({
+      where: { buildingId: observedBuilding.id },
+      data: { status: 'COMPLETED', closedAt: new Date() },
+    });
+    const afterClosure = await service.supervision(
+      { sub: data.portalUser.id, organizationId: data.organization.id },
+      { page: 1, pageSize: 1 },
+      observedBuilding.id,
+    );
+    expect(afterClosure.items[0].actionSummary).toMatchObject({
+      open: 0,
+      overdue: 0,
+      closed: 1,
     });
     const incident = await prisma.incidentEvent.findFirstOrThrow({
       where: { buildingId: observedBuilding.id },

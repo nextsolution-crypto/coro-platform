@@ -14,6 +14,9 @@ type Metric = {
   required?: number;
   evidence?: number;
   open?: number;
+  overdue?: number;
+  completed?: number;
+  closed?: number;
   freshness: string;
   observedAt?: string | null;
   items?: Array<{
@@ -24,6 +27,19 @@ type Metric = {
     occupancySnapshotCount: number | null;
   }>;
 };
+type CorrectiveActionItem = {
+  id: string;
+  reference?: string | null;
+  title: string;
+  status: string;
+  priority: string;
+  responsible?: string | null;
+  dueDate?: string | null;
+  overdue: boolean;
+  evidenceCount: number;
+  verificationCount: number;
+  source: "INCIDENT" | "EXERCISE" | "AUDIT_REVIEW" | "DIRECT";
+};
 type BuildingDetail = {
   id: string;
   name: string;
@@ -33,7 +49,7 @@ type BuildingDetail = {
   incidentSummary: Metric;
   occupancySummary: Metric;
   documentSummary: Metric;
-  actionSummary: Metric;
+  actionSummary: Omit<Metric, "items"> & { items?: CorrectiveActionItem[] };
 };
 
 export default function NetworkBuildingPage() {
@@ -142,6 +158,51 @@ export default function NetworkBuildingPage() {
                 </div>
               </section>
             ) : null}
+            <section aria-labelledby="corrective-actions-heading">
+              <h2 id="corrective-actions-heading">Actions correctives</h2>
+              <p>
+                {building.actionSummary.open ?? 0} ouverte(s) ·{" "}
+                {building.actionSummary.overdue ?? 0} en retard ·{" "}
+                {building.actionSummary.completed ?? 0} réalisée(s) ou
+                vérifiée(s) · {building.actionSummary.closed ?? 0} fermée(s)
+              </p>
+              {building.actionSummary.items?.length ? (
+                <div className={styles.grid}>
+                  {building.actionSummary.items.map((action) => (
+                    <Link
+                      key={action.id}
+                      className={styles.card}
+                      href={`/sentinelle/${building.id}/corrective-actions/${action.id}`}
+                    >
+                      <span className={styles.cardTitle}>{action.title}</span>
+                      <span className={styles.address}>
+                        {action.reference ?? "Action corrective"} ·{" "}
+                        {action.status} · {action.priority}
+                      </span>
+                      <span>
+                        Source : {action.source} · Responsable :{" "}
+                        {action.responsible ?? "Non assigné"}
+                      </span>
+                      <span>
+                        Échéance :{" "}
+                        {action.dueDate
+                          ? new Date(action.dueDate).toLocaleDateString("fr-CA")
+                          : "Aucune"}
+                        {action.overdue ? " · EN RETARD" : ""}
+                      </span>
+                      <span>
+                        Preuves : {action.evidenceCount} · Vérifications :{" "}
+                        {action.verificationCount}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.state}>
+                  Aucune action corrective pour ce bâtiment.
+                </p>
+              )}
+            </section>
           </>
         ) : null}
       </main>

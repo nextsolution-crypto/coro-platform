@@ -924,15 +924,35 @@ export class CustomerNetworkService {
         _count: { _all: true },
         _max: { updatedAt: true },
       }),
-      this.prisma.correctiveAction.groupBy({
-        by: ['buildingId'],
+      this.prisma.correctiveAction.findMany({
         where: {
           organizationId: actor.organizationId,
           buildingId: { in: ids },
-          status: { notIn: ['COMPLETED', 'CANCELLED'] },
+          status: { not: 'CANCELLED' },
         },
-        _count: { _all: true },
-        _max: { updatedAt: true },
+        orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
+        select: {
+          id: true,
+          reference: true,
+          buildingId: true,
+          title: true,
+          status: true,
+          priority: true,
+          assignedTo: true,
+          assigneeDisplayNameSnapshot: true,
+          dueDate: true,
+          updatedAt: true,
+          incidentId: true,
+          exerciseReportId: true,
+          reviewRecommendationId: true,
+          closedAt: true,
+          _count: {
+            select: {
+              evidence: { where: { status: 'ACTIVE' } },
+              verifications: true,
+            },
+          },
+        },
       }),
     ]);
     const by = <T extends { buildingId: string | null }>(rows: T[]) =>
@@ -941,7 +961,6 @@ export class CustomerNetworkService {
     const occupancyHistoryBy = by(occupancyHistory);
     const requirementBy = by(requirements);
     const evidenceBy = by(evidence);
-    const actionBy = by(actions);
     const generatedAt = new Date();
     return {
       generatedAt,
@@ -969,7 +988,17 @@ export class CustomerNetworkService {
         const occupancyObserved = occupancyHistoryBy.get(building.id);
         const required = requirementBy.get(building.id);
         const documented = evidenceBy.get(building.id);
-        const action = actionBy.get(building.id);
+        const buildingActions = actions.filter(
+          (action) => action.buildingId === building.id,
+        );
+        const openActions = buildingActions.filter((action) =>
+          ['PLANNED', 'IN_PROGRESS'].includes(action.status),
+        );
+        const latestAction = buildingActions.reduce(
+          (latest, action) =>
+            !latest || action.updatedAt > latest.updatedAt ? action : latest,
+          buildingActions[0],
+        );
         return {
           ...building,
           incidentSummary: {
@@ -1014,9 +1043,45 @@ export class CustomerNetworkService {
             ),
           },
           actionSummary: {
-            open: action?._count._all ?? 0,
-            observedAt: action?._max.updatedAt ?? null,
-            freshness: this.freshness(action?._max.updatedAt),
+            open: openActions.length,
+            overdue: openActions.filter(
+              (action) => action.dueDate && action.dueDate < generatedAt,
+            ).length,
+            completed: buildingActions.filter((action) =>
+              ['COMPLETED', 'VERIFIED'].includes(action.status),
+            ).length,
+            closed: buildingActions.filter((action) => action.closedAt !== null)
+              .length,
+            observedAt: latestAction?.updatedAt ?? null,
+            freshness: this.freshness(latestAction?.updatedAt),
+            items: exactBuildingId
+              ? buildingActions.map((action) => ({
+                  id: action.id,
+                  reference: action.reference,
+                  title: action.title,
+                  status: action.status,
+                  priority: action.priority,
+                  responsible:
+                    action.assigneeDisplayNameSnapshot ?? action.assignedTo,
+                  dueDate: action.dueDate,
+                  overdue: Boolean(
+                    action.dueDate &&
+                    action.dueDate < generatedAt &&
+                    ['PLANNED', 'IN_PROGRESS'].includes(action.status),
+                  ),
+                  evidenceCount: action._count.evidence,
+                  verificationCount: action._count.verifications,
+                  source: action.incidentId
+                    ? 'INCIDENT'
+                    : action.exerciseReportId
+                      ? 'EXERCISE'
+                      : action.reviewRecommendationId
+                        ? 'AUDIT_REVIEW'
+                        : 'DIRECT',
+                  updatedAt: action.updatedAt,
+                  closedAt: action.closedAt,
+                }))
+              : undefined,
           },
         };
       }),
