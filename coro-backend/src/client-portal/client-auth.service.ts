@@ -47,7 +47,7 @@ export class ClientAuthService {
     return matches.length === 1 ? matches[0] : null;
   }
 
-  private clientToken(clientUser: any) {
+  private clientToken(clientUser: any, mfaVerifiedAt?: Date) {
     return this.jwt.sign({
       sub: clientUser.id,
       email: clientUser.email,
@@ -59,6 +59,7 @@ export class ClientAuthService {
       operationalReviewPermissions: clientUser.operationalReviewPermissions,
       correctiveActionPermissions: clientUser.correctiveActionPermissions,
       sessionVersion: clientUser.sessionVersion,
+      mfaVerifiedAt: mfaVerifiedAt?.toISOString() ?? null,
       type: 'CLIENT',
     });
   }
@@ -194,7 +195,7 @@ export class ClientAuthService {
       },
     });
 
-    const token = this.clientToken(clientUser);
+    const token = this.clientToken(clientUser, new Date());
 
     return {
       token,

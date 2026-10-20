@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { apiGet, apiPost, getUser } from '../../store/auth';
 import { toast } from '../../store/toast';
 import PortalLayout from '../../components/PortalLayout';
+import styles from './document-detail.module.css';
 import {
   Download,
   CheckCircle,
@@ -445,8 +446,9 @@ const mySignature =
 
   return (
     <PortalLayout>
+      <div className={styles.page}>
       {/* Retour */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div className={styles.topActions}>
         <button
           type="button"
           onClick={() => router.push(`/files/${projectId}`)}
@@ -472,6 +474,7 @@ const mySignature =
       </div>
 
       <button
+        className={styles.backLink}
         type="button"
         onClick={() => router.push('/documents')}
         style={{
@@ -2195,6 +2198,7 @@ const mySignature =
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
+      </div>
     </PortalLayout>
   );
 }

@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Get,
   Post,
   Param,
@@ -16,11 +17,105 @@ import { ClientJwtGuard } from '../client-portal/client-jwt.guard';
 import { ProjectFilesService } from './project-files.service';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 import { EvidenceReadAccess } from '../auth/organization-access.decorator';
+import { OfflineDocumentsService } from './offline-documents.service';
+import type { RegistrationResponseJSON } from '@simplewebauthn/server';
 
 @Controller('project-files/client')
 @UseGuards(ClientJwtGuard, OrganizationStatusGuard)
 export class ProjectFilesClientController {
-  constructor(private projectFilesService: ProjectFilesService) {}
+  constructor(
+    private projectFilesService: ProjectFilesService,
+    private offlineDocumentsService: OfflineDocumentsService,
+  ) {}
+
+  private buildingScope(clientUser: {
+    role?: string;
+    buildingIds?: string[];
+  }): string[] | undefined {
+    return clientUser.role === 'CLIENT_MANAGER'
+      ? (clientUser.buildingIds ?? [])
+      : undefined;
+  }
+
+  @Get('offline/config')
+  offlineConfiguration() {
+    return this.offlineDocumentsService.getPublicConfiguration();
+  }
+
+  @Get('offline/registration-options')
+  offlineRegistrationOptions(@Request() req: any) {
+    return this.offlineDocumentsService.registrationOptions({
+      clientUserId: req.clientUser.sub,
+      email: req.clientUser.email,
+      displayName: req.clientUser.email,
+    });
+  }
+
+  @Post('offline/devices')
+  registerOfflineDevice(
+    @Body()
+    body: {
+      credentialId: string;
+      label: string;
+      prfSupported: boolean;
+      registrationResponse: RegistrationResponseJSON;
+    },
+    @Request() req: any,
+  ) {
+    return this.offlineDocumentsService.registerDevice({
+      clientUserId: req.clientUser.sub,
+      organizationId: req.clientUser.organizationId,
+      mfaVerifiedAt: req.clientUser.mfaVerifiedAt,
+      ...body,
+    });
+  }
+
+  @Post('offline/files/:id/lease')
+  issueOfflineLease(
+    @Param('id') id: string,
+    @Body() body: { deviceId: string },
+    @Request() req: any,
+  ) {
+    return this.offlineDocumentsService.issueLease({
+      clientUserId: req.clientUser.sub,
+      organizationId: req.clientUser.organizationId,
+      permittedBuildingIds: this.buildingScope(req.clientUser),
+      deviceId: body.deviceId,
+      fileId: id,
+    });
+  }
+
+  @Post('offline/reconcile')
+  reconcileOffline(
+    @Body()
+    body: {
+      deviceId: string;
+      leaseIds: string[];
+      events: Array<{
+        requestId: string;
+        leaseId?: string;
+        eventType: string;
+        occurredAt: string;
+      }>;
+    },
+    @Request() req: any,
+  ) {
+    return this.offlineDocumentsService.reconcile({
+      clientUserId: req.clientUser.sub,
+      organizationId: req.clientUser.organizationId,
+      permittedBuildingIds: this.buildingScope(req.clientUser),
+      ...body,
+    });
+  }
+
+  @Delete('offline/devices/:id')
+  revokeOfflineDevice(@Param('id') id: string, @Request() req: any) {
+    return this.offlineDocumentsService.revokeDevice({
+      clientUserId: req.clientUser.sub,
+      organizationId: req.clientUser.organizationId,
+      deviceId: id,
+    });
+  }
 
   @Get(':projectId')
   @EvidenceReadAccess()
@@ -33,7 +128,7 @@ export class ProjectFilesClientController {
       projectId,
       visibility,
       req.clientUser.organizationId,
-      req.clientUser.buildingIds,
+      this.buildingScope(req.clientUser),
     );
   }
 
@@ -55,7 +150,7 @@ export class ProjectFilesClientController {
       size: file.size,
       visibility: 'shared',
       uploadedByClientId: req.clientUser.sub,
-      permittedBuildingIds: req.clientUser.buildingIds,
+      permittedBuildingIds: this.buildingScope(req.clientUser),
     });
   }
 
@@ -65,7 +160,7 @@ export class ProjectFilesClientController {
     const file = await this.projectFilesService.downloadPrivateFile(
       id,
       req.clientUser.organizationId,
-      req.clientUser.buildingIds,
+      this.buildingScope(req.clientUser),
       true,
     );
     return new StreamableFile(file.buffer, {
@@ -80,7 +175,7 @@ export class ProjectFilesClientController {
     return this.projectFilesService.getLifecycleHistory(
       id,
       req.clientUser.organizationId,
-      req.clientUser.buildingIds,
+      this.buildingScope(req.clientUser),
     );
   }
 }

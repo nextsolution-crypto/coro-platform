@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { apiGet, getToken, setAuth, clearAuth } from "../store/auth";
+import { apiGet, getToken, getUser, setAuth, clearAuth } from "../store/auth";
 import { useToast } from "../store/useToast";
 import ToastContainer from "./ToastContainer";
 import { useTheme } from "../../design-system/theme/ThemeProvider";
@@ -18,6 +18,7 @@ import {
   Map,
   Shield,
   Network,
+  HardDriveDownload,
 } from "lucide-react";
 import { resolveActivePortalNavigationPath } from "./active-navigation";
 
@@ -37,6 +38,7 @@ export default function PortalLayout({
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
   const [networkEnabled, setNetworkEnabled] = useState(false);
+  const [offlineVaultMode, setOfflineVaultMode] = useState(false);
   const { toasts, showToast, removeToast } = useToast();
 
   useEffect(() => {
@@ -81,25 +83,40 @@ export default function PortalLayout({
         setAuth(token, freshUser);
         setUser(freshUser);
         setNetworkEnabled(networkAccess?.enabled === true);
+        setOfflineVaultMode(false);
       })
       .catch(() => {
-        if (active && getToken()) setSessionError(true);
+        if (!active || !getToken()) return;
+        const cachedUser = getUser();
+        if (pathname === "/offline-documents" && cachedUser) {
+          setUser(cachedUser);
+          setNetworkEnabled(false);
+          setOfflineVaultMode(true);
+          return;
+        }
+        setSessionError(true);
       });
     return () => {
       active = false;
     };
-  }, [router, sessionAttempt]);
+  }, [pathname, router, sessionAttempt]);
 
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
 
-  const handleLogout = () => {
-    clearAuth();
-    router.replace("/login");
+  const handleLogout = async () => {
+    const { revokeOfflineDeviceAndPurge } =
+      await import("../offline-documents/offline-vault");
+    try {
+      await revokeOfflineDeviceAndPurge();
+    } finally {
+      clearAuth();
+      router.replace("/login");
+    }
   };
 
-  const navItems = [
+  const onlineNavItems = [
     { label: "Tableau de bord", path: "/dashboard", icon: LayoutDashboard },
     { label: "Documents", path: "/documents", icon: FileText },
     { label: "Bâtiments", path: "/buildings", icon: Building2 },
@@ -109,9 +126,17 @@ export default function PortalLayout({
     ...(networkEnabled
       ? [{ label: "CORO Network", path: "/network", icon: Network }]
       : []),
+    {
+      label: "Hors ligne",
+      path: "/offline-documents",
+      icon: HardDriveDownload,
+    },
     { label: "Notifications", path: "/notifications", icon: Bell, badge: 0 },
     { label: "Mon profil", path: "/profile", icon: User },
   ];
+  const navItems = offlineVaultMode
+    ? onlineNavItems.filter((item) => item.path === "/offline-documents")
+    : onlineNavItems;
 
   // On injecte le vrai compte de notifs
   const navItemsWithBadge = navItems.map((item) =>

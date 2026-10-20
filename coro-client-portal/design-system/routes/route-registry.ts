@@ -127,6 +127,16 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
     styling: ["inline-hex"],
   },
   {
+    pattern: "/offline-documents",
+    family: "portal",
+    shell: "none",
+    status: "beta",
+    render: "skin",
+    styling: ["css-module"],
+    sensitivity: ["documents", "emergency-content"],
+    validation: ["test:skin", "test:offline-documents"],
+  },
+  {
     pattern: "/intervention/[token]",
     family: "public",
     shell: "none",

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiGet, getUser } from '../store/auth';
 import PortalLayout from '../components/PortalLayout';
+import styles from './documents.module.css';
 import {
   Search,
   FileText,
@@ -158,65 +159,25 @@ export default function DocumentsPage() {
 
   return (
     <PortalLayout>
+      <div className={styles.page}>
       {/* En-tête */}
-      <header
-        style={{
-          marginBottom: 28,
-        }}
-      >
-        <p
-          style={{
-            margin: '0 0 4px',
-            fontSize: 12,
-            fontWeight: 700,
-            color: '#ADB5BD',
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-          }}
-        >
+      <header className={styles.header}>
+        <p className={styles.eyebrow}>
           Documents
         </p>
 
-        <h1
-          style={{
-            margin: 0,
-            fontSize: 'clamp(24px, 5vw, 28px)',
-            lineHeight: 1.2,
-            fontWeight: 800,
-            color: '#2C3E50',
-          }}
-        >
+        <h1 className={styles.title}>
           Vos documents de conformité
         </h1>
       </header>
 
       {/* Filtres */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns:
-            'repeat(auto-fit, minmax(min(220px, 100%), 1fr))',
-          gap: 12,
-          marginBottom: 24,
-        }}
-      >
+      <div className={styles.filters}>
         {/* Recherche */}
-        <div
-          style={{
-            position: 'relative',
-            minWidth: 0,
-          }}
-        >
+        <div className={styles.search}>
           <Search
             size={16}
-            style={{
-              position: 'absolute',
-              left: 13,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: '#ADB5BD',
-              pointerEvents: 'none',
-            }}
+            className={styles.searchIcon}
           />
 
           <input
@@ -225,17 +186,7 @@ export default function DocumentsPage() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher..."
             aria-label="Rechercher un document"
-            style={{
-              width: '100%',
-              minHeight: 46,
-              padding: '10px 12px 10px 38px',
-              borderRadius: 7,
-              border: '1px solid #DEE2E6',
-              fontSize: 16,
-              color: '#2C3E50',
-              backgroundColor: '#FFFFFF',
-              outline: 'none',
-            }}
+            className={styles.control}
           />
         </div>
 
@@ -244,17 +195,7 @@ export default function DocumentsPage() {
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
           aria-label="Filtrer par statut"
-          style={{
-            width: '100%',
-            minHeight: 46,
-            padding: '10px 12px',
-            borderRadius: 7,
-            border: '1px solid #DEE2E6',
-            fontSize: 16,
-            color: '#2C3E50',
-            backgroundColor: '#FFFFFF',
-            outline: 'none',
-          }}
+          className={styles.control}
         >
           <option value="">Tous les statuts</option>
 
@@ -273,17 +214,7 @@ export default function DocumentsPage() {
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
           aria-label="Filtrer par type de document"
-          style={{
-            width: '100%',
-            minHeight: 46,
-            padding: '10px 12px',
-            borderRadius: 7,
-            border: '1px solid #DEE2E6',
-            fontSize: 16,
-            color: '#2C3E50',
-            backgroundColor: '#FFFFFF',
-            outline: 'none',
-          }}
+          className={styles.control}
         >
           <option value="">Tous les types</option>
 
@@ -302,41 +233,18 @@ export default function DocumentsPage() {
 
       {/* Liste documents */}
       {filtered.length === 0 ? (
-        <div
-          style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: 12,
-            border: '1px solid #E9ECEF',
-            padding: 'clamp(40px, 10vw, 64px) 20px',
-            textAlign: 'center',
-          }}
-        >
+        <div className={styles.empty}>
           <FileText
             size={48}
             color="#DEE2E6"
-            style={{
-              margin: '0 auto 16px',
-            }}
           />
 
-          <p
-            style={{
-              margin: 0,
-              color: '#ADB5BD',
-              fontSize: 15,
-            }}
-          >
+          <p>
             Aucun document trouvé.
           </p>
         </div>
       ) : (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
-          }}
-        >
+        <div className={styles.list}>
           {filtered.map((p) => {
             const sc =
               STATUS_COLORS[p.status] || STATUS_COLORS.DRAFT;
@@ -355,118 +263,36 @@ export default function DocumentsPage() {
                 onClick={() =>
                   router.push(`/documents/${p.id}`)
                 }
-                style={{
-                  width: '100%',
-                  minWidth: 0,
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: 12,
-                  border: '1px solid #E9ECEF',
-                  padding: 'clamp(16px, 4vw, 24px)',
-                  cursor: 'pointer',
-                  transition:
-                    'box-shadow 0.15s, transform 0.15s, background-color 0.15s',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 16,
-                  flexWrap: 'wrap',
-                  textAlign: 'left',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow =
-                    '0 4px 16px rgba(0,0,0,0.08)';
-
-                  e.currentTarget.style.transform =
-                    'translateY(-1px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = 'none';
-
-                  e.currentTarget.style.transform =
-                    'translateY(0)';
-                }}
+                className={styles.documentCard}
               >
                 {/* Badge type */}
                 <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 10,
-                    backgroundColor: dc,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
+                  className={styles.typeBadge}
+                  style={{ backgroundColor: dc }}
                 >
                   <span
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 900,
-                      color: '#FFFFFF',
-                    }}
                   >
                     {p.documentType}
                   </span>
                 </div>
 
                 {/* Infos */}
-                <div
-                  style={{
-                    flex: '1 1 220px',
-                    minWidth: 0,
-                  }}
-                >
-                  <p
-                    style={{
-                      margin: '0 0 4px',
-                      fontSize: 15,
-                      lineHeight: 1.4,
-                      fontWeight: 700,
-                      color: '#2C3E50',
-                      overflowWrap: 'anywhere',
-                    }}
-                  >
+                <div className={styles.documentInfo}>
+                  <p className={styles.documentName}>
                     {p.name}
                   </p>
 
-                  <p
-                    style={{
-                      margin: 0,
-                      minWidth: 0,
-                      fontSize: 13,
-                      color: '#ADB5BD',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
+                  <p className={styles.documentMeta}>
                     {p.building?.name || '—'}
                     {p.year ? ` · ${p.year}` : ''}
                   </p>
                 </div>
 
                 {/* Statuts */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    flexShrink: 0,
-                    flexWrap: 'wrap',
-                    justifyContent: 'flex-end',
-                    marginLeft: 'auto',
-                  }}
-                >
+                <div className={styles.statuses}>
                   {isSigned && (
                     <span
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        fontSize: 12,
-                        color: '#8E44AD',
-                        whiteSpace: 'nowrap',
-                      }}
+                      className={styles.signed}
                     >
                       <CheckCircle size={14} />
                       Signé
@@ -474,27 +300,15 @@ export default function DocumentsPage() {
                   )}
 
                   <span
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      padding: '5px 10px',
-                      borderRadius: 10,
-                      backgroundColor: sc.bg,
-                      color: sc.text,
-                      border: `1px solid ${sc.border}`,
-                      whiteSpace: 'nowrap',
-                    }}
+                    className={styles.status}
+                    style={{ backgroundColor: sc.bg, color: sc.text, borderColor: sc.border }}
                   >
                     {sc.label}
                   </span>
 
                   <span
                     aria-hidden="true"
-                    style={{
-                      fontSize: 15,
-                      color: '#ADB5BD',
-                      lineHeight: 1,
-                    }}
+                    className={styles.arrow}
                   >
                     →
                   </span>
@@ -504,6 +318,7 @@ export default function DocumentsPage() {
           })}
         </div>
       )}
+      </div>
     </PortalLayout>
   );
 }

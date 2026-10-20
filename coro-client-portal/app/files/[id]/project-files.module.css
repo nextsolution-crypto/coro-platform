@@ -1,0 +1,83 @@
+.page {
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  color: var(--cg-text-primary, #1b2a3b);
+}
+
+.header h1,
+.fileCard p {
+  color: var(--cg-text-primary, #1b2a3b) !important;
+}
+
+.infoPanel {
+  border: 1px solid var(--cg-info-border, var(--cg-border-default, #b8c8d8)) !important;
+  background: var(--cg-info-bg, var(--cg-glass-bg, #eef6fb)) !important;
+  box-shadow: inset 0 1px 0 var(--cg-glass-highlight, transparent);
+}
+
+.infoPanel p {
+  color: var(--cg-info-fg, var(--cg-text-secondary, #35546f)) !important;
+}
+
+.offlineStatus {
+  margin: calc(var(--cg-space-3, 12px) * -1) 0 var(--cg-space-5, 24px);
+  padding: var(--cg-space-3, 12px) var(--cg-space-4, 16px);
+  border: 1px solid var(--cg-success-border, #76b88f);
+  border-radius: var(--cg-radius-md, 8px);
+  background: var(--cg-success-bg, #edf8f1);
+  color: var(--cg-success-fg, #1b6e3f);
+  line-height: 1.5;
+}
+
+.fileCard {
+  border-color: var(--cg-border-default, #d7dfe5) !important;
+  background: var(--cg-glass-bg, #fff) !important;
+  background-image: var(--cg-sheen, none) !important;
+  box-shadow:
+    inset 0 1px 0 var(--cg-glass-highlight, transparent),
+    var(--cg-shadow-card, 0 4px 16px rgba(27, 42, 59, 0.08));
+  backdrop-filter: blur(var(--cg-blur-md, 0));
+}
+
+.fileActions button {
+  min-height: 46px;
+  padding: 11px var(--cg-space-4, 16px) !important;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.offlineButton {
+  border: 1px solid var(--cg-success-border, #4b9b7b) !important;
+  background: var(--cg-success-bg, #edf8f1) !important;
+  color: var(--cg-success-fg, #176044) !important;
+  white-space: normal !important;
+}
+
+.offlineButton:focus-visible,
+.fileActions button:focus-visible {
+  outline: var(--cg-focus-width, 2px) solid var(--cg-focus-ring, #1f6fb2);
+  outline-offset: var(--cg-focus-offset, 2px);
+}
+
+.offlineButton:disabled {
+  cursor: wait !important;
+  opacity: 0.72;
+}
+
+@media (max-width: 640px) {
+  .fileActions {
+    grid-template-columns: 1fr !important;
+  }
+
+  .fileActions button {
+    width: 100%;
+    min-width: 0;
+    white-space: normal !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fileActions button {
+    transition: none !important;
+  }
+}

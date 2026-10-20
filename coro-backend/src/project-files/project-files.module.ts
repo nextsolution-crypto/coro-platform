@@ -8,6 +8,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { MulterModule } from '@nestjs/platform-express';
 import { JwtModule } from '@nestjs/jwt';
 import { requireJwtSecret } from '../auth/auth-security.config';
+import { OfflineDocumentsService } from './offline-documents.service';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { requireJwtSecret } from '../auth/auth-security.config';
     }),
   ],
   controllers: [ProjectFilesController, ProjectFilesClientController],
-  providers: [ProjectFilesService],
+  providers: [ProjectFilesService, OfflineDocumentsService],
   exports: [ProjectFilesService],
 })
 export class ProjectFilesModule {}

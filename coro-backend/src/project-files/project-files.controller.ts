@@ -108,6 +108,26 @@ export class ProjectFilesController {
     });
   }
 
+  @Put(':id/offline-classification')
+  setOfflineClassification(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      classification: 'PROHIBITED' | 'NON_SENSITIVE_EMERGENCY';
+      reason: string;
+      requestId: string;
+      lockVersion: number;
+    },
+    @Request() req: any,
+  ) {
+    return this.projectFilesService.setOfflineClassification({
+      fileId: id,
+      organizationId: req.user.organizationId,
+      actorId: req.user.userId,
+      ...body,
+    });
+  }
+
   @Get(':id/download')
   @EvidenceReadAccess()
   getDownloadUrl(@Param('id') id: string, @Request() req: any) {

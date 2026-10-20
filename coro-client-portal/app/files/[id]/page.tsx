@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getUser, apiGet } from "../../store/auth";
 import PortalLayout from "../../components/PortalLayout";
+import { prepareOfflineDocument } from "../../offline-documents/offline-vault";
+import styles from "./project-files.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002/api";
 
@@ -58,6 +60,8 @@ export default function ProjectFilesClientPage() {
 
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [preparingId, setPreparingId] = useState<string | null>(null);
+  const [offlineMessage, setOfflineMessage] = useState("");
 
   const [showUploadModal, setShowUploadModal] = useState(false);
 
@@ -210,6 +214,36 @@ export default function ProjectFilesClientPage() {
   const handleView = openFile;
   const handleDownload = openFile;
 
+  const handlePrepareOffline = async (file: any) => {
+    setPreparingId(file.id);
+    setOfflineMessage("");
+    try {
+      await prepareOfflineDocument(file);
+      setOfflineMessage(
+        "Document chiffré et préparé pour un accès hors ligne de 24 heures.",
+      );
+    } catch (error) {
+      console.error(error);
+      const detail =
+        error instanceof TypeError && error.message === "Failed to fetch"
+          ? "Le service est temporairement indisponible. Le document n’a pas été modifié; reconnectez-vous puis réessayez."
+          : error instanceof Error &&
+              (error.message === "OFFLINE_STORAGE_QUOTA_EXCEEDED" ||
+                error.message === "OFFLINE_STORAGE_QUOTA_INSUFFICIENT")
+            ? "L'espace hors ligne disponible est insuffisant. Aucun document partiel n'a été conservé; libérez de l'espace puis réessayez."
+            : error instanceof Error
+              ? error.message
+              : null;
+      setOfflineMessage(
+        detail
+          ? `Préparation hors ligne refusée : ${detail}`
+          : "Préparation hors ligne refusée.",
+      );
+    } finally {
+      setPreparingId(null);
+    }
+  };
+
   const lifecycleLabel = (file: any) => {
     const state = file.effectiveLifecycleState || file.lifecycleState;
     return (
@@ -270,14 +304,15 @@ export default function ProjectFilesClientPage() {
 
   return (
     <PortalLayout>
-      {/* ═══════════════════════════════
+      <div className={styles.page}>
+        {/* ═══════════════════════════════
           RETOUR
       ═══════════════════════════════ */}
 
-      <button
-        type="button"
-        onClick={() => router.push("/documents")}
-        className="
+        <button
+          type="button"
+          onClick={() => router.push("/documents")}
+          className="
           inline-flex
           items-center
           gap-2
@@ -286,38 +321,38 @@ export default function ProjectFilesClientPage() {
           py-2
           text-sm
         "
-        style={{
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          color: "#6C757D",
-        }}
-      >
-        ← Retour aux documents
-      </button>
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: "#6C757D",
+          }}
+        >
+          ← Retour aux documents
+        </button>
 
-      {/* ═══════════════════════════════
+        {/* ═══════════════════════════════
           HEADER
       ═══════════════════════════════ */}
 
-      <header className="mb-6 sm:mb-7">
-        <p
-          className="
+        <header className={`${styles.header} mb-6 sm:mb-7`}>
+          <p
+            className="
             mb-1
             text-xs
             font-bold
             uppercase
             tracking-[0.08em]
           "
-          style={{
-            color: "#ADB5BD",
-          }}
-        >
-          Espace de fichiers
-        </p>
+            style={{
+              color: "#ADB5BD",
+            }}
+          >
+            Espace de fichiers
+          </p>
 
-        <div
-          className="
+          <div
+            className="
             flex
             flex-col
             sm:flex-row
@@ -325,9 +360,9 @@ export default function ProjectFilesClientPage() {
             sm:justify-between
             gap-3
           "
-        >
-          <h1
-            className="
+          >
+            <h1
+              className="
               m-0
               flex-1
               min-w-0
@@ -337,17 +372,17 @@ export default function ProjectFilesClientPage() {
               leading-tight
               break-words
             "
-            style={{
-              color: "#2C3E50",
-            }}
-          >
-            {project?.name}
-          </h1>
+              style={{
+                color: "#2C3E50",
+              }}
+            >
+              {project?.name}
+            </h1>
 
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="
               w-full
               sm:w-auto
               min-h-[46px]
@@ -359,70 +394,71 @@ export default function ProjectFilesClientPage() {
               flex-shrink-0
               transition-colors
             "
-            style={{
-              backgroundColor: "#C0392B",
-              color: "#FFFFFF",
-              border: "none",
-              cursor: "pointer",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#A93226";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#C0392B";
-            }}
-          >
-            + Déposer un fichier
-          </button>
+              style={{
+                backgroundColor: "#C0392B",
+                color: "#FFFFFF",
+                border: "none",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#A93226";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#C0392B";
+              }}
+            >
+              + Déposer un fichier
+            </button>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            onChange={handleFileSelect}
-            className="hidden"
-            accept=".pdf,.png,.jpg,.jpeg,.dwg,.docx,.xlsx,.zip"
-          />
-        </div>
-      </header>
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileSelect}
+              className="hidden"
+              accept=".pdf,.png,.jpg,.jpeg,.dwg,.docx,.xlsx,.zip"
+            />
+          </div>
+        </header>
 
-      {/* ═══════════════════════════════
+        {/* ═══════════════════════════════
           INFO
       ═══════════════════════════════ */}
 
-      <div
-        className="
-          rounded-lg
-          px-4
-          py-3
-          mb-6
-        "
-        style={{
-          backgroundColor: "#EBF5FB",
-          border: "1px solid #AED6F1",
-        }}
-      >
-        <p
-          className="
+        <div
+          className={`${styles.infoPanel} rounded-lg px-4 py-3 mb-6`}
+          style={{
+            backgroundColor: "#EBF5FB",
+            border: "1px solid #AED6F1",
+          }}
+        >
+          <p
+            className="
             m-0
             text-[13px]
             leading-relaxed
           "
-          style={{
-            color: "#1A5276",
-          }}
-        >
-          💡 Téléchargez les plans de votre conseiller, annotez-les et
-          redéposez-les ici. Votre conseiller sera notifié automatiquement.
-        </p>
-      </div>
+            style={{
+              color: "#1A5276",
+            }}
+          >
+            💡 Téléchargez les plans de votre conseiller, annotez-les et
+            redéposez-les ici. Votre conseiller sera notifié automatiquement.
+          </p>
+        </div>
 
-      {/* ═══════════════════════════════
+        {offlineMessage && (
+          <p role="status" className={styles.offlineStatus}>
+            {offlineMessage}
+          </p>
+        )}
+
+        {/* ═══════════════════════════════
           ÉTAT VIDE
       ═══════════════════════════════ */}
 
-      {files.length === 0 ? (
-        <section
-          className="
+        {files.length === 0 ? (
+          <section
+            className="
             rounded-xl
             px-4
             py-10
@@ -430,43 +466,43 @@ export default function ProjectFilesClientPage() {
             lg:py-16
             text-center
           "
-          style={{
-            backgroundColor: "#FFFFFF",
-            border: "1px solid #E9ECEF",
-          }}
-        >
-          <p className="text-5xl mb-4">📁</p>
+            style={{
+              backgroundColor: "#FFFFFF",
+              border: "1px solid #E9ECEF",
+            }}
+          >
+            <p className="text-5xl mb-4">📁</p>
 
-          <p
-            className="
+            <p
+              className="
               mb-2
               text-base
               font-bold
             "
-            style={{
-              color: "#2C3E50",
-            }}
-          >
-            Aucun fichier partagé
-          </p>
+              style={{
+                color: "#2C3E50",
+              }}
+            >
+              Aucun fichier partagé
+            </p>
 
-          <p
-            className="
+            <p
+              className="
               mb-6
               text-sm
               leading-relaxed
             "
-            style={{
-              color: "#ADB5BD",
-            }}
-          >
-            Votre conseiller n&apos;a pas encore partagé de fichiers.
-          </p>
+              style={{
+                color: "#ADB5BD",
+              }}
+            >
+              Votre conseiller n&apos;a pas encore partagé de fichiers.
+            </p>
 
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="
               w-full
               sm:w-auto
               min-h-[46px]
@@ -476,33 +512,33 @@ export default function ProjectFilesClientPage() {
               text-sm
               font-bold
             "
-            style={{
-              backgroundColor: "#C0392B",
-              color: "#FFFFFF",
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            Déposer un fichier
-          </button>
-        </section>
-      ) : (
-        /* ═══════════════════════════════
+              style={{
+                backgroundColor: "#C0392B",
+                color: "#FFFFFF",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              Déposer un fichier
+            </button>
+          </section>
+        ) : (
+          /* ═══════════════════════════════
            GROUPES
         ═══════════════════════════════ */
 
-        <div
-          className="
+          <div
+            className="
             flex
             flex-col
             gap-6
             min-w-0
           "
-        >
-          {groupedFiles.map((group) => (
-            <section key={group.value} className="min-w-0">
-              <p
-                className="
+          >
+            {groupedFiles.map((group) => (
+              <section key={group.value} className="min-w-0">
+                <p
+                  className="
                   mb-3
                   text-xs
                   font-bold
@@ -510,40 +546,40 @@ export default function ProjectFilesClientPage() {
                   tracking-[0.06em]
                   break-words
                 "
-                style={{
-                  color: "#ADB5BD",
-                }}
-              >
-                {group.label}
-              </p>
+                  style={{
+                    color: "#ADB5BD",
+                  }}
+                >
+                  {group.label}
+                </p>
 
-              <div
-                className="
+                <div
+                  className="
                   flex
                   flex-col
                   gap-2
                 "
-              >
-                {group.files.map((file: any) => (
-                  <article
-                    key={file.id}
-                    className="
+                >
+                  {group.files.map((file: any) => (
+                    <article
+                      key={file.id}
+                      className={`${styles.fileCard}
                         rounded-xl
                         p-3.5
                         sm:p-4
                         lg:p-5
                         min-w-0
-                      "
-                    style={{
-                      backgroundColor: "#FFFFFF",
+                      `}
+                      style={{
+                        backgroundColor: "#FFFFFF",
 
-                      border: `1px solid ${
-                        file.status === "valide" ? "#A9DFBF" : "#E9ECEF"
-                      }`,
-                    }}
-                  >
-                    <div
-                      className="
+                        border: `1px solid ${
+                          file.status === "valide" ? "#A9DFBF" : "#E9ECEF"
+                        }`,
+                      }}
+                    >
+                      <div
+                        className="
                           flex
                           flex-col
                           lg:flex-row
@@ -551,43 +587,43 @@ export default function ProjectFilesClientPage() {
                           lg:justify-between
                           gap-4
                         "
-                    >
-                      {/* INFO FICHIER */}
+                      >
+                        {/* INFO FICHIER */}
 
-                      <div
-                        className="
+                        <div
+                          className="
                             flex
                             items-start
                             gap-3
                             flex-1
                             min-w-0
                           "
-                      >
-                        <span
-                          className="
+                        >
+                          <span
+                            className="
                               text-2xl
                               sm:text-[28px]
                               flex-shrink-0
                             "
-                          aria-hidden="true"
-                        >
-                          {file.mimeType?.includes("pdf")
-                            ? "📄"
-                            : file.mimeType?.includes("image")
-                              ? "🖼️"
-                              : file.name?.toLowerCase().endsWith(".dwg")
-                                ? "📐"
-                                : "📎"}
-                        </span>
+                            aria-hidden="true"
+                          >
+                            {file.mimeType?.includes("pdf")
+                              ? "📄"
+                              : file.mimeType?.includes("image")
+                                ? "🖼️"
+                                : file.name?.toLowerCase().endsWith(".dwg")
+                                  ? "📐"
+                                  : "📎"}
+                          </span>
 
-                        <div
-                          className="
+                          <div
+                            className="
                               flex-1
                               min-w-0
                             "
-                        >
-                          <p
-                            className="
+                          >
+                            <p
+                              className="
                                 m-0
                                 mb-1
                                 text-sm
@@ -595,15 +631,15 @@ export default function ProjectFilesClientPage() {
                                 leading-snug
                                 break-words
                               "
-                            style={{
-                              color: "#2C3E50",
-                            }}
-                          >
-                            {file.name}
-                          </p>
+                              style={{
+                                color: "#2C3E50",
+                              }}
+                            >
+                              {file.name}
+                            </p>
 
-                          <div
-                            className="
+                            <div
+                              className="
                                 flex
                                 flex-wrap
                                 items-center
@@ -611,65 +647,65 @@ export default function ProjectFilesClientPage() {
                                 gap-y-1
                                 text-xs
                               "
-                            style={{
-                              color: "#ADB5BD",
-                            }}
-                          >
-                            <span>{formatSize(file.size)}</span>
+                              style={{
+                                color: "#ADB5BD",
+                              }}
+                            >
+                              <span>{formatSize(file.size)}</span>
 
-                            <span aria-hidden="true">·</span>
+                              <span aria-hidden="true">·</span>
 
-                            <span>v{file.version}</span>
+                              <span>v{file.version}</span>
 
-                            <span aria-hidden="true">·</span>
+                              <span aria-hidden="true">·</span>
 
-                            <span>
-                              {new Date(file.createdAt).toLocaleDateString(
-                                "fr-CA",
-                                {
-                                  day: "numeric",
-                                  month: "short",
-                                },
-                              )}
-                            </span>
+                              <span>
+                                {new Date(file.createdAt).toLocaleDateString(
+                                  "fr-CA",
+                                  {
+                                    day: "numeric",
+                                    month: "short",
+                                  },
+                                )}
+                              </span>
 
-                            {file.status === "valide" && (
-                              <span
-                                className="
+                              {file.status === "valide" && (
+                                <span
+                                  className="
                                     font-semibold
                                     whitespace-nowrap
                                   "
-                                style={{
-                                  color: "#27AE60",
-                                }}
-                              >
-                                ✓ Validé
-                              </span>
-                            )}
+                                  style={{
+                                    color: "#27AE60",
+                                  }}
+                                >
+                                  ✓ Validé
+                                </span>
+                              )}
 
-                            {file.effectiveLifecycleState && (
-                              <span
-                                className="font-semibold whitespace-nowrap"
-                                style={{
-                                  color:
-                                    file.isDownloadable === false
-                                      ? "#C0392B"
-                                      : "#2980B9",
-                                }}
-                              >
-                                {lifecycleLabel(file)}
-                              </span>
-                            )}
+                              {file.effectiveLifecycleState && (
+                                <span
+                                  className="font-semibold whitespace-nowrap"
+                                  style={{
+                                    color:
+                                      file.isDownloadable === false
+                                        ? "#C0392B"
+                                        : "#2980B9",
+                                  }}
+                                >
+                                  {lifecycleLabel(file)}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* ═══════════════════
+                        {/* ═══════════════════
                             ACTIONS
                         ═══════════════════ */}
 
-                      <div
-                        className="
+                        <div
+                          className={`${styles.fileActions}
                             grid
                             grid-cols-1
                             min-[420px]:grid-cols-2
@@ -678,13 +714,13 @@ export default function ProjectFilesClientPage() {
                             lg:flex-wrap
                             gap-2
                             flex-shrink-0
-                          "
-                      >
-                        {file.mimeType?.includes("pdf") && (
-                          <button
-                            type="button"
-                            onClick={() => handleView(file)}
-                            className="
+                          `}
+                        >
+                          {file.mimeType?.includes("pdf") && (
+                            <button
+                              type="button"
+                              onClick={() => handleView(file)}
+                              className="
                                 min-h-[42px]
                                 px-3.5
                                 py-2
@@ -694,31 +730,33 @@ export default function ProjectFilesClientPage() {
                                 transition-colors
                                 whitespace-nowrap
                               "
-                            style={{
-                              border: "2px solid #2980B9",
+                              style={{
+                                border: "2px solid #2980B9",
 
-                              backgroundColor: "#FFFFFF",
+                                backgroundColor: "#FFFFFF",
 
-                              color: "#2980B9",
+                                color: "#2980B9",
 
-                              cursor: "pointer",
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = "#EBF5FB";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = "#FFFFFF";
-                            }}
-                          >
-                            👁 Visualiser
-                          </button>
-                        )}
+                                cursor: "pointer",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor =
+                                  "#EBF5FB";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor =
+                                  "#FFFFFF";
+                              }}
+                            >
+                              👁 Visualiser
+                            </button>
+                          )}
 
-                        <button
-                          type="button"
-                          disabled={file.isDownloadable === false}
-                          onClick={() => handleDownload(file)}
-                          className="
+                          <button
+                            type="button"
+                            disabled={file.isDownloadable === false}
+                            onClick={() => handleDownload(file)}
+                            className="
                               min-h-[42px]
                               px-3.5
                               py-2
@@ -728,29 +766,50 @@ export default function ProjectFilesClientPage() {
                               transition-colors
                               whitespace-nowrap
                             "
-                          style={{
-                            border: "none",
+                            style={{
+                              border: "none",
 
-                            backgroundColor: "#C0392B",
+                              backgroundColor: "#C0392B",
 
-                            color: "#FFFFFF",
+                              color: "#FFFFFF",
 
-                            cursor: "pointer",
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = "#A93226";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = "#C0392B";
-                          }}
-                        >
-                          ↓ Télécharger
-                        </button>
+                              cursor: "pointer",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = "#A93226";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = "#C0392B";
+                            }}
+                          >
+                            ↓ Télécharger
+                          </button>
 
-                        <button
-                          type="button"
-                          onClick={handleAnnotatedUpload}
-                          className="
+                          {file.offlineClassification ===
+                            "NON_SENSITIVE_EMERGENCY" &&
+                            file.effectiveLifecycleState === "APPROVED" && (
+                              <button
+                                type="button"
+                                disabled={preparingId === file.id}
+                                onClick={() => handlePrepareOffline(file)}
+                                className={`${styles.offlineButton} min-h-[42px] px-3.5 py-2 rounded-md text-[13px] font-semibold`}
+                                style={{
+                                  border: "2px solid #16A085",
+                                  backgroundColor: "#FFFFFF",
+                                  color: "#117864",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                {preparingId === file.id
+                                  ? "Préparation…"
+                                  : "Préparer hors ligne"}
+                              </button>
+                            )}
+
+                          <button
+                            type="button"
+                            onClick={handleAnnotatedUpload}
+                            className="
                               min-h-[42px]
                               px-3.5
                               py-2
@@ -763,44 +822,44 @@ export default function ProjectFilesClientPage() {
                               min-[420px]:col-span-2
                               sm:col-span-1
                             "
-                          style={{
-                            border: "1px solid #DEE2E6",
+                            style={{
+                              border: "1px solid #DEE2E6",
 
-                            backgroundColor: "#FFFFFF",
+                              backgroundColor: "#FFFFFF",
 
-                            color: "#6C757D",
+                              color: "#6C757D",
 
-                            cursor: "pointer",
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = "#F8F9FA";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = "#FFFFFF";
-                          }}
-                        >
-                          ↑ Redéposer annoté
-                        </button>
+                              cursor: "pointer",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = "#F8F9FA";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = "#FFFFFF";
+                            }}
+                          >
+                            ↑ Redéposer annoté
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
 
-      {/* ═══════════════════════════════
+        {/* ═══════════════════════════════
           MODALE UPLOAD
       ═══════════════════════════════ */}
 
-      {showUploadModal && selectedFile && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="upload-title"
-          className="
+        {showUploadModal && selectedFile && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="upload-title"
+            className="
               fixed
               inset-0
               z-[1000]
@@ -810,17 +869,17 @@ export default function ProjectFilesClientPage() {
               p-4
               overflow-y-auto
             "
-          style={{
-            backgroundColor: "rgba(0,0,0,0.45)",
-          }}
-          onClick={() => {
-            if (!uploading) {
-              resetUpload();
-            }
-          }}
-        >
-          <div
-            className="
+            style={{
+              backgroundColor: "rgba(0,0,0,0.45)",
+            }}
+            onClick={() => {
+              if (!uploading) {
+                resetUpload();
+              }
+            }}
+          >
+            <div
+              className="
                 w-full
                 max-w-[440px]
                 rounded-xl
@@ -830,46 +889,46 @@ export default function ProjectFilesClientPage() {
                 overflow-y-auto
                 max-h-[calc(100dvh-32px)]
               "
-            style={{
-              backgroundColor: "#FFFFFF",
+              style={{
+                backgroundColor: "#FFFFFF",
 
-              boxShadow: "0 16px 48px rgba(0,0,0,0.15)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3
-              id="upload-title"
-              className="
+                boxShadow: "0 16px 48px rgba(0,0,0,0.15)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3
+                id="upload-title"
+                className="
                   m-0
                   mb-2
                   text-lg
                   font-bold
                 "
-              style={{
-                color: "#2C3E50",
-              }}
-            >
-              Déposer un fichier
-            </h3>
+                style={{
+                  color: "#2C3E50",
+                }}
+              >
+                Déposer un fichier
+              </h3>
 
-            {/* FICHIER SÉLECTIONNÉ */}
+              {/* FICHIER SÉLECTIONNÉ */}
 
-            <div
-              className="
+              <div
+                className="
                   rounded-lg
                   px-4
                   py-3
                   my-4
                   min-w-0
                 "
-              style={{
-                backgroundColor: "#F8F9FA",
+                style={{
+                  backgroundColor: "#F8F9FA",
 
-                border: "1px solid #E9ECEF",
-              }}
-            >
-              <p
-                className="
+                  border: "1px solid #E9ECEF",
+                }}
+              >
+                <p
+                  className="
                     m-0
                     mb-1
                     text-sm
@@ -877,49 +936,49 @@ export default function ProjectFilesClientPage() {
                     leading-snug
                     break-words
                   "
-                style={{
-                  color: "#2C3E50",
-                }}
-              >
-                {selectedFile.name}
-              </p>
+                  style={{
+                    color: "#2C3E50",
+                  }}
+                >
+                  {selectedFile.name}
+                </p>
 
-              <p
-                className="
+                <p
+                  className="
                     m-0
                     text-[13px]
                   "
-                style={{
-                  color: "#ADB5BD",
-                }}
-              >
-                {formatSize(selectedFile.size)}
-              </p>
-            </div>
+                  style={{
+                    color: "#ADB5BD",
+                  }}
+                >
+                  {formatSize(selectedFile.size)}
+                </p>
+              </div>
 
-            {/* CATÉGORIE */}
+              {/* CATÉGORIE */}
 
-            <div className="mb-4">
-              <label
-                htmlFor="client-file-category"
-                className="
+              <div className="mb-4">
+                <label
+                  htmlFor="client-file-category"
+                  className="
                     block
                     text-[13px]
                     font-semibold
                     mb-1.5
                   "
-                style={{
-                  color: "#495057",
-                }}
-              >
-                Catégorie
-              </label>
+                  style={{
+                    color: "#495057",
+                  }}
+                >
+                  Catégorie
+                </label>
 
-              <select
-                id="client-file-category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="
+                <select
+                  id="client-file-category"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="
                     w-full
                     min-w-0
                     min-h-[46px]
@@ -929,47 +988,47 @@ export default function ProjectFilesClientPage() {
                     text-base
                     outline-none
                   "
-                style={{
-                  border: "1px solid #DEE2E6",
+                  style={{
+                    border: "1px solid #DEE2E6",
 
-                  color: "#2C3E50",
+                    color: "#2C3E50",
 
-                  backgroundColor: "#FFFFFF",
-                }}
-              >
-                {CATEGORIES.map((categoryItem) => (
-                  <option key={categoryItem.value} value={categoryItem.value}>
-                    {categoryItem.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+                    backgroundColor: "#FFFFFF",
+                  }}
+                >
+                  {CATEGORIES.map((categoryItem) => (
+                    <option key={categoryItem.value} value={categoryItem.value}>
+                      {categoryItem.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            {/* COMMENTAIRE */}
+              {/* COMMENTAIRE */}
 
-            <div className="mb-5">
-              <label
-                htmlFor="client-file-comment"
-                className="
+              <div className="mb-5">
+                <label
+                  htmlFor="client-file-comment"
+                  className="
                     block
                     text-[13px]
                     font-semibold
                     mb-1.5
                   "
-                style={{
-                  color: "#495057",
-                }}
-              >
-                Commentaire (optionnel)
-              </label>
+                  style={{
+                    color: "#495057",
+                  }}
+                >
+                  Commentaire (optionnel)
+                </label>
 
-              <textarea
-                id="client-file-comment"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Ex: J'ai annoté les sorties de secours du 3e étage"
-                rows={3}
-                className="
+                <textarea
+                  id="client-file-comment"
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Ex: J'ai annoté les sorties de secours du 3e étage"
+                  rows={3}
+                  className="
                     w-full
                     min-w-0
                     min-h-[96px]
@@ -981,31 +1040,31 @@ export default function ProjectFilesClientPage() {
                     resize-y
                     outline-none
                   "
-                style={{
-                  border: "1px solid #DEE2E6",
+                  style={{
+                    border: "1px solid #DEE2E6",
 
-                  color: "#2C3E50",
+                    color: "#2C3E50",
 
-                  backgroundColor: "#FFFFFF",
-                }}
-              />
-            </div>
+                    backgroundColor: "#FFFFFF",
+                  }}
+                />
+              </div>
 
-            {/* ACTIONS */}
+              {/* ACTIONS */}
 
-            <div
-              className="
+              <div
+                className="
                   grid
                   grid-cols-1
                   sm:grid-cols-2
                   gap-2.5
                 "
-            >
-              <button
-                type="button"
-                onClick={resetUpload}
-                disabled={uploading}
-                className="
+              >
+                <button
+                  type="button"
+                  onClick={resetUpload}
+                  disabled={uploading}
+                  className="
                     min-h-[48px]
                     px-4
                     py-3
@@ -1014,24 +1073,24 @@ export default function ProjectFilesClientPage() {
                     font-semibold
                     disabled:opacity-50
                   "
-                style={{
-                  border: "1px solid #DEE2E6",
+                  style={{
+                    border: "1px solid #DEE2E6",
 
-                  backgroundColor: "#FFFFFF",
+                    backgroundColor: "#FFFFFF",
 
-                  color: "#6C757D",
+                    color: "#6C757D",
 
-                  cursor: uploading ? "not-allowed" : "pointer",
-                }}
-              >
-                Annuler
-              </button>
+                    cursor: uploading ? "not-allowed" : "pointer",
+                  }}
+                >
+                  Annuler
+                </button>
 
-              <button
-                type="button"
-                onClick={handleUpload}
-                disabled={uploading}
-                className="
+                <button
+                  type="button"
+                  onClick={handleUpload}
+                  disabled={uploading}
+                  className="
                     min-h-[48px]
                     px-4
                     py-3
@@ -1039,22 +1098,23 @@ export default function ProjectFilesClientPage() {
                     text-sm
                     font-bold
                   "
-                style={{
-                  backgroundColor: uploading ? "#ADB5BD" : "#C0392B",
+                  style={{
+                    backgroundColor: uploading ? "#ADB5BD" : "#C0392B",
 
-                  color: "#FFFFFF",
+                    color: "#FFFFFF",
 
-                  border: "none",
+                    border: "none",
 
-                  cursor: uploading ? "not-allowed" : "pointer",
-                }}
-              >
-                {uploading ? "Envoi..." : "↑ Déposer"}
-              </button>
+                    cursor: uploading ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {uploading ? "Envoi..." : "↑ Déposer"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </PortalLayout>
   );
 }

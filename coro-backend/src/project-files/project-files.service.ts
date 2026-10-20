@@ -304,6 +304,84 @@ export class ProjectFilesService {
     });
   }
 
+  async setOfflineClassification(data: {
+    fileId: string;
+    organizationId: string;
+    actorId: string;
+    classification: 'PROHIBITED' | 'NON_SENSITIVE_EMERGENCY';
+    reason: string;
+    requestId: string;
+    lockVersion: number;
+  }) {
+    this.assertTransitionInput(data.reason, data.requestId, data.lockVersion);
+    return this.prisma.$transaction(async (tx) => {
+      const file = await this.loadForCustodian(
+        tx,
+        data.fileId,
+        data.organizationId,
+        data.actorId,
+      );
+      if (file.lifecycleState !== 'APPROVED')
+        throw new ConflictException(
+          'Seule une version approuvee peut etre classifiee hors ligne',
+        );
+      const existingEvent = await tx.projectFileLifecycleEvent.findUnique({
+        where: {
+          projectFileId_requestId: {
+            projectFileId: file.id,
+            requestId: data.requestId,
+          },
+        },
+      });
+      if (existingEvent) return this.safeFile(file);
+      const changed = await tx.projectFile.updateMany({
+        where: {
+          id: file.id,
+          organizationId: data.organizationId,
+          lifecycleState: 'APPROVED',
+          lockVersion: data.lockVersion,
+        },
+        data: {
+          offlineClassification: data.classification,
+          offlineApprovedAt:
+            data.classification === 'NON_SENSITIVE_EMERGENCY'
+              ? new Date()
+              : null,
+          offlineApprovedById:
+            data.classification === 'NON_SENSITIVE_EMERGENCY'
+              ? data.actorId
+              : null,
+          offlineApprovalReason: data.reason.trim(),
+          lockVersion: { increment: 1 },
+        },
+      });
+      if (changed.count !== 1)
+        throw new ConflictException('Version concurrente du fichier');
+      await tx.projectFileLifecycleEvent.create({
+        data: {
+          projectFileId: file.id,
+          organizationId: file.organizationId,
+          projectId: file.projectId,
+          requestId: data.requestId,
+          action:
+            data.classification === 'NON_SENSITIVE_EMERGENCY'
+              ? 'OFFLINE_CLASSIFICATION_APPROVED'
+              : 'OFFLINE_CLASSIFICATION_REMOVED',
+          fromState: 'APPROVED',
+          toState: 'APPROVED',
+          actorType: 'USER',
+          actorId: data.actorId,
+          reason: data.reason.trim(),
+          metadata: { classification: data.classification },
+        },
+      });
+      const updated = await tx.projectFile.findUnique({
+        where: { id: file.id },
+      });
+      return this.safeFile(updated!);
+    });
+  }
+
   async getFilesForProject(
     projectId: string,
     visibility: string | undefined,

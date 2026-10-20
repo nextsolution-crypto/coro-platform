@@ -3048,6 +3048,9 @@ model ClientUser {
   securityAuditEvents          ClientSecurityAuditEvent[]
   auditLogs                    AuditLog[]                    @relation("AuditLogClientActor")
   sessionVersion               Int                           @default(0)
+  offlineDocumentDevices       OfflineDocumentDevice[]
+  offlineDocumentLeases        OfflineDocumentLease[]
+  offlineDocumentAuditEvents   OfflineDocumentAuditEvent[]
 
   @@unique([id, organizationId])
 }
@@ -3348,27 +3351,27 @@ model BookingNotification {
 }
 
 model ProjectFile {
-  id                     String                      @id @default(uuid())
+  id                     String                        @id @default(uuid())
   projectId              String
-  project                Project                     @relation(fields: [projectId], references: [id])
+  project                Project                       @relation(fields: [projectId], references: [id])
   organizationId         String
-  organization           Organization                @relation(fields: [organizationId], references: [id])
+  organization           Organization                  @relation(fields: [organizationId], references: [id])
   name                   String
   category               String // 'plans_evacuation', 'plans_operation', 'plans_implantation', 'documents_reference', 'fichiers_client', 'autre'
   size                   Int
   mimeType               String
   storageKey             String
   url                    String
-  version                Int                         @default(1)
+  version                Int                           @default(1)
   parentId               String?
-  parent                 ProjectFile?                @relation("FileVersions", fields: [parentId], references: [id])
-  versions               ProjectFile[]               @relation("FileVersions")
+  parent                 ProjectFile?                  @relation("FileVersions", fields: [parentId], references: [id])
+  versions               ProjectFile[]                 @relation("FileVersions")
   uploadedById           String?
-  uploadedBy             User?                       @relation("FileUploader", fields: [uploadedById], references: [id])
+  uploadedBy             User?                         @relation("FileUploader", fields: [uploadedById], references: [id])
   uploadedByClientId     String?
-  uploadedByClient       ClientUser?                 @relation("ClientFileUploader", fields: [uploadedByClientId], references: [id])
-  visibility             String                      @default("shared") // 'shared', 'internal'
-  status                 String                      @default("en_revision") // 'en_revision', 'valide'
+  uploadedByClient       ClientUser?                   @relation("ClientFileUploader", fields: [uploadedByClientId], references: [id])
+  visibility             String                        @default("shared") // 'shared', 'internal'
+  status                 String                        @default("en_revision") // 'en_revision', 'valide'
   lifecycleState         ProjectFileLifecycleState?
   sha256                 String?
   reviewRequestedAt      DateTime?
@@ -3382,13 +3385,94 @@ model ProjectFile {
   revokedAt              DateTime?
   revokedById            String?
   revocationReason       String?
-  lockVersion            Int                         @default(0)
-  createdAt              DateTime                    @default(now())
-  officialExerciseReport ExerciseReport?             @relation("ExerciseReportOfficialFile")
+  lockVersion            Int                           @default(0)
+  offlineClassification  OfflineDocumentClassification @default(PROHIBITED)
+  offlineApprovedAt      DateTime?
+  offlineApprovedById    String?
+  offlineApprovalReason  String?
+  createdAt              DateTime                      @default(now())
+  officialExerciseReport ExerciseReport?               @relation("ExerciseReportOfficialFile")
   lifecycleEvents        ProjectFileLifecycleEvent[]
+  offlineLeases          OfflineDocumentLease[]
 
   @@index([organizationId, projectId, lifecycleState])
   @@index([expiresAt])
+}
+
+enum OfflineDocumentClassification {
+  PROHIBITED
+  NON_SENSITIVE_EMERGENCY
+}
+
+enum OfflineDocumentLeaseStatus {
+  ACTIVE
+  RECONCILED
+  REVOKED
+  EXPIRED
+}
+
+model OfflineDocumentDevice {
+  id                   String                      @id @default(uuid())
+  clientUserId         String
+  clientUser           ClientUser                  @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  organizationId       String
+  credentialIdHash     String                      @unique
+  credentialPublicKey  Bytes
+  credentialCounter    Int                         @default(0)
+  credentialTransports String[]                    @default([])
+  webauthnVerifiedAt   DateTime
+  prfSupported         Boolean
+  label                String
+  revokedAt            DateTime?
+  createdAt            DateTime                    @default(now())
+  lastReconciledAt     DateTime?
+  leases               OfflineDocumentLease[]
+  auditEvents          OfflineDocumentAuditEvent[]
+
+  @@index([clientUserId, organizationId, revokedAt])
+}
+
+model OfflineDocumentLease {
+  id                 String                     @id @default(uuid())
+  leaseId            String                     @unique
+  deviceId           String
+  device             OfflineDocumentDevice      @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  clientUserId       String
+  clientUser         ClientUser                 @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  organizationId     String
+  buildingId         String
+  projectFileId      String
+  projectFile        ProjectFile                @relation(fields: [projectFileId], references: [id], onDelete: Restrict)
+  projectFileVersion Int
+  documentSha256     String
+  credentialIdHash   String
+  issuedAt           DateTime
+  expiresAt          DateTime
+  status             OfflineDocumentLeaseStatus @default(ACTIVE)
+  reconciledAt       DateTime?
+  createdAt          DateTime                   @default(now())
+
+  @@index([clientUserId, organizationId, status])
+  @@index([projectFileId, status])
+  @@index([expiresAt])
+}
+
+model OfflineDocumentAuditEvent {
+  id             String                @id @default(uuid())
+  requestId      String
+  deviceId       String
+  device         OfflineDocumentDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  clientUserId   String
+  clientUser     ClientUser            @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  organizationId String
+  leaseId        String?
+  eventType      String
+  occurredAt     DateTime
+  receivedAt     DateTime              @default(now())
+  metadata       Json?
+
+  @@unique([deviceId, requestId])
+  @@index([clientUserId, organizationId, occurredAt])
 }
 
 enum ProjectFileLifecycleState {
