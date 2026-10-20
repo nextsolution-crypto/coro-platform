@@ -75,6 +75,7 @@ describe('ClientPortalService booking scope', () => {
       'client-a',
       'org-a',
       'CLIENT_MANAGER',
+      ['building-a'],
     );
     expect(bookingsService.createBooking).not.toHaveBeenCalled();
   });
