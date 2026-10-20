@@ -6,10 +6,13 @@ import { OccupancyEmployeesController } from './occupancy-employees.controller';
 import { IncidentService } from './incident.service';
 import { IncidentController } from './incident.controller';
 import { PrismaService } from '../prisma/prisma.service';
+import { PopulationModule } from '../population/population.module';
+import { IncidentNotificationDispatcherService } from './incident-notification-dispatcher.service';
 
 @Module({
+  imports: [PopulationModule],
   controllers: [OccupancyController, OccupancyEmployeesController, IncidentController],
-  providers: [OccupancyService, OccupancyEmployeesService, IncidentService, PrismaService],
-  exports: [OccupancyService, OccupancyEmployeesService, IncidentService],
+  providers: [OccupancyService, OccupancyEmployeesService, IncidentService, IncidentNotificationDispatcherService, PrismaService],
+  exports: [OccupancyService, OccupancyEmployeesService, IncidentService, IncidentNotificationDispatcherService],
 })
 export class OccupancyModule {}

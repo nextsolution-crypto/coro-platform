@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import {
   CoroActorType,
+  IncidentPermission,
   PopulationAlertType,
   PopulationPermission,
 } from '@prisma/client';
@@ -306,6 +307,26 @@ export class ClientPortalService {
       select: { id: true },
     });
     if (!evacuation) throw new NotFoundException('Évacuation introuvable');
+  }
+
+  async assertIncidentPermission(
+    actor: { sub?: string; id?: string; organizationId: string },
+    permission: IncidentPermission,
+  ) {
+    const actorId = actor.sub || actor.id;
+    if (!actorId) throw new ForbiddenException('Identite client requise.');
+    const authorized = await this.prisma.clientUser.findFirst({
+      where: {
+        id: actorId,
+        organizationId: actor.organizationId,
+        isActive: true,
+        incidentPermissions: { has: permission },
+      },
+      select: { id: true },
+    });
+    if (!authorized) {
+      throw new ForbiddenException(`Permission incident requise: ${permission}.`);
+    }
   }
 
   async assertIncidentAccess(

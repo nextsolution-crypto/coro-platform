@@ -1,6 +1,7 @@
 import { ArrayUnique, IsArray, IsEnum, IsOptional } from 'class-validator';
 import {
   CorrectiveActionPermission,
+  IncidentPermission,
   OperationalReviewPermission,
 } from '@prisma/client';
 
@@ -16,4 +17,10 @@ export class UpdateClientUserOperationalPermissionsDto {
   @ArrayUnique()
   @IsEnum(CorrectiveActionPermission, { each: true })
   correctiveActionPermissions?: CorrectiveActionPermission[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsEnum(IncidentPermission, { each: true })
+  incidentPermissions?: IncidentPermission[];
 }

@@ -288,6 +288,11 @@ enum PlatformPermission {
   FINANCIAL_RENDEMENT_READ
   FINANCIAL_SALE_VALIDATE
   FINANCIAL_ADVISOR_COST_MANAGE
+  INCIDENT_READ
+  INCIDENT_TASK_PARTICIPATE
+  INCIDENT_SUPERVISE
+  INCIDENT_COMMAND
+  PCA_ACTIVATE
 }
 
 enum PlatformPermissionScope {
@@ -3028,6 +3033,7 @@ model ClientUser {
   populationPermissions        PopulationPermission[]        @default([])
   operationalReviewPermissions OperationalReviewPermission[] @default([])
   correctiveActionPermissions  CorrectiveActionPermission[]  @default([])
+  incidentPermissions          IncidentPermission[]           @default([])
   buildingIds                  String[]
   isActive                     Boolean                       @default(true)
   clientId                     String
@@ -3617,6 +3623,14 @@ enum CorrectiveActionPermission {
   CORRECTIVE_ACTION_VERIFY
   CORRECTIVE_ACTION_CLOSE
   CORRECTIVE_ACTION_REPORT_GENERATE
+}
+
+enum IncidentPermission {
+  INCIDENT_READ
+  INCIDENT_TASK_PARTICIPATE
+  INCIDENT_SUPERVISE
+  INCIDENT_COMMAND
+  PCA_ACTIVATE
 }
 
 enum CorrectiveActionAssigneeType {
@@ -5064,6 +5078,28 @@ enum IncidentTaskStatus {
   CANCELLED
 }
 
+enum PcaActivationStatus {
+  ACTIVE
+  CLOSED
+  REVOKED
+}
+
+enum IncidentNotificationStatus {
+  QUEUED
+  PROCESSING
+  SENT
+  DELIVERED
+  ACKNOWLEDGED
+  FAILED
+  EXHAUSTED
+  CANCELLED
+}
+
+enum IncidentAuthorityAssignmentStatus {
+  ACTIVE
+  REVOKED
+}
+
 // ─── CORO SENTINELLE — Organisation d'urgence ───────────────────────────────
 
 enum EmergencyRoleType {
@@ -5285,6 +5321,9 @@ model IncidentEvent {
   publicAccessToken    String?        @unique // Jeton d'accès public à la fiche — valide tant que isActive
   publicAccessCount    Int            @default(0) // Nombre de consultations de la fiche via le lien public
   publicAccessLastAt   DateTime? // Dernière consultation de la fiche via le lien public
+  publicAccessExpiresAt DateTime?
+  publicAccessRevokedAt DateTime?
+  lockVersion           Int            @default(0)
   containedAt          DateTime?
   resolvedAt           DateTime?
   closingNotes         String?
@@ -5304,6 +5343,10 @@ model IncidentEvent {
   correctiveActions           CorrectiveAction[]
   populationAlerts            PopulationAlert[]
   populationOperationalEvents PopulationOperationalEvent[]
+  pcaActivations               PcaActivation[]
+  notificationDeliveries       IncidentNotificationDelivery[]
+  authorityAssignments         IncidentAuthorityAssignment[]
+  auditEvents                  IncidentAuditEvent[]
 }
 
 model PopulationOperationalEvent {
@@ -5507,11 +5550,129 @@ model IncidentTask {
   isCoordinatorStep Boolean            @default(false)
   status            IncidentTaskStatus @default(PENDING)
   ackToken          String?            @unique
+  ackExpiresAt      DateTime?
+  ackRevokedAt      DateTime?
+  ackUsedAt         DateTime?
+  lockVersion       Int                @default(0)
+  reassignedAt      DateTime?
+  reassignedByType  CoroActorType?
+  reassignedById    String?
   notifiedAt        DateTime?
   acknowledgedAt    DateTime?
   completedAt       DateTime?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
+}
+
+model PcaActivation {
+  id               String              @id @default(uuid())
+  organizationId   String
+  buildingId       String
+  projectId        String
+  incidentEventId  String?
+  incidentEvent    IncidentEvent?      @relation(fields: [incidentEventId], references: [id], onDelete: Restrict)
+  status           PcaActivationStatus @default(ACTIVE)
+  lockVersion      Int                 @default(0)
+  activatedByType  CoroActorType
+  activatedById    String
+  activationReason String
+  activatedAt      DateTime            @default(now())
+  closedByType     CoroActorType?
+  closedById       String?
+  closedAt         DateTime?
+  closureReason    String?
+  revokedByType    CoroActorType?
+  revokedById      String?
+  revokedAt        DateTime?
+  revocationReason String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([organizationId, buildingId, status])
+  @@index([incidentEventId])
+  @@index([projectId])
+}
+
+model IncidentNotificationDelivery {
+  id                String                     @id @default(uuid())
+  organizationId    String
+  incidentEventId   String
+  incidentEvent     IncidentEvent              @relation(fields: [incidentEventId], references: [id], onDelete: Cascade)
+  channel           String
+  recipientHash     String
+  encryptedEnvelope String
+  encryptionKeyId   String
+  purpose           String
+  idempotencyKey    String                     @unique
+  status            IncidentNotificationStatus @default(QUEUED)
+  attemptCount      Int                        @default(0)
+  maxAttempts       Int                        @default(3)
+  providerMessageId String?
+  providerAcceptedAt DateTime?
+  providerDeliveredAt DateTime?
+  lastErrorCode     String?
+  lastErrorAt       DateTime?
+  sentAt            DateTime?
+  acknowledgedAt    DateTime?
+  nextAttemptAt     DateTime?
+  cancelledAt       DateTime?
+  cancellationReason String?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+
+  @@index([organizationId, incidentEventId])
+  @@index([status, nextAttemptAt])
+}
+
+model IncidentAuthorityAssignment {
+  id                String                            @id @default(uuid())
+  organizationId    String
+  buildingId        String
+  incidentEventId   String?
+  incidentEvent     IncidentEvent?                    @relation(fields: [incidentEventId], references: [id], onDelete: Cascade)
+  subjectType       CoroActorType
+  subjectId         String
+  operationalRole   String
+  permissions       IncidentPermission[]
+  status            IncidentAuthorityAssignmentStatus @default(ACTIVE)
+  grantedByType     CoroActorType
+  grantedById       String
+  grantReason       String
+  grantedAt         DateTime                          @default(now())
+  revokedByType     CoroActorType?
+  revokedById       String?
+  revokedAt         DateTime?
+  revocationReason  String?
+  lockVersion       Int                               @default(0)
+  createdAt         DateTime                          @default(now())
+  updatedAt         DateTime                          @updatedAt
+
+  @@index([organizationId, buildingId, status])
+  @@index([incidentEventId, subjectType, subjectId, status])
+}
+
+model IncidentAuditEvent {
+  id                      String         @id @default(uuid())
+  organizationId          String
+  buildingId              String
+  incidentEventId         String
+  incidentEvent           IncidentEvent @relation(fields: [incidentEventId], references: [id], onDelete: Restrict)
+  operation               String
+  actorType               CoroActorType
+  actorId                 String
+  authorizationAssignmentId String?
+  authorizationPermission IncidentPermission?
+  reason                  String?
+  requestId               String?
+  previousState           Json?
+  resultingState          Json?
+  occurredAt              DateTime       @default(now())
+  previousEventHash       String?
+  eventHash               String         @unique
+
+  @@index([organizationId, incidentEventId, occurredAt])
+  @@index([actorType, actorId, occurredAt])
+  @@index([requestId])
 }
 
 model IncidentLog {

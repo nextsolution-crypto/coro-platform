@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import type {
   CorrectiveActionPermission,
+  IncidentPermission,
   OperationalReviewPermission,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -79,6 +80,7 @@ export class ClientsService {
         buildingIds: true,
         operationalReviewPermissions: true,
         correctiveActionPermissions: true,
+        incidentPermissions: true,
         client: { select: { id: true, name: true } },
       },
     });
@@ -145,6 +147,7 @@ export class ClientsService {
         buildingIds: true,
         operationalReviewPermissions: true,
         correctiveActionPermissions: true,
+        incidentPermissions: true,
       },
     });
   }
@@ -169,6 +172,7 @@ export class ClientsService {
     data: {
       operationalReviewPermissions?: OperationalReviewPermission[];
       correctiveActionPermissions?: CorrectiveActionPermission[];
+      incidentPermissions?: IncidentPermission[];
     },
     actor: any,
   ) {
@@ -189,6 +193,7 @@ export class ClientsService {
     data: {
       operationalReviewPermissions?: OperationalReviewPermission[];
       correctiveActionPermissions?: CorrectiveActionPermission[];
+      incidentPermissions?: IncidentPermission[];
     },
     actor: any,
   ) {
@@ -209,12 +214,14 @@ export class ClientsService {
     data: {
       operationalReviewPermissions?: OperationalReviewPermission[];
       correctiveActionPermissions?: CorrectiveActionPermission[];
+      incidentPermissions?: IncidentPermission[];
     },
     actor: any,
   ) {
     if (
       data.operationalReviewPermissions === undefined &&
-      data.correctiveActionPermissions === undefined
+      data.correctiveActionPermissions === undefined &&
+      data.incidentPermissions === undefined
     ) {
       throw new BadRequestException('Au moins une liste de permissions est requise.');
     }
@@ -228,6 +235,7 @@ export class ClientsService {
       data.operationalReviewPermissions ?? current.operationalReviewPermissions;
     const nextCorrective =
       data.correctiveActionPermissions ?? current.correctiveActionPermissions;
+    const nextIncident = data.incidentPermissions ?? current.incidentPermissions;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const user = await tx.clientUser.update({
@@ -235,6 +243,7 @@ export class ClientsService {
         data: {
           operationalReviewPermissions: nextReview,
           correctiveActionPermissions: nextCorrective,
+          incidentPermissions: nextIncident,
         },
         select: {
           id: true,
@@ -246,6 +255,7 @@ export class ClientsService {
           buildingIds: true,
           operationalReviewPermissions: true,
           correctiveActionPermissions: true,
+          incidentPermissions: true,
         },
       });
         await tx.auditLog.create({
@@ -265,10 +275,12 @@ export class ClientsService {
             previous: {
               operationalReviewPermissions: current.operationalReviewPermissions,
               correctiveActionPermissions: current.correctiveActionPermissions,
+              incidentPermissions: current.incidentPermissions,
             },
             next: {
               operationalReviewPermissions: nextReview,
               correctiveActionPermissions: nextCorrective,
+              incidentPermissions: nextIncident,
             },
           },
           },
@@ -280,8 +292,8 @@ export class ClientsService {
           targetId: clientUserId,
           targetLabel: current.email,
           organizationId,
-          beforeData: { operationalReviewPermissions: current.operationalReviewPermissions, correctiveActionPermissions: current.correctiveActionPermissions },
-          afterData: { operationalReviewPermissions: nextReview, correctiveActionPermissions: nextCorrective },
+          beforeData: { operationalReviewPermissions: current.operationalReviewPermissions, correctiveActionPermissions: current.correctiveActionPermissions, incidentPermissions: current.incidentPermissions },
+          afterData: { operationalReviewPermissions: nextReview, correctiveActionPermissions: nextCorrective, incidentPermissions: nextIncident },
         });
       return user;
     });
@@ -462,6 +474,7 @@ export class ClientsService {
         buildingIds: true,
         operationalReviewPermissions: true,
         correctiveActionPermissions: true,
+        incidentPermissions: true,
       },
     });
     if (!user) throw new NotFoundException('Utilisateur client introuvable.');
@@ -479,6 +492,7 @@ export class ClientsService {
       buildingIds: user.buildingIds,
       operationalReviewPermissions: user.operationalReviewPermissions,
       correctiveActionPermissions: user.correctiveActionPermissions,
+      incidentPermissions: user.incidentPermissions,
     };
   }
 }

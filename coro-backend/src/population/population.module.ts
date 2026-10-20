@@ -54,6 +54,7 @@ import { PopulationContactChangeService } from './population-contact-change.serv
     PopulationOperationalEventsService,
     PopulationEvidenceService,
     PopulationEvidenceReportService,
+    PopulationDeliveryService,
   ],
 })
 export class PopulationModule {}

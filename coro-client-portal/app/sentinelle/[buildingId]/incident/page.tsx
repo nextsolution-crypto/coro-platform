@@ -121,6 +121,7 @@ export default function IncidentPage() {
   const [accessSent, setAccessSent]       = useState<string | null>(null);
   const [linkCopied, setLinkCopied]       = useState<string | null>(null);
   const [resolvingPreAlert, setResolvingPreAlert] = useState<string | null>(null);
+  const [isOnline, setIsOnline]           = useState(true);
 
   useEffect(() => {
     const u = getUser();
@@ -130,24 +131,58 @@ export default function IncidentPage() {
   }, [buildingId]);
 
   const fetchIncidents = useCallback(async () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setLoading(false);
+      return;
+    }
     try {
       const res = await clientFetch(`/client-portal/incidents/buildings/${buildingId}/active-all`);
       setIncidents(Array.isArray(res) ? res : res ? [res] : []);
-    } catch { setIncidents([]); }
+    } catch {
+      // Preserve the last authorized snapshot during a connectivity failure.
+      // Degraded mode is strictly read-only and never manufactures live state.
+    }
     finally { setLoading(false); }
   }, [buildingId]);
 
   useEffect(() => {
-    if (incidents.length === 0) return;
+    const markOffline = () => {
+      setIsOnline(false);
+      setShowTrigger(false);
+      setShowResolve(null);
+    };
+    const markOnline = () => {
+      setIsOnline(true);
+      void fetchIncidents();
+    };
+
+    setIsOnline(navigator.onLine);
+    window.addEventListener('offline', markOffline);
+    window.addEventListener('online', markOnline);
+    return () => {
+      window.removeEventListener('offline', markOffline);
+      window.removeEventListener('online', markOnline);
+    };
+  }, [fetchIncidents]);
+
+  useEffect(() => {
+    if (!isOnline || incidents.length === 0) return;
     // Poll plus fréquemment pendant une pré-alerte, pour refléter rapidement
     // une confirmation/annulation faite par un autre coordonnateur, ou
     // l'escalade automatique côté serveur.
     const hasPreAlert = incidents.some(i => i.status === 'PRE_ALERT');
     const interval = setInterval(fetchIncidents, hasPreAlert ? 5000 : 15000);
     return () => clearInterval(interval);
-  }, [incidents, fetchIncidents]);
+  }, [incidents, fetchIncidents, isOnline]);
+
+  const requireLiveConnection = () => {
+    if (isOnline) return true;
+    alert('Mode d\u00e9grad\u00e9 en lecture seule. Reconnectez-vous et actualisez les donn\u00e9es avant toute action.');
+    return false;
+  };
 
   const handleTrigger = async () => {
+    if (!requireLiveConnection()) return;
     if (!confirm(`Déclencher : ${INCIDENT_TYPES.find(t => t.value === selectedType)?.label} ?\n\nLe coordonnateur et l'équipe d'urgence seront notifiés immédiatement.`)) return;
     setTriggering(true);
     try {
@@ -164,22 +199,29 @@ export default function IncidentPage() {
   };
 
   const handleToggleStep = async (taskId: string, currentStatus: string, incidentId: string) => {
+    if (!requireLiveConnection()) return;
     try {
       if (currentStatus === 'COMPLETED') {
         await clientFetch(`/client-portal/incidents/tasks/${taskId}/uncomplete`, 'PUT');
+      } else if (currentStatus === 'ACKNOWLEDGED' || currentStatus === 'IN_PROGRESS') {
+        await clientFetch(`/client-portal/incidents/tasks/${taskId}/complete`, 'PUT');
       } else {
         await clientFetch(`/client-portal/incidents/tasks/${taskId}/acknowledge`, 'PUT');
       }
+      const nextStatus = currentStatus === 'COMPLETED'
+        ? 'PENDING'
+        : currentStatus === 'ACKNOWLEDGED' || currentStatus === 'IN_PROGRESS'
+          ? 'COMPLETED'
+          : 'ACKNOWLEDGED';
       setIncidents(prev => prev.map(inc => inc.id !== incidentId ? inc : {
         ...inc,
-        tasks: inc.tasks.map((t: any) => t.id !== taskId ? t :
-          { ...t, status: currentStatus === 'COMPLETED' ? 'PENDING' : 'COMPLETED' }
-        ),
+        tasks: inc.tasks.map((t: any) => t.id !== taskId ? t : { ...t, status: nextStatus }),
       }));
     } catch { console.error('Erreur toggle étape'); }
   };
 
   const handleAddLog = async (incidentId: string) => {
+    if (!requireLiveConnection()) return;
     const text = logText[incidentId]?.trim();
     if (!text) return;
     setAddingLog(incidentId);
@@ -196,6 +238,7 @@ export default function IncidentPage() {
   };
 
   const handleConfirmPreAlert = async (incidentId: string) => {
+    if (!requireLiveConnection()) return;
     setResolvingPreAlert(incidentId);
     try {
       await clientFetch(`/client-portal/incidents/${incidentId}/confirm-pre-alert`, 'PUT');
@@ -205,6 +248,7 @@ export default function IncidentPage() {
   };
 
   const handleCancelPreAlert = async (incidentId: string) => {
+    if (!requireLiveConnection()) return;
     if (!confirm("Annuler cette pré-alerte ?\n\nAucune notification ne sera envoyée — à utiliser si c'est un test ou un faux déclenchement du panneau d'alarme.")) return;
     setResolvingPreAlert(incidentId);
     try {
@@ -215,6 +259,7 @@ export default function IncidentPage() {
   };
 
   const handleContain = async (incidentId: string) => {
+    if (!requireLiveConnection()) return;
     try {
       await clientFetch(`/client-portal/incidents/${incidentId}/contain`, 'PUT');
       await fetchIncidents();
@@ -222,6 +267,7 @@ export default function IncidentPage() {
   };
 
   const handleResolve = async (incidentId: string) => {
+    if (!requireLiveConnection()) return;
     try {
       await clientFetch(`/client-portal/incidents/${incidentId}/resolve`, 'PUT', {
         closingNotes: closingNotes[incidentId] || null,
@@ -242,6 +288,7 @@ export default function IncidentPage() {
   };
 
   const handleSendAccess = async (incidentId: string) => {
+    if (!requireLiveConnection()) return;
     const raw = accessEmails[incidentId] || '';
     const emails = raw.split(/[,;\s]+/).map(e => e.trim()).filter(Boolean);
     if (emails.length === 0) return;
@@ -267,6 +314,18 @@ export default function IncidentPage() {
 
   return (
     <PortalLayout>
+      {!isOnline && (
+        <div role="status" aria-live="polite" style={{ marginBottom: 20, padding: '14px 16px', borderRadius: 10, border: '1px solid #F5CBA7', backgroundColor: '#FEF5E7', color: '#784212' }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 800 }}>Mode d\u00e9grad\u00e9 \u2014 lecture seule</p>
+          <p style={{ margin: '4px 0 0', fontSize: 13, lineHeight: 1.5 }}>
+            Les donn\u00e9es affich\u00e9es peuvent ne plus refl\u00e9ter la situation en direct. Les actions incident, t\u00e2ches, PCA et notifications sont bloqu\u00e9es jusqu\u2019\u00e0 une reconnexion et une actualisation r\u00e9ussie. Les proc\u00e9dures d\u00e9j\u00e0 approuv\u00e9es restent accessibles dans le coffre documentaire hors ligne.
+          </p>
+          <button type="button" onClick={() => router.push('/offline-documents')}
+            style={{ marginTop: 10, minHeight: 44, padding: '9px 14px', borderRadius: 8, border: '1px solid #B9770E', backgroundColor: '#FFFFFF', color: '#784212', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+            Ouvrir les proc\u00e9dures hors ligne
+          </button>
+        </div>
+      )}
       {/* ── En-tête ── */}
       <header style={{ marginBottom: 24 }}>
         <button type="button" onClick={() => router.push(`/sentinelle/${buildingId}`)}
@@ -282,12 +341,12 @@ export default function IncidentPage() {
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {activeIncidents.length > 0 && (
-              <button type="button" onClick={fetchIncidents}
+              <button type="button" onClick={fetchIncidents} disabled={!isOnline}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#F8F9FA', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#2C3E50' }}>
                 <RefreshCw size={13} /> Actualiser
               </button>
             )}
-            <button type="button" onClick={() => setShowTrigger(!showTrigger)}
+            <button type="button" onClick={() => setShowTrigger(!showTrigger)} disabled={!isOnline}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, border: 'none', backgroundColor: '#C0392B', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>
               <Plus size={14} /> Nouvel incident
             </button>
@@ -329,7 +388,7 @@ export default function IncidentPage() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" onClick={handleTrigger} disabled={triggering}
+            <button type="button" onClick={handleTrigger} disabled={triggering || !isOnline}
               style={{ padding: '12px 24px', borderRadius: 8, border: 'none', backgroundColor: isExercise ? '#E67E22' : '#C0392B', color: '#FFFFFF', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: triggering ? 0.7 : 1 }}>
               {triggering ? 'Déclenchement...' : isExercise ? '🎯 Lancer l\'exercice' : '🚨 Déclencher'}
             </button>
@@ -384,7 +443,7 @@ export default function IncidentPage() {
                   </button>
                 )}
                 {incident.status === 'ACTIVE' && (
-                  <button type="button" onClick={() => handleContain(incident.id)}
+                  <button type="button" onClick={() => handleContain(incident.id)} disabled={!isOnline}
                     style={{ padding: '7px 12px', borderRadius: 6, border: '1px solid #F9E79F', backgroundColor: '#FEF9E7', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#E67E22' }}>
                     Contenir
                   </button>
@@ -409,11 +468,11 @@ export default function IncidentPage() {
                   {' '}<PreAlertCountdown triggeredAt={incident.triggeredAt} />
                 </p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <button type="button" onClick={() => handleConfirmPreAlert(incident.id)} disabled={resolvingPreAlert === incident.id}
+                  <button type="button" onClick={() => handleConfirmPreAlert(incident.id)} disabled={!isOnline || resolvingPreAlert === incident.id}
                     style={{ padding: '9px 16px', borderRadius: 6, border: 'none', backgroundColor: '#C0392B', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: resolvingPreAlert === incident.id ? 'not-allowed' : 'pointer', opacity: resolvingPreAlert === incident.id ? 0.7 : 1 }}>
                     🚨 Confirmer — envoyer les notifications maintenant
                   </button>
-                  <button type="button" onClick={() => handleCancelPreAlert(incident.id)} disabled={resolvingPreAlert === incident.id}
+                  <button type="button" onClick={() => handleCancelPreAlert(incident.id)} disabled={!isOnline || resolvingPreAlert === incident.id}
                     style={{ padding: '9px 16px', borderRadius: 6, border: '1px solid #DEE2E6', backgroundColor: '#FFFFFF', color: '#6C757D', fontSize: 13, fontWeight: 700, cursor: resolvingPreAlert === incident.id ? 'not-allowed' : 'pointer' }}>
                     Annuler (faux déclenchement)
                   </button>
@@ -443,7 +502,7 @@ export default function IncidentPage() {
                       onChange={e => setAccessEmails(prev => ({ ...prev, [incident.id]: e.target.value }))}
                       onKeyDown={e => e.key === 'Enter' && handleSendAccess(incident.id)}
                       style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: '1px solid #E9ECEF', fontSize: 13, outline: 'none' }} />
-                    <button type="button" onClick={() => handleSendAccess(incident.id)} disabled={sendingAccess === incident.id}
+                    <button type="button" onClick={() => handleSendAccess(incident.id)} disabled={!isOnline || sendingAccess === incident.id}
                       style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 6, border: 'none', backgroundColor: accessSent === incident.id ? '#27AE60' : '#2C3E50', color: '#FFFFFF', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' as const }}>
                       {accessSent === incident.id ? <><Check size={13} /> Envoyé</> : <><Mail size={13} /> {sendingAccess === incident.id ? 'Envoi...' : 'Envoyer'}</>}
                     </button>
@@ -459,7 +518,7 @@ export default function IncidentPage() {
                   onChange={e => setClosingNotes(prev => ({ ...prev, [incident.id]: e.target.value }))}
                   style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #A9DFBF', fontSize: 13, resize: 'none', boxSizing: 'border-box', marginBottom: 8 }} />
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button type="button" onClick={() => handleResolve(incident.id)}
+                  <button type="button" onClick={() => handleResolve(incident.id)} disabled={!isOnline}
                     style={{ padding: '8px 16px', borderRadius: 6, border: 'none', backgroundColor: '#27AE60', color: '#FFFFFF', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                     Confirmer la clôture
                   </button>
@@ -505,7 +564,7 @@ export default function IncidentPage() {
                     return (
                       <button key={task.id} type="button"
                         onClick={() => incident.status !== 'RESOLVED' && handleToggleStep(task.id, task.status, incident.id)}
-                        disabled={incident.status === 'RESOLVED'}
+                        disabled={!isOnline || incident.status === 'RESOLVED'}
                         style={{ display: 'flex', alignItems: 'flex-start', gap: 10, width: '100%', padding: '11px 20px',
                           borderBottom: i < coordSteps.length - 1 ? '1px solid #F8F9FA' : 'none',
                           border: 'none', backgroundColor: done ? '#F8FFF8' : '#FFFFFF',
@@ -576,7 +635,7 @@ export default function IncidentPage() {
                       onKeyDown={e => e.key === 'Enter' && handleAddLog(incident.id)}
                       style={{ flex: 1, padding: '7px 10px', borderRadius: 6, border: '1px solid #E9ECEF', fontSize: 13, outline: 'none' }} />
                     <button type="button" onClick={() => handleAddLog(incident.id)}
-                      disabled={addingLog === incident.id || !logText[incident.id]?.trim()}
+                      disabled={!isOnline || addingLog === incident.id || !logText[incident.id]?.trim()}
                       style={{ padding: '7px 12px', borderRadius: 6, border: 'none', backgroundColor: '#2C3E50', color: '#FFFFFF', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: !logText[incident.id]?.trim() ? 0.4 : 1 }}>
                       +
                     </button>
