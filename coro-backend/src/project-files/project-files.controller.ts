@@ -17,11 +17,24 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ProjectFilesService } from './project-files.service';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 import { EvidenceReadAccess } from '../auth/organization-access.decorator';
+import { ProjectFileExpiryRemindersService } from './project-file-expiry-reminders.service';
 
 @Controller('project-files')
 @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class ProjectFilesController {
-  constructor(private projectFilesService: ProjectFilesService) {}
+  constructor(
+    private projectFilesService: ProjectFilesService,
+    private expiryReminders: ProjectFileExpiryRemindersService,
+  ) {}
+
+  @Put('reminders/:id/acknowledge')
+  acknowledgeReminder(@Param('id') id: string, @Request() req: any) {
+    return this.expiryReminders.acknowledge(
+      id,
+      req.user.organizationId,
+      req.user.userId,
+    );
+  }
 
   @Get('project/:projectId')
   @EvidenceReadAccess()
@@ -126,6 +139,42 @@ export class ProjectFilesController {
       actorId: req.user.userId,
       ...body,
     });
+  }
+
+  @Put(':id/governance')
+  configureGovernance(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      reason: string;
+      requestId: string;
+      lockVersion: number;
+      documentResponsibleUserId?: string;
+      expiryEscalationUserId?: string;
+      historicalDownloadAllowed: boolean;
+    },
+    @Request() req: any,
+  ) {
+    return this.projectFilesService.configureDocumentGovernance({
+      fileId: id,
+      organizationId: req.user.organizationId,
+      actorId: req.user.userId,
+      ...body,
+    });
+  }
+
+  @Get(':id/current')
+  @EvidenceReadAccess()
+  currentVersion(
+    @Param('id') id: string,
+    @Query('asOf') asOf: string | undefined,
+    @Request() req: any,
+  ) {
+    return this.projectFilesService.resolveCurrentVersion(
+      id,
+      req.user.organizationId,
+      asOf ? new Date(asOf) : new Date(),
+    );
   }
 
   @Get(':id/download')

@@ -94,6 +94,7 @@ describe('ProjectFilesService governed lifecycle', () => {
       ),
     };
     const prisma: any = { projectFile, projectFileLifecycleEvent };
+    prisma.$executeRaw = jest.fn(async () => 1);
     prisma.$transaction = jest.fn(async (callback: any) => callback(prisma));
     const storage = {
       downloadPrivate: jest.fn(async () => Buffer.from('private')),
@@ -217,9 +218,9 @@ describe('ProjectFilesService governed lifecycle', () => {
       lifecycleState: 'APPROVED',
       lockVersion: 2,
     });
-    expect(h.events.filter((event) => event.action === 'APPROVED')).toHaveLength(
-      1,
-    );
+    expect(
+      h.events.filter((event) => event.action === 'APPROVED'),
+    ).toHaveLength(1);
     expect(
       h.events.filter((event) => event.action === 'SUPERSEDED'),
     ).toHaveLength(1);
@@ -237,6 +238,28 @@ describe('ProjectFilesService governed lifecycle', () => {
     const h = harness();
     h.rows[0].lifecycleState = 'APPROVED';
     h.rows[0].effectiveAt = new Date(Date.now() + 60_000);
+    await expect(
+      h.service.downloadPrivateFile('file-v1', 'org-a'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('requires explicit historical authorization for a superseded download', async () => {
+    const h = harness();
+    h.rows[0].lifecycleState = 'SUPERSEDED';
+    await expect(
+      h.service.downloadPrivateFile('file-v1', 'org-a'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    h.rows[0].historicalDownloadAllowedAt = new Date();
+    await expect(
+      h.service.downloadPrivateFile('file-v1', 'org-a'),
+    ).resolves.toMatchObject({ name: 'plan.pdf' });
+  });
+
+  it('denies a scheduled superseded version after its cutoff', async () => {
+    const h = harness();
+    h.rows[0].lifecycleState = 'APPROVED';
+    h.rows[0].effectiveAt = new Date(Date.now() - 120_000);
+    h.rows[0].supersededEffectiveAt = new Date(Date.now() - 60_000);
     await expect(
       h.service.downloadPrivateFile('file-v1', 'org-a'),
     ).rejects.toBeInstanceOf(NotFoundException);

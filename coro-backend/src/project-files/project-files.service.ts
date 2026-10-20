@@ -201,6 +201,9 @@ export class ProjectFilesService {
         throw new ConflictException('Le fichier doit être en révision');
 
       const rootId = file.parentId ?? file.id;
+      // Serialize approvals per tenant and documentary chain. The statement is
+      // fixed and accepts no caller-controlled SQL fragment.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`${data.organizationId}:${rootId}`}, 0))`;
       const approved = await tx.projectFile.findMany({
         where: {
           organizationId: data.organizationId,
@@ -209,14 +212,27 @@ export class ProjectFilesService {
         },
       });
       const now = new Date();
+      if (
+        approved.some(
+          (candidate) =>
+            candidate.id !== file.id &&
+            candidate.effectiveAt?.getTime() === effectiveAt.getTime(),
+        )
+      )
+        throw new ConflictException(
+          'Une version approuvee existe deja a cette date effective',
+        );
       for (const previous of approved) {
         if (previous.id === file.id) continue;
+        const supersessionIsEffective = effectiveAt.getTime() <= now.getTime();
         await tx.projectFile.update({
           where: { id: previous.id },
           data: {
-            lifecycleState: 'SUPERSEDED',
-            supersededAt: now,
+            lifecycleState: supersessionIsEffective ? 'SUPERSEDED' : 'APPROVED',
+            supersededAt: supersessionIsEffective ? now : null,
             supersededById: data.actorId,
+            supersededEffectiveAt: effectiveAt,
+            supersededByFileId: file.id,
             lockVersion: { increment: 1 },
           },
         });
@@ -226,9 +242,11 @@ export class ProjectFilesService {
             organizationId: previous.organizationId,
             projectId: previous.projectId,
             requestId: `${data.requestId}:supersede:${previous.id}`,
-            action: 'SUPERSEDED',
+            action: supersessionIsEffective
+              ? 'SUPERSEDED'
+              : 'SUPERSESSION_SCHEDULED',
             fromState: 'APPROVED',
-            toState: 'SUPERSEDED',
+            toState: supersessionIsEffective ? 'SUPERSEDED' : 'APPROVED',
             actorType: 'USER',
             actorId: data.actorId,
             reason: data.reason,
@@ -278,6 +296,153 @@ export class ProjectFilesService {
         where: { id: file.id },
       });
       return this.safeFile(updated!);
+    });
+  }
+
+  async resolveCurrentVersion(
+    fileId: string,
+    organizationId: string,
+    asOf = new Date(),
+    permittedBuildingIds?: string[],
+  ) {
+    if (Number.isNaN(asOf.getTime()))
+      throw new BadRequestException('Date de resolution invalide');
+    const requested = await this.prisma.projectFile.findFirst({
+      where: {
+        id: fileId,
+        organizationId,
+        project: {
+          organizationId,
+          ...(permittedBuildingIds !== undefined
+            ? { buildingId: { in: permittedBuildingIds } }
+            : {}),
+        },
+      },
+      select: { id: true, parentId: true },
+    });
+    if (!requested) throw new NotFoundException('Fichier introuvable');
+    const rootId = requested.parentId ?? requested.id;
+    const candidates = await this.prisma.projectFile.findMany({
+      where: {
+        organizationId,
+        lifecycleState: 'APPROVED',
+        OR: [{ id: rootId }, { parentId: rootId }],
+        effectiveAt: { lte: asOf },
+        AND: [
+          { OR: [{ expiresAt: null }, { expiresAt: { gt: asOf } }] },
+          {
+            OR: [
+              { supersededEffectiveAt: null },
+              { supersededEffectiveAt: { gt: asOf } },
+            ],
+          },
+        ],
+      },
+      orderBy: [{ effectiveAt: 'desc' }, { version: 'desc' }],
+      take: 2,
+    });
+    if (candidates.length === 0)
+      throw new NotFoundException('Aucune version courante');
+    if (
+      candidates.length > 1 &&
+      candidates[0].effectiveAt?.getTime() ===
+        candidates[1].effectiveAt?.getTime()
+    )
+      throw new ConflictException('Resolution courante ambigue');
+    return this.safeFile({ ...candidates[0], isCurrent: true });
+  }
+
+  async configureDocumentGovernance(data: {
+    fileId: string;
+    organizationId: string;
+    actorId: string;
+    reason: string;
+    requestId: string;
+    lockVersion: number;
+    documentResponsibleUserId?: string;
+    expiryEscalationUserId?: string;
+    historicalDownloadAllowed: boolean;
+  }) {
+    this.assertTransitionInput(data.reason, data.requestId, data.lockVersion);
+    return this.prisma.$transaction(async (tx) => {
+      const file = await this.loadForCustodian(
+        tx,
+        data.fileId,
+        data.organizationId,
+        data.actorId,
+      );
+      if (!file.lifecycleState)
+        throw new ConflictException('Document historique sans cycle gouverne');
+      const recipientIds = [
+        data.documentResponsibleUserId,
+        data.expiryEscalationUserId,
+      ].filter((value): value is string => Boolean(value));
+      if (recipientIds.length) {
+        const validRecipients = await tx.user.count({
+          where: {
+            id: { in: recipientIds },
+            organizationId: data.organizationId,
+            isActive: true,
+          },
+        });
+        if (validRecipients !== new Set(recipientIds).size)
+          throw new BadRequestException(
+            'Responsable documentaire ou escalade invalide',
+          );
+      }
+      const existingEvent = await tx.projectFileLifecycleEvent.findUnique({
+        where: {
+          projectFileId_requestId: {
+            projectFileId: file.id,
+            requestId: data.requestId,
+          },
+        },
+      });
+      if (existingEvent) return this.safeFile(file);
+      const changed = await tx.projectFile.updateMany({
+        where: {
+          id: file.id,
+          organizationId: data.organizationId,
+          lockVersion: data.lockVersion,
+        },
+        data: {
+          documentResponsibleUserId: data.documentResponsibleUserId ?? null,
+          expiryEscalationUserId: data.expiryEscalationUserId ?? null,
+          historicalDownloadAllowedAt: data.historicalDownloadAllowed
+            ? new Date()
+            : null,
+          historicalDownloadAuthorizedById: data.historicalDownloadAllowed
+            ? data.actorId
+            : null,
+          historicalDownloadReason: data.reason.trim(),
+          lockVersion: { increment: 1 },
+        },
+      });
+      if (changed.count !== 1)
+        throw new ConflictException('Version concurrente du fichier');
+      await tx.projectFileLifecycleEvent.create({
+        data: {
+          projectFileId: file.id,
+          organizationId: file.organizationId,
+          projectId: file.projectId,
+          requestId: data.requestId,
+          action: data.historicalDownloadAllowed
+            ? 'HISTORICAL_ACCESS_AUTHORIZED'
+            : 'HISTORICAL_ACCESS_REVOKED',
+          fromState: file.lifecycleState,
+          toState: file.lifecycleState,
+          actorType: 'USER',
+          actorId: data.actorId,
+          reason: data.reason.trim(),
+          metadata: {
+            documentResponsibleUserId: data.documentResponsibleUserId ?? null,
+            expiryEscalationUserId: data.expiryEscalationUserId ?? null,
+          },
+        },
+      });
+      return this.safeFile(
+        (await tx.projectFile.findUnique({ where: { id: file.id } }))!,
+      );
     });
   }
 
@@ -422,7 +587,34 @@ export class ProjectFilesService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return files.map((file) => this.safeFile(file));
+    const now = Date.now();
+    return files.map((file) => {
+      const chain = [file, ...file.versions];
+      const current = chain
+        .filter(
+          (candidate) =>
+            candidate.lifecycleState === 'APPROVED' &&
+            (!candidate.effectiveAt ||
+              candidate.effectiveAt.getTime() <= now) &&
+            (!candidate.expiresAt || candidate.expiresAt.getTime() > now) &&
+            (!candidate.supersededEffectiveAt ||
+              candidate.supersededEffectiveAt.getTime() > now),
+        )
+        .sort(
+          (left, right) =>
+            (right.effectiveAt?.getTime() ?? 0) -
+              (left.effectiveAt?.getTime() ?? 0) ||
+            right.version - left.version,
+        )[0];
+      return this.safeFile({
+        ...file,
+        isCurrent: current?.id === file.id,
+        versions: file.versions.map((version) => ({
+          ...version,
+          isCurrent: current?.id === version.id,
+        })),
+      });
+    });
   }
 
   async getSignedUrl(fileId: string, organizationId: string) {
@@ -457,7 +649,18 @@ export class ProjectFilesService {
       throw new NotFoundException('Fichier prive introuvable');
     if (file.lifecycleState === 'REVOKED')
       throw new NotFoundException('Fichier prive introuvable');
+    if (
+      file.lifecycleState === 'SUPERSEDED' &&
+      !file.historicalDownloadAllowedAt
+    )
+      throw new NotFoundException('Fichier prive introuvable');
     if (file.effectiveAt && file.effectiveAt.getTime() > Date.now())
+      throw new NotFoundException('Fichier prive introuvable');
+    if (
+      file.supersededEffectiveAt &&
+      file.supersededEffectiveAt.getTime() <= Date.now() &&
+      !file.historicalDownloadAllowedAt
+    )
       throw new NotFoundException('Fichier prive introuvable');
     if (file.expiresAt && file.expiresAt.getTime() <= Date.now())
       throw new NotFoundException('Fichier prive introuvable');
@@ -626,13 +829,20 @@ export class ProjectFilesService {
             safe.expiresAt &&
             new Date(safe.expiresAt).getTime() <= Date.now()
           ? 'EXPIRED'
-          : lifecycleState;
+          : lifecycleState === 'APPROVED' &&
+              safe.supersededEffectiveAt &&
+              new Date(safe.supersededEffectiveAt).getTime() <= Date.now()
+            ? 'SUPERSEDED'
+            : lifecycleState;
     return {
       ...safe,
       effectiveLifecycleState,
-      isDownloadable: !['REVOKED', 'EXPIRED', 'NOT_EFFECTIVE'].includes(
-        effectiveLifecycleState,
-      ),
+      isDownloadable:
+        !['REVOKED', 'EXPIRED', 'NOT_EFFECTIVE'].includes(
+          effectiveLifecycleState,
+        ) &&
+        (effectiveLifecycleState !== 'SUPERSEDED' ||
+          Boolean(safe.historicalDownloadAllowedAt)),
       ...(versions
         ? {
             versions: versions.map((version: Record<string, any>) =>

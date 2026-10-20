@@ -117,6 +117,17 @@ export class ProjectFilesClientController {
     });
   }
 
+  @Get('file/:id/current')
+  @EvidenceReadAccess()
+  currentVersion(@Param('id') id: string, @Request() req: any) {
+    return this.projectFilesService.resolveCurrentVersion(
+      id,
+      req.clientUser.organizationId,
+      new Date(),
+      this.buildingScope(req.clientUser),
+    );
+  }
+
   @Get(':projectId')
   @EvidenceReadAccess()
   getFiles(

@@ -220,7 +220,15 @@ export class OfflineDocumentsService {
         offlineClassification: 'NON_SENSITIVE_EMERGENCY',
         offlineApprovedAt: { not: null },
         effectiveAt: { lte: now },
-        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+        AND: [
+          { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+          {
+            OR: [
+              { supersededEffectiveAt: null },
+              { supersededEffectiveAt: { gt: now } },
+            ],
+          },
+        ],
         project: {
           organizationId: data.organizationId,
           ...(data.permittedBuildingIds !== undefined
@@ -327,6 +335,8 @@ export class OfflineDocumentsService {
         (!lease.projectFile.expiresAt || lease.projectFile.expiresAt > now) &&
         (!lease.projectFile.effectiveAt ||
           lease.projectFile.effectiveAt <= now) &&
+        (!lease.projectFile.supersededEffectiveAt ||
+          lease.projectFile.supersededEffectiveAt > now) &&
         (data.permittedBuildingIds === undefined ||
           data.permittedBuildingIds.includes(
             lease.projectFile.project.buildingId,

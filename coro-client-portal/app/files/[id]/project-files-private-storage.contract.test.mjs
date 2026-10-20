@@ -28,4 +28,6 @@ test('revoked and expired files remain visible but cannot be opened', () => {
 test('approved and historical versions are projected for authenticated access', () => {
   assert.match(source, /sharedRoots\.flatMap/);
   assert.match(source, /\.\.\.\(file\.versions \|\| \[\]\)/);
+  assert.match(source, /file\.isCurrent === true/);
+  assert.match(source, /Version documentaire courante/);
 });

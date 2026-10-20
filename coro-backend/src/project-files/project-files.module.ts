@@ -9,6 +9,7 @@ import { MulterModule } from '@nestjs/platform-express';
 import { JwtModule } from '@nestjs/jwt';
 import { requireJwtSecret } from '../auth/auth-security.config';
 import { OfflineDocumentsService } from './offline-documents.service';
+import { ProjectFileExpiryRemindersService } from './project-file-expiry-reminders.service';
 
 @Module({
   imports: [
@@ -22,7 +23,11 @@ import { OfflineDocumentsService } from './offline-documents.service';
     }),
   ],
   controllers: [ProjectFilesController, ProjectFilesClientController],
-  providers: [ProjectFilesService, OfflineDocumentsService],
+  providers: [
+    ProjectFilesService,
+    OfflineDocumentsService,
+    ProjectFileExpiryRemindersService,
+  ],
   exports: [ProjectFilesService],
 })
 export class ProjectFilesModule {}

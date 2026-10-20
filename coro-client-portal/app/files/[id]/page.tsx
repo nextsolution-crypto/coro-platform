@@ -696,6 +696,16 @@ export default function ProjectFilesClientPage() {
                                   {lifecycleLabel(file)}
                                 </span>
                               )}
+
+                              {file.isCurrent === true && (
+                                <span
+                                  className="font-semibold whitespace-nowrap"
+                                  aria-label="Version documentaire courante"
+                                  style={{ color: "#1F7A4D" }}
+                                >
+                                  Version courante
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
