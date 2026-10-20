@@ -312,7 +312,7 @@ export default function ProjectFilesClientPage() {
         <button
           type="button"
           onClick={() => router.push("/documents")}
-          className="
+          className={`${styles.backButton}
           inline-flex
           items-center
           gap-2
@@ -320,7 +320,7 @@ export default function ProjectFilesClientPage() {
           px-1
           py-2
           text-sm
-        "
+        `}
           style={{
             background: "none",
             border: "none",

@@ -4,12 +4,22 @@
   color: var(--cg-text-primary, #1b2a3b);
 }
 
+.backButton {
+  min-height: 44px;
+}
+
 .header h1,
 .fileCard p {
   color: var(--cg-text-primary, #1b2a3b) !important;
 }
 
+.header {
+  margin-bottom: var(--cg-space-5, 24px) !important;
+}
+
 .infoPanel {
+  margin-bottom: var(--cg-space-5, 24px) !important;
+  padding: var(--cg-space-3, 12px) var(--cg-space-4, 16px) !important;
   border: 1px solid var(--cg-info-border, var(--cg-border-default, #b8c8d8)) !important;
   background: var(--cg-info-bg, var(--cg-glass-bg, #eef6fb)) !important;
   box-shadow: inset 0 1px 0 var(--cg-glass-highlight, transparent);
@@ -30,6 +40,7 @@
 }
 
 .fileCard {
+  padding: var(--cg-space-4, 16px) !important;
   border-color: var(--cg-border-default, #d7dfe5) !important;
   background: var(--cg-glass-bg, #fff) !important;
   background-image: var(--cg-sheen, none) !important;
@@ -37,6 +48,10 @@
     inset 0 1px 0 var(--cg-glass-highlight, transparent),
     var(--cg-shadow-card, 0 4px 16px rgba(27, 42, 59, 0.08));
   backdrop-filter: blur(var(--cg-blur-md, 0));
+}
+
+.fileActions {
+  gap: var(--cg-space-2, 8px) !important;
 }
 
 .fileActions button {
@@ -65,8 +80,17 @@
 }
 
 @media (max-width: 640px) {
+  .page {
+    padding-inline: var(--cg-space-1, 4px);
+  }
+
+  .header {
+    margin-bottom: var(--cg-space-4, 16px) !important;
+  }
+
   .fileActions {
     grid-template-columns: 1fr !important;
+    margin-top: var(--cg-space-1, 4px);
   }
 
   .fileActions button {
