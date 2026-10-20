@@ -1,38 +1,36 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { getUser, apiGet } from '../../store/auth';
-import PortalLayout from '../../components/PortalLayout';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { getUser, apiGet } from "../../store/auth";
+import PortalLayout from "../../components/PortalLayout";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  'http://localhost:3002/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002/api";
 
 const CATEGORIES = [
   {
-    value: 'plans_evacuation',
+    value: "plans_evacuation",
     label: "🚨 Plans d'évacuation",
   },
   {
-    value: 'plans_operation',
+    value: "plans_operation",
     label: "⚙️ Plans d'opération",
   },
   {
-    value: 'plans_implantation',
+    value: "plans_implantation",
     label: "📐 Plans d'implantation",
   },
   {
-    value: 'documents_reference',
-    label: '📚 Documents de référence',
+    value: "documents_reference",
+    label: "📚 Documents de référence",
   },
   {
-    value: 'fichiers_client',
-    label: '👤 Fichiers client',
+    value: "fichiers_client",
+    label: "👤 Fichiers client",
   },
   {
-    value: 'autre',
-    label: '📎 Autre',
+    value: "autre",
+    label: "📎 Autre",
   },
 ];
 
@@ -61,41 +59,36 @@ export default function ProjectFilesClientPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
-  const [showUploadModal, setShowUploadModal] =
-    useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
-  const [selectedFile, setSelectedFile] =
-    useState<File | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const [category, setCategory] =
-    useState('fichiers_client');
+  const [category, setCategory] = useState("fichiers_client");
 
-  const [comment, setComment] =
-    useState('');
+  const [comment, setComment] = useState("");
 
-  const fileInputRef =
-    useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const [projectRes, filesRes] =
-        await Promise.all([
-          apiGet(
-            `/client-portal/projects/${projectId}`
-          ),
+      const [projectRes, filesRes] = await Promise.all([
+        apiGet(`/client-portal/projects/${projectId}`),
 
-          apiGet(
-            `/project-files/client/${projectId}?visibility=shared`
-          ),
-        ]);
+        apiGet(`/project-files/client/${projectId}?visibility=shared`),
+      ]);
 
       setProject(projectRes);
 
+      const sharedRoots = (filesRes || []).filter(
+        (file: any) => file.visibility === "shared",
+      );
       setFiles(
-        (filesRes || []).filter(
-          (file: any) =>
-            file.visibility === 'shared'
-        )
+        sharedRoots.flatMap((file: any) => [
+          file,
+          ...(file.versions || []).filter(
+            (version: any) => version.visibility === "shared",
+          ),
+        ]),
       );
     } catch (err) {
       console.error(err);
@@ -108,7 +101,7 @@ export default function ProjectFilesClientPage() {
     const currentUser = getUser();
 
     if (!currentUser) {
-      router.replace('/login');
+      router.replace("/login");
       return;
     }
 
@@ -119,27 +112,23 @@ export default function ProjectFilesClientPage() {
   const resetUpload = () => {
     setShowUploadModal(false);
     setSelectedFile(null);
-    setCategory('fichiers_client');
-    setComment('');
+    setCategory("fichiers_client");
+    setComment("");
 
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
-  const handleFileSelect = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
 
     if (!file) return;
 
     if (file.size > 50 * 1024 * 1024) {
-      alert(
-        'Le fichier doit faire moins de 50 MB'
-      );
+      alert("Le fichier doit faire moins de 50 MB");
 
-      e.target.value = '';
+      e.target.value = "";
       return;
     }
 
@@ -153,114 +142,103 @@ export default function ProjectFilesClientPage() {
     setUploading(true);
 
     try {
-      const token =
-        localStorage.getItem(
-          'coro_client_token'
-        );
+      const token = localStorage.getItem("coro_client_token");
 
       const formData = new FormData();
 
-      formData.append(
-        'file',
-        selectedFile
-      );
+      formData.append("file", selectedFile);
 
-      formData.append(
-        'category',
-        category
-      );
+      formData.append("category", category);
 
-      formData.append(
-        'visibility',
-        'shared'
-      );
+      formData.append("visibility", "shared");
 
       if (comment.trim()) {
-        formData.append(
-          'comment',
-          comment.trim()
-        );
+        formData.append("comment", comment.trim());
       }
 
-      const res = await fetch(
-        `${API_URL}/project-files/client/${projectId}`,
-        {
-          method: 'POST',
+      const res = await fetch(`${API_URL}/project-files/client/${projectId}`, {
+        method: "POST",
 
-          headers: {
-            Authorization:
-              `Bearer ${token}`,
-          },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
 
-          body: formData,
-        }
-      );
+        body: formData,
+      });
 
       if (!res.ok) {
-        throw new Error(
-          'Erreur upload'
-        );
+        throw new Error("Erreur upload");
       }
 
       resetUpload();
       await fetchData();
-
     } catch (err) {
       console.error(err);
 
-      alert(
-        'Erreur lors du téléversement.'
-      );
-
+      alert("Erreur lors du téléversement.");
     } finally {
       setUploading(false);
     }
   };
 
-  const openFile = async (
-    file: any
-  ) => {
-    if (file.url !== 'private:project-file') {
-      window.open(file.url, '_blank', 'noopener,noreferrer');
+  const openFile = async (file: any) => {
+    if (file.isDownloadable === false) return;
+    if (file.url !== "private:project-file") {
+      window.open(file.url, "_blank", "noopener,noreferrer");
       return;
     }
     try {
-      const token = localStorage.getItem('coro_client_token');
+      const token = localStorage.getItem("coro_client_token");
       const response = await fetch(
         `${API_URL}/project-files/client/file/${file.id}/content`,
-        { headers: { Authorization: `Bearer ${token}` } },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
       );
-      if (!response.ok) throw new Error('Erreur telechargement');
+      if (!response.ok) throw new Error("Erreur telechargement");
       const url = URL.createObjectURL(await response.blob());
-      window.open(url, '_blank', 'noopener,noreferrer');
+      window.open(url, "_blank", "noopener,noreferrer");
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err) {
       console.error(err);
-      alert('Erreur lors du telechargement.');
+      alert("Erreur lors du telechargement.");
     }
   };
 
   const handleView = openFile;
   const handleDownload = openFile;
 
+  const lifecycleLabel = (file: any) => {
+    const state = file.effectiveLifecycleState || file.lifecycleState;
+    return (
+      (
+        {
+          DRAFT: "Brouillon",
+          REVIEW: "En révision",
+          APPROVED: "Approuvé",
+          SUPERSEDED: "Remplacé",
+          EXPIRED: "Expiré",
+          NOT_EFFECTIVE: "À venir",
+          REVOKED: "Révoqué",
+          LEGACY_VALIDATED: "Validé (historique)",
+          LEGACY: "Historique",
+        } as Record<string, string>
+      )[state] || state
+    );
+  };
+
   const handleAnnotatedUpload = () => {
-    setCategory('fichiers_client');
+    setCategory("fichiers_client");
     fileInputRef.current?.click();
   };
 
-  const groupedFiles =
-    CATEGORIES.map(categoryItem => ({
-      ...categoryItem,
+  const groupedFiles = CATEGORIES.map((categoryItem) => ({
+    ...categoryItem,
 
-      files: files.filter(
-        file =>
-          file.category ===
-          categoryItem.value
-      ),
-    })).filter(
-      group =>
-        group.files.length > 0
-    );
+    files: files.filter((file) => file.category === categoryItem.value),
+  })).filter((group) => group.files.length > 0);
 
   if (loading || !user) {
     return (
@@ -280,7 +258,7 @@ export default function ProjectFilesClientPage() {
               text-sm
             "
             style={{
-              color: '#ADB5BD',
+              color: "#ADB5BD",
             }}
           >
             Chargement...
@@ -292,16 +270,13 @@ export default function ProjectFilesClientPage() {
 
   return (
     <PortalLayout>
-
       {/* ═══════════════════════════════
           RETOUR
       ═══════════════════════════════ */}
 
       <button
         type="button"
-        onClick={() =>
-          router.push('/documents')
-        }
+        onClick={() => router.push("/documents")}
         className="
           inline-flex
           items-center
@@ -312,22 +287,20 @@ export default function ProjectFilesClientPage() {
           text-sm
         "
         style={{
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          color: '#6C757D',
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          color: "#6C757D",
         }}
       >
         ← Retour aux documents
       </button>
-
 
       {/* ═══════════════════════════════
           HEADER
       ═══════════════════════════════ */}
 
       <header className="mb-6 sm:mb-7">
-
         <p
           className="
             mb-1
@@ -337,7 +310,7 @@ export default function ProjectFilesClientPage() {
             tracking-[0.08em]
           "
           style={{
-            color: '#ADB5BD',
+            color: "#ADB5BD",
           }}
         >
           Espace de fichiers
@@ -365,7 +338,7 @@ export default function ProjectFilesClientPage() {
               break-words
             "
             style={{
-              color: '#2C3E50',
+              color: "#2C3E50",
             }}
           >
             {project?.name}
@@ -373,9 +346,7 @@ export default function ProjectFilesClientPage() {
 
           <button
             type="button"
-            onClick={() =>
-              fileInputRef.current?.click()
-            }
+            onClick={() => fileInputRef.current?.click()}
             className="
               w-full
               sm:w-auto
@@ -389,18 +360,16 @@ export default function ProjectFilesClientPage() {
               transition-colors
             "
             style={{
-              backgroundColor: '#C0392B',
-              color: '#FFFFFF',
-              border: 'none',
-              cursor: 'pointer',
+              backgroundColor: "#C0392B",
+              color: "#FFFFFF",
+              border: "none",
+              cursor: "pointer",
             }}
-            onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor =
-                '#A93226';
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#A93226";
             }}
-            onMouseLeave={e => {
-              e.currentTarget.style.backgroundColor =
-                '#C0392B';
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "#C0392B";
             }}
           >
             + Déposer un fichier
@@ -414,9 +383,7 @@ export default function ProjectFilesClientPage() {
             accept=".pdf,.png,.jpg,.jpeg,.dwg,.docx,.xlsx,.zip"
           />
         </div>
-
       </header>
-
 
       {/* ═══════════════════════════════
           INFO
@@ -430,8 +397,8 @@ export default function ProjectFilesClientPage() {
           mb-6
         "
         style={{
-          backgroundColor: '#EBF5FB',
-          border: '1px solid #AED6F1',
+          backgroundColor: "#EBF5FB",
+          border: "1px solid #AED6F1",
         }}
       >
         <p
@@ -441,23 +408,19 @@ export default function ProjectFilesClientPage() {
             leading-relaxed
           "
           style={{
-            color: '#1A5276',
+            color: "#1A5276",
           }}
         >
-          💡 Téléchargez les plans de votre
-          conseiller, annotez-les et
-          redéposez-les ici. Votre conseiller
-          sera notifié automatiquement.
+          💡 Téléchargez les plans de votre conseiller, annotez-les et
+          redéposez-les ici. Votre conseiller sera notifié automatiquement.
         </p>
       </div>
-
 
       {/* ═══════════════════════════════
           ÉTAT VIDE
       ═══════════════════════════════ */}
 
       {files.length === 0 ? (
-
         <section
           className="
             rounded-xl
@@ -468,13 +431,11 @@ export default function ProjectFilesClientPage() {
             text-center
           "
           style={{
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E9ECEF',
+            backgroundColor: "#FFFFFF",
+            border: "1px solid #E9ECEF",
           }}
         >
-          <p className="text-5xl mb-4">
-            📁
-          </p>
+          <p className="text-5xl mb-4">📁</p>
 
           <p
             className="
@@ -483,7 +444,7 @@ export default function ProjectFilesClientPage() {
               font-bold
             "
             style={{
-              color: '#2C3E50',
+              color: "#2C3E50",
             }}
           >
             Aucun fichier partagé
@@ -496,18 +457,15 @@ export default function ProjectFilesClientPage() {
               leading-relaxed
             "
             style={{
-              color: '#ADB5BD',
+              color: "#ADB5BD",
             }}
           >
-            Votre conseiller n&apos;a pas
-            encore partagé de fichiers.
+            Votre conseiller n&apos;a pas encore partagé de fichiers.
           </p>
 
           <button
             type="button"
-            onClick={() =>
-              fileInputRef.current?.click()
-            }
+            onClick={() => fileInputRef.current?.click()}
             className="
               w-full
               sm:w-auto
@@ -519,18 +477,16 @@ export default function ProjectFilesClientPage() {
               font-bold
             "
             style={{
-              backgroundColor: '#C0392B',
-              color: '#FFFFFF',
-              border: 'none',
-              cursor: 'pointer',
+              backgroundColor: "#C0392B",
+              color: "#FFFFFF",
+              border: "none",
+              cursor: "pointer",
             }}
           >
             Déposer un fichier
           </button>
         </section>
-
       ) : (
-
         /* ═══════════════════════════════
            GROUPES
         ═══════════════════════════════ */
@@ -543,13 +499,8 @@ export default function ProjectFilesClientPage() {
             min-w-0
           "
         >
-          {groupedFiles.map(group => (
-
-            <section
-              key={group.value}
-              className="min-w-0"
-            >
-
+          {groupedFiles.map((group) => (
+            <section key={group.value} className="min-w-0">
               <p
                 className="
                   mb-3
@@ -560,12 +511,11 @@ export default function ProjectFilesClientPage() {
                   break-words
                 "
                 style={{
-                  color: '#ADB5BD',
+                  color: "#ADB5BD",
                 }}
               >
                 {group.label}
               </p>
-
 
               <div
                 className="
@@ -574,35 +524,26 @@ export default function ProjectFilesClientPage() {
                   gap-2
                 "
               >
-
-                {group.files.map(
-                  (file: any) => (
-
-                    <article
-                      key={file.id}
-                      className="
+                {group.files.map((file: any) => (
+                  <article
+                    key={file.id}
+                    className="
                         rounded-xl
                         p-3.5
                         sm:p-4
                         lg:p-5
                         min-w-0
                       "
-                      style={{
-                        backgroundColor:
-                          '#FFFFFF',
+                    style={{
+                      backgroundColor: "#FFFFFF",
 
-                        border:
-                          `1px solid ${
-                            file.status ===
-                            'valide'
-                              ? '#A9DFBF'
-                              : '#E9ECEF'
-                          }`,
-                      }}
-                    >
-
-                      <div
-                        className="
+                      border: `1px solid ${
+                        file.status === "valide" ? "#A9DFBF" : "#E9ECEF"
+                      }`,
+                    }}
+                  >
+                    <div
+                      className="
                           flex
                           flex-col
                           lg:flex-row
@@ -610,56 +551,43 @@ export default function ProjectFilesClientPage() {
                           lg:justify-between
                           gap-4
                         "
-                      >
+                    >
+                      {/* INFO FICHIER */}
 
-                        {/* INFO FICHIER */}
-
-                        <div
-                          className="
+                      <div
+                        className="
                             flex
                             items-start
                             gap-3
                             flex-1
                             min-w-0
                           "
-                        >
-                          <span
-                            className="
+                      >
+                        <span
+                          className="
                               text-2xl
                               sm:text-[28px]
                               flex-shrink-0
                             "
-                            aria-hidden="true"
-                          >
-                            {file.mimeType
-                              ?.includes(
-                                'pdf'
-                              )
-                              ? '📄'
-                              : file.mimeType
-                                  ?.includes(
-                                    'image'
-                                  )
-                                ? '🖼️'
-                                : file.name
-                                    ?.toLowerCase()
-                                    .endsWith(
-                                      '.dwg'
-                                    )
-                                  ? '📐'
-                                  : '📎'}
-                          </span>
+                          aria-hidden="true"
+                        >
+                          {file.mimeType?.includes("pdf")
+                            ? "📄"
+                            : file.mimeType?.includes("image")
+                              ? "🖼️"
+                              : file.name?.toLowerCase().endsWith(".dwg")
+                                ? "📐"
+                                : "📎"}
+                        </span>
 
-
-                          <div
-                            className="
+                        <div
+                          className="
                               flex-1
                               min-w-0
                             "
-                          >
-
-                            <p
-                              className="
+                        >
+                          <p
+                            className="
                                 m-0
                                 mb-1
                                 text-sm
@@ -667,17 +595,15 @@ export default function ProjectFilesClientPage() {
                                 leading-snug
                                 break-words
                               "
-                              style={{
-                                color:
-                                  '#2C3E50',
-                              }}
-                            >
-                              {file.name}
-                            </p>
+                            style={{
+                              color: "#2C3E50",
+                            }}
+                          >
+                            {file.name}
+                          </p>
 
-
-                            <div
-                              className="
+                          <div
+                            className="
                                 flex
                                 flex-wrap
                                 items-center
@@ -685,78 +611,65 @@ export default function ProjectFilesClientPage() {
                                 gap-y-1
                                 text-xs
                               "
-                              style={{
-                                color:
-                                  '#ADB5BD',
-                              }}
-                            >
+                            style={{
+                              color: "#ADB5BD",
+                            }}
+                          >
+                            <span>{formatSize(file.size)}</span>
 
-                              <span>
-                                {formatSize(
-                                  file.size
-                                )}
-                              </span>
+                            <span aria-hidden="true">·</span>
 
+                            <span>v{file.version}</span>
+
+                            <span aria-hidden="true">·</span>
+
+                            <span>
+                              {new Date(file.createdAt).toLocaleDateString(
+                                "fr-CA",
+                                {
+                                  day: "numeric",
+                                  month: "short",
+                                },
+                              )}
+                            </span>
+
+                            {file.status === "valide" && (
                               <span
-                                aria-hidden="true"
-                              >
-                                ·
-                              </span>
-
-                              <span>
-                                v
-                                {file.version}
-                              </span>
-
-                              <span
-                                aria-hidden="true"
-                              >
-                                ·
-                              </span>
-
-                              <span>
-                                {new Date(
-                                  file.createdAt
-                                ).toLocaleDateString(
-                                  'fr-CA',
-                                  {
-                                    day:
-                                      'numeric',
-                                    month:
-                                      'short',
-                                  }
-                                )}
-                              </span>
-
-
-                              {file.status ===
-                                'valide' && (
-                                <span
-                                  className="
+                                className="
                                     font-semibold
                                     whitespace-nowrap
                                   "
-                                  style={{
-                                    color:
-                                      '#27AE60',
-                                  }}
-                                >
-                                  ✓ Validé
-                                </span>
-                              )}
+                                style={{
+                                  color: "#27AE60",
+                                }}
+                              >
+                                ✓ Validé
+                              </span>
+                            )}
 
-                            </div>
-
+                            {file.effectiveLifecycleState && (
+                              <span
+                                className="font-semibold whitespace-nowrap"
+                                style={{
+                                  color:
+                                    file.isDownloadable === false
+                                      ? "#C0392B"
+                                      : "#2980B9",
+                                }}
+                              >
+                                {lifecycleLabel(file)}
+                              </span>
+                            )}
                           </div>
                         </div>
+                      </div>
 
-
-                        {/* ═══════════════════
+                      {/* ═══════════════════
                             ACTIONS
                         ═══════════════════ */}
 
-                        <div
-                          className="
+                      <div
+                        className="
                             grid
                             grid-cols-1
                             min-[420px]:grid-cols-2
@@ -766,21 +679,12 @@ export default function ProjectFilesClientPage() {
                             gap-2
                             flex-shrink-0
                           "
-                        >
-
-                          {file.mimeType
-                            ?.includes(
-                              'pdf'
-                            ) && (
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleView(
-                                  file
-                                )
-                              }
-                              className="
+                      >
+                        {file.mimeType?.includes("pdf") && (
+                          <button
+                            type="button"
+                            onClick={() => handleView(file)}
+                            className="
                                 min-h-[42px]
                                 px-3.5
                                 py-2
@@ -790,42 +694,31 @@ export default function ProjectFilesClientPage() {
                                 transition-colors
                                 whitespace-nowrap
                               "
-                              style={{
-                                border:
-                                  '2px solid #2980B9',
+                            style={{
+                              border: "2px solid #2980B9",
 
-                                backgroundColor:
-                                  '#FFFFFF',
+                              backgroundColor: "#FFFFFF",
 
-                                color:
-                                  '#2980B9',
+                              color: "#2980B9",
 
-                                cursor:
-                                  'pointer',
-                              }}
-                              onMouseEnter={e => {
-                                e.currentTarget.style.backgroundColor =
-                                  '#EBF5FB';
-                              }}
-                              onMouseLeave={e => {
-                                e.currentTarget.style.backgroundColor =
-                                  '#FFFFFF';
-                              }}
-                            >
-                              👁 Visualiser
-                            </button>
+                              cursor: "pointer",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = "#EBF5FB";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = "#FFFFFF";
+                            }}
+                          >
+                            👁 Visualiser
+                          </button>
+                        )}
 
-                          )}
-
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleDownload(
-                                file
-                              )
-                            }
-                            className="
+                        <button
+                          type="button"
+                          disabled={file.isDownloadable === false}
+                          onClick={() => handleDownload(file)}
+                          className="
                               min-h-[42px]
                               px-3.5
                               py-2
@@ -835,37 +728,29 @@ export default function ProjectFilesClientPage() {
                               transition-colors
                               whitespace-nowrap
                             "
-                            style={{
-                              border: 'none',
+                          style={{
+                            border: "none",
 
-                              backgroundColor:
-                                '#C0392B',
+                            backgroundColor: "#C0392B",
 
-                              color:
-                                '#FFFFFF',
+                            color: "#FFFFFF",
 
-                              cursor:
-                                'pointer',
-                            }}
-                            onMouseEnter={e => {
-                              e.currentTarget.style.backgroundColor =
-                                '#A93226';
-                            }}
-                            onMouseLeave={e => {
-                              e.currentTarget.style.backgroundColor =
-                                '#C0392B';
-                            }}
-                          >
-                            ↓ Télécharger
-                          </button>
+                            cursor: "pointer",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "#A93226";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "#C0392B";
+                          }}
+                        >
+                          ↓ Télécharger
+                        </button>
 
-
-                          <button
-                            type="button"
-                            onClick={
-                              handleAnnotatedUpload
-                            }
-                            className="
+                        <button
+                          type="button"
+                          onClick={handleAnnotatedUpload}
+                          className="
                               min-h-[42px]
                               px-3.5
                               py-2
@@ -878,64 +763,44 @@ export default function ProjectFilesClientPage() {
                               min-[420px]:col-span-2
                               sm:col-span-1
                             "
-                            style={{
-                              border:
-                                '1px solid #DEE2E6',
+                          style={{
+                            border: "1px solid #DEE2E6",
 
-                              backgroundColor:
-                                '#FFFFFF',
+                            backgroundColor: "#FFFFFF",
 
-                              color:
-                                '#6C757D',
+                            color: "#6C757D",
 
-                              cursor:
-                                'pointer',
-                            }}
-                            onMouseEnter={e => {
-                              e.currentTarget.style.backgroundColor =
-                                '#F8F9FA';
-                            }}
-                            onMouseLeave={e => {
-                              e.currentTarget.style.backgroundColor =
-                                '#FFFFFF';
-                            }}
-                          >
-                            ↑ Redéposer annoté
-                          </button>
-
-                        </div>
-
+                            cursor: "pointer",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "#F8F9FA";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "#FFFFFF";
+                          }}
+                        >
+                          ↑ Redéposer annoté
+                        </button>
                       </div>
-
-                    </article>
-
-                  )
-                )}
-
+                    </div>
+                  </article>
+                ))}
               </div>
-
             </section>
-
           ))}
-
         </div>
-
       )}
-
 
       {/* ═══════════════════════════════
           MODALE UPLOAD
       ═══════════════════════════════ */}
 
-      {showUploadModal &&
-        selectedFile && (
-
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="upload-title"
-
-            className="
+      {showUploadModal && selectedFile && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="upload-title"
+          className="
               fixed
               inset-0
               z-[1000]
@@ -945,21 +810,17 @@ export default function ProjectFilesClientPage() {
               p-4
               overflow-y-auto
             "
-
-            style={{
-              backgroundColor:
-                'rgba(0,0,0,0.45)',
-            }}
-
-            onClick={() => {
-              if (!uploading) {
-                resetUpload();
-              }
-            }}
-          >
-
-            <div
-              className="
+          style={{
+            backgroundColor: "rgba(0,0,0,0.45)",
+          }}
+          onClick={() => {
+            if (!uploading) {
+              resetUpload();
+            }
+          }}
+        >
+          <div
+            className="
                 w-full
                 max-w-[440px]
                 rounded-xl
@@ -969,58 +830,46 @@ export default function ProjectFilesClientPage() {
                 overflow-y-auto
                 max-h-[calc(100dvh-32px)]
               "
+            style={{
+              backgroundColor: "#FFFFFF",
 
-              style={{
-                backgroundColor:
-                  '#FFFFFF',
-
-                boxShadow:
-                  '0 16px 48px rgba(0,0,0,0.15)',
-              }}
-
-              onClick={e =>
-                e.stopPropagation()
-              }
-            >
-
-              <h3
-                id="upload-title"
-                className="
+              boxShadow: "0 16px 48px rgba(0,0,0,0.15)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3
+              id="upload-title"
+              className="
                   m-0
                   mb-2
                   text-lg
                   font-bold
                 "
-                style={{
-                  color: '#2C3E50',
-                }}
-              >
-                Déposer un fichier
-              </h3>
+              style={{
+                color: "#2C3E50",
+              }}
+            >
+              Déposer un fichier
+            </h3>
 
+            {/* FICHIER SÉLECTIONNÉ */}
 
-              {/* FICHIER SÉLECTIONNÉ */}
-
-              <div
-                className="
+            <div
+              className="
                   rounded-lg
                   px-4
                   py-3
                   my-4
                   min-w-0
                 "
+              style={{
+                backgroundColor: "#F8F9FA",
 
-                style={{
-                  backgroundColor:
-                    '#F8F9FA',
-
-                  border:
-                    '1px solid #E9ECEF',
-                }}
-              >
-
-                <p
-                  className="
+                border: "1px solid #E9ECEF",
+              }}
+            >
+              <p
+                className="
                     m-0
                     mb-1
                     text-sm
@@ -1028,64 +877,49 @@ export default function ProjectFilesClientPage() {
                     leading-snug
                     break-words
                   "
+                style={{
+                  color: "#2C3E50",
+                }}
+              >
+                {selectedFile.name}
+              </p>
 
-                  style={{
-                    color: '#2C3E50',
-                  }}
-                >
-                  {selectedFile.name}
-                </p>
-
-                <p
-                  className="
+              <p
+                className="
                     m-0
                     text-[13px]
                   "
+                style={{
+                  color: "#ADB5BD",
+                }}
+              >
+                {formatSize(selectedFile.size)}
+              </p>
+            </div>
 
-                  style={{
-                    color: '#ADB5BD',
-                  }}
-                >
-                  {formatSize(
-                    selectedFile.size
-                  )}
-                </p>
+            {/* CATÉGORIE */}
 
-              </div>
-
-
-              {/* CATÉGORIE */}
-
-              <div className="mb-4">
-
-                <label
-                  htmlFor="client-file-category"
-                  className="
+            <div className="mb-4">
+              <label
+                htmlFor="client-file-category"
+                className="
                     block
                     text-[13px]
                     font-semibold
                     mb-1.5
                   "
+                style={{
+                  color: "#495057",
+                }}
+              >
+                Catégorie
+              </label>
 
-                  style={{
-                    color: '#495057',
-                  }}
-                >
-                  Catégorie
-                </label>
-
-                <select
-                  id="client-file-category"
-
-                  value={category}
-
-                  onChange={e =>
-                    setCategory(
-                      e.target.value
-                    )
-                  }
-
-                  className="
+              <select
+                id="client-file-category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="
                     w-full
                     min-w-0
                     min-h-[46px]
@@ -1095,80 +929,47 @@ export default function ProjectFilesClientPage() {
                     text-base
                     outline-none
                   "
+                style={{
+                  border: "1px solid #DEE2E6",
 
-                  style={{
-                    border:
-                      '1px solid #DEE2E6',
+                  color: "#2C3E50",
 
-                    color:
-                      '#2C3E50',
+                  backgroundColor: "#FFFFFF",
+                }}
+              >
+                {CATEGORIES.map((categoryItem) => (
+                  <option key={categoryItem.value} value={categoryItem.value}>
+                    {categoryItem.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-                    backgroundColor:
-                      '#FFFFFF',
-                  }}
-                >
+            {/* COMMENTAIRE */}
 
-                  {CATEGORIES.map(
-                    categoryItem => (
-
-                      <option
-                        key={
-                          categoryItem.value
-                        }
-
-                        value={
-                          categoryItem.value
-                        }
-                      >
-                        {
-                          categoryItem.label
-                        }
-                      </option>
-
-                    )
-                  )}
-
-                </select>
-
-              </div>
-
-
-              {/* COMMENTAIRE */}
-
-              <div className="mb-5">
-
-                <label
-                  htmlFor="client-file-comment"
-                  className="
+            <div className="mb-5">
+              <label
+                htmlFor="client-file-comment"
+                className="
                     block
                     text-[13px]
                     font-semibold
                     mb-1.5
                   "
+                style={{
+                  color: "#495057",
+                }}
+              >
+                Commentaire (optionnel)
+              </label>
 
-                  style={{
-                    color: '#495057',
-                  }}
-                >
-                  Commentaire (optionnel)
-                </label>
-
-                <textarea
-                  id="client-file-comment"
-
-                  value={comment}
-
-                  onChange={e =>
-                    setComment(
-                      e.target.value
-                    )
-                  }
-
-                  placeholder="Ex: J'ai annoté les sorties de secours du 3e étage"
-
-                  rows={3}
-
-                  className="
+              <textarea
+                id="client-file-comment"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Ex: J'ai annoté les sorties de secours du 3e étage"
+                rows={3}
+                className="
                     w-full
                     min-w-0
                     min-h-[96px]
@@ -1180,45 +981,31 @@ export default function ProjectFilesClientPage() {
                     resize-y
                     outline-none
                   "
+                style={{
+                  border: "1px solid #DEE2E6",
 
-                  style={{
-                    border:
-                      '1px solid #DEE2E6',
+                  color: "#2C3E50",
 
-                    color:
-                      '#2C3E50',
+                  backgroundColor: "#FFFFFF",
+                }}
+              />
+            </div>
 
-                    backgroundColor:
-                      '#FFFFFF',
-                  }}
-                />
+            {/* ACTIONS */}
 
-              </div>
-
-
-              {/* ACTIONS */}
-
-              <div
-                className="
+            <div
+              className="
                   grid
                   grid-cols-1
                   sm:grid-cols-2
                   gap-2.5
                 "
-              >
-
-                <button
-                  type="button"
-
-                  onClick={
-                    resetUpload
-                  }
-
-                  disabled={
-                    uploading
-                  }
-
-                  className="
+            >
+              <button
+                type="button"
+                onClick={resetUpload}
+                disabled={uploading}
+                className="
                     min-h-[48px]
                     px-4
                     py-3
@@ -1227,39 +1014,24 @@ export default function ProjectFilesClientPage() {
                     font-semibold
                     disabled:opacity-50
                   "
+                style={{
+                  border: "1px solid #DEE2E6",
 
-                  style={{
-                    border:
-                      '1px solid #DEE2E6',
+                  backgroundColor: "#FFFFFF",
 
-                    backgroundColor:
-                      '#FFFFFF',
+                  color: "#6C757D",
 
-                    color:
-                      '#6C757D',
+                  cursor: uploading ? "not-allowed" : "pointer",
+                }}
+              >
+                Annuler
+              </button>
 
-                    cursor:
-                      uploading
-                        ? 'not-allowed'
-                        : 'pointer',
-                  }}
-                >
-                  Annuler
-                </button>
-
-
-                <button
-                  type="button"
-
-                  onClick={
-                    handleUpload
-                  }
-
-                  disabled={
-                    uploading
-                  }
-
-                  className="
+              <button
+                type="button"
+                onClick={handleUpload}
+                disabled={uploading}
+                className="
                     min-h-[48px]
                     px-4
                     py-3
@@ -1267,37 +1039,22 @@ export default function ProjectFilesClientPage() {
                     text-sm
                     font-bold
                   "
+                style={{
+                  backgroundColor: uploading ? "#ADB5BD" : "#C0392B",
 
-                  style={{
-                    backgroundColor:
-                      uploading
-                        ? '#ADB5BD'
-                        : '#C0392B',
+                  color: "#FFFFFF",
 
-                    color:
-                      '#FFFFFF',
+                  border: "none",
 
-                    border: 'none',
-
-                    cursor:
-                      uploading
-                        ? 'not-allowed'
-                        : 'pointer',
-                  }}
-                >
-                  {uploading
-                    ? 'Envoi...'
-                    : '↑ Déposer'}
-                </button>
-
-              </div>
-
+                  cursor: uploading ? "not-allowed" : "pointer",
+                }}
+              >
+                {uploading ? "Envoi..." : "↑ Déposer"}
+              </button>
             </div>
-
           </div>
-
-        )}
-
+        </div>
+      )}
     </PortalLayout>
   );
 }

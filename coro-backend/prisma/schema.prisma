@@ -3348,29 +3348,75 @@ model BookingNotification {
 }
 
 model ProjectFile {
-  id                     String          @id @default(uuid())
+  id                     String                      @id @default(uuid())
   projectId              String
-  project                Project         @relation(fields: [projectId], references: [id])
+  project                Project                     @relation(fields: [projectId], references: [id])
   organizationId         String
-  organization           Organization    @relation(fields: [organizationId], references: [id])
+  organization           Organization                @relation(fields: [organizationId], references: [id])
   name                   String
   category               String // 'plans_evacuation', 'plans_operation', 'plans_implantation', 'documents_reference', 'fichiers_client', 'autre'
   size                   Int
   mimeType               String
   storageKey             String
   url                    String
-  version                Int             @default(1)
+  version                Int                         @default(1)
   parentId               String?
-  parent                 ProjectFile?    @relation("FileVersions", fields: [parentId], references: [id])
-  versions               ProjectFile[]   @relation("FileVersions")
+  parent                 ProjectFile?                @relation("FileVersions", fields: [parentId], references: [id])
+  versions               ProjectFile[]               @relation("FileVersions")
   uploadedById           String?
-  uploadedBy             User?           @relation("FileUploader", fields: [uploadedById], references: [id])
+  uploadedBy             User?                       @relation("FileUploader", fields: [uploadedById], references: [id])
   uploadedByClientId     String?
-  uploadedByClient       ClientUser?     @relation("ClientFileUploader", fields: [uploadedByClientId], references: [id])
-  visibility             String          @default("shared") // 'shared', 'internal'
-  status                 String          @default("en_revision") // 'en_revision', 'valide'
-  createdAt              DateTime        @default(now())
-  officialExerciseReport ExerciseReport? @relation("ExerciseReportOfficialFile")
+  uploadedByClient       ClientUser?                 @relation("ClientFileUploader", fields: [uploadedByClientId], references: [id])
+  visibility             String                      @default("shared") // 'shared', 'internal'
+  status                 String                      @default("en_revision") // 'en_revision', 'valide'
+  lifecycleState         ProjectFileLifecycleState?
+  sha256                 String?
+  reviewRequestedAt      DateTime?
+  reviewRequestedById    String?
+  approvedAt             DateTime?
+  approvedById           String?
+  effectiveAt            DateTime?
+  expiresAt              DateTime?
+  supersededAt           DateTime?
+  supersededById         String?
+  revokedAt              DateTime?
+  revokedById            String?
+  revocationReason       String?
+  lockVersion            Int                         @default(0)
+  createdAt              DateTime                    @default(now())
+  officialExerciseReport ExerciseReport?             @relation("ExerciseReportOfficialFile")
+  lifecycleEvents        ProjectFileLifecycleEvent[]
+
+  @@index([organizationId, projectId, lifecycleState])
+  @@index([expiresAt])
+}
+
+enum ProjectFileLifecycleState {
+  DRAFT
+  REVIEW
+  APPROVED
+  SUPERSEDED
+  REVOKED
+}
+
+model ProjectFileLifecycleEvent {
+  id             String                     @id @default(uuid())
+  projectFileId  String
+  projectFile    ProjectFile                @relation(fields: [projectFileId], references: [id], onDelete: Restrict)
+  organizationId String
+  projectId      String
+  requestId      String
+  action         String
+  fromState      ProjectFileLifecycleState?
+  toState        ProjectFileLifecycleState
+  actorType      String
+  actorId        String
+  reason         String?
+  metadata       Json?
+  createdAt      DateTime                   @default(now())
+
+  @@unique([projectFileId, requestId])
+  @@index([organizationId, projectId, createdAt])
 }
 
 model RefreshToken {

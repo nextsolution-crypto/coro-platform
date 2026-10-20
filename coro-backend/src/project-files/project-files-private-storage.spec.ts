@@ -42,7 +42,11 @@ describe('ProjectFilesService private storage authority', () => {
           return row;
         }),
       },
+      projectFileLifecycleEvent: {
+        create: jest.fn(async ({ data }: any) => ({ id: 'event', ...data })),
+      },
     };
+    prisma.$transaction = jest.fn(async (callback: any) => callback(prisma));
     const objects = new Map<string, Buffer>();
     const storage: any = {
       uploadPrivateImmutable: jest.fn(async (payload: Buffer, key: string) => {

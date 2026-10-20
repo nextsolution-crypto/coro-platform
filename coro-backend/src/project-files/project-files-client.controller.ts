@@ -73,4 +73,14 @@ export class ProjectFilesClientController {
       disposition: `attachment; filename="${file.name.replace(/["\r\n]/g, '_')}"`,
     });
   }
+
+  @Get('file/:id/history')
+  @EvidenceReadAccess()
+  history(@Param('id') id: string, @Request() req: any) {
+    return this.projectFilesService.getLifecycleHistory(
+      id,
+      req.clientUser.organizationId,
+      req.clientUser.buildingIds,
+    );
+  }
 }

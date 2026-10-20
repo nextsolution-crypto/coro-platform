@@ -3,7 +3,6 @@ import {
   Get,
   Post,
   Put,
-  Delete,
   Param,
   Body,
   UseGuards,
@@ -55,19 +54,58 @@ export class ProjectFilesController {
       mimeType: file.mimetype,
       size: file.size,
       visibility: body.visibility || 'shared',
-      uploadedById: req.user.sub,
+      uploadedById: req.user.userId,
       parentId: body.parentId,
     });
   }
 
-  @Put(':id/validate')
-  validateFile(@Param('id') id: string, @Request() req: any) {
-    return this.projectFilesService.validateFile(id, req.user.organizationId);
+  @Put(':id/review')
+  requestReview(
+    @Param('id') id: string,
+    @Body() body: { reason: string; requestId: string; lockVersion: number },
+    @Request() req: any,
+  ) {
+    return this.projectFilesService.requestReview({
+      fileId: id,
+      organizationId: req.user.organizationId,
+      actorId: req.user.userId,
+      ...body,
+    });
   }
 
-  @Delete(':id')
-  deleteFile(@Param('id') id: string, @Request() req: any) {
-    return this.projectFilesService.deleteFile(id, req.user.organizationId);
+  @Put(':id/approve')
+  approveFile(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      reason: string;
+      requestId: string;
+      lockVersion: number;
+      effectiveAt: string;
+      expiresAt?: string;
+    },
+    @Request() req: any,
+  ) {
+    return this.projectFilesService.approveFile({
+      fileId: id,
+      organizationId: req.user.organizationId,
+      actorId: req.user.userId,
+      ...body,
+    });
+  }
+
+  @Put(':id/revoke')
+  revokeFile(
+    @Param('id') id: string,
+    @Body() body: { reason: string; requestId: string; lockVersion: number },
+    @Request() req: any,
+  ) {
+    return this.projectFilesService.revokeFile({
+      fileId: id,
+      organizationId: req.user.organizationId,
+      actorId: req.user.userId,
+      ...body,
+    });
   }
 
   @Get(':id/download')
@@ -87,5 +125,14 @@ export class ProjectFilesController {
       type: file.mimeType,
       disposition: `attachment; filename="${file.name.replace(/["\r\n]/g, '_')}"`,
     });
+  }
+
+  @Get(':id/history')
+  @EvidenceReadAccess()
+  history(@Param('id') id: string, @Request() req: any) {
+    return this.projectFilesService.getLifecycleHistory(
+      id,
+      req.user.organizationId,
+    );
   }
 }
