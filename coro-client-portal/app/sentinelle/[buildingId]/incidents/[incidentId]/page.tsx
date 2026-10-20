@@ -4,6 +4,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { getUser } from '../../../../store/auth';
 import PortalLayout from '../../../../components/PortalLayout';
 import { FileText, CheckSquare, Square, Download, Clock } from 'lucide-react';
+import styles from './incident-escalation.module.css';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
 
@@ -361,6 +362,7 @@ export default function IncidentDetailPage() {
   const completed  = coordSteps.filter((t: any) => t.status === 'COMPLETED').length;
   const pct        = coordSteps.length > 0 ? Math.round((completed / coordSteps.length) * 100) : 0;
   const teamSnap   = (incident.teamSnapshot as any[]) || [];
+  const governedTasks = (incident.tasks || []).filter((t: any) => t.ackDeadlineAt || t.missedAcknowledgmentAt || t.escalationStatus !== 'PENDING');
 
   return (
     <PortalLayout>
@@ -405,6 +407,40 @@ export default function IncidentDetailPage() {
           </div>
         ))}
       </div>
+
+      {governedTasks.length > 0 && (
+        <section className={styles.escalationPanel} aria-labelledby="incident-escalations-title">
+          <div className={styles.escalationHeader}>
+            <div>
+              <p className={styles.eyebrow}>Accusés critiques</p>
+              <h2 id="incident-escalations-title">Délais et escalades</h2>
+            </div>
+            <span className={styles.queueCount}>{governedTasks.filter((task: any) => task.escalationStatus === 'OPERATOR_QUEUE').length} en file opérateur</span>
+          </div>
+          <div className={styles.taskGrid}>
+            {governedTasks.map((task: any) => {
+              const late = Boolean(task.missedAcknowledgmentAt);
+              const closed = ['ACKNOWLEDGED', 'COMPLETED', 'CANCELLED'].includes(task.status);
+              return (
+                <article key={task.id} className={styles.taskCard} data-critical={task.severity === 'CRITICAL' ? 'true' : undefined}>
+                  <div className={styles.taskTitleRow}>
+                    <h3>{task.title}</h3>
+                    <span className={styles.severity}>{task.severity || 'NORMAL'}</span>
+                  </div>
+                  <dl className={styles.taskFacts}>
+                    <div><dt>Échéance</dt><dd>{task.ackDeadlineAt ? new Date(task.ackDeadlineAt).toLocaleString('fr-CA', { hour: '2-digit', minute: '2-digit' }) : 'Non configurée'}</dd></div>
+                    <div><dt>Accusé</dt><dd>{task.acknowledgedAt ? new Date(task.acknowledgedAt).toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }) : 'En attente'}</dd></div>
+                    <div><dt>Escalade</dt><dd>{task.escalationStatus === 'OPERATOR_QUEUE' ? 'File opérateur' : task.escalationLevel > 0 ? `Niveau ${task.escalationLevel}` : 'Aucune'}</dd></div>
+                  </dl>
+                  <div className={styles.taskState} data-tone={late ? 'danger' : closed ? 'success' : 'pending'}>
+                    {late ? 'Échéance manquée — preuve conservée' : closed ? 'Accusé reçu' : 'Accusé attendu'}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: 16 }}>
 

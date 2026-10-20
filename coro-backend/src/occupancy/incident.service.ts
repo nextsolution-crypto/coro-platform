@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { createHash, randomUUID } from 'crypto';
 import { CoroActorType, IncidentPermission } from '@prisma/client';
 import { IncidentNotificationDispatcherService } from './incident-notification-dispatcher.service';
+import { Cron } from '@nestjs/schedule';
 
 type IncidentAuditContext = {
   actorType: CoroActorType;
@@ -62,6 +63,32 @@ const INCIDENT_LABELS: Record<string, string> = {
 // n'escalade automatiquement en incident actif avec notifications envoyées.
 const ALARM_ESCALATION_WINDOW_MS = 45_000;
 const PUBLIC_CAPABILITY_TTL_MS = 15 * 60 * 1000;
+const TASK_ACK_DEADLINE_MS = {
+  CRITICAL: 2 * 60 * 1000,
+  HIGH: 5 * 60 * 1000,
+  NORMAL: 15 * 60 * 1000,
+  LOW: 30 * 60 * 1000,
+} as const;
+
+type IncidentTaskSeverityName = keyof typeof TASK_ACK_DEADLINE_MS;
+
+function taskAckPolicy(severity: IncidentTaskSeverityName, configuredAt: Date) {
+  const acknowledgmentWindowMs = TASK_ACK_DEADLINE_MS[severity];
+  return {
+    version: 1,
+    severity,
+    acknowledgmentWindowMs,
+    alternateWindowMs: acknowledgmentWindowMs,
+    maximumAutomaticAlternateLevels: 2,
+    configuredAt: configuredAt.toISOString(),
+    source: 'FOUNDER_APPROVED_DEFAULTS',
+    regulatoryClaim: false,
+  };
+}
+
+function escapeIncidentNotificationHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
+}
 
 const OCCUPANT_MESSAGES: Record<string, { alert: string; alarm: string }> = {
   FIRE_ALERT:      { alert: 'Une investigation est en cours. Restez en place, préparez-vous à évacuer.', alarm: 'Évacuez immédiatement le bâtiment.' },
@@ -434,7 +461,7 @@ export class IncidentService {
     return this.prisma.$transaction(async (tx) => {
     const claimed = await tx.incidentTask.updateMany({
       where: { id: task.id, ackUsedAt: null, ackRevokedAt: null, ackExpiresAt: { gt: now } },
-      data: { status: 'ACKNOWLEDGED', acknowledgedAt: now, ackUsedAt: now, lockVersion: { increment: 1 } },
+      data: { status: 'ACKNOWLEDGED', acknowledgedAt: now, ackUsedAt: now, escalationStatus: 'ACKNOWLEDGED', nextEscalationAt: null, escalationCancelledAt: now, escalationCancellationReason: 'ACKNOWLEDGED_BY_CAPABILITY', lockVersion: { increment: 1 } },
     });
     if (claimed.count !== 1) throw new ConflictException('Ce lien a deja ete utilise.');
 
@@ -754,6 +781,8 @@ export class IncidentService {
 
     const otherMembers = mobilizableTeam.filter(m => !m.roles.some((r: any) => r.role === 'COORDINATOR') && m.email);
     for (const member of otherMembers) {
+      const escalationConfiguredAt = new Date();
+      const escalationPolicy = taskAckPolicy('NORMAL', escalationConfiguredAt);
       // Créer tâche membre avec ackToken unique
       const memberTask = await tx.incidentTask.create({
         data: {
@@ -765,6 +794,10 @@ export class IncidentService {
           status:            'PENDING' as any,
           ackToken:          randomUUID(),
           ackExpiresAt:      new Date(Date.now() + PUBLIC_CAPABILITY_TTL_MS),
+          severity:          'NORMAL' as any,
+          ackDeadlineAt:     new Date(escalationConfiguredAt.getTime() + escalationPolicy.acknowledgmentWindowMs),
+          ackPolicySnapshot: escalationPolicy as any,
+          nextEscalationAt:  new Date(escalationConfiguredAt.getTime() + escalationPolicy.acknowledgmentWindowMs),
           notifiedAt:        new Date(),
         },
       });
@@ -924,6 +957,132 @@ export class IncidentService {
     return incidents[0] || null;
   }
 
+  async configureTaskEscalation(
+    taskId: string,
+    input: { severity: IncidentTaskSeverityName; alternateEmployeeIds?: string[]; acknowledgmentSubjectType: 'USER' | 'CLIENT_USER'; acknowledgmentSubjectId: string; lockVersion: number; reason: string },
+    organizationId: string,
+    audit: IncidentAuditContext,
+  ) {
+    if (!input.reason?.trim()) throw new ConflictException('Une justification est obligatoire.');
+    if (!Object.prototype.hasOwnProperty.call(TASK_ACK_DEADLINE_MS, input.severity)) throw new ConflictException('Severite invalide.');
+    const requestedAlternateIds = input.alternateEmployeeIds || [];
+    const alternateEmployeeIds = [...new Set(requestedAlternateIds)];
+    if (alternateEmployeeIds.length !== requestedAlternateIds.length) throw new ConflictException('Chaque niveau de suppleance doit designer une identite distincte.');
+    if (alternateEmployeeIds.length > 2) throw new ConflictException('Deux niveaux de suppleance maximum sont autorises.');
+    if (!input.acknowledgmentSubjectType || !input.acknowledgmentSubjectId) throw new ConflictException("L'identite d'accuse explicite est obligatoire.");
+
+    const task = await this.prisma.incidentTask.findFirst({
+      where: { id: taskId, incidentEvent: { organizationId, isActive: true, status: { in: ['PRE_ALERT', 'ACTIVE', 'CONTAINED'] } } },
+      include: { incidentEvent: { select: { buildingId: true } } },
+    });
+    if (!task || ['COMPLETED', 'CANCELLED'].includes(task.status)) throw new NotFoundException('Tache active introuvable.');
+    if (task.employeeId && alternateEmployeeIds.includes(task.employeeId)) throw new ConflictException("L'intervenant principal ne peut pas etre son propre suppleant.");
+    if (alternateEmployeeIds.length) {
+      const eligible = await this.prisma.buildingEmployee.count({ where: { id: { in: alternateEmployeeIds }, buildingId: task.incidentEvent.buildingId, organizationId, isActive: true } });
+      if (eligible !== alternateEmployeeIds.length) throw new NotFoundException('Un suppleant actif est introuvable dans le batiment cible.');
+    }
+    const identity = input.acknowledgmentSubjectType === 'USER'
+      ? await this.prisma.user.findFirst({ where: { id: input.acknowledgmentSubjectId, organizationId, isActive: true }, select: { id: true } })
+      : await this.prisma.clientUser.findFirst({ where: { id: input.acknowledgmentSubjectId, organizationId, isActive: true }, select: { id: true } });
+    if (!identity) throw new NotFoundException("Identite active d'accuse introuvable dans l'organisation.");
+
+    const now = new Date();
+    const policy = taskAckPolicy(input.severity, now);
+    const ackDeadlineAt = new Date(now.getTime() + policy.acknowledgmentWindowMs);
+    return this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.incidentTask.updateMany({
+        where: { id: taskId, lockVersion: input.lockVersion, status: 'PENDING' },
+        data: {
+          severity: input.severity,
+          ackDeadlineAt,
+          ackPolicySnapshot: policy as any,
+          alternateEmployeeIds,
+          acknowledgmentSubjectType: input.acknowledgmentSubjectType,
+          acknowledgmentSubjectId: input.acknowledgmentSubjectId,
+          escalationStatus: 'PENDING',
+          escalationLevel: 0,
+          nextEscalationAt: ackDeadlineAt,
+          operatorQueuedAt: null,
+          escalationCancelledAt: null,
+          escalationCancellationReason: null,
+          lockVersion: { increment: 1 },
+        },
+      });
+      if (claimed.count !== 1) throw new ConflictException('La tache a ete modifiee ou ne peut plus etre configuree.');
+      const updated = await tx.incidentTask.findUniqueOrThrow({ where: { id: taskId } });
+      await this.appendCriticalAudit(tx, {
+        organizationId, buildingId: task.incidentEvent.buildingId, incidentEventId: task.incidentEventId,
+        operation: 'TASK_ESCALATION_POLICY_CONFIGURED', ...audit, reason: input.reason.trim(),
+        previousState: { severity: task.severity, alternateEmployeeIds: task.alternateEmployeeIds, lockVersion: task.lockVersion },
+        resultingState: { severity: updated.severity, ackDeadlineAt: updated.ackDeadlineAt, alternateEmployeeIds: updated.alternateEmployeeIds, acknowledgmentSubjectType: updated.acknowledgmentSubjectType, acknowledgmentSubjectId: updated.acknowledgmentSubjectId, lockVersion: updated.lockVersion },
+      });
+      return updated;
+    });
+  }
+
+  @Cron('*/15 * * * * *')
+  async dispatchDueTaskEscalations() {
+    const due = await this.prisma.incidentTask.findMany({
+      where: { status: 'PENDING', escalationStatus: { in: ['PENDING', 'LEVEL_1', 'LEVEL_2'] }, nextEscalationAt: { lte: new Date() }, incidentEvent: { isActive: true, status: { in: ['PRE_ALERT', 'ACTIVE', 'CONTAINED'] } } },
+      select: { id: true }, orderBy: { nextEscalationAt: 'asc' }, take: 25,
+    });
+    for (const task of due) await this.processTaskEscalation(task.id);
+    return { processed: due.length };
+  }
+
+  async processTaskEscalation(taskId: string, now = new Date()) {
+    const task = await this.prisma.incidentTask.findUnique({
+      where: { id: taskId },
+      include: { incidentEvent: { select: { organizationId: true, buildingId: true, status: true, isActive: true } } },
+    });
+    if (!task || task.status !== 'PENDING' || !task.nextEscalationAt || task.nextEscalationAt > now || !task.incidentEvent.isActive || !['PRE_ALERT', 'ACTIVE', 'CONTAINED'].includes(task.incidentEvent.status)) return { claimed: false };
+    const nextLevel = Math.min(3, task.escalationLevel + 1);
+    const nextStatus = nextLevel === 1 ? 'LEVEL_1' : nextLevel === 2 ? 'LEVEL_2' : 'OPERATOR_QUEUE';
+    const policy = (task.ackPolicySnapshot || {}) as any;
+    const windowMs = Number(policy.alternateWindowMs) > 0 ? Number(policy.alternateWindowMs) : TASK_ACK_DEADLINE_MS[task.severity];
+    const alternateId = nextLevel <= 2 ? task.alternateEmployeeIds[nextLevel - 1] : undefined;
+    const alternate = alternateId ? await this.prisma.buildingEmployee.findFirst({ where: { id: alternateId, buildingId: task.incidentEvent.buildingId, organizationId: task.incidentEvent.organizationId, isActive: true }, select: { id: true, email: true, phone: true, smsConsent: true, firstName: true, lastName: true } }) : null;
+
+    return this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.incidentTask.updateMany({
+        where: { id: task.id, lockVersion: task.lockVersion, status: 'PENDING', escalationStatus: task.escalationStatus, nextEscalationAt: { lte: now } },
+        data: {
+          escalationStatus: nextStatus as any,
+          escalationLevel: nextLevel,
+          missedAcknowledgmentAt: task.missedAcknowledgmentAt ?? now,
+          nextEscalationAt: nextLevel < 3 ? new Date(now.getTime() + windowMs) : null,
+          operatorQueuedAt: nextLevel === 3 ? now : task.operatorQueuedAt,
+          lockVersion: { increment: 1 },
+        },
+      });
+      if (claimed.count !== 1) return { claimed: false };
+      if (alternate && this.dispatcher) {
+        const purpose = `TASK_ACK_ESCALATION_LEVEL_${nextLevel}`;
+        const baseKey = `${task.incidentEventId}:task:${task.id}:cycle:${task.escalationCycle}:level:${nextLevel}`;
+        const message = `CORO Incident - Accuse requis pour la tache: ${task.title}`;
+        if (alternate.email) await this.dispatcher.enqueue({ organizationId: task.incidentEvent.organizationId, incidentEventId: task.incidentEventId, channel: 'EMAIL', purpose, idempotencyKey: `${baseKey}:email`, envelope: { destination: alternate.email, subject: 'CORO - Escalade de tache incident', html: `<p>${escapeIncidentNotificationHtml(message)}</p>` } }, tx);
+        if (alternate.smsConsent && alternate.phone) await this.dispatcher.enqueue({ organizationId: task.incidentEvent.organizationId, incidentEventId: task.incidentEventId, channel: 'SMS', purpose, idempotencyKey: `${baseKey}:sms`, envelope: { destination: alternate.phone, message } }, tx);
+      }
+      const updated = await tx.incidentTask.findUniqueOrThrow({ where: { id: task.id } });
+      await tx.incidentLog.create({ data: { incidentEventId: task.incidentEventId, action: nextLevel === 3 ? 'Tache placee dans la file operateur' : `Escalade tache niveau ${nextLevel}`, details: alternate ? `Suppleant explicite ${alternate.id}` : 'Aucun suppleant explicite eligible', isAutomatic: true } });
+      await this.appendCriticalAudit(tx, {
+        organizationId: task.incidentEvent.organizationId, buildingId: task.incidentEvent.buildingId, incidentEventId: task.incidentEventId,
+        operation: nextLevel === 3 ? 'TASK_ESCALATED_TO_OPERATOR_QUEUE' : 'TASK_ACKNOWLEDGMENT_ESCALATED', actorType: 'SYSTEM', actorId: 'incident-task-escalation-dispatcher', reason: 'Acknowledgment deadline missed',
+        previousState: { escalationStatus: task.escalationStatus, escalationLevel: task.escalationLevel, nextEscalationAt: task.nextEscalationAt, lockVersion: task.lockVersion },
+        resultingState: { escalationStatus: updated.escalationStatus, escalationLevel: updated.escalationLevel, missedAcknowledgmentAt: updated.missedAcknowledgmentAt, nextEscalationAt: updated.nextEscalationAt, operatorQueuedAt: updated.operatorQueuedAt, alternateEmployeeId: alternate?.id ?? null, lockVersion: updated.lockVersion },
+      });
+      return { claimed: true, level: nextLevel, status: nextStatus, alternateNotified: !!alternate };
+    });
+  }
+
+  async getOperatorEscalationQueue(organizationId: string) {
+    return this.prisma.incidentTask.findMany({
+      where: { escalationStatus: 'OPERATOR_QUEUE', status: 'PENDING', incidentEvent: { organizationId, isActive: true } },
+      include: { incidentEvent: { select: { id: true, buildingId: true, type: true, status: true, triggeredAt: true } }, employee: { select: { id: true, firstName: true, lastName: true } } },
+      orderBy: [{ operatorQueuedAt: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
   // Version sans organizationId — pour la borne kiosque (aucune authentification).
   // Ne retourne que le strict nécessaire pour afficher le QR ou l'écran de
   // pré-alerte, rien de sensible. Inclut PRE_ALERT pour que la borne puisse
@@ -942,7 +1101,8 @@ export class IncidentService {
     if (!task) throw new NotFoundException('Étape introuvable');
     if (!['ACKNOWLEDGED', 'IN_PROGRESS'].includes(task.status)) throw new ConflictException('La tache doit etre accusee avant execution.');
     return this.prisma.$transaction(async (tx) => {
-    const claimed = await tx.incidentTask.updateMany({ where: { id: taskId, lockVersion: task.lockVersion, status: { in: ['ACKNOWLEDGED', 'IN_PROGRESS'] } }, data: { status: 'COMPLETED', completedAt: new Date(), lockVersion: { increment: 1 } } });
+    const completedAt = new Date();
+    const claimed = await tx.incidentTask.updateMany({ where: { id: taskId, lockVersion: task.lockVersion, status: { in: ['ACKNOWLEDGED', 'IN_PROGRESS'] } }, data: { status: 'COMPLETED', completedAt, escalationStatus: 'CANCELLED', nextEscalationAt: null, escalationCancelledAt: completedAt, escalationCancellationReason: 'TASK_COMPLETED', lockVersion: { increment: 1 } } });
     if (claimed.count !== 1) throw new ConflictException('La tache a ete modifiee.');
     const updated = await tx.incidentTask.findUniqueOrThrow({ where: { id: taskId } });
     await tx.incidentLog.create({ data: { incidentEventId: task.incidentEventId, action: 'Étape complétée', details: task.stepText?.substring(0, 120) || task.title, isAutomatic: false } });
@@ -964,13 +1124,16 @@ export class IncidentService {
   async acknowledgeTask(taskId: string, organizationId: string, audit?: IncidentAuditContext) {
     const task = await this.prisma.incidentTask.findFirst({ where: { id: taskId, incidentEvent: { organizationId } }, include: { incidentEvent: { select: { buildingId: true } } } });
     if (!task) throw new NotFoundException('Tache introuvable');
+    if (task.acknowledgmentSubjectType && (audit?.actorType !== task.acknowledgmentSubjectType || audit.actorId !== task.acknowledgmentSubjectId)) {
+      throw new NotFoundException("Cette identite n'est pas l'intervenant designe pour cet accuse.");
+    }
     const now = new Date();
     return this.prisma.$transaction(async (tx) => {
-    const claimed = await tx.incidentTask.updateMany({ where: { id: taskId, lockVersion: task.lockVersion, status: 'PENDING' }, data: { status: 'ACKNOWLEDGED', acknowledgedAt: now, lockVersion: { increment: 1 } } });
+    const claimed = await tx.incidentTask.updateMany({ where: { id: taskId, lockVersion: task.lockVersion, status: 'PENDING' }, data: { status: 'ACKNOWLEDGED', acknowledgedAt: now, escalationStatus: 'ACKNOWLEDGED', nextEscalationAt: null, escalationCancelledAt: now, escalationCancellationReason: 'TASK_ACKNOWLEDGED', lockVersion: { increment: 1 } } });
     if (claimed.count !== 1) throw new ConflictException('La tache est deja accusee ou a ete modifiee.');
     await tx.incidentLog.create({ data: { incidentEventId: task.incidentEventId, action: 'Tache accusee', details: task.title, isAutomatic: false } });
     const updated = await tx.incidentTask.findUniqueOrThrow({ where: { id: taskId } });
-    if (audit) await this.appendCriticalAudit(tx, { organizationId, buildingId: task.incidentEvent.buildingId, incidentEventId: task.incidentEventId, operation: 'TASK_ACKNOWLEDGED', ...audit, previousState: { id: task.id, status: task.status, lockVersion: task.lockVersion }, resultingState: { id: updated.id, status: updated.status, lockVersion: updated.lockVersion } });
+    if (audit) await this.appendCriticalAudit(tx, { organizationId, buildingId: task.incidentEvent.buildingId, incidentEventId: task.incidentEventId, operation: task.missedAcknowledgmentAt ? 'TASK_ACKNOWLEDGED_LATE' : 'TASK_ACKNOWLEDGED', ...audit, previousState: { id: task.id, status: task.status, escalationStatus: task.escalationStatus, missedAcknowledgmentAt: task.missedAcknowledgmentAt, lockVersion: task.lockVersion }, resultingState: { id: updated.id, status: updated.status, escalationStatus: updated.escalationStatus, acknowledgedAt: updated.acknowledgedAt, late: !!task.missedAcknowledgmentAt, lockVersion: updated.lockVersion } });
     return updated;
     });
   }
@@ -981,8 +1144,11 @@ export class IncidentService {
     if (!task) throw new NotFoundException('Tache introuvable');
     const employee = await this.prisma.buildingEmployee.findFirst({ where: { id: employeeId, buildingId: task.incidentEvent.buildingId, organizationId, isActive: true }, select: { id: true } });
     if (!employee) throw new NotFoundException('Intervenant introuvable');
+    const policy = (task.ackPolicySnapshot || taskAckPolicy(task.severity, new Date())) as any;
+    const reassignedAt = new Date();
+    const ackDeadlineAt = new Date(reassignedAt.getTime() + (Number(policy.acknowledgmentWindowMs) || TASK_ACK_DEADLINE_MS[task.severity]));
     return this.prisma.$transaction(async (tx) => {
-    const claimed = await tx.incidentTask.updateMany({ where: { id: taskId, lockVersion: expectedLockVersion, status: { notIn: ['COMPLETED', 'CANCELLED'] } }, data: { employeeId, reassignedAt: new Date(), reassignedByType: audit?.actorType ?? 'CLIENT_USER', reassignedById: actorId, lockVersion: { increment: 1 } } });
+    const claimed = await tx.incidentTask.updateMany({ where: { id: taskId, lockVersion: expectedLockVersion, status: { notIn: ['COMPLETED', 'CANCELLED'] } }, data: { employeeId, reassignedAt, reassignedByType: audit?.actorType ?? 'CLIENT_USER', reassignedById: actorId, status: 'PENDING', acknowledgedAt: null, ackDeadlineAt, nextEscalationAt: ackDeadlineAt, escalationStatus: 'PENDING', escalationLevel: 0, escalationCycle: { increment: 1 }, operatorQueuedAt: null, escalationCancelledAt: reassignedAt, escalationCancellationReason: 'TASK_REASSIGNED', lockVersion: { increment: 1 } } });
     if (claimed.count !== 1) throw new ConflictException('La tache a ete modifiee ou est fermee.');
     await tx.incidentLog.create({ data: { incidentEventId: task.incidentEventId, action: 'Tache reassignee', details: `Tache ${task.id}`, actor: actorId, isAutomatic: false } });
     const updated = await tx.incidentTask.findUniqueOrThrow({ where: { id: taskId } });
@@ -1096,7 +1262,7 @@ export class IncidentService {
     if (!incident) throw new NotFoundException();
     const updated = await this.prisma.$transaction(async (tx) => {
       const resolved = await tx.incidentEvent.update({ where: { id: incidentId }, data: { status: 'RESOLVED', resolvedAt: new Date(), closingNotes: body.closingNotes || null, isActive: false, publicAccessRevokedAt: new Date(), lockVersion: { increment: 1 } } });
-      await tx.incidentTask.updateMany({ where: { incidentEventId: incidentId, ackUsedAt: null }, data: { ackRevokedAt: new Date(), lockVersion: { increment: 1 } } });
+      await tx.incidentTask.updateMany({ where: { incidentEventId: incidentId }, data: { ackRevokedAt: new Date(), escalationStatus: 'CANCELLED', nextEscalationAt: null, escalationCancelledAt: new Date(), escalationCancellationReason: 'INCIDENT_RESOLVED', lockVersion: { increment: 1 } } });
       if (this.dispatcher) await this.dispatcher.cancelIncident(incidentId, 'INCIDENT_RESOLVED', tx);
       await tx.incidentLog.create({ data: { incidentEventId: incidentId, action: 'Incident résolu', details: body.closingNotes || null, isAutomatic: false } });
       if (audit) await this.appendCriticalAudit(tx, { organizationId, buildingId: incident.buildingId, incidentEventId: incidentId, operation: 'INCIDENT_RESOLVED', ...audit, previousState: { status: incident.status, isActive: incident.isActive, lockVersion: incident.lockVersion }, resultingState: { status: resolved.status, isActive: resolved.isActive, lockVersion: resolved.lockVersion } });

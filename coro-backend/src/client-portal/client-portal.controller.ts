@@ -1572,6 +1572,24 @@ export class ClientPortalController {
     return this.incidentService.reassignTask(taskId, body.employeeId, body.lockVersion, req.clientUser.organizationId, actorId, { actorType: 'CLIENT_USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_SUPERVISE, reason: 'Task reassignment', requestId: req.id || req.headers?.['x-request-id'] });
   }
 
+  @Put('incidents/tasks/:taskId/escalation-policy')
+  async configureIncidentTaskEscalation(@Param('taskId') taskId: string, @Body() body: { severity: 'CRITICAL' | 'HIGH' | 'NORMAL' | 'LOW'; alternateEmployeeIds?: string[]; acknowledgmentSubjectType: 'USER' | 'CLIENT_USER'; acknowledgmentSubjectId: string; lockVersion: number; reason: string }, @Request() req: any) {
+    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_SUPERVISE);
+    const actorId = req.clientUser.sub || req.clientUser.id;
+    const assignment = await this.incidentService.requireTaskAuthority(taskId, 'CLIENT_USER', actorId, req.clientUser.organizationId, IncidentPermission.INCIDENT_SUPERVISE);
+    await this.clientPortalService.assertIncidentTaskAccess(taskId, req.clientUser);
+    return this.incidentService.configureTaskEscalation(taskId, body, req.clientUser.organizationId, { actorType: 'CLIENT_USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_SUPERVISE, reason: body.reason, requestId: req.id || req.headers?.['x-request-id'] });
+  }
+
+  @Get('incidents/buildings/:buildingId/escalations/operator-queue')
+  async incidentOperatorQueue(@Param('buildingId') buildingId: string, @Request() req: any) {
+    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_SUPERVISE);
+    const actorId = req.clientUser.sub || req.clientUser.id;
+    await this.incidentService.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId, organizationId: req.clientUser.organizationId, buildingId, permission: IncidentPermission.INCIDENT_SUPERVISE });
+    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    return (await this.incidentService.getOperatorEscalationQueue(req.clientUser.organizationId)).filter((task: any) => task.incidentEvent.buildingId === buildingId);
+  }
+
   @Post('incidents/pca/activate')
   async activateIncidentPca(@Body() body: { buildingId: string; projectId: string; incidentEventId?: string; reason: string }, @Request() req: any) {
     await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.PCA_ACTIVATE);

@@ -83,6 +83,25 @@ export class IncidentController {
   }
 
   @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
+  @RequirePlatformPermission(PlatformPermission.INCIDENT_SUPERVISE)
+  @Put('tasks/:taskId/escalation-policy')
+  async configureEscalation(@Param('taskId') taskId: string, @Body() body: { severity: 'CRITICAL' | 'HIGH' | 'NORMAL' | 'LOW'; alternateEmployeeIds?: string[]; acknowledgmentSubjectType: 'USER' | 'CLIENT_USER'; acknowledgmentSubjectId: string; lockVersion: number; reason: string }, @Request() req: any) {
+    const actorId = req.user.userId || req.user.sub;
+    const assignment = await this.service.requireTaskAuthority(taskId, 'USER', actorId, req.user.organizationId, IncidentPermission.INCIDENT_SUPERVISE);
+    return this.service.configureTaskEscalation(taskId, body, req.user.organizationId, { actorType: 'USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_SUPERVISE, reason: body.reason, requestId: req.id || req.headers?.['x-request-id'] });
+  }
+
+  @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
+  @RequirePlatformPermission(PlatformPermission.INCIDENT_SUPERVISE)
+  @Get('buildings/:buildingId/escalations/operator-queue')
+  async operatorQueue(@Param('buildingId') buildingId: string, @Request() req: any) {
+    const actorId = req.user.userId || req.user.sub;
+    await this.service.requireIncidentAuthority({ actorType: 'USER', actorId, organizationId: req.user.organizationId, buildingId, permission: IncidentPermission.INCIDENT_SUPERVISE });
+    const queue = await this.service.getOperatorEscalationQueue(req.user.organizationId);
+    return queue.filter((task: any) => task.incidentEvent.buildingId === buildingId);
+  }
+
+  @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
   @RequirePlatformPermission(PlatformPermission.PCA_ACTIVATE)
   @Post('pca/activate')
   async activatePca(@Body() body: { buildingId: string; projectId: string; incidentEventId?: string; reason: string }, @Request() req: any) {

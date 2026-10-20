@@ -5078,6 +5078,22 @@ enum IncidentTaskStatus {
   CANCELLED
 }
 
+enum IncidentTaskSeverity {
+  CRITICAL
+  HIGH
+  NORMAL
+  LOW
+}
+
+enum IncidentTaskEscalationStatus {
+  PENDING
+  LEVEL_1
+  LEVEL_2
+  OPERATOR_QUEUE
+  ACKNOWLEDGED
+  CANCELLED
+}
+
 enum PcaActivationStatus {
   ACTIVE
   CLOSED
@@ -5549,6 +5565,20 @@ model IncidentTask {
   stepOrder         Int                @default(0)
   isCoordinatorStep Boolean            @default(false)
   status            IncidentTaskStatus @default(PENDING)
+  severity          IncidentTaskSeverity @default(NORMAL)
+  ackDeadlineAt     DateTime?
+  ackPolicySnapshot Json?
+  alternateEmployeeIds String[]         @default([])
+  acknowledgmentSubjectType CoroActorType?
+  acknowledgmentSubjectId String?
+  escalationStatus IncidentTaskEscalationStatus @default(PENDING)
+  escalationLevel  Int                 @default(0)
+  escalationCycle  Int                 @default(0)
+  missedAcknowledgmentAt DateTime?
+  nextEscalationAt DateTime?
+  operatorQueuedAt DateTime?
+  escalationCancelledAt DateTime?
+  escalationCancellationReason String?
   ackToken          String?            @unique
   ackExpiresAt      DateTime?
   ackRevokedAt      DateTime?
@@ -5562,6 +5592,9 @@ model IncidentTask {
   completedAt       DateTime?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
+
+  @@index([escalationStatus, nextEscalationAt])
+  @@index([incidentEventId, escalationStatus])
 }
 
 model PcaActivation {
