@@ -37,6 +37,27 @@ stage journal under `D:\CORO-QA`, stops on the first failing stage and supports
 an explicit `--from`/`--through` resume range. Infrastructure setup and teardown
 remain explicit so an application failure cannot be hidden by automatic retries.
 
+## QA Identity Lab
+
+The reusable identity catalogue, D:-scoped secret store, protected MFA adapter,
+multi-actor session helpers and CORS-aware preflight live in `src/identity-*.mjs`,
+`src/secret-store.mjs`, `src/mfa-capture-adapter.mjs` and
+`src/browser-orchestration.mjs`. No password or channel credential is committed.
+Initialize the local store once, then run preflight before any long browser run:
+
+```powershell
+node qa/global-e2e/src/identity-lab-cli.mjs init
+node qa/global-e2e/src/identity-lab-cli.mjs preflight
+```
+
+Use `identity:rotate` between campaigns when credentials must change and
+`identity:cleanup` to remove the fixed transient containers and unconsumed MFA
+captures. Evidence and the restricted secret store are preserved deliberately.
+
+The MFA adapter consumes the backend's restricted QA capture files, immediately
+deletes each consumed challenge, and exposes it only through an authenticated
+loopback channel. Production origins, credentials and ports remain rejected.
+
 When the backend is intentionally not published to the Windows host,
 `internal-runner.mjs` runs one of three allowlisted API scripts in the backend
 network namespace and exposes a fixed loopback-only 3155→3002 proxy there. It

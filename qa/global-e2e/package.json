@@ -9,6 +9,14 @@
     "business-smoke": "node src/business-smoke.mjs",
     "campaign:plan": "node src/campaign.mjs --plan",
     "campaign": "node src/campaign.mjs",
-    "cleanup": "node src/cli.mjs cleanup"
+    "cleanup": "node src/cli.mjs cleanup",
+    "identity:init": "node src/identity-lab-cli.mjs init",
+    "identity:secure": "node src/identity-lab-cli.mjs secure",
+    "identity:rotate": "node src/identity-lab-cli.mjs rotate",
+    "identity:catalogue": "node src/identity-lab-cli.mjs catalogue",
+    "identity:preflight": "node src/identity-lab-cli.mjs preflight",
+    "identity:acceptance": "node src/identity-acceptance.mjs",
+    "identity:negative": "node src/identity-negative-acceptance.mjs",
+    "identity:cleanup": "node src/identity-cleanup.mjs"
   }
 }

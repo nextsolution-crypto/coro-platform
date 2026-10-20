@@ -40,6 +40,12 @@ const ids = Object.freeze({
   mandateA: "60000000-0000-4000-8000-000000000001",
   portalManager: "70000000-0000-4000-8000-000000000001",
   portalUser: "70000000-0000-4000-8000-000000000002",
+  portalRegional: "70000000-0000-4000-8000-000000000003",
+  portalLocal: "70000000-0000-4000-8000-000000000004",
+  portalZero: "70000000-0000-4000-8000-000000000005",
+  portalCorporateB: "70000000-0000-4000-8000-000000000006",
+  portalCorporateA: "70000000-0000-4000-8000-000000000007",
+  revoked: "20000000-0000-4000-8000-000000000008",
 });
 
 const user = (id, key, role, organizationId) =>
@@ -76,6 +82,20 @@ try {
   await user(ids.adminA, "customer-admin-a", "ADMIN", ids.orgA);
   await user(ids.adminB, "customer-admin-b", "ADMIN", ids.orgB);
   await user(ids.advisorA, "advisor-a", "OPERATOR", ids.orgA);
+  await prisma.user.upsert({
+    where: { id: ids.revoked },
+    update: { isActive: false },
+    create: {
+      id: ids.revoked,
+      email: "revoked@global-e2e.test",
+      password: hash,
+      firstName: "Synthetic",
+      lastName: "revoked",
+      role: "OPERATOR",
+      organizationId: ids.orgA,
+      isActive: false,
+    },
+  });
   await prisma.client.upsert({
     where: { id: ids.clientA },
     update: {},
@@ -134,13 +154,28 @@ try {
       description: "Synthetic QA mandate",
     },
   });
-  for (const [id, key, role] of [
-    [ids.portalManager, "portal-manager-a", "CLIENT_MANAGER"],
-    [ids.portalUser, "portal-user-a", "CLIENT_CORPORATE"],
+  for (const [id, key, role, clientId, organizationId, buildingIds] of [
+    [ids.portalManager, "portal-manager-a", "CLIENT_MANAGER", ids.clientA, ids.orgA, [ids.buildingA]],
+    [ids.portalUser, "portal-user-a", "CLIENT_CORPORATE", ids.clientA, ids.orgA, [ids.buildingA]],
+    [ids.portalCorporateA, "portal-corporate-a", "CLIENT_CORPORATE", ids.clientA, ids.orgA, []],
+    [ids.portalRegional, "portal-regional-a", "CLIENT_MANAGER", ids.clientA, ids.orgA, [ids.buildingA]],
+    [ids.portalLocal, "portal-local-a", "CLIENT_MANAGER", ids.clientA, ids.orgA, [ids.buildingA]],
+    [ids.portalZero, "portal-zero-a", "CLIENT_MANAGER", ids.clientA, ids.orgA, []],
+    [ids.portalCorporateB, "portal-corporate-b", "CLIENT_CORPORATE", ids.clientB, ids.orgB, []],
   ]) {
     await prisma.clientUser.upsert({
       where: { id },
-      update: { isActive: true },
+      update: {
+        email: `${key}@global-e2e.test`,
+        password: hash,
+        firstName: "Synthetic",
+        lastName: key,
+        role,
+        buildingIds,
+        clientId,
+        organizationId,
+        isActive: true,
+      },
       create: {
         id,
         email: `${key}@global-e2e.test`,
@@ -148,9 +183,9 @@ try {
         firstName: "Synthetic",
         lastName: key,
         role,
-        buildingIds: [ids.buildingA],
-        clientId: ids.clientA,
-        organizationId: ids.orgA,
+        buildingIds,
+        clientId,
+        organizationId,
       },
     });
   }
