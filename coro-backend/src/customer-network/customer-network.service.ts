@@ -18,6 +18,7 @@ import {
   CreateRegionDto,
   LinkRegionDto,
   PortfolioQueryDto,
+  SucceedPortfolioAssignmentDto,
 } from './customer-network.dto';
 
 type InternalActor = { userId: string };
@@ -253,6 +254,7 @@ export class CustomerNetworkService {
         data: {
           status: 'REVOKED',
           revokedAt: new Date(),
+          revokedByActorType: 'INTERNAL_USER',
           revokedByUserId: actor.userId,
           revocationReason: 'Autorite Network revoquee',
           lockVersion: { increment: 1 },
@@ -443,6 +445,7 @@ export class CustomerNetworkService {
           scope: 'PORTFOLIO',
           portfolioId: portfolio.id,
           permissions,
+          grantedByActorType: 'INTERNAL_USER',
           grantedByUserId: actor.userId,
           grantReason: reason,
         },
@@ -505,6 +508,7 @@ export class CustomerNetworkService {
           permissions: [...new Set(input.permissions)],
           effectiveFrom,
           effectiveUntil,
+          grantedByActorType: 'INTERNAL_USER',
           grantedByUserId: actor.userId,
           grantReason: reason,
         },
@@ -571,6 +575,7 @@ export class CustomerNetworkService {
         data: {
           status: 'REVOKED',
           revokedAt: new Date(),
+          revokedByActorType: 'INTERNAL_USER',
           revokedByUserId: actor.userId,
           revocationReason: reason,
           lockVersion: { increment: 1 },
@@ -756,6 +761,312 @@ export class CustomerNetworkService {
         }),
       });
       return created;
+    });
+  }
+
+  private async requireClientAssignmentManager(
+    tx: Prisma.TransactionClient,
+    actor: ClientActor,
+  ) {
+    const now = new Date();
+    const [authority, identity, assignments] = await Promise.all([
+      tx.customerNetworkAuthorityConfiguration.findUnique({
+        where: { organizationId: actor.organizationId },
+        select: { status: true },
+      }),
+      tx.clientUser.findFirst({
+        where: {
+          id: actor.sub,
+          organizationId: actor.organizationId,
+          isActive: true,
+        },
+        select: { id: true },
+      }),
+      tx.customerPortfolioAssignment.findMany({
+        where: {
+          organizationId: actor.organizationId,
+          subjectType: 'CLIENT_USER',
+          clientUserId: actor.sub,
+          status: 'ACTIVE',
+          permissions: { has: 'NETWORK_ASSIGNMENT_MANAGE' },
+          effectiveFrom: { lte: now },
+          OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: now } }],
+        },
+      }),
+    ]);
+    if (authority?.status !== 'ACTIVE' || !identity || !assignments.length)
+      throw new ForbiddenException('Autorite de delegation Network requise.');
+    return assignments;
+  }
+
+  private async assignmentContainsTarget(
+    tx: Prisma.TransactionClient,
+    manager: {
+      scope: string;
+      portfolioId: string | null;
+      regionId: string | null;
+      buildingId: string | null;
+      permissions: CustomerNetworkPermission[];
+    },
+    target: {
+      scope: string;
+      portfolioId?: string | null;
+      regionId?: string | null;
+      buildingId?: string | null;
+      permissions: CustomerNetworkPermission[];
+    },
+  ) {
+    if (target.permissions.some((permission) => !manager.permissions.includes(permission)))
+      return false;
+    if (manager.scope === 'BUILDING')
+      return target.scope === 'BUILDING' && manager.buildingId === target.buildingId;
+    if (manager.scope === 'REGION') {
+      if (target.scope === 'REGION') return manager.regionId === target.regionId;
+      if (target.scope !== 'BUILDING') return false;
+      return Boolean(await tx.customerPortfolioBuildingMembership.findFirst({
+        where: { regionId: manager.regionId!, buildingId: target.buildingId! },
+        select: { id: true },
+      }));
+    }
+    if (target.scope === 'PORTFOLIO') return manager.portfolioId === target.portfolioId;
+    if (target.scope === 'REGION')
+      return Boolean(await tx.customerPortfolioRegionLink.findFirst({
+        where: { portfolioId: manager.portfolioId!, regionId: target.regionId! },
+        select: { id: true },
+      }));
+    return Boolean(await tx.customerPortfolioBuildingMembership.findFirst({
+      where: { portfolioId: manager.portfolioId!, buildingId: target.buildingId! },
+      select: { id: true },
+    }));
+  }
+
+  private async requireClientMayManageTarget(
+    tx: Prisma.TransactionClient,
+    actor: ClientActor,
+    target: {
+      scope: string;
+      portfolioId?: string | null;
+      regionId?: string | null;
+      buildingId?: string | null;
+      permissions: CustomerNetworkPermission[];
+    },
+  ) {
+    const managers = await this.requireClientAssignmentManager(tx, actor);
+    for (const manager of managers) {
+      if (await this.assignmentContainsTarget(tx, manager, target)) return;
+    }
+    throw new ForbiddenException("Le perimetre ou les permissions depassent l'autorite du delegant.");
+  }
+
+  async listManagedAssignments(actor: ClientActor) {
+    return this.prisma.$transaction(async (tx) => {
+      const managers = await this.requireClientAssignmentManager(tx, actor);
+      const assignments = await tx.customerPortfolioAssignment.findMany({
+        where: { organizationId: actor.organizationId, subjectType: 'CLIENT_USER' },
+        orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+      });
+      const visible: typeof assignments = [];
+      for (const assignment of assignments) {
+        for (const manager of managers) {
+          if (await this.assignmentContainsTarget(tx, manager, assignment)) {
+            visible.push(assignment);
+            break;
+          }
+        }
+      }
+      return visible;
+    });
+  }
+
+  async clientManagementContext(actor: ClientActor) {
+    return this.prisma.$transaction(async (tx) => {
+      const managers = await this.requireClientAssignmentManager(tx, actor);
+      const [users, portfolios, regions, buildings, assignments, auditEvents] = await Promise.all([
+        tx.clientUser.findMany({
+          where: { organizationId: actor.organizationId, isActive: true },
+          select: { id: true, firstName: true, lastName: true, email: true, role: true },
+          orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+        }),
+        tx.customerPortfolio.findMany({ where: { organizationId: actor.organizationId, isActive: true }, select: { id: true, name: true } }),
+        tx.customerPortfolioRegion.findMany({ where: { organizationId: actor.organizationId, isActive: true }, select: { id: true, name: true } }),
+        tx.building.findMany({ where: { organizationId: actor.organizationId, isActive: true }, select: { id: true, name: true } }),
+        tx.customerPortfolioAssignment.findMany({ where: { organizationId: actor.organizationId, subjectType: 'CLIENT_USER' }, orderBy: [{ status: 'asc' }, { createdAt: 'desc' }] }),
+        tx.adminAuditEvent.findMany({
+          where: { organizationId: actor.organizationId, targetType: 'CustomerPortfolioAssignment' },
+          orderBy: { createdAt: 'desc' }, take: 50,
+          select: { id: true, actorType: true, actorDisplayName: true, action: true, targetId: true, reason: true, createdAt: true },
+        }),
+      ]);
+      const filterTargets = async <T extends { id: string }>(items: T[], scope: string, key: 'portfolioId' | 'regionId' | 'buildingId') => {
+        const visible: T[] = [];
+        for (const item of items) {
+          for (const manager of managers) {
+            if (await this.assignmentContainsTarget(tx, manager, { scope, [key]: item.id, permissions: [] })) {
+              visible.push(item); break;
+            }
+          }
+        }
+        return visible;
+      };
+      const visibleAssignments: typeof assignments = [];
+      for (const assignment of assignments) {
+        for (const manager of managers) {
+          if (await this.assignmentContainsTarget(tx, manager, assignment)) {
+            visibleAssignments.push(assignment); break;
+          }
+        }
+      }
+      const visibleAssignmentIds = new Set(visibleAssignments.map((assignment) => assignment.id));
+      return {
+        users,
+        portfolios: await filterTargets(portfolios, 'PORTFOLIO', 'portfolioId'),
+        regions: await filterTargets(regions, 'REGION', 'regionId'),
+        buildings: await filterTargets(buildings, 'BUILDING', 'buildingId'),
+        assignments: visibleAssignments,
+        auditEvents: auditEvents.filter((event) => visibleAssignmentIds.has(event.targetId)),
+      };
+    });
+  }
+
+  async createClientAssignment(actor: ClientActor, input: CreatePortfolioAssignmentDto) {
+    if (input.subjectType !== 'CLIENT_USER')
+      throw new ForbiddenException('Un administrateur client ne peut deleguer qu’a un utilisateur client.');
+    const reason = this.reason(input.reason);
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`customer-network-assignment:${actor.organizationId}`}, 0))`;
+      await this.requireClientMayManageTarget(tx, actor, input);
+      await this.validateAssignmentTarget(tx, actor.organizationId, input);
+      const effectiveFrom = input.effectiveFrom ? new Date(input.effectiveFrom) : new Date();
+      const effectiveUntil = input.effectiveUntil ? new Date(input.effectiveUntil) : null;
+      if (effectiveUntil && effectiveUntil <= effectiveFrom)
+        throw new BadRequestException('Periode effective invalide.');
+      const created = await tx.customerPortfolioAssignment.create({
+        data: {
+          organizationId: actor.organizationId,
+          subjectType: 'CLIENT_USER',
+          clientUserId: input.clientUserId!,
+          scope: input.scope,
+          portfolioId: input.scope === 'PORTFOLIO' ? input.portfolioId : null,
+          regionId: input.scope === 'REGION' ? input.regionId : null,
+          buildingId: input.scope === 'BUILDING' ? input.buildingId : null,
+          permissions: [...new Set(input.permissions)],
+          effectiveFrom,
+          effectiveUntil,
+          grantedByActorType: 'CLIENT_USER',
+          grantedByClientUserId: actor.sub,
+          grantReason: reason,
+        },
+      });
+      await this.audit.record(tx, {
+        actorType: 'CLIENT_USER',
+        actorClientUserId: actor.sub,
+        action: 'CUSTOMER_NETWORK_ASSIGNMENT_CREATED',
+        targetType: 'CustomerPortfolioAssignment',
+        targetId: created.id,
+        organizationId: actor.organizationId,
+        reason,
+        afterData: this.json({ scope: created.scope, permissions: created.permissions, clientUserId: created.clientUserId }),
+      });
+      return created;
+    });
+  }
+
+  async revokeClientAssignment(actor: ClientActor, id: string, lockVersion: number, rawReason: string) {
+    const reason = this.reason(rawReason);
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`customer-network-assignment:${actor.organizationId}`}, 0))`;
+      const before = await tx.customerPortfolioAssignment.findFirst({
+        where: { id, organizationId: actor.organizationId, status: 'ACTIVE' },
+      });
+      if (!before) throw new NotFoundException('Affectation Network introuvable.');
+      if (before.subjectType !== 'CLIENT_USER')
+        throw new ForbiddenException('Une identite client ne peut pas revoquer une affectation interne ou operateur.');
+      await this.requireClientMayManageTarget(tx, actor, before);
+      if (before.permissions.includes('NETWORK_ASSIGNMENT_MANAGE'))
+        await this.requireReplacementManager(tx, actor.organizationId, before, id);
+      const changed = await tx.customerPortfolioAssignment.updateMany({
+        where: { id, organizationId: actor.organizationId, status: 'ACTIVE', lockVersion },
+        data: {
+          status: 'REVOKED', revokedAt: new Date(), revokedByActorType: 'CLIENT_USER',
+          revokedByClientUserId: actor.sub, revocationReason: reason, lockVersion: { increment: 1 },
+        },
+      });
+      if (changed.count !== 1) throw new ConflictException("Conflit de revocation d'affectation.");
+      const result = await tx.customerPortfolioAssignment.findUniqueOrThrow({ where: { id } });
+      await this.audit.record(tx, {
+        actorType: 'CLIENT_USER', actorClientUserId: actor.sub,
+        action: 'CUSTOMER_NETWORK_ASSIGNMENT_REVOKED', targetType: 'CustomerPortfolioAssignment',
+        targetId: id, organizationId: actor.organizationId, reason,
+        beforeData: this.json({ status: before.status, lockVersion }),
+        afterData: this.json({ status: result.status, lockVersion: result.lockVersion }),
+      });
+      return result;
+    });
+  }
+
+  private async requireReplacementManager(
+    tx: Prisma.TransactionClient,
+    organizationId: string,
+    target: { scope: string; portfolioId: string | null; regionId: string | null; buildingId: string | null; permissions: CustomerNetworkPermission[] },
+    excludedId: string,
+  ) {
+    const now = new Date();
+    const candidates = await tx.customerPortfolioAssignment.findMany({
+      where: {
+        organizationId, id: { not: excludedId }, status: 'ACTIVE',
+        permissions: { has: 'NETWORK_ASSIGNMENT_MANAGE' }, effectiveFrom: { lte: now },
+        OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: now } }],
+      },
+    });
+    for (const candidate of candidates)
+      if (await this.assignmentContainsTarget(tx, candidate, target)) return;
+    throw new ConflictException('Une affectation de remplacement est requise avant de retirer le dernier gestionnaire Network de ce perimetre.');
+  }
+
+  async succeedClientAssignment(actor: ClientActor, id: string, input: SucceedPortfolioAssignmentDto) {
+    const reason = this.reason(input.reason);
+    const effectiveFrom = new Date(input.effectiveFrom);
+    if (Number.isNaN(effectiveFrom.getTime())) throw new BadRequestException('Date effective invalide.');
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`customer-network-assignment:${actor.organizationId}`}, 0))`;
+      const predecessor = await tx.customerPortfolioAssignment.findFirst({
+        where: { id, organizationId: actor.organizationId, status: 'ACTIVE' },
+      });
+      if (!predecessor) throw new NotFoundException('Affectation Network introuvable.');
+      if (predecessor.subjectType !== 'CLIENT_USER')
+        throw new ForbiddenException('Une identite client ne peut pas transferer une affectation interne ou operateur.');
+      await this.requireClientMayManageTarget(tx, actor, predecessor);
+      const successor = await tx.clientUser.findFirst({
+        where: { id: input.successorClientUserId, organizationId: actor.organizationId, isActive: true },
+        select: { id: true },
+      });
+      if (!successor) throw new BadRequestException('Successeur client invalide.');
+      if (predecessor.clientUserId === successor.id)
+        throw new BadRequestException('Le successeur doit etre distinct du predecesseur.');
+      if (predecessor.effectiveUntil && effectiveFrom >= predecessor.effectiveUntil)
+        throw new BadRequestException("La succession doit prendre effet avant l'expiration existante.");
+      const changed = await tx.customerPortfolioAssignment.updateMany({
+        where: { id, organizationId: actor.organizationId, status: 'ACTIVE', lockVersion: input.lockVersion },
+        data: { effectiveUntil: effectiveFrom, lockVersion: { increment: 1 } },
+      });
+      if (changed.count !== 1) throw new ConflictException('Conflit de succession Network.');
+      const created = await tx.customerPortfolioAssignment.create({
+        data: {
+          organizationId: actor.organizationId, subjectType: 'CLIENT_USER', clientUserId: successor.id,
+          scope: predecessor.scope, portfolioId: predecessor.portfolioId, regionId: predecessor.regionId,
+          buildingId: predecessor.buildingId, permissions: predecessor.permissions, effectiveFrom,
+          effectiveUntil: predecessor.effectiveUntil, grantedByActorType: 'CLIENT_USER',
+          grantedByClientUserId: actor.sub, grantReason: reason,
+        },
+      });
+      await this.audit.record(tx, {
+        actorType: 'CLIENT_USER', actorClientUserId: actor.sub,
+        action: 'CUSTOMER_NETWORK_ASSIGNMENT_SUCCEEDED', targetType: 'CustomerPortfolioAssignment',
+        targetId: created.id, organizationId: actor.organizationId, reason,
+        beforeData: this.json({ predecessorId: predecessor.id, clientUserId: predecessor.clientUserId }),
+        afterData: this.json({ successorId: created.id, clientUserId: successor.id, effectiveFrom }),
+      });
+      return { predecessorId: predecessor.id, successor: created };
     });
   }
 
@@ -990,8 +1301,18 @@ export class CustomerNetworkService {
     const requirementBy = by(requirements);
     const evidenceBy = by(evidence);
     const generatedAt = new Date();
+    const canManage = Boolean(await this.prisma.customerPortfolioAssignment.findFirst({
+      where: {
+        organizationId: actor.organizationId,
+        subjectType: 'CLIENT_USER', clientUserId: actor.sub, status: 'ACTIVE',
+        permissions: { has: 'NETWORK_ASSIGNMENT_MANAGE' }, effectiveFrom: { lte: generatedAt },
+        OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: generatedAt } }],
+      },
+      select: { id: true },
+    }));
     return {
       generatedAt,
+      canManage,
       provenance: {
         buildings: 'Building',
         incidents: 'IncidentEvent',

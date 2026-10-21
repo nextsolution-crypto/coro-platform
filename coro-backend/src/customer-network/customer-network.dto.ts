@@ -80,6 +80,13 @@ export class CreatePortfolioAssignmentDto {
   @IsString() @MinLength(10) reason!: string;
 }
 
+export class SucceedPortfolioAssignmentDto {
+  @IsUUID() successorClientUserId!: string;
+  @IsDateString() effectiveFrom!: string;
+  @IsInt() @Min(0) lockVersion!: number;
+  @IsString() @MinLength(10) reason!: string;
+}
+
 export class PortfolioQueryDto {
   @IsOptional() @IsInt() @Min(1) page = 1;
   @IsOptional() @IsInt() @Min(1) @Max(100) pageSize = 25;

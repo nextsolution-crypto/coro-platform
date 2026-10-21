@@ -37,7 +37,8 @@ describe('CustomerNetworkService', () => {
         updateMany: jest.fn(),
         findUniqueOrThrow: jest.fn(),
       },
-      customerPortfolioBuildingMembership: { findMany: jest.fn() },
+      customerPortfolioBuildingMembership: { findMany: jest.fn(), findFirst: jest.fn() },
+      customerPortfolioRegionLink: { findFirst: jest.fn() },
       customerPortfolio: {
         count: jest.fn(),
         findFirst: jest.fn(),
@@ -45,7 +46,8 @@ describe('CustomerNetworkService', () => {
       },
       organization: { findUnique: jest.fn() },
       user: { findUnique: jest.fn(), findFirst: jest.fn() },
-      clientUser: { findFirst: jest.fn() },
+      clientUser: { findFirst: jest.fn(), findUnique: jest.fn() },
+      adminAuditEvent: { findMany: jest.fn() },
     };
     return prisma;
   }
@@ -405,5 +407,58 @@ describe('CustomerNetworkService', () => {
         },
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('allows an explicitly scoped client manager to delegate a narrower building scope', async () => {
+    const prisma = createPrisma();
+    prisma.customerNetworkAuthorityConfiguration.findUnique.mockResolvedValue({ status: 'ACTIVE' });
+    prisma.clientUser.findFirst
+      .mockResolvedValueOnce({ id: 'manager' })
+      .mockResolvedValueOnce({ id: 'recipient' });
+    prisma.customerPortfolioAssignment.findMany.mockResolvedValue([{
+      id: 'manager-assignment', scope: 'REGION', portfolioId: null, regionId: 'region-a', buildingId: null,
+      permissions: ['NETWORK_ASSIGNMENT_MANAGE', 'NETWORK_SUPERVISION_READ'],
+    }]);
+    prisma.customerPortfolioBuildingMembership.findFirst.mockResolvedValue({ id: 'membership' });
+    (prisma as any).building = { findFirst: jest.fn().mockResolvedValue({ id: 'building-a' }) };
+    prisma.customerPortfolioAssignment.create.mockResolvedValue({
+      id: 'delegation', subjectType: 'CLIENT_USER', clientUserId: 'recipient', scope: 'BUILDING',
+      buildingId: 'building-a', permissions: ['NETWORK_SUPERVISION_READ'], status: 'ACTIVE',
+    });
+
+    const result = await service(prisma).createClientAssignment(
+      { sub: 'manager', organizationId },
+      {
+        subjectType: 'CLIENT_USER', clientUserId: 'recipient', scope: 'BUILDING', buildingId: 'building-a',
+        permissions: ['NETWORK_SUPERVISION_READ'], reason: 'Delegation locale explicite',
+      },
+    );
+
+    expect(result).toMatchObject({ id: 'delegation' });
+    expect(prisma.customerPortfolioAssignment.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      grantedByActorType: 'CLIENT_USER', grantedByClientUserId: 'manager',
+    }) });
+    expect(audit.record).toHaveBeenCalledWith(prisma, expect.objectContaining({
+      actorType: 'CLIENT_USER', actorClientUserId: 'manager', organizationId,
+    }));
+  });
+
+  it('denies customer delegation outside the managers scope', async () => {
+    const prisma = createPrisma();
+    prisma.customerNetworkAuthorityConfiguration.findUnique.mockResolvedValue({ status: 'ACTIVE' });
+    prisma.clientUser.findFirst.mockResolvedValue({ id: 'manager' });
+    prisma.customerPortfolioAssignment.findMany.mockResolvedValue([{
+      id: 'manager-assignment', scope: 'BUILDING', portfolioId: null, regionId: null, buildingId: 'building-a',
+      permissions: ['NETWORK_ASSIGNMENT_MANAGE', 'NETWORK_SUPERVISION_READ'],
+    }]);
+
+    await expect(service(prisma).createClientAssignment(
+      { sub: 'manager', organizationId },
+      {
+        subjectType: 'CLIENT_USER', clientUserId: 'recipient', scope: 'BUILDING', buildingId: 'building-b',
+        permissions: ['NETWORK_SUPERVISION_READ'], reason: 'Tentative hors perimetre',
+      },
+    )).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.customerPortfolioAssignment.create).not.toHaveBeenCalled();
   });
 });

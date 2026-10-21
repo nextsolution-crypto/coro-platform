@@ -21,6 +21,7 @@ import {
   NetworkAuthorityTransitionDto,
   PortfolioQueryDto,
   ReplaceNetworkResponsibleDto,
+  SucceedPortfolioAssignmentDto,
 } from './customer-network.dto';
 import { CustomerNetworkService } from './customer-network.service';
 
@@ -181,6 +182,47 @@ export class CustomerNetworkClientController {
   @Get('access')
   access(@Req() req: ClientRequest) {
     return this.service.hasClientAccess(req.clientUser);
+  }
+
+  @Get('assignments')
+  assignments(@Req() req: ClientRequest) {
+    return this.service.listManagedAssignments(req.clientUser);
+  }
+
+  @Get('management-context')
+  managementContext(@Req() req: ClientRequest) {
+    return this.service.clientManagementContext(req.clientUser);
+  }
+
+  @Post('assignments')
+  createAssignment(
+    @Req() req: ClientRequest,
+    @Body() input: CreatePortfolioAssignmentDto,
+  ) {
+    return this.service.createClientAssignment(req.clientUser, input);
+  }
+
+  @Post('assignments/:id/revoke')
+  revokeAssignment(
+    @Req() req: ClientRequest,
+    @Param('id') id: string,
+    @Body() input: NetworkAuthorityTransitionDto,
+  ) {
+    return this.service.revokeClientAssignment(
+      req.clientUser,
+      id,
+      input.lockVersion,
+      input.reason,
+    );
+  }
+
+  @Post('assignments/:id/succeed')
+  succeedAssignment(
+    @Req() req: ClientRequest,
+    @Param('id') id: string,
+    @Body() input: SucceedPortfolioAssignmentDto,
+  ) {
+    return this.service.succeedClientAssignment(req.clientUser, id, input);
   }
 
   @Get('supervision')

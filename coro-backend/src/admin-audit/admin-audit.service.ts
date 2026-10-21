@@ -2,8 +2,12 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { RequestContext } from '../common/request-context';
 
-export type AdminAuditInput = {
-  actorUserId: string;
+type AuditActor =
+  | { actorType?: 'INTERNAL_USER'; actorUserId: string; actorClientUserId?: never; systemActorKey?: never }
+  | { actorType: 'CLIENT_USER'; actorClientUserId: string; actorUserId?: never; systemActorKey?: never }
+  | { actorType: 'SYSTEM'; systemActorKey: string; actorUserId?: never; actorClientUserId?: never };
+
+export type AdminAuditInput = AuditActor & {
   action: string;
   targetType: string;
   targetId: string;
@@ -24,13 +28,27 @@ export class AdminAuditService {
   }
 
   async record(tx: Prisma.TransactionClient, input: AdminAuditInput) {
-    const actor = await tx.user.findUnique({ where: { id: input.actorUserId }, select: { firstName: true, lastName: true, role: true } });
-    if (!actor) throw new BadRequestException('Acteur administratif introuvable.');
+    const actorType = input.actorType ?? 'INTERNAL_USER';
+    const actor = actorType === 'INTERNAL_USER'
+      ? await tx.user.findUnique({ where: { id: input.actorUserId }, select: { firstName: true, lastName: true, role: true, organizationId: true } })
+      : actorType === 'CLIENT_USER'
+        ? await tx.clientUser.findUnique({ where: { id: input.actorClientUserId }, select: { firstName: true, lastName: true, role: true, organizationId: true, isActive: true } })
+        : null;
+    if (actorType !== 'SYSTEM' && (!actor || ('isActive' in actor && !actor.isActive)))
+      throw new BadRequestException('Acteur administratif introuvable.');
+    if (actorType === 'CLIENT_USER' && input.organizationId && actor?.organizationId !== input.organizationId)
+      throw new BadRequestException("L'acteur administratif ne correspond pas au tenant.");
+    const displayName = actorType === 'SYSTEM'
+      ? input.systemActorKey
+      : `${actor!.firstName} ${actor!.lastName}`.trim();
     return tx.adminAuditEvent.create({
       data: {
-        actorUserId: input.actorUserId,
-        actorDisplayName: `${actor.firstName} ${actor.lastName}`.trim(),
-        actorRole: actor.role,
+        actorType,
+        actorUserId: actorType === 'INTERNAL_USER' ? input.actorUserId : null,
+        actorClientUserId: actorType === 'CLIENT_USER' ? input.actorClientUserId : null,
+        systemActorKey: actorType === 'SYSTEM' ? input.systemActorKey : null,
+        actorDisplayName: displayName!,
+        actorRole: actorType === 'SYSTEM' ? 'SYSTEM' : actor!.role,
         action: input.action,
         targetType: input.targetType,
         targetId: input.targetId,

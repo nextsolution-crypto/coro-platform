@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   AlertTriangle,
   Building2,
@@ -36,6 +37,7 @@ type Building = {
 };
 type Response = {
   generatedAt: string;
+  canManage: boolean;
   page: number;
   pageSize: number;
   total: number;
@@ -93,6 +95,7 @@ export default function NetworkPage() {
               Actualisé {new Date(data.generatedAt).toLocaleString("fr-CA")}
             </time>
           )}
+          {data?.canManage && <Link href="/network/administration">Gérer les délégations</Link>}
         </header>
 
         <section className={styles.stats} aria-label="Indicateurs consolidés">

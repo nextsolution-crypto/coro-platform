@@ -150,7 +150,9 @@ model User {
   refreshTokens                RefreshToken[]
   trustedDevices               TrustedDevice[]
   mfaChallenge                 PlatformMfaChallenge?
-  adminAuditEvents             AdminAuditEvent[]
+  adminAuditEvents             AdminAuditEvent[]                   @relation("AdminAuditInternalActor")
+  networkAssignmentsGranted    CustomerPortfolioAssignment[]       @relation("NetworkAssignmentGrantedByUser")
+  networkAssignmentsRevoked    CustomerPortfolioAssignment[]       @relation("NetworkAssignmentRevokedByUser")
   priceBookVersionsCreated     PriceBookVersion[]             @relation("PriceBookVersionCreator")
   organizationContractsCreated OrganizationContract[]         @relation("OrganizationContractCreator")
   contractRevisionsCreated     OrganizationContractRevision[] @relation("ContractRevisionCreator")
@@ -390,6 +392,17 @@ enum CustomerPortfolioAssignmentStatus {
   REVOKED
 }
 
+enum NetworkActorType {
+  INTERNAL_USER
+  CLIENT_USER
+}
+
+enum AuditActorType {
+  INTERNAL_USER
+  CLIENT_USER
+  SYSTEM
+}
+
 model CustomerNetworkAuthorityConfiguration {
   id                       String                         @id @default(uuid())
   organizationId           String                         @unique
@@ -489,14 +502,22 @@ model CustomerPortfolioAssignment {
   status           CustomerPortfolioAssignmentStatus      @default(ACTIVE)
   effectiveFrom    DateTime                               @default(now())
   effectiveUntil   DateTime?
-  grantedByUserId  String
+  grantedByActorType NetworkActorType @default(INTERNAL_USER)
+  grantedByUserId  String?
+  grantedByClientUserId String?
   grantReason      String
   revokedAt        DateTime?
+  revokedByActorType NetworkActorType?
   revokedByUserId  String?
+  revokedByClientUserId String?
   revocationReason String?
   lockVersion      Int                                    @default(0)
   createdAt        DateTime                               @default(now())
   updatedAt        DateTime                               @updatedAt
+  grantedByUser       User?       @relation("NetworkAssignmentGrantedByUser", fields: [grantedByUserId], references: [id], onDelete: Restrict)
+  grantedByClientUser ClientUser? @relation("NetworkAssignmentGrantedByClientUser", fields: [grantedByClientUserId], references: [id], onDelete: Restrict)
+  revokedByUser       User?       @relation("NetworkAssignmentRevokedByUser", fields: [revokedByUserId], references: [id], onDelete: Restrict)
+  revokedByClientUser ClientUser? @relation("NetworkAssignmentRevokedByClientUser", fields: [revokedByClientUserId], references: [id], onDelete: Restrict)
 
   @@index([organizationId, status, effectiveFrom, effectiveUntil])
   @@index([userId, status])
@@ -505,6 +526,8 @@ model CustomerPortfolioAssignment {
   @@index([portfolioId, status])
   @@index([regionId, status])
   @@index([buildingId, status])
+  @@index([grantedByClientUserId, createdAt])
+  @@index([revokedByClientUserId, revokedAt])
 }
 
 enum CommercialRelationship {
@@ -3073,13 +3096,19 @@ model ClientUser {
   offlineDocumentDevices       OfflineDocumentDevice[]
   offlineDocumentLeases        OfflineDocumentLease[]
   offlineDocumentAuditEvents   OfflineDocumentAuditEvent[]
+  adminAuditEvents             AdminAuditEvent[]                   @relation("AdminAuditClientActor")
+  networkAssignmentsGranted    CustomerPortfolioAssignment[]       @relation("NetworkAssignmentGrantedByClientUser")
+  networkAssignmentsRevoked    CustomerPortfolioAssignment[]       @relation("NetworkAssignmentRevokedByClientUser")
 
   @@unique([id, organizationId])
 }
 
 model AdminAuditEvent {
   id               String   @id @default(uuid())
-  actorUserId      String
+  actorType         AuditActorType @default(INTERNAL_USER)
+  actorUserId      String?
+  actorClientUserId String?
+  systemActorKey   String?
   actorDisplayName String
   actorRole        String
   action           String
@@ -3094,9 +3123,11 @@ model AdminAuditEvent {
   schemaVersion    Int      @default(1)
   createdAt        DateTime @default(now())
 
-  actor User @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  actor User? @relation("AdminAuditInternalActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  clientActor ClientUser? @relation("AdminAuditClientActor", fields: [actorClientUserId], references: [id], onDelete: Restrict)
 
   @@index([actorUserId, createdAt])
+  @@index([actorClientUserId, createdAt])
   @@index([targetType, targetId, createdAt])
   @@index([organizationId, createdAt])
   @@index([requestId])
