@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
 import { PlatformAuthorityService } from '../auth/platform-authority.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -8,6 +8,7 @@ describe('CustomerNetworkService', () => {
   const organizationId = '11111111-1111-4111-8111-111111111111';
   const responsibleUserId = '22222222-2222-4222-8222-222222222222';
   const portfolioId = '33333333-3333-4333-8333-333333333333';
+  const operatorUserId = '44444444-4444-4444-8444-444444444444';
 
   const audit = {
     normalizeReason: jest.fn((reason: string) => reason.trim()),
@@ -275,5 +276,134 @@ describe('CustomerNetworkService', () => {
         organizationId,
       }),
     ).resolves.toEqual({ enabled: false });
+  });
+
+  it('creates an explicit read-only operator assignment under active independent authorities', async () => {
+    const prisma = createPrisma();
+    prisma.customerNetworkAuthorityConfiguration.findUnique.mockResolvedValue({
+      id: 'network-authority',
+      organizationId,
+      status: 'ACTIVE',
+    });
+    prisma.customerPortfolioAssignment.findFirst.mockResolvedValue({
+      id: 'assignment-manager',
+    });
+    prisma.user.findFirst.mockResolvedValue({
+      id: operatorUserId,
+      organizationId: 'operator-org',
+    });
+    prisma.customerPortfolio.findFirst.mockResolvedValue({ id: portfolioId });
+    prisma.customerPortfolioAssignment.create.mockResolvedValue({
+      id: 'operator-assignment',
+      organizationId,
+      subjectType: 'OPERATOR_USER',
+      userId: null,
+      clientUserId: null,
+      operatorUserId,
+      scope: 'PORTFOLIO',
+      portfolioId,
+      permissions: ['NETWORK_SUPERVISION_READ'],
+    });
+    prisma.customerNetworkAuthorityConfiguration.findUnique
+      .mockResolvedValueOnce({ status: 'ACTIVE' })
+      .mockResolvedValueOnce({ status: 'ACTIVE' });
+    (prisma as any).platformAuthorityConfiguration = {
+      findUnique: jest.fn().mockResolvedValue({
+        status: 'ACTIVE',
+        operatorOrganizationId: 'operator-org',
+      }),
+    };
+
+    const result = await service(prisma).createAssignment(
+      { userId: responsibleUserId },
+      organizationId,
+      {
+        subjectType: 'OPERATOR_USER',
+        operatorUserId,
+        scope: 'PORTFOLIO',
+        portfolioId,
+        permissions: ['NETWORK_SUPERVISION_READ'],
+        reason: 'Supervision explicite du rapport exercice',
+      },
+    );
+
+    expect(result).toMatchObject({
+      subjectType: 'OPERATOR_USER',
+      operatorUserId,
+    });
+    expect(prisma.customerPortfolioAssignment.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        subjectType: 'OPERATOR_USER',
+        operatorUserId,
+        userId: null,
+        clientUserId: null,
+        permissions: ['NETWORK_SUPERVISION_READ'],
+      }),
+    });
+  });
+
+  it('rejects operator assignment management permissions', async () => {
+    const prisma = createPrisma();
+    prisma.customerNetworkAuthorityConfiguration.findUnique.mockResolvedValue({
+      status: 'ACTIVE',
+    });
+    prisma.customerPortfolioAssignment.findFirst.mockResolvedValue({
+      id: 'manager',
+    });
+    prisma.user.findFirst.mockResolvedValue({
+      id: operatorUserId,
+      organizationId: 'operator-org',
+    });
+    (prisma as any).platformAuthorityConfiguration = {
+      findUnique: jest.fn().mockResolvedValue({
+        status: 'ACTIVE',
+        operatorOrganizationId: 'operator-org',
+      }),
+    };
+
+    await expect(
+      service(prisma).createAssignment(
+        { userId: responsibleUserId },
+        organizationId,
+        {
+          subjectType: 'OPERATOR_USER',
+          operatorUserId,
+          scope: 'PORTFOLIO',
+          portfolioId,
+          permissions: ['NETWORK_ASSIGNMENT_MANAGE'],
+          reason: 'Tentative de privilege implicite refusee',
+        },
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.customerPortfolioAssignment.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects an operator outside the canonical operating organization', async () => {
+    const prisma = createPrisma();
+    prisma.customerNetworkAuthorityConfiguration.findUnique.mockResolvedValue({
+      status: 'ACTIVE',
+    });
+    prisma.customerPortfolioAssignment.findFirst.mockResolvedValue({
+      id: 'manager',
+    });
+    prisma.user.findFirst.mockResolvedValue(null);
+    (prisma as any).platformAuthorityConfiguration = {
+      findUnique: jest.fn(),
+    };
+
+    await expect(
+      service(prisma).createAssignment(
+        { userId: responsibleUserId },
+        organizationId,
+        {
+          subjectType: 'OPERATOR_USER',
+          operatorUserId,
+          scope: 'PORTFOLIO',
+          portfolioId,
+          permissions: ['NETWORK_SUPERVISION_READ'],
+          reason: 'Tentative inter-organisation refusee',
+        },
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

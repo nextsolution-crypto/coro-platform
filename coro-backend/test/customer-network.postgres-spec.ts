@@ -266,6 +266,124 @@ describePostgres('Customer Network authority on PostgreSQL 16', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('governs additive CORO operator assignments without weakening customer tenant subjects', async () => {
+    const data = await fixture('operator-assignment');
+    await prisma.platformAuthorityConfiguration.create({
+      data: {
+        id: 'PRIMARY',
+        operatorOrganizationId: data.founder.organizationId,
+        founderUserId: data.founder.id,
+        createdByUserId: data.founder.id,
+        activatedByUserId: data.founder.id,
+        activatedAt: new Date(),
+        activationReason: 'Activation synthetique P-4.3',
+        status: 'ACTIVE',
+      },
+    });
+    await activateAuthority(data);
+    const bootstrapped = await service.bootstrapInitialPortfolio(
+      { userId: data.responsible.id },
+      data.organization.id,
+      { ...bootstrapInput, permissions: [...bootstrapInput.permissions] },
+    );
+
+    const assignment = await service.createAssignment(
+      { userId: data.responsible.id },
+      data.organization.id,
+      {
+        subjectType: 'OPERATOR_USER',
+        operatorUserId: data.founder.id,
+        scope: 'PORTFOLIO',
+        portfolioId: bootstrapped.portfolio.id,
+        permissions: ['NETWORK_SUPERVISION_READ'],
+        reason: 'Supervision explicite ExerciseReport P-4.3',
+      },
+    );
+    expect(assignment).toMatchObject({
+      organizationId: data.organization.id,
+      subjectType: 'OPERATOR_USER',
+      operatorUserId: data.founder.id,
+      userId: null,
+      clientUserId: null,
+      permissions: ['NETWORK_SUPERVISION_READ'],
+      status: 'ACTIVE',
+    });
+
+    await expect(
+      service.createAssignment(
+        { userId: data.responsible.id },
+        data.organization.id,
+        {
+          subjectType: 'OPERATOR_USER',
+          operatorUserId: data.founder.id,
+          scope: 'PORTFOLIO',
+          portfolioId: bootstrapped.portfolio.id,
+          permissions: ['NETWORK_ASSIGNMENT_MANAGE'],
+          reason: 'Privilege operateur Network interdit',
+        },
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    await service.revokeAssignment(
+      { userId: data.responsible.id },
+      data.organization.id,
+      assignment.id,
+      assignment.lockVersion,
+      'Revocation operateur Network explicite',
+    );
+    expect(
+      await prisma.customerPortfolioAssignment.findUnique({
+        where: { id: assignment.id },
+        select: { status: true, lockVersion: true },
+      }),
+    ).toEqual({ status: 'REVOKED', lockVersion: 1 });
+
+    const concurrent = await Promise.allSettled([
+      service.createAssignment(
+        { userId: data.responsible.id },
+        data.organization.id,
+        {
+          subjectType: 'OPERATOR_USER',
+          operatorUserId: data.founder.id,
+          scope: 'PORTFOLIO',
+          portfolioId: bootstrapped.portfolio.id,
+          permissions: ['NETWORK_SUPERVISION_READ'],
+          reason: 'Affectation concurrente operateur numero un',
+        },
+      ),
+      service.createAssignment(
+        { userId: data.responsible.id },
+        data.organization.id,
+        {
+          subjectType: 'OPERATOR_USER',
+          operatorUserId: data.founder.id,
+          scope: 'PORTFOLIO',
+          portfolioId: bootstrapped.portfolio.id,
+          permissions: ['NETWORK_SUPERVISION_READ'],
+          reason: 'Affectation concurrente operateur numero deux',
+        },
+      ),
+    ]);
+    expect(
+      concurrent.filter(({ status }) => status === 'fulfilled'),
+    ).toHaveLength(1);
+    expect(
+      concurrent.filter(({ status }) => status === 'rejected'),
+    ).toHaveLength(1);
+
+    // The authority is immutable through product APIs. Remove this exact QA-only
+    // fixture with trigger bypass so the independent Platform Authority suite can
+    // bootstrap PRIMARY in the same disposable database process.
+    await prisma.$transaction([
+      prisma.$executeRawUnsafe(
+        `SET LOCAL session_replication_role = 'replica'`,
+      ),
+      prisma.$executeRawUnsafe(
+        `DELETE FROM "PlatformAuthorityConfiguration" WHERE "id" = 'PRIMARY'`,
+      ),
+    ]);
+  });
+
   it('serializes concurrent attempts so exactly one succeeds', async () => {
     const data = await fixture('concurrency');
     await activateAuthority(data);

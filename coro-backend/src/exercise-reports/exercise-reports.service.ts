@@ -10,10 +10,12 @@ import {
   ExerciseReportStatus,
   ExerciseReportType,
   ExerciseTimelineEntryType,
+  PlatformPermission,
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { AdviserActor, projectAccessWhere } from '../auth/project-access';
+import { AdviserActor } from '../auth/project-access';
+import { ExerciseReportAccessService } from './exercise-report-access.service';
 import { CreateExerciseReportDto } from './dto/create-exercise-report.dto';
 import { CompatibleExerciseSourcesDto } from './dto/compatible-exercise-sources.dto';
 import {
@@ -36,6 +38,14 @@ const reportInclude = {
   findings: { orderBy: { order: 'asc' as const } },
   recommendations: { orderBy: { order: 'asc' as const } },
   actionItems: { orderBy: { order: 'asc' as const } },
+  versions: {
+    orderBy: { versionNumber: 'desc' as const },
+    select: {
+      id: true, versionNumber: true, documentSha256: true, pdfSize: true,
+      templateCode: true, templateVersion: true, publishedById: true, createdAt: true,
+    },
+  },
+  auditEvents: { orderBy: [{ occurredAt: 'asc' as const }, { id: 'asc' as const }] },
   activity: true,
   project: { select: { id: true, name: true } },
   building: { select: { id: true, name: true } },
@@ -78,7 +88,10 @@ type ReportWithCollections = Prisma.ExerciseReportGetPayload<{
 
 @Injectable()
 export class ExerciseReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly access: ExerciseReportAccessService,
+  ) {}
 
   async createFromActivity(
     activityId: string,
@@ -93,7 +106,7 @@ export class ExerciseReportsService {
 
     const activity = await this.getAccessibleActivity(activityId, user);
     const existing = await this.prisma.exerciseReport.findFirst({
-      where: { activityId, organizationId: user.organizationId },
+      where: { activityId, organizationId: activity.organizationId },
       include: reportInclude,
     });
     if (existing) return existing;
@@ -112,7 +125,7 @@ export class ExerciseReportsService {
           where: {
             id: bookingId,
             projectId: activity.projectId,
-            organizationId: user.organizationId,
+            organizationId: activity.organizationId,
           },
         })
       : null;
@@ -129,7 +142,7 @@ export class ExerciseReportsService {
       ? await this.prisma.incidentEvent.findFirst({
           where: {
             id: dto.incidentEventId,
-            ...this.compatibleIncidentWhere(activity, user.organizationId),
+            ...this.compatibleIncidentWhere(activity, activity.organizationId),
           },
           include: { logs: { orderBy: { timestamp: 'asc' } } },
         })
@@ -144,7 +157,7 @@ export class ExerciseReportsService {
       ? await this.prisma.evacuationEvent.findFirst({
           where: {
             id: dto.evacuationEventId,
-            ...this.compatibleEvacuationWhere(activity, user.organizationId),
+            ...this.compatibleEvacuationWhere(activity, activity.organizationId),
           },
         })
       : null;
@@ -168,7 +181,7 @@ export class ExerciseReportsService {
         async (tx) => {
           const report = await tx.exerciseReport.create({
             data: {
-              organizationId: user.organizationId,
+              organizationId: activity.organizationId,
               projectId: activity.projectId,
               activityId: activity.id,
               clientId: activity.project.clientId,
@@ -270,7 +283,7 @@ export class ExerciseReportsService {
         error.code === 'P2002'
       ) {
         const concurrent = await this.prisma.exerciseReport.findFirst({
-          where: { activityId, organizationId: user.organizationId },
+          where: { activityId, organizationId: activity.organizationId },
           include: reportInclude,
         });
         if (concurrent) return concurrent;
@@ -292,7 +305,7 @@ export class ExerciseReportsService {
     }
     const [incidents, evacuations] = await Promise.all([
       this.prisma.incidentEvent.findMany({
-        where: this.compatibleIncidentWhere(activity, user.organizationId),
+        where: this.compatibleIncidentWhere(activity, activity.organizationId),
         orderBy: { triggeredAt: 'desc' },
         take: 100,
         select: {
@@ -308,7 +321,7 @@ export class ExerciseReportsService {
         },
       }),
       this.prisma.evacuationEvent.findMany({
-        where: this.compatibleEvacuationWhere(activity, user.organizationId),
+        where: this.compatibleEvacuationWhere(activity, activity.organizationId),
         orderBy: { triggeredAt: 'desc' },
         take: 100,
         select: {
@@ -345,11 +358,16 @@ export class ExerciseReportsService {
     activityId: string,
     user: AdviserActor,
   ): Promise<ActivityContext> {
+    const scope = await this.access.activity(
+      activityId,
+      user,
+      PlatformPermission.EXERCISE_REPORT_REVIEW,
+    );
     const activity = await this.prisma.projectActivity.findFirst({
       where: {
         id: activityId,
-        organizationId: user.organizationId,
-        project: { is: projectAccessWhere(user) },
+        organizationId: scope.organizationId,
+        projectId: scope.projectId,
       },
       include: activityContextInclude,
     });
@@ -384,11 +402,16 @@ export class ExerciseReportsService {
   }
 
   async getDraft(id: string, user: AdviserActor) {
+    const scope = await this.access.report(
+      id,
+      user,
+      PlatformPermission.EXERCISE_REPORT_REVIEW,
+    );
     const report = await this.prisma.exerciseReport.findFirst({
       where: {
         id,
-        organizationId: user.organizationId,
-        project: { is: projectAccessWhere(user) },
+        organizationId: scope.organizationId,
+        projectId: scope.projectId,
       },
       include: reportInclude,
     });
@@ -402,13 +425,18 @@ export class ExerciseReportsService {
     user: AdviserActor,
   ) {
     this.assertUniqueKeys(dto);
+    const scope = await this.access.report(
+      id,
+      user,
+      PlatformPermission.EXERCISE_REPORT_REVIEW,
+    );
     return this.prisma.$transaction(
       async (tx) => {
         const report = await tx.exerciseReport.findFirst({
           where: {
             id,
-            organizationId: user.organizationId,
-            project: { is: projectAccessWhere(user) },
+            organizationId: scope.organizationId,
+            projectId: scope.projectId,
           },
           include: {
             participants: true,
@@ -425,7 +453,7 @@ export class ExerciseReportsService {
         const claimed = await tx.exerciseReport.updateMany({
           where: {
             id,
-            organizationId: user.organizationId,
+            organizationId: scope.organizationId,
             status: ExerciseReportStatus.DRAFT,
           },
           data: { ...scalar, updatedAt: new Date() },

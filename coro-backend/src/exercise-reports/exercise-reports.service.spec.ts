@@ -125,7 +125,28 @@ function harness() {
       callback(tx),
     ),
   };
-  return { tx, prisma, service: new ExerciseReportsService(prisma as never) };
+  const access = {
+    activity: jest.fn().mockResolvedValue({
+      id: 'activity-a',
+      organizationId: 'org-a',
+      projectId: 'project-a',
+      buildingId: 'building-a',
+      authorization: 'CUSTOMER_PROJECT_SCOPE',
+    }),
+    report: jest.fn().mockResolvedValue({
+      id: 'report-a',
+      organizationId: 'org-a',
+      projectId: 'project-a',
+      buildingId: 'building-a',
+      authorization: 'CUSTOMER_PROJECT_SCOPE',
+    }),
+  };
+  return {
+    tx,
+    prisma,
+    access,
+    service: new ExerciseReportsService(prisma as never, access as never),
+  };
 }
 
 describe('ExerciseReportsService createFromActivity', () => {
@@ -511,11 +532,16 @@ describe('ExerciseReportsService authorization and compatible sources', () => {
     const h = harness();
     h.prisma.exerciseReport.findFirst.mockResolvedValue(report());
     await h.service.getDraft('report-a', user);
+    expect(h.access.report).toHaveBeenCalledWith(
+      'report-a',
+      user,
+      'EXERCISE_REPORT_REVIEW',
+    );
     expect(h.prisma.exerciseReport.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           organizationId: 'org-a',
-          project: { is: { organizationId: 'org-a' } },
+          projectId: 'project-a',
         }),
       }),
     );
@@ -531,16 +557,16 @@ describe('ExerciseReportsService authorization and compatible sources', () => {
         role: 'OPERATOR',
       },
     );
+    expect(h.access.activity).toHaveBeenCalledWith(
+      'activity-a',
+      expect.objectContaining({ role: 'OPERATOR' }),
+      'EXERCISE_REPORT_REVIEW',
+    );
     expect(h.prisma.projectActivity.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           organizationId: 'org-a',
-          project: {
-            is: {
-              organizationId: 'org-a',
-              OR: [{ userId: 'user-a' }, { lastEditedById: 'user-a' }],
-            },
-          },
+          projectId: 'project-a',
         }),
       }),
     );
@@ -548,7 +574,7 @@ describe('ExerciseReportsService authorization and compatible sources', () => {
 
   it('rejects an unassigned OPERATOR and a foreign organization', async () => {
     const h = harness();
-    h.prisma.projectActivity.findFirst.mockResolvedValue(null);
+    h.access.activity.mockRejectedValue(new NotFoundException());
     await expect(
       h.service.createFromActivity(
         'activity-a',
@@ -581,15 +607,16 @@ describe('ExerciseReportsService authorization and compatible sources', () => {
         role: 'OPERATOR',
       },
     );
+    expect(h.access.report).toHaveBeenCalledWith(
+      'report-a',
+      expect.objectContaining({ role: 'OPERATOR' }),
+      'EXERCISE_REPORT_REVIEW',
+    );
     expect(h.tx.exerciseReport.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          project: {
-            is: {
-              organizationId: 'org-a',
-              OR: [{ userId: 'user-a' }, { lastEditedById: 'user-a' }],
-            },
-          },
+          organizationId: 'org-a',
+          projectId: 'project-a',
         }),
       }),
     );
@@ -598,11 +625,10 @@ describe('ExerciseReportsService authorization and compatible sources', () => {
   it('rejects GET and PUT when the report is outside operator scope', async () => {
     const h = harness();
     const operator = { ...user, role: 'OPERATOR' };
-    h.prisma.exerciseReport.findFirst.mockResolvedValue(null);
+    h.access.report.mockRejectedValue(new NotFoundException());
     await expect(
       h.service.getDraft('report-a', operator),
     ).rejects.toBeInstanceOf(NotFoundException);
-    h.tx.exerciseReport.findFirst.mockResolvedValue(null);
     await expect(
       h.service.updateDraft('report-a', { conclusion: 'x' }, operator),
     ).rejects.toBeInstanceOf(NotFoundException);

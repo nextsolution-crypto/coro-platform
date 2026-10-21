@@ -40,6 +40,7 @@ model Organization {
   bookings                       Booking[]
   files                          ProjectFile[]
   exerciseReports                ExerciseReport[]
+  exerciseReportTemplateVersions ExerciseReportTemplateVersion[]
   complianceRequirements         ComplianceRequirement[]
   complianceEvidence             ComplianceEvidence[]
   populationOperationalEvents    PopulationOperationalEvent[]
@@ -162,38 +163,47 @@ model User {
   authVersion      Int       @default(1)
 
   bookings                              Booking[]
-  bookingAssignments                    BookingAssignment[]              @relation("BookingAssignee")
-  bookingAssignmentsCreated             BookingAssignment[]              @relation("BookingAssignmentActor")
-  projectAdvisorEligibilities           ProjectAdvisorEligibility[]      @relation("EligibleAdvisor")
-  projectAdvisorEligibilitiesAuthorized ProjectAdvisorEligibility[]      @relation("EligibilityAuthorizer")
-  uploadedFiles                         ProjectFile[]                    @relation("FileUploader")
-  referralsCreated                      Referral[]                       @relation("ReferralCreator")
-  exerciseReportsCreated                ExerciseReport[]                 @relation("ExerciseReportCreator")
-  exerciseReportsFinalized              ExerciseReport[]                 @relation("ExerciseReportFinalizer")
-  exerciseReportVersions                ExerciseReportVersion[]
-  exerciseReportImportsReviewed         ExerciseReportImport[]           @relation("ExerciseReportImportReviewer")
-  exerciseParticipantsValidated         ExerciseParticipant[]            @relation("ExerciseParticipantValidator")
-  exerciseTimelineValidated             ExerciseTimelineEntry[]          @relation("ExerciseTimelineValidator")
-  exerciseFindingsValidated             ExerciseFinding[]                @relation("ExerciseFindingValidator")
-  exerciseRecommendationsValidated      ExerciseRecommendation[]         @relation("ExerciseRecommendationValidator")
-  exerciseActionItemsValidated          ExerciseActionItem[]             @relation("ExerciseActionItemValidator")
-  mandateServicesCreated                ProjectMandateService[]          @relation("MandateServiceCreator")
-  mandateServicesUpdated                ProjectMandateService[]          @relation("MandateServiceUpdater")
-  mandateServicesRemoved                ProjectMandateService[]          @relation("MandateServiceRemover")
-  mandateServiceOperations              MandateServiceOperation[]        @relation("MandateServiceOperationCreator")
-  meteringResultsCreated                MeteringResult[]                 @relation("MeteringResultCreator")
-  advisorInternalCostRates              AdvisorInternalCostRate[]        @relation("AdvisorInternalCostRateAdvisor")
-  advisorCostRatesProposed              AdvisorInternalCostRate[]        @relation("AdvisorInternalCostRateProposer")
-  advisorCostRatesApproved              AdvisorInternalCostRate[]        @relation("AdvisorInternalCostRateApprover")
-  advisorCostRatesRejected              AdvisorInternalCostRate[]        @relation("AdvisorInternalCostRateRejector")
-  advisorCostRatesSuperseded            AdvisorInternalCostRate[]        @relation("AdvisorInternalCostRateSuperseder")
-  mandateSalesValidated                 ProjectMandate[]                 @relation("ProjectMandateSaleValidator")
-  platformAuthorityFounder              PlatformAuthorityConfiguration?  @relation("PlatformAuthorityFounder")
-  platformAuthoritiesCreated            PlatformAuthorityConfiguration[] @relation("PlatformAuthorityCreator")
-  platformAuthoritiesActivated          PlatformAuthorityConfiguration[] @relation("PlatformAuthorityActivator")
-  platformPermissionGrants              PlatformPermissionGrant[]        @relation("PlatformPermissionSubject")
-  platformPermissionGrantsIssued        PlatformPermissionGrant[]        @relation("PlatformPermissionIssuer")
-  platformPermissionGrantsRevoked       PlatformPermissionGrant[]        @relation("PlatformPermissionRevoker")
+  bookingAssignments                    BookingAssignment[]                @relation("BookingAssignee")
+  bookingAssignmentsCreated             BookingAssignment[]                @relation("BookingAssignmentActor")
+  projectAdvisorEligibilities           ProjectAdvisorEligibility[]        @relation("EligibleAdvisor")
+  projectAdvisorEligibilitiesAuthorized ProjectAdvisorEligibility[]        @relation("EligibilityAuthorizer")
+  uploadedFiles                         ProjectFile[]                      @relation("FileUploader")
+  referralsCreated                      Referral[]                         @relation("ReferralCreator")
+  exerciseReportsCreated                ExerciseReport[]                   @relation("ExerciseReportCreator")
+  exerciseReportsFinalized              ExerciseReport[]                   @relation("ExerciseReportFinalizer")
+  exerciseReportsReviewSubmitted        ExerciseReport[]                   @relation("ExerciseReportReviewSubmitter")
+  exerciseReportsReviewed               ExerciseReport[]                   @relation("ExerciseReportReviewer")
+  exerciseReportsApproved               ExerciseReport[]                   @relation("ExerciseReportApprover")
+  exerciseReportsPublished              ExerciseReport[]                   @relation("ExerciseReportPublisher")
+  exerciseReportVersions                ExerciseReportVersion[]            @relation("ExerciseReportVersionCreator")
+  exerciseReportVersionsPublished       ExerciseReportVersion[]            @relation("ExerciseReportVersionPublisher")
+  exerciseReportAuditEvents             ExerciseReportAuditEvent[]
+  exerciseReportTemplatesCreated        ExerciseReportTemplateVersion[]    @relation("ExerciseReportTemplateCreator")
+  exerciseReportTemplatesPublished      ExerciseReportTemplateVersion[]    @relation("ExerciseReportTemplatePublisher")
+  exerciseReportTemplateAuditEvents     ExerciseReportTemplateAuditEvent[]
+  exerciseReportImportsReviewed         ExerciseReportImport[]             @relation("ExerciseReportImportReviewer")
+  exerciseParticipantsValidated         ExerciseParticipant[]              @relation("ExerciseParticipantValidator")
+  exerciseTimelineValidated             ExerciseTimelineEntry[]            @relation("ExerciseTimelineValidator")
+  exerciseFindingsValidated             ExerciseFinding[]                  @relation("ExerciseFindingValidator")
+  exerciseRecommendationsValidated      ExerciseRecommendation[]           @relation("ExerciseRecommendationValidator")
+  exerciseActionItemsValidated          ExerciseActionItem[]               @relation("ExerciseActionItemValidator")
+  mandateServicesCreated                ProjectMandateService[]            @relation("MandateServiceCreator")
+  mandateServicesUpdated                ProjectMandateService[]            @relation("MandateServiceUpdater")
+  mandateServicesRemoved                ProjectMandateService[]            @relation("MandateServiceRemover")
+  mandateServiceOperations              MandateServiceOperation[]          @relation("MandateServiceOperationCreator")
+  meteringResultsCreated                MeteringResult[]                   @relation("MeteringResultCreator")
+  advisorInternalCostRates              AdvisorInternalCostRate[]          @relation("AdvisorInternalCostRateAdvisor")
+  advisorCostRatesProposed              AdvisorInternalCostRate[]          @relation("AdvisorInternalCostRateProposer")
+  advisorCostRatesApproved              AdvisorInternalCostRate[]          @relation("AdvisorInternalCostRateApprover")
+  advisorCostRatesRejected              AdvisorInternalCostRate[]          @relation("AdvisorInternalCostRateRejector")
+  advisorCostRatesSuperseded            AdvisorInternalCostRate[]          @relation("AdvisorInternalCostRateSuperseder")
+  mandateSalesValidated                 ProjectMandate[]                   @relation("ProjectMandateSaleValidator")
+  platformAuthorityFounder              PlatformAuthorityConfiguration?    @relation("PlatformAuthorityFounder")
+  platformAuthoritiesCreated            PlatformAuthorityConfiguration[]   @relation("PlatformAuthorityCreator")
+  platformAuthoritiesActivated          PlatformAuthorityConfiguration[]   @relation("PlatformAuthorityActivator")
+  platformPermissionGrants              PlatformPermissionGrant[]          @relation("PlatformPermissionSubject")
+  platformPermissionGrantsIssued        PlatformPermissionGrant[]          @relation("PlatformPermissionIssuer")
+  platformPermissionGrantsRevoked       PlatformPermissionGrant[]          @relation("PlatformPermissionRevoker")
 
   @@unique([id, organizationId])
 }
@@ -293,6 +303,9 @@ enum PlatformPermission {
   INCIDENT_SUPERVISE
   INCIDENT_COMMAND
   PCA_ACTIVATE
+  EXERCISE_REPORT_REVIEW
+  EXERCISE_REPORT_APPROVE
+  EXERCISE_REPORT_PUBLISH
 }
 
 enum PlatformPermissionScope {
@@ -357,6 +370,7 @@ enum CustomerNetworkAuthorityStatus {
 enum CustomerPortfolioAssignmentSubjectType {
   INTERNAL_USER
   CLIENT_USER
+  OPERATOR_USER
 }
 
 enum CustomerPortfolioAssignmentScope {
@@ -466,6 +480,7 @@ model CustomerPortfolioAssignment {
   subjectType      CustomerPortfolioAssignmentSubjectType
   userId           String?
   clientUserId     String?
+  operatorUserId   String?
   scope            CustomerPortfolioAssignmentScope
   portfolioId      String?
   regionId         String?
@@ -486,6 +501,7 @@ model CustomerPortfolioAssignment {
   @@index([organizationId, status, effectiveFrom, effectiveUntil])
   @@index([userId, status])
   @@index([clientUserId, status])
+  @@index([operatorUserId, status])
   @@index([portfolioId, status])
   @@index([regionId, status])
   @@index([buildingId, status])
@@ -3033,7 +3049,7 @@ model ClientUser {
   populationPermissions        PopulationPermission[]        @default([])
   operationalReviewPermissions OperationalReviewPermission[] @default([])
   correctiveActionPermissions  CorrectiveActionPermission[]  @default([])
-  incidentPermissions          IncidentPermission[]           @default([])
+  incidentPermissions          IncidentPermission[]          @default([])
   buildingIds                  String[]
   isActive                     Boolean                       @default(true)
   clientId                     String
@@ -5319,39 +5335,39 @@ model EmployeeQualification {
 }
 
 model IncidentEvent {
-  id                   String         @id @default(uuid())
-  buildingId           String
-  building             Building       @relation(fields: [buildingId], references: [id])
-  organizationId       String
-  type                 IncidentType
-  status               IncidentStatus @default(ACTIVE)
-  triggeredAt          DateTime       @default(now())
-  triggeredBy          String // Nom de la personne qui a déclenché
-  description          String?
-  occupantsSnapshot    Json // Snapshot des occupants au moment du déclenchement
-  teamSnapshot         Json // Snapshot de l'équipe mobilisable au moment du déclenchement
-  procedureCode        String? // Code de la procédure liée (ex: P003)
-  procedureSnapshot    Json? // Étapes ROLE-CU capturées au déclenchement
-  assemblyPoint        String? // Point de rassemblement récupéré du configData PMU
-  interventionSheet    Json? // Fiche d'intervention figée au déclenchement (accès QR temporaire)
-  publicAccessToken    String?        @unique // Jeton d'accès public à la fiche — valide tant que isActive
-  publicAccessCount    Int            @default(0) // Nombre de consultations de la fiche via le lien public
-  publicAccessLastAt   DateTime? // Dernière consultation de la fiche via le lien public
+  id                    String         @id @default(uuid())
+  buildingId            String
+  building              Building       @relation(fields: [buildingId], references: [id])
+  organizationId        String
+  type                  IncidentType
+  status                IncidentStatus @default(ACTIVE)
+  triggeredAt           DateTime       @default(now())
+  triggeredBy           String // Nom de la personne qui a déclenché
+  description           String?
+  occupantsSnapshot     Json // Snapshot des occupants au moment du déclenchement
+  teamSnapshot          Json // Snapshot de l'équipe mobilisable au moment du déclenchement
+  procedureCode         String? // Code de la procédure liée (ex: P003)
+  procedureSnapshot     Json? // Étapes ROLE-CU capturées au déclenchement
+  assemblyPoint         String? // Point de rassemblement récupéré du configData PMU
+  interventionSheet     Json? // Fiche d'intervention figée au déclenchement (accès QR temporaire)
+  publicAccessToken     String?        @unique // Jeton d'accès public à la fiche — valide tant que isActive
+  publicAccessCount     Int            @default(0) // Nombre de consultations de la fiche via le lien public
+  publicAccessLastAt    DateTime? // Dernière consultation de la fiche via le lien public
   publicAccessExpiresAt DateTime?
   publicAccessRevokedAt DateTime?
   lockVersion           Int            @default(0)
-  containedAt          DateTime?
-  resolvedAt           DateTime?
-  closingNotes         String?
-  rexWentWell          String? // Ce qui a bien fonctionné
-  rexToImprove         String? // Points à améliorer
-  rexRecommendations   String? // Recommandations
-  rexCorrectiveActions String? // Actions correctives
-  rexCompletedAt       DateTime? // Date de finalisation du REX
-  isActive             Boolean        @default(true)
-  isExercise           Boolean        @default(false)
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
+  containedAt           DateTime?
+  resolvedAt            DateTime?
+  closingNotes          String?
+  rexWentWell           String? // Ce qui a bien fonctionné
+  rexToImprove          String? // Points à améliorer
+  rexRecommendations    String? // Recommandations
+  rexCorrectiveActions  String? // Actions correctives
+  rexCompletedAt        DateTime? // Date de finalisation du REX
+  isActive              Boolean        @default(true)
+  isExercise            Boolean        @default(false)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
 
   tasks                       IncidentTask[]
   logs                        IncidentLog[]
@@ -5359,10 +5375,10 @@ model IncidentEvent {
   correctiveActions           CorrectiveAction[]
   populationAlerts            PopulationAlert[]
   populationOperationalEvents PopulationOperationalEvent[]
-  pcaActivations               PcaActivation[]
-  notificationDeliveries       IncidentNotificationDelivery[]
-  authorityAssignments         IncidentAuthorityAssignment[]
-  auditEvents                  IncidentAuditEvent[]
+  pcaActivations              PcaActivation[]
+  notificationDeliveries      IncidentNotificationDelivery[]
+  authorityAssignments        IncidentAuthorityAssignment[]
+  auditEvents                 IncidentAuditEvent[]
 }
 
 model PopulationOperationalEvent {
@@ -5552,46 +5568,46 @@ enum PopulationEvidenceReportStatus {
 }
 
 model IncidentTask {
-  id                String             @id @default(uuid())
-  incidentEventId   String
-  incidentEvent     IncidentEvent      @relation(fields: [incidentEventId], references: [id], onDelete: Cascade)
-  employeeId        String?
-  employee          BuildingEmployee?  @relation(fields: [employeeId], references: [id])
-  role              EmergencyRoleType
-  title             String
-  description       String?
-  stepId            String? // ID de l'étape dans la procédure CORO
-  stepText          String? // Texte complet de l'étape (pour affichage offline)
-  stepOrder         Int                @default(0)
-  isCoordinatorStep Boolean            @default(false)
-  status            IncidentTaskStatus @default(PENDING)
-  severity          IncidentTaskSeverity @default(NORMAL)
-  ackDeadlineAt     DateTime?
-  ackPolicySnapshot Json?
-  alternateEmployeeIds String[]         @default([])
-  acknowledgmentSubjectType CoroActorType?
-  acknowledgmentSubjectId String?
-  escalationStatus IncidentTaskEscalationStatus @default(PENDING)
-  escalationLevel  Int                 @default(0)
-  escalationCycle  Int                 @default(0)
-  missedAcknowledgmentAt DateTime?
-  nextEscalationAt DateTime?
-  operatorQueuedAt DateTime?
-  escalationCancelledAt DateTime?
+  id                           String                       @id @default(uuid())
+  incidentEventId              String
+  incidentEvent                IncidentEvent                @relation(fields: [incidentEventId], references: [id], onDelete: Cascade)
+  employeeId                   String?
+  employee                     BuildingEmployee?            @relation(fields: [employeeId], references: [id])
+  role                         EmergencyRoleType
+  title                        String
+  description                  String?
+  stepId                       String? // ID de l'étape dans la procédure CORO
+  stepText                     String? // Texte complet de l'étape (pour affichage offline)
+  stepOrder                    Int                          @default(0)
+  isCoordinatorStep            Boolean                      @default(false)
+  status                       IncidentTaskStatus           @default(PENDING)
+  severity                     IncidentTaskSeverity         @default(NORMAL)
+  ackDeadlineAt                DateTime?
+  ackPolicySnapshot            Json?
+  alternateEmployeeIds         String[]                     @default([])
+  acknowledgmentSubjectType    CoroActorType?
+  acknowledgmentSubjectId      String?
+  escalationStatus             IncidentTaskEscalationStatus @default(PENDING)
+  escalationLevel              Int                          @default(0)
+  escalationCycle              Int                          @default(0)
+  missedAcknowledgmentAt       DateTime?
+  nextEscalationAt             DateTime?
+  operatorQueuedAt             DateTime?
+  escalationCancelledAt        DateTime?
   escalationCancellationReason String?
-  ackToken          String?            @unique
-  ackExpiresAt      DateTime?
-  ackRevokedAt      DateTime?
-  ackUsedAt         DateTime?
-  lockVersion       Int                @default(0)
-  reassignedAt      DateTime?
-  reassignedByType  CoroActorType?
-  reassignedById    String?
-  notifiedAt        DateTime?
-  acknowledgedAt    DateTime?
-  completedAt       DateTime?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  ackToken                     String?                      @unique
+  ackExpiresAt                 DateTime?
+  ackRevokedAt                 DateTime?
+  ackUsedAt                    DateTime?
+  lockVersion                  Int                          @default(0)
+  reassignedAt                 DateTime?
+  reassignedByType             CoroActorType?
+  reassignedById               String?
+  notifiedAt                   DateTime?
+  acknowledgedAt               DateTime?
+  completedAt                  DateTime?
+  createdAt                    DateTime                     @default(now())
+  updatedAt                    DateTime                     @updatedAt
 
   @@index([escalationStatus, nextEscalationAt])
   @@index([incidentEventId, escalationStatus])
@@ -5627,81 +5643,81 @@ model PcaActivation {
 }
 
 model IncidentNotificationDelivery {
-  id                String                     @id @default(uuid())
-  organizationId    String
-  incidentEventId   String
-  incidentEvent     IncidentEvent              @relation(fields: [incidentEventId], references: [id], onDelete: Cascade)
-  channel           String
-  recipientHash     String
-  encryptedEnvelope String
-  encryptionKeyId   String
-  purpose           String
-  idempotencyKey    String                     @unique
-  status            IncidentNotificationStatus @default(QUEUED)
-  attemptCount      Int                        @default(0)
-  maxAttempts       Int                        @default(3)
-  providerMessageId String?
-  providerAcceptedAt DateTime?
+  id                  String                     @id @default(uuid())
+  organizationId      String
+  incidentEventId     String
+  incidentEvent       IncidentEvent              @relation(fields: [incidentEventId], references: [id], onDelete: Cascade)
+  channel             String
+  recipientHash       String
+  encryptedEnvelope   String
+  encryptionKeyId     String
+  purpose             String
+  idempotencyKey      String                     @unique
+  status              IncidentNotificationStatus @default(QUEUED)
+  attemptCount        Int                        @default(0)
+  maxAttempts         Int                        @default(3)
+  providerMessageId   String?
+  providerAcceptedAt  DateTime?
   providerDeliveredAt DateTime?
-  lastErrorCode     String?
-  lastErrorAt       DateTime?
-  sentAt            DateTime?
-  acknowledgedAt    DateTime?
-  nextAttemptAt     DateTime?
-  cancelledAt       DateTime?
-  cancellationReason String?
-  createdAt         DateTime                   @default(now())
-  updatedAt         DateTime                   @updatedAt
+  lastErrorCode       String?
+  lastErrorAt         DateTime?
+  sentAt              DateTime?
+  acknowledgedAt      DateTime?
+  nextAttemptAt       DateTime?
+  cancelledAt         DateTime?
+  cancellationReason  String?
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
 
   @@index([organizationId, incidentEventId])
   @@index([status, nextAttemptAt])
 }
 
 model IncidentAuthorityAssignment {
-  id                String                            @id @default(uuid())
-  organizationId    String
-  buildingId        String
-  incidentEventId   String?
-  incidentEvent     IncidentEvent?                    @relation(fields: [incidentEventId], references: [id], onDelete: Cascade)
-  subjectType       CoroActorType
-  subjectId         String
-  operationalRole   String
-  permissions       IncidentPermission[]
-  status            IncidentAuthorityAssignmentStatus @default(ACTIVE)
-  grantedByType     CoroActorType
-  grantedById       String
-  grantReason       String
-  grantedAt         DateTime                          @default(now())
-  revokedByType     CoroActorType?
-  revokedById       String?
-  revokedAt         DateTime?
-  revocationReason  String?
-  lockVersion       Int                               @default(0)
-  createdAt         DateTime                          @default(now())
-  updatedAt         DateTime                          @updatedAt
+  id               String                            @id @default(uuid())
+  organizationId   String
+  buildingId       String
+  incidentEventId  String?
+  incidentEvent    IncidentEvent?                    @relation(fields: [incidentEventId], references: [id], onDelete: Cascade)
+  subjectType      CoroActorType
+  subjectId        String
+  operationalRole  String
+  permissions      IncidentPermission[]
+  status           IncidentAuthorityAssignmentStatus @default(ACTIVE)
+  grantedByType    CoroActorType
+  grantedById      String
+  grantReason      String
+  grantedAt        DateTime                          @default(now())
+  revokedByType    CoroActorType?
+  revokedById      String?
+  revokedAt        DateTime?
+  revocationReason String?
+  lockVersion      Int                               @default(0)
+  createdAt        DateTime                          @default(now())
+  updatedAt        DateTime                          @updatedAt
 
   @@index([organizationId, buildingId, status])
   @@index([incidentEventId, subjectType, subjectId, status])
 }
 
 model IncidentAuditEvent {
-  id                      String         @id @default(uuid())
-  organizationId          String
-  buildingId              String
-  incidentEventId         String
-  incidentEvent           IncidentEvent @relation(fields: [incidentEventId], references: [id], onDelete: Restrict)
-  operation               String
-  actorType               CoroActorType
-  actorId                 String
+  id                        String              @id @default(uuid())
+  organizationId            String
+  buildingId                String
+  incidentEventId           String
+  incidentEvent             IncidentEvent       @relation(fields: [incidentEventId], references: [id], onDelete: Restrict)
+  operation                 String
+  actorType                 CoroActorType
+  actorId                   String
   authorizationAssignmentId String?
-  authorizationPermission IncidentPermission?
-  reason                  String?
-  requestId               String?
-  previousState           Json?
-  resultingState          Json?
-  occurredAt              DateTime       @default(now())
-  previousEventHash       String?
-  eventHash               String         @unique
+  authorizationPermission   IncidentPermission?
+  reason                    String?
+  requestId                 String?
+  previousState             Json?
+  resultingState            Json?
+  occurredAt                DateTime            @default(now())
+  previousEventHash         String?
+  eventHash                 String              @unique
 
   @@index([organizationId, incidentEventId, occurredAt])
   @@index([actorType, actorId, occurredAt])
@@ -5741,6 +5757,8 @@ model ResilienceSnapshot {
 
 enum ExerciseReportStatus {
   DRAFT
+  IN_REVIEW
+  APPROVED
   FINALIZING
   PUBLISHED
   PUBLICATION_FAILED
@@ -5772,57 +5790,71 @@ enum ExerciseTimelineEntryType {
 }
 
 model ExerciseReport {
-  id                String               @id @default(uuid())
-  organizationId    String
-  organization      Organization         @relation(fields: [organizationId], references: [id])
-  projectId         String
-  project           Project              @relation(fields: [projectId], references: [id])
-  activityId        String               @unique
-  activity          ProjectActivity      @relation(fields: [activityId], references: [id], onDelete: Restrict)
-  clientId          String
-  client            Client               @relation(fields: [clientId], references: [id])
-  buildingId        String
-  building          Building             @relation(fields: [buildingId], references: [id])
-  bookingId         String?
-  booking           Booking?             @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  incidentEventId   String?
-  incidentEvent     IncidentEvent?       @relation(fields: [incidentEventId], references: [id], onDelete: SetNull)
-  evacuationEventId String?
-  evacuationEvent   EvacuationEvent?     @relation(fields: [evacuationEventId], references: [id], onDelete: SetNull)
-  officialFileId    String?              @unique
-  officialFile      ProjectFile?         @relation("ExerciseReportOfficialFile", fields: [officialFileId], references: [id], onDelete: SetNull)
-  type              ExerciseReportType
-  status            ExerciseReportStatus @default(DRAFT)
-  activityLabel     String
-  scheduledAt       DateTime?
-  occurredAt        DateTime?
-  startedAt         DateTime?
-  durationMinutes   Int?
-  zones             String[]
-  mandateName       String?
-  providerName      String?
-  adviserName       String?
-  buildingName      String
-  buildingAddress   String
-  level             String?
-  difficulty        String?
-  scenario          String?
-  positiveIntro     String?
-  globalRating      String?
-  summaryTitle      String?
-  conclusion        String?
-  preparedBy        String?
-  recipient         String?
-  conclusionDate    DateTime?
-  fieldProvenance   Json?
-  createdById       String
-  createdBy         User                 @relation("ExerciseReportCreator", fields: [createdById], references: [id])
-  finalizedById     String?
-  finalizedBy       User?                @relation("ExerciseReportFinalizer", fields: [finalizedById], references: [id])
-  finalizedAt       DateTime?
-  publishedAt       DateTime?
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
+  id                  String               @id @default(uuid())
+  organizationId      String
+  organization        Organization         @relation(fields: [organizationId], references: [id])
+  projectId           String
+  project             Project              @relation(fields: [projectId], references: [id])
+  activityId          String               @unique
+  activity            ProjectActivity      @relation(fields: [activityId], references: [id], onDelete: Restrict)
+  clientId            String
+  client              Client               @relation(fields: [clientId], references: [id])
+  buildingId          String
+  building            Building             @relation(fields: [buildingId], references: [id])
+  bookingId           String?
+  booking             Booking?             @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  incidentEventId     String?
+  incidentEvent       IncidentEvent?       @relation(fields: [incidentEventId], references: [id], onDelete: SetNull)
+  evacuationEventId   String?
+  evacuationEvent     EvacuationEvent?     @relation(fields: [evacuationEventId], references: [id], onDelete: SetNull)
+  officialFileId      String?              @unique
+  officialFile        ProjectFile?         @relation("ExerciseReportOfficialFile", fields: [officialFileId], references: [id], onDelete: SetNull)
+  type                ExerciseReportType
+  status              ExerciseReportStatus @default(DRAFT)
+  lockVersion         Int                  @default(0)
+  activityLabel       String
+  scheduledAt         DateTime?
+  occurredAt          DateTime?
+  startedAt           DateTime?
+  durationMinutes     Int?
+  zones               String[]
+  mandateName         String?
+  providerName        String?
+  adviserName         String?
+  buildingName        String
+  buildingAddress     String
+  level               String?
+  difficulty          String?
+  scenario            String?
+  positiveIntro       String?
+  globalRating        String?
+  summaryTitle        String?
+  conclusion          String?
+  preparedBy          String?
+  recipient           String?
+  conclusionDate      DateTime?
+  fieldProvenance     Json?
+  createdById         String
+  createdBy           User                 @relation("ExerciseReportCreator", fields: [createdById], references: [id])
+  finalizedById       String?
+  finalizedBy         User?                @relation("ExerciseReportFinalizer", fields: [finalizedById], references: [id])
+  finalizedAt         DateTime?
+  publishedAt         DateTime?
+  reviewSubmittedById String?
+  reviewSubmittedBy   User?                @relation("ExerciseReportReviewSubmitter", fields: [reviewSubmittedById], references: [id], onDelete: SetNull)
+  reviewSubmittedAt   DateTime?
+  reviewedById        String?
+  reviewedBy          User?                @relation("ExerciseReportReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt          DateTime?
+  approvedById        String?
+  approvedBy          User?                @relation("ExerciseReportApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedAt          DateTime?
+  publishedById       String?
+  publishedBy         User?                @relation("ExerciseReportPublisher", fields: [publishedById], references: [id], onDelete: SetNull)
+  rejectionReason     String?
+  templateVersionId   String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 
   participants       ExerciseParticipant[]
   timelineEntries    ExerciseTimelineEntry[]
@@ -5831,6 +5863,7 @@ model ExerciseReport {
   actionItems        ExerciseActionItem[]
   versions           ExerciseReportVersion[]
   imports            ExerciseReportImport[]
+  auditEvents        ExerciseReportAuditEvent[]
   correctiveActions  CorrectiveAction[]
   complianceEvidence ComplianceEvidence[]
 
@@ -5982,17 +6015,89 @@ model ExerciseActionItem {
 }
 
 model ExerciseReportVersion {
-  id            String         @id @default(uuid())
-  reportId      String
-  report        ExerciseReport @relation(fields: [reportId], references: [id], onDelete: Restrict)
-  versionNumber Int
-  snapshot      Json
-  createdById   String
-  createdBy     User           @relation(fields: [createdById], references: [id])
-  createdAt     DateTime       @default(now())
+  id              String         @id @default(uuid())
+  reportId        String
+  report          ExerciseReport @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  versionNumber   Int
+  snapshot        Json
+  createdById     String
+  createdBy       User           @relation("ExerciseReportVersionCreator", fields: [createdById], references: [id])
+  publishedById   String?
+  publishedBy     User?          @relation("ExerciseReportVersionPublisher", fields: [publishedById], references: [id])
+  documentSha256  String?
+  pdfStorageKey   String?
+  pdfSize         Int?
+  templateCode    String?
+  templateVersion Int?
+  createdAt       DateTime       @default(now())
 
   @@unique([reportId, versionNumber])
   @@index([reportId])
+}
+
+model ExerciseReportTemplateVersion {
+  id                String                             @id @default(uuid())
+  organizationId    String?
+  organization      Organization?                      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  code              String
+  version           Int
+  name              String
+  sections          Json
+  contentSha256     String
+  isActive          Boolean                            @default(true)
+  createdById       String
+  createdBy         User                               @relation("ExerciseReportTemplateCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt         DateTime                           @default(now())
+  publishedById     String
+  publishedBy       User                               @relation("ExerciseReportTemplatePublisher", fields: [publishedById], references: [id], onDelete: Restrict)
+  publishedAt       DateTime                           @default(now())
+  publicationReason String
+  auditEvents       ExerciseReportTemplateAuditEvent[]
+
+  @@unique([organizationId, code, version])
+  @@index([organizationId, code, isActive])
+}
+
+model ExerciseReportTemplateAuditEvent {
+  id                String                        @id @default(uuid())
+  organizationId    String?
+  templateVersionId String
+  templateVersion   ExerciseReportTemplateVersion @relation(fields: [templateVersionId], references: [id], onDelete: Restrict)
+  actorId           String
+  actor             User                          @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  operation         String
+  reason            String
+  requestId         String
+  metadata          Json?
+  occurredAt        DateTime                      @default(now())
+  previousEventHash String?
+  eventHash         String                        @unique
+
+  @@unique([templateVersionId, requestId, operation])
+  @@index([organizationId, occurredAt])
+}
+
+model ExerciseReportAuditEvent {
+  id                String         @id @default(uuid())
+  organizationId    String
+  buildingId        String
+  reportId          String
+  report            ExerciseReport @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  operation         String
+  actorId           String
+  actor             User           @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  authorization     String
+  reason            String?
+  requestId         String
+  previousState     Json
+  resultingState    Json
+  metadata          Json?
+  occurredAt        DateTime       @default(now())
+  previousEventHash String?
+  eventHash         String         @unique
+
+  @@unique([reportId, requestId, operation])
+  @@index([organizationId, reportId, occurredAt])
 }
 
 enum ExerciseReportImportStatus {

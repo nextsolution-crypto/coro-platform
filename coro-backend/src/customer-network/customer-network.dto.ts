@@ -65,6 +65,7 @@ export class CreatePortfolioAssignmentDto {
   subjectType!: CustomerPortfolioAssignmentSubjectType;
   @IsOptional() @IsUUID() userId?: string;
   @IsOptional() @IsUUID() clientUserId?: string;
+  @IsOptional() @IsUUID() operatorUserId?: string;
   @IsEnum(CustomerPortfolioAssignmentScope)
   scope!: CustomerPortfolioAssignmentScope;
   @IsOptional() @IsUUID() portfolioId?: string;

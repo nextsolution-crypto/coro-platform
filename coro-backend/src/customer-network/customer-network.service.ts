@@ -320,13 +320,38 @@ export class CustomerNetworkService {
       input.subjectType === 'INTERNAL_USER'
         ? await tx.user.findFirst({
             where: { id: input.userId, organizationId, isActive: true },
-            select: { id: true },
+            select: { id: true, organizationId: true },
           })
-        : await tx.clientUser.findFirst({
-            where: { id: input.clientUserId, organizationId, isActive: true },
-            select: { id: true },
-          });
+        : input.subjectType === 'CLIENT_USER'
+          ? await tx.clientUser.findFirst({
+              where: { id: input.clientUserId, organizationId, isActive: true },
+              select: { id: true, organizationId: true },
+            })
+          : await tx.user.findFirst({
+              where: {
+                id: input.operatorUserId,
+                isActive: true,
+                organization: { isActive: true, isInternal: true },
+                organizationId: {
+                  not: organizationId,
+                },
+              },
+              select: { id: true, organizationId: true },
+            });
     if (!subject) throw new BadRequestException('Sujet Network invalide.');
+    if (input.subjectType === 'OPERATOR_USER') {
+      const authority = await tx.platformAuthorityConfiguration.findUnique({
+        where: { id: 'PRIMARY' },
+        select: { status: true, operatorOrganizationId: true },
+      });
+      if (
+        authority?.status !== 'ACTIVE' ||
+        subject.organizationId !== authority.operatorOrganizationId ||
+        input.permissions.length !== 1 ||
+        input.permissions[0] !== 'NETWORK_SUPERVISION_READ'
+      )
+        throw new ForbiddenException('Affectation operateur Network invalide.');
+    }
     const targetId =
       input.scope === 'PORTFOLIO'
         ? input.portfolioId
@@ -471,6 +496,8 @@ export class CustomerNetworkService {
           userId: input.subjectType === 'INTERNAL_USER' ? input.userId : null,
           clientUserId:
             input.subjectType === 'CLIENT_USER' ? input.clientUserId : null,
+          operatorUserId:
+            input.subjectType === 'OPERATOR_USER' ? input.operatorUserId : null,
           scope: input.scope,
           portfolioId: input.scope === 'PORTFOLIO' ? input.portfolioId : null,
           regionId: input.scope === 'REGION' ? input.regionId : null,
@@ -493,6 +520,7 @@ export class CustomerNetworkService {
           subjectType: created.subjectType,
           userId: created.userId,
           clientUserId: created.clientUserId,
+          operatorUserId: created.operatorUserId,
           scope: created.scope,
           permissions: created.permissions,
         }),

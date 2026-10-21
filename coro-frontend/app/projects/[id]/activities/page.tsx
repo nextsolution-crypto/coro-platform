@@ -137,6 +137,13 @@ export default function ActivitiesPage() {
     });
   };
 
+  const openExerciseReport = async (activity: any) => {
+    try {
+      const report = activity.exerciseReport ?? (await api.post(`/activities/${activity.id}/exercise-report`, {})).data;
+      router.push(`/exercise-reports/${report.id}`);
+    } catch { toast('Le rapport est disponible uniquement pour un exercice admissible.', 'error'); }
+  };
+
   const handleDuplicate = async () => {
     if (!confirm('Dupliquer toutes les activités pour l\'année suivante (+12 mois) ?')) return;
     setDuplicating(true);
@@ -280,6 +287,11 @@ export default function ActivitiesPage() {
                           onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EBF5FB'}
                           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                           <Download size={14} />
+                        </button>
+                      )}
+                      {(activity.exerciseReport || ['exercice_table', 'exercice_evacuation'].includes(activity.type)) && (
+                        <button onClick={() => void openExerciseReport(activity)} className="px-3 py-2 rounded text-xs font-bold" style={{ color: '#245E4C', border: '1px solid #8FB5A7' }}>
+                          {activity.exerciseReport ? 'Rapport d’exercice' : 'Créer le rapport'}
                         </button>
                       )}
                       <button onClick={() => handleDelete(activity.id)}
