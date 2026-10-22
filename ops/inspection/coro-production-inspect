@@ -124,8 +124,22 @@ cp -- "$BACKUP_DIR/backup-state.json" "$work/backup-state.json"
 
 find "$BACKUP_DIR" -maxdepth 1 -type f -name '*.remote.manifest.json' -printf '%T@ %p\n' | sort -nr | sed -n '1p' >"$work/latest-backup"
 find "$RESTORE_DIR" -maxdepth 2 -type f -name '*.restore-report.json' -printf '%T@ %p\n' | sort -nr | sed -n '1p' >"$work/latest-restore"
-find "$RELEASE_DIR" -maxdepth 1 -type f -name 'production-*.json' -printf '%T@ %p\n' | sort -nr | sed -n '1p' >"$work/latest-release"
-find "$RELEASE_DIR/state" -maxdepth 1 -type f -name 'production-*.state.json' -printf '%T@ %p\n' | sort -nr | sed -n '1p' >"$work/latest-release-state"
+find "$RELEASE_DIR" -maxdepth 1 -type f -name 'production-*.json' -printf '%T@ %p\n' \
+  | sort -nr \
+  | while read -r timestamp path; do
+      [[ -f "$path" && ! -L "$path" ]] || continue
+      node -e 'const m=require(process.argv[1]);process.exit(m.status==="SUCCESS"?0:1)' "$path" || continue
+      printf '%s %s\n' "$timestamp" "$path"
+      break
+    done >"$work/latest-release"
+find "$RELEASE_DIR/state" -maxdepth 1 -type f -name 'production-*.state.json' -printf '%T@ %p\n' \
+  | sort -nr \
+  | while read -r timestamp path; do
+      [[ -f "$path" && ! -L "$path" ]] || continue
+      node -e 'const m=require(process.argv[1]);process.exit(m.state==="SUCCEEDED"&&m.stage==="COMPLETED"?0:1)' "$path" || continue
+      printf '%s %s\n' "$timestamp" "$path"
+      break
+    done >"$work/latest-release-state"
 
 latest_backup_manifest="$(cut -d' ' -f2- "$work/latest-backup")"
 [[ -f "$latest_backup_manifest" && ! -L "$latest_backup_manifest" ]] || fail BACKUP_MANIFEST_MISSING
