@@ -6,8 +6,10 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ClientJwtGuard } from '../client-portal/client-jwt.guard';
 import {
@@ -19,6 +21,7 @@ import {
   CreateRegionDto,
   LinkRegionDto,
   NetworkAuthorityTransitionDto,
+  PortfolioAnalyticsQueryDto,
   PortfolioQueryDto,
   ReplaceNetworkResponsibleDto,
   SucceedPortfolioAssignmentDto,
@@ -228,6 +231,32 @@ export class CustomerNetworkClientController {
   @Get('supervision')
   supervision(@Req() req: ClientRequest, @Query() query: PortfolioQueryDto) {
     return this.service.supervision(req.clientUser, query);
+  }
+
+  @Get('analytics')
+  analytics(
+    @Req() req: ClientRequest,
+    @Query() query: PortfolioAnalyticsQueryDto,
+  ) {
+    return this.service.analytics(req.clientUser, query);
+  }
+
+  @Get('analytics/export')
+  async exportAnalytics(
+    @Req() req: ClientRequest,
+    @Query() query: PortfolioAnalyticsQueryDto,
+    @Res() response: Response,
+  ) {
+    const exported = await this.service.exportAnalytics(req.clientUser, query);
+    response.set({
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${exported.filename}"`,
+      'Content-Length': String(exported.bytes.length),
+      'X-CORO-Content-SHA256': exported.sha256,
+      'Access-Control-Expose-Headers':
+        'Content-Disposition, X-CORO-Content-SHA256',
+    });
+    response.send(exported.bytes);
   }
 
   @Get('buildings/:buildingId')

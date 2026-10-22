@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import { CustomerNetworkPermission, Prisma } from '@prisma/client';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
 import { PlatformAuthorityService } from '../auth/platform-authority.service';
@@ -17,6 +18,7 @@ import {
   CreatePortfolioDto,
   CreateRegionDto,
   LinkRegionDto,
+  PortfolioAnalyticsQueryDto,
   PortfolioQueryDto,
   SucceedPortfolioAssignmentDto,
 } from './customer-network.dto';
@@ -1144,6 +1146,163 @@ export class CustomerNetworkService {
     return Date.now() - date.getTime() <= 24 * 60 * 60 * 1000
       ? ('CURRENT' as const)
       : ('STALE' as const);
+  }
+
+  private analyticsRange(query: PortfolioAnalyticsQueryDto) {
+    const to = query.to ? new Date(query.to) : new Date();
+    const from = query.from ? new Date(query.from) : new Date(Date.UTC(to.getUTCFullYear(), to.getUTCMonth() - 11, 1));
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to)
+      throw new BadRequestException('Periode analytique invalide.');
+    if (to.getTime() - from.getTime() > 5 * 366 * 24 * 60 * 60 * 1000)
+      throw new BadRequestException('La periode analytique est limitee a cinq ans.');
+    return { from, to };
+  }
+
+  private monthKey(date: Date) {
+    return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+  }
+
+  private async analyticsScope(actor: ClientActor, query: PortfolioAnalyticsQueryDto) {
+    const scopedIds = await this.clientBuildingScope(actor);
+    const memberships = await this.prisma.customerPortfolioBuildingMembership.findMany({
+      where: { organizationId: actor.organizationId, buildingId: { in: scopedIds } },
+      select: { buildingId: true, portfolioId: true, regionId: true },
+    });
+    const filtered = memberships.filter((row) =>
+      (!query.portfolioId || row.portfolioId === query.portfolioId) &&
+      (!query.regionId || row.regionId === query.regionId));
+    let buildingIds = query.portfolioId || query.regionId
+      ? [...new Set(filtered.map((row) => row.buildingId))]
+      : scopedIds;
+    if (query.buildingId) {
+      if (!buildingIds.includes(query.buildingId))
+        throw new ForbiddenException('Perimetre analytique non autorise.');
+      buildingIds = [query.buildingId];
+    }
+    if ((query.portfolioId || query.regionId) && !buildingIds.length)
+      throw new ForbiddenException('Perimetre analytique non autorise.');
+    const [portfolios, regions] = await Promise.all([
+      this.prisma.customerPortfolio.findMany({
+        where: { organizationId: actor.organizationId, id: { in: [...new Set(memberships.map((row) => row.portfolioId))] }, isActive: true },
+        orderBy: [{ name: 'asc' }, { id: 'asc' }], select: { id: true, name: true },
+      }),
+      this.prisma.customerPortfolioRegion.findMany({
+        where: { organizationId: actor.organizationId, id: { in: [...new Set(memberships.map((row) => row.regionId))] }, isActive: true },
+        orderBy: [{ name: 'asc' }, { id: 'asc' }], select: { id: true, name: true },
+      }),
+    ]);
+    return { buildingIds, portfolios, regions };
+  }
+
+  async analytics(actor: ClientActor, query: PortfolioAnalyticsQueryDto) {
+    const { from, to } = this.analyticsRange(query);
+    const scope = await this.analyticsScope(actor, query);
+    const [buildings, incidents, reports, reviews, actions] = await Promise.all([
+      this.prisma.building.findMany({
+        where: { organizationId: actor.organizationId, id: { in: scope.buildingIds } },
+        orderBy: [{ name: 'asc' }, { id: 'asc' }], select: { id: true, name: true },
+      }),
+      this.prisma.incidentEvent.findMany({
+        where: { organizationId: actor.organizationId, buildingId: { in: scope.buildingIds }, triggeredAt: { gte: from, lte: to } },
+        select: { id: true, status: true, isExercise: true, triggeredAt: true, updatedAt: true },
+      }),
+      this.prisma.exerciseReport.findMany({
+        where: { organizationId: actor.organizationId, buildingId: { in: scope.buildingIds }, status: 'PUBLISHED', createdAt: { lte: to } },
+        select: { id: true, occurredAt: true, publishedAt: true, createdAt: true, updatedAt: true },
+      }),
+      this.prisma.operationalReview.findMany({
+        where: { organizationId: actor.organizationId, buildingId: { in: scope.buildingIds }, createdAt: { lte: to } },
+        select: { id: true, finalizedAt: true, createdAt: true, updatedAt: true },
+      }),
+      this.prisma.correctiveAction.findMany({
+        where: { organizationId: actor.organizationId, buildingId: { in: scope.buildingIds }, createdAt: { lte: to }, status: { not: 'CANCELLED' } },
+        select: { id: true, status: true, dueDate: true, createdAt: true, updatedAt: true, completedAt: true, verifiedAt: true, closedAt: true },
+      }),
+    ]);
+    const inRange = (date: Date | null | undefined) => Boolean(date && date >= from && date <= to);
+    const reportDate = (row: (typeof reports)[number]) => row.occurredAt ?? row.publishedAt ?? row.createdAt;
+    const reviewDate = (row: (typeof reviews)[number]) => row.finalizedAt ?? row.createdAt;
+    const selectedIncidents = incidents.filter((row) => !row.isExercise);
+    const selectedReports = reports.filter((row) => inRange(reportDate(row)));
+    const selectedReviews = reviews.filter((row) => inRange(reviewDate(row)));
+    const selectedActions = actions.filter((row) => inRange(row.createdAt));
+    const openActions = actions.filter((row) => ['PLANNED', 'IN_PROGRESS'].includes(row.status));
+    const trends: Array<{ period: string; incidents: number; exercises: number; operationalReviews: number; correctiveActionsCreated: number; correctiveActionsDue: number }> = [];
+    const cursor = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), 1));
+    const last = new Date(Date.UTC(to.getUTCFullYear(), to.getUTCMonth(), 1));
+    while (cursor <= last) {
+      trends.push({ period: this.monthKey(cursor), incidents: 0, exercises: 0, operationalReviews: 0, correctiveActionsCreated: 0, correctiveActionsDue: 0 });
+      cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+    }
+    const byPeriod = new Map(trends.map((row) => [row.period, row]));
+    const increment = (date: Date | null | undefined, field: Exclude<keyof (typeof trends)[number], 'period'>) => {
+      if (!date || !inRange(date)) return;
+      const row = byPeriod.get(this.monthKey(date));
+      if (row) row[field] += 1;
+    };
+    selectedIncidents.forEach((row) => increment(row.triggeredAt, 'incidents'));
+    selectedReports.forEach((row) => increment(reportDate(row), 'exercises'));
+    selectedReviews.forEach((row) => increment(reviewDate(row), 'operationalReviews'));
+    selectedActions.forEach((row) => increment(row.createdAt, 'correctiveActionsCreated'));
+    actions.forEach((row) => increment(row.dueDate, 'correctiveActionsDue'));
+    const latest = (dates: Array<Date | null | undefined>) => dates.reduce<Date | null>((value, date) => date && (!value || date > value) ? date : value, null);
+    const observed = {
+      incidents: latest(selectedIncidents.map((row) => row.updatedAt)),
+      exercises: latest(selectedReports.map((row) => row.updatedAt)),
+      operationalReviews: latest(selectedReviews.map((row) => row.updatedAt)),
+      correctiveActions: latest(actions.map((row) => row.updatedAt)),
+    };
+    const generatedAt = new Date();
+    return {
+      generatedAt, period: { from, to },
+      filters: { portfolioId: query.portfolioId ?? null, regionId: query.regionId ?? null, buildingId: query.buildingId ?? null },
+      scope: { organizationId: actor.organizationId, buildingCount: buildings.length, buildings: buildings.map(({ id, name }) => ({ id, name })), portfolios: scope.portfolios, regions: scope.regions },
+      summary: {
+        incidents: { total: selectedIncidents.length, active: selectedIncidents.filter((row) => ['PRE_ALERT', 'ACTIVE', 'CONTAINED'].includes(row.status)).length, resolved: selectedIncidents.filter((row) => row.status === 'RESOLVED').length },
+        exercises: { published: selectedReports.length },
+        operationalReviews: { total: selectedReviews.length },
+        correctiveActions: {
+          created: selectedActions.length, open: openActions.length,
+          overdue: openActions.filter((row) => row.dueDate && row.dueDate < generatedAt).length,
+          completed: actions.filter((row) => row.completedAt).length,
+          verified: actions.filter((row) => row.verifiedAt).length,
+          closed: actions.filter((row) => row.closedAt).length,
+        },
+      },
+      trends,
+      freshness: Object.fromEntries(Object.entries(observed).map(([source, date]) => [source, { state: this.freshness(date), observedAt: date }])),
+      missingData: Object.entries(observed).filter(([, date]) => !date).map(([source]) => source),
+      provenance: {
+        incidents: 'IncidentEvent.triggeredAt', exercises: 'ExerciseReport.occurredAt|publishedAt|createdAt (PUBLISHED)',
+        operationalReviews: 'OperationalReview.finalizedAt|createdAt', correctiveActions: 'CorrectiveAction.createdAt|dueDate|lifecycle timestamps',
+        authorization: 'CustomerPortfolioAssignment.NETWORK_SUPERVISION_READ',
+      },
+    };
+  }
+
+  private csvCell(value: unknown) {
+    const text = value === null || value === undefined ? '' : String(value);
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  }
+
+  async exportAnalytics(actor: ClientActor, query: PortfolioAnalyticsQueryDto) {
+    const analytics = await this.analytics(actor, query);
+    const rows: unknown[][] = [
+      ['# generated_at', analytics.generatedAt.toISOString()], ['# organization_id', actor.organizationId],
+      ['# period_from', analytics.period.from.toISOString()], ['# period_to', analytics.period.to.toISOString()],
+      ['# building_count', analytics.scope.buildingCount], ['# missing_data', analytics.missingData.join('|')],
+      ['period', 'incidents', 'exercises', 'operational_reviews', 'corrective_actions_created', 'corrective_actions_due'],
+      ...analytics.trends.map((row) => [row.period, row.incidents, row.exercises, row.operationalReviews, row.correctiveActionsCreated, row.correctiveActionsDue]),
+    ];
+    const bytes = Buffer.from('\uFEFF' + rows.map((row) => row.map((cell) => this.csvCell(cell)).join(',')).join('\r\n') + '\r\n', 'utf8');
+    const sha256 = createHash('sha256').update(bytes).digest('hex');
+    await this.prisma.$transaction(async (tx) => this.audit.record(tx, {
+      actorType: 'CLIENT_USER', actorClientUserId: actor.sub, action: 'CUSTOMER_NETWORK_ANALYTICS_EXPORTED',
+      targetType: 'CustomerPortfolioAnalytics', targetId: actor.organizationId, organizationId: actor.organizationId,
+      reason: 'Export analytique Network demande par un utilisateur autorise.',
+      afterData: this.json({ filters: analytics.filters, period: { from: analytics.period.from.toISOString(), to: analytics.period.to.toISOString() }, buildingCount: analytics.scope.buildingCount, sha256 }),
+    }));
+    return { filename: `coro-network-analytics-${analytics.generatedAt.toISOString().slice(0, 10)}.csv`, bytes, sha256 };
   }
 
   async supervision(

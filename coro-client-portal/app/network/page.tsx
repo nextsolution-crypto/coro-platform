@@ -95,7 +95,10 @@ export default function NetworkPage() {
               Actualisé {new Date(data.generatedAt).toLocaleString("fr-CA")}
             </time>
           )}
-          {data?.canManage && <Link href="/network/administration">Gérer les délégations</Link>}
+          {data?.canManage && (
+            <Link href="/network/administration">Gérer les délégations</Link>
+          )}
+          {data && <Link href="/network/analytics">Analyser les risques</Link>}
         </header>
 
         <section className={styles.stats} aria-label="Indicateurs consolidés">

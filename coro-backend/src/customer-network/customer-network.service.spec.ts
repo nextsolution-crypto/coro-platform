@@ -37,13 +37,23 @@ describe('CustomerNetworkService', () => {
         updateMany: jest.fn(),
         findUniqueOrThrow: jest.fn(),
       },
-      customerPortfolioBuildingMembership: { findMany: jest.fn(), findFirst: jest.fn() },
+      customerPortfolioBuildingMembership: {
+        findMany: jest.fn(),
+        findFirst: jest.fn(),
+      },
       customerPortfolioRegionLink: { findFirst: jest.fn() },
+      customerPortfolioRegion: { findMany: jest.fn() },
       customerPortfolio: {
         count: jest.fn(),
         findFirst: jest.fn(),
+        findMany: jest.fn(),
         create: jest.fn(),
       },
+      building: { findMany: jest.fn() },
+      incidentEvent: { findMany: jest.fn() },
+      exerciseReport: { findMany: jest.fn() },
+      operationalReview: { findMany: jest.fn() },
+      correctiveAction: { findMany: jest.fn() },
       organization: { findUnique: jest.fn() },
       user: { findUnique: jest.fn(), findFirst: jest.fn() },
       clientUser: { findFirst: jest.fn(), findUnique: jest.fn() },
@@ -278,6 +288,130 @@ describe('CustomerNetworkService', () => {
         organizationId,
       }),
     ).resolves.toEqual({ enabled: false });
+  });
+
+  it('aggregates longitudinal analytics only from the explicit Network scope', async () => {
+    const prisma = createPrisma();
+    const buildingId = '55555555-5555-4555-8555-555555555555';
+    const now = new Date('2026-10-22T12:00:00.000Z');
+    prisma.customerNetworkAuthorityConfiguration.findUnique.mockResolvedValue({
+      status: 'ACTIVE',
+    });
+    prisma.clientUser.findFirst.mockResolvedValue({ id: 'client-user' });
+    prisma.customerPortfolioAssignment.findMany.mockResolvedValue([
+      {
+        scope: 'BUILDING',
+        portfolioId: null,
+        regionId: null,
+        buildingId,
+      },
+    ]);
+    prisma.customerPortfolioBuildingMembership.findMany.mockResolvedValue([]);
+    prisma.customerPortfolio.findMany.mockResolvedValue([]);
+    prisma.customerPortfolioRegion.findMany.mockResolvedValue([]);
+    prisma.building.findMany.mockResolvedValue([
+      { id: buildingId, name: 'Tour A', updatedAt: now },
+    ]);
+    prisma.incidentEvent.findMany.mockResolvedValue([
+      {
+        id: 'incident',
+        buildingId,
+        status: 'RESOLVED',
+        isExercise: false,
+        triggeredAt: now,
+        updatedAt: now,
+      },
+    ]);
+    prisma.exerciseReport.findMany.mockResolvedValue([
+      {
+        id: 'report',
+        buildingId,
+        occurredAt: now,
+        publishedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]);
+    prisma.operationalReview.findMany.mockResolvedValue([]);
+    prisma.correctiveAction.findMany.mockResolvedValue([
+      {
+        id: 'action',
+        buildingId,
+        status: 'IN_PROGRESS',
+        dueDate: new Date('2026-10-01T00:00:00Z'),
+        createdAt: now,
+        updatedAt: now,
+        completedAt: null,
+        verifiedAt: null,
+        closedAt: null,
+      },
+    ]);
+
+    const result = await service(prisma).analytics(
+      { sub: 'client-user', organizationId },
+      { from: '2026-10-01T00:00:00.000Z', to: '2026-10-31T23:59:59.000Z' },
+    );
+
+    expect(result.scope.buildings).toEqual([
+      { id: buildingId, name: 'Tour A' },
+    ]);
+    expect(result.summary.incidents).toMatchObject({ total: 1, resolved: 1 });
+    expect(result.summary.exercises.published).toBe(1);
+    expect(result.summary.correctiveActions.open).toBe(1);
+    expect(result.trends).toEqual([
+      expect.objectContaining({
+        period: '2026-10',
+        incidents: 1,
+        exercises: 1,
+        correctiveActionsCreated: 1,
+      }),
+    ]);
+    expect(result.missingData).toContain('operationalReviews');
+
+    const exported = await service(prisma).exportAnalytics(
+      { sub: 'client-user', organizationId },
+      {
+        from: '2026-10-01T00:00:00.000Z',
+        to: '2026-10-31T23:59:59.000Z',
+      },
+    );
+    expect(exported.filename).toMatch(/^coro-network-analytics-/);
+    expect(exported.sha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(exported.bytes.toString('utf8')).toContain(
+      'period,incidents,exercises',
+    );
+    expect(audit.record).toHaveBeenCalledWith(
+      prisma,
+      expect.objectContaining({
+        actorType: 'CLIENT_USER',
+        action: 'CUSTOMER_NETWORK_ANALYTICS_EXPORTED',
+      }),
+    );
+  });
+
+  it('denies an analytical building filter outside the assigned scope', async () => {
+    const prisma = createPrisma();
+    prisma.customerNetworkAuthorityConfiguration.findUnique.mockResolvedValue({
+      status: 'ACTIVE',
+    });
+    prisma.clientUser.findFirst.mockResolvedValue({ id: 'client-user' });
+    prisma.customerPortfolioAssignment.findMany.mockResolvedValue([
+      {
+        scope: 'BUILDING',
+        portfolioId: null,
+        regionId: null,
+        buildingId: '55555555-5555-4555-8555-555555555555',
+      },
+    ]);
+    prisma.customerPortfolioBuildingMembership.findMany.mockResolvedValue([]);
+
+    await expect(
+      service(prisma).analytics(
+        { sub: 'client-user', organizationId },
+        { buildingId: '66666666-6666-4666-8666-666666666666' },
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.incidentEvent.findMany).not.toHaveBeenCalled();
   });
 
   it('creates an explicit read-only operator assignment under active independent authorities', async () => {

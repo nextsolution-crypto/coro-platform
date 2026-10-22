@@ -211,6 +211,15 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
     styling: ["css-module"],
   },
   {
+    pattern: "/network/analytics",
+    family: "portal",
+    shell: "none",
+    status: "beta",
+    render: "skin",
+    styling: ["css-module"],
+    validation: ["test:skin"],
+  },
+  {
     pattern: "/network/buildings/[id]",
     family: "portal",
     shell: "none",

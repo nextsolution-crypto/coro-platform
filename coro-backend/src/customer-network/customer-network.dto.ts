@@ -94,3 +94,11 @@ export class PortfolioQueryDto {
   @IsOptional() @IsUUID() portfolioId?: string;
   @IsOptional() @IsUUID() regionId?: string;
 }
+
+export class PortfolioAnalyticsQueryDto {
+  @IsOptional() @IsUUID() portfolioId?: string;
+  @IsOptional() @IsUUID() regionId?: string;
+  @IsOptional() @IsUUID() buildingId?: string;
+  @IsOptional() @IsDateString() from?: string;
+  @IsOptional() @IsDateString() to?: string;
+}
