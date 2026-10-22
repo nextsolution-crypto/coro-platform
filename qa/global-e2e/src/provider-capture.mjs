@@ -46,8 +46,9 @@ export async function startProviderCapture({ port = 34641, output }) {
   await new Promise((resolve, reject) =>
     server.listen(port, "127.0.0.1", resolve).once("error", reject),
   );
+  const assignedPort = server.address().port;
   return {
-    url: `http://127.0.0.1:${port}`,
+    url: `http://127.0.0.1:${assignedPort}`,
     close: () => new Promise((resolve) => server.close(resolve)),
   };
 }

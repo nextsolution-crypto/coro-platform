@@ -53,12 +53,14 @@ export function startPrivateStorage({
   });
   return new Promise((resolve, reject) =>
     server
-      .listen(port, "127.0.0.1", () =>
+      .listen(port, "127.0.0.1", () => {
+        const assignedPort = server.address().port;
         resolve({
-          url: `http://127.0.0.1:${port}`,
+          url: `http://127.0.0.1:${assignedPort}`,
           objects,
           close: () => new Promise((done) => server.close(done)),
-        }),
+        });
+      },
       )
       .once("error", reject),
   );

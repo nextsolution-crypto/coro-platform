@@ -48,6 +48,7 @@ Initialize the local store once, then run preflight before any long browser run:
 ```powershell
 node qa/global-e2e/src/identity-lab-cli.mjs init
 node qa/global-e2e/src/identity-lab-cli.mjs preflight
+node qa/global-e2e/src/identity-session-acceptance.mjs
 ```
 
 Use `identity:rotate` between campaigns when credentials must change and
@@ -57,6 +58,14 @@ captures. Evidence and the restricted secret store are preserved deliberately.
 The MFA adapter consumes the backend's restricted QA capture files, immediately
 deletes each consumed challenge, and exposes it only through an authenticated
 loopback channel. Production origins, credentials and ports remain rejected.
+The session acceptance stage proves one-time refresh-token rotation, replay
+denial, logout and post-logout refresh denial against the real QA backend.
+
+`identity-stack.ps1` is the reusable Windows/Docker bootstrap. It validates
+loopback ports, starts disposable PostgreSQL and local provider fakes, applies
+migrations, seeds the canonical identity catalogue, starts the real backend and
+portal on the internal network, and records a sanitized readiness manifest.
+`Stop` removes only its fixed, stack-prefixed containers and preserves evidence.
 
 When the backend is intentionally not published to the Windows host,
 `internal-runner.mjs` runs one of three allowlisted API scripts in the backend

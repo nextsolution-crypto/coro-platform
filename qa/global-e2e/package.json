@@ -17,6 +17,7 @@
     "identity:preflight": "node src/identity-lab-cli.mjs preflight",
     "identity:acceptance": "node src/identity-acceptance.mjs",
     "identity:negative": "node src/identity-negative-acceptance.mjs",
+    "identity:session": "node src/identity-session-acceptance.mjs",
     "identity:cleanup": "node src/identity-cleanup.mjs"
   }
 }

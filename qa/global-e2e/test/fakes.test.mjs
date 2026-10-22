@@ -8,7 +8,7 @@ import { startPrivateStorage } from "../src/private-storage.mjs";
 test("provider capture redacts secrets and injects deterministic failures", async () => {
   const dir = await mkdtemp("D:\\CORO-QA\\provider-test-");
   const output = join(dir, "events.ndjson");
-  const capture = await startProviderCapture({ port: 34651, output });
+  const capture = await startProviderCapture({ port: 0, output });
   try {
     let result = await fetch(`${capture.url}/email`, {
       method: "POST",
@@ -31,7 +31,7 @@ test("provider capture redacts secrets and injects deterministic failures", asyn
 });
 
 test("private storage requires authentication, tenant prefix and immutability", async () => {
-  const storage = await startPrivateStorage({ port: 34652 });
+  const storage = await startPrivateStorage({ port: 0 });
   try {
     let result = await fetch(`${storage.url}/bucket/tenant-a/a.pdf`);
     assert.equal(result.status, 403);
