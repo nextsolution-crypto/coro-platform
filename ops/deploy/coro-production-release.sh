@@ -164,6 +164,30 @@ for container in coro_backend coro_frontend coro_client_portal coro_website; do
   previous_images+="${immutable_ref}"$'\n'
 done
 [[ "$(printf '%s\n' "$previous_images" | sed '/^$/d' | wc -l)" -eq 4 ]] || fail ROLLBACK_METADATA_MISSING
+
+# Fail before backup, pulls, migration or rollout unless the host can stage a
+# backup, a conservatively expanded image set, database growth and an
+# operational reserve. This augments and never weakens the backup's own gate.
+set -a
+# shellcheck disable=SC1091
+source /etc/coro-backup/backup.env
+set +a
+backup_min_bytes="${CORO_BACKUP_MIN_FREE_BYTES:-5368709120}"
+backup_min_percent="${CORO_BACKUP_MIN_FREE_PERCENT:-10}"
+for value in "$backup_min_bytes" "$backup_min_percent"; do [[ "$value" =~ ^[0-9]+$ ]] || fail CAPACITY_POLICY_INVALID; done
+read -r capacity_total_kib capacity_free_kib < <(df -Pk -- "$BACKUP_DIR" | awk 'NR==2 {print $2,$4}')
+capacity_total=$((capacity_total_kib * 1024)); capacity_free=$((capacity_free_kib * 1024))
+backup_percent=$((capacity_total * backup_min_percent / 100)); backup_required="$backup_min_bytes"
+(( backup_percent > backup_required )) && backup_required="$backup_percent"
+active_image_bytes=0
+while read -r ref; do [[ -n "$ref" ]] || continue; size="$(docker image inspect --format '{{.Size}}' "$ref")" || fail CAPACITY_IMAGE_SIZE_UNAVAILABLE; active_image_bytes=$((active_image_bytes + size)); done <<<"$previous_images"
+image_stage_required=$((active_image_bytes * 125 / 100))
+database_bytes="$(docker compose exec -T postgres sh -ceu 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT pg_database_size(current_database())"')" || fail CAPACITY_DATABASE_SIZE_UNAVAILABLE
+[[ "$database_bytes" =~ ^[0-9]+$ ]] || fail CAPACITY_DATABASE_SIZE_INVALID
+database_growth=$((database_bytes / 5)); (( database_growth < 2147483648 )) && database_growth=2147483648
+operational_reserve=$((capacity_total / 10)); (( operational_reserve < 5368709120 )) && operational_reserve=5368709120
+release_capacity_required=$((backup_required + image_stage_required + database_growth + operational_reserve))
+(( capacity_free >= release_capacity_required )) || fail RELEASE_CAPACITY_INSUFFICIENT
 previous_compose="$RELEASE_DIR/${RELEASE_ID}.previous-compose.yml"
 [[ ! -e "$previous_compose" ]] || fail RELEASE_ARTIFACT_EXISTS
 install -m 0600 -T docker-compose.yml "$previous_compose"

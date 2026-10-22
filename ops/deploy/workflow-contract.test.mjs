@@ -4,7 +4,7 @@ import test from 'node:test';
 
 const workflow = fs.readFileSync(new URL('../../.github/workflows/deploy.yml', import.meta.url), 'utf8').replaceAll('\r\n', '\n');
 const release = fs.readFileSync(new URL('./coro-production-release.sh', import.meta.url), 'utf8');
-const control = fs.readFileSync(new URL('./coro-release-control.sh', import.meta.url), 'utf8');
+const control = fs.readFileSync(new URL('./coro-release-control.sh', import.meta.url), 'utf8').replaceAll('\r\n', '\n');
 const reconcile = fs.readFileSync(new URL('./coro-release-reconcile.sh', import.meta.url), 'utf8');
 
 test('push validates but cannot build or deploy', () => {
@@ -28,6 +28,13 @@ test('fails closed through backup, remote evidence and restore gates', () => {
   assert.match(release, /coro-db-backup-health\.service/);
   assert.match(release, /coro-db-backup\.service/);
   assert.match(release, /coro-db-restore-run\.sh/);
+});
+test('fails before backup when release capacity headroom is insufficient', () => {
+  assert.match(release, /RELEASE_CAPACITY_INSUFFICIENT/);
+  assert.match(release, /active_image_bytes \* 125/);
+  assert.match(release, /database_growth/);
+  assert.match(release, /operational_reserve/);
+  assert.ok(release.indexOf('RELEASE_CAPACITY_INSUFFICIENT') < release.indexOf('systemctl start coro-db-backup.service'));
 });
 test('migrates and verifies migration head before application rollout', () => {
   const migrate = release.indexOf('migrate deploy');

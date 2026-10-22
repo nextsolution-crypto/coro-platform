@@ -1,0 +1,60 @@
+name: Audit Production Capacity Read Only
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: |
+          bash -n ops/capacity/coro-capacity-audit.sh
+          node --test ops/capacity/*.test.mjs
+  audit:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Validate pinned host identity
+        env:
+          HOST_FINGERPRINT: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+        run: '[[ "$HOST_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]'
+      - name: Execute fixed read-only capacity audit
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            evidence="$(mktemp /tmp/coro-capacity-audit.XXXXXX.json)"
+            script="$(mktemp /tmp/coro-capacity-audit.XXXXXX.sh)"
+            policy="$(mktemp /tmp/capacity-policy.XXXXXX.mjs)"
+            trap 'rm -f -- "$evidence" "$script" "$policy"' EXIT
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
+            git -C "$repo" show "$SOURCE_SHA:ops/capacity/coro-capacity-audit.sh" >"$script"
+            git -C "$repo" show "$SOURCE_SHA:ops/capacity/capacity-policy.mjs" >"$policy"
+            bash -n "$script"
+            chmod 0700 "$script"
+            CORO_CAPACITY_POLICY_PATH="$policy" "$script" >"$evidence"
+            node -e 'const r=require(process.argv[1]);if(r.schemaVersion!==1||!Array.isArray(r.cleanupCandidates)||!r.gates)process.exit(1)' "$evidence"
+            cat "$evidence"
+      - name: Record evidence boundary
+        if: always()
+        run: echo 'The immutable GitHub job log contains the sanitized capacity report.'
