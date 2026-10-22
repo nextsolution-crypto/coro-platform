@@ -47,6 +47,12 @@ const [serviceResult,timerState,availableBytes,requiredBytes,inodeTotal,inodeAva
 console.log(JSON.stringify({schemaVersion:1,serviceResult,timerState,capacity:{availableBytes:Number(availableBytes),requiredBytes:Number(requiredBytes),largestDumpBytes:Number(largestDumpBytes)},inodes:{total:Number(inodeTotal),available:Number(inodeAvailable),freePercent:Number(inodeFreePercent)},lockBusy:lockBusy==='true',failureCode},null,2));
 NODE
 
+echo 'DOCKER_CAPACITY_BEGIN'
+docker system df --format '{{json .}}' || true
+echo 'DOCKER_CAPACITY_END'
+echo "JOURNAL_DISK_USAGE=$(journalctl --disk-usage 2>/dev/null | grep -Eo '[0-9.]+[KMGT]?' | tail -n 1 || true)"
+echo "APT_CACHE_BYTES=$(du -sb /var/cache/apt/archives 2>/dev/null | awk '{print $1}' || echo 0)"
+
 journalctl -u coro-db-backup.service -n 30 --no-pager -o cat \
   | grep -Eo 'ERROR_CODE=[A-Z0-9_]+|BACKUP_[A-Z0-9_]+|LOCAL_BACKUP_FAILED|REMOTE_[A-Z0-9_]+' \
   | sort -u || true

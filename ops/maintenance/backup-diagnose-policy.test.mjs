@@ -9,6 +9,8 @@ test('backup diagnosis is read-only and redacts configuration', () => {
   assert.match(source, /df -Pi/);
   assert.match(source, /systemctl show/);
   assert.match(source, /journalctl/);
+  assert.match(source, /docker system df/);
+  assert.match(source, /APT_CACHE_BYTES/);
   assert.doesNotMatch(source, /systemctl start|systemctl restart|docker prune|rm -/);
   assert.doesNotMatch(source, /^\s*(cat .*backup\.env|printenv|env)\s*$/m);
 });
