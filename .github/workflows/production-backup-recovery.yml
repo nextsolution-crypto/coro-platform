@@ -1,0 +1,58 @@
+name: Governed Production Backup Checkpoint Recovery
+
+on:
+  workflow_dispatch:
+    inputs:
+      recovery_approval:
+        description: Type RECOVER_BACKUP_CHECKPOINT
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - env:
+          BACKUP_RECOVERY_APPROVAL: ${{ inputs.recovery_approval }}
+        run: |
+          [[ "$BACKUP_RECOVERY_APPROVAL" == RECOVER_BACKUP_CHECKPOINT ]]
+          bash -n ops/maintenance/coro-backup-checkpoint-recovery.sh
+          node --test ops/maintenance/backup-checkpoint-recovery.test.mjs
+
+  recover:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    steps:
+      - name: Execute governed backup recovery
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          BACKUP_RECOVERY_APPROVAL: ${{ inputs.recovery_approval }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          command_timeout: 30m
+          envs: SOURCE_SHA,BACKUP_RECOVERY_APPROVAL
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
+            script="$(mktemp /tmp/coro-backup-recovery.XXXXXX.sh)"
+            trap 'rm -f -- "$script"' EXIT
+            git -C "$repo" show "$SOURCE_SHA:ops/maintenance/coro-backup-checkpoint-recovery.sh" >"$script"
+            bash -n "$script"
+            chmod 0700 "$script"
+            "$script"
