@@ -10,6 +10,9 @@ test('recovery preserves governed safety gates', () => {
   assert.match(source, /flock --nonblock/);
   assert.match(source, /docker image prune --force/);
   assert.doesNotMatch(source, /image prune .*--all|system prune|volume prune|rm -rf/);
+  assert.match(source, /previousImages/);
+  assert.match(source, /protected_ids/);
+  assert.match(source, /docker image rm --force/);
 });
 
 test('recovery requires remote verification and restore readiness', () => {

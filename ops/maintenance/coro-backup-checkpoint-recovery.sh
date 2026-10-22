@@ -19,6 +19,29 @@ before=$(( $(df -Pk -- "$backup_dir" | awk 'NR==2 {print $4}') * 1024 ))
 # Remove dangling layers only. Tagged current, rollback and historical images remain.
 docker image prune --force >/dev/null
 after=$(( $(df -Pk -- "$backup_dir" | awk 'NR==2 {print $4}') * 1024 ))
+
+if (( after < min_bytes )); then
+  current_commit="$(git -C /opt/coro-platform rev-parse HEAD)"
+  release_manifest="/opt/coro-ops/releases/production-${current_commit}.json"
+  [[ -f "$release_manifest" && ! -L "$release_manifest" ]] || { echo 'BACKUP_RECOVERY_FAILED code=ACTIVE_MANIFEST_MISSING'; exit 1; }
+  mapfile -t protected_refs < <(node -e 'const m=require(process.argv[1]);for(const r of [...Object.values(m.images||{}),...(m.previousImages||[])])if(typeof r==="string")console.log(r)' "$release_manifest")
+  declare -A protected_ids=()
+  while IFS= read -r id; do [[ -n "$id" ]] && protected_ids["$id"]=1; done < <(docker ps -aq | xargs -r docker inspect --format '{{.Image}}')
+  for ref in "${protected_refs[@]}"; do
+    id="$(docker image inspect --format '{{.Id}}' "$ref" 2>/dev/null || true)"
+    [[ -n "$id" ]] && protected_ids["$id"]=1
+  done
+  mapfile -t all_ids < <(docker image ls -q --no-trunc | sort -u)
+  removed=0
+  for id in "${all_ids[@]}"; do
+    [[ -z "${protected_ids[$id]:-}" ]] || continue
+    docker image rm --force "$id" >/dev/null 2>&1 || continue
+    removed=$((removed + 1))
+    after=$(( $(df -Pk -- "$backup_dir" | awk 'NR==2 {print $4}') * 1024 ))
+    (( after >= min_bytes )) && break
+  done
+  echo "BACKUP_RECOVERY_LOCAL_IMAGE_CACHE removed=$removed"
+fi
 (( after >= min_bytes )) || { echo "BACKUP_RECOVERY_FAILED code=SAFE_RECLAIM_INSUFFICIENT beforeBytes=$before afterBytes=$after requiredBytes=$min_bytes"; exit 1; }
 
 systemctl reset-failed coro-db-backup.service
