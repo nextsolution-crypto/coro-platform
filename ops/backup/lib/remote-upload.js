@@ -59,6 +59,7 @@ function updateState(success, errorCode, values = {}) {
     lastSuccessAt: now,
     lastBackupId: values.backupId,
     lastRemoteObject: values.remoteObject,
+    lastRemoteVersionId: values.remoteVersionId,
     lastSizeBytes: values.sizeBytes,
     lastSha256: values.sha256,
     consecutiveFailures: 0,
@@ -69,6 +70,7 @@ function updateState(success, errorCode, values = {}) {
     lastSuccessAt: previous.lastSuccessAt || null,
     lastBackupId: previous.lastBackupId || currentBackupId,
     lastRemoteObject: previous.lastRemoteObject || null,
+    lastRemoteVersionId: previous.lastRemoteVersionId || null,
     lastSizeBytes: previous.lastSizeBytes || null,
     lastSha256: previous.lastSha256 || null,
     consecutiveFailures: Number(previous.consecutiveFailures || 0) + 1,
@@ -123,6 +125,12 @@ function metadataValue(head, key) {
   return metadata[key] || metadata[key.toLowerCase()] || null;
 }
 
+function requiredVersionId(head, code) {
+  const versionId = head.VersionId || head.versionId || null;
+  assert(typeof versionId === 'string' && versionId.length > 0 && versionId !== 'null', code, 'Remote object VersionId is required');
+  return versionId;
+}
+
 async function main() {
   assert(manifestPath && path.isAbsolute(manifestPath), 'REMOTE_PRECHECK_FAILED', 'Manifest path must be absolute');
   assert(endpoint.startsWith('https://') && !/[?#]/.test(endpoint), 'REMOTE_PRECHECK_FAILED', 'Spaces endpoint must be a plain HTTPS endpoint');
@@ -171,6 +179,7 @@ async function main() {
   aws(['put-object', '--bucket', bucket, '--key', dumpKey, '--body', dumpPath, '--acl', 'private', '--metadata', `sha256=${local.sha256},backup-id=${local.backupId}`, '--output', 'json'], 'REMOTE_UPLOAD_FAILED');
   const dumpHeadResult = aws(['head-object', '--bucket', bucket, '--key', dumpKey, '--output', 'json'], 'REMOTE_OBJECT_MISSING');
   const dumpHead = JSON.parse(dumpHeadResult.stdout);
+  const dumpVersionId = requiredVersionId(dumpHead, 'REMOTE_VERSION_ID_MISSING');
   assert(Number(dumpHead.ContentLength) === local.sizeBytes, 'REMOTE_SIZE_MISMATCH', 'Remote dump size mismatch');
   assert(metadataValue(dumpHead, 'sha256') === local.sha256 && metadataValue(dumpHead, 'backup-id') === local.backupId, 'REMOTE_CHECKSUM_MISMATCH', 'Remote dump metadata mismatch');
   aws(['get-object', '--bucket', bucket, '--key', dumpKey, verifyDumpPath, '--output', 'json'], 'REMOTE_VERIFICATION_FAILED');
@@ -184,7 +193,9 @@ async function main() {
     remoteVerifiedAt: new Date().toISOString(),
     remoteBucket: bucket,
     remoteObjectKey: dumpKey,
+    remoteVersionId: dumpVersionId,
     remoteManifestKey: manifestKey,
+    remoteRetentionStatus: 'VERSIONED_NO_WORM_GUARANTEE',
   };
   atomicJson(pendingRemoteManifestPath, remoteManifest);
   const remoteManifestSha = await sha256File(pendingRemoteManifestPath);
@@ -200,7 +211,7 @@ async function main() {
   fs.renameSync(pendingRemoteManifestPath, remoteManifestPath);
   fs.chmodSync(remoteManifestPath, 0o600);
 
-  updateState(true, null, { backupId: local.backupId, remoteObject: dumpKey, sizeBytes: local.sizeBytes, sha256: local.sha256 });
+  updateState(true, null, { backupId: local.backupId, remoteObject: dumpKey, remoteVersionId: dumpVersionId, sizeBytes: local.sizeBytes, sha256: local.sha256 });
   process.stdout.write(`backupId=${local.backupId}\nstatus=REMOTE_VERIFIED\nremoteObject=${dumpKey}\nsizeBytes=${local.sizeBytes}\nsha256=${local.sha256}\n`);
 }
 

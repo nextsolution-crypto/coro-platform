@@ -145,7 +145,9 @@ Configuration is split between `/etc/coro-backup/backup.env` (operational values
 
 The backup timer runs every six hours with `Persistent=true`. Health runs every fifteen minutes. `coro-db-backup-health.sh` exits `0` for HEALTHY, `1` for WARNING and `2` for CRITICAL. Backup thresholds are 7/8 hours and two consecutive failures. Restore thresholds are 35/45 days; existing valid `RESTORE_VERIFIED` reports are discovered read-only.
 
-The monthly restore service requires an explicitly installed `restore.env` containing an exact REMOTE_VERIFIED manifest and VersionId. Because current remote manifests do not persist VersionId, its timer must remain disabled until that deterministic selection is configured and reviewed. No backup or restore timer is enabled by `install.sh` unless `--enable` is explicit; even that flag enables only backup and health timers.
+The monthly restore service requires an explicitly installed `restore.env` containing an exact REMOTE_VERIFIED manifest and VersionId. Remote manifests persist the verified dump `VersionId` and record `VERSIONED_NO_WORM_GUARANTEE`. `coro-db-select-restore-point.sh <exact-backup-id>` validates the exact local/remote evidence pair, timestamp, source database, migration head, checksum, size, remote object and version before producing a sanitized selection record. It never selects a latest object. The monthly timer must remain disabled until an operator has installed a reviewed exact selection in `restore.env`; automatic latest-object selection is prohibited. No backup or restore timer is enabled by `install.sh` unless `--enable` is explicit; even that flag enables only backup and health timers.
+
+The internal recovery objectives and governed drill evidence contract are recorded in `RECOVERY-GOVERNANCE.md`.
 
 Installation preview:
 

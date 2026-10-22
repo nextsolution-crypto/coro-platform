@@ -53,7 +53,11 @@ case "$operation" in
     size="$(stat -c '%s' "$object")"
     [[ "$scenario" == 'size-mismatch' && "$key" == *.dump ]] && size=$((size + 1))
     IFS='|' read -r sha backup_id <"$metadata_file"
-    printf '{"ContentLength":%s,"Metadata":{"sha256":"%s","backup-id":"%s"}}\n' "$size" "$sha" "$backup_id"
+    if [[ "$scenario" == 'missing-version' && "$key" == *.dump ]]; then
+      printf '{"ContentLength":%s,"Metadata":{"sha256":"%s","backup-id":"%s"}}\n' "$size" "$sha" "$backup_id"
+    else
+      printf '{"ContentLength":%s,"VersionId":"version-%s","Metadata":{"sha256":"%s","backup-id":"%s"}}\n' "$size" "$backup_id" "$sha" "$backup_id"
+    fi
     ;;
   put-object)
     body="$(value_after --body)"
@@ -127,10 +131,10 @@ run_case() {
 
 run_case success success success
 success_root="${TEST_ROOT}/success/backup"
-if node -e "const m=require(process.argv[1]);if(m.status!=='REMOTE_VERIFIED'||m.remoteVerification!=='PASSED')process.exit(1)" "${success_root}/test-20261002T180000Z-abcdef123456.remote.manifest.json"; then pass remote-manifest; else fail remote-manifest invalid; fi
-if node -e "const s=require(process.argv[1]);if(s.consecutiveFailures!==0||!s.lastRemoteObject)process.exit(1)" "${success_root}/state.json"; then pass success-state; else fail success-state invalid; fi
+if node -e "const m=require(process.argv[1]);if(m.status!=='REMOTE_VERIFIED'||m.remoteVerification!=='PASSED'||m.remoteVersionId!=='version-test-20261002T180000Z-abcdef123456'||m.remoteRetentionStatus!=='VERSIONED_NO_WORM_GUARANTEE')process.exit(1)" "${success_root}/test-20261002T180000Z-abcdef123456.remote.manifest.json"; then pass remote-manifest; else fail remote-manifest invalid; fi
+if node -e "const s=require(process.argv[1]);if(s.consecutiveFailures!==0||!s.lastRemoteObject||s.lastRemoteVersionId!=='version-test-20261002T180000Z-abcdef123456')process.exit(1)" "${success_root}/state.json"; then pass success-state; else fail success-state invalid; fi
 
-for scenario in network timeout http400 http401 http403 missing-after-upload http429 http500 http503 partial-upload size-mismatch checksum-mismatch manifest-upload-failure verification-failure; do
+for scenario in network timeout http400 http401 http403 missing-after-upload missing-version http429 http500 http503 partial-upload size-mismatch checksum-mismatch manifest-upload-failure verification-failure; do
   run_case "$scenario" "$scenario" failure
 done
 
