@@ -1,0 +1,92 @@
+name: Governed Production Single-Service Maintenance
+
+on:
+  workflow_dispatch:
+    inputs:
+      maintenance_approval:
+        description: Type RECONCILE_SINGLE_SERVICE
+        required: true
+      release_commit:
+        description: Exact active release SHA
+        required: true
+      service:
+        description: Authorized service
+        required: true
+        type: choice
+        options: [backend]
+      image:
+        description: Exact immutable GHCR image reference
+        required: true
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate request and tests
+        env:
+          MAINTENANCE_APPROVAL: ${{ inputs.maintenance_approval }}
+          RELEASE_COMMIT: ${{ inputs.release_commit }}
+          SERVICE: ${{ inputs.service }}
+          TARGET_IMAGE: ${{ inputs.image }}
+        run: |
+          node --input-type=module -e "import {validateSingleServiceRequest} from './ops/maintenance/single-service-policy.mjs'; validateSingleServiceRequest({approval:process.env.MAINTENANCE_APPROVAL,releaseCommit:process.env.RELEASE_COMMIT,service:process.env.SERVICE,image:process.env.TARGET_IMAGE})"
+          node --test ops/maintenance/single-service-policy.test.mjs
+          bash -n ops/maintenance/coro-single-service-maintenance.sh
+      - name: Verify exact package manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_IMAGE: ${{ inputs.image }}
+        run: |
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u '${{ github.actor }}' --password-stdin >/dev/null
+          docker buildx imagetools inspect "$TARGET_IMAGE" >/dev/null
+
+  reconcile:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    steps:
+      - name: Validate pinned host identity
+        env:
+          HOST_FINGERPRINT: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+        run: |
+          [[ "$HOST_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]
+      - name: Execute governed backend-only reconciliation
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          MAINTENANCE_APPROVAL: ${{ inputs.maintenance_approval }}
+          RELEASE_COMMIT: ${{ inputs.release_commit }}
+          SERVICE: ${{ inputs.service }}
+          TARGET_IMAGE: ${{ inputs.image }}
+          MAINTENANCE_RUN_ID: ${{ github.run_id }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          command_timeout: 15m
+          envs: SOURCE_SHA,MAINTENANCE_APPROVAL,RELEASE_COMMIT,SERVICE,TARGET_IMAGE,MAINTENANCE_RUN_ID
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
+            script="$(mktemp /tmp/coro-single-service.XXXXXX.sh)"
+            trap 'rm -f -- "$script"' EXIT
+            git -C "$repo" show "$SOURCE_SHA:ops/maintenance/coro-single-service-maintenance.sh" >"$script"
+            bash -n "$script"
+            chmod 0700 "$script"
+            "$script"

@@ -209,7 +209,11 @@ Ne pas utiliser Prémont.
 
 1. Remettre `POPULATION_SMS_PRODUCTION_VALIDATED=false` dans la configuration
    protégée.
-2. Exécuter `docker compose up -d --force-recreate backend`.
+2. Utiliser exclusivement le workflow gouverné de maintenance single-service avec
+   l'image backend immuable (`@sha256`) du manifeste de release actif. Le workflow
+   partage le verrou de déploiement, vérifie et compare la configuration SMS
+   assainie ainsi que les preuves avant/après. Une commande directe
+   `docker compose ... --force-recreate backend` est interdite en production.
 3. Vérifier `population.sms=NOT_VALIDATED` et le blocage des voies ordinaires.
 4. Examiner toute requête déjà acceptée côté fournisseur.
 5. Conserver les preuves et la suppression STOP légitime.
