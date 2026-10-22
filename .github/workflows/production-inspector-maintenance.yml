@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  AUTHORIZED_SOURCE_SHA: bcc91b861f4d62a62b4106f52d65e21c9d379abd
+  AUTHORIZED_SOURCE_SHA: d8e2e87a3ab605eb802bfcc4ba2efd2eca794720
 
 jobs:
   validate-maintenance:
