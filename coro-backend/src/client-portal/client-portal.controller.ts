@@ -38,6 +38,7 @@ import {
 import { CorrectiveActionsService } from '../occupancy/corrective-actions.service';
 import {
   CreateCorrectiveActionDto,
+  MaterializeExerciseActionDto,
   UpdateCorrectiveActionDto,
 } from '../occupancy/dto/corrective-action.dto';
 import { CorrectiveActionActor } from '../occupancy/corrective-actions.service';
@@ -1359,6 +1360,31 @@ export class ClientPortalController {
     @Request() req: CorrectiveActionRequest,
   ) {
     return this.correctiveActionsService.create(body, req.clientUser);
+  }
+
+  @Post('exercise-action-items/:id/corrective-action')
+  materializeExerciseAction(
+    @Param('id') id: string,
+    @Body() body: MaterializeExerciseActionDto,
+    @Request() req: CorrectiveActionRequest,
+  ) {
+    return this.correctiveActionsService.materializeExerciseAction(id, body, req.clientUser);
+  }
+
+  @Get('exercise-action-items/:id')
+  getExerciseActionMaterialization(
+    @Param('id') id: string,
+    @Request() req: CorrectiveActionRequest,
+  ) {
+    return this.correctiveActionsService.getExerciseActionMaterialization(id, req.clientUser);
+  }
+
+  @Get('exercise-action-items/:id/corrective-action')
+  getExerciseCorrectiveAction(
+    @Param('id') id: string,
+    @Request() req: CorrectiveActionRequest,
+  ) {
+    return this.correctiveActionsService.getForExerciseAction(id, req.clientUser);
   }
 
   @Put('corrective-actions/:id')

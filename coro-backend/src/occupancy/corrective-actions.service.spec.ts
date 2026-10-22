@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
@@ -42,6 +43,7 @@ function harness() {
     clientUser: { findFirst: jest.fn() },
     user: { findFirst: jest.fn() },
     reviewRecommendation: { findFirst: jest.fn() },
+    exerciseActionItem: { findFirst: jest.fn() },
     $executeRaw: jest.fn(),
     $queryRaw: jest.fn(),
     $transaction: jest.fn((callback: any) => callback(prisma)),
@@ -307,6 +309,98 @@ describe('CorrectiveActionsService D1 workflow', () => {
     expect(h.prisma.correctiveAction.create).not.toHaveBeenCalled();
     h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', status: 'PLANNED' });
     await expect(h.service.createFromRecommendation('review-a', 'rec-a', dto, actor)).resolves.toMatchObject({ id: 'action-a' });
+  });
+
+  it('materialise explicitement un item publie avec sa provenance canonique', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: ['CORRECTIVE_ACTION_CREATE'] });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue(null);
+    h.prisma.exerciseActionItem.findFirst.mockResolvedValue({
+      id: 'item-a', title: 'Corriger le plan', description: 'Mettre a jour le plan', assignedTo: null,
+      dueDate: new Date('2026-11-01T00:00:00.000Z'), priority: 'CRITICAL', findingId: 'finding-a',
+      recommendationId: 'recommendation-a', source: 'MANUAL', sourceRef: 'section-4',
+      validatedAt: new Date('2026-10-20T00:00:00.000Z'),
+      report: { id: 'report-a', organizationId: 'org-a', buildingId: 'building-a', status: 'PUBLISHED',
+        publishedAt: new Date('2026-10-21T00:00:00.000Z'),
+        versions: [{ id: 'version-a', versionNumber: 2, createdAt: new Date('2026-10-21T00:00:00.000Z') }] },
+    });
+
+    await expect(h.service.materializeExerciseAction('item-a', { justification: 'Suivi requis' }, actor))
+      .resolves.toMatchObject({ id: 'action-a' });
+    expect(h.prisma.correctiveAction.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      organizationId: 'org-a', buildingId: 'building-a', exerciseReportId: 'report-a',
+      sourceFindingId: 'finding-a', sourceRecommendationId: 'recommendation-a', exerciseActionItemId: 'item-a',
+      category: 'EXERCISES', title: 'Corriger le plan', priority: 'CRITICAL', status: 'PLANNED',
+      createdByType: 'CLIENT_USER', createdById: 'user-a',
+    }) });
+    expect(h.prisma.correctiveActionAuditEvent.createMany).toHaveBeenCalledWith({ data: expect.arrayContaining([
+      expect.objectContaining({ eventType: 'SOURCE_LINKED', metadata: expect.objectContaining({
+        exerciseReportId: 'report-a', exerciseReportVersionId: 'version-a', exerciseActionItemId: 'item-a',
+        sourceFindingId: 'finding-a', sourceRecommendationId: 'recommendation-a', justification: 'Suivi requis',
+      }) }),
+    ]) });
+  });
+
+  it('rend la materialisation idempotente sous verrou', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: ['CORRECTIVE_ACTION_CREATE'] });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'existing-a', exerciseActionItemId: 'item-a' });
+    await expect(h.service.materializeExerciseAction('item-a', { justification: 'Reprise sure' }, actor))
+      .resolves.toMatchObject({ id: 'existing-a' });
+    expect(h.prisma.$executeRaw).toHaveBeenCalledTimes(1);
+    expect(h.prisma.exerciseActionItem.findFirst).not.toHaveBeenCalled();
+    expect(h.prisma.correctiveAction.create).not.toHaveBeenCalled();
+  });
+
+  it('refuse une source non publiee et une source hors tenant sans fuite', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: ['CORRECTIVE_ACTION_CREATE'] });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue(null);
+    h.prisma.exerciseActionItem.findFirst.mockResolvedValueOnce({
+      id: 'item-a', report: { id: 'report-a', buildingId: 'building-a', status: 'APPROVED', versions: [] },
+    }).mockResolvedValueOnce(null);
+    await expect(h.service.materializeExerciseAction('item-a', { justification: 'Trop tot' }, actor))
+      .rejects.toBeInstanceOf(ConflictException);
+    await expect(h.service.materializeExerciseAction('item-b', { justification: 'Hors tenant' }, actor))
+      .rejects.toBeInstanceOf(NotFoundException);
+    expect(h.prisma.correctiveAction.create).not.toHaveBeenCalled();
+  });
+
+  it('exige une permission explicite et une justification', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: [] });
+    await expect(h.service.materializeExerciseAction('item-a', { justification: 'Refuse' }, actor))
+      .rejects.toBeInstanceOf(ForbiddenException);
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: ['CORRECTIVE_ACTION_CREATE'] });
+    await expect(h.service.materializeExerciseAction('item-a', { justification: '   ' }, actor))
+      .rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('echoue integralement lorsque l audit transactionnel echoue', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: ['CORRECTIVE_ACTION_CREATE'] });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue(null);
+    h.prisma.exerciseActionItem.findFirst.mockResolvedValue({
+      id: 'item-a', title: 'Action', description: null, assignedTo: null, dueDate: null,
+      priority: 'WARNING', findingId: null, recommendationId: null, source: 'MANUAL',
+      sourceRef: null, validatedAt: null,
+      report: { id: 'report-a', buildingId: 'building-a', status: 'PUBLISHED', publishedAt: new Date(),
+        versions: [{ id: 'version-a', versionNumber: 1, createdAt: new Date() }] },
+    });
+    h.prisma.correctiveActionAuditEvent.createMany.mockRejectedValue(new Error('audit unavailable'));
+    await expect(h.service.materializeExerciseAction('item-a', { justification: 'Audit atomique' }, actor))
+      .rejects.toThrow('audit unavailable');
+  });
+
+  it('presente l eligibilite sans inventer une permission de materialisation', async () => {
+    const h = harness();
+    h.prisma.exerciseActionItem.findFirst.mockResolvedValue({
+      id: 'item-a', title: 'Action', description: null, assignedTo: null, dueDate: null,
+      priority: 'WARNING', findingId: null, recommendationId: null,
+      report: { id: 'report-a', buildingId: 'building-a', status: 'PUBLISHED', publishedAt: new Date(), versions: [{ id: 'version-a', versionNumber: 1 }] },
+    });
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: [] });
+    await expect(h.service.getExerciseActionMaterialization('item-a', actor)).resolves.toMatchObject({ eligible: true, canMaterialize: false });
   });
 
   it('resout le snapshot d un responsable CLIENT_USER cote serveur', async () => {

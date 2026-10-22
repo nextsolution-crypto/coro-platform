@@ -43,7 +43,7 @@ test("le registre couvre exactement les pages de app/ (rien en trop, rien d’ou
   const b = new Set(ROUTE_REGISTRY.map((e) => e.pattern));
   assert.equal(
     a.size,
-    40,
+    41,
     "nombre de routes du portail : mettre à jour l’inventaire si une page est ajoutée",
   );
   assert.deepEqual(

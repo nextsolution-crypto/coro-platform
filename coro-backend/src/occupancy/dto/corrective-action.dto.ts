@@ -46,6 +46,19 @@ export class CreateCorrectiveActionDto {
   @IsOptional() @IsDateString() dueDate?: string;
 }
 
+export class MaterializeExerciseActionDto {
+  @IsString() @MaxLength(2000) justification!: string;
+  @IsOptional() @IsString() @MaxLength(500) title?: string;
+  @IsOptional() @IsString() @MaxLength(10000) description?: string;
+  @IsOptional() @IsIn(CORRECTIVE_ACTION_PRIORITIES) priority?: string;
+  @IsOptional() @IsString() @MaxLength(300) assignedTo?: string;
+  @IsOptional() @IsIn(Object.values(CorrectiveActionAssigneeType)) assigneeType?: CorrectiveActionAssigneeType;
+  @IsOptional() @IsUUID() assigneeId?: string;
+  @IsOptional() @IsString() @MaxLength(300) externalAssigneeDisplayName?: string;
+  @IsOptional() @IsIn(Object.values(OperationalReviewConfidentiality)) visibility?: OperationalReviewConfidentiality;
+  @IsOptional() @IsDateString() dueDate?: string;
+}
+
 export class UpdateCorrectiveActionDto {
   @IsOptional() @IsString() @MaxLength(500) title?: string;
   @IsOptional() @IsString() @MaxLength(10000) description?: string;

@@ -299,6 +299,16 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
     validation: ["test:skin", "test:sentinelle-auth"],
   },
   {
+    pattern: "/sentinelle/[buildingId]/exercise-actions/[actionItemId]",
+    family: "sentinelle",
+    shell: "none",
+    status: "beta",
+    render: "skin",
+    styling: ["css-module"],
+    sensitivity: ["emergency-content"],
+    validation: ["test:skin", "test:sentinelle-auth"],
+  },
+  {
     pattern: "/sentinelle/[buildingId]/employes",
     family: "sentinelle",
     shell: "none",

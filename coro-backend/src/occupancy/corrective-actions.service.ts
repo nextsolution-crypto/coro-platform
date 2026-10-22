@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CoroActorType, CorrectiveActionAssigneeType, CorrectiveActionPermission, OperationalReviewConfidentiality, OperationalReviewPermission, Prisma } from '@prisma/client';
 import {
   CreateCorrectiveActionDto,
+  MaterializeExerciseActionDto,
   UpdateCorrectiveActionDto,
 } from './dto/corrective-action.dto';
 import { CloseCorrectiveActionDto, CompleteCorrectiveActionDto, VerifyCorrectiveActionDto } from './dto/corrective-action-evidence.dto';
@@ -75,10 +76,12 @@ export class CorrectiveActionsService {
     const { id, reference, buildingId, category, title, description, status, priority,
       assignedTo, assigneeDisplayNameSnapshot, dueDate, visibility, completedAt,
       completionComment, completedByType, completedById, assigneeType, assigneeId,
-      verifiedAt, closedAt, closureComment, createdAt, updatedAt } = action;
+      verifiedAt, closedAt, closureComment, exerciseReportId, sourceFindingId,
+      sourceRecommendationId, exerciseActionItemId, createdAt, updatedAt } = action;
     return { id, reference, buildingId, category, title, description, status, priority,
       assignedTo, assigneeDisplayNameSnapshot, dueDate, visibility, completedAt,
-      completionComment, verifiedAt, closedAt, closureComment, createdAt, updatedAt,
+      completionComment, verifiedAt, closedAt, closureComment, exerciseReportId,
+      sourceFindingId, sourceRecommendationId, exerciseActionItemId, createdAt, updatedAt,
       verificationBlockedForCurrentUser: Boolean(actor.sub && (
         (completedByType === 'CLIENT_USER' && completedById === actor.sub) ||
         (assigneeType === 'CLIENT_USER' && assigneeId === actor.sub)
@@ -197,6 +200,157 @@ export class CorrectiveActionsService {
       ] });
       return this.safeAction(action, actor);
     });
+  }
+
+  async materializeExerciseAction(exerciseActionItemId: string, body: MaterializeExerciseActionDto, actor: CorrectiveActionActor) {
+    await this.requireExplicitPermission(actor, CorrectiveActionPermission.CORRECTIVE_ACTION_CREATE);
+    const justification = body.justification?.trim();
+    if (!justification) throw new BadRequestException('Justification requise');
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'exercise-action-materialization:' + exerciseActionItemId}))`;
+      const replay = await tx.correctiveAction.findFirst({
+        where: { exerciseActionItemId, organizationId: actor.organizationId },
+      });
+      if (replay) return this.safeAction(replay, actor);
+
+      const source = await tx.exerciseActionItem.findFirst({
+        where: {
+          id: exerciseActionItemId,
+          report: {
+            is: {
+              organizationId: actor.organizationId,
+              ...(this.isClientActor(actor) ? { building: { is: this.clientScope(actor) } } : {}),
+            },
+          },
+        },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          assignedTo: true,
+          dueDate: true,
+          priority: true,
+          findingId: true,
+          recommendationId: true,
+          source: true,
+          sourceRef: true,
+          validatedAt: true,
+          report: {
+            select: {
+              id: true,
+              organizationId: true,
+              buildingId: true,
+              status: true,
+              publishedAt: true,
+              versions: {
+                where: { publishedById: { not: null } },
+                orderBy: { versionNumber: 'desc' },
+                take: 1,
+                select: { id: true, versionNumber: true, createdAt: true },
+              },
+            },
+          },
+        },
+      });
+      if (!source) throw new NotFoundException('Action d exercice introuvable');
+      this.assertBuildingAccess(actor, source.report.buildingId);
+      const publishedVersion = source.report.versions[0];
+      if (source.report.status !== 'PUBLISHED' || !publishedVersion) {
+        throw new ConflictException('Le rapport d exercice doit etre publie');
+      }
+
+      const assignee = await this.resolveAssignee(body, actor);
+      const inheritedPriority = source.priority && ['CRITICAL', 'WARNING', 'INFO'].includes(source.priority)
+        ? source.priority
+        : 'WARNING';
+      const action = await tx.correctiveAction.create({ data: {
+        organizationId: actor.organizationId,
+        buildingId: source.report.buildingId,
+        exerciseReportId: source.report.id,
+        sourceFindingId: source.findingId,
+        sourceRecommendationId: source.recommendationId,
+        exerciseActionItemId: source.id,
+        category: 'EXERCISES',
+        title: body.title?.trim() || source.title,
+        description: body.description?.trim() || source.description,
+        status: 'PLANNED',
+        priority: body.priority || inheritedPriority,
+        assignedTo: body.assignedTo || source.assignedTo,
+        ...assignee,
+        visibility: body.visibility || OperationalReviewConfidentiality.BUILDING_TEAM,
+        dueDate: body.dueDate ? new Date(body.dueDate) : source.dueDate,
+        createdByType: CoroActorType.CLIENT_USER,
+        createdById: actor.sub!,
+      } });
+      await tx.correctiveActionAuditEvent.createMany({ data: [
+        { organizationId: actor.organizationId, correctiveActionId: action.id, eventType: 'CREATED', actorType: CoroActorType.CLIENT_USER, actorId: actor.sub!, metadata: { status: 'PLANNED', category: 'EXERCISES', justification } },
+        { organizationId: actor.organizationId, correctiveActionId: action.id, eventType: 'SOURCE_LINKED', actorType: CoroActorType.CLIENT_USER, actorId: actor.sub!, metadata: {
+          exerciseReportId: source.report.id,
+          exerciseReportVersionId: publishedVersion.id,
+          exerciseReportVersionNumber: publishedVersion.versionNumber,
+          exerciseActionItemId: source.id,
+          sourceFindingId: source.findingId,
+          sourceRecommendationId: source.recommendationId,
+          sourceTitle: source.title,
+          sourceDescription: source.description,
+          sourceDueDate: source.dueDate?.toISOString() || null,
+          sourcePriority: source.priority,
+          source: source.source,
+          sourceRef: source.sourceRef,
+          sourceValidatedAt: source.validatedAt?.toISOString() || null,
+          reportPublishedAt: source.report.publishedAt?.toISOString() || null,
+          justification,
+        } },
+      ] });
+      return this.safeAction(action, actor);
+    });
+  }
+
+  async getForExerciseAction(exerciseActionItemId: string, actor: CorrectiveActionActor) {
+    const action = await this.prisma.correctiveAction.findFirst({
+      where: {
+        exerciseActionItemId,
+        organizationId: actor.organizationId,
+        ...this.accessScope(actor),
+        ...await this.visibilityScope(actor),
+      },
+    });
+    if (!action) throw new NotFoundException('Action corrective introuvable');
+    return this.safeDetail(action, actor);
+  }
+
+  async getExerciseActionMaterialization(exerciseActionItemId: string, actor: CorrectiveActionActor) {
+    const source = await this.prisma.exerciseActionItem.findFirst({
+      where: {
+        id: exerciseActionItemId,
+        report: {
+          is: {
+            organizationId: actor.organizationId,
+            ...(this.isClientActor(actor) ? { building: { is: this.clientScope(actor) } } : {}),
+          },
+        },
+      },
+      select: {
+        id: true, title: true, description: true, assignedTo: true, dueDate: true, priority: true,
+        findingId: true, recommendationId: true,
+        report: { select: { id: true, buildingId: true, status: true, publishedAt: true,
+          versions: { where: { publishedById: { not: null } }, orderBy: { versionNumber: 'desc' }, take: 1,
+            select: { id: true, versionNumber: true } },
+        } },
+      },
+    });
+    if (!source) throw new NotFoundException('Action d exercice introuvable');
+    this.assertBuildingAccess(actor, source.report.buildingId);
+    const user = actor.sub ? await this.prisma.clientUser.findFirst({
+      where: { id: actor.sub, organizationId: actor.organizationId, isActive: true },
+      select: { correctiveActionPermissions: true },
+    }) : null;
+    return {
+      ...source,
+      eligible: source.report.status === 'PUBLISHED' && source.report.versions.length > 0,
+      canMaterialize: Boolean(user?.correctiveActionPermissions.includes(CorrectiveActionPermission.CORRECTIVE_ACTION_CREATE)),
+    };
   }
 
   async update(
