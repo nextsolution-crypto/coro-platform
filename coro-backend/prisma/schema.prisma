@@ -58,6 +58,9 @@ model Organization {
   referralCredits                ReferralCredit[]                @relation("ReferralCreditOrganization")
   contracts                      OrganizationContract[]
   capabilityEntitlements         CapabilityEntitlement[]
+  commercialSubscriptions        CommercialSubscription[]
+  commercialInvoices             CommercialInvoice[]
+  commercialTaxConfigurations    CommercialTaxConfiguration[]
   commercialProposals            CommercialProposal[]
   convertedCommercialProspects   CommercialProspect[]            @relation("CommercialProspectConversion")
   meteringResults                MeteringResult[]
@@ -101,6 +104,12 @@ model User {
   commercialProspectsCreated                   CommercialProspect[]                     @relation("CommercialProspectCreator")
   commercialProspectsConverted                 CommercialProspect[]                     @relation("CommercialProspectConverter")
   commercialProposalsCreated                   CommercialProposal[]                     @relation("CommercialProposalCreator")
+  commercialSubscriptionsCreated               CommercialSubscription[]                 @relation("CommercialSubscriptionCreator")
+  commercialSubscriptionRenewals               CommercialSubscriptionRenewal[]          @relation("CommercialSubscriptionRenewalActor")
+  commercialInvoicesCreated                    CommercialInvoice[]                      @relation("CommercialInvoiceCreator")
+  commercialPaymentsRecorded                   CommercialPayment[]                      @relation("CommercialPaymentRecorder")
+  commercialCreditNotesCreated                 CommercialCreditNote[]                   @relation("CommercialCreditNoteCreator")
+  commercialTaxConfigurationsCreated           CommercialTaxConfiguration[]             @relation("CommercialTaxConfigurationCreator")
   commercialProposalRevisionsCreated           CommercialProposalRevision[]             @relation("CommercialProposalRevisionCreator")
   proposalDocumentsCreated                     ProposalDocument[]                       @relation("ProposalDocumentCreator")
   proposalDocumentCompositionsCreated          ProposalDocumentCompositionSnapshot[]    @relation("ProposalDocumentCompositionCreator")
@@ -150,9 +159,9 @@ model User {
   refreshTokens                RefreshToken[]
   trustedDevices               TrustedDevice[]
   mfaChallenge                 PlatformMfaChallenge?
-  adminAuditEvents             AdminAuditEvent[]                   @relation("AdminAuditInternalActor")
-  networkAssignmentsGranted    CustomerPortfolioAssignment[]       @relation("NetworkAssignmentGrantedByUser")
-  networkAssignmentsRevoked    CustomerPortfolioAssignment[]       @relation("NetworkAssignmentRevokedByUser")
+  adminAuditEvents             AdminAuditEvent[]              @relation("AdminAuditInternalActor")
+  networkAssignmentsGranted    CustomerPortfolioAssignment[]  @relation("NetworkAssignmentGrantedByUser")
+  networkAssignmentsRevoked    CustomerPortfolioAssignment[]  @relation("NetworkAssignmentRevokedByUser")
   priceBookVersionsCreated     PriceBookVersion[]             @relation("PriceBookVersionCreator")
   organizationContractsCreated OrganizationContract[]         @relation("OrganizationContractCreator")
   contractRevisionsCreated     OrganizationContractRevision[] @relation("ContractRevisionCreator")
@@ -296,6 +305,10 @@ enum PlatformPermission {
   COMMERCIAL_CONTRACT_PREPARE
   COMMERCIAL_CONTRACT_ACTIVATE
   COMMERCIAL_ENTITLEMENT_PROVISION
+  COMMERCIAL_SUBSCRIPTION_MANAGE
+  COMMERCIAL_BILLING_MANAGE
+  COMMERCIAL_BILLING_APPROVE
+  COMMERCIAL_PAYMENT_RECORD
   ORGANIZATION_360_READ
   FINANCIAL_RENDEMENT_READ
   FINANCIAL_SALE_VALIDATE
@@ -488,36 +501,36 @@ model CustomerPortfolioBuildingMembership {
 }
 
 model CustomerPortfolioAssignment {
-  id               String                                 @id @default(uuid())
-  organizationId   String
-  subjectType      CustomerPortfolioAssignmentSubjectType
-  userId           String?
-  clientUserId     String?
-  operatorUserId   String?
-  scope            CustomerPortfolioAssignmentScope
-  portfolioId      String?
-  regionId         String?
-  buildingId       String?
-  permissions      CustomerNetworkPermission[]            @default([])
-  status           CustomerPortfolioAssignmentStatus      @default(ACTIVE)
-  effectiveFrom    DateTime                               @default(now())
-  effectiveUntil   DateTime?
-  grantedByActorType NetworkActorType @default(INTERNAL_USER)
-  grantedByUserId  String?
+  id                    String                                 @id @default(uuid())
+  organizationId        String
+  subjectType           CustomerPortfolioAssignmentSubjectType
+  userId                String?
+  clientUserId          String?
+  operatorUserId        String?
+  scope                 CustomerPortfolioAssignmentScope
+  portfolioId           String?
+  regionId              String?
+  buildingId            String?
+  permissions           CustomerNetworkPermission[]            @default([])
+  status                CustomerPortfolioAssignmentStatus      @default(ACTIVE)
+  effectiveFrom         DateTime                               @default(now())
+  effectiveUntil        DateTime?
+  grantedByActorType    NetworkActorType                       @default(INTERNAL_USER)
+  grantedByUserId       String?
   grantedByClientUserId String?
-  grantReason      String
-  revokedAt        DateTime?
-  revokedByActorType NetworkActorType?
-  revokedByUserId  String?
+  grantReason           String
+  revokedAt             DateTime?
+  revokedByActorType    NetworkActorType?
+  revokedByUserId       String?
   revokedByClientUserId String?
-  revocationReason String?
-  lockVersion      Int                                    @default(0)
-  createdAt        DateTime                               @default(now())
-  updatedAt        DateTime                               @updatedAt
-  grantedByUser       User?       @relation("NetworkAssignmentGrantedByUser", fields: [grantedByUserId], references: [id], onDelete: Restrict)
-  grantedByClientUser ClientUser? @relation("NetworkAssignmentGrantedByClientUser", fields: [grantedByClientUserId], references: [id], onDelete: Restrict)
-  revokedByUser       User?       @relation("NetworkAssignmentRevokedByUser", fields: [revokedByUserId], references: [id], onDelete: Restrict)
-  revokedByClientUser ClientUser? @relation("NetworkAssignmentRevokedByClientUser", fields: [revokedByClientUserId], references: [id], onDelete: Restrict)
+  revocationReason      String?
+  lockVersion           Int                                    @default(0)
+  createdAt             DateTime                               @default(now())
+  updatedAt             DateTime                               @updatedAt
+  grantedByUser         User?                                  @relation("NetworkAssignmentGrantedByUser", fields: [grantedByUserId], references: [id], onDelete: Restrict)
+  grantedByClientUser   ClientUser?                            @relation("NetworkAssignmentGrantedByClientUser", fields: [grantedByClientUserId], references: [id], onDelete: Restrict)
+  revokedByUser         User?                                  @relation("NetworkAssignmentRevokedByUser", fields: [revokedByUserId], references: [id], onDelete: Restrict)
+  revokedByClientUser   ClientUser?                            @relation("NetworkAssignmentRevokedByClientUser", fields: [revokedByClientUserId], references: [id], onDelete: Restrict)
 
   @@index([organizationId, status, effectiveFrom, effectiveUntil])
   @@index([userId, status])
@@ -728,6 +741,42 @@ enum EntitlementLimitType {
   CLIENTS
   SITES
   USAGE
+}
+
+enum CommercialSubscriptionStatus {
+  DRAFT
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  TERMINATED
+}
+
+enum CommercialInvoiceStatus {
+  DRAFT
+  APPROVED
+  ISSUED
+  PARTIAL
+  PAID
+  PAST_DUE
+  CANCELLED
+}
+
+enum CommercialPaymentStatus {
+  RECORDED
+  VOIDED
+}
+
+enum CommercialCreditNoteStatus {
+  DRAFT
+  APPROVED
+  ISSUED
+  CANCELLED
+}
+
+enum CommercialTaxConfigurationStatus {
+  DRAFT
+  APPROVED
+  ARCHIVED
 }
 
 enum CommercialProspectStatus {
@@ -951,6 +1000,7 @@ model CommercialCapability {
   proposalExclusivityCapabilities ProposalExclusivityCapability[]
   simulationScenarioCapabilities  CommercialSimulationScenarioCapability[]
   simulationScenarioLines         CommercialSimulationScenarioLine[]
+  subscriptionItems               CommercialSubscriptionItem[]
 
   @@index([displayOrder])
   @@index([lifecycle, isAvailable])
@@ -1007,6 +1057,7 @@ model PriceBookVersion {
   proposalRevisions        CommercialProposalRevision[]
   simulationWorkspaces     CommercialSimulationWorkspace[]
   simulationRuns           CommercialSimulationCalculationRun[]
+  commercialSubscriptions  CommercialSubscription[]
   configurationDeployments CommercialConfigurationDeployment[]  @relation("CommercialConfigurationDeploymentPriceBookVersion")
 
   @@unique([priceBookId, versionNumber])
@@ -1064,29 +1115,30 @@ model PriceTier {
 }
 
 model OrganizationContract {
-  id                   String                         @id @default(uuid())
-  organizationId       String
-  reference            String                         @unique
-  title                String
-  status               OrganizationContractStatus     @default(DRAFT)
-  isPrimary            Boolean                        @default(false)
-  approvedAt           DateTime?
-  activatedAt          DateTime?
-  expiredAt            DateTime?
-  terminatedAt         DateTime?
-  cancelledAt          DateTime?
-  lifecycleReason      String?
-  internalNotes        String?
-  lockVersion          Int                            @default(0)
-  createdByUserId      String?
-  createdByDisplayName String?
-  createdAt            DateTime                       @default(now())
-  updatedAt            DateTime                       @updatedAt
-  organization         Organization                   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  createdBy            User?                          @relation("OrganizationContractCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  revisions            OrganizationContractRevision[]
-  documents            OrganizationContractDocument[]
-  entitlementSources   CapabilityEntitlement[]
+  id                      String                         @id @default(uuid())
+  organizationId          String
+  reference               String                         @unique
+  title                   String
+  status                  OrganizationContractStatus     @default(DRAFT)
+  isPrimary               Boolean                        @default(false)
+  approvedAt              DateTime?
+  activatedAt             DateTime?
+  expiredAt               DateTime?
+  terminatedAt            DateTime?
+  cancelledAt             DateTime?
+  lifecycleReason         String?
+  internalNotes           String?
+  lockVersion             Int                            @default(0)
+  createdByUserId         String?
+  createdByDisplayName    String?
+  createdAt               DateTime                       @default(now())
+  updatedAt               DateTime                       @updatedAt
+  organization            Organization                   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  createdBy               User?                          @relation("OrganizationContractCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  revisions               OrganizationContractRevision[]
+  documents               OrganizationContractDocument[]
+  entitlementSources      CapabilityEntitlement[]
+  commercialSubscriptions CommercialSubscription[]
 
   @@unique([id, organizationId])
   @@index([organizationId, status])
@@ -1136,6 +1188,7 @@ model OrganizationContractRevision {
   entitlementSources       CapabilityEntitlement[]
   sourceProposalRevisionId String?                        @unique
   sourceProposalRevision   CommercialProposalRevision?    @relation("ProposalContractOrigin", fields: [sourceProposalRevisionId], references: [id], onDelete: Restrict)
+  commercialSubscriptions  CommercialSubscription[]
 
   @@unique([id, contractId])
   @@unique([contractId, revisionNumber])
@@ -1399,6 +1452,205 @@ model CapabilityEntitlementLimit {
   @@index([type, metricCode])
 }
 
+model CommercialSubscription {
+  id                  String                          @id @default(uuid())
+  organizationId      String
+  reference           String                          @unique
+  status              CommercialSubscriptionStatus    @default(DRAFT)
+  contractId          String
+  contractRevisionId  String
+  proposalRevisionId  String
+  priceBookVersionId  String
+  billingCadence      ContractBillingCadence
+  currency            String                          @default("CAD") @db.Char(3)
+  effectiveFrom       DateTime                        @db.Date
+  effectiveUntil      DateTime?                       @db.Date
+  renewalAt           DateTime?                       @db.Date
+  paymentTermsDays    Int                             @default(30)
+  graceMonitoringDays Int                             @default(15)
+  lockVersion         Int                             @default(0)
+  idempotencyKey      String                          @unique
+  lifecycleReason     String?
+  activatedAt         DateTime?
+  pastDueAt           DateTime?
+  suspendedAt         DateTime?
+  terminatedAt        DateTime?
+  createdByUserId     String
+  createdAt           DateTime                        @default(now())
+  updatedAt           DateTime                        @updatedAt
+  organization        Organization                    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  contract            OrganizationContract            @relation(fields: [contractId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  contractRevision    OrganizationContractRevision    @relation(fields: [contractRevisionId, contractId], references: [id, contractId], onDelete: Restrict)
+  proposalRevision    CommercialProposalRevision      @relation(fields: [proposalRevisionId], references: [id], onDelete: Restrict)
+  priceBookVersion    PriceBookVersion                @relation(fields: [priceBookVersionId], references: [id], onDelete: Restrict)
+  createdBy           User                            @relation("CommercialSubscriptionCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  items               CommercialSubscriptionItem[]
+  invoices            CommercialInvoice[]
+  renewals            CommercialSubscriptionRenewal[]
+
+  @@unique([id, organizationId])
+  @@index([organizationId, status])
+  @@index([contractId, contractRevisionId])
+  @@index([renewalAt, status])
+}
+
+model CommercialSubscriptionRenewal {
+  id                String                 @id @default(uuid())
+  subscriptionId    String
+  previousRenewalAt DateTime?              @db.Date
+  termEffectiveFrom DateTime               @db.Date
+  nextRenewalAt     DateTime               @db.Date
+  termMonths        Int?
+  reason            String
+  renewedByUserId   String
+  createdAt         DateTime               @default(now())
+  subscription      CommercialSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+  renewedBy         User                   @relation("CommercialSubscriptionRenewalActor", fields: [renewedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([subscriptionId, termEffectiveFrom])
+  @@index([subscriptionId, createdAt])
+}
+
+model CommercialSubscriptionItem {
+  id                     String                 @id @default(uuid())
+  subscriptionId         String
+  capabilityId           String
+  contractSnapshotLineId String
+  quantity               Decimal?               @db.Decimal(20, 6)
+  quantityUnit           String?
+  amountMinor            BigInt?
+  billingPeriod          BillingPeriod?
+  active                 Boolean                @default(false)
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  subscription           CommercialSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+  capability             CommercialCapability   @relation(fields: [capabilityId], references: [id], onDelete: Restrict)
+
+  @@unique([subscriptionId, capabilityId, contractSnapshotLineId])
+  @@index([subscriptionId, active])
+  @@index([capabilityId])
+}
+
+model CommercialTaxConfiguration {
+  id                            String                           @id @default(uuid())
+  organizationId                String
+  jurisdictionCode              String                           @db.VarChar(20)
+  name                          String
+  status                        CommercialTaxConfigurationStatus @default(DRAFT)
+  federalRatePartsPerMillion    Int
+  provincialRatePartsPerMillion Int
+  effectiveFrom                 DateTime                         @db.Date
+  effectiveUntil                DateTime?                        @db.Date
+  approvalReference             String?
+  lockVersion                   Int                              @default(0)
+  createdByUserId               String
+  createdAt                     DateTime                         @default(now())
+  updatedAt                     DateTime                         @updatedAt
+  organization                  Organization                     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  createdBy                     User                             @relation("CommercialTaxConfigurationCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  invoices                      CommercialInvoice[]
+
+  @@unique([organizationId, jurisdictionCode, effectiveFrom])
+  @@index([organizationId, status, effectiveFrom, effectiveUntil])
+}
+
+model CommercialInvoice {
+  id                 String                     @id @default(uuid())
+  organizationId     String
+  subscriptionId     String
+  taxConfigurationId String
+  number             String?                    @unique
+  status             CommercialInvoiceStatus    @default(DRAFT)
+  periodStart        DateTime                   @db.Date
+  periodEnd          DateTime                   @db.Date
+  currency           String                     @default("CAD") @db.Char(3)
+  subtotalMinor      BigInt                     @default(0)
+  federalTaxMinor    BigInt                     @default(0)
+  provincialTaxMinor BigInt                     @default(0)
+  totalMinor         BigInt                     @default(0)
+  paidMinor          BigInt                     @default(0)
+  dueDate            DateTime?                  @db.Date
+  issuedAt           DateTime?
+  approvedAt         DateTime?
+  cancelledAt        DateTime?
+  pastDueAt          DateTime?
+  lockVersion        Int                        @default(0)
+  idempotencyKey     String                     @unique
+  lifecycleReason    String?
+  createdByUserId    String
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  organization       Organization               @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  subscription       CommercialSubscription     @relation(fields: [subscriptionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  taxConfiguration   CommercialTaxConfiguration @relation(fields: [taxConfigurationId], references: [id], onDelete: Restrict)
+  createdBy          User                       @relation("CommercialInvoiceCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  lines              CommercialInvoiceLine[]
+  payments           CommercialPayment[]
+  creditNotes        CommercialCreditNote[]
+
+  @@unique([id, organizationId])
+  @@index([organizationId, status, dueDate])
+  @@index([subscriptionId, periodStart, periodEnd])
+}
+
+model CommercialInvoiceLine {
+  id                   String            @id @default(uuid())
+  invoiceId            String
+  description          String
+  sourceSnapshotLineId String?
+  quantity             Decimal           @default(1) @db.Decimal(20, 6)
+  unitAmountMinor      BigInt
+  subtotalMinor        BigInt
+  adjustmentMinor      BigInt            @default(0)
+  taxable              Boolean           @default(true)
+  displayOrder         Int
+  createdAt            DateTime          @default(now())
+  invoice              CommercialInvoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+
+  @@unique([invoiceId, displayOrder])
+  @@index([invoiceId])
+}
+
+model CommercialPayment {
+  id                String                  @id @default(uuid())
+  invoiceId         String
+  amountMinor       BigInt
+  currency          String                  @default("CAD") @db.Char(3)
+  status            CommercialPaymentStatus @default(RECORDED)
+  paidAt            DateTime
+  evidenceReference String
+  idempotencyKey    String                  @unique
+  reason            String
+  recordedByUserId  String
+  recordedAt        DateTime                @default(now())
+  voidedAt          DateTime?
+  invoice           CommercialInvoice       @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  recordedBy        User                    @relation("CommercialPaymentRecorder", fields: [recordedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([invoiceId, status, paidAt])
+}
+
+model CommercialCreditNote {
+  id                String                     @id @default(uuid())
+  invoiceId         String
+  number            String?                    @unique
+  status            CommercialCreditNoteStatus @default(DRAFT)
+  amountMinor       BigInt
+  reason            String
+  approvalReference String?
+  lockVersion       Int                        @default(0)
+  createdByUserId   String
+  approvedAt        DateTime?
+  issuedAt          DateTime?
+  cancelledAt       DateTime?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  invoice           CommercialInvoice          @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  createdBy         User                       @relation("CommercialCreditNoteCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([invoiceId, status])
+}
+
 model CommercialProspect {
   id                      String                          @id @default(uuid())
   reference               String                          @unique
@@ -1545,6 +1797,7 @@ model CommercialProposalRevision {
   simulationConversion            CommercialSimulationProposalConversion?
   documentCompositions            ProposalDocumentCompositionSnapshot[]
   temporalTerms                   CommercialProposalTemporalTerms?
+  commercialSubscriptions         CommercialSubscription[]
 
   @@unique([proposalId, revisionNumber])
   @@unique([id, proposalId])
@@ -3096,34 +3349,34 @@ model ClientUser {
   offlineDocumentDevices       OfflineDocumentDevice[]
   offlineDocumentLeases        OfflineDocumentLease[]
   offlineDocumentAuditEvents   OfflineDocumentAuditEvent[]
-  adminAuditEvents             AdminAuditEvent[]                   @relation("AdminAuditClientActor")
-  networkAssignmentsGranted    CustomerPortfolioAssignment[]       @relation("NetworkAssignmentGrantedByClientUser")
-  networkAssignmentsRevoked    CustomerPortfolioAssignment[]       @relation("NetworkAssignmentRevokedByClientUser")
+  adminAuditEvents             AdminAuditEvent[]             @relation("AdminAuditClientActor")
+  networkAssignmentsGranted    CustomerPortfolioAssignment[] @relation("NetworkAssignmentGrantedByClientUser")
+  networkAssignmentsRevoked    CustomerPortfolioAssignment[] @relation("NetworkAssignmentRevokedByClientUser")
 
   @@unique([id, organizationId])
 }
 
 model AdminAuditEvent {
-  id               String   @id @default(uuid())
+  id                String         @id @default(uuid())
   actorType         AuditActorType @default(INTERNAL_USER)
-  actorUserId      String?
+  actorUserId       String?
   actorClientUserId String?
-  systemActorKey   String?
-  actorDisplayName String
-  actorRole        String
-  action           String
-  targetType       String
-  targetId         String
-  targetLabel      String?
-  organizationId   String?
-  reason           String?
-  requestId        String?
-  beforeData       Json?
-  afterData        Json?
-  schemaVersion    Int      @default(1)
-  createdAt        DateTime @default(now())
+  systemActorKey    String?
+  actorDisplayName  String
+  actorRole         String
+  action            String
+  targetType        String
+  targetId          String
+  targetLabel       String?
+  organizationId    String?
+  reason            String?
+  requestId         String?
+  beforeData        Json?
+  afterData         Json?
+  schemaVersion     Int            @default(1)
+  createdAt         DateTime       @default(now())
 
-  actor User? @relation("AdminAuditInternalActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  actor       User?       @relation("AdminAuditInternalActor", fields: [actorUserId], references: [id], onDelete: Restrict)
   clientActor ClientUser? @relation("AdminAuditClientActor", fields: [actorClientUserId], references: [id], onDelete: Restrict)
 
   @@index([actorUserId, createdAt])

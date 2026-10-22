@@ -38,7 +38,7 @@ describe('Phase 2A schema and seed contract', () => {
   });
   it('seed neuf capabilities, 27 policies, aucun PriceBook et aucun prix', () => {
     const capabilityValues =
-      migration.match(/INSERT INTO "CommercialCapability"[\s\S]*?;\n/)?.[0] ??
+      migration.match(/INSERT INTO "CommercialCapability"[\s\S]*?;\r?\n/)?.[0] ??
       '';
     expect(capabilityValues.match(/gen_random_uuid/g) ?? []).toHaveLength(9);
     const policyValues =

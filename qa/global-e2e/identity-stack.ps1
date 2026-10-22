@@ -142,7 +142,7 @@ Invoke-Docker @('network', 'connect', $hostNetwork, "$prefix-api-proxy")
 Invoke-Docker @('run', '-d', '--name', "$prefix-api-publish", '--network', $hostNetwork,
   '-p', "127.0.0.1:$BackendPort`:3002", 'alpine/socat', 'TCP-LISTEN:3002,fork,reuseaddr', "TCP:$prefix-api-proxy`:3002")
 Invoke-Docker @('run', '-d', '--name', "$prefix-portal", '--network', $internalNetwork,
-  '--network-alias', 'portal', $PortalImage)
+  '--network-alias', 'portal', '-e', 'PORT=3003', $PortalImage)
 Invoke-Docker @('run', '-d', '--name', "$prefix-portal-proxy", '--network', $internalNetwork,
   'alpine/socat', 'TCP-LISTEN:3003,fork,reuseaddr', 'TCP:portal:3003')
 Invoke-Docker @('network', 'connect', $hostNetwork, "$prefix-portal-proxy")

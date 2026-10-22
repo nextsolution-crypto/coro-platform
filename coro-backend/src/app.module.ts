@@ -71,6 +71,8 @@ import { CommercialLegalIssuerModule } from './commercial-legal-issuer/commercia
 import { CommercialClauseModule } from './commercial-clauses/commercial-clause.module';
 import { ProposalDocumentCompositionModule } from './proposal-document-composition/proposal-document-composition.module';
 import { CustomerNetworkModule } from './customer-network/customer-network.module';
+import { CommercialSubscriptionsModule } from './commercial-subscriptions/commercial-subscriptions.module';
+import { CommercialBillingModule } from './commercial-billing/commercial-billing.module';
 
 @Module({
   imports: [
@@ -92,6 +94,8 @@ import { CustomerNetworkModule } from './customer-network/customer-network.modul
     CommercialClauseModule,
     ProposalDocumentCompositionModule,
     CustomerNetworkModule,
+    CommercialSubscriptionsModule,
+    CommercialBillingModule,
     AuthModule,
     UsersModule,
     ClientsModule,

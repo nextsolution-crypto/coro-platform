@@ -101,7 +101,7 @@ export default function Organization360Page() {
         <button
           type="button"
           onClick={() => router.push("/admin/organizations")}
-          className="mb-4 text-sm font-medium"
+          className="mb-4 min-h-11 text-sm font-medium"
           style={{ color: palette.red }}
         >
           ← Organisations
@@ -162,7 +162,7 @@ export default function Organization360Page() {
                   { scroll: false },
                 );
               }}
-              className="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
+              className="min-h-11 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
               style={{
                 background: tab === code ? palette.ink : palette.panel,
                 color: tab === code ? "#FFF" : palette.ink,
@@ -494,6 +494,11 @@ function CommercialPanel({ data }: { data: JsonRecord }) {
   const excessEntitlements =
     (continuity.excessEntitlements as JsonRecord[]) ?? [];
   const pendingActions = (continuity.pendingActions as string[]) ?? [];
+  const subscriptions = (data.subscriptions as JsonRecord[]) ?? [];
+  const activeModules = (data.activeModules as JsonRecord[]) ?? [];
+  const billing = (data.billing ?? {}) as JsonRecord;
+  const invoices = (billing.invoices as JsonRecord[]) ?? [];
+  const warnings = (data.warnings as string[]) ?? [];
   const current =
     data.contract && typeof data.contract === "object"
       ? (data.contract as JsonRecord)
@@ -539,7 +544,7 @@ function CommercialPanel({ data }: { data: JsonRecord }) {
           <button
             type="button"
             onClick={save}
-            className="rounded bg-slate-800 px-4 py-2 text-white"
+            className="min-h-11 rounded bg-slate-800 px-4 py-2 text-white"
           >
             Save
           </button>
@@ -558,7 +563,11 @@ function CommercialPanel({ data }: { data: JsonRecord }) {
           ["Pricing", data.pricing],
           ["Entitlements", data.entitlements ?? "OBSERVATION_ONLY"],
           ["Enforcement", data.enforcement ?? "NONE"],
-          ["Billing", data.billing ?? "NOT_CONFIGURED"],
+          ["Subscription", subscriptions.length ? "CONFIGURED" : "NOT_CONFIGURED"],
+          ["Renewal", data.renewalDate],
+          ["Billing currency", billing.currency ?? "NOT_CONFIGURED"],
+          ["Open invoices", billing.openInvoiceCount ?? 0],
+          ["Past-due invoices", billing.pastDueInvoiceCount ?? 0],
         ]}
       />
       <div className="mt-5">
@@ -634,6 +643,82 @@ function CommercialPanel({ data }: { data: JsonRecord }) {
           </p>
         )}
       </div>
+      <h3 className="mt-6 font-semibold">Subscription and billing</h3>
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <article className="min-w-0 rounded-lg border p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <strong>Subscription</strong>
+            <Link
+              className="rounded bg-slate-900 px-3 py-2 text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
+              href={`/admin/commercial/subscriptions/${organizationId}`}
+            >
+              Manage subscription
+            </Link>
+          </div>
+          {subscriptions.length ? (
+            <ul className="mt-3 space-y-2 text-sm">
+              {subscriptions.map((subscription) => (
+                <li key={String(subscription.id)} className="min-w-0 rounded border bg-slate-50 p-3">
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <span>{String(subscription.reference)}</span>
+                    <Badge>{String(subscription.status)}</Badge>
+                  </div>
+                  <p className="mt-1 break-words text-xs text-slate-600">
+                    {String(subscription.billingCadence)} · renewal {formatValue(subscription.renewalAt)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <State text="No governed subscription." />
+          )}
+          {activeModules.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {activeModules.map((module) => (
+                <Badge key={String(module.code)}>
+                  {String(module.label)} · {module.active ? "ACTIVE" : "PENDING"}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </article>
+        <article className="min-w-0 rounded-lg border p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <strong>Billing</strong>
+            <Link
+              className="rounded bg-slate-900 px-3 py-2 text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
+              href={`/admin/commercial/billing/${organizationId}`}
+            >
+              Manage billing
+            </Link>
+          </div>
+          <p className="mt-2 text-xs text-slate-600">
+            CAD · Net {formatValue(billing.paymentTermsDays)} · no automatic collection or suspension
+          </p>
+          <div className="mt-3 overflow-x-auto rounded border">
+            <table className="min-w-[36rem] w-full text-left text-sm">
+              <thead><tr><th className="px-3 py-2">Number</th><th className="px-3 py-2">Status</th><th className="px-3 py-2">Due</th><th className="px-3 py-2 text-right">Total</th></tr></thead>
+              <tbody>
+                {invoices.map((invoice) => (
+                  <tr key={String(invoice.id)} className="border-t">
+                    <td className="px-3 py-2">{formatValue(invoice.number)}</td>
+                    <td className="px-3 py-2">{formatValue(invoice.status)}</td>
+                    <td className="px-3 py-2">{formatValue(invoice.dueDate)}</td>
+                    <td className="px-3 py-2 text-right">{formatMinorAmount(invoice.totalMinor, "CAD")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {!invoices.length && <p className="mt-3 text-sm text-slate-500">No invoice.</p>}
+        </article>
+      </div>
+      {warnings.length > 0 && (
+        <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <strong>Commercial warnings</strong>
+          <ul className="mt-2 list-disc pl-5">{warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+        </div>
+      )}
       <h3 className="mt-6 font-semibold">Contracts and history</h3>
       <div className="mt-3 space-y-3">
         {contracts.length ? (

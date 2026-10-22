@@ -454,7 +454,8 @@ export class Organization360Service {
       },
       orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
     });
-    const [proposals, entitlementSummary] = await this.prisma.$transaction([
+    const [proposals, entitlementSummary, subscriptions, invoices] =
+      await this.prisma.$transaction([
       this.prisma.commercialProposal.findMany({
         where: { organizationId },
         orderBy: { updatedAt: 'desc' },
@@ -485,6 +486,22 @@ export class Organization360Service {
         where: { organizationId },
         orderBy: { source: 'asc' },
         _count: { id: true },
+      }),
+      this.prisma.commercialSubscription.findMany({
+        where: { organizationId },
+        include: {
+          contract: { select: { id: true, reference: true } },
+          items: { include: { capability: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.commercialInvoice.findMany({
+        where: { organizationId },
+        include: {
+          payments: { where: { status: 'RECORDED' } },
+          creditNotes: { where: { status: 'ISSUED' } },
+        },
+        orderBy: { createdAt: 'desc' },
       }),
     ]);
     const currentContract =
@@ -540,18 +557,37 @@ export class Organization360Service {
         code: entitlement.capability.code,
         label: entitlement.capability.nameFr,
       }));
+    const activeSubscription =
+      subscriptions.find((item) => item.status === 'ACTIVE') ?? null;
+    const openInvoices = invoices.filter((invoice) =>
+      ['ISSUED', 'PARTIAL', 'PAST_DUE'].includes(invoice.status),
+    );
+    const pastDueInvoices = invoices.filter(
+      (invoice) => invoice.status === 'PAST_DUE',
+    );
+    const subscriptionCapabilities = activeSubscription?.items.map((item) => ({
+      code: item.capability.code,
+      label: item.capability.nameFr,
+      active: item.active,
+      quantity: item.quantity,
+      quantityUnit: item.quantityUnit,
+    })) ?? [];
     return this.jsonSafe({
       legacy: {
         licenseType: organization.licenseType,
         organizationStatus: organization.isActive ? 'ACTIVE' : 'SUSPENDED',
       },
-      futureCommercialModel: 'NOT_CONFIGURED',
+      futureCommercialModel: subscriptions.length ? 'CONFIGURED' : 'NOT_CONFIGURED',
       relationship: organization.commercialRelationship ?? 'NOT_CONFIGURED',
       contract: currentContract ?? 'NOT_CONFIGURED',
       contracts,
       proposals,
       acceptedProposal:
         proposals.find((proposal) => proposal.acceptedRevisionId) ?? null,
+      subscription: activeSubscription ?? 'NOT_CONFIGURED',
+      subscriptions,
+      activeModules: subscriptionCapabilities,
+      renewalDate: activeSubscription?.renewalAt ?? null,
       entitlementSummary,
       continuity: {
         contractedCapabilities,
@@ -566,8 +602,30 @@ export class Organization360Service {
       },
       pricing: currentContract ? 'CONTRACT_SNAPSHOT' : 'NOT_CONFIGURED',
       entitlements: 'OBSERVATION_ONLY',
-      enforcement: 'NONE',
-      billing: 'NOT_CONFIGURED',
+      enforcement: 'EXPLICIT_ENTITLEMENT_APPLY',
+      billing: {
+        currency: 'CAD',
+        paymentTermsDays: 30,
+        graceMonitoringDays: 15,
+        automaticCollection: false,
+        automaticSuspension: false,
+        invoices,
+        openInvoiceCount: openInvoices.length,
+        pastDueInvoiceCount: pastDueInvoices.length,
+        outstandingMinor: openInvoices.reduce(
+          (sum, invoice) => sum + (invoice.totalMinor - invoice.paidMinor),
+          0n,
+        ),
+      },
+      warnings: [
+        ...(pastDueInvoices.length ? ['PAST_DUE_INVOICE_REVIEW'] : []),
+        ...(activeSubscription && !currentContract
+          ? ['SUBSCRIPTION_WITHOUT_ACTIVE_CONTRACT']
+          : []),
+        ...(activeSubscription && subscriptionCapabilities.some((item) => !item.active)
+          ? ['SUBSCRIPTION_MODULE_ACTIVATION_REQUIRED']
+          : []),
+      ],
       editable: false,
     });
   }

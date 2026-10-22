@@ -522,7 +522,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             type="button"
             aria-controls={glass ? 'coro-sidebar' : undefined}
             onClick={() => setSidebarOpen(prev => !prev)}
-            className="lg:hidden w-11 h-11 rounded flex items-center justify-center flex-shrink-0 transition-colors"
+            className="lg:hidden min-h-[44px] min-w-[44px] w-11 h-11 rounded flex items-center justify-center flex-shrink-0 transition-colors"
             style={{
               color: p.text('#2C3E50'),
               border: `1px solid ${p.line('#DEE2E6')}`,
@@ -665,7 +665,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div ref={profileRef} className="relative">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className={`flex items-center gap-2 px-1.5 sm:px-3 py-1.5 rounded transition-colors${glass ? ' min-h-[44px] min-w-[44px] justify-center lg:min-h-0 lg:min-w-0' : ''}`}
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded px-1.5 py-1.5 transition-colors sm:px-3 lg:min-h-0 lg:min-w-0"
                 style={{ border: '1px solid transparent' }}
                 onMouseEnter={e => { e.currentTarget.style.backgroundColor = p.bg('#F8F9FA'); e.currentTarget.style.borderColor = p.line('#DEE2E6'); }}
                 onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}>
