@@ -70,7 +70,7 @@ const records=files.map(name=>{const p=`${mount.Source}/${name}`;const raw=fs.re
 if(!records.some(r=>r.mode==='DRY_RUN')) throw Error('DRY_RUN_EVIDENCE_MISSING');
 if(!records.some(r=>r.mode==='LIVE'&&r.providerMessageIdPresent)) throw Error('LIVE_EVIDENCE_CORRELATION_MISSING');
 const result={schemaVersion:1,phase:process.env.PHASE,releaseCommit:JSON.parse(fs.readFileSync(process.env.RELEASE_MANIFEST)).gitCommit,containers,sms:{senderApproved:true,globalGateClosed:true,webhookSecretPresent:true,evidenceMount:{type:mount.Type,destination:mount.Destination},environmentNames:Object.keys(env).filter(k=>/^(BREVO_SMS_SENDER|POPULATION_BREVO_SMS_WEBHOOK_SECRET|POPULATION_SMS_PRODUCTION_VALIDATED|POPULATION_SMS_LIVE_VALIDATION_EVIDENCE_DIR)$/.test(k)).sort(),evidence:records}};
-fs.writeFileSync(out,JSON.stringify(result,null,2)+'\n',{mode:0o600,flag:'wx'});
+fs.writeFileSync(out,JSON.stringify(result,null,2)+'\n',{mode:0o600,flag:'w'});
 NODE
 }
 

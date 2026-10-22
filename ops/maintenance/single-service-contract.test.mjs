@@ -22,6 +22,13 @@ test('preserves unrelated services and provides governed rollback', () => {
   assert.match(script, /single-service-rollback/);
 });
 
+test('writes snapshots into secure files created by mktemp and keeps final evidence exclusive', () => {
+  assert.match(script, /before="\$\(mktemp \/tmp\/coro-maintenance-before/);
+  assert.match(script, /after="\$\(mktemp \/tmp\/coro-maintenance-after/);
+  assert.match(script, /fs\.writeFileSync\(out,[\s\S]*?flag:'w'/);
+  assert.match(script, /fs\.writeFileSync\(process\.argv\[4\],[\s\S]*?flag:'wx'/);
+});
+
 test('fails closed on SMS drift and keeps the global gate closed', () => {
   for (const marker of ['GLOBAL_SMS_GATE_OPEN', 'SMS_WEBHOOK_SECRET_MISSING', 'SMS_EVIDENCE_MOUNT_INVALID', 'DRY_RUN_EVIDENCE_MISSING', 'LIVE_EVIDENCE_CORRELATION_MISSING', 'SMS_CONFIGURATION_OR_EVIDENCE_CHANGED']) assert.match(script, new RegExp(marker));
   assert.doesNotMatch(script, /console\.log\(.*POPULATION_BREVO_SMS_WEBHOOK_SECRET/);
