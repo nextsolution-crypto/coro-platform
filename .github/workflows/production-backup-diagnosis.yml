@@ -1,0 +1,53 @@
+name: Diagnose Production Backup Read Only
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: |
+          bash -n ops/maintenance/coro-backup-diagnose.sh
+          node --test ops/maintenance/backup-diagnose-policy.test.mjs
+
+  diagnose:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Validate pinned host identity
+        env:
+          HOST_FINGERPRINT: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+        run: '[[ "$HOST_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]'
+      - name: Execute sanitized read-only diagnosis
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
+            script="$(mktemp /tmp/coro-backup-diagnose.XXXXXX.sh)"
+            trap 'rm -f -- "$script"' EXIT
+            git -C "$repo" show "$SOURCE_SHA:ops/maintenance/coro-backup-diagnose.sh" >"$script"
+            bash -n "$script"
+            chmod 0700 "$script"
+            "$script"
