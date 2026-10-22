@@ -80,7 +80,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
           command_timeout: 10m
-          envs: SOURCE_SHA,COLLECTOR_SHA256,REPORTER_SHA256,MAINTENANCE_RUN_ID
+          envs: AUTHORIZED_SOURCE_SHA,SOURCE_SHA,COLLECTOR_SHA256,REPORTER_SHA256,MAINTENANCE_RUN_ID
           script: |
             set -Eeuo pipefail
             umask 077
@@ -109,7 +109,7 @@ jobs:
             }
             trap rollback EXIT
 
-            [[ "$SOURCE_SHA" == c65a750fe89a29fde0a6ef7409a49467a7c0d947 ]] || fail SOURCE_SHA_INVALID
+            [[ "$SOURCE_SHA" == "$AUTHORIZED_SOURCE_SHA" ]] || fail SOURCE_SHA_INVALID
             [[ "$COLLECTOR_SHA256" =~ ^[0-9a-f]{64}$ ]] || fail COLLECTOR_HASH_INVALID
             [[ "$REPORTER_SHA256" =~ ^[0-9a-f]{64}$ ]] || fail REPORTER_HASH_INVALID
             [[ "$MAINTENANCE_RUN_ID" =~ ^[0-9]+$ ]] || fail RUN_ID_INVALID
