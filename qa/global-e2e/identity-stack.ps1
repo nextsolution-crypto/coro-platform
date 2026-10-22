@@ -6,6 +6,7 @@ param(
   [ValidateRange(1024, 65535)][int]$DatabasePort = 55461,
   [ValidateRange(1024, 65535)][int]$BackendPort = 3166,
   [ValidateRange(1024, 65535)][int]$PortalPort = 3167,
+  [ValidateRange(1024, 65535)][int]$ProviderPort = 34641,
   [string]$BackendImage = 'coro-p61-backend:local',
   [string]$PortalImage = 'coro-p61-portal:local',
   [switch]$NetworkFixtures
@@ -70,7 +71,7 @@ if ($Action -eq 'Stop') {
   exit 0
 }
 
-foreach ($port in @($DatabasePort, $BackendPort, $PortalPort)) { Assert-LoopbackPortFree $port }
+foreach ($port in @($DatabasePort, $BackendPort, $PortalPort, $ProviderPort)) { Assert-LoopbackPortFree $port }
 if (-not (Test-Path -LiteralPath $secretFile)) { throw 'QA Identity Lab secret store is missing.' }
 $secrets = Get-Content -LiteralPath $secretFile -Raw | ConvertFrom-Json
 if (-not $secrets.databasePassword -or -not $secrets.syntheticPassword) {
@@ -80,8 +81,8 @@ New-Item -ItemType Directory -Force -Path (Join-Path $qaRoot 'pg'), (Join-Path $
 $env:CORO_QA_DB_PASSWORD = $secrets.databasePassword
 $env:CORO_QA_POSTGRES_DATA = Join-Path $qaRoot 'pg'
 $env:CORO_QA_POSTGRES_PORT = "$DatabasePort"
-$env:CORO_QA_PROVIDER_PORT = '34641'
-Invoke-Docker @('compose', '-p', $project, '-f', $compose, 'up', '-d', 'postgres', 'provider-fake')
+$env:CORO_QA_PROVIDER_PORT = "$ProviderPort"
+Invoke-Docker @('compose', '-p', $project, '-f', $compose, 'up', '-d', 'postgres', 'provider-fake', 'private-storage-qa')
 
 for ($attempt = 0; $attempt -lt 60; $attempt += 1) {
   $health = (& docker inspect --format '{{.State.Health.Status}}' "$project-postgres-1" 2>$null)
@@ -117,7 +118,24 @@ Invoke-Docker @('run', '-d', '--name', "$prefix-backend", '--network', $internal
   '-e', "JWT_SECRET=$jwt", '-e', "PLATFORM_MFA_SECRET=$mfa",
   '-e', "FRONTEND_URL=http://127.0.0.1:$PortalPort", '-e', 'MFA_QA_CAPTURE_ENABLED=true',
   '-e', 'MFA_QA_CAPTURE_DIR=/tmp/coro-mfa', '-e', 'MFA_QA_ALLOWED_RECIPIENT_SUFFIXES=global-e2e.test',
-  '-e', 'MFA_QA_NETWORK_ISOLATED=true', '-v', "$(Join-Path $qaRoot 'mfa'):/tmp/coro-mfa", $BackendImage)
+  '-e', 'MFA_QA_NETWORK_ISOLATED=true',
+  '-e', 'PRIVATE_STORAGE_QA_MODE=true', '-e', 'PRIVATE_STORAGE_QA_ENDPOINT=http://private-storage-qa:34642',
+  '-e', 'PRIVATE_STORAGE_QA_ACCESS_KEY=qa-storage-access', '-e', 'PRIVATE_STORAGE_QA_SECRET_KEY=qa-storage-secret',
+  '-e', 'PRIVATE_STORAGE_QA_BUCKET=coro-private-qa',
+  '-v', "$(Join-Path $qaRoot 'mfa'):/tmp/coro-mfa", $BackendImage)
+
+$storageProbeArgs = @(
+  'run', '--rm', '--network', $internalNetwork,
+  '-e', 'PRIVATE_STORAGE_QA_ENDPOINT=http://private-storage-qa:34642',
+  '-e', 'PRIVATE_STORAGE_QA_ACCESS_KEY=qa-storage-access',
+  '-e', 'PRIVATE_STORAGE_QA_BUCKET=coro-private-qa',
+  '-v', "$(Join-Path $PSScriptRoot 'src'):/qa:ro",
+  'node:22-alpine', 'node', '/qa/private-storage-readiness.mjs'
+)
+$storageProbe = & docker @storageProbeArgs 2>&1
+if ($LASTEXITCODE -ne 0 -or ($storageProbe -join "`n") -notmatch '"status":"PASS"') {
+  throw 'Private storage readiness failed closed.'
+}
 Invoke-Docker @('run', '-d', '--name', "$prefix-api-proxy", '--network', $internalNetwork,
   'alpine/socat', 'TCP-LISTEN:3002,fork,reuseaddr', 'TCP:backend:3002')
 Invoke-Docker @('network', 'connect', $hostNetwork, "$prefix-api-proxy")
@@ -136,8 +154,9 @@ $portalStatus = Wait-Http "http://127.0.0.1:$PortalPort"
 $manifest = [ordered]@{
   stackId = $StackId; startedAt = (Get-Date).ToUniversalTime().ToString('o')
   databasePort = $DatabasePort; backendPort = $BackendPort; portalPort = $PortalPort
+  providerPort = $ProviderPort
   backendStatus = $backendStatus; portalStatus = $portalStatus
-  network = 'internal-deny-by-default'; secretsPersisted = $false
+  privateStorageStatus = 'PASS'; network = 'internal-deny-by-default'; secretsPersisted = $false
 }
 $manifest | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $qaRoot 'stack-manifest.json') -Encoding UTF8
 Write-Output "QA stack $StackId ready on loopback ports $DatabasePort/$BackendPort/$PortalPort."

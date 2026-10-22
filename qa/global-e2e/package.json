@@ -18,6 +18,9 @@
     "identity:acceptance": "node src/identity-acceptance.mjs",
     "identity:negative": "node src/identity-negative-acceptance.mjs",
     "identity:session": "node src/identity-session-acceptance.mjs",
+    "exercise-rex:runtime-test": "node --test test/exercise-rex-runtime.test.mjs",
+    "exercise-rex:acceptance": "node src/exercise-rex-acceptance.mjs",
+    "exercise-rex:browser": "node src/exercise-rex-browser.mjs",
     "identity:cleanup": "node src/identity-cleanup.mjs"
   }
 }

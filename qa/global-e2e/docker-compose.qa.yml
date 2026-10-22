@@ -1,5 +1,20 @@
 name: coro-global-e2e
 services:
+  private-storage-qa:
+    image: node:22-alpine
+    command: ["node", "/qa/private-storage-container.mjs"]
+    environment:
+      PRIVATE_STORAGE_PORT: "34642"
+      PRIVATE_STORAGE_ACCESS_KEY: "qa-storage-access"
+    volumes:
+      - type: bind
+        source: ./src
+        target: /qa
+        read_only: true
+    restart: "no"
+    networks:
+      isolated:
+        aliases: [private-storage-qa]
   provider-fake:
     image: node:22-alpine
     command: ["node", "/qa/provider-container.mjs"]

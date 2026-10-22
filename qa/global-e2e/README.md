@@ -61,11 +61,20 @@ loopback channel. Production origins, credentials and ports remain rejected.
 The session acceptance stage proves one-time refresh-token rotation, replay
 denial, logout and post-logout refresh denial against the real QA backend.
 
+Exercise/REX campaigns resolve their active API, Portal, MFA capture, actor
+catalogue, Chrome/CDP and evidence locations through `exercise-rex-runtime.mjs`.
+Campaign-specific paths are prohibited; missing MFA configuration and non-local
+origins fail closed. Sanitized runtime evidence contains origins and readiness
+booleans only, never credentials, MFA values or filesystem paths.
+
 `identity-stack.ps1` is the reusable Windows/Docker bootstrap. It validates
 loopback ports, starts disposable PostgreSQL and local provider fakes, applies
 migrations, seeds the canonical identity catalogue, starts the real backend and
 portal on the internal network, and records a sanitized readiness manifest.
 `Stop` removes only its fixed, stack-prefixed containers and preserves evidence.
+The database, backend, portal and provider-fake loopback ports are independently
+configurable, allowing concurrent isolated campaigns without a shared host-port
+collision.
 
 When the backend is intentionally not published to the Windows host,
 `internal-runner.mjs` runs one of three allowlisted API scripts in the backend

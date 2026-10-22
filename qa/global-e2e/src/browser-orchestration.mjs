@@ -2,6 +2,9 @@ import { actor } from "./identity-catalogue.mjs";
 import { assertLocalUrl } from "./policy.mjs";
 import { createRequire } from "node:module";
 import { resolve, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const repositoryRoot = resolve(fileURLToPath(new URL("../../../", import.meta.url)));
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -82,7 +85,7 @@ export class QaIdentityLab {
     const session = this.sessions.get(key) || await this.loginAs(key);
     let ownedBrowser = false;
     if (!browser) {
-      const require = createRequire(join(resolve("coro-backend"), "package.json"));
+      const require = createRequire(join(repositoryRoot, "coro-backend", "package.json"));
       const puppeteer = require("puppeteer");
       browser = await puppeteer.launch({ headless: true });
       ownedBrowser = true;

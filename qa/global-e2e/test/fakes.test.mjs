@@ -44,6 +44,11 @@ test("private storage requires authentication, tenant prefix and immutability", 
       body: "x",
     });
     assert.equal(result.status, 403);
+    result = await fetch(
+      `${storage.url}/bucket/exercise-reports/10000000-0000-4000-8000-000000000002/report/v1/a.pdf`,
+      { method: "PUT", headers, body: "pdf" },
+    );
+    assert.equal(result.status, 200);
     result = await fetch(`${storage.url}/bucket/tenant-a/a.pdf`, {
       method: "PUT",
       headers,
@@ -56,6 +61,13 @@ test("private storage requires authentication, tenant prefix and immutability", 
       body: "y",
     });
     assert.equal(result.status, 409);
+    result = await fetch(`${storage.url}/bucket/tenant-a/a.pdf`, {
+      method: "DELETE",
+      headers,
+    });
+    assert.equal(result.status, 204);
+    result = await fetch(`${storage.url}/bucket/tenant-a/a.pdf`, { headers });
+    assert.equal(result.status, 404);
   } finally {
     await storage.close();
   }

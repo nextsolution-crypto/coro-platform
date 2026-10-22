@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 
 export function startPrivateStorage({
   port = 34642,
+  host = "127.0.0.1",
   accessKey = "qa-storage-access",
 } = {}) {
   const objects = new Map();
@@ -18,7 +19,12 @@ export function startPrivateStorage({
       return;
     }
     const [, bucket, key] = match;
-    if (!key.startsWith("tenant-") || key.includes("..")) {
+    const tenantScoped = key.startsWith("tenant-");
+    const governedExerciseReport =
+      /^exercise-reports\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\//i.test(
+        key,
+      );
+    if ((!tenantScoped && !governedExerciseReport) || key.includes("..")) {
       response.writeHead(403).end("TENANT_PREFIX_REQUIRED");
       return;
     }
@@ -49,14 +55,23 @@ export function startPrivateStorage({
         .end(objects.get(objectKey));
       return;
     }
+    if (request.method === "DELETE") {
+      if (!objects.has(objectKey)) {
+        response.writeHead(404).end("NOT_FOUND");
+        return;
+      }
+      objects.delete(objectKey);
+      response.writeHead(204).end();
+      return;
+    }
     response.writeHead(405).end("METHOD_NOT_ALLOWED");
   });
   return new Promise((resolve, reject) =>
     server
-      .listen(port, "127.0.0.1", () => {
+      .listen(port, host, () => {
         const assignedPort = server.address().port;
         resolve({
-          url: `http://127.0.0.1:${assignedPort}`,
+          url: `http://${host}:${assignedPort}`,
           objects,
           close: () => new Promise((done) => server.close(done)),
         });
