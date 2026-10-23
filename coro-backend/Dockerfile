@@ -50,6 +50,8 @@ COPY --from=builder /app/assets ./assets
 # Fail the image build if the runtime Prisma engine is missing or cannot load.
 RUN node -e "require('./node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node')"
 
+RUN node dist/scripts/knowledge-runtime-smoke.js
+
 EXPOSE 3002
 
 CMD ["node", "dist/src/main.js"]
