@@ -27,10 +27,13 @@ export class CoroAiProviderGateway {
         provider: 'SECURITY_POLICY' as const,
         grounded: this.deterministic.answer(question, hits),
       };
-    if (this.config.aiProvider === 'bedrock')
+    const usableHits = hits.filter(
+      (hit) => !this.deterministic.suspicious(hit.text) && hit.score >= 0.25,
+    );
+    if (this.config.aiProvider === 'bedrock' && usableHits.length)
       return {
         provider: this.providerName(),
-        grounded: await this.bedrock.answer(question, hits),
+        grounded: await this.bedrock.answer(question, usableHits),
       };
     return {
       provider: 'DETERMINISTIC_SIMULATED' as const,
