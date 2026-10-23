@@ -51,3 +51,9 @@ Les alertes de budget AWS ne constituent pas un plafond de dépense. Contrôler 
 Le corpus `coro-backend/assets/knowledge-qa/` est intégralement fictif. Il contient trois pages natives avec tableau, une version remplacée, une source contradictoire, un scan et un document mixte. Le générateur et l’inventaire SHA-256 sont versionnés. Ne jamais utiliser ces contenus en intervention réelle.
 
 La recette PostgreSQL utilise uniquement une base locale dont le nom contient « test ». Elle exécute les transitions canoniques, la recherche autorisée et le rejet d’une révocation pendant l’extraction. La CI construit aussi l’image avec ses vrais moteurs OCR. Les résultats locaux, CI et production doivent être rapportés séparément ; un test simulé ne prouve pas une invocation Bedrock réelle.
+
+## Admission des questions
+
+Une citation valide ne suffit pas à prouver qu’une réponse parle du sujet demandé. Avant l’appel au modèle, les termes substantiels de la question doivent apparaître dans chaque extrait envoyé au modèle ou sa provenance, après normalisation simple. Les extraits portant sur un autre sujet sont écartés. Une entité absente, même entourée de mots communs comme « code » ou « document », provoque une abstention sans invocation Bedrock. Les contradictions numériques détectées sont également arrêtées avant le modèle.
+
+Ce contrôle est volontairement conservateur : un synonyme ou une formulation absente peut demander une reformulation avec les termes du document. Il ne constitue pas une preuve générale d’implication sémantique. La recette inclut le cas « Orme » absent des sources, qui ne doit jamais récupérer le code d’un autre document.
