@@ -1,6 +1,10 @@
 import { BedrockProviderAdapter } from './bedrock-provider.adapter';
 import { KnowledgeConfig } from './knowledge.config';
 import { KnowledgeSearchHit } from './knowledge.types';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
 
 const hit: KnowledgeSearchHit = {
   chunkId: 'chunk-1',
@@ -93,5 +97,61 @@ describe('BedrockProviderAdapter', () => {
     await expect(adapter.answer('Question', [hit])).rejects.toThrow(
       'Invocation Bedrock non autorisee',
     );
+  });
+
+  it('refuse un appel direct lorsque le fournisseur Bedrock n est pas selectionne', async () => {
+    process.env.CORO_AI_PROVIDER = 'deterministic-simulated';
+    const send = jest.fn();
+    const adapter = new BedrockProviderAdapter(new KnowledgeConfig());
+    adapter.setClientForTesting({ send } as never);
+    await expect(adapter.answer('Question', [hit])).rejects.toThrow(
+      'Fournisseur Bedrock non selectionne',
+    );
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('ne transmet aucune question sans source autorisee', async () => {
+    const send = jest.fn();
+    const adapter = new BedrockProviderAdapter(new KnowledgeConfig());
+    adapter.setClientForTesting({ send } as never);
+    await expect(adapter.answer('Question', [])).rejects.toThrow(
+      'Aucune source autorisee',
+    );
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('charge credential_process depuis le fichier config explicite sans AWS_CONFIG_FILE', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'coro-roles-anywhere-test-'));
+    const previous = { ...process.env };
+    try {
+      const configFile = join(directory, 'config');
+      const credentialsFile = join(directory, 'credentials');
+      const processFile = join(directory, 'fake-credential-process.cjs');
+      writeFileSync(credentialsFile, '');
+      writeFileSync(
+        processFile,
+        `process.stdout.write(JSON.stringify({Version:1,AccessKeyId:'TEST_ONLY_ACCESS_KEY',SecretAccessKey:'TEST_ONLY_SECRET',SessionToken:'TEST_ONLY_TOKEN'}));`,
+      );
+      writeFileSync(
+        configFile,
+        `[profile coro-credential-process-test]\ncredential_process = "${process.execPath}" "${processFile}"\nregion = ca-central-1\n`,
+      );
+      delete process.env.AWS_CONFIG_FILE;
+      process.env.AWS_SHARED_CREDENTIALS_FILE = credentialsFile;
+      process.env.AWS_PROFILE = 'coro-credential-process-test';
+      const config = new KnowledgeConfig();
+      Object.defineProperty(config, 'awsConfigFile', { value: configFile });
+      const adapter = new BedrockProviderAdapter(config);
+      const client = (
+        adapter as unknown as { getClient(): BedrockRuntimeClient }
+      ).getClient();
+      const credentials = await client.config.credentials();
+      expect(credentials.accessKeyId).toBe('TEST_ONLY_ACCESS_KEY');
+      expect(credentials.sessionToken).toBe('TEST_ONLY_TOKEN');
+      client.destroy();
+    } finally {
+      process.env = previous;
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });
