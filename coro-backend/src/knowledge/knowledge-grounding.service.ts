@@ -30,7 +30,7 @@ export class KnowledgeGroundingService {
         usedCitationIds: [],
       };
     const usable = hits.filter(
-      (hit) => !this.suspicious(hit.text) && hit.score >= 0.25,
+      (hit) => !this.suspicious(hit.text) && hit.score >= 0.25 && this.coversQuestion(question, [hit]),
     );
     if (!usable.length)
       return {
@@ -65,6 +65,36 @@ export class KnowledgeGroundingService {
       conflicts,
       usedCitationIds: [source.citationId],
     };
+  }
+
+  admissibleHits(question: string, hits: KnowledgeSearchHit[]) {
+    return hits.filter(hit => this.coversQuestion(question, [hit]));
+  }
+
+  /** Conservative lexical admission, before either provider: a citation alone
+   * cannot establish that an unrelated named subject exists in its source.
+   * Unknown vocabulary abstains rather than letting the model fill a gap. */
+  private coversQuestion(question: string, hits: KnowledgeSearchHit[]) {
+    const scaffolding = new Set([
+      'quels', 'quelles', 'comment', 'pourquoi', 'combien', 'trouve', 'trouver', 'situe', 'situee',
+      'selon', 'indique', 'indiquent', 'peux', 'pouvez', 'dire', 'donne', 'donner', 'moi', 'nous', 'vous',
+      'svp', 'stp', 'please', 'what', 'where', 'is', 'are', 'does', 'the', 'this', 'that', 'and',
+      'or', 'which', 'how', 'can', 'could', 'tell', 'me', 'about', 'according', 'document', 'documents',
+      'source', 'sources', 'approuve', 'approuvee', 'approuves', 'approuvees', 'actuel', 'actuelle',
+      'version', 'versions', 'objet', 'objets', 'fictif', 'fictive', 'fictifs', 'synthetique', 'synthetiques',
+      'resume', 'resumer', 'synthese', 'compare', 'comparer', 'difference', 'entre',
+      'je', 'veux', 'voudrais', 'savoir', 'connaitre', 'connais', 'indiquer', 'qu', 'que', 'quoi',
+      'cela', 'ceci', 'cette', 'cet', 'sur', 'avec', 'plan', 'plans',
+    ]);
+    const stem = (term: string) => {
+      const singular = term.length > 4 ? term.replace(/s$/, '') : term;
+      return singular.length > 6 ? singular.replace(/e$/, '') : singular;
+    };
+    const anchors = [...this.terms(question)].filter(term => !scaffolding.has(term)).map(stem);
+    const evidence = new Set(hits.flatMap(hit => [...this.terms([
+      hit.text, hit.documentName ?? '', hit.sectionPath ?? '', 'sha256', hit.sourceSha256 ?? '',
+    ].join(' '))].map(stem)));
+    return anchors.every(term => evidence.has(term));
   }
 
   private conflicts(hits: KnowledgeSearchHit[], question: string) {
