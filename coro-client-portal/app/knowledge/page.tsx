@@ -21,7 +21,7 @@ type Citation = {
 
 type Answer = {
   status: "ANSWERED" | "INSUFFICIENT_EVIDENCE" | "BLOCKED" | "PROVIDER_FAILURE";
-  provider: "DETERMINISTIC_SIMULATED";
+  provider: "DETERMINISTIC_SIMULATED" | "AWS_BEDROCK_CA_CENTRAL_1";
   answer: string | null;
   uncertainty: string | null;
   missingInformation: string[];
@@ -83,7 +83,7 @@ export default function KnowledgePage() {
               Les réponses proviennent uniquement des versions ProjectFile actuelles auxquelles vous avez accès.
             </p>
           </div>
-          <span className={styles.provider}><ShieldCheck size={16} /> IA simulée locale</span>
+          <span className={styles.provider}><ShieldCheck size={16} /> {answer?.provider === "AWS_BEDROCK_CA_CENTRAL_1" ? "CORO AI · AWS Canada" : answer?.provider === "DETERMINISTIC_SIMULATED" ? "IA simulée locale" : "Réponses avec sources"}</span>
         </header>
 
         <section className={styles.askPanel} aria-labelledby="knowledge-question">

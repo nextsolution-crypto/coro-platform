@@ -63,6 +63,43 @@ describe('BedrockProviderAdapter', () => {
     });
   });
 
+  const fence = String.fromCharCode(96).repeat(3);
+  const groundedJson = JSON.stringify({
+    answer: 'Le point de rassemblement est dans la cour nord.',
+    uncertainty: null, missingInformation: [], conflicts: [],
+    usedCitationIds: ['citation-1'],
+  });
+  function responseAdapter(text: string) {
+    const adapter = new BedrockProviderAdapter(new KnowledgeConfig());
+    adapter.setClientForTesting({ send: jest.fn().mockResolvedValue({
+      output: { message: { content: [{ text }] } },
+    }) } as never);
+    return adapter;
+  }
+
+  it.each(['json', ''])('accepte un bloc JSON unique avec balise %s', async (language) => {
+    const text = '  '+fence+language+'\n'+groundedJson+'\n'+fence+'  ';
+    await expect(responseAdapter(text).answer('Question', [hit])).resolves.toMatchObject({
+      answer: 'Le point de rassemblement est dans la cour nord.',
+      usedCitationIds: ['citation-1'],
+    });
+  });
+
+  it.each([
+    'Voici la reponse: '+fence+'json\n'+groundedJson+'\n'+fence,
+    fence+'json\n'+groundedJson+'\n'+fence+' Texte ajoute',
+    fence+'json\n'+groundedJson+'\n'+fence+'\n'+fence+'json\n{}\n'+fence,
+    fence+'javascript\n'+groundedJson+'\n'+fence,
+    fence+'json\n'+groundedJson+' {}\n'+fence,
+  ])('refuse un document entoure de prose, plusieurs blocs ou du contenu non JSON (%#)', async (text) => {
+    await expect(responseAdapter(text).answer('Question', [hit])).rejects.toThrow(SyntaxError);
+  });
+
+  it('refuse toujours une citation interdite dans un bloc JSON', async () => {
+    const text=fence+'json\n'+JSON.stringify({answer:'Inventee',uncertainty:null,missingInformation:[],conflicts:[],usedCitationIds:['citation-interdite']})+'\n'+fence;
+    await expect(responseAdapter(text).answer('Question', [hit])).rejects.toThrow('Citation Bedrock non autorisee');
+  });
+
   it('refuse une citation inventee par le fournisseur', async () => {
     const adapter = new BedrockProviderAdapter(new KnowledgeConfig());
     adapter.setClientForTesting({
