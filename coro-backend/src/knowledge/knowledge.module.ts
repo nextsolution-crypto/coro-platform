@@ -16,6 +16,8 @@ import { KnowledgeIngestionService } from './knowledge-ingestion.service';
 import { KnowledgeNormalizer } from './knowledge-normalizer';
 import { KnowledgeRetrievalService } from './knowledge-retrieval.service';
 import { KnowledgeReconciliationService } from './knowledge-reconciliation.service';
+import { BedrockProviderAdapter } from './bedrock-provider.adapter';
+import { CoroAiProviderGateway } from './coro-ai-provider.gateway';
 
 @Module({
   imports: [
@@ -35,6 +37,8 @@ import { KnowledgeReconciliationService } from './knowledge-reconciliation.servi
     KnowledgeIngestionService,
     KnowledgeRetrievalService,
     KnowledgeGroundingService,
+    BedrockProviderAdapter,
+    CoroAiProviderGateway,
     CoroAiService,
     KnowledgeReconciliationService,
   ],

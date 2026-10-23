@@ -15,8 +15,10 @@
 | Upgrade 150→151 | PASS |
 | Browser responsive | 12/12 PASS |
 | OCR image-only | NOT_IMPLEMENTED_FAIL_CLOSED |
-| Bedrock réel | NOT_AUTHORIZED |
-| GitHub CI | PENDING_PUBLICATION |
-| Déploiement privé | PENDING_PUBLICATION |
+| Adaptateur Bedrock / IAM Roles Anywhere | READY_INACTIVE_NO_INVOCATION |
+| Invocation Bedrock réelle | NOT_EXECUTED_BY_FOUNDER_DIRECTIVE |
+| GitHub CI du socle Knowledge | PASS - run 39884548292 |
+| Déploiement privé du socle Knowledge | PASS - run 39884904204, SHA `40cf44a66535616f1aabc9b66bc46cd38ace66d4` |
+| Adaptateur AWS | BRANCH_READY_NOT_DEPLOYED |
 
 Preuves nettoyées : `D:\CORO-QA\tracking\master-d-knowledge-ai\final-e2e`.

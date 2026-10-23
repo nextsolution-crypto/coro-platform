@@ -1,0 +1,20 @@
+services:
+  backend:
+    environment:
+      # L activation reste volontairement distincte du deploiement du code.
+      CORO_AI_PROVIDER: ${CORO_AI_PROVIDER:-deterministic-simulated}
+      CORO_AI_BEDROCK_INVOCATION_ENABLED: ${CORO_AI_BEDROCK_INVOCATION_ENABLED:-false}
+      CORO_AI_BEDROCK_REGION: ${CORO_AI_BEDROCK_REGION:-ca-central-1}
+      CORO_AI_BEDROCK_MODEL_ID: ${CORO_AI_BEDROCK_MODEL_ID:-ca.amazon.nova-lite-v1:0}
+      CORO_AI_ROLES_ANYWHERE_SESSION_SECONDS: ${CORO_AI_ROLES_ANYWHERE_SESSION_SECONDS:-900}
+      AWS_PROFILE: ${CORO_AI_AWS_PROFILE:-coro-ai-production}
+      AWS_CONFIG_FILE: /etc/coro-ai/aws-config
+    volumes:
+      - type: bind
+        source: /etc/coro-ai
+        target: /etc/coro-ai
+        read_only: true
+      - type: bind
+        source: ${CORO_AI_SIGNING_HELPER_HOST_PATH:-/usr/local/bin/aws_signing_helper}
+        target: /usr/local/bin/aws_signing_helper
+        read_only: true

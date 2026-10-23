@@ -30,4 +30,46 @@ export class KnowledgeConfig {
   );
   readonly maxResults = integer('KNOWLEDGE_MAX_RESULTS', 12, 1, 50);
   readonly pipelineVersion = 'PROJECTFILE_KNOWLEDGE_V1';
+
+  readonly aiProvider = this.enumValue(
+    'CORO_AI_PROVIDER',
+    'deterministic-simulated',
+    ['deterministic-simulated', 'bedrock'] as const,
+  );
+  readonly bedrockInvocationEnabled =
+    process.env.CORO_AI_BEDROCK_INVOCATION_ENABLED === 'true';
+  readonly bedrockRegion = process.env.CORO_AI_BEDROCK_REGION ?? 'ca-central-1';
+  readonly bedrockModelId =
+    process.env.CORO_AI_BEDROCK_MODEL_ID ?? 'ca.amazon.nova-lite-v1:0';
+  readonly awsProfile = process.env.AWS_PROFILE ?? 'coro-ai-production';
+  readonly awsConfigFile =
+    process.env.AWS_CONFIG_FILE ?? '/etc/coro-ai/aws-config';
+  readonly rolesAnywhereSessionSeconds = integer(
+    'CORO_AI_ROLES_ANYWHERE_SESSION_SECONDS',
+    900,
+    900,
+    3600,
+  );
+
+  assertBedrockActivation() {
+    if (this.aiProvider !== 'bedrock') return;
+    if (!this.bedrockInvocationEnabled)
+      throw new Error('Invocation Bedrock non autorisee par la configuration.');
+    if (this.bedrockRegion !== 'ca-central-1')
+      throw new Error('La region Bedrock doit etre ca-central-1.');
+    if (this.bedrockModelId !== 'ca.amazon.nova-lite-v1:0')
+      throw new Error('Le modele Bedrock demande n est pas autorise.');
+    if (this.rolesAnywhereSessionSeconds !== 900)
+      throw new Error('La session Roles Anywhere doit etre limitee a 900 secondes.');
+  }
+
+  private enumValue<const T extends readonly string[]>(
+    name: string,
+    fallback: T[number],
+    allowed: T,
+  ): T[number] {
+    const value = process.env[name] ?? fallback;
+    if (!allowed.includes(value)) throw new Error(`${name} invalide`);
+    return value;
+  }
 }
