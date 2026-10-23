@@ -96,7 +96,7 @@ describe('BedrockProviderAdapter', () => {
   });
 
   it('refuse toujours une citation interdite dans un bloc JSON', async () => {
-    const text=fence+'json\n'+JSON.stringify({answer:'Inventee',usedCitationIds:['citation-interdite']})+'\n'+fence;
+    const text=fence+'json\n'+JSON.stringify({answer:'Inventee',uncertainty:null,missingInformation:[],conflicts:[],usedCitationIds:['citation-interdite']})+'\n'+fence;
     await expect(responseAdapter(text).answer('Question', [hit])).rejects.toThrow('Citation Bedrock non autorisee');
   });
 
