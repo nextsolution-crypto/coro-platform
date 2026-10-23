@@ -112,6 +112,9 @@ jobs:
       - name: Build backend
         working-directory: coro-backend
         run: npm run build
+      - name: Verify compiled Knowledge PDF extraction
+        working-directory: coro-backend
+        run: node dist/scripts/knowledge-runtime-smoke.js
 
   client-portal-build:
     runs-on: ubuntu-latest
