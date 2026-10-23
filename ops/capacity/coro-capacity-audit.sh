@@ -31,7 +31,7 @@ active_manifest="$(find "$release_dir" -maxdepth 1 -type f -name 'production-*.j
 [[ -n "$active_manifest" && -f "$active_manifest" ]] || { echo 'CAPACITY_AUDIT_FAILED code=ACTIVE_MANIFEST_MISSING'; exit 1; }
 
 mapfile -t active_refs < <(node -e 'const m=require(process.argv[1]);for(const r of Object.values(m.images||{}))if(typeof r==="string")console.log(r)' "$active_manifest")
-mapfile -t rollback_refs < <(node -e 'const m=require(process.argv[1]);for(const r of m.previousImages||[])if(typeof r==="string")console.log(r)' "$active_manifest")
+mapfile -t rollback_refs < <(node -e 'const m=require(process.argv[1]);for(const r of m.previousImages||[])if(typeof r==="string"&&r)console.log(r)' "$active_manifest")
 declare -A protected=() reasons=() container_refs=()
 while read -r id; do [[ -n "$id" ]] && protected["$id"]=1 && reasons["$id"]="CONTAINER_REFERENCE" && container_refs["$id"]=1; done < <(docker ps -aq | xargs -r docker inspect --format '{{.Image}}' | sort -u)
 active_available=0; rollback_available=0

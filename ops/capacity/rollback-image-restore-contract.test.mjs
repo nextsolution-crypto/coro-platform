@@ -7,6 +7,7 @@ const workflow = fs.readFileSync(new URL("../../.github/workflows/production-rol
 
 test("restores only the four immutable rollback references from the active manifest", () => {
   assert.match(script, /m\.previousImages/);
+  assert.match(script, /typeof r===\"string\"&&r/);
   assert.match(script, /\$\{#rollback_refs\[@\]\}" -eq 4/);
   assert.match(script, /@sha256:\[0-9a-f\]\{64\}/);
   assert.match(script, /docker pull --platform linux\/amd64 "\$ref"/);

@@ -16,7 +16,7 @@ flock --nonblock 9 || { echo 'CAPACITY_CLEANUP_FAILED code=DEPLOYMENT_LOCK_BUSY'
 
 active_manifest="$(find "$release_dir" -maxdepth 1 -type f -name 'production-*.json' -print0 | xargs -0 -r stat -c '%Y %n' | sort -rn | cut -d' ' -f2- | while read -r f; do node -e 'const m=require(process.argv[1]);if(m.status==="SUCCESS"){process.stdout.write(process.argv[1]);process.exit(0)}process.exit(1)' "$f" 2>/dev/null && break || true; done)"
 [[ -n "$active_manifest" && -f "$active_manifest" ]] || { echo 'CAPACITY_CLEANUP_FAILED code=ACTIVE_MANIFEST_MISSING'; exit 1; }
-mapfile -t protected_refs < <(node -e 'const m=require(process.argv[1]);for(const r of [...Object.values(m.images||{}),...(m.previousImages||[])])if(typeof r==="string")console.log(r)' "$active_manifest")
+mapfile -t protected_refs < <(node -e 'const m=require(process.argv[1]);for(const r of [...Object.values(m.images||{}),...(m.previousImages||[])])if(typeof r==="string"&&r)console.log(r)' "$active_manifest")
 declare -A protected=()
 while read -r id; do [[ -n "$id" ]] && protected["$id"]=1; done < <(docker ps -aq | xargs -r docker inspect --format '{{.Image}}' | sort -u)
 for ref in "${protected_refs[@]}"; do id="$(docker image inspect --format '{{.Id}}' "$ref" 2>/dev/null || true)"; [[ -n "$id" ]] && protected["$id"]=1; done
