@@ -218,13 +218,16 @@ export default function ProjectFiles({ projectId }: { projectId: string }) {
   const handleReview = (file: ProjectFile) => openLifecycleAction(file, "review");
   const handleApprove = (file: ProjectFile) => openLifecycleAction(file, "approve");
   const handleRevoke = (file: ProjectFile) => openLifecycleAction(file, "revoke");
-  const confirmLifecycleAction = async () => {
+  const confirmLifecycleAction = async (form: HTMLFormElement) => {
     if (!lifecycleAction || lifecycleSubmitting) return;
     const reason = lifecycleReason.trim();
     if (reason.length < 8) { setLifecycleError("La justification doit contenir au moins 8 caractères."); return; }
     const { file, action } = lifecycleAction;
-    const effective = lifecycleEffectiveAt ? new Date(lifecycleEffectiveAt) : new Date();
-    const expires = lifecycleExpiresAt ? new Date(lifecycleExpiresAt) : null;
+    const values = new FormData(form);
+    const effectiveValue = String(values.get("effectiveAt") ?? "");
+    const expiresValue = String(values.get("expiresAt") ?? "");
+    const effective = effectiveValue ? new Date(effectiveValue) : new Date();
+    const expires = expiresValue ? new Date(expiresValue) : null;
     if (action === "approve" && (!Number.isFinite(effective.getTime()) || (expires && (!Number.isFinite(expires.getTime()) || expires <= effective)))) {
       setLifecycleError("La fin de validité doit être postérieure à la prise d’effet."); return;
     }
@@ -946,6 +949,8 @@ export default function ProjectFiles({ projectId }: { projectId: string }) {
                                     color: "#ADB5BD",
                                   }}
                                 >
+                                  {lifecycleLabel(version)}
+                                  {" · "}
                                   {formatSize(version.size)}
                                   {" · "}
                                   {new Date(
@@ -959,8 +964,15 @@ export default function ProjectFiles({ projectId }: { projectId: string }) {
                                 </p>
                               </div>
 
+                              <div className="flex flex-wrap gap-2">
+                                {version.lifecycleState === "DRAFT" && <button type="button" aria-label={`Demander la révision ${version.name} version ${version.version}`} onClick={() => handleReview(version)} className="rounded border px-3 py-2 text-xs">Demander la révision</button>}
+                                {version.lifecycleState === "REVIEW" && <button type="button" aria-label={`Approuver ${version.name} version ${version.version}`} onClick={() => handleApprove(version)} className="rounded border px-3 py-2 text-xs">Approuver</button>}
+                                {version.lifecycleState && version.lifecycleState !== "REVOKED" && <button type="button" aria-label={`Révoquer ${version.name} version ${version.version}`} onClick={() => handleRevoke(version)} className="rounded border px-3 py-2 text-xs">Révoquer</button>}
+                              </div>
+
                               <button
                                 type="button"
+                                disabled={version.isDownloadable === false}
                                 onClick={() => handleDownload(version)}
                                 className="
                                     w-full
@@ -1271,7 +1283,7 @@ export default function ProjectFiles({ projectId }: { projectId: string }) {
         </div>
       )}
       <dialog ref={lifecycleDialogRef} aria-labelledby="file-lifecycle-title" onCancel={(event) => { event.preventDefault(); closeLifecycleAction(); }} className="m-auto w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-xl backdrop:bg-black/40">
-        {lifecycleAction && <form onSubmit={(event) => { event.preventDefault(); void confirmLifecycleAction(); }}>
+        {lifecycleAction && <form onSubmit={(event) => { event.preventDefault(); void confirmLifecycleAction(event.currentTarget); }}>
           <h3 id="file-lifecycle-title" className="text-lg font-semibold">
             {lifecycleAction.action === "review" ? "Mettre en révision" : lifecycleAction.action === "approve" ? "Approuver la version" : "Révoquer la version"}
           </h3>
@@ -1281,10 +1293,10 @@ export default function ProjectFiles({ projectId }: { projectId: string }) {
           </label>
           {lifecycleAction.action === "approve" && <div className="mt-3 space-y-3">
             <label className="block text-sm">Prise d’effet (heure locale, vide : maintenant)
-              <input type="datetime-local" value={lifecycleEffectiveAt} onChange={(event) => setLifecycleEffectiveAt(event.target.value)} disabled={lifecycleSubmitting} className="mt-1 w-full rounded border p-2" />
+              <input name="effectiveAt" type="datetime-local" value={lifecycleEffectiveAt} onChange={(event) => setLifecycleEffectiveAt(event.target.value)} disabled={lifecycleSubmitting} className="mt-1 w-full rounded border p-2" />
             </label>
             <label className="block text-sm">Fin de validité (facultatif)
-              <input type="datetime-local" value={lifecycleExpiresAt} onChange={(event) => setLifecycleExpiresAt(event.target.value)} disabled={lifecycleSubmitting} className="mt-1 w-full rounded border p-2" />
+              <input name="expiresAt" type="datetime-local" value={lifecycleExpiresAt} onChange={(event) => setLifecycleExpiresAt(event.target.value)} disabled={lifecycleSubmitting} className="mt-1 w-full rounded border p-2" />
             </label>
           </div>}
           {lifecycleError && <p role="alert" className="mt-3 text-sm text-red-700">{lifecycleError}</p>}

@@ -140,6 +140,7 @@ describe('BedrockProviderAdapter', () => {
 
   it.each([
     null, [], {},
+    { answer: validToolAnswer.answer, usedCitationIds: validToolAnswer.usedCitationIds },
     { ...validToolAnswer, answer: 7 },
     { ...validToolAnswer, uncertainty: 0 },
     { ...validToolAnswer, missingInformation: 'Aucune' },

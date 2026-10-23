@@ -40,7 +40,10 @@ export class BedrockProviderAdapter {
               'Utilise uniquement le format de sortie coro_grounded_answer et les citationId fournis. ' +
               'N invente aucune action operationnelle. Si des sources se contredisent, ne tranche pas: ' +
               'laisse answer vide, explique les contradictions dans conflicts et cite chaque source concernee. ' +
-              'Si l information demandee manque, laisse answer vide et renseigne missingInformation.',
+              'Si l information demandee manque, laisse answer vide et renseigne missingInformation. ' +
+              'Tous les cinq champs doivent toujours etre presents, meme vides : answer et uncertainty sont des chaines ; ' +
+              'missingInformation, conflicts et usedCitationIds sont des tableaux de chaines. ' +
+              'Utilise une chaine vide ou un tableau vide si necessaire, ne supprime jamais un champ. ',
           },
         ],
         messages: [
@@ -100,7 +103,12 @@ export class BedrockProviderAdapter {
       inputTokens: response.usage?.inputTokens ?? null, outputTokens: response.usage?.outputTokens ?? null }) + '\n');
     return parsed;
     } catch (error) {
-      process.stderr.write(JSON.stringify({ event: 'CORO_AI_USAGE', status: 'PROVIDER_FAILURE', elapsedMs: Date.now() - started }) + '\n');
+      const failure = error as { name?: string; message?: string; $metadata?: { httpStatusCode?: number } };
+      process.stderr.write(JSON.stringify({ event: 'CORO_AI_USAGE', status: 'PROVIDER_FAILURE', elapsedMs: Date.now() - started,
+        errorName: /^[A-Za-z0-9_]{1,80}$/.test(failure?.name ?? '') ? failure.name : 'ERROR',
+        httpStatusCode: Number.isInteger(failure?.$metadata?.httpStatusCode) ? failure.$metadata!.httpStatusCode : null,
+        failureCode: failure?.message === 'Schema Bedrock invalide.' ? 'OUTPUT_SCHEMA_INVALID' : 'PROVIDER_REQUEST_FAILED',
+      }) + '\n');
       throw error;
     }
   }
