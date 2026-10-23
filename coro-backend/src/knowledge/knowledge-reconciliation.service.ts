@@ -21,6 +21,10 @@ export class KnowledgeReconciliationService {
     this.running = true;
     try {
       const now = new Date();
+      await this.prisma.projectFileKnowledgeIngestion.updateMany({
+        where: { status: 'PROCESSING', updatedAt: { lt: new Date(now.getTime() - Math.max(900_000, this.config.extractionTimeoutMs + 120_000)) } },
+        data: { status: 'FAILED', lastErrorCode: 'INTERRUPTED_INGESTION' },
+      });
       const invalid = await this.prisma.projectFile.findMany({
         where: {
           knowledgeIngestions: { some: { status: 'READY' } },
@@ -50,12 +54,14 @@ export class KnowledgeReconciliationService {
               ],
             },
           ],
-          knowledgeIngestions: {
-            none: {
-              status: 'READY',
+          NOT: { knowledgeIngestions: {
+            some: {
               pipelineVersion: this.config.pipelineVersion,
+              OR: [ { status: { in: ['READY', 'PROCESSING'] } },
+                { status: 'FAILED', attemptCount: { gte: this.config.maxAutoAttempts } },
+                { status: 'FAILED', updatedAt: { gt: new Date(now.getTime() - this.config.retryDelayMs) } } ],
             },
-          },
+          } },
         },
         select: { id: true },
         orderBy: { approvedAt: 'asc' },
@@ -66,7 +72,7 @@ export class KnowledgeReconciliationService {
           await this.ingestion.indexCanonical(file.id);
         } catch (error) {
           this.logger.warn(
-            `Indexation ProjectFile echouee (${file.id}): ${error instanceof Error ? error.message : 'UNKNOWN'}`,
+            `Indexation ProjectFile echouee (${file.id}): ${error instanceof Error && /^[A-Z_]+$/.test(error.message) ? error.message : 'EXTRACTION_FAILED'}`,
           );
         }
       }
