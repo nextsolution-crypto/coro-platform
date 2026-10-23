@@ -5,6 +5,7 @@ import { KnowledgeGroundingService } from './knowledge-grounding.service';
 import { KnowledgeAuthorizationService } from './knowledge-authorization.service';
 import { KnowledgeRetrievalService } from './knowledge-retrieval.service';
 import { KnowledgeActor } from './knowledge.types';
+import { CoroAiProviderGateway } from './coro-ai-provider.gateway';
 
 type OperationalContext =
   | 'INCIDENT'
@@ -19,6 +20,7 @@ export class CoroAiService {
     private readonly prisma: PrismaService,
     private readonly retrieval: KnowledgeRetrievalService,
     private readonly grounding: KnowledgeGroundingService,
+    private readonly providerGateway: CoroAiProviderGateway,
     private readonly authorization: KnowledgeAuthorizationService,
   ) {}
 
@@ -47,8 +49,11 @@ export class CoroAiService {
     const buildingId = contextBuildingId ?? input.buildingId;
     const hits = await this.retrieval.search(actor, input.question, buildingId);
     let grounded;
+    let provider: string = this.providerGateway.providerName();
     try {
-      grounded = this.grounding.answer(input.question, hits);
+      const result = await this.providerGateway.answer(input.question, hits);
+      grounded = result.grounded;
+      provider = result.provider;
     } catch {
       const failed = await this.prisma.coroKnowledgeInteraction.create({
         data: {
@@ -119,7 +124,7 @@ export class CoroAiService {
       interactionId: interaction.id,
       correlationId,
       status,
-      provider: 'DETERMINISTIC_SIMULATED',
+      provider,
       answer: grounded.answer,
       uncertainty: grounded.uncertainty,
       missingInformation: grounded.missingInformation,

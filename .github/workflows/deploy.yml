@@ -3,6 +3,8 @@ name: Validate and Release Production
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
     inputs:
       release_commit:
@@ -106,6 +108,10 @@ jobs:
       - name: Run PostgreSQL integration tests
         working-directory: coro-backend
         run: npm run test:postgres
+
+      - name: Build backend
+        working-directory: coro-backend
+        run: npm run build
 
   client-portal-build:
     runs-on: ubuntu-latest

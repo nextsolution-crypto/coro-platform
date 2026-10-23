@@ -19,7 +19,8 @@ Date : 2026-10-22
 - D-2 architecture canonique : PASS; ProjectFile unique.
 - D-3 ingestion/indexation : PASS; OCR image-only `NOT_IMPLEMENTED_FAIL_CLOSED`.
 - D-4 retrieval : PASS, Internal User/ClientUser/Network/tenant/bâtiment.
-- D-5 AI simulée : PASS; Bedrock réel non autorisé.
+- D-5 AI simulée : PASS; adaptateur Bedrock/Roles Anywhere prêt mais inactif,
+  aucune invocation réelle exécutée.
 - D-6 intégration opérationnelle : PASS en lecture seule.
 - D-7 sécurité/résilience : PASS local.
 - D-8 UX : 12/12 PASS.
@@ -36,4 +37,10 @@ Date : 2026-10-22
 
 ## Prochaine action
 
-Revue finale du diff, commit local, publication/CI puis release privée gouvernée. Toute activation Bedrock reste une décision Founder distincte.
+L'activation du trafic Bedrock demeure une opération gouvernée distincte; la
+branche d'intégration ne modifie pas la configuration active de production.
+
+Le socle Knowledge et l'IA simulée ont été publiés au SHA
+`40cf44a66535616f1aabc9b66bc46cd38ace66d4` (CI `39884548292`, release
+gouvernée `39884904204`). L'adaptateur AWS/Roles Anywhere est préparé dans
+la branche MASTER D, testé sans invocation et non déployé.

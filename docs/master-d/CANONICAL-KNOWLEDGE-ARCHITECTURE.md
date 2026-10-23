@@ -27,4 +27,10 @@ Ces modèles ne contiennent ni approbation documentaire ni téléchargement publ
 
 ## Gate externe
 
-Le fournisseur réel demeure désactivé. L'adaptateur fake est autorisé pour QA. L'activation AWS Bedrock requiert une décision séparée sur budget, région/résidence, rétention, journalisation, classification admissible, IAM et connectivité privée.
+Le fournisseur réel demeure désactivé. L'adaptateur fake est autorisé pour
+QA. La configuration AWS approuvée utilise IAM Roles Anywhere, le profil
+`coro-ai-production`, `ca-central-1`, le profil d'inférence canadien
+`ca.amazon.nova-lite-v1:0` et des sessions temporaires de 900 secondes. Les
+certificats et clés restent hors image et hors Git sous `/etc/coro-ai`. Le
+conteneur backend glibc peut exécuter le helper monté en lecture seule. Une
+activation gouvernée distincte reste requise avant toute invocation réelle.

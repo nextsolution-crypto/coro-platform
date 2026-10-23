@@ -14,4 +14,9 @@ Le moteur déterministe répond uniquement depuis les extraits ProjectFile autor
 
 Chaque citation doit contenir document/version ProjectFile, page ou section, bâtiment pertinent et timestamp source. Une citation inventée ou devenue inéligible invalide la réponse entière.
 
-Le fournisseur simulé est le seul mode accepté dans ce dossier. `CORO_AI_PROVIDER=bedrock` reste interdit tant que la décision fournisseur n'est pas approuvée.
+Le fournisseur simulé reste le seul mode exécuté dans cette phase. L'adaptateur
+Bedrock est préparé pour `ca.amazon.nova-lite-v1:0` dans `ca-central-1`, avec le
+profil Roles Anywhere `coro-ai-production` et des sessions de 900 secondes.
+L'activation exige les deux valeurs explicites `CORO_AI_PROVIDER=bedrock` et
+`CORO_AI_BEDROCK_INVOCATION_ENABLED=true`. Aucune invocation réelle n'a été
+effectuée pendant l'acceptation de cette branche.

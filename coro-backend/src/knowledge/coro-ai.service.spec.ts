@@ -37,7 +37,26 @@ function harness() {
   const authorization: any = {
     scope: jest.fn().mockResolvedValue({ organizationId: 'org-a', buildingIds: ['building-a'] }),
   };
-  return { service: new CoroAiService(prisma, retrieval, grounding, authorization), prisma, retrieval, grounding };
+  const providerGateway: any = {
+    providerName: jest.fn().mockReturnValue('DETERMINISTIC_SIMULATED'),
+    answer: jest.fn().mockImplementation(async (question, hits) => ({
+      provider: 'DETERMINISTIC_SIMULATED',
+      grounded: grounding.answer(question, hits),
+    })),
+  };
+  return {
+    service: new CoroAiService(
+      prisma,
+      retrieval,
+      grounding,
+      providerGateway,
+      authorization,
+    ),
+    prisma,
+    retrieval,
+    grounding,
+    providerGateway,
+  };
 }
 
 describe('CoroAiService', () => {
