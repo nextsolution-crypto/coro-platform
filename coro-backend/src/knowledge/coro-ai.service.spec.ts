@@ -11,6 +11,7 @@ const actor = {
 function harness() {
   const find = jest.fn().mockResolvedValue({ buildingId: 'building-a' });
   const prisma: any = {
+    clientUser: { findFirst: jest.fn().mockResolvedValue({ clientId: 'customer-a', role: 'CLIENT_MANAGER', buildingIds: ['building-a'], operationalReviewPermissions: [] }) },
     incidentEvent: { findFirst: find },
     evacuationEvent: { findFirst: find },
     exerciseReport: { findFirst: find },
@@ -60,6 +61,13 @@ function harness() {
 }
 
 describe('CoroAiService', () => {
+  it('reports the real selected provider when Bedrock fails without exposing an answer', async () => {
+    const h = harness();
+    h.providerGateway.providerName.mockReturnValue('AWS_BEDROCK_CA_CENTRAL_1');
+    h.providerGateway.answer.mockRejectedValue(new Error('provider unavailable'));
+    const result = await h.service.ask(actor, { question: 'Question de recette fictive' });
+    expect(result).toMatchObject({ status: 'PROVIDER_FAILURE', provider: 'AWS_BEDROCK_CA_CENTRAL_1', answer: null, citations: [] });
+  });
   it.each(['INCIDENT', 'SENTINELLE', 'NETWORK', 'EXERCISE_REPORT', 'CORRECTIVE_ACTION'] as const)(
     'binds %s assistance to the authorized building without a mutation path',
     async (operationalContext) => {
@@ -75,6 +83,31 @@ describe('CoroAiService', () => {
     },
   );
 
+  it('applies canonical client confidentiality when binding corrective actions', async () => {
+    const h = harness();
+    await h.service.ask(actor, { question: 'Question fictive', operationalContext: 'CORRECTIVE_ACTION', operationalResourceId: 'action-a' });
+    const where = h.prisma.correctiveAction.findFirst.mock.calls[0][0].where;
+    expect(where.buildingId).toEqual({ in: ['building-a'] });
+    expect(where.building).toEqual({ is: { clientId: 'customer-a' } });
+    expect(where.OR).toEqual([
+      { visibility: { in: ['BUILDING_TEAM', 'ORGANIZATION'] } },
+      { visibility: 'RESTRICTED', createdById: actor.id },
+    ]);
+  });
+  it('restricts client report assistance to published, active canonical projects', async () => {
+    const h = harness();
+    await h.service.ask(actor, { question: 'Question fictive', operationalContext: 'EXERCISE_REPORT', operationalResourceId: 'report-a' });
+    expect(h.prisma.exerciseReport.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
+      status: 'PUBLISHED', project: { is: { isActive: true, organizationId: 'org-a' } },
+    }) }));
+  });
+  it('rejects inaccessible contexts before retrieval or provider invocation', async () => {
+    const h = harness();
+    h.prisma.incidentEvent.findFirst.mockResolvedValue({ buildingId: 'forbidden-building' });
+    await expect(h.service.ask(actor, { question: 'Question fictive', operationalContext: 'INCIDENT', operationalResourceId: 'other-event' })).rejects.toThrow('Contexte non disponible');
+    expect(h.retrieval.search).not.toHaveBeenCalled();
+    expect(h.providerGateway.answer).not.toHaveBeenCalled();
+  });
   it('fails closed and records a provider failure without citations', async () => {
     const h = harness();
     h.grounding.answer.mockImplementation(() => { throw new Error('SIMULATED_PROVIDER_FAILURE'); });
