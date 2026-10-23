@@ -40,7 +40,10 @@ export class KnowledgeGroundingService {
         conflicts: [],
         usedCitationIds: [],
       };
-    const conflicts = this.conflicts(usable);
+    const conflicts = this.conflicts(usable, question);
+    if (conflicts.length) return { answer: null,
+      uncertainty: 'Les sources accessibles se contredisent ; aucune valeur ne peut être retenue.',
+      missingInformation: [], conflicts, usedCitationIds: [...new Set(usable.map(hit => hit.citationId))] };
     const source = usable[0];
     const questionTerms = this.terms(question);
     const sentence = source.text
@@ -64,19 +67,19 @@ export class KnowledgeGroundingService {
     };
   }
 
-  private conflicts(hits: KnowledgeSearchHit[]) {
-    const numeric = hits
-      .slice(0, 5)
-      .map((hit) => ({
-        id: hit.citationId,
-        values: [...new Set(hit.text.match(/\b\d+(?:[.,]\d+)?\b/g) ?? [])],
-      }))
-      .filter((item) => item.values.length);
-    if (numeric.length < 2) return [];
-    const signatures = new Set(numeric.map((item) => item.values.join('|')));
-    return signatures.size > 1
-      ? ['Valeurs numériques divergentes entre les sources citées.']
-      : [];
+  private conflicts(hits: KnowledgeSearchHit[], question: string) {
+    const query = this.terms(question);
+    const facts = new Map<string, Set<string>>();
+    for (const hit of hits) for (const sentence of hit.text.split(/[\n.!?]+/)) {
+      const normalized = sentence.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+      const values = normalized.match(/\b\d+(?:[.,]\d+)?\b/g);
+      if (!values || ![...this.terms(normalized)].some(term => query.has(term))) continue;
+      const signature = normalized.replace(/\b\d+(?:[.,]\d+)?\b/g, '#').replace(/\s+/g, ' ');
+      const variants = facts.get(signature) ?? new Set<string>();
+      variants.add(values.join('|')); facts.set(signature, variants);
+    }
+    return [...facts.values()].some(variants => variants.size > 1)
+      ? ['Valeurs numériques divergentes pour un même fait dans les sources citées.'] : [];
   }
 
   private terms(value: string) {
