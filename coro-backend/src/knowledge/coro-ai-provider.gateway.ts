@@ -30,11 +30,16 @@ export class CoroAiProviderGateway {
     const usableHits = hits.filter(
       (hit) => !this.deterministic.suspicious(hit.text) && hit.score >= 0.25,
     );
-    if (this.config.aiProvider === 'bedrock' && usableHits.length)
+    if (this.config.aiProvider === 'bedrock' && usableHits.length) {
+      const admittedHits = this.deterministic.admissibleHits(question, usableHits);
+      const admission = this.deterministic.answer(question, admittedHits);
+      if (admission.missingInformation.length || admission.conflicts.length)
+        return { provider: 'DOCUMENTARY_POLICY' as const, grounded: admission };
       return {
         provider: this.providerName(),
-        grounded: await this.bedrock.answer(question, usableHits),
+        grounded: await this.bedrock.answer(question, admittedHits),
       };
+    }
     return {
       provider: 'DETERMINISTIC_SIMULATED' as const,
       grounded: this.deterministic.answer(question, hits),
