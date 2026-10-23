@@ -93,7 +93,10 @@ export class BedrockProviderAdapter {
       (content) => 'text' in content,
     )?.text;
     if (!text) throw new Error('Reponse Bedrock vide.');
-    const value = JSON.parse(text) as Partial<GroundedAnswer>;
+    const trimmed = text.trim();
+    // Accept a single JSON fence returned by the model, without surrounding prose.
+    const fenced = /^```(?:json)?\s*\n([\s\S]*?)\n```$/i.exec(trimmed);
+    const value = JSON.parse(fenced ? fenced[1] : trimmed) as Partial<GroundedAnswer>;
     return {
       answer: typeof value.answer === 'string' ? value.answer : null,
       uncertainty:
