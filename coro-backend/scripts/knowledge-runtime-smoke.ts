@@ -1,7 +1,7 @@
 import { KnowledgeConfig } from '../src/knowledge/knowledge.config';
 import { KnowledgeExtractorService } from '../src/knowledge/knowledge-extractor.service';
 
-function fixturePdf() {
+export function fixturePdf() {
   const content = 'BT /F1 12 Tf 72 720 Td (CORO-KNOWLEDGE-2026) Tj ET\n';
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
@@ -32,7 +32,7 @@ async function main() {
   console.log(JSON.stringify({ status: 'PASS', test: 'KNOWLEDGE_COMPILED_PDF', pages: 1, codeFound: true }));
 }
 
-main().catch((error) => {
+if (require.main === module) main().catch((error) => {
   console.error(error instanceof Error ? error.message : 'KNOWLEDGE_COMPILED_PDF_SMOKE_FAILED');
   process.exitCode = 1;
 });
