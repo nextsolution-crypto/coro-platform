@@ -137,7 +137,7 @@ describe('BedrockProviderAdapter', () => {
     { ...validToolAnswer, missingInformation: 'Aucune' },
     { ...validToolAnswer, conflicts: 'Aucun' },
     { ...validToolAnswer, usedCitationIds: ['citation-1', 7] },
-  ])('refuse un schema de sortie structuree invalide (%#)', async (input) => {
+  ].map((input) => ({ input })))('refuse un schema de sortie structuree invalide (%#)', async ({ input }) => {
     const { adapter } = toolAdapter([{ name: 'coro_grounded_answer', input }]);
     await expect(adapter.answer('Question', [hit])).rejects.toThrow('Schema Bedrock invalide');
   });
