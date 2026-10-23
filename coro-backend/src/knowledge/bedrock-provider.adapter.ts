@@ -21,7 +21,10 @@ export class BedrockProviderAdapter {
     question: string,
     hits: KnowledgeSearchHit[],
   ): Promise<GroundedAnswer> {
+    if (this.config.aiProvider !== 'bedrock')
+      throw new Error('Fournisseur Bedrock non selectionne.');
     this.config.assertBedrockActivation();
+    if (!hits.length) throw new Error('Aucune source autorisee pour Bedrock.');
     const allowedCitationIds = new Set(hits.map((hit) => hit.citationId));
     const response = await this.getClient().send(
       new ConverseCommand({
@@ -79,7 +82,7 @@ export class BedrockProviderAdapter {
       region: this.config.bedrockRegion,
       credentials: fromIni({
         profile: this.config.awsProfile,
-        filepath: this.config.awsConfigFile,
+        configFilepath: this.config.awsConfigFile,
       }),
     });
     return this.client;
