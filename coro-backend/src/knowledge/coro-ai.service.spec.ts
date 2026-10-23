@@ -89,4 +89,41 @@ describe('CoroAiService', () => {
       expect.objectContaining({ data: expect.objectContaining({ status: 'PROVIDER_FAILURE' }) }),
     );
   });
+  it('links only grounded citations to the canonical source viewer, not a project document route', async () => {
+    const h = harness();
+    const hit = {
+      citationId: 'citation-a',
+      chunkId: 'chunk-a',
+      projectFileId: 'file-a',
+      projectFileVersion: 3,
+      documentName: 'source.pdf',
+      pageStart: 2,
+      pageEnd: 2,
+      sectionPath: 'Section 1',
+      sourceSha256: 'a'.repeat(64),
+      score: 1,
+    };
+    h.retrieval.search.mockResolvedValue([hit, { ...hit, citationId: 'unused-citation' }]);
+    h.grounding.answer.mockReturnValue({
+      answer: 'Réponse sourcée.',
+      uncertainty: null,
+      missingInformation: [],
+      conflicts: [],
+      usedCitationIds: ['citation-a'],
+    });
+    const result = await h.service.ask(actor, { question: 'Que dit la source approuvée ?' });
+    expect(result.status).toBe('ANSWERED');
+    expect(result.citations).toEqual([{
+      citationId: 'citation-a',
+      projectFileId: 'file-a',
+      version: 3,
+      name: 'source.pdf',
+      pageStart: 2,
+      pageEnd: 2,
+      sectionPath: 'Section 1',
+      sha256: 'a'.repeat(64),
+      href: '/knowledge/sources/file-a',
+    }]);
+  });
+
 });

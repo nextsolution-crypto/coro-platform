@@ -140,7 +140,7 @@ export class CoroAiService {
           pageEnd: hit.pageEnd,
           sectionPath: hit.sectionPath,
           sha256: hit.sourceSha256,
-          href: `/documents/${hit.projectFileId}`,
+          href: `/knowledge/sources/${hit.projectFileId}`,
         })),
     };
   }
