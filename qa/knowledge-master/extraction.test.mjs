@@ -51,3 +51,12 @@ test('limits and malformed PDFs cannot produce a partial successful extraction',
   await assert.rejects(() => extractor({}).extract(Buffer.from('%PDF-invalid'),'application/pdf'), /PDF_INVALID/);
   assert.throws(() => parseOcrTsv('header\n5\t1\t1\t1\t1\t1\t0\t0\t1\t1\t5\tuncertain text with more than twenty chars',80), /OCR_LOW_CONFIDENCE/);
 });
+test('worker concurrency and overall deadline are bounded without retaining a partial result', async () => {
+  const service = extractor({localOcrEnabled:false});
+  const first = service.extract(bytes('master-native-v1.pdf'),'application/pdf');
+  const second = service.extract(bytes('master-native-v2.pdf'),'application/pdf');
+  await assert.rejects(() => service.extract(bytes('master-native-v1.pdf'),'application/pdf'), /EXTRACTOR_BUSY/);
+  const results = await Promise.all([first,second]);
+  assert.deepEqual(results.map(pages => pages.length),[3,3]);
+  await assert.rejects(() => extractor({extractionTimeoutMs:1}).extract(bytes('master-native-v1.pdf'),'application/pdf'), /EXTRACTION_TIMEOUT/);
+});
