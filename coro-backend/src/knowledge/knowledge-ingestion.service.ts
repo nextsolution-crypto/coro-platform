@@ -63,16 +63,17 @@ export class KnowledgeIngestionService {
     if (existing?.status === 'PROCESSING')
       throw new ConflictException('Indexation deja en cours.');
 
-    const ingestion = existing
-      ? await this.prisma.projectFileKnowledgeIngestion.update({
-          where: { id: existing.id },
-          data: {
-            status: 'PROCESSING',
-            attemptCount: { increment: 1 },
-            lastErrorCode: null,
-          },
-        })
-      : await this.prisma.projectFileKnowledgeIngestion.create({
+    let ingestion: { id: string };
+    if (existing) {
+      const claim = await this.prisma.projectFileKnowledgeIngestion.updateMany({
+        where: { id: existing.id, status: existing.status, updatedAt: existing.updatedAt },
+        data: { status: 'PROCESSING', attemptCount: { increment: 1 }, lastErrorCode: null },
+      });
+      if (claim.count !== 1) throw new ConflictException('Indexation deja en cours.');
+      ingestion = existing;
+    } else {
+      try {
+        ingestion = await this.prisma.projectFileKnowledgeIngestion.create({
           data: {
             organizationId: file.organizationId,
             projectFileId: file.id,
@@ -92,6 +93,11 @@ export class KnowledgeIngestionService {
             attemptCount: 1,
           },
         });
+      } catch (error) {
+        if ((error as { code?: string }).code === 'P2002') throw new ConflictException('Indexation deja en cours.');
+        throw error;
+      }
+    }
     try {
       const downloaded = await this.files.downloadPrivateFile(
         file.id,
@@ -111,6 +117,15 @@ export class KnowledgeIngestionService {
         select: { id: true },
       });
       await this.prisma.$transaction(async (tx) => {
+        const current = await tx.projectFile.findFirst({
+          where: { id: file.id, organizationId: file.organizationId, sha256: digest,
+            lifecycleState: 'APPROVED',
+            OR: [{ effectiveAt: null }, { effectiveAt: { lte: new Date() } }],
+            AND: [ { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+              { OR: [{ supersededEffectiveAt: null }, { supersededEffectiveAt: { gt: new Date() } }] } ] },
+          select: { id: true },
+        });
+        if (!current) throw new Error('SOURCE_NO_LONGER_ADMISSIBLE');
         await tx.projectFileKnowledgeIngestion.updateMany({
           where: {
             projectFileId: { in: chain.map((item) => item.id) },
@@ -151,7 +166,10 @@ export class KnowledgeIngestionService {
         }
         await tx.projectFileKnowledgeIngestion.update({
           where: { id: ingestion.id },
-          data: { status: 'READY', indexedAt: now, lastErrorCode: null },
+          data: { status: 'READY', indexedAt: new Date(), lastErrorCode: null,
+            extractionMethod: pages.some(p => p.extractionMethod === 'LOCAL_OCR') ? 'LOCAL_OCR' : 'NATIVE_TEXT',
+            extractorName: pages.some(p => p.extractionMethod === 'LOCAL_OCR') ? 'pdfjs-dist+tesseract-local' : file.mimeType === 'application/pdf' ? 'pdfjs-dist' : 'utf8',
+            extractorVersion: pages.some(p => p.extractionMethod === 'LOCAL_OCR') ? '6.3.289;local-ocr-v1' : file.mimeType === 'application/pdf' ? '6.3.289' : '1' },
         });
       });
       return this.prisma.projectFileKnowledgeIngestion.findUnique({
@@ -159,7 +177,8 @@ export class KnowledgeIngestionService {
         include: { chunks: { orderBy: { ordinal: 'asc' } } },
       });
     } catch (error) {
-      const code = error instanceof Error ? error.message.slice(0, 120) : 'UNKNOWN';
+      const code = error instanceof Error && /^[A-Z][A-Z_]{2,100}$/.test(error.message)
+        ? error.message : 'EXTRACTION_FAILED';
       await this.prisma.projectFileKnowledgeIngestion.update({
         where: { id: ingestion.id },
         data: { status: 'FAILED', lastErrorCode: code },

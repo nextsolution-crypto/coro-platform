@@ -79,7 +79,7 @@ try {
       const sessionPersistent = await page.evaluate(() => Boolean(localStorage.getItem("coro_client_token")) && Boolean(document.querySelector("#knowledge-input")));
       const pass = geometry.viewport.width === width && geometry.viewport.height === height && geometry.ui === theme.expectedUi && geometry.theme === theme.expectedTheme &&
         !geometry.globalOverflow && geometry.failures.length === 0 && geometry.heading.includes("documents approuvés") && geometry.status.includes("ANSWERED") &&
-        geometry.citationHref?.startsWith("/documents/") && sessionPersistent;
+        geometry.citationHref?.startsWith("/knowledge/sources/") && sessionPersistent;
       results.push({ id, status: pass ? "PASS" : "FAIL", geometry, sessionPersistent });
     }
   }

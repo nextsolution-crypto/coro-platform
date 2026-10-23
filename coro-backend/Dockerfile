@@ -31,6 +31,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
     openssl \
     ca-certificates \
+    poppler-utils \
+    tesseract-ocr \
+    tesseract-ocr-fra \
+    tesseract-ocr-eng \
     fonts-freefont-ttf \
     fonts-noto-core \
     && rm -rf /var/lib/apt/lists/*
@@ -51,6 +55,7 @@ COPY --from=builder /app/assets ./assets
 RUN node -e "require('./node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node')"
 
 RUN node dist/scripts/knowledge-runtime-smoke.js
+RUN node dist/scripts/knowledge-ocr-smoke.js
 
 EXPOSE 3002
 

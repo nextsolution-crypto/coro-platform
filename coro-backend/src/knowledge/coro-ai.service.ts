@@ -5,6 +5,8 @@ import { KnowledgeGroundingService } from './knowledge-grounding.service';
 import { KnowledgeAuthorizationService } from './knowledge-authorization.service';
 import { KnowledgeRetrievalService } from './knowledge-retrieval.service';
 import { KnowledgeActor } from './knowledge.types';
+import { CorrectiveActionsService } from '../occupancy/corrective-actions.service';
+import { projectAccessWhere } from '../auth/project-access';
 import { CoroAiProviderGateway } from './coro-ai-provider.gateway';
 
 type OperationalContext =
@@ -67,7 +69,7 @@ export class CoroAiService {
           questionFingerprint: this.retrieval.questionFingerprint(input.question),
           sourceCount: hits.length,
           usedSourceCount: 0,
-          uncertainty: 'Le fournisseur simulé est temporairement indisponible.',
+          uncertainty: 'Le fournisseur de réponses est temporairement indisponible.',
           correlationId,
           completedAt: new Date(),
         },
@@ -76,9 +78,9 @@ export class CoroAiService {
         interactionId: failed.id,
         correlationId,
         status: 'PROVIDER_FAILURE',
-        provider: 'DETERMINISTIC_SIMULATED',
+        provider,
         answer: null,
-        uncertainty: 'Le fournisseur simulé est temporairement indisponible.',
+        uncertainty: 'Le fournisseur de réponses est temporairement indisponible.',
         missingInformation: [],
         conflicts: [],
         citations: [],
@@ -150,6 +152,7 @@ export class CoroAiService {
     context: OperationalContext,
     resourceId: string,
   ) {
+    const scope = await this.authorization.scope(actor);
     let resource: { buildingId: string | null } | null = null;
     if (context === 'INCIDENT')
       resource = await this.prisma.incidentEvent.findFirst({
@@ -163,21 +166,34 @@ export class CoroAiService {
       });
     else if (context === 'EXERCISE_REPORT')
       resource = await this.prisma.exerciseReport.findFirst({
-        where: { id: resourceId, organizationId: actor.organizationId },
+        where: { id: resourceId, organizationId: actor.organizationId,
+          project: { is: { isActive: true, ...(actor.type === 'INTERNAL_USER'
+            ? projectAccessWhere({ userId: actor.id, organizationId: actor.organizationId, role: actor.role })
+            : { organizationId: actor.organizationId }) } },
+          building: { is: { isActive: true, organizationId: actor.organizationId } },
+          ...(actor.type === 'CLIENT_USER' ? { status: 'PUBLISHED' as const } : {}),
+        },
         select: { buildingId: true },
       });
-    else if (context === 'CORRECTIVE_ACTION')
-      resource = await this.prisma.correctiveAction.findFirst({
-        where: { id: resourceId, organizationId: actor.organizationId },
-        select: { buildingId: true },
+    else if (context === 'CORRECTIVE_ACTION') {
+      const client = actor.type === 'CLIENT_USER' ? await this.prisma.clientUser.findFirst({
+        where: { id: actor.id, organizationId: actor.organizationId, isActive: true },
+        select: { clientId: true, role: true, buildingIds: true },
+      }) : null;
+      if (actor.type === 'CLIENT_USER' && !client) throw new NotFoundException('Contexte non disponible.');
+      // Reuse the canonical read authorization, including RESTRICTED/ADVISOR visibility.
+      const action = await new CorrectiveActionsService(this.prisma).findAccessibleAction(resourceId, {
+        organizationId: actor.organizationId, role: client?.role ?? actor.role,
+        ...(client ? { sub: actor.id, clientId: client.clientId, buildingIds: client.buildingIds } : {}),
       });
+      resource = { buildingId: action.buildingId };
+    }
     else if (context === 'NETWORK')
       resource = await this.prisma.building.findFirst({
         where: { id: resourceId, organizationId: actor.organizationId },
         select: { id: true },
       }).then((value) => (value ? { buildingId: value.id } : null));
     if (!resource?.buildingId) throw new NotFoundException('Contexte non disponible.');
-    const scope = await this.authorization.scope(actor);
     if (scope.buildingIds && !scope.buildingIds.includes(resource.buildingId))
       throw new NotFoundException('Contexte non disponible.');
     return resource.buildingId;

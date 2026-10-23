@@ -70,5 +70,15 @@ describe('KnowledgeGroundingService', () => {
       hit({ citationId: 'citation-b', text: 'Le délai est de 30 minutes.' }),
     ]);
     expect(answer.conflicts).toHaveLength(1);
+    expect(answer.answer).toBeNull();
+    expect(answer.usedCitationIds).toEqual(['citation-a', 'citation-b']);
+  });
+
+  it('does not confuse unrelated page numbers and inventory values with contradictory facts', () => {
+    const answer = service.answer('Quel est le code Orme ?', [
+      hit({ text: 'Orme | CODE-ORME-031 | Recette. Page 2.' }),
+      hit({ citationId: 'other', text: 'Pin | CODE-PIN-062 | Recette. Page 3.' }),
+    ]);
+    expect(answer.conflicts).toEqual([]);
   });
 });

@@ -112,6 +112,15 @@ jobs:
       - name: Build backend
         working-directory: coro-backend
         run: npm run build
+      - name: Install local OCR runtime
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils tesseract-ocr tesseract-ocr-fra tesseract-ocr-eng
+
+      - name: Verify durable Knowledge runtime policy
+        run: node --test ops/knowledge/*.test.mjs
+
+      - name: Verify synthetic Knowledge corpus and local OCR
+        run: node --test qa/knowledge-master/extraction.test.mjs
+
       - name: Verify compiled Knowledge PDF extraction
         working-directory: coro-backend
         run: node dist/scripts/knowledge-runtime-smoke.js

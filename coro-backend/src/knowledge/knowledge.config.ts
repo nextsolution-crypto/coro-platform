@@ -29,7 +29,15 @@ export class KnowledgeConfig {
     4000,
   );
   readonly maxResults = integer('KNOWLEDGE_MAX_RESULTS', 12, 1, 50);
-  readonly pipelineVersion = 'PROJECTFILE_KNOWLEDGE_V1';
+  readonly pipelineVersion = 'PROJECTFILE_KNOWLEDGE_V2';
+  readonly localOcrEnabled = process.env.KNOWLEDGE_LOCAL_OCR_ENABLED === 'true';
+  readonly ocrMaxPages = integer('KNOWLEDGE_OCR_MAX_PAGES', 8, 1, 20);
+  readonly ocrMinConfidence = integer('KNOWLEDGE_OCR_MIN_CONFIDENCE', 80, 50, 100);
+  readonly ocrPageTimeoutMs = integer('KNOWLEDGE_OCR_PAGE_TIMEOUT_MS', 20_000, 1000, 60_000);
+  readonly maxExtractionBytes = 10 * 1024 * 1024;
+  readonly maxAutoAttempts = integer('KNOWLEDGE_MAX_AUTO_ATTEMPTS', 3, 1, 10);
+  readonly retryDelayMs = integer('KNOWLEDGE_RETRY_DELAY_MS', 300_000, 60_000, 3_600_000);
+  readonly bedrockTimeoutMs = integer('CORO_AI_BEDROCK_TIMEOUT_MS', 30_000, 1000, 60_000);
 
   readonly aiProvider = this.enumValue(
     'CORO_AI_PROVIDER',

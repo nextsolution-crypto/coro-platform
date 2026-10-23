@@ -1,0 +1,30 @@
+{
+  "syntheticOnly": true,
+  "files": [
+    {
+      "name": "master-native-v1.pdf",
+      "sha256": "a14f2980a60e1dd38eaba246bce1eb8889ea1f8d72900e16c7c90ce645391162",
+      "bytes": 2047
+    },
+    {
+      "name": "master-native-v2.pdf",
+      "sha256": "b814d90f21325c0b1b8a1aa9d1860b55af21b2dbefd6e14c1c7e5408cfacc8ac",
+      "bytes": 2047
+    },
+    {
+      "name": "master-contradiction.pdf",
+      "sha256": "3b603ae024eff5e7ca4971f5b96ec6ad5e0805a8c676709ececf82b9e409c058",
+      "bytes": 2047
+    },
+    {
+      "name": "master-scanned.pdf",
+      "sha256": "97855b2d51ec1ae5ef0e2cd3079095da8381b00bdd29260e166cf2c0798101d2",
+      "bytes": 45189
+    },
+    {
+      "name": "master-mixed.pdf",
+      "sha256": "81d937ef9bc61a322187bcbfbb72f9170708fc0ea4c6fee2097308a5213f526b",
+      "bytes": 45604
+    }
+  ]
+}

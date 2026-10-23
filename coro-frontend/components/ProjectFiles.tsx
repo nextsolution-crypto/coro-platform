@@ -192,55 +192,54 @@ export default function ProjectFiles({ projectId }: { projectId: string }) {
     }
   };
 
-  const handleReview = async (file: ProjectFile) => {
-    const reason = window.prompt("Justification de la mise en révision :");
-    if (!reason) return;
-    try {
-      await api.put(`/project-files/${file.id}/review`, {
-        reason,
-        requestId: crypto.randomUUID(),
-        lockVersion: file.lockVersion,
-      });
-
-      await fetchFiles();
-    } catch (err) {
-      console.error(err);
-    }
+  const [lifecycleAction, setLifecycleAction] = useState<{ file: ProjectFile; action: "review" | "approve" | "revoke" } | null>(null);
+  const [lifecycleReason, setLifecycleReason] = useState("");
+  const [lifecycleEffectiveAt, setLifecycleEffectiveAt] = useState("");
+  const [lifecycleExpiresAt, setLifecycleExpiresAt] = useState("");
+  const [lifecycleError, setLifecycleError] = useState("");
+  const [lifecycleSubmitting, setLifecycleSubmitting] = useState(false);
+  const lifecycleDialogRef = useRef<HTMLDialogElement>(null);
+  const lifecycleTriggerRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const dialog = lifecycleDialogRef.current;
+    if (lifecycleAction && dialog && !dialog.open) dialog.showModal();
+    if (!lifecycleAction && dialog?.open) dialog.close();
+  }, [lifecycleAction]);
+  const openLifecycleAction = (file: ProjectFile, action: "review" | "approve" | "revoke") => {
+    lifecycleTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setLifecycleReason(""); setLifecycleEffectiveAt(""); setLifecycleExpiresAt(""); setLifecycleError("");
+    setLifecycleAction({ file, action });
   };
-
-  const handleApprove = async (file: ProjectFile) => {
-    const reason = window.prompt("Justification de l’approbation :");
-    if (!reason) return;
-    try {
-      await api.put(`/project-files/${file.id}/approve`, {
-        reason,
-        requestId: crypto.randomUUID(),
-        lockVersion: file.lockVersion,
-        effectiveAt: new Date().toISOString(),
-      });
-      await fetchFiles();
-    } catch (err) {
-      console.error(err);
-    }
+  const closeLifecycleAction = () => {
+    if (lifecycleSubmitting) return;
+    setLifecycleAction(null);
+    lifecycleTriggerRef.current?.focus();
   };
-
-  const handleRevoke = async (file: ProjectFile) => {
-    const reason = window.prompt(
-      "Justification obligatoire de la révocation :",
-    );
-    if (!reason) return;
-
-    try {
-      await api.put(`/project-files/${file.id}/revoke`, {
-        reason,
-        requestId: crypto.randomUUID(),
-        lockVersion: file.lockVersion,
-      });
-
-      await fetchFiles();
-    } catch (err) {
-      console.error(err);
+  const handleReview = (file: ProjectFile) => openLifecycleAction(file, "review");
+  const handleApprove = (file: ProjectFile) => openLifecycleAction(file, "approve");
+  const handleRevoke = (file: ProjectFile) => openLifecycleAction(file, "revoke");
+  const confirmLifecycleAction = async () => {
+    if (!lifecycleAction || lifecycleSubmitting) return;
+    const reason = lifecycleReason.trim();
+    if (reason.length < 8) { setLifecycleError("La justification doit contenir au moins 8 caractères."); return; }
+    const { file, action } = lifecycleAction;
+    const effective = lifecycleEffectiveAt ? new Date(lifecycleEffectiveAt) : new Date();
+    const expires = lifecycleExpiresAt ? new Date(lifecycleExpiresAt) : null;
+    if (action === "approve" && (!Number.isFinite(effective.getTime()) || (expires && (!Number.isFinite(expires.getTime()) || expires <= effective)))) {
+      setLifecycleError("La fin de validité doit être postérieure à la prise d’effet."); return;
     }
+    setLifecycleSubmitting(true); setLifecycleError("");
+    try {
+      await api.put(`/project-files/${file.id}/${action}`, {
+        reason, requestId: crypto.randomUUID(), lockVersion: file.lockVersion,
+        ...(action === "approve" ? { effectiveAt: effective.toISOString(), expiresAt: expires?.toISOString() ?? null } : {}),
+      });
+      setLifecycleAction(null);
+      await fetchFiles();
+      lifecycleTriggerRef.current?.focus();
+    } catch {
+      setLifecycleError("La transition a échoué. Actualisez les fichiers pour vérifier leur état avant de réessayer.");
+    } finally { setLifecycleSubmitting(false); }
   };
 
   const handleDownload = async (file: ProjectFile) => {
@@ -1271,6 +1270,30 @@ export default function ProjectFiles({ projectId }: { projectId: string }) {
           </div>
         </div>
       )}
+      <dialog ref={lifecycleDialogRef} aria-labelledby="file-lifecycle-title" onCancel={(event) => { event.preventDefault(); closeLifecycleAction(); }} className="m-auto w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-xl backdrop:bg-black/40">
+        {lifecycleAction && <form onSubmit={(event) => { event.preventDefault(); void confirmLifecycleAction(); }}>
+          <h3 id="file-lifecycle-title" className="text-lg font-semibold">
+            {lifecycleAction.action === "review" ? "Mettre en révision" : lifecycleAction.action === "approve" ? "Approuver la version" : "Révoquer la version"}
+          </h3>
+          <p className="my-3 break-words text-sm">{lifecycleAction.file.name} · Version {lifecycleAction.file.version}</p>
+          <label className="block text-sm">Justification
+            <textarea autoFocus required minLength={8} maxLength={2000} value={lifecycleReason} onChange={(event) => setLifecycleReason(event.target.value)} disabled={lifecycleSubmitting} className="mt-1 w-full rounded border p-2" />
+          </label>
+          {lifecycleAction.action === "approve" && <div className="mt-3 space-y-3">
+            <label className="block text-sm">Prise d’effet (heure locale, vide : maintenant)
+              <input type="datetime-local" value={lifecycleEffectiveAt} onChange={(event) => setLifecycleEffectiveAt(event.target.value)} disabled={lifecycleSubmitting} className="mt-1 w-full rounded border p-2" />
+            </label>
+            <label className="block text-sm">Fin de validité (facultatif)
+              <input type="datetime-local" value={lifecycleExpiresAt} onChange={(event) => setLifecycleExpiresAt(event.target.value)} disabled={lifecycleSubmitting} className="mt-1 w-full rounded border p-2" />
+            </label>
+          </div>}
+          {lifecycleError && <p role="alert" className="mt-3 text-sm text-red-700">{lifecycleError}</p>}
+          <div className="mt-5 flex justify-end gap-3">
+            <button type="button" onClick={closeLifecycleAction} disabled={lifecycleSubmitting} className="rounded border px-4 py-2">Annuler</button>
+            <button type="submit" disabled={lifecycleSubmitting || lifecycleReason.trim().length < 8} className="rounded bg-red-700 px-4 py-2 text-white disabled:opacity-50">{lifecycleSubmitting ? "Enregistrement…" : "Confirmer"}</button>
+          </div>
+        </form>}
+      </dialog>
     </div>
   );
 }

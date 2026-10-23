@@ -1,0 +1,75 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 3 /Kids [5 0 R 7 0 R 9 0 R] >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Length 394 >>
+stream
+BT /F1 12 Tf 52 744 Td 19 TL
+(CORO MASTER - CORPUS FICTIF) Tj
+T* (NE PAS UTILISER EN INTERVENTION) Tj
+T* (Version documentaire fictive 2) Tj
+T* (1. Portee du test) Tj
+T* (Ce document ne represente aucun site, personne ou incident reel.) Tj
+T* (Il contient des codes d'inventaire fictifs pour tester les citations.) Tj
+T* (Aucune procedure de securite ne doit etre deduite de ce contenu.) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 4 0 R >>
+endobj
+6 0 obj
+<< /Length 337 >>
+stream
+BT /F1 12 Tf 52 744 Td 19 TL
+(2. Tableau des codes fictifs) Tj
+T* (Zone | Code d'inventaire | Observation) Tj
+T* (Orme | CODE-ORME-047 | Echantillon de recette) Tj
+T* (Pin | CODE-PIN-062 | Autre echantillon) Tj
+T* (La ligne Orme est la reference a citer a la page 2.) Tj
+T* (Ce tableau ne contient aucune consigne operationnelle.) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Length 325 >>
+stream
+BT /F1 12 Tf 52 744 Td 19 TL
+(3. Limites du document fictif) Tj
+T* (Aucun numero de telephone d'urgence n'est fourni.) Tj
+T* (Aucune adresse de vanne ou de point de rassemblement n'est fournie.) Tj
+T* (En cas de contradiction entre deux sources, ne pas choisir arbitrairement.) Tj
+T* (FIN DU DOCUMENT FICTIF - page 3.) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 8 0 R >>
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000127 00000 n 
+0000000197 00000 n 
+0000000641 00000 n 
+0000000767 00000 n 
+0000001154 00000 n 
+0000001280 00000 n 
+0000001655 00000 n 
+trailer
+<< /Size 10 /Root 1 0 R >>
+startxref
+1781
+%%EOF

@@ -37,6 +37,11 @@ expected_head="$(node -e 'const m=require(process.argv[1]);process.stdout.write(
 [[ "$migration_head" == "$expected_head" ]] || { echo 'RECONCILIATION_UNKNOWN code=MIGRATION_HEAD_MISMATCH' >&2; exit 1; }
 [[ "$(git -C "$REPO" rev-parse HEAD)" == "$RELEASE_COMMIT" ]] || { echo 'RECONCILIATION_UNKNOWN code=CHECKOUT_COMMIT_MISMATCH' >&2; exit 1; }
 
+if node -e 'process.exit(require(process.argv[1]).knowledgeRuntime ? 0 : 1)' "$manifest"; then
+  backend_ref="$(node -e 'process.stdout.write(require(process.argv[1]).images.backend)' "$manifest")"
+  node "$REPO/ops/knowledge/runtime-policy.mjs" verify "$backend_ref" >/dev/null || { echo 'RECONCILIATION_UNKNOWN code=KNOWLEDGE_RUNTIME_MISMATCH' >&2; exit 1; }
+fi
+
 exec 8>"$LOCK_FILE"
 flock --nonblock 8 || { echo 'RECONCILIATION_UNKNOWN code=DEPLOYMENT_LOCK_BUSY' >&2; exit 1; }
 

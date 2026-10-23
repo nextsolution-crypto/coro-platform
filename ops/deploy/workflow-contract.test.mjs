@@ -72,3 +72,13 @@ test('reconciliation is read-only and verifies runtime against immutable evidenc
   }
   assert.doesNotMatch(reconcile, /docker compose .*up|migrate deploy|pg_restore|ROLLBACK_APPLICATIONS/);
 });
+test('durable Knowledge policy and real synthetic provider smoke gate release success', () => {
+  assert.match(release, /runtime-policy\.mjs overlay/);
+  assert.match(release, /knowledge-provider-smoke\.js/);
+  assert.match(release, /KNOWLEDGE_PROVIDER_SMOKE_FAILED/);
+  assert.match(release, /runtime-policy\.mjs verify/);
+  assert.match(release, /knowledgeRuntime/);
+  assert.match(reconcile, /runtime-policy\.mjs" verify/);
+  assert.ok(release.indexOf('knowledge-provider-smoke.js') < release.indexOf('manifest.knowledgeRuntime'));
+  assert.match(workflow, /node --test qa\/knowledge-master\/extraction.test.mjs/);
+});
