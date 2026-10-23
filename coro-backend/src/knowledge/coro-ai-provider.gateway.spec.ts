@@ -30,6 +30,7 @@ describe('CoroAiProviderGateway provider boundary', () => {
       usedCitationIds: [],
     };
     const deterministic = {
+      admissibleHits: jest.fn((_question: string, hits: KnowledgeSearchHit[]) => hits),
       suspicious: jest.fn((text: string) => text === 'untrusted'),
       answer: jest.fn().mockReturnValue(abstention),
     };
@@ -84,4 +85,34 @@ describe('CoroAiProviderGateway provider boundary', () => {
     expect(result.provider).toBe('DETERMINISTIC_SIMULATED');
     expect(h.bedrock.answer).not.toHaveBeenCalled();
   });
+  it.each(['Orme', 'orme'])('abstains for the observed unrelated-code regression (%s) before invoking the model', async (subject) => {
+    const bedrock = { answer: jest.fn().mockResolvedValue({ answer: 'CORO-KNOWLEDGE-2026' }) };
+    const gateway = new CoroAiProviderGateway(new KnowledgeConfig(), new KnowledgeGroundingService(), bedrock as any);
+    const result = await gateway.answer(`Quel est le code de recette de l'objet fictif ${subject} ?`, [{
+      ...hit, text: 'DOCUMENT FICTIF. Le code de validation technique est CORO-KNOWLEDGE-2026.',
+    }]);
+    expect(result).toMatchObject({ provider: 'DOCUMENTARY_POLICY', grounded: { answer: null, usedCitationIds: [] } });
+    expect(bedrock.answer).not.toHaveBeenCalled();
+  });
+
+  it('allows a subject and value explicitly present in the approved evidence', async () => {
+    const bedrock = { answer: jest.fn().mockResolvedValue({ answer: 'CODE-ORME-031' }) };
+    const gateway = new CoroAiProviderGateway(new KnowledgeConfig(), new KnowledgeGroundingService(), bedrock as any);
+    const relevant = { ...hit, text: 'Orme | CODE-ORME-031 | Echantillon de recette' };
+    await gateway.answer("Quel est le code de recette de l'objet fictif Orme ?", [relevant, { ...hit, citationId: 'unrelated', text: 'Le code de validation technique est CORO-KNOWLEDGE-2026.' }]);
+    expect(bedrock.answer).toHaveBeenCalledWith(expect.any(String), [relevant]);
+  });
+
+  it('abstains on contradictory numeric facts before the model can choose a value', async () => {
+    const bedrock = { answer: jest.fn() };
+    const gateway = new CoroAiProviderGateway(new KnowledgeConfig(), new KnowledgeGroundingService(), bedrock as any);
+    const result = await gateway.answer('Quel est le code Orme ?', [
+      { ...hit, citationId: 'v1', text: 'Orme | CODE-ORME-031 | Recette' },
+      { ...hit, citationId: 'other', text: 'Orme | CODE-ORME-055 | Recette' },
+    ]);
+    expect(result.grounded).toMatchObject({ answer: null, usedCitationIds: ['v1','other'] });
+    expect(result.grounded.conflicts).toHaveLength(1);
+    expect(bedrock.answer).not.toHaveBeenCalled();
+  });
+
 });
