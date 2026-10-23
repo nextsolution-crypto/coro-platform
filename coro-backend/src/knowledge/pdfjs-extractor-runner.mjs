@@ -1,13 +1,25 @@
 import { readFile } from 'node:fs/promises';
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { Console } from 'node:console';
+import { fileURLToPath } from 'node:url';
+
+// stdout is a JSON protocol; dependency diagnostics belong on stderr.
+const diagnostics = new Console({ stdout: process.stderr, stderr: process.stderr });
+for (const method of ['log', 'info', 'debug', 'warn']) {
+  console[method] = diagnostics[method].bind(diagnostics);
+}
 
 const [, , input, maxPagesRaw] = process.argv;
 try {
+  const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
   const bytes = await readFile(input);
   const loadingTask = getDocument({
     data: new Uint8Array(bytes),
     isEvalSupported: false,
     useWorkerFetch: false,
+    verbosity: 0,
+    standardFontDataUrl: fileURLToPath(
+      new URL('./standard_fonts/', import.meta.resolve('pdfjs-dist/package.json')),
+    ),
   });
   const document = await loadingTask.promise;
   if (document.numPages > Number(maxPagesRaw))
