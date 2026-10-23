@@ -100,6 +100,53 @@ describe('BedrockProviderAdapter', () => {
     await expect(responseAdapter(text).answer('Question', [hit])).rejects.toThrow('Citation Bedrock non autorisee');
   });
 
+  const validToolAnswer = {
+    answer: 'Le point de rassemblement est dans la cour nord.',
+    uncertainty: '', missingInformation: [], conflicts: [], usedCitationIds: ['citation-1'],
+  };
+  function toolAdapter(inputs: Array<{ name: string; input: unknown }>) {
+    const send = jest.fn().mockResolvedValue({
+      output: { message: { content: inputs.map((tool) => ({ toolUse: { toolUseId: 'test-tool', ...tool } })) } },
+    });
+    const adapter = new BedrockProviderAdapter(new KnowledgeConfig());
+    adapter.setClientForTesting({ send } as never);
+    return { adapter, send };
+  }
+
+  it('demande un format type limite aux citations autorisees et accepte sa reponse', async () => {
+    const { adapter, send } = toolAdapter([{ name: 'coro_grounded_answer', input: validToolAnswer }]);
+    await expect(adapter.answer('Question', [hit])).resolves.toMatchObject(validToolAnswer);
+    const request = send.mock.calls[0][0].input;
+    expect(request.toolConfig.toolChoice).toEqual({ tool: { name: 'coro_grounded_answer' } });
+    expect(request.toolConfig.tools[0].toolSpec.inputSchema.json.properties.usedCitationIds.items.enum).toEqual(['citation-1']);
+    expect(request.inferenceConfig.maxTokens).toBe(800);
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { tools: [{ name: 'execute_action', input: validToolAnswer }] },
+    { tools: [{ name: 'coro_grounded_answer', input: validToolAnswer }, { name: 'coro_grounded_answer', input: validToolAnswer }] },
+  ])('refuse les sorties multiples ou un nom de format non autorise (%#)', async ({ tools }) => {
+    await expect(toolAdapter(tools).adapter.answer('Question', [hit])).rejects.toThrow('Format de sortie Bedrock non autorise');
+  });
+
+  it.each([
+    null, [], {},
+    { ...validToolAnswer, answer: 7 },
+    { ...validToolAnswer, uncertainty: 0 },
+    { ...validToolAnswer, missingInformation: 'Aucune' },
+    { ...validToolAnswer, conflicts: 'Aucun' },
+    { ...validToolAnswer, usedCitationIds: ['citation-1', 7] },
+  ].map((input) => ({ input })))('refuse un schema de sortie structuree invalide (%#)', async ({ input }) => {
+    const { adapter } = toolAdapter([{ name: 'coro_grounded_answer', input }]);
+    await expect(adapter.answer('Question', [hit])).rejects.toThrow('Schema Bedrock invalide');
+  });
+
+  it('refuse une citation inventee meme dans la sortie structuree', async () => {
+    const { adapter } = toolAdapter([{ name: 'coro_grounded_answer', input: { ...validToolAnswer, usedCitationIds: ['forbidden'] } }]);
+    await expect(adapter.answer('Question', [hit])).rejects.toThrow('Citation Bedrock non autorisee');
+  });
+
   it('refuse une citation inventee par le fournisseur', async () => {
     const adapter = new BedrockProviderAdapter(new KnowledgeConfig());
     adapter.setClientForTesting({
