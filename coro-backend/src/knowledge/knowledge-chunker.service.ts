@@ -31,10 +31,10 @@ export class KnowledgeChunkerService {
     for (const page of pages) {
       const normalized = this.normalizer.normalize(page.text);
       const lines = normalized.split('\n');
-      const heading = lines.find((line) => /^\d+(?:\.\d+)*[\s—–-]+.{2,160}$/.test(line));
+      const heading = lines.find((line) => /^(?:Section\s+)?\d+(?:\.\d+)*\.?[\s—–-]+.{2,160}$/i.test(line));
       if (heading) {
         sectionTitle = heading;
-        sectionPath = heading.match(/^\d+(?:\.\d+)*/)?.[0] ?? null;
+        sectionPath = heading.match(/^(?:Section\s+)?(\d+(?:\.\d+)*)/i)?.[1] ?? null;
       }
       let cursor = 0;
       while (cursor < normalized.length) {
