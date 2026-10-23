@@ -113,7 +113,7 @@ export default function KnowledgePage() {
           <section className={styles.answerGrid} aria-live="polite">
             <article className={styles.answerCard}>
               <div className={styles.cardHeader}><h2>Réponse fondée sur les sources</h2><span>{answer.status}</span></div>
-              {answer.answer ? <p className={styles.answer}>{answer.answer}</p> : <div className={styles.empty}><CircleAlert /><p>{answer.uncertainty ?? "Information insuffisante."}</p></div>}
+              {answer.answer ? <p className={styles.answer}>{answer.answer}</p> : <div className={styles.empty}><CircleAlert /><p>{answer.uncertainty?.trim() || answer.missingInformation.map((item) => item.trim()).filter(Boolean).join(" ") || "Information insuffisante."}</p></div>}
               {answer.uncertainty && answer.answer && <p className={styles.uncertainty}>{answer.uncertainty}</p>}
               {answer.conflicts.length > 0 && <div className={styles.warning}><strong>Contradiction détectée</strong>{answer.conflicts.map((item) => <p key={item}>{item}</p>)}</div>}
               <small>Référence de requête : {answer.correlationId}</small>
