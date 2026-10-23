@@ -34,12 +34,14 @@ describePg('Knowledge master canonical lifecycle and tenant isolation PostgreSQL
   const portal: KnowledgeActor = { type: 'CLIENT_USER', id: manager, organizationId: org, role: 'CLIENT_MANAGER', buildingIds: [building] };
   const config = new KnowledgeConfig();
   const objects = new Map<string, Buffer>();
+  const unavailableOnce = new Set<string>();
   const files = new ProjectFilesService(prisma as any, {
     uploadPrivateImmutable: async (buffer: Buffer, key: string) => {
       if (objects.has(key)) throw new Error('IMMUTABLE_OBJECT_EXISTS');
       objects.set(key, Buffer.from(buffer)); return { storageKey: key };
     },
     downloadPrivate: async (key: string) => {
+      if (unavailableOnce.delete(key)) throw new Error('STORAGE_UNAVAILABLE');
       const buffer = objects.get(key); if (!buffer) throw new Error('OBJECT_NOT_FOUND'); return Buffer.from(buffer);
     },
   } as any, { create: jest.fn() } as any);
@@ -129,4 +131,19 @@ describePg('Knowledge master canonical lifecycle and tenant isolation PostgreSQL
     expect(record).toMatchObject({ status: 'FAILED', lastErrorCode: 'SOURCE_NO_LONGER_ADMISSIBLE' });
     expect(await prisma.projectFileKnowledgeChunk.count({ where: { ingestionId: record!.id } })).toBe(0);
   });
+  it('recovers an interrupted storage read through the same idempotent canonical ingestion', async () => {
+    const file = await approve(await upload());
+    const canonical = await prisma.projectFile.findUniqueOrThrow({ where: { id: file.id } });
+    unavailableOnce.add(canonical.storageKey!);
+    await expect(ingestion.index(internal, file.id)).rejects.toThrow('STORAGE_UNAVAILABLE');
+    const failed = await prisma.projectFileKnowledgeIngestion.findFirstOrThrow({ where: { projectFileId: file.id } });
+    expect(failed).toMatchObject({ status: 'FAILED', attemptCount: 1, lastErrorCode: 'STORAGE_UNAVAILABLE' });
+    expect(await prisma.projectFileKnowledgeChunk.count({ where: { ingestionId: failed.id } })).toBe(0);
+    const recovered = await ingestion.index(internal, file.id);
+    expect(recovered).toMatchObject({ id: failed.id, status: 'READY', attemptCount: 2, lastErrorCode: null });
+    expect(recovered?.chunks).toHaveLength(3);
+    expect((await ingestion.index(internal, file.id))?.id).toBe(failed.id);
+    expect(await prisma.projectFileKnowledgeIngestion.count({ where: { projectFileId: file.id } })).toBe(1);
+  });
+
 });
