@@ -1,8 +1,8 @@
 # Retrieval acceptance
 
-Statut : `PARTIAL_SECURITY_REDESIGN_REQUIRED`.
+Statut : `VALIDATED_E2E_LOCAL`.
 
-La recherche historique applique un filtre tenant et des critères d'effectivité, mais repose sur `KnowledgeDocument` et un acteur interne `AdviserActor`. Elle ne démontre pas les autorisations ClientUser, Network, bâtiment, historique ProjectFile ni la révocation moderne.
+La recherche portée n'utilise plus `KnowledgeDocument`. Elle part des projections ProjectFile et revalide, à chaque requête, le tenant, le bâtiment, la visibilité, l'affectation Network et le cycle de vie canonique.
 
 ## Décision de conception
 
@@ -13,6 +13,6 @@ La recherche historique applique un filtre tenant et des critères d'effectivit�
 - Retourner `UNKNOWN`/limitation si la fraîcheur ou l'autorité ne peut être prouvée.
 - Masquer l'existence des ressources non autorisées.
 
-## Matrice requise
+## Matrice démontrée
 
-Client local, régional, corporatif, opérateur explicitement délégué, utilisateur non affecté, identité révoquée et tenant B; lecture courante, historique, accès direct, export et citation. Aucune de ces lignes n'est encore validée E2E sur la baseline actuelle.
+CLIENT_CORPORATE autorisé, CLIENT_MANAGER sans bâtiment, autre tenant et source révoquée sont démontrés E2E. Les contrats couvrent l'utilisateur interne affecté, local/régional Network, identité inactive et portée bâtiment. Une source non autorisée est indistinguable d'une source absente.

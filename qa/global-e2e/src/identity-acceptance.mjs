@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { mkdir, writeFile } from "node:fs/promises";
 import { QaIdentityLab } from "./browser-orchestration.mjs";
 import { actor } from "./identity-catalogue.mjs";
@@ -9,6 +10,7 @@ import { startMfaCaptureAdapter } from "./mfa-capture-adapter.mjs";
 import { assertUnderQaRoot } from "./policy.mjs";
 
 const output = assertUnderQaRoot(process.env.CORO_QA_IDENTITY_EVIDENCE || "D:\\CORO-QA\\tracking\\qa-identity-lab\\acceptance.json");
+const repositoryRoot = resolve(fileURLToPath(new URL("../../../", import.meta.url)));
 const secrets = await loadSecretStore();
 const adapter = await startMfaCaptureAdapter({
   captureDirectory: process.env.CORO_QA_MFA_DIR,
@@ -24,6 +26,8 @@ const lab = new QaIdentityLab({
 });
 const report = { executedAt: new Date().toISOString(), checks: [] };
 const check = (id, pass, detail) => report.checks.push({ id, status: pass ? "PASS" : "FAIL", detail });
+const authWindowMs = 61_000;
+const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
 
 try {
   const wrongPassword = await lab.call("/auth/login", {
@@ -32,15 +36,26 @@ try {
   });
   check("wrong-password", wrongPassword.status === 401, `HTTP ${wrongPassword.status}`);
 
-  for (const key of ["founder", "delegatedEmployee", "advisor", "clientCorporateA", "clientRegionalA", "clientLocalA", "clientWithoutBuildings", "clientOrganizationB"]) {
-    const session = await lab.loginAs(key);
-    check(`login-${key}`, Boolean(session.token), `${session.actor.role}/${session.actor.scope}`);
+  const groups = [
+    ["founder", "delegatedEmployee", "advisor"],
+    ["clientCorporateA", "clientRegionalA", "clientLocalA", "clientWithoutBuildings", "clientOrganizationB"],
+  ];
+  for (const group of groups) {
+    for (let index = 0; index < group.length; index += 1) {
+      if (index > 0 && index % 2 === 0) {
+        process.stdout.write("QA_AUTH_THROTTLE_WINDOW_WAIT\n");
+        await delay(authWindowMs);
+      }
+      const key = group[index];
+      const session = await lab.loginAs(key);
+      check(`login-${key}`, Boolean(session.token), `${session.actor.role}/${session.actor.scope}`);
+    }
   }
 
   const revoked = await lab.loginAs("revokedUser");
   check("revoked-user", revoked.denied && revoked.status >= 400, `HTTP ${revoked.status}`);
 
-  const require = createRequire(join(resolve("coro-backend"), "package.json"));
+  const require = createRequire(join(repositoryRoot, "coro-backend", "package.json"));
   const puppeteer = require("puppeteer");
   const browser = await puppeteer.launch({ headless: true });
   try {

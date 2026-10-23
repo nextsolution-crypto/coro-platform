@@ -1,8 +1,8 @@
 # AI answer grounding
 
-Statut : `IMPLEMENTED_UNPUBLISHED_WITH_FAKE_PROVIDER_ONLY`.
+Statut : `VALIDATED_E2E_LOCAL_SIMULATED_PROVIDER_ONLY`.
 
-Le moteur historique impose une sortie structurée, refuse les affirmations sans source, rejette les identifiants/dates/nombres absents des preuves et sait exprimer information manquante et conflits. Ces mécanismes sont réutilisables après migration vers les citations ProjectFile.
+Le moteur déterministe répond uniquement depuis les extraits ProjectFile autorisés, sélectionne la phrase pertinente, cite la version et son SHA-256, signale les conflits et s'abstient sous le seuil de preuve. Les questions/réponses brutes ne sont pas conservées.
 
 ## Contrat de réponse
 

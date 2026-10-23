@@ -73,6 +73,7 @@ import { ProposalDocumentCompositionModule } from './proposal-document-compositi
 import { CustomerNetworkModule } from './customer-network/customer-network.module';
 import { CommercialSubscriptionsModule } from './commercial-subscriptions/commercial-subscriptions.module';
 import { CommercialBillingModule } from './commercial-billing/commercial-billing.module';
+import { KnowledgeModule } from './knowledge/knowledge.module';
 
 @Module({
   imports: [
@@ -96,6 +97,7 @@ import { CommercialBillingModule } from './commercial-billing/commercial-billing
     CustomerNetworkModule,
     CommercialSubscriptionsModule,
     CommercialBillingModule,
+    KnowledgeModule,
     AuthModule,
     UsersModule,
     ClientsModule,

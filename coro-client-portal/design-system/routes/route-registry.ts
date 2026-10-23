@@ -167,6 +167,16 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
     validation: ["test:skin"],
   },
   {
+    pattern: "/knowledge",
+    family: "portal",
+    shell: "none",
+    status: "beta",
+    render: "skin",
+    styling: ["css-module"],
+    sensitivity: ["documents", "emergency-content"],
+    validation: ["test:skin"],
+  },
+  {
     pattern: "/login",
     family: "auth",
     shell: "none",

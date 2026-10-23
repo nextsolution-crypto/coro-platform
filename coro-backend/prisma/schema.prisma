@@ -3708,6 +3708,8 @@ model ProjectFile {
   lifecycleEvents                  ProjectFileLifecycleEvent[]
   offlineLeases                    OfflineDocumentLease[]
   expiryReminders                  ProjectFileExpiryReminder[]
+  knowledgeIngestions              ProjectFileKnowledgeIngestion[]
+  knowledgeCitations               ProjectFileKnowledgeCitation[]
 
   @@index([organizationId, projectId, lifecycleState])
   @@index([expiresAt])
@@ -3848,6 +3850,156 @@ model ProjectFileLifecycleEvent {
 
   @@unique([projectFileId, requestId])
   @@index([organizationId, projectId, createdAt])
+}
+
+enum ProjectFileKnowledgeIngestionStatus {
+  QUEUED
+  PROCESSING
+  READY
+  FAILED
+  STALE
+  REVOKED
+}
+
+enum ProjectFileKnowledgeExtractionMethod {
+  NATIVE_TEXT
+  LOCAL_OCR
+}
+
+enum CoroKnowledgeActorType {
+  INTERNAL_USER
+  CLIENT_USER
+}
+
+enum CoroKnowledgeAnswerStatus {
+  ANSWERED
+  INSUFFICIENT_EVIDENCE
+  BLOCKED
+  PROVIDER_FAILURE
+}
+
+/// Reconstructible projection of one canonical ProjectFile version.
+/// ProjectFile remains the only document and lifecycle authority.
+model ProjectFileKnowledgeIngestion {
+  id                 String                              @id @default(uuid())
+  organizationId     String
+  projectFileId      String
+  projectFile        ProjectFile                         @relation(fields: [projectFileId], references: [id], onDelete: Restrict)
+  projectId          String
+  buildingId         String
+  sourceVersion      Int
+  sourceSha256       String
+  sourceLifecycle    ProjectFileLifecycleState
+  sourceEffectiveAt  DateTime?
+  sourceExpiresAt    DateTime?
+  sourceVisibility   String
+  status             ProjectFileKnowledgeIngestionStatus @default(QUEUED)
+  extractionMethod   ProjectFileKnowledgeExtractionMethod @default(NATIVE_TEXT)
+  extractorName      String
+  extractorVersion   String
+  pipelineVersion    String
+  idempotencyKey     String                              @unique
+  attemptCount       Int                                 @default(0)
+  lastErrorCode      String?
+  indexedAt          DateTime?
+  staleAt            DateTime?
+  createdAt          DateTime                            @default(now())
+  updatedAt          DateTime                            @updatedAt
+  chunks             ProjectFileKnowledgeChunk[]
+  citations          ProjectFileKnowledgeCitation[]
+
+  @@unique([projectFileId, sourceSha256, pipelineVersion])
+  @@index([organizationId, buildingId, status])
+  @@index([projectFileId, status])
+}
+
+model ProjectFileKnowledgeChunk {
+  id                String                         @id @default(uuid())
+  organizationId    String
+  ingestionId       String
+  ingestion         ProjectFileKnowledgeIngestion  @relation(fields: [ingestionId], references: [id], onDelete: Cascade)
+  ordinal           Int
+  pageStart         Int
+  pageEnd           Int
+  sectionPath       String?
+  sectionTitle      String?
+  text              String
+  contentHash       String
+  tokenCountApprox  Int
+  characterCount    Int
+  embedding         Float[]
+  createdAt         DateTime                       @default(now())
+  citations         ProjectFileKnowledgeCitation[]
+  interactionSources CoroKnowledgeInteractionSource[]
+
+  @@unique([ingestionId, ordinal])
+  @@index([organizationId, ingestionId])
+  @@index([contentHash])
+}
+
+model ProjectFileKnowledgeCitation {
+  id             String                         @id @default(uuid())
+  organizationId String
+  projectFileId  String
+  projectFile    ProjectFile                    @relation(fields: [projectFileId], references: [id], onDelete: Restrict)
+  ingestionId    String
+  ingestion      ProjectFileKnowledgeIngestion  @relation(fields: [ingestionId], references: [id], onDelete: Cascade)
+  chunkId        String
+  chunk          ProjectFileKnowledgeChunk      @relation(fields: [chunkId], references: [id], onDelete: Cascade)
+  sourceSha256   String
+  pageStart      Int
+  pageEnd        Int
+  sectionPath    String?
+  startOffset    Int?
+  endOffset      Int?
+  contentHash    String
+  createdAt      DateTime                       @default(now())
+  interactionSources CoroKnowledgeInteractionSource[]
+
+  @@unique([ingestionId, chunkId])
+  @@index([organizationId, projectFileId, pageStart])
+}
+
+model CoroKnowledgeInteraction {
+  id                    String                    @id @default(uuid())
+  organizationId        String
+  actorType             CoroKnowledgeActorType
+  actorId               String
+  buildingId            String?
+  operationalContext    String?
+  operationalResourceId String?
+  status                CoroKnowledgeAnswerStatus
+  questionFingerprint   String
+  answerFingerprint     String?
+  providerCode          String                    @default("DETERMINISTIC_SIMULATED")
+  sourceCount           Int                       @default(0)
+  usedSourceCount       Int                       @default(0)
+  uncertainty           String?
+  suspiciousContent     Boolean                   @default(false)
+  correlationId         String                    @unique
+  createdAt             DateTime                  @default(now())
+  completedAt           DateTime?
+  sources               CoroKnowledgeInteractionSource[]
+
+  @@index([organizationId, actorType, actorId, createdAt])
+  @@index([organizationId, buildingId, createdAt])
+}
+
+model CoroKnowledgeInteractionSource {
+  id             String                        @id @default(uuid())
+  interactionId  String
+  interaction    CoroKnowledgeInteraction      @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  citationId     String
+  citation       ProjectFileKnowledgeCitation  @relation(fields: [citationId], references: [id], onDelete: Restrict)
+  chunkId        String
+  chunk          ProjectFileKnowledgeChunk     @relation(fields: [chunkId], references: [id], onDelete: Restrict)
+  retrievalRank  Int
+  retrievalScore Float
+  usedInAnswer   Boolean                       @default(false)
+  createdAt      DateTime                      @default(now())
+
+  @@unique([interactionId, citationId])
+  @@index([citationId, createdAt])
 }
 
 model RefreshToken {

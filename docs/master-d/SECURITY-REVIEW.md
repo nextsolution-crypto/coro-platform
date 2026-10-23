@@ -8,17 +8,17 @@
 - Aucune donnée documentaire ne part vers un fournisseur réel pendant QA.
 - Les contenus récupérés sont des données non fiables : leurs instructions sont ignorées.
 
-## Défauts confirmés de la branche historique
+## Défauts historiques éliminés dans le candidat
 
-1. Autorité documentaire et approbation Knowledge parallèles.
-2. Politique AI limitée aux rôles internes `SUPER_ADMIN/ADMIN/OPERATOR`, sans résolution canonique moderne.
-3. Absence de preuve ClientUser, Network, historique et révocation actuelle.
-4. Absence d'OCR gouverné.
-5. Aucune décision approuvée autorisant AWS Bedrock avec données CORO.
+1. L'autorité Knowledge parallèle n'a pas été portée.
+2. Les accès sont résolus par les autorités projet, ClientUser et Network actuelles, sans rôle seul.
+3. Les sources expirées, remplacées et révoquées sont filtrées au moment de chaque retrieval.
+4. Les questions/réponses ne sont pas journalisées en clair; empreintes et citations suffisent à la provenance.
+5. L'échec du fournisseur simulé renvoie `PROVIDER_FAILURE` sans réponse ni citation.
 
-## Tests obligatoires
+## Tests exécutés
 
-Prompt injection dans document/question, exfiltration inter-tenant, identifiant direct, citation révoquée entre retrieval et rendu, document expiré/remplacé, source contradictoire, index corrompu, modèle indisponible, quota/timeout, fuite de storageKey, journalisation sensible, révocation de session et throttling.
+Prompt injection, tenant B, mauvais bâtiment/portée vide, citation révoquée, absence de preuve, contradiction, intégrité SHA, fournisseur indisponible, absence de `storageKey`, MFA local et throttling non contourné : PASS. OCR local demeure non implémenté et échoue fermé.
 
 ## Décision Founder requise
 

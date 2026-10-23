@@ -2,7 +2,7 @@
 
 Date : 2026-10-22
 
-`MASTER_D_STATUS: AUDITED_ARCHITECTURE_RECONCILIATION_REQUIRED_EXTERNAL_PROVIDER_DECISION_PENDING`
+`MASTER_D_STATUS: VALIDATED_E2E_LOCAL_PUBLICATION_PENDING`
 
 ## Baseline
 
@@ -16,21 +16,24 @@ Date : 2026-10-22
 ## État D-1 à D-8
 
 - D-1 inventaire : COMPLETE.
-- D-2 architecture canonique : REVISED; ProjectFile unique.
-- D-3 ingestion/indexation : PARTIAL, code historique à adapter; OCR manquant.
-- D-4 retrieval : PARTIAL, autorisation moderne à reconstruire.
-- D-5 AI : PARTIAL, grounding historique réutilisable; fournisseur réel bloqué.
-- D-6 intégration opérationnelle : NOT_IMPLEMENTED.
-- D-7 sécurité/résilience : PLAN_COMPLETE, E2E_PENDING.
-- D-8 UX : NOT_IMPLEMENTED.
+- D-2 architecture canonique : PASS; ProjectFile unique.
+- D-3 ingestion/indexation : PASS; OCR image-only `NOT_IMPLEMENTED_FAIL_CLOSED`.
+- D-4 retrieval : PASS, Internal User/ClientUser/Network/tenant/bâtiment.
+- D-5 AI simulée : PASS; Bedrock réel non autorisé.
+- D-6 intégration opérationnelle : PASS en lecture seule.
+- D-7 sécurité/résilience : PASS local.
+- D-8 UX : 12/12 PASS.
 
-## Gates
+## Preuves locales
 
-1. Ne pas fusionner la branche historique en bloc.
-2. Rebaser les composants dérivés sur ProjectFile et migration 150 avec migrations additives renumérotées.
-3. Utiliser exclusivement le modèle fake pour développement et QA.
-4. Obtenir une décision Founder distincte avant activation Bedrock ou traitement externe.
+- migration additive `20261105010000_project_file_knowledge_projection`;
+- PostgreSQL 16 standard : 151 migrations depuis zéro et upgrade 150→151;
+- ProjectFile → SHA-256 → index → réponse/citation → révocation : PASS;
+- prompt injection, information absente, tenant B et CLIENT_MANAGER sans bâtiment : PASS fail-closed;
+- contexte Network read-only : PASS E2E; cinq contextes opérationnels : PASS contrats;
+- Chrome authentifié : 4 viewports × 3 thèmes, 12/12 PASS;
+- trafic fournisseur externe : aucun; réseau backend QA deny-by-default démontré.
 
 ## Prochaine action
 
-`FOUNDER_DECISION_REAL_AI_PROVIDER_AND_DATA_POLICY`, pendant que l'implémentation locale indépendante peut poursuivre la projection ProjectFile, l'extraction native, la recherche déterministe et les tests avec fournisseur simulé.
+Revue finale du diff, commit local, publication/CI puis release privée gouvernée. Toute activation Bedrock reste une décision Founder distincte.

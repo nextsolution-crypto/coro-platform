@@ -1,6 +1,6 @@
 # UX acceptance
 
-Statut : `NOT_IMPLEMENTED_ON_CURRENT_BASELINE`.
+Statut : `VALIDATED_12_OF_12_LOCAL`.
 
 ## Expérience cible
 
@@ -14,4 +14,4 @@ Statut : `NOT_IMPLEMENTED_ON_CURRENT_BASELINE`.
 
 ## Acceptation
 
-Chrome authentifié, quatre viewports et Classic/Glass Light/Glass Dark, soit 12/12. Mesurer conteneurs, cartes, citations, textes longs, filtres, modales et erreurs. Aucun résultat navigateur n'est encore déclaré.
+Chrome authentifié, quatre viewports et Classic/Glass Light/Glass Dark : 12/12 PASS. Les conteneurs, cartes, formulaire, citations, navigation et actions ont été mesurés; aucun débordement, chevauchement, contrôle inaccessible ou erreur console critique. Les cibles tactiles du shell Portal ont été portées à 44 px minimum.

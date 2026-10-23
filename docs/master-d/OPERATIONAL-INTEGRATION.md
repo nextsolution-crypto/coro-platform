@@ -15,4 +15,4 @@ Toute action proposée passe par l'interface canonique, une confirmation humaine
 
 ## État
 
-Les autorités opérationnelles existent en production; leur assemblage contextuel avec Knowledge/AI n'est pas encore démontré E2E.
+Les cinq contextes `INCIDENT`, `SENTINELLE`, `NETWORK`, `EXERCISE_REPORT` et `CORRECTIVE_ACTION` sont résolus côté serveur en lecture seule avec tenant/bâtiment. Les contrats sont PASS et le contexte Network est PASS E2E. Aucun endpoint de mutation IA n'existe.

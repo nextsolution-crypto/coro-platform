@@ -19,6 +19,7 @@ import {
   Shield,
   Network,
   HardDriveDownload,
+  BookOpenCheck,
 } from "lucide-react";
 import { resolveActivePortalNavigationPath } from "./active-navigation";
 
@@ -119,6 +120,7 @@ export default function PortalLayout({
   const onlineNavItems = [
     { label: "Tableau de bord", path: "/dashboard", icon: LayoutDashboard },
     { label: "Documents", path: "/documents", icon: FileText },
+    { label: "Connaissances", path: "/knowledge", icon: BookOpenCheck },
     { label: "Bâtiments", path: "/buildings", icon: Building2 },
     { label: "Carte", path: "/map", icon: Map },
     { label: "Activités", path: "/activities", icon: Calendar },
@@ -245,7 +247,8 @@ export default function PortalLayout({
               border: "none",
               backgroundColor: "transparent",
               cursor: "pointer",
-              padding: 0,
+              minHeight: 44,
+              padding: "4px 0",
               textAlign: "left",
               flexShrink: 0,
             }}
@@ -302,7 +305,8 @@ export default function PortalLayout({
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
-                    minHeight: 40,
+                    minHeight: 44,
+                    minWidth: 44,
                     /* padding compact sur md, plus aéré sur xl via JS inline n/a → on garde 8px */
                     padding: "8px 10px",
                     borderRadius: 6,
@@ -429,7 +433,8 @@ export default function PortalLayout({
               style={{
                 alignItems: "center",
                 gap: 6,
-                minHeight: 40,
+                minHeight: 44,
+                minWidth: 44,
                 padding: "8px 12px",
                 borderRadius: 6,
                 border: "1px solid #E9ECEF",

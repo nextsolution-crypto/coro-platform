@@ -21,6 +21,8 @@
     "exercise-rex:runtime-test": "node --test test/exercise-rex-runtime.test.mjs",
     "exercise-rex:acceptance": "node src/exercise-rex-acceptance.mjs",
     "exercise-rex:browser": "node src/exercise-rex-browser.mjs",
+    "knowledge-ai:acceptance": "node src/knowledge-ai-acceptance.mjs",
+    "knowledge-ai:browser": "node src/knowledge-ai-browser.mjs",
     "identity:cleanup": "node src/identity-cleanup.mjs"
   }
 }
