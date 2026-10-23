@@ -75,6 +75,8 @@ export class KnowledgeGroundingService {
    * cannot establish that an unrelated named subject exists in its source.
    * Unknown vocabulary abstains rather than letting the model fill a gap. */
   private coversQuestion(question: string, hits: KnowledgeSearchHit[]) {
+    const requestedVersion = /\bversion\s+v?(\d+)\b/i.exec(question);
+    if (requestedVersion && !hits.some(hit => hit.projectFileVersion === Number(requestedVersion[1]))) return false;
     const scaffolding = new Set([
       'quels', 'quelles', 'comment', 'pourquoi', 'combien', 'trouve', 'trouver', 'situe', 'situee',
       'selon', 'indique', 'indiquent', 'peux', 'pouvez', 'dire', 'donne', 'donner', 'moi', 'nous', 'vous',
