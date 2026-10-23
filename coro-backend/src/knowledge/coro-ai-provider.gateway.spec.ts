@@ -115,4 +115,14 @@ describe('CoroAiProviderGateway provider boundary', () => {
     expect(bedrock.answer).not.toHaveBeenCalled();
   });
 
+  it('does not substitute the current version when the question explicitly requests an unavailable version', async () => {
+    const bedrock = { answer: jest.fn() };
+    const gateway = new CoroAiProviderGateway(new KnowledgeConfig(), new KnowledgeGroundingService(), bedrock as any);
+    const result = await gateway.answer('Quel est le code Orme de la version 2 ?', [
+      { ...hit, projectFileVersion: 1, text: 'Orme | CODE-ORME-031 | Recette' },
+    ]);
+    expect(result.grounded.answer).toBeNull();
+    expect(bedrock.answer).not.toHaveBeenCalled();
+  });
+
 });
