@@ -63,6 +63,14 @@ describe('BedrockProviderAdapter', () => {
     });
   });
 
+  it('abstains if the provider reports contradictory evidence even when it proposes an answer', async () => {
+    const adapter = new BedrockProviderAdapter(new KnowledgeConfig());
+    adapter.setClientForTesting({ send: jest.fn().mockResolvedValue({ output: { message: { content: [{ text: JSON.stringify({
+      answer: 'Une valeur arbitraire', uncertainty: '', missingInformation: [], conflicts: ['Deux valeurs divergentes'], usedCitationIds: ['citation-1'],
+    }) }] } } }) } as never);
+    await expect(adapter.answer('Question de recette', [hit])).resolves.toMatchObject({ answer: null, conflicts: ['Deux valeurs divergentes'], usedCitationIds: ['citation-1'] });
+  });
+
   const fence = String.fromCharCode(96).repeat(3);
   const groundedJson = JSON.stringify({
     answer: 'Le point de rassemblement est dans la cour nord.',
