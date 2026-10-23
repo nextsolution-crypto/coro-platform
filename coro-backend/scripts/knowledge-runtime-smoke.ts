@@ -2,7 +2,7 @@ import { KnowledgeConfig } from '../src/knowledge/knowledge.config';
 import { KnowledgeExtractorService } from '../src/knowledge/knowledge-extractor.service';
 
 export function fixturePdf() {
-  const content = 'BT /F1 12 Tf 72 720 Td (CORO-KNOWLEDGE-2026) Tj ET\n';
+  const content = 'BT /F1 12 Tf 72 720 Td (DOCUMENT FICTIF - NE PAS UTILISER EN INTERVENTION) Tj 0 -18 Td (Le code de validation technique est CORO-KNOWLEDGE-2026.) Tj ET\n';
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
