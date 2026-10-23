@@ -8,6 +8,7 @@ BACKUP_DIR=/opt/coro-ops/backups/database
 RELEASE_DIR=/opt/coro-ops/releases
 LOCK_FILE=/run/lock/coro-production-deployment.lock
 COMPOSE_OVERRIDE=''
+KNOWLEDGE_OVERRIDE=''
 AUTH_SMOKE_HEADERS=''
 AUTH_SMOKE_BODY=''
 
@@ -21,6 +22,7 @@ fail() {
 }
 cleanup() {
   [[ -z "$COMPOSE_OVERRIDE" ]] || rm -f -- "$COMPOSE_OVERRIDE"
+  [[ -z "$KNOWLEDGE_OVERRIDE" ]] || rm -f -- "$KNOWLEDGE_OVERRIDE"
   [[ -z "$AUTH_SMOKE_HEADERS" ]] || rm -f -- "$AUTH_SMOKE_HEADERS"
   [[ -z "$AUTH_SMOKE_BODY" ]] || rm -f -- "$AUTH_SMOKE_BODY"
 }
@@ -241,7 +243,10 @@ services:
   website:
     image: $WEBSITE_IMAGE
 YAML
-compose=(docker compose -f docker-compose.yml -f "$COMPOSE_OVERRIDE")
+KNOWLEDGE_OVERRIDE="$(mktemp /tmp/coro-knowledge-runtime.XXXXXX.json)"
+rm -f -- "$KNOWLEDGE_OVERRIDE"
+node ops/knowledge/runtime-policy.mjs overlay "$BACKEND_IMAGE" "$KNOWLEDGE_OVERRIDE" || fail KNOWLEDGE_RUNTIME_POLICY_INVALID
+compose=(docker compose -f docker-compose.yml -f "$COMPOSE_OVERRIDE" -f "$KNOWLEDGE_OVERRIDE")
 "${compose[@]}" config --quiet || fail COMPOSE_CONFIGURATION_INVALID
 
 # Migrations execute in the approved backend image before any running service is replaced.
@@ -272,13 +277,26 @@ for container in coro_backend coro_frontend coro_client_portal coro_website; do
 done
 [[ "$(docker compose exec -T backend sh -c 'printf %s "${MFA_QA_CAPTURE_ENABLED:-false}"')" != true ]] || fail MFA_QA_CAPTURE_ENABLED
 
+# A persistent, root-owned policy preserves the existing application's access
+# across releases. Provider failure restores a healthy, credential-free backend
+# and fails the release rather than reporting a silently degraded success.
+if ! docker exec coro_backend node dist/scripts/knowledge-provider-smoke.js >"$RELEASE_DIR/${RELEASE_ID}.knowledge-smoke.json"; then
+  docker compose -f docker-compose.yml -f "$COMPOSE_OVERRIDE" up -d --no-deps --no-build backend || fail KNOWLEDGE_DEGRADATION_FAILED
+  wait_for_backend_ready coro_backend http://127.0.0.1:3002/api/auth/login
+  fail KNOWLEDGE_PROVIDER_SMOKE_FAILED
+fi
+node ops/knowledge/runtime-policy.mjs verify "$BACKEND_IMAGE" >"$RELEASE_DIR/${RELEASE_ID}.knowledge-runtime.json" || fail KNOWLEDGE_RUNTIME_MISMATCH
+
 export RELEASE_TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 export PREVIOUS_COMMIT="$previous_commit" PREVIOUS_IMAGES="$previous_images" PREVIOUS_MIGRATION_HEAD="$previous_migration_head"
 export PREVIOUS_COMPOSE="$previous_compose" EXPECTED_MIGRATION_HEAD="$expected_migration_head" BACKUP_ID="$backup_id" BACKUP_SHA="$backup_sha" BACKUP_REMOTE_OBJECT="$remote_object" BACKUP_VERSION_ID="$backup_version_id" RESTORE_REPORT="$restore_report"
-export COMPOSE_IDENTITY="$(sha256sum docker-compose.yml "$COMPOSE_OVERRIDE" | sha256sum | cut -d' ' -f1)"
+export COMPOSE_IDENTITY="$(sha256sum docker-compose.yml "$COMPOSE_OVERRIDE" "$KNOWLEDGE_OVERRIDE" | sha256sum | cut -d' ' -f1)"
 node <<'NODE'
 const fs=require('fs'); const p=process.env;
+const knowledgeRuntime=JSON.parse(fs.readFileSync(`/opt/coro-ops/releases/${p.RELEASE_ID}.knowledge-runtime.json`,'utf8'));
+const knowledgeSmoke=JSON.parse(fs.readFileSync(`/opt/coro-ops/releases/${p.RELEASE_ID}.knowledge-smoke.json`,'utf8'));
 const manifest={releaseId:p.RELEASE_ID,gitCommit:p.RELEASE_COMMIT,timestampUtc:p.RELEASE_TIMESTAMP,operator:p.RELEASE_OPERATOR,status:'SUCCESS',images:{backend:p.BACKEND_IMAGE,frontend:p.FRONTEND_IMAGE,clientPortal:p.CLIENT_PORTAL_IMAGE,website:p.WEBSITE_IMAGE},composeIdentity:p.COMPOSE_IDENTITY,expectedMigrationHead:p.EXPECTED_MIGRATION_HEAD,previousCommit:p.PREVIOUS_COMMIT,previousImages:p.PREVIOUS_IMAGES.split('\n'),previousCompose:p.PREVIOUS_COMPOSE,previousMigrationHead:p.PREVIOUS_MIGRATION_HEAD,backupCheckpointId:p.BACKUP_ID,backupSha256:p.BACKUP_SHA,backupRemoteObject:p.BACKUP_REMOTE_OBJECT,backupVersionId:p.BACKUP_VERSION_ID,restoreEvidence:{status:'RESTORE_VERIFIED',report:p.RESTORE_REPORT},healthChecks:{database:'PASS',backend:'PASS',frontend:'PASS',clientPortal:'PASS',website:'PASS',internalAuthReachable:'PASS',clientAuthReachable:'PASS',unauthenticatedBookingDenied:'PASS',authenticatedBooking:'NOT_VERIFIED_REQUIRES_APPROVED_SYNTHETIC_IDENTITY',containers:'PASS',restartCount:'PASS',criticalLogs:'PASS',mfaQaCaptureDisabled:'PASS'}};
+manifest.knowledgeRuntime={...knowledgeRuntime,smoke:knowledgeSmoke};
 const path=`/opt/coro-ops/releases/${p.RELEASE_ID}.json`; fs.writeFileSync(path,JSON.stringify(manifest,null,2)+'\n',{flag:'wx',mode:0o600});
 NODE
 
