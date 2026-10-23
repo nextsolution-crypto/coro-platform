@@ -1,0 +1,71 @@
+name: Governed Production Rollback Image Restore
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: DRY_RUN or EXECUTE
+        required: true
+        type: choice
+        options: [DRY_RUN, EXECUTE]
+      restore_approval:
+        description: For EXECUTE type RESTORE_EXACT_MANIFEST_ROLLBACK_IMAGES
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: |
+          bash -n ops/capacity/coro-rollback-image-restore.sh
+          node --test ops/capacity/*.test.mjs
+  restore:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Validate request
+        env:
+          MODE: ${{ inputs.mode }}
+          APPROVAL: ${{ inputs.restore_approval }}
+        run: |
+          [[ "$MODE" == DRY_RUN || "$MODE" == EXECUTE ]]
+          [[ "$MODE" == DRY_RUN || "$APPROVAL" == RESTORE_EXACT_MANIFEST_ROLLBACK_IMAGES ]]
+      - name: Validate pinned host identity
+        env:
+          HOST_FINGERPRINT: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+        run: '[[ "$HOST_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]'
+      - name: Restore exact manifest rollback images
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          ROLLBACK_IMAGE_RESTORE_MODE: ${{ inputs.mode }}
+          ROLLBACK_IMAGE_RESTORE_APPROVAL: ${{ inputs.restore_approval }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,ROLLBACK_IMAGE_RESTORE_MODE,ROLLBACK_IMAGE_RESTORE_APPROVAL
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            script="$(mktemp /tmp/coro-rollback-image-restore.XXXXXX.sh)"
+            trap 'rm -f -- "$script"' EXIT
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
+            git -C "$repo" show "$SOURCE_SHA:ops/capacity/coro-rollback-image-restore.sh" >"$script"
+            bash -n "$script"
+            chmod 0700 "$script"
+            "$script"
