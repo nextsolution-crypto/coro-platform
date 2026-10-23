@@ -4,6 +4,10 @@ FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 
+# Detect and generate the Prisma engine against the runtime OpenSSL version.
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY package*.json ./
 COPY prisma ./prisma/
 
@@ -25,6 +29,7 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 # Dépendances système pour Puppeteer
 RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
+    openssl \
     ca-certificates \
     fonts-freefont-ttf \
     fonts-noto-core \
@@ -41,6 +46,9 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/assets ./assets
+
+# Fail the image build if the runtime Prisma engine is missing or cannot load.
+RUN node -e "require('./node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node')"
 
 EXPOSE 3002
 
