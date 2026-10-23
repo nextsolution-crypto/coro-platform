@@ -1,0 +1,14 @@
+[Unit]
+Description=CORO Knowledge read-only health and certificate check
+After=docker.service
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/coro-platform
+ExecStart=/usr/bin/node /opt/coro-platform/ops/knowledge/health.mjs
+TimeoutStartSec=60
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
