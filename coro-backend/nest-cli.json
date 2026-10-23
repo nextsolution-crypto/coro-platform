@@ -4,7 +4,12 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": true,
-    "assets": ["knowledge/*.mjs"],
+    "assets": [
+      {
+        "include": "knowledge/*.mjs",
+        "outDir": "dist/src"
+      }
+    ],
     "watchAssets": true
   }
 }
