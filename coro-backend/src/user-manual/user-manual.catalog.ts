@@ -13,7 +13,7 @@ export type ManualArticle = {
   route: string;
   sourceRefs: string[];
 };
-export const MANUAL_VERSION = '2026-10-23.1';
+export const MANUAL_VERSION = '2026-10-24.1';
 const both: ManualAudience[] = ['INTERNAL', 'CLIENT'];
 const internal: ManualAudience[] = ['INTERNAL'];
 const client: ManualAudience[] = ['CLIENT'];
@@ -51,6 +51,22 @@ const article = (
 
 // Versioned product instructions only. Never a second authority for client plans.
 export const MANUAL_ARTICLES: readonly ManualArticle[] = [
+  article('building-document-library', 'Alimenter la base documentaire du bâtiment', 'Documents et connaissances', both, '/buildings',
+    ['espace', 'documentaire', 'bâtiment', 'fichier', 'ajouter', 'déposer', 'excel', 'word', 'image', 'plan', 'archivage'],
+    'Conserver les références du bâtiment indépendamment des projets et alimenter Knowledge avec les versions approuvées en vigueur.',
+    ['Ouvrez Bâtiments puis le bâtiment concerné et son espace documentaire.',
+     'Cliquez sur Ajouter un document, sélectionnez le fichier et sa catégorie, puis confirmez le dépôt.',
+     'Le fichier est créé en brouillon. Une personne interne habilitée doit le soumettre en révision puis l’approuver avec une justification et sa date de validité.',
+     'Après approbation, le traitement Knowledge démarre automatiquement pour les formats pris en charge. Consultez son état dans la liste.',
+     'Utilisez Interroger CORO AI pour poser une question limitée à ce bâtiment et consulter les sources citées.',
+     'Pour une mise à jour, utilisez Nouvelle version. L’ancienne source est remplacée lors de l’entrée en vigueur de la version approuvée.',
+     'Les responsables clients peuvent déléguer le droit de dépôt dans Permissions de dépôt client.'],
+    'Le document demeure rattaché au bâtiment. L’archivage du projet d’origine ne le révoque pas.',
+    ['coro-backend/src/building-documents/building-documents.service.ts', 'coro-frontend/components/building-documents/BuildingDocuments.tsx'],
+    ['Compte actif autorisé sur le bâtiment ; droit de dépôt pour ajouter un fichier.'],
+    ['50 Mo maximum par fichier. DWG, DXF, IFC, DOC, XLS et WebP sont conservés sans extraction Knowledge ; fournissez un PDF ou un format pris en charge.',
+     'Excel : valeurs brutes et références de cellules ; les formules ne sont pas recalculées et leurs valeurs ne servent pas de preuve. DOCX : blocs logiques, sans pagination de mise en page.',
+     'L’OCR lit le texte avec un seuil de confiance ; il ne constitue pas une interprétation des symboles, cotes ou réseaux des plans techniques.']),
   article(
     'demarrer',
     'Se repérer dans CORO',
