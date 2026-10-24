@@ -58,7 +58,7 @@ export default function BuildingsPage() {
           <p style={{ margin: 0, color: '#ADB5BD', fontSize: 15 }}>Aucun bâtiment associé à votre compte.</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: 16 }}>
           {buildings.map((b: any) => (
             <div key={b.id} style={{
               backgroundColor: '#FFFFFF', borderRadius: 12,
@@ -69,7 +69,7 @@ export default function BuildingsPage() {
               {b.photoBase64 ? (
                 <img src={b.photoBase64} alt={b.name} style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }} />
               ) : (
-                <div style={{ width: '100%', height: 120, backgroundColor: '#EBF5FB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '100%', height: 160, backgroundColor: '#EBF5FB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Building2 size={40} color="#AED6F1" />
                 </div>
               )}
@@ -92,7 +92,7 @@ export default function BuildingsPage() {
                 <div style={{ display: 'flex', gap: 12, marginBottom: 16, padding: '12px 0', borderTop: '1px solid #F1F3F5', borderBottom: '1px solid #F1F3F5' }}>
                   <div style={{ flex: 1, textAlign: 'center' }}>
                     <p style={{ margin: 0, fontSize: 22, fontWeight: 900, color: '#2C3E50', lineHeight: 1 }}>{b.projectCount || 0}</p>
-                    <p style={{ margin: '4px 0 0', fontSize: 11, color: '#ADB5BD' }}>document{(b.projectCount || 0) !== 1 ? 's' : ''}</p>
+                    <p style={{ margin: '4px 0 0', fontSize: 11, color: '#ADB5BD' }}>dossier{(b.projectCount || 0) !== 1 ? 's' : ''} de conformité</p>
                   </div>
                   <div style={{ width: 1, backgroundColor: '#F1F3F5' }} />
                   <div style={{ flex: 1, textAlign: 'center' }}>
@@ -132,7 +132,7 @@ export default function BuildingsPage() {
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = '#EBF5FB'}
                   >
                     <FileText size={14} />
-                    Documents
+                    Ouvrir le bâtiment
                   </button>
                   <button
                     type="button"
