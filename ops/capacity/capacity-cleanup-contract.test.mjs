@@ -23,8 +23,8 @@ test("cleanup is image-only and refuses broad pruning", () => {
 });
 
 // Reject invalid recovery requests before any production filesystem access.
-test("cache age cannot be reduced below the two reviewed retention windows", () => {
-  for (const value of ["0", "1", "23", "25", "-1", "invalid"]) {
+test("cache age cannot be reduced below the reviewed retention windows", () => {
+  for (const value of ["0", "1", "11", "23", "25", "-1", "invalid"]) {
     const result = spawnSync("bash", [new URL("./coro-capacity-cleanup.sh", import.meta.url).pathname], { env: { PATH: process.env.PATH, CAPACITY_CLEANUP_MINIMUM_AGE_HOURS: value }, encoding: "utf8" });
     assert.equal(result.status, 1);
     assert.match(result.stdout, /MINIMUM_AGE_INVALID/);
