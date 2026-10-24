@@ -103,7 +103,7 @@ export class ProjectFileExpiryRemindersService {
     file: {
       id: string;
       name: string;
-      projectId: string;
+      projectId: string | null;
       organizationId: string;
     },
     recipientUserId: string,
