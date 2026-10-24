@@ -700,12 +700,17 @@ export class ProjectsService {
       select: { id: true },
     });
     if (!project) throw new NotFoundException('Projet introuvable');
-    return this.prisma.projectComment.findMany({
+    const comments = await this.prisma.projectComment.findMany({
       where: { projectId, organizationId: actor.organizationId },
       include: {
         user: { select: { firstName: true, lastName: true, role: true } },
+        clientUser: { select: { firstName: true, lastName: true, role: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
+    return comments.map(({ clientUser: clientAuthor, ...comment }) => ({
+      ...comment,
+      user: comment.user ?? clientAuthor,
+    }));
   }
 }

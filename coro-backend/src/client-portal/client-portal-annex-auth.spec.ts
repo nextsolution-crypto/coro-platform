@@ -66,7 +66,6 @@ describe('ClientPortalService annex resource authorization', () => {
       service.addComment(
         'project-b',
         manager,
-        manager.organizationId,
         'Unauthorized comment',
       ),
     ).rejects.toBeInstanceOf(NotFoundException);
@@ -161,5 +160,72 @@ describe('ClientPortalService annex resource authorization', () => {
         buildingId: true,
       },
     });
+  });
+
+  it('records the authenticated ClientUser as the typed author and ignores browser authorship', async () => {
+    prisma.project.findFirst.mockResolvedValue({
+      id: 'project-a',
+      organizationId: 'org-a',
+      clientId: 'client-a',
+      buildingId: 'building-a',
+    });
+    prisma.projectComment.create.mockResolvedValue({ id: 'comment-a' });
+
+    await service.addComment(
+      'project-a',
+      { ...manager, userId: 'forged-internal-user' },
+      'Canonical client comment',
+    );
+
+    expect(prisma.projectComment.create).toHaveBeenCalledWith({
+      data: {
+        projectId: 'project-a',
+        actorType: 'CLIENT_USER',
+        clientUserId: 'manager-a',
+        organizationId: 'org-a',
+        contenu: '[Portail client] Canonical client comment',
+      },
+    });
+  });
+
+  it('presents internal and client authors through the compatible author view', async () => {
+    prisma.project.findFirst.mockResolvedValue({
+      id: 'project-a',
+      organizationId: 'org-a',
+      clientId: 'client-a',
+      buildingId: 'building-a',
+    });
+    prisma.projectComment.findMany.mockResolvedValue([
+      {
+        id: 'internal-comment',
+        actorType: 'INTERNAL_USER',
+        user: { firstName: 'Internal', lastName: 'Author', role: 'ADVISOR' },
+        clientUser: null,
+      },
+      {
+        id: 'client-comment',
+        actorType: 'CLIENT_USER',
+        user: null,
+        clientUser: {
+          firstName: 'Client',
+          lastName: 'Author',
+          role: 'CLIENT_MANAGER',
+        },
+      },
+    ]);
+
+    const comments = await service.getComments('project-a', manager);
+
+    expect(comments).toEqual([
+      expect.objectContaining({
+        id: 'internal-comment',
+        user: expect.objectContaining({ firstName: 'Internal' }),
+      }),
+      expect.objectContaining({
+        id: 'client-comment',
+        user: expect.objectContaining({ firstName: 'Client' }),
+      }),
+    ]);
+    expect(comments[1]).not.toHaveProperty('clientUser');
   });
 });

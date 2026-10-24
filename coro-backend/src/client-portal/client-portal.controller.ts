@@ -479,7 +479,6 @@ export class ClientPortalController {
     return this.clientPortalService.addComment(
       id,
       req.clientUser,
-      req.clientUser.organizationId,
       body.contenu,
     );
   }

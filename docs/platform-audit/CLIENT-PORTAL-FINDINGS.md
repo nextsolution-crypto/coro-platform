@@ -41,7 +41,7 @@ active et preuve de recette appropriée.
 | CP-004 | Intelligence agrège par organisation sans transmettre le client ni les bâtiments autorisés | BLOQUANT | CONFIRMÉ — OUVERT | `GET intelligence/overview` transmet uniquement `organizationId`; agrégats synthétiques multi-clients requis |
 | CP-005 | Le refus documentaire charge le projet par identifiant puis écrit le statut, le commentaire et les notifications sans contrôle préalable du scope client/bâtiment | BLOQUANT | CONFIRMÉ — OUVERT | Refus interdit à tester avec preuve d’absence d’écriture, courriel et notification |
 | CP-006 | Commentaires, versions et engagements n’héritaient pas du contrôle canonique du projet; la portée corporate ProjectFile était artificiellement limitée au client d’origine | BLOQUANT | CORRIGÉ LOCAL — CI/E2E À CONFIRMER | Garde parent unique ajoutée avant lectures/écritures; inventaire `CLIENT-PORTAL-CP006-ROUTE-INVENTORY.md`; matrice PostgreSQL requise en CI |
-| CP-007 | `addComment` utilise l’identifiant `ClientUser` comme `userId` de commentaire, sans provenance d’acteur typée démontrée | MAJEUR | CONFIRMÉ — OUVERT | Test de création et correction de provenance typée requis |
+| CP-007 | `addComment` utilisait l’identifiant `ClientUser` comme `userId` de commentaire, sans provenance d’acteur typée | MAJEUR | CORRIGÉ LOCAL — CI/UPGRADE/E2E À CONFIRMER | Migration additive et contrainte exactement-un-auteur; preuve `CLIENT-PORTAL-CP007-ACTOR-PROVENANCE.md` |
 
 ## Limites actionnables actuelles
 
