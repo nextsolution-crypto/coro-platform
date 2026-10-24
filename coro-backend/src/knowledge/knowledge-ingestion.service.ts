@@ -51,7 +51,13 @@ export class KnowledgeIngestionService {
       include: { project: { select: { buildingId: true } } },
     });
     if (!file) throw new NotFoundException('Version ProjectFile non admissible.');
-    if (actor) await this.authorization.assertInternalProject(actor, file.projectId);
+    if (actor) {
+      if (file.projectId) await this.authorization.assertInternalProject(actor, file.projectId);
+      else { const scope = await this.authorization.scope(actor);
+        if (actor.type !== 'INTERNAL_USER' || (scope.buildingIds && !scope.buildingIds.includes(file.buildingId!)))
+          throw new NotFoundException('Document non autorisé');
+      }
+    }
     const idempotencyKey = createHash('sha256')
       .update(`${file.id}:${file.sha256}:${this.config.pipelineVersion}`)
       .digest('hex');
@@ -78,7 +84,7 @@ export class KnowledgeIngestionService {
             organizationId: file.organizationId,
             projectFileId: file.id,
             projectId: file.projectId,
-            buildingId: file.project.buildingId,
+            buildingId: file.buildingId ?? file.project!.buildingId,
             sourceVersion: file.version,
             sourceSha256: file.sha256!,
             sourceLifecycle: file.lifecycleState!,
@@ -86,8 +92,8 @@ export class KnowledgeIngestionService {
             sourceExpiresAt: file.expiresAt,
             sourceVisibility: file.visibility,
             status: 'PROCESSING',
-            extractorName: file.mimeType === 'application/pdf' ? 'pdfjs-dist' : 'utf8',
-            extractorVersion: file.mimeType === 'application/pdf' ? '6.3.289' : '1',
+            extractorName: file.mimeType === 'application/pdf' ? 'pdfjs-dist' : file.mimeType.includes('openxmlformats') ? 'office-local' : file.mimeType.startsWith('image/') ? 'tesseract-local' : 'utf8',
+            extractorVersion: file.mimeType === 'application/pdf' ? '6.3.289' : 'local-v1',
             pipelineVersion: this.config.pipelineVersion,
             idempotencyKey,
             attemptCount: 1,
@@ -168,7 +174,7 @@ export class KnowledgeIngestionService {
           where: { id: ingestion.id },
           data: { status: 'READY', indexedAt: new Date(), lastErrorCode: null,
             extractionMethod: pages.some(p => p.extractionMethod === 'LOCAL_OCR') ? 'LOCAL_OCR' : 'NATIVE_TEXT',
-            extractorName: pages.some(p => p.extractionMethod === 'LOCAL_OCR') ? 'pdfjs-dist+tesseract-local' : file.mimeType === 'application/pdf' ? 'pdfjs-dist' : 'utf8',
+            extractorName: pages.some(p => p.extractionMethod === 'LOCAL_OCR') ? 'pdfjs-dist+tesseract-local' : file.mimeType === 'application/pdf' ? 'pdfjs-dist' : file.mimeType.includes('openxmlformats') ? 'office-local' : 'utf8',
             extractorVersion: pages.some(p => p.extractionMethod === 'LOCAL_OCR') ? '6.3.289;local-ocr-v1' : file.mimeType === 'application/pdf' ? '6.3.289' : '1' },
         });
       });
