@@ -9,6 +9,11 @@
 | AUD-005 | Le plan de rétention distante reporte explicitement les suppressions automatiques et les contrôles GFS. | Ne pas annoncer une politique automatique GFS déjà exploitée. | Exécuter la phase de conservation séparée avec preuves de restauration et autorisations appropriées. |
 | AUD-006 | Aucun parcours navigateur global multi-acteurs n’a été exécuté dans cette campagne initiale. Les 17+2 cas Knowledge de release722 sont historiques et limités à ce chantier. | La décision globale COMMERCIALISABLE reste ouverte. | Exécuter les 24 campagnes de JOURNEYS.md et rattacher leurs preuves aux fonctions couvertes. |
 | AUD-007 | Le manuel V1 contient 22 articles reliés au code. Ses recherches ne couvrent pas toutes les formulations ni toutes les fonctions inventoriées. | Une abstention du manuel signifie « instruction non trouvée », pas « fonction inexistante ». | Enrichir les articles et les formulations à partir des recettes métier et des retours utilisateurs. |
+| AUD-008 | En production, le 24 octobre 2026 (America/Toronto), l’historique des incidents du compte de démonstration Martin Gagnon masque une requête échouée derrière « Aucun incident enregistré ». Le code appelle `catch(console.error)` avec une liste initiale vide. | Résultat opérationnel trompeur : un refus ou une panne ressemble à une absence d’incident. | Correction isolée sur `fix/client-incident-history-states`; tests comportementaux et recette après déploiement requis. |
+
+Les constats détaillés et leur statut se trouvent dans
+`CLIENT-PORTAL-FINDINGS.md`. Le point de reprise sans secret se trouve dans
+`CLIENT-PORTAL-HANDOFF.md`.
 
 Les preuves de tests isolés sont consignées sans prompts, réponses clients,
 secrets ni données de production. La campagne ne procède à aucun envoi LIVE,

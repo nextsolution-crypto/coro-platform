@@ -13,6 +13,7 @@
     "test:skin": "node design-system/portal-glass.test.cjs && node app/components/active-navigation.test.cjs && node app/buildings/building-projects.test.cjs",
     "test:sms-compliance": "node --experimental-strip-types app/population/lib/smsCompliance.test.ts",
     "test:sentinelle-auth": "node app/sentinelle/sentinelleAuth.contract.test.mjs",
+    "test:incident-history": "node --experimental-strip-types \"app/sentinelle/[buildingId]/incidents/incidentHistoryState.test.ts\"",
     "test:population-sharing": "node \"app/sentinelle/[buildingId]/population/publicPortalSharing.test.mjs\"",
     "test:population-identity": "node app/population/populationIdentity.contract.test.mjs",
     "test:population-profile": "node app/population/populationContactProfile.contract.test.mjs",
