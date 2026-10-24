@@ -41,8 +41,8 @@ invitation, signature ou changement de permission n’est autorisé pour la rece
 - CP-005 : le refus vérifie accès, rôle et état avant transaction; une victoire
   concurrente unique produit le commentaire et les notifications, une répétition
   est sans effet.
-- CP-004 : la correction de portée Intelligence est fusionnée et CI verte, mais
-  n’est pas encore active en production.
+- CP-004 : la correction de portée Intelligence est active en production sur
+  `1e67c77ea5a3eb61fb4a8e32e30e92845411a277`.
 
 ## Tests exécutés
 
@@ -60,17 +60,18 @@ invitation, signature ou changement de permission n’est autorisé pour la rece
   PASS/GO; SHA actif `3829afc…`, PostgreSQL 16.15, 153 migrations, head
   `20261107010000_project_comment_typed_actor`, backup `REMOTE_VERIFIED`,
   restore `RESTORE_VERIFIED`, quatre rollback disponibles.
-- CP-004 : CI PR `40117984030` SUCCESS. La release `40119347659` a échoué
-  fail-closed avant mutation. L’audit capacité `40120197159` mesure
-  11 846 500 352 octets libres pour 14 020 728 037 requis.
+- CP-004 : après extension gouvernée du Droplet à 2 vCPU, 4 Go et 80 Go,
+  l’audit capacité `40121361626` mesure 43 116 140 480 octets libres,
+  19 700 652 056 requis et 23 417 448 424 octets de marge. Release
+  `40121511765` SUCCESS; inspection `40122406450` PASS/GO; 153 migrations,
+  backup `REMOTE_VERIFIED`, restore `RESTORE_VERIFIED`, quatre rollback.
 
 ## Constats ouverts
 
 Voir `CLIENT-PORTAL-FINDINGS.md`. CP-001, CP-002, CP-003, CP-005, CP-006 et
-CP-007 sont CLOS. CP-004 est corrigé, fusionné et validé en CI, mais demeure
-`À VÉRIFIER` tant que sa release exacte et son inspection post-release ne sont
-pas réussies. Le verdict commercial global demeure ouvert; la fermeture des
-constats de sécurité ne remplace pas l’audit fonctionnel restant.
+CP-007 sont CLOS côté serveur et production. La matrice navigateur synthétique
+CP-004 demeure `NOT_VERIFIED`. Le verdict commercial global demeure ouvert;
+la fermeture des constats de sécurité ne remplace pas CORE-01/DOC-01.
 
 ## Opérations au résultat incertain
 
@@ -81,8 +82,7 @@ constats de sécurité ne remplace pas l’audit fonctionnel restant.
 
 ## Prochaine action concrète
 
-Rétablir la marge de capacité sans supprimer les quatre images de rollback,
-les backups ou les preuves protégées; relancer ensuite la release gouvernée de
-CP-004 et son inspection. Après clôture, reprendre l’audit fonctionnel restant
-du portail à partir de `PRODUCT-MATRIX.md` et `JOURNEYS.md` sans rouvrir
-CP-002/CP-003 hors preuve de régression.
+Exécuter CORE-01 et DOC-01 selon `JOURNEYS.md` dans le runtime QA synthétique,
+puis rejouer la matrice navigateur CP-004. Ne pas rouvrir CP-002/CP-003 hors
+preuve de régression et ne pas utiliser les données d’un client de production
+pour fabriquer une preuve de refus inter-client.

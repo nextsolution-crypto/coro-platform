@@ -60,13 +60,16 @@ Mise à jour : 24 octobre 2026, America/Toronto.
   tenant, TypeScript et build; CI `40117984030` SUCCESS.
 - **Livraison source :** PR #50, SHA
   `e94e4f3d7b3a00406dcc56f0e5123a38235a3492`.
-- **Release :** `40119347659` arrêtée fail-closed avant mutation. L’audit
-  `40120197159` mesure un déficit de marge de 2 174 227 685 octets. Le dry-run
-  `40120299651` ne trouve que 908 545 341 octets de caches admissibles à 12 h,
-  insuffisants; aucune suppression n’est effectuée.
-- **Production vérifiée :** inspection `40120103415` PASS/GO sur le SHA antérieur
-  `3829afc…`, migration 153, backup/restore vérifiés et quatre rollback intacts.
-- **Statut :** À VÉRIFIER — source corrigée et CI verte, déploiement non réalisé.
+- **Capacité :** Droplet étendu de manière gouvernée à 2 vCPU, 4 Go RAM et
+  80 Go disque. Audit `40121361626` SUCCESS : 43 116 140 480 octets libres,
+  besoin release 19 700 652 056, marge 23 417 448 424, gates backup/release vrais.
+- **Release :** successeur documentaire `1e67c77ea5a3eb61fb4a8e32e30e92845411a277`,
+  workflow `40121511765` SUCCESS, quatre images immuables.
+- **Production vérifiée :** inspection `40122406450` PASS/GO sur `1e67c77…`,
+  migration 153, backup `REMOTE_VERIFIED`, restore `RESTORE_VERIFIED`, quatre
+  rollback, verrou libre et services sans redémarrage.
+- **Statut :** CLOS côté serveur/PostgreSQL/production; preuve navigateur
+  synthétique 12/12 encore `NOT_VERIFIED`.
 
 ## Limite transversale
 
