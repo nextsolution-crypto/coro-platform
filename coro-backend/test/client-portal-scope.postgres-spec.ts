@@ -43,6 +43,7 @@ describe('Client Portal project and building scope', () => {
     manager: `cp006-manager-${suffix}`,
     corporate: `cp006-corporate-${suffix}`,
     commentB: `cp006-comment-b-${suffix}`,
+    clientComment: `cp007-client-comment-${suffix}`,
     versionB: `cp006-version-b-${suffix}`,
     engagementB: `cp006-engagement-b-${suffix}`,
   };
@@ -230,7 +231,9 @@ describe('Client Portal project and building scope', () => {
       where: { id: ids.engagementB },
     });
     await prisma.projectVersion.deleteMany({ where: { id: ids.versionB } });
-    await prisma.projectComment.deleteMany({ where: { id: ids.commentB } });
+    await prisma.projectComment.deleteMany({
+      where: { id: { in: [ids.commentB, ids.clientComment] } },
+    });
     await prisma.clientUser.deleteMany({
       where: { id: { in: [ids.manager, ids.corporate] } },
     });
@@ -250,6 +253,54 @@ describe('Client Portal project and building scope', () => {
       where: { id: { in: [ids.org, ids.otherOrg] } },
     });
     await prisma.$disconnect();
+  });
+
+  it('persists typed ClientUser provenance and preserves internal-author history', async () => {
+    const created = await service.addComment(
+      ids.projectA,
+      {
+        sub: ids.manager,
+        organizationId: ids.org,
+        clientId: ids.clientA,
+        role: ClientUserRole.CLIENT_MANAGER,
+        buildingIds: [ids.buildingA],
+      },
+      'Typed client author',
+    );
+    await prisma.projectComment.update({
+      where: { id: created.id },
+      data: { id: ids.clientComment },
+    });
+
+    const [clientComment, historicalInternalComment] = await Promise.all([
+      prisma.projectComment.findUniqueOrThrow({
+        where: { id: ids.clientComment },
+      }),
+      prisma.projectComment.findUniqueOrThrow({ where: { id: ids.commentB } }),
+    ]);
+    expect(clientComment).toMatchObject({
+      actorType: 'CLIENT_USER',
+      clientUserId: ids.manager,
+      userId: null,
+    });
+    expect(historicalInternalComment).toMatchObject({
+      actorType: 'INTERNAL_USER',
+      userId: ids.user,
+      clientUserId: null,
+    });
+
+    await expect(
+      prisma.projectComment.create({
+        data: {
+          projectId: ids.projectA,
+          organizationId: ids.org,
+          actorType: 'CLIENT_USER',
+          userId: ids.user,
+          clientUserId: ids.manager,
+          contenu: 'Invalid mixed provenance',
+        },
+      }),
+    ).rejects.toThrow();
   });
 
   it('applies identical client and building scope to CLIENT_MANAGER list and direct reads', async () => {

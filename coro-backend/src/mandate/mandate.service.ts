@@ -280,18 +280,25 @@ export class MandateService {
   async getComments(projectId: string, actor: WorkManagementActor) {
     await this.assertProjectAccess(projectId, actor);
     const organizationId = actor.organizationId;
-    return this.prisma.projectComment.findMany({
+    const comments = await this.prisma.projectComment.findMany({
       where: { projectId, organizationId },
-      include: { user: { select: { firstName: true, lastName: true, id: true } } },
+      include: {
+        user: { select: { firstName: true, lastName: true, id: true } },
+        clientUser: { select: { firstName: true, lastName: true, id: true } },
+      },
       orderBy: { createdAt: 'desc' },
     });
+    return comments.map(({ clientUser: clientAuthor, ...comment }) => ({
+      ...comment,
+      user: comment.user ?? clientAuthor,
+    }));
   }
 
   async addComment(projectId: string, actor: WorkManagementActor, contenu: string) {
     await this.assertProjectAccess(projectId, actor);
     const { organizationId, userId } = actor;
     return this.prisma.projectComment.create({
-      data: { projectId, organizationId, userId, contenu },
+      data: { projectId, organizationId, actorType: 'INTERNAL_USER', userId, contenu },
       include: { user: { select: { firstName: true, lastName: true, id: true } } },
     });
   }

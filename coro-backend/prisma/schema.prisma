@@ -3201,15 +3201,20 @@ model MandateServiceOperation {
 }
 
 model ProjectComment {
-  id             String   @id @default(uuid())
-  projectId      String
-  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  userId         String
-  user           User     @relation(fields: [userId], references: [id])
-  contenu        String
-  organizationId String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id               String         @id @default(uuid())
+  projectId        String
+  project          Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  actorType         AuditActorType @default(INTERNAL_USER)
+  userId            String?
+  user              User?          @relation(fields: [userId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  clientUserId      String?
+  clientUser        ClientUser?    @relation(fields: [clientUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  contenu           String
+  organizationId   String
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([clientUserId, createdAt])
 }
 
 model TimelogEntry {
@@ -3355,6 +3360,7 @@ model ClientUser {
   adminAuditEvents             AdminAuditEvent[]             @relation("AdminAuditClientActor")
   networkAssignmentsGranted    CustomerPortfolioAssignment[] @relation("NetworkAssignmentGrantedByClientUser")
   networkAssignmentsRevoked    CustomerPortfolioAssignment[] @relation("NetworkAssignmentRevokedByClientUser")
+  projectComments              ProjectComment[]
 
   @@unique([id, organizationId])
 }

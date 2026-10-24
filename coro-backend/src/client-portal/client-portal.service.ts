@@ -1648,15 +1648,15 @@ export class ClientPortalService {
   async addComment(
     projectId: string,
     clientUser: any,
-    organizationId: string,
     contenu: string,
   ) {
     await this.assertProjectAccess(projectId, clientUser);
     return this.prisma.projectComment.create({
       data: {
         projectId,
-        userId: clientUser.sub,
-        organizationId,
+        actorType: 'CLIENT_USER',
+        clientUserId: clientUser.sub,
+        organizationId: clientUser.organizationId,
         contenu: `[Portail client] ${contenu}`,
       },
     });
@@ -1664,13 +1664,18 @@ export class ClientPortalService {
 
   async getComments(projectId: string, clientUser: any) {
     await this.assertProjectAccess(projectId, clientUser);
-    return this.prisma.projectComment.findMany({
+    const comments = await this.prisma.projectComment.findMany({
       where: { projectId },
       include: {
         user: { select: { firstName: true, lastName: true, role: true } },
+        clientUser: { select: { firstName: true, lastName: true, role: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
+    return comments.map(({ clientUser: clientAuthor, ...comment }) => ({
+      ...comment,
+      user: comment.user ?? clientAuthor,
+    }));
   }
 
   async getDashboard(

@@ -189,7 +189,7 @@ describe('Work Management security hardening', () => {
     prisma.projectComment.create.mockResolvedValue({ id: 'comment-a' });
     await new MandateService(prisma).addComment('project-a', actor('OPERATOR'), 'Bonjour');
     expect(prisma.projectComment.create.mock.calls[0][0].data).toEqual({
-      projectId: 'project-a', organizationId: 'org-a', userId: 'user-a', contenu: 'Bonjour',
+      projectId: 'project-a', organizationId: 'org-a', actorType: 'INTERNAL_USER', userId: 'user-a', contenu: 'Bonjour',
     });
   });
 
