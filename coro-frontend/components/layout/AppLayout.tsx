@@ -59,6 +59,7 @@ const NAV_GROUPS = [
     label: 'Ressources',
     items: [
       { label: 'Bibliothèque', path: '/library',   icon: '📚' },
+      { label: 'Manuel d’utilisation', path: '/manual', icon: '📖' },
       { label: 'Paramètres',   path: '/settings',  icon: '⚙️' },
     ],
   },
