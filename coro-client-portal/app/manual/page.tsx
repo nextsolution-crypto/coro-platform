@@ -161,7 +161,7 @@ export default function ManualPage() {
                 value={question}
                 maxLength={1000}
                 onChange={(e) => setQuestion(e.target.value)}
-                placeholder="Ex. Comment approuver un document ?"
+                placeholder="Ex. Comment utiliser Knowledge ?"
                 minLength={3}
                 required
               />
