@@ -29,10 +29,11 @@ export class KnowledgeChunkerService {
     let sectionPath: string | null = null;
     let sectionTitle: string | null = null;
     for (const page of pages) {
+      if (page.sectionPath) { sectionPath = page.sectionPath; sectionTitle = page.sectionPath; }
       const normalized = this.normalizer.normalize(page.text);
       const lines = normalized.split('\n');
       const heading = lines.find((line) => /^(?:Section\s+)?\d+(?:\.\d+)*\.?[\s—–-]+.{2,160}$/i.test(line));
-      if (heading) {
+      if (heading && !page.sectionPath) {
         sectionTitle = heading;
         sectionPath = heading.match(/^(?:Section\s+)?(\d+(?:\.\d+)*)/i)?.[1] ?? null;
       }
