@@ -1,3 +1,5 @@
+import { BuildingDocumentsService } from '../building-documents/building-documents.service';
+import { BuildingDocumentsController, BuildingDocumentsClientController } from '../building-documents/building-documents.controller';
 import { Module } from '@nestjs/common';
 import { ProjectFilesService } from './project-files.service';
 import { ProjectFilesController } from './project-files.controller';
@@ -22,9 +24,10 @@ import { ProjectFileExpiryRemindersService } from './project-file-expiry-reminde
       signOptions: { expiresIn: '7d' },
     }),
   ],
-  controllers: [ProjectFilesController, ProjectFilesClientController],
+  controllers: [ProjectFilesController, ProjectFilesClientController, BuildingDocumentsController, BuildingDocumentsClientController],
   providers: [
     ProjectFilesService,
+    BuildingDocumentsService,
     OfflineDocumentsService,
     ProjectFileExpiryRemindersService,
   ],
