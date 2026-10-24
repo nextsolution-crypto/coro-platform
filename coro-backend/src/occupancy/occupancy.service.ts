@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CheckInDto,
@@ -688,10 +693,28 @@ export class OccupancyService {
     } catch (err) { console.error('[ResilienceSnapshot] Erreur:', err); }
   }
 
-  async getIntelligenceOverview(organizationId: string) {
-    // Tous les bâtiments de l'organisation
+  async getIntelligenceOverview(actor: {
+    organizationId: string;
+    clientId: string;
+    role: string;
+    buildingIds?: string[];
+  }) {
+    if (!['CLIENT_MANAGER', 'CLIENT_CORPORATE'].includes(actor.role)) {
+      throw new ForbiddenException('Accès Intelligence refusé');
+    }
+    const buildingScope =
+      actor.role === 'CLIENT_MANAGER'
+        ? {
+            clientId: actor.clientId,
+            id: { in: actor.buildingIds ?? [] },
+          }
+        : {};
     const buildings = await this.prisma.building.findMany({
-      where: { organizationId, isActive: true },
+      where: {
+        organizationId: actor.organizationId,
+        isActive: true,
+        ...buildingScope,
+      },
       include: { kioskToken: { select: { token: true } } },
     });
 
@@ -733,7 +756,7 @@ export class OccupancyService {
     const infoCount      = allRecs.filter(r => r.type === 'INFO').length;
 
     return {
-      organizationId,
+      organizationId: actor.organizationId,
       avgScore,
       globalStatus:  avgScore >= 85 ? 'READY' : avgScore >= 60 ? 'REDUCED' : 'CRITICAL',
       totalBuildings: results.length,

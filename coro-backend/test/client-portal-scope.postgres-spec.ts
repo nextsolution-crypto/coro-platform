@@ -13,6 +13,7 @@ jest.mock('../src/export/export.service', () => ({
 const {
   ClientPortalService,
 } = require('../src/client-portal/client-portal.service');
+const { OccupancyService } = require('../src/occupancy/occupancy.service');
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 if (!databaseUrl) {
@@ -414,6 +415,42 @@ describe('Client Portal project and building scope', () => {
         [ids.buildingA, ids.buildingB],
       ),
     ).resolves.toBeNull();
+  });
+
+  it('scopes Intelligence counters and recommendations before aggregation', async () => {
+    const intelligence = new OccupancyService(prisma);
+    const managerOverview = await intelligence.getIntelligenceOverview({
+      organizationId: ids.org,
+      clientId: ids.clientA,
+      role: ClientUserRole.CLIENT_MANAGER,
+      buildingIds: [ids.buildingA],
+    });
+    expect(managerOverview.totalBuildings).toBe(1);
+    expect(
+      managerOverview.buildings.map((building: { buildingId: string }) =>
+        building.buildingId,
+      ),
+    ).toEqual([ids.buildingA]);
+    expect(managerOverview.recommendations).toEqual([]);
+
+    const corporateOverview = await intelligence.getIntelligenceOverview({
+      organizationId: ids.org,
+      clientId: ids.clientA,
+      role: ClientUserRole.CLIENT_CORPORATE,
+      buildingIds: [],
+    });
+    expect(corporateOverview.totalBuildings).toBe(2);
+    expect(
+      corporateOverview.buildings
+        .map((building: { buildingId: string }) => building.buildingId)
+        .sort(),
+    ).toEqual([ids.buildingA, ids.buildingB].sort());
+    expect(
+      corporateOverview.buildings.some(
+        (building: { buildingId: string }) =>
+          building.buildingId === ids.otherBuilding,
+      ),
+    ).toBe(false);
   });
 
   it('does not trust a known building id or a stale cross-client assignment', async () => {
