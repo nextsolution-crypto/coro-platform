@@ -262,11 +262,11 @@ export default function BuildingDocuments({
       <header className={styles.header}>
         <div>
           <span className={styles.eyebrow}>
-            <Database size={15} /> KNOWLEDGE · BÂTIMENT
+            <Database size={15} /> PLANS · RAPPORTS · RÉFÉRENCES
           </span>
-          <h2>Espace documentaire</h2>
+          <h2>Documentation du bâtiment</h2>
           <p>
-            La mémoire permanente de {data?.building.name ?? "ce bâtiment"}. Les
+            Les plans, rapports, registres et fichiers de référence de {data?.building.name ?? "ce bâtiment"}. Les
             documents approuvés des projets enrichissent cette base, même après
             leur archivage.
           </p>
