@@ -27,37 +27,28 @@ active et preuve de recette appropriée.
   données anciennes signalées, réponses tardives ignorées, libellés distincts.
 - **Tests :** 11 comportements incident-history + 5 contrats Sentinelle,
   TypeScript et build portail.
-- **Statut :** À VÉRIFIER.
-- **Commit/PR :** à renseigner après publication.
-- **Recette post-déploiement :** à exécuter; elle établira aussi le statut HTTP
-  exact du compte sans modifier ses permissions.
+- **Statut :** CLOS.
+- **Commit/PR :** `d8dab2a48e6872d23024a717df33e1dca8994d58`, PR #44.
+- **Recette post-déploiement :** PASS; le compte reçoit un refus 403 explicite,
+  F5 conserve la session, et les libellés des deux historiques sont distincts.
 
 ## Constats de sécurité à reconfirmer avant correction
 
 | ID | Constat initial | Gravité | Statut | Preuve nécessaire |
 |---|---|---|---|---|
-| CP-002 | Listes projets/bâtiments potentiellement limitées par `organizationId` sans `clientId` systématique | BLOQUANT | À INVESTIGUER | Test deux clients du même prestataire |
-| CP-003 | Lecture directe d’un projet potentiellement sans contrôle du client propriétaire | BLOQUANT | À INVESTIGUER | Test direct ID projet client B par client A |
-| CP-004 | Intelligence susceptible d’agréger le prestataire plutôt que le client connecté | BLOQUANT | À INVESTIGUER | Agrégats synthétiques multi-clients |
-| CP-005 | Refus documentaire susceptible d’écrire avant validation complète de l’acteur | BLOQUANT | À INVESTIGUER | Refus interdit sans écriture ni notification |
-| CP-006 | Commentaires, versions, engagements et téléchargements susceptibles de ne pas hériter du scope projet | BLOQUANT | À INVESTIGUER | Matrice directe parent/enfant inter-client |
-| CP-007 | Auteur de commentaire ClientUser potentiellement incompatible avec la relation User | MAJEUR | À INVESTIGUER | Test de création et inspection de provenance typée |
+| CP-002 | Les listes projets/bâtiments d’un `CLIENT_MANAGER` n’imposaient pas le `clientId` en plus des bâtiments affectés | BLOQUANT | CORRIGÉ LOCAL — CI/E2E À CONFIRMER | Tests rouges puis verts avec deux clients d’une même organisation; test PostgreSQL synthétique ajouté |
+| CP-003 | La lecture directe projet était plus stricte que la liste; alignement explicite requis | BLOQUANT | CORRIGÉ LOCAL — CI/E2E À CONFIRMER | Matrice liste/direct manager et non-régression corporate ajoutées |
+| CP-004 | Intelligence agrège par organisation sans transmettre le client ni les bâtiments autorisés | BLOQUANT | CONFIRMÉ — OUVERT | `GET intelligence/overview` transmet uniquement `organizationId`; agrégats synthétiques multi-clients requis |
+| CP-005 | Le refus documentaire charge le projet par identifiant puis écrit le statut, le commentaire et les notifications sans contrôle préalable du scope client/bâtiment | BLOQUANT | CONFIRMÉ — OUVERT | Refus interdit à tester avec preuve d’absence d’écriture, courriel et notification |
+| CP-006 | Commentaires, versions et engagements n’héritent pas du contrôle canonique du projet; fichiers/téléchargements restent à prouver séparément | BLOQUANT | CONFIRMÉ PARTIEL — OUVERT | Les routes enfant appellent des lectures/écritures par `projectId` seul; matrice parent/enfant inter-client requise |
+| CP-007 | `addComment` utilise l’identifiant `ClientUser` comme `userId` de commentaire, sans provenance d’acteur typée démontrée | MAJEUR | CONFIRMÉ — OUVERT | Test de création et correction de provenance typée requis |
 
 ## Limites actionnables actuelles
 
-### LIMITATION — statut HTTP exact de CP-001 avant déploiement
-
-- **IMPACT :** la cause serveur du compte (refus, session ou panne) ne peut pas
-  encore être affirmée; seule la cause du faux état vide est établie.
-- **CONDITION DE LEVÉE :** déployer le rendu typé puis observer le message réel,
-  ou obtenir une preuve réseau/log serveur expurgée.
-- **RESPONSABLE :** équipe technique CORO.
-- **STATUT :** compatible avec la correction; bloquant pour clore CP-001.
-
-### LIMITATION — CP-002 à CP-007 non reconfirmés sur la release actuelle
+### LIMITATION — CP-002 à CP-007 non entièrement clos
 
 - **IMPACT :** aucun feu vert commercial global du portail.
-- **CONDITION DE LEVÉE :** tests synthétiques positifs/négatifs sur la version
-  actuelle, puis corrections ciblées si les défauts sont reproduits.
+- **CONDITION DE LEVÉE :** publier et recetter CP-002/CP-003, puis traiter
+  séparément Intelligence, refus documentaire et ressources annexes.
 - **RESPONSABLE :** équipe technique CORO.
 - **STATUT :** bloquant pour une ouverture commerciale non limitée.

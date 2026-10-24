@@ -249,6 +249,9 @@ export class ClientPortalService {
       where: {
         id: buildingId,
         organizationId: actor.organizationId,
+        ...(actor.role === 'CLIENT_MANAGER'
+          ? { clientId: actor.clientId }
+          : {}),
       },
       select: {
         id: true,
@@ -1126,7 +1129,10 @@ export class ClientPortalService {
   ) {
     const where: any = { organizationId };
 
-    if (role === 'CLIENT_MANAGER') where.buildingId = { in: buildingIds ?? [] };
+    if (role === 'CLIENT_MANAGER') {
+      where.clientId = clientId;
+      where.buildingId = { in: buildingIds ?? [] };
+    }
 
     const projects = await this.prisma.project.findMany({
       where,
@@ -1965,7 +1971,10 @@ export class ClientPortalService {
     buildingIds?: string[],
   ) {
     const where: any = { organizationId };
-    if (role === 'CLIENT_MANAGER') where.id = { in: buildingIds ?? [] };
+    if (role === 'CLIENT_MANAGER') {
+      where.clientId = clientId;
+      where.id = { in: buildingIds ?? [] };
+    }
     const buildings = await this.prisma.building.findMany({
       where,
       include: {
@@ -2014,7 +2023,10 @@ export class ClientPortalService {
     buildingIds?: string[],
   ) {
     const where: any = { organizationId };
-    if (role === 'CLIENT_MANAGER') where.id = { in: buildingIds ?? [] };
+    if (role === 'CLIENT_MANAGER') {
+      where.clientId = clientId;
+      where.id = { in: buildingIds ?? [] };
+    }
 
     const buildings = await this.prisma.building.findMany({
       where,

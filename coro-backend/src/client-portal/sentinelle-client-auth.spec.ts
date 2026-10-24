@@ -92,6 +92,7 @@ describe('Sentinelle Client Portal authentication boundary', () => {
         where: {
           id: 'building-other-org',
           organizationId: actor.organizationId,
+          clientId: actor.clientId,
         },
       }),
     );
