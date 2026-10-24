@@ -121,6 +121,7 @@ export default function PortalLayout({
     { label: "Tableau de bord", path: "/dashboard", icon: LayoutDashboard },
     { label: "Documents", path: "/documents", icon: FileText },
     { label: "Connaissances", path: "/knowledge", icon: BookOpenCheck },
+    { label: "Manuel d’utilisation", path: "/manual", icon: BookOpenCheck },
     { label: "Bâtiments", path: "/buildings", icon: Building2 },
     { label: "Carte", path: "/map", icon: Map },
     { label: "Activités", path: "/activities", icon: Calendar },
