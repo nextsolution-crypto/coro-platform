@@ -1324,7 +1324,7 @@ export class ClientPortalController {
   @Get('intelligence/overview')
   async getIntelligenceOverview(@Request() req: any) {
     return this.occupancyService.getIntelligenceOverview(
-      req.clientUser.organizationId,
+      req.clientUser,
     );
   }
 
