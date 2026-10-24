@@ -121,7 +121,7 @@ export default function BuildingsPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   <button
                     type="button"
-                    onClick={() => router.push(`/documents?building=${b.id}`)}
+                    onClick={() => router.push(`/buildings/${b.id}`)}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                       padding: '10px 12px', borderRadius: 7, fontSize: 13, fontWeight: 600,
