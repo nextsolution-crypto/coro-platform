@@ -77,10 +77,10 @@ export default function KnowledgePage() {
         <header className={styles.hero}>
           <div className={styles.heroIcon} aria-hidden="true"><BookOpenCheck /></div>
           <div>
-            <p className={styles.eyebrow}>CORO Knowledge</p>
+            <p className={styles.eyebrow}>CORO AI</p>
             <h1>Interroger vos documents approuvés</h1>
             <p>
-              Les réponses proviennent uniquement des versions ProjectFile actuelles auxquelles vous avez accès.
+              Les réponses s’appuient sur les documents approuvés et en vigueur auxquels vous avez accès. Pour ajouter des plans ou des fichiers de référence, ouvrez la documentation du bâtiment concerné.
             </p>
             <p><Link href="/manual">Comment utiliser CORO ? Interroger le manuel avec l’aide CORO AI.</Link></p>
           </div>
@@ -120,8 +120,8 @@ export default function KnowledgePage() {
               <small>Référence de requête : {answer.correlationId}</small>
             </article>
 
-            <aside className={styles.citations} aria-label="Sources canoniques">
-              <h2>Sources canoniques</h2>
+            <aside className={styles.citations} aria-label="Sources de la réponse">
+              <h2>Sources de la réponse</h2>
               {answer.citations.length ? answer.citations.map((citation) => (
                 <Link key={citation.citationId} href={citation.href} className={styles.citation}>
                   <FileCitation citation={citation} />
