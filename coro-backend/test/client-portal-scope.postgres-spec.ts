@@ -232,7 +232,12 @@ describe('Client Portal project and building scope', () => {
     });
     await prisma.projectVersion.deleteMany({ where: { id: ids.versionB } });
     await prisma.projectComment.deleteMany({
-      where: { id: { in: [ids.commentB, ids.clientComment] } },
+      where: {
+        OR: [
+          { id: { in: [ids.commentB, ids.clientComment] } },
+          { projectId: { in: [ids.projectA, ids.projectB, ids.otherProject] } },
+        ],
+      },
     });
     await prisma.clientUser.deleteMany({
       where: { id: { in: [ids.manager, ids.corporate] } },
@@ -301,6 +306,84 @@ describe('Client Portal project and building scope', () => {
         },
       }),
     ).rejects.toThrow();
+  });
+
+  it('applies refusal authorization before mutation and keeps legitimate retries idempotent', async () => {
+    const emailService = { sendDocumentRefused: jest.fn() };
+    const notificationsService = { create: jest.fn() };
+    const refusalService = new ClientPortalService(
+      prisma,
+      {},
+      {},
+      emailService,
+      {},
+      notificationsService,
+      {},
+      {},
+      {},
+    );
+    await prisma.project.update({
+      where: { id: ids.projectA },
+      data: { status: 'VALIDATED' },
+    });
+    const deniedBefore = await prisma.project.findUniqueOrThrow({
+      where: { id: ids.projectA },
+      select: { status: true },
+    });
+
+    await expect(
+      refusalService.refuseDocument(
+        ids.projectA,
+        {
+          sub: ids.manager,
+          organizationId: ids.org,
+          clientId: ids.clientA,
+          role: ClientUserRole.CLIENT_MANAGER,
+          buildingIds: [ids.buildingB],
+        },
+        'Out of scope',
+      ),
+    ).rejects.toThrow();
+    expect(
+      await prisma.project.findUniqueOrThrow({
+        where: { id: ids.projectA },
+        select: { status: true },
+      }),
+    ).toEqual(deniedBefore);
+    expect(
+      await prisma.projectComment.count({
+        where: { projectId: ids.projectA, contenu: { contains: 'Out of scope' } },
+      }),
+    ).toBe(0);
+    expect(emailService.sendDocumentRefused).not.toHaveBeenCalled();
+    expect(notificationsService.create).not.toHaveBeenCalled();
+
+    const actor = {
+      sub: ids.manager,
+      organizationId: ids.org,
+      clientId: ids.clientA,
+      role: ClientUserRole.CLIENT_MANAGER,
+      buildingIds: [ids.buildingA],
+    };
+    await expect(
+      refusalService.refuseDocument(ids.projectA, actor, 'Canonical refusal'),
+    ).resolves.toEqual({ success: true, alreadyRefused: false });
+    await expect(
+      refusalService.refuseDocument(ids.projectA, actor, 'Canonical refusal'),
+    ).resolves.toEqual({ success: true, alreadyRefused: true });
+
+    expect(
+      await prisma.projectComment.count({
+        where: {
+          projectId: ids.projectA,
+          actorType: 'CLIENT_USER',
+          clientUserId: ids.manager,
+          contenu: '[Refus client] Canonical refusal',
+        },
+      }),
+    ).toBe(1);
+    expect(emailService.sendDocumentRefused).toHaveBeenCalledTimes(1);
+    expect(notificationsService.create).toHaveBeenCalledTimes(1);
   });
 
   it('applies identical client and building scope to CLIENT_MANAGER list and direct reads', async () => {

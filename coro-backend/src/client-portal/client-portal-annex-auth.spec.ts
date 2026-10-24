@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 
 jest.mock('../export/export.service', () => ({
   ExportService: class ExportService {},
@@ -8,10 +8,12 @@ const { ClientPortalService } = require('./client-portal.service');
 
 describe('ClientPortalService annex resource authorization', () => {
   const prisma = {
+    $transaction: jest.fn(),
     project: {
       findFirst: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
     },
     projectComment: { findMany: jest.fn(), create: jest.fn() },
     projectVersion: {
@@ -24,7 +26,10 @@ describe('ClientPortalService annex resource authorization', () => {
   };
   const exportService = { generatePdf: jest.fn() };
   const storageService = { uploadFile: jest.fn() };
-  const emailService = { sendDocumentSigned: jest.fn() };
+  const emailService = {
+    sendDocumentSigned: jest.fn(),
+    sendDocumentRefused: jest.fn(),
+  };
   const notificationsService = { create: jest.fn() };
   const service = new ClientPortalService(
     prisma as any,
@@ -54,6 +59,7 @@ describe('ClientPortalService annex resource authorization', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    prisma.$transaction.mockImplementation((callback: any) => callback(prisma));
   });
 
   it('fails closed before reading or writing any annex resource', async () => {
@@ -108,6 +114,7 @@ describe('ClientPortalService annex resource authorization', () => {
     expect(exportService.generatePdf).not.toHaveBeenCalled();
     expect(storageService.uploadFile).not.toHaveBeenCalled();
     expect(emailService.sendDocumentSigned).not.toHaveBeenCalled();
+    expect(emailService.sendDocumentRefused).not.toHaveBeenCalled();
     expect(notificationsService.create).not.toHaveBeenCalled();
   });
 
@@ -227,5 +234,130 @@ describe('ClientPortalService annex resource authorization', () => {
       }),
     ]);
     expect(comments[1]).not.toHaveProperty('clientUser');
+  });
+
+  it('refuses an out-of-scope document before every mutation and side effect', async () => {
+    prisma.project.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.refuseDocument('project-b', manager, 'Wrong building'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.project.updateMany).not.toHaveBeenCalled();
+    expect(prisma.projectComment.create).not.toHaveBeenCalled();
+    expect(emailService.sendDocumentRefused).not.toHaveBeenCalled();
+    expect(notificationsService.create).not.toHaveBeenCalled();
+  });
+
+  it('fails closed on a role without refusal permission before reading the project', async () => {
+    await expect(
+      service.refuseDocument(
+        'project-a',
+        { ...manager, role: 'CLIENT_VIEWER' },
+        'Unauthorized role',
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(prisma.project.findFirst).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(emailService.sendDocumentRefused).not.toHaveBeenCalled();
+    expect(notificationsService.create).not.toHaveBeenCalled();
+  });
+
+  it('atomically records one legitimate refusal with canonical client provenance', async () => {
+    const project = {
+      id: 'project-a',
+      organizationId: 'org-a',
+      clientId: 'client-a',
+      buildingId: 'building-a',
+      status: 'VALIDATED',
+      userId: 'advisor-a',
+      name: 'Plan A',
+      client: { name: 'Client A' },
+      building: { id: 'building-a' },
+      user: { firstName: 'Ada', lastName: 'Advisor', email: 'qa@example.invalid' },
+    };
+    prisma.project.findFirst
+      .mockResolvedValueOnce(project)
+      .mockResolvedValueOnce(project);
+    prisma.project.updateMany.mockResolvedValue({ count: 1 });
+    prisma.projectComment.create.mockResolvedValue({ id: 'refusal-a' });
+
+    await expect(
+      service.refuseDocument('project-a', manager, '  Revoir la section 3  '),
+    ).resolves.toEqual({ success: true, alreadyRefused: false });
+
+    expect(prisma.project.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'project-a',
+        organizationId: 'org-a',
+        status: { in: ['VALIDATED', 'EXPORTED'] },
+      },
+      data: { status: 'IN_PROGRESS' },
+    });
+    expect(prisma.projectComment.create).toHaveBeenCalledWith({
+      data: {
+        projectId: 'project-a',
+        actorType: 'CLIENT_USER',
+        clientUserId: 'manager-a',
+        organizationId: 'org-a',
+        contenu: '[Refus client] Revoir la section 3',
+      },
+    });
+    expect(emailService.sendDocumentRefused).toHaveBeenCalledTimes(1);
+    expect(notificationsService.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('makes an already-applied refusal idempotent without duplicate effects', async () => {
+    const project = {
+      id: 'project-a',
+      organizationId: 'org-a',
+      clientId: 'client-a',
+      buildingId: 'building-a',
+      status: 'IN_PROGRESS',
+      userId: 'advisor-a',
+      client: { name: 'Client A' },
+      building: { id: 'building-a' },
+      user: { email: 'qa@example.invalid' },
+    };
+    prisma.project.findFirst
+      .mockResolvedValueOnce(project)
+      .mockResolvedValueOnce(project);
+
+    await expect(
+      service.refuseDocument('project-a', manager, 'Repeated refusal'),
+    ).resolves.toEqual({ success: true, alreadyRefused: true });
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.projectComment.create).not.toHaveBeenCalled();
+    expect(emailService.sendDocumentRefused).not.toHaveBeenCalled();
+    expect(notificationsService.create).not.toHaveBeenCalled();
+  });
+
+  it('emits no side effect when the transactional refusal record fails', async () => {
+    const project = {
+      id: 'project-a',
+      organizationId: 'org-a',
+      clientId: 'client-a',
+      buildingId: 'building-a',
+      status: 'EXPORTED',
+      userId: 'advisor-a',
+      client: { name: 'Client A' },
+      building: { id: 'building-a' },
+      user: { email: 'qa@example.invalid' },
+    };
+    prisma.project.findFirst
+      .mockResolvedValueOnce(project)
+      .mockResolvedValueOnce(project);
+    prisma.project.updateMany.mockResolvedValue({ count: 1 });
+    prisma.projectComment.create.mockRejectedValue(new Error('write failed'));
+
+    await expect(
+      service.refuseDocument('project-a', manager, 'Atomic failure'),
+    ).rejects.toThrow('write failed');
+
+    expect(emailService.sendDocumentRefused).not.toHaveBeenCalled();
+    expect(notificationsService.create).not.toHaveBeenCalled();
   });
 });
