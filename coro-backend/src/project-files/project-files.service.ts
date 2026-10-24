@@ -23,7 +23,8 @@ export class ProjectFilesService {
   ) {}
 
   async uploadFile(data: {
-    projectId: string;
+    projectId?: string;
+    buildingId?: string;
     organizationId: string;
     name: string;
     category: string;
@@ -36,30 +37,38 @@ export class ProjectFilesService {
     parentId?: string;
     permittedBuildingIds?: string[];
   }) {
-    const project = await this.prisma.project.findFirst({
-      where: {
-        id: data.projectId,
-        organizationId: data.organizationId,
-        ...(data.permittedBuildingIds !== undefined
-          ? { buildingId: { in: data.permittedBuildingIds } }
-          : {}),
-      },
-    });
-    if (!project) throw new NotFoundException('Projet introuvable');
+    const project = data.projectId ? await this.prisma.project.findFirst({
+      where: { id: data.projectId, organizationId: data.organizationId,
+        ...(data.permittedBuildingIds !== undefined ? { buildingId: { in: data.permittedBuildingIds } } : {}) },
+    }) : null;
+    if (data.projectId && !project) throw new NotFoundException('Projet introuvable');
+    const buildingId = project?.buildingId ?? data.buildingId;
+    const building = buildingId ? await this.prisma.building.findFirst({
+      where: { id: buildingId, organizationId: data.organizationId,
+        ...(data.permittedBuildingIds !== undefined ? { id: { in: data.permittedBuildingIds }, AND: { id: buildingId } } : {}) },
+      select: { id: true },
+    }) : null;
+    if (!building) throw new NotFoundException('Bâtiment introuvable');
+    if (!['shared', 'internal'].includes(data.visibility)) throw new BadRequestException('Visibilité invalide');
+    if (!data.buffer?.length || data.buffer.length > 50 * 1024 * 1024) throw new BadRequestException('Fichier vide ou supérieur à 50 Mo');
 
     // Déterminer la version
     let version = 1;
-    const parentId = data.parentId;
+    let parentId = data.parentId;
 
     if (parentId) {
       const parent = await this.prisma.projectFile.findFirst({
         where: {
           id: parentId,
-          projectId: data.projectId,
+          ...(data.projectId ? { projectId: data.projectId } : {}),
+          buildingId,
           organizationId: data.organizationId,
+          ...(data.uploadedByClientId ? { visibility: 'shared' } : {}),
         },
       });
+      if (!parent) throw new NotFoundException('Document parent introuvable');
       if (parent) {
+        parentId = parent.parentId ?? parent.id;
         const lastVersion = await this.prisma.projectFile.findFirst({
           where: { OR: [{ id: parentId }, { parentId }] },
           orderBy: { version: 'desc' },
@@ -72,7 +81,7 @@ export class ProjectFilesService {
     // The legacy public URL remains on historical rows only.
     const id = randomUUID();
     const safeName = data.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const storageKey = `tenant-${data.organizationId}/project-files/${data.projectId}/${id}/${safeName}`;
+    const storageKey = `tenant-${data.organizationId}/building-files/${buildingId}/${id}/${safeName}`;
 
     await this.storage.uploadPrivateImmutable(
       data.buffer,
@@ -82,10 +91,16 @@ export class ProjectFilesService {
 
     const digest = createHash('sha256').update(data.buffer).digest('hex');
     const file = await this.prisma.$transaction(async (tx) => {
+      if (parentId) {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`${data.organizationId}:${parentId}`}, 0))`;
+        const latest = await tx.projectFile.findFirst({ where: { organizationId: data.organizationId, OR: [{ id: parentId }, { parentId }] }, orderBy: { version: 'desc' } });
+        version = (latest?.version ?? 1) + 1;
+      }
       const created = await tx.projectFile.create({
         data: {
           id,
-          projectId: data.projectId,
+          projectId: data.projectId ?? null,
+          buildingId,
           organizationId: data.organizationId,
           name: data.name,
           category: data.category,
@@ -130,7 +145,7 @@ export class ProjectFilesService {
     // Le conseiller responsable du projet n'a aucun autre moyen d'apprendre
     // qu'un client a redéposé un fichier (annotation) — sans ceci, il faut
     // tomber dessus par hasard en retournant sur le projet.
-    if (data.uploadedByClientId) {
+    if (data.uploadedByClientId && project) {
       const clientName = file.uploadedByClient
         ? `${file.uploadedByClient.firstName} ${file.uploadedByClient.lastName}`
         : 'Un client';
@@ -311,12 +326,11 @@ export class ProjectFilesService {
       where: {
         id: fileId,
         organizationId,
-        project: {
-          organizationId,
-          ...(permittedBuildingIds !== undefined
-            ? { buildingId: { in: permittedBuildingIds } }
-            : {}),
-        },
+        OR: [
+          { building: { organizationId, ...(permittedBuildingIds !== undefined ? { id: { in: permittedBuildingIds } } : {}) } },
+          { buildingId: null, project: { organizationId,
+            ...(permittedBuildingIds !== undefined ? { buildingId: { in: permittedBuildingIds } } : {}) } },
+        ],
       },
       select: { id: true, parentId: true },
     });
@@ -637,12 +651,11 @@ export class ProjectFilesService {
         id: fileId,
         organizationId,
         ...(sharedOnly ? { visibility: 'shared' } : {}),
-        project: {
-          organizationId,
-          ...(permittedBuildingIds !== undefined
-            ? { buildingId: { in: permittedBuildingIds } }
-            : {}),
-        },
+        OR: [
+          { building: { organizationId, ...(permittedBuildingIds !== undefined ? { id: { in: permittedBuildingIds } } : {}) } },
+          { buildingId: null, project: { organizationId,
+            ...(permittedBuildingIds !== undefined ? { buildingId: { in: permittedBuildingIds } } : {}) } },
+        ],
       },
     });
     if (!file || file.url !== PRIVATE_PROJECT_FILE_URL)
@@ -680,12 +693,11 @@ export class ProjectFilesService {
       where: {
         id: fileId,
         organizationId,
-        project: {
-          organizationId,
-          ...(permittedBuildingIds !== undefined
-            ? { buildingId: { in: permittedBuildingIds } }
-            : {}),
-        },
+        OR: [
+          { building: { organizationId, ...(permittedBuildingIds !== undefined ? { id: { in: permittedBuildingIds } } : {}) } },
+          { buildingId: null, project: { organizationId,
+            ...(permittedBuildingIds !== undefined ? { buildingId: { in: permittedBuildingIds } } : {}) } },
+        ],
       },
       select: { id: true },
     });
@@ -738,7 +750,11 @@ export class ProjectFilesService {
       include: { project: { select: { userId: true } } },
     });
     if (!file) throw new NotFoundException('Fichier introuvable');
-    if (file.project.userId !== actorId)
+    const buildingApprover = !file.project && file.buildingId
+      ? await tx.user.findFirst({ where: { id: actorId, organizationId, isActive: true,
+          OR: [{ role: { in: ['ADMIN', 'SUPER_ADMIN'] } }, { id: file.uploadedById ?? '' }] }, select: { id: true } })
+      : null;
+    if (file.project?.userId !== actorId && !buildingApprover)
       throw new ForbiddenException(
         'Transition réservée au conseiller responsable du projet',
       );
