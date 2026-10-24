@@ -33,6 +33,14 @@ describe('Versioned product manual', () => {
         .id,
     ).toBe('timelog');
   });
+  it('does not substitute document consultation for an unsupported approval or creation action', () => {
+    expect(
+      service.ask('CLIENT', 'Comment approuver un document ?').status,
+    ).toBe('INSUFFICIENT_EVIDENCE');
+    expect(service.ask('INTERNAL', 'Comment créer un projet ?').status).toBe(
+      'INSUFFICIENT_EVIDENCE',
+    );
+  });
   it.each([
     'Comment interroger mes documents avec Knowledge ?',
     'Où trouver les connaissances et citations ?',
