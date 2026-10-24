@@ -229,16 +229,14 @@ export class OfflineDocumentsService {
             ],
           },
         ],
-        project: {
-          organizationId: data.organizationId,
-          ...(data.permittedBuildingIds !== undefined
-            ? { buildingId: { in: data.permittedBuildingIds } }
-            : {}),
-        },
+        OR: [
+          { building: { organizationId: data.organizationId, ...(data.permittedBuildingIds !== undefined ? { id: { in: data.permittedBuildingIds } } : {}) } },
+          { buildingId: null, project: { organizationId: data.organizationId, ...(data.permittedBuildingIds !== undefined ? { buildingId: { in: data.permittedBuildingIds } } : {}) } },
+        ],
       },
       include: { project: { select: { buildingId: true } } },
     });
-    if (!file?.sha256 || !file.project.buildingId)
+    if (!file?.sha256 || !(file.buildingId ?? file.project?.buildingId))
       throw new NotFoundException('Document hors ligne inadmissible');
     const expiresAt = new Date(now.getTime() + LEASE_MS);
     const payload: OfflineLeasePayload = {
@@ -248,7 +246,7 @@ export class OfflineDocumentsService {
       credentialIdHash: device.credentialIdHash,
       clientUserId: data.clientUserId,
       organizationId: data.organizationId,
-      buildingId: file.project.buildingId,
+      buildingId: (file.buildingId ?? file.project?.buildingId)!,
       projectFileId: file.id,
       projectFileVersion: file.version,
       documentSha256: file.sha256,
@@ -339,7 +337,7 @@ export class OfflineDocumentsService {
           lease.projectFile.supersededEffectiveAt > now) &&
         (data.permittedBuildingIds === undefined ||
           data.permittedBuildingIds.includes(
-            lease.projectFile.project.buildingId,
+            (lease.projectFile.buildingId ?? lease.projectFile.project?.buildingId ?? ''),
           ));
       (valid ? keep : purge).push(lease.leaseId);
       await this.prisma.offlineDocumentLease.update({
