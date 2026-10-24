@@ -36,6 +36,7 @@ export interface RouteEntry {
 }
 
 export const ROUTE_REGISTRY: readonly RouteEntry[] = [
+  { pattern: "/manual", family: "portal", shell: "none", status: "beta", render: "skin", styling: ["inline-hex", "css-module"] },
   {
     pattern: "/",
     family: "public",
