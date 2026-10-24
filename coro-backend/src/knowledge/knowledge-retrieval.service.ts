@@ -34,7 +34,7 @@ export class KnowledgeRetrievalService {
         ingestion: {
           status: 'READY',
           ...(buildingId ? { buildingId } : {}),
-          ...(scope.buildingIds !== undefined
+          ...(!buildingId && scope.buildingIds !== undefined
             ? { buildingId: { in: scope.buildingIds } }
             : {}),
           projectFile: {
@@ -43,6 +43,7 @@ export class KnowledgeRetrievalService {
             sha256: { not: null },
             OR: [{ effectiveAt: null }, { effectiveAt: { lte: now } }],
             AND: [
+              ...((this.authorization.where(scope).AND as any[]) ?? []),
               { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
               {
                 OR: [
