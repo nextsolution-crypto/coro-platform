@@ -16,14 +16,14 @@ const normalize = (s: string) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 const stop = new Set(
-  'comment faire pour dans avec est les des une mon mes son ses sur que qui quoi quel quelle quels quelles trouver acceder ouvrir consulter cette cela peux peut dois puis avoir voudrais besoin fonction fonctionne'.split(
+  'utiliser savoir apprendre connaitre veux souhaite aider explique expliquer montrer coro comment faire pour dans avec est les des une mon mes son ses sur que qui quoi quel quelle quels quelles trouver acceder ouvrir consulter cette cela peux peut dois puis avoir voudrais besoin fonction fonctionne'.split(
     ' ',
   ),
 );
 const tokens = (s: string) => [
   ...new Set(
     (normalize(s).match(/[a-z0-9]+/g) ?? [])
-      .filter((t) => t.length > 2 && !stop.has(t))
+      .filter((t) => (t.length > 2 || t === 'ai' || t === 'ia') && !stop.has(t))
       .map((t) => (t.length > 4 ? t.replace(/s$/, '') : t)),
   ),
 ];
