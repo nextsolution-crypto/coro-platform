@@ -8,6 +8,12 @@ on:
         required: true
         type: choice
         options: [DRY_RUN, EXECUTE]
+      minimum_age_hours:
+        description: Minimum age of unreferenced image cache (72 normally, 24 or 12 for release recovery)
+        required: true
+        type: choice
+        default: "72"
+        options: ["72", "24", "12"]
       cleanup_approval:
         description: For EXECUTE type REMOVE_LISTED_UNREFERENCED_IMAGE_CACHE
         required: false
@@ -39,9 +45,11 @@ jobs:
         env:
           MODE: ${{ inputs.mode }}
           APPROVAL: ${{ inputs.cleanup_approval }}
+          MINIMUM_AGE_HOURS: ${{ inputs.minimum_age_hours }}
         run: |
           [[ "$MODE" == DRY_RUN || "$MODE" == EXECUTE ]]
           [[ "$MODE" == DRY_RUN || "$APPROVAL" == REMOVE_LISTED_UNREFERENCED_IMAGE_CACHE ]]
+          [[ "$MINIMUM_AGE_HOURS" == 72 || "$MINIMUM_AGE_HOURS" == 24 || "$MINIMUM_AGE_HOURS" == 12 ]]
       - name: Validate pinned host identity
         env:
           HOST_FINGERPRINT: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
@@ -52,12 +60,13 @@ jobs:
           SOURCE_SHA: ${{ github.sha }}
           CAPACITY_CLEANUP_MODE: ${{ inputs.mode }}
           CAPACITY_CLEANUP_APPROVAL: ${{ inputs.cleanup_approval }}
+          CAPACITY_CLEANUP_MINIMUM_AGE_HOURS: ${{ inputs.minimum_age_hours }}
         with:
           host: ${{ secrets.SERVER_IP }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
-          envs: SOURCE_SHA,CAPACITY_CLEANUP_MODE,CAPACITY_CLEANUP_APPROVAL
+          envs: SOURCE_SHA,CAPACITY_CLEANUP_MODE,CAPACITY_CLEANUP_APPROVAL,CAPACITY_CLEANUP_MINIMUM_AGE_HOURS
           script: |
             set -Eeuo pipefail
             repo=/opt/coro-platform
