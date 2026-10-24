@@ -1,3 +1,4 @@
+import { PrismaService } from '../prisma/prisma.service';
 import {
   Controller,
   Delete,
@@ -24,17 +25,104 @@ import type { RegistrationResponseJSON } from '@simplewebauthn/server';
 @UseGuards(ClientJwtGuard, OrganizationStatusGuard)
 export class ProjectFilesClientController {
   constructor(
+    private prisma: PrismaService,
     private projectFilesService: ProjectFilesService,
     private offlineDocumentsService: OfflineDocumentsService,
   ) {}
 
-  private buildingScope(clientUser: {
-    role?: string;
-    buildingIds?: string[];
-  }): string[] | undefined {
-    return clientUser.role === 'CLIENT_MANAGER'
-      ? (clientUser.buildingIds ?? [])
-      : undefined;
+  private async buildingScope(clientUser: {
+    sub: string;
+    organizationId: string;
+  }): Promise<string[]> {
+    const user = await this.prisma.clientUser.findFirst({
+      where: {
+        id: clientUser.sub,
+        organizationId: clientUser.organizationId,
+        isActive: true,
+      },
+      select: { clientId: true, role: true, buildingIds: true, email: true },
+    });
+    if (!user) return [];
+    const grants = await this.prisma.buildingDocumentGrant.findMany({
+      where: {
+        clientUserId: clientUser.sub,
+        organizationId: clientUser.organizationId,
+        canUpload: true,
+      },
+      select: { buildingId: true },
+    });
+    const now = new Date();
+    const assignments = await this.prisma.customerPortfolioAssignment.findMany({
+      where: {
+        organizationId: clientUser.organizationId,
+        subjectType: 'CLIENT_USER',
+        clientUserId: clientUser.sub,
+        status: 'ACTIVE',
+        permissions: { has: 'NETWORK_SUPERVISION_READ' },
+        effectiveFrom: { lte: now },
+        OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: now } }],
+      },
+      select: {
+        scope: true,
+        buildingId: true,
+        portfolioId: true,
+        regionId: true,
+      },
+    });
+    const portfolioIds = assignments
+      .filter((a) => a.scope === 'PORTFOLIO' && a.portfolioId)
+      .map((a) => a.portfolioId!);
+    const regionIds = assignments
+      .filter((a) => a.scope === 'REGION' && a.regionId)
+      .map((a) => a.regionId!);
+    const memberships =
+      portfolioIds.length || regionIds.length
+        ? await this.prisma.customerPortfolioBuildingMembership.findMany({
+            where: {
+              organizationId: clientUser.organizationId,
+              OR: [
+                ...(portfolioIds.length
+                  ? [{ portfolioId: { in: portfolioIds } }]
+                  : []),
+                ...(regionIds.length ? [{ regionId: { in: regionIds } }] : []),
+              ],
+            },
+            select: { buildingId: true },
+          })
+        : [];
+    const scopeIds = [
+      ...user.buildingIds,
+      ...grants.map((g) => g.buildingId),
+      ...assignments
+        .filter((a) => a.scope === 'BUILDING' && a.buildingId)
+        .map((a) => a.buildingId!),
+      ...memberships.map((m) => m.buildingId),
+    ];
+    const buildings = await this.prisma.building.findMany({
+      where: {
+        clientId: user.clientId,
+        organizationId: clientUser.organizationId,
+        ...(user.role === 'CLIENT_CORPORATE'
+          ? {}
+          : {
+              OR: [
+                { id: { in: scopeIds } },
+                ...(user.email
+                  ? [
+                      {
+                        responsableEmail: {
+                          equals: user.email,
+                          mode: 'insensitive' as const,
+                        },
+                      },
+                    ]
+                  : []),
+              ],
+            }),
+      },
+      select: { id: true },
+    });
+    return buildings.map((b) => b.id);
   }
 
   @Get('offline/config')
@@ -71,7 +159,7 @@ export class ProjectFilesClientController {
   }
 
   @Post('offline/files/:id/lease')
-  issueOfflineLease(
+  async issueOfflineLease(
     @Param('id') id: string,
     @Body() body: { deviceId: string },
     @Request() req: any,
@@ -79,14 +167,14 @@ export class ProjectFilesClientController {
     return this.offlineDocumentsService.issueLease({
       clientUserId: req.clientUser.sub,
       organizationId: req.clientUser.organizationId,
-      permittedBuildingIds: this.buildingScope(req.clientUser),
+      permittedBuildingIds: await this.buildingScope(req.clientUser),
       deviceId: body.deviceId,
       fileId: id,
     });
   }
 
   @Post('offline/reconcile')
-  reconcileOffline(
+  async reconcileOffline(
     @Body()
     body: {
       deviceId: string;
@@ -103,7 +191,7 @@ export class ProjectFilesClientController {
     return this.offlineDocumentsService.reconcile({
       clientUserId: req.clientUser.sub,
       organizationId: req.clientUser.organizationId,
-      permittedBuildingIds: this.buildingScope(req.clientUser),
+      permittedBuildingIds: await this.buildingScope(req.clientUser),
       ...body,
     });
   }
@@ -119,27 +207,27 @@ export class ProjectFilesClientController {
 
   @Get('file/:id/current')
   @EvidenceReadAccess()
-  currentVersion(@Param('id') id: string, @Request() req: any) {
+  async currentVersion(@Param('id') id: string, @Request() req: any) {
     return this.projectFilesService.resolveCurrentVersion(
       id,
       req.clientUser.organizationId,
       new Date(),
-      this.buildingScope(req.clientUser),
+      await this.buildingScope(req.clientUser),
     );
   }
 
   @Get(':projectId')
   @EvidenceReadAccess()
-  getFiles(
+  async getFiles(
     @Param('projectId') projectId: string,
     @Request() req: any,
     @Query('visibility') visibility?: string,
   ) {
     return this.projectFilesService.getFilesForProject(
       projectId,
-      visibility,
+      'shared',
       req.clientUser.organizationId,
-      this.buildingScope(req.clientUser),
+      await this.buildingScope(req.clientUser),
     );
   }
 
@@ -161,7 +249,7 @@ export class ProjectFilesClientController {
       size: file.size,
       visibility: 'shared',
       uploadedByClientId: req.clientUser.sub,
-      permittedBuildingIds: this.buildingScope(req.clientUser),
+      permittedBuildingIds: await this.buildingScope(req.clientUser),
     });
   }
 
@@ -171,7 +259,7 @@ export class ProjectFilesClientController {
     const file = await this.projectFilesService.downloadPrivateFile(
       id,
       req.clientUser.organizationId,
-      this.buildingScope(req.clientUser),
+      await this.buildingScope(req.clientUser),
       true,
     );
     return new StreamableFile(file.buffer, {
@@ -182,11 +270,11 @@ export class ProjectFilesClientController {
 
   @Get('file/:id/history')
   @EvidenceReadAccess()
-  history(@Param('id') id: string, @Request() req: any) {
+  async history(@Param('id') id: string, @Request() req: any) {
     return this.projectFilesService.getLifecycleHistory(
       id,
       req.clientUser.organizationId,
-      this.buildingScope(req.clientUser),
+      await this.buildingScope(req.clientUser),
     );
   }
 }
