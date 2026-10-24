@@ -2,6 +2,9 @@
 set -Eeuo pipefail
 umask 077
 
+minimum_age_hours="${CAPACITY_CLEANUP_MINIMUM_AGE_HOURS:-72}"
+[[ "$minimum_age_hours" == 72 || "$minimum_age_hours" == 24 ]] || { echo 'CAPACITY_CLEANUP_FAILED code=MINIMUM_AGE_INVALID'; exit 1; }
+
 mode="${CAPACITY_CLEANUP_MODE:-DRY_RUN}"
 [[ "$mode" == DRY_RUN || "$mode" == EXECUTE ]] || { echo 'CAPACITY_CLEANUP_FAILED code=MODE_INVALID'; exit 1; }
 if [[ "$mode" == EXECUTE ]]; then
@@ -28,7 +31,7 @@ while read -r id; do
   created="$(docker image inspect --format '{{.Created}}' "$id")"
   size="$(docker image inspect --format '{{.Size}}' "$id")"
   epoch="$(date -d "$created" +%s 2>/dev/null || echo "$now")"; age_hours=$(((now-epoch)/3600))
-  (( age_hours >= 72 )) || continue
+  (( age_hours >= minimum_age_hours )) || continue
   candidates=$((candidates + 1))
   echo "CAPACITY_CLEANUP_CANDIDATE id=$id sizeBytes=$size ageHours=$age_hours reason=UNREFERENCED_STALE_IMAGE_CACHE"
   if [[ "$mode" == EXECUTE ]]; then
@@ -37,4 +40,4 @@ while read -r id; do
   fi
 done < <(docker image ls -q --no-trunc | sort -u)
 after=$(( $(df -Pk -- "$release_dir" | awk 'NR==2 {print $4}') * 1024 ))
-echo "CAPACITY_CLEANUP_RESULT mode=$mode candidates=$candidates removed=$removed estimatedReclaimedBytes=$reclaimed beforeBytes=$before afterBytes=$after"
+echo "CAPACITY_CLEANUP_RESULT mode=$mode minimumAgeHours=$minimum_age_hours candidates=$candidates removed=$removed estimatedReclaimedBytes=$reclaimed beforeBytes=$before afterBytes=$after"
