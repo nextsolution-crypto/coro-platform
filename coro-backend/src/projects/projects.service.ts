@@ -694,9 +694,14 @@ export class ProjectsService {
     return { projects, clients, buildings };
   }
 
-  async getComments(projectId: string, organizationId: string) {
+  async getComments(projectId: string, actor: AdviserActor) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, ...projectAccessWhere(actor) },
+      select: { id: true },
+    });
+    if (!project) throw new NotFoundException('Projet introuvable');
     return this.prisma.projectComment.findMany({
-      where: { projectId, organizationId },
+      where: { projectId, organizationId: actor.organizationId },
       include: {
         user: { select: { firstName: true, lastName: true, role: true } },
       },

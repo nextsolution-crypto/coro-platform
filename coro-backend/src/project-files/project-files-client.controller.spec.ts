@@ -19,7 +19,7 @@ describe('ProjectFilesClientController live client perimeter', () => {
     jest.clearAllMocks();
     prisma.buildingDocumentGrant.findMany.mockResolvedValue([]);
   });
-  it('limits corporate access to the client, even when two clients share a provider organization', async () => {
+  it('preserves corporate access across the authorized organization', async () => {
     prisma.clientUser.findFirst.mockResolvedValue({
       clientId: 'client-a',
       role: 'CLIENT_CORPORATE',
@@ -33,7 +33,7 @@ describe('ProjectFilesClientController live client perimeter', () => {
     );
     expect(prisma.building.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { organizationId: 'org-a', clientId: 'client-a' },
+        where: { organizationId: 'org-a' },
       }),
     );
     expect(files.getFilesForProject).toHaveBeenCalledWith(

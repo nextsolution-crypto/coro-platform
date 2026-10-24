@@ -47,10 +47,10 @@ invitation, signature ou changement de permission n’est autorisé pour la rece
 ## Constats ouverts
 
 Voir `CLIENT-PORTAL-FINDINGS.md`. CP-001, CP-002 et CP-003 sont CLOS.
-CP-004 et CP-005 sont confirmés ouverts. CP-006 est confirmé pour les
-commentaires, versions et engagements, tandis que les fichiers/téléchargements
-restent à prouver. CP-007 est confirmé ouvert. Ces constats interdisent un feu
-vert commercial global.
+CP-004 et CP-005 sont confirmés ouverts. CP-006 est corrigé localement et son
+inventaire de routes est documenté; la CI PostgreSQL et la recette contrôlée
+restent obligatoires avant clôture. CP-007 est confirmé ouvert. Ces constats
+interdisent un feu vert commercial global.
 
 ## Opérations au résultat incertain
 
@@ -59,5 +59,6 @@ vert commercial global.
 
 ## Prochaine action concrète
 
-Poursuivre CP-006, CP-005 puis CP-004 séparément, avec une preuve négative
-d’absence de lecture, écriture, notification ou autre effet secondaire.
+Publier et recetter CP-006 après la CI PostgreSQL. Traiter ensuite CP-007 dans
+un lot distinct, puis CP-005 et CP-004, avec une preuve négative d’absence de
+lecture, écriture, notification ou autre effet secondaire.

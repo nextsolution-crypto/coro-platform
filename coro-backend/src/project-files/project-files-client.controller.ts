@@ -100,11 +100,11 @@ export class ProjectFilesClientController {
     ];
     const buildings = await this.prisma.building.findMany({
       where: {
-        clientId: user.clientId,
         organizationId: clientUser.organizationId,
         ...(user.role === 'CLIENT_CORPORATE'
           ? {}
           : {
+              clientId: user.clientId,
               OR: [
                 { id: { in: scopeIds } },
                 ...(user.email

@@ -498,8 +498,8 @@ export class ClientPortalController {
   }
 
   @Get('projects/:id/comments')
-  async getComments(@Param('id') id: string) {
-    return this.clientPortalService.getComments(id);
+  async getComments(@Param('id') id: string, @Request() req: any) {
+    return this.clientPortalService.getComments(id, req.clientUser);
   }
 
   @Post('projects/:id/engagement')
@@ -508,23 +508,29 @@ export class ClientPortalController {
     @Request() req: any,
     @Body() body: { event: string; device?: string; duration?: number },
   ) {
-    return this.clientPortalService.trackEngagement({
-      projectId: id,
-      clientUserId: req.clientUser.sub,
-      event: body.event,
-      device: body.device,
-      duration: body.duration,
-    });
+    return this.clientPortalService.trackEngagement(
+      {
+        projectId: id,
+        clientUserId: req.clientUser.sub,
+        event: body.event,
+        device: body.device,
+        duration: body.duration,
+      },
+      req.clientUser,
+    );
   }
 
   @Get('projects/:id/engagement')
-  async getEngagement(@Param('id') id: string) {
-    return this.clientPortalService.getEngagement(id);
+  async getEngagement(@Param('id') id: string, @Request() req: any) {
+    return this.clientPortalService.getEngagement(id, req.clientUser);
   }
 
   @Get('projects/:id/versions')
-  async getVersionHistory(@Param('id') id: string) {
-    return this.clientPortalService.getProjectVersionHistory(id);
+  async getVersionHistory(@Param('id') id: string, @Request() req: any) {
+    return this.clientPortalService.getProjectVersionHistory(
+      id,
+      req.clientUser,
+    );
   }
 
   @Post('projects/:id/bookings')
