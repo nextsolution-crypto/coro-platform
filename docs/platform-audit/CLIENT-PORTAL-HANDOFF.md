@@ -18,13 +18,13 @@ invitation, signature ou changement de permission n’est autorisé pour la rece
 
 ## Références
 
-- Branche : `fix/client-project-building-scope`.
-- Base : `origin/main` au SHA `d8dab2a48e6872d23024a717df33e1dca8994d58`.
-- Production active vérifiée : `d8dab2a48e6872d23024a717df33e1dca8994d58`.
+- Branche produit livrée : `fix/client-project-building-scope`.
+- Commit/PR : `460a3ba8c20aff09c6b6012ff7b2bb54a1969b36`, PR #45.
+- Production active vérifiée : `460a3ba8c20aff09c6b6012ff7b2bb54a1969b36`.
 - Worktree isolé : `F:\coro-platform\.worktrees\client-project-scope`.
 - Worktree principal `F:\coro-platform` et travaux P-5 : préservés, non modifiés.
 
-## Modifications en cours
+## Modifications livrées
 
 - CP-002 : le scope `CLIENT_MANAGER` combine désormais organisation, client et
   bâtiments explicitement affectés pour les listes projets/bâtiments.
@@ -35,14 +35,18 @@ invitation, signature ou changement de permission n’est autorisé pour la rece
 ## Tests exécutés
 
 - CP-002 phase rouge : 7 échecs reproduisant les filtres manquants.
-- `client-portal.service.spec.ts` : 70/70 PASS après correction.
-- Les validations TypeScript, PostgreSQL, CI et recette synthétique restent à
-  exécuter avant publication.
+- Tests unitaires ciblés : 76/76 PASS après correction.
+- TypeScript et builds backend/Client Portal : PASS.
+- PostgreSQL 16 : scénario synthétique multi-organisation et multi-client PASS
+  dans `backend-tests`.
+- CI PR `40112888019` : SUCCESS.
+- Release `40113284582` : SUCCESS.
+- Inspection post-release `40114255591` : PASS/GO; SHA, migration head, santé
+  PostgreSQL, sauvegarde, restauration et rollback réconciliés.
 
 ## Constats ouverts
 
-Voir `CLIENT-PORTAL-FINDINGS.md`. CP-001 est CLOS. CP-002 et CP-003 sont
-corrigés localement, en attente de la CI PostgreSQL et de la recette contrôlée.
+Voir `CLIENT-PORTAL-FINDINGS.md`. CP-001, CP-002 et CP-003 sont CLOS.
 CP-004 et CP-005 sont confirmés ouverts. CP-006 est confirmé pour les
 commentaires, versions et engagements, tandis que les fichiers/téléchargements
 restent à prouver. CP-007 est confirmé ouvert. Ces constats interdisent un feu
@@ -50,11 +54,10 @@ vert commercial global.
 
 ## Opérations au résultat incertain
 
-- Aucune mutation métier, migration, communication ou production n’est en cours.
-- Aucune opération CP-002 n’a encore été publiée ou déployée.
+- Aucune mutation métier, migration ou communication n’est en cours.
+- CP-002 est publié, déployé et réconcilié; aucune opération incertaine ne reste.
 
 ## Prochaine action concrète
 
-Compléter les tests de non-régression, TypeScript et PostgreSQL, revoir le diff,
-publier CP-002/CP-003, attendre la CI et recetter avec des données synthétiques.
-Ensuite seulement, poursuivre CP-006, CP-005 puis CP-004 séparément.
+Poursuivre CP-006, CP-005 puis CP-004 séparément, avec une preuve négative
+d’absence de lecture, écriture, notification ou autre effet secondaire.

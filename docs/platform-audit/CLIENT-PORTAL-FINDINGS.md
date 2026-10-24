@@ -36,8 +36,8 @@ active et preuve de recette appropriée.
 
 | ID | Constat initial | Gravité | Statut | Preuve nécessaire |
 |---|---|---|---|---|
-| CP-002 | Les listes projets/bâtiments d’un `CLIENT_MANAGER` n’imposaient pas le `clientId` en plus des bâtiments affectés | BLOQUANT | CORRIGÉ LOCAL — CI/E2E À CONFIRMER | Tests rouges puis verts avec deux clients d’une même organisation; test PostgreSQL synthétique ajouté |
-| CP-003 | La lecture directe projet était plus stricte que la liste; alignement explicite requis | BLOQUANT | CORRIGÉ LOCAL — CI/E2E À CONFIRMER | Matrice liste/direct manager et non-régression corporate ajoutées |
+| CP-002 | Les listes projets/bâtiments d’un `CLIENT_MANAGER` n’imposaient pas le `clientId` en plus des bâtiments affectés | BLOQUANT | CLOS | PR #45, CI PostgreSQL synthétique et inspection post-release PASS |
+| CP-003 | La lecture directe projet était plus stricte que la liste; alignement explicite requis | BLOQUANT | CLOS | Matrice liste/direct manager PASS; portée corporate préservée; inspection post-release PASS |
 | CP-004 | Intelligence agrège par organisation sans transmettre le client ni les bâtiments autorisés | BLOQUANT | CONFIRMÉ — OUVERT | `GET intelligence/overview` transmet uniquement `organizationId`; agrégats synthétiques multi-clients requis |
 | CP-005 | Le refus documentaire charge le projet par identifiant puis écrit le statut, le commentaire et les notifications sans contrôle préalable du scope client/bâtiment | BLOQUANT | CONFIRMÉ — OUVERT | Refus interdit à tester avec preuve d’absence d’écriture, courriel et notification |
 | CP-006 | Commentaires, versions et engagements n’héritent pas du contrôle canonique du projet; fichiers/téléchargements restent à prouver séparément | BLOQUANT | CONFIRMÉ PARTIEL — OUVERT | Les routes enfant appellent des lectures/écritures par `projectId` seul; matrice parent/enfant inter-client requise |
@@ -45,10 +45,38 @@ active et preuve de recette appropriée.
 
 ## Limites actionnables actuelles
 
-### LIMITATION — CP-002 à CP-007 non entièrement clos
+### LIMITATION — CP-004 à CP-007 non clos
 
 - **IMPACT :** aucun feu vert commercial global du portail.
-- **CONDITION DE LEVÉE :** publier et recetter CP-002/CP-003, puis traiter
-  séparément Intelligence, refus documentaire et ressources annexes.
+- **CONDITION DE LEVÉE :** traiter séparément Intelligence, refus documentaire,
+  ressources annexes et provenance des commentaires.
 - **RESPONSABLE :** équipe technique CORO.
 - **STATUT :** bloquant pour une ouverture commerciale non limitée.
+
+## Preuve de clôture CP-002
+
+- **Correctif livré :** commit fusionné
+  `460a3ba8c20aff09c6b6012ff7b2bb54a1969b36`, PR #45.
+- **Tests :** 76 tests unitaires ciblés PASS; test PostgreSQL 16 avec deux
+  organisations, deux clients dans la même organisation, un autre tenant,
+  `CLIENT_MANAGER` et `CLIENT_CORPORATE` PASS dans la CI.
+- **Refus démontrés :** projet d’un autre client connu par identifiant, bâtiment
+  d’un autre client présent dans une affectation périmée/forgée et projet d’un
+  autre tenant; aucune ressource retournée et aucune écriture exécutée.
+- **Accès légitimes préservés :** responsable sur son client et ses bâtiments;
+  corporate sur les clients de son organisation; aucune portée inter-tenant.
+- **Release :** workflow `40113284582` SUCCESS; quatre images immuables.
+- **Inspection post-release :** workflow `40114255591` PASS/GO; SHA actif
+  `460a3ba8c20aff09c6b6012ff7b2bb54a1969b36`, PostgreSQL 16.15, 152
+  migrations, sauvegarde `REMOTE_VERIFIED`, restauration `RESTORE_VERIFIED`,
+  quatre images de rollback disponibles, verrou de déploiement libre.
+
+## Preuve de clôture CP-003
+
+- **Règle :** la liste et la lecture directe appliquent le même triplet
+  organisation/client/bâtiments pour `CLIENT_MANAGER`.
+- **Test :** un identifiant projet connu appartenant à un autre client de la
+  même organisation retourne `null`, même si son bâtiment est injecté dans la
+  liste d’affectations; la liste ne retourne pas ce projet.
+- **Non-régression :** `CLIENT_CORPORATE` conserve la portée organisationnelle
+  historique et demeure refusé hors organisation.
