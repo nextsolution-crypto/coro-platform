@@ -15,6 +15,7 @@ export type KnowledgeActor =
 
 export interface ExtractedPage {
   pageNumber: number;
+  sectionPath?: string;
   text: string;
   extractionMethod?: 'NATIVE_TEXT' | 'LOCAL_OCR';
 }
