@@ -218,6 +218,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
         where: {
           id: 'building-1',
           organizationId: 'org-1',
+          clientId: 'client-1',
         },
         select: {
           id: true,
@@ -261,6 +262,29 @@ describe('ClientPortalService - Sentinelle Population', () => {
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
+    it("refuse un CLIENT_MANAGER pour un bâtiment d'un autre client de la même organisation", async () => {
+      prisma.building.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.assertBuildingAccess('building-client-2', {
+          clientId: 'client-1',
+          organizationId: 'org-1',
+          role: 'CLIENT_MANAGER',
+          buildingIds: ['building-client-2'],
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+
+      expect(prisma.building.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            id: 'building-client-2',
+            organizationId: 'org-1',
+            clientId: 'client-1',
+          },
+        }),
+      );
+    });
+
     it('refuse un CLIENT_MANAGER sans buildingIds même pour un bâtiment de son client', async () => {
       prisma.building.findFirst.mockResolvedValue({
         id: 'building-2',
@@ -302,6 +326,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
           expect.objectContaining({
             where: {
               organizationId: 'org-1',
+              clientId: 'client-1',
               buildingId: { in: expected },
             },
           }),
@@ -314,6 +339,53 @@ describe('ClientPortalService - Sentinelle Population', () => {
 
       expect(prisma.project.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ where: { organizationId: 'org-1' } }),
+      );
+    });
+
+    it('applies the same CLIENT_MANAGER scope to list and direct project reads', async () => {
+      prisma.project.findFirst.mockResolvedValue(null);
+
+      await service.getProjects('client-1', 'org-1', 'CLIENT_MANAGER', ['building-1']);
+      await service.getProject(
+        'project-client-2',
+        'client-1',
+        'org-1',
+        'CLIENT_MANAGER',
+        ['building-1'],
+      );
+
+      expect(prisma.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            organizationId: 'org-1',
+            clientId: 'client-1',
+            buildingId: { in: ['building-1'] },
+          },
+        }),
+      );
+      expect(prisma.project.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            id: 'project-client-2',
+            organizationId: 'org-1',
+            clientId: 'client-1',
+            buildingId: { in: ['building-1'] },
+          },
+        }),
+      );
+    });
+
+    it('limits the CLIENT_MANAGER building list to both client and assigned buildings', async () => {
+      await service.getBuildings('client-1', 'org-1', 'CLIENT_MANAGER', ['building-1']);
+
+      expect(prisma.building.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            organizationId: 'org-1',
+            clientId: 'client-1',
+            id: { in: ['building-1'] },
+          },
+        }),
       );
     });
   });
@@ -528,6 +600,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
         where: {
           id: 'building-1',
           organizationId: 'org-1',
+          clientId: 'client-1',
         },
         select: {
           id: true,
@@ -684,6 +757,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
         where: {
           id: 'building-1',
           organizationId: 'org-1',
+          clientId: 'client-1',
         },
         select: {
           id: true,
@@ -775,6 +849,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
         where: {
           id: 'building-1',
           organizationId: 'org-1',
+          clientId: 'client-1',
         },
         select: {
           id: true,
@@ -855,6 +930,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
         where: {
           id: 'building-1',
           organizationId: 'org-1',
+          clientId: 'client-1',
         },
         select: {
           id: true,

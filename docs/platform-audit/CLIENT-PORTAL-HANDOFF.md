@@ -18,45 +18,43 @@ invitation, signature ou changement de permission n’est autorisé pour la rece
 
 ## Références
 
-- Branche : `fix/client-incident-history-states`.
-- Base : `origin/main` au SHA `da13a066b3b4531756bfac2fa5cb3ac61243e10f`.
-- Production observée : release GitHub de ce SHA réussie; inspection active à
-  confirmer lors de la release du correctif.
-- Worktree isolé : `D:\CORO-QA\worktrees\client-incident-history-fix`.
+- Branche : `fix/client-project-building-scope`.
+- Base : `origin/main` au SHA `d8dab2a48e6872d23024a717df33e1dca8994d58`.
+- Production active vérifiée : `d8dab2a48e6872d23024a717df33e1dca8994d58`.
+- Worktree isolé : `F:\coro-platform\.worktrees\client-project-scope`.
 - Worktree principal `F:\coro-platform` et travaux P-5 : préservés, non modifiés.
 
 ## Modifications en cours
 
-- Machine d’état de l’historique des incidents.
-- Erreurs 401/403/techniques distinctes et bouton Réessayer.
-- Distinction vide bâtiment / filtre sans résultat.
-- Données précédentes marquées anciennes si l’actualisation échoue.
-- Réponse tardive d’un ancien bâtiment ignorée.
-- Libellés « Historique des présences » et « Historique des incidents ».
-- Cibles tactiles de 44 px et navigation clavier des lignes.
+- CP-002 : le scope `CLIENT_MANAGER` combine désormais organisation, client et
+  bâtiments explicitement affectés pour les listes projets/bâtiments.
+- Les lectures bâtiment et les ressources annexes utilisant
+  `assertBuildingAccess` appliquent le même couple client/bâtiment.
+- Le scope historique organisation-wide de `CLIENT_CORPORATE` est préservé.
 
 ## Tests exécutés
 
-- `npm run test:incident-history` : 11/11 PASS.
-- `npm run test:sentinelle-auth` : 5/5 PASS.
-- TypeScript : PASS après exécution autorisée dans le worktree D:.
-- `npm run build` : PASS, Next.js 16.4.2.
+- CP-002 phase rouge : 7 échecs reproduisant les filtres manquants.
+- `client-portal.service.spec.ts` : 70/70 PASS après correction.
+- Les validations TypeScript, PostgreSQL, CI et recette synthétique restent à
+  exécuter avant publication.
 
 ## Constats ouverts
 
-Voir `CLIENT-PORTAL-FINDINGS.md`, CP-001 à CP-007. CP-001 est À VÉRIFIER;
-CP-002 à CP-007 demeurent À INVESTIGUER et interdisent un feu vert commercial
-global.
+Voir `CLIENT-PORTAL-FINDINGS.md`. CP-001 est CLOS. CP-002 et CP-003 sont
+corrigés localement, en attente de la CI PostgreSQL et de la recette contrôlée.
+CP-004 et CP-005 sont confirmés ouverts. CP-006 est confirmé pour les
+commentaires, versions et engagements, tandis que les fichiers/téléchargements
+restent à prouver. CP-007 est confirmé ouvert. Ces constats interdisent un feu
+vert commercial global.
 
 ## Opérations au résultat incertain
 
 - Aucune mutation métier, migration, communication ou production n’est en cours.
-- Le statut HTTP exact de la requête production CP-001 n’est pas encore connu;
-  la console ne conserve que le message frontend générique.
+- Aucune opération CP-002 n’a encore été publiée ou déployée.
 
 ## Prochaine action concrète
 
-Revoir le diff exact, exécuter les derniers contrôles, créer le commit/PR,
-attendre la CI, déployer par le pipeline gouverné, puis recetter CP-001 sur la
-version active. Ensuite seulement, commencer CP-002 avec un test synthétique
-de deux clients appartenant au même prestataire.
+Compléter les tests de non-régression, TypeScript et PostgreSQL, revoir le diff,
+publier CP-002/CP-003, attendre la CI et recetter avec des données synthétiques.
+Ensuite seulement, poursuivre CP-006, CP-005 puis CP-004 séparément.
