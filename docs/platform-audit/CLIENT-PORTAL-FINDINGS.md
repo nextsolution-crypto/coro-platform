@@ -38,20 +38,28 @@ active et preuve de recette appropriée.
 |---|---|---|---|---|
 | CP-002 | Les listes projets/bâtiments d’un `CLIENT_MANAGER` n’imposaient pas le `clientId` en plus des bâtiments affectés | BLOQUANT | CLOS | PR #45, CI PostgreSQL synthétique et inspection post-release PASS |
 | CP-003 | La lecture directe projet était plus stricte que la liste; alignement explicite requis | BLOQUANT | CLOS | Matrice liste/direct manager PASS; portée corporate préservée; inspection post-release PASS |
-| CP-004 | Intelligence agrégeait par organisation sans transmettre le client ni les bâtiments autorisés | BLOQUANT | CORRIGÉ LOCAL — CI/E2E À CONFIRMER | Filtrage avant agrégation; preuve multi-clients `CLIENT-PORTAL-CP004-INTELLIGENCE-SCOPE.md` |
-| CP-005 | Le refus documentaire chargeait le projet par identifiant puis écrivait statut, commentaire et notifications sans contrôle préalable | BLOQUANT | CORRIGÉ LOCAL — CI/E2E À CONFIRMER | Contrôle parent/rôle/état avant mutation, transaction et idempotence; preuve `CLIENT-PORTAL-CP005-DOCUMENT-REFUSAL.md` |
-| CP-006 | Commentaires, versions et engagements n’héritaient pas du contrôle canonique du projet; la portée corporate ProjectFile était artificiellement limitée au client d’origine | BLOQUANT | CORRIGÉ LOCAL — CI/E2E À CONFIRMER | Garde parent unique ajoutée avant lectures/écritures; inventaire `CLIENT-PORTAL-CP006-ROUTE-INVENTORY.md`; matrice PostgreSQL requise en CI |
-| CP-007 | `addComment` utilisait l’identifiant `ClientUser` comme `userId` de commentaire, sans provenance d’acteur typée | MAJEUR | CORRIGÉ LOCAL — CI/UPGRADE/E2E À CONFIRMER | Migration additive et contrainte exactement-un-auteur; preuve `CLIENT-PORTAL-CP007-ACTOR-PROVENANCE.md` |
+| CP-004 | Intelligence agrégeait par organisation sans transmettre le client ni les bâtiments autorisés | BLOQUANT | À VÉRIFIER — CORRIGÉ/CI VERT, RELEASE BLOQUÉE CAPACITÉ | PR #50 fusionnée `e94e4f3d…`; filtrage pré-agrégation et matrice PostgreSQL PASS; production demeure sur `3829afc…` |
+| CP-005 | Le refus documentaire chargeait le projet par identifiant puis écrivait statut, commentaire et notifications sans contrôle préalable | BLOQUANT | CLOS | PR #49; contrôle parent/rôle/état avant mutation, transaction/idempotence; release `40118313963` et inspection `40119271708` PASS |
+| CP-006 | Commentaires, versions et engagements n’héritaient pas du contrôle canonique du projet; la portée corporate ProjectFile était artificiellement limitée au client d’origine | BLOQUANT | CLOS | PR #47; garde parent avant accès, matrice synthétique PASS; release `40116294651` et inspection `40117291362` PASS |
+| CP-007 | `addComment` utilisait l’identifiant `ClientUser` comme `userId` de commentaire, sans provenance d’acteur typée | MAJEUR | CLOS | PR #48; migration additive 153 et contrainte exactement-un-auteur; release `40118313963` et inspection `40119271708` PASS |
 
 ## Limites actionnables actuelles
 
-### LIMITATION — CP-004 à CP-007 non clos
+### LIMITATION — CP-004 non déployé
 
 - **IMPACT :** aucun feu vert commercial global du portail.
-- **CONDITION DE LEVÉE :** traiter séparément Intelligence, refus documentaire,
-  ressources annexes et provenance des commentaires.
+- **CONDITION DE LEVÉE :** rétablir au moins 2 174 227 685 octets de marge de
+  release supplémentaire, déployer le SHA CP-004 exact et réussir
+  l’inspection post-release. Le nettoyage gouverné à 12 h ne récupérerait
+  qu’environ 909 Mo et n’est donc pas exécuté isolément.
 - **RESPONSABLE :** équipe technique CORO.
 - **STATUT :** bloquant pour une ouverture commerciale non limitée.
+
+## Preuves CP-004 à CP-007
+
+Le détail consolidé des défauts reproduits, règles attendues, tests, commits,
+releases et limites résiduelles est conservé dans
+`CLIENT-PORTAL-CP004-CP007-CLOSURE.md`.
 
 ## Preuve de clôture CP-002
 
