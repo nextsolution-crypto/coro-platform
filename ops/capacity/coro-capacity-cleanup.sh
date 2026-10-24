@@ -3,7 +3,7 @@ set -Eeuo pipefail
 umask 077
 
 minimum_age_hours="${CAPACITY_CLEANUP_MINIMUM_AGE_HOURS:-72}"
-[[ "$minimum_age_hours" == 72 || "$minimum_age_hours" == 24 ]] || { echo 'CAPACITY_CLEANUP_FAILED code=MINIMUM_AGE_INVALID'; exit 1; }
+[[ "$minimum_age_hours" == 72 || "$minimum_age_hours" == 24 || "$minimum_age_hours" == 12 ]] || { echo 'CAPACITY_CLEANUP_FAILED code=MINIMUM_AGE_INVALID'; exit 1; }
 
 mode="${CAPACITY_CLEANUP_MODE:-DRY_RUN}"
 [[ "$mode" == DRY_RUN || "$mode" == EXECUTE ]] || { echo 'CAPACITY_CLEANUP_FAILED code=MODE_INVALID'; exit 1; }
