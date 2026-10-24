@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
+import BuildingDocuments from '@/components/building-documents/BuildingDocuments';
 import AppLayout from '@/components/layout/AppLayout';
 import { toast } from '@/lib/toast';
 import { ArrowLeft, Building2, MapPin, Layers, Edit2, FolderOpen, Plus, Calendar } from 'lucide-react';
@@ -274,6 +275,8 @@ export default function BuildingDetailPage() {
           </button>
         </div>
       </div>
+
+      <BuildingDocuments buildingId={buildingId} />
 
       {/* Section projets */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">

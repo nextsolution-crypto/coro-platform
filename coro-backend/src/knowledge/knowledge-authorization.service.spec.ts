@@ -7,6 +7,7 @@ function harness() {
     clientUser: { findFirst: jest.fn() },
     customerPortfolioAssignment: { findMany: jest.fn() },
     customerPortfolioBuildingMembership: { findMany: jest.fn() },
+    buildingDocumentGrant: { findMany: jest.fn(async () => []) },
     project: { findFirst: jest.fn() },
   };
   return { prisma, service: new KnowledgeAuthorizationService(prisma) };
@@ -25,10 +26,9 @@ describe('KnowledgeAuthorizationService', () => {
     expect(scope.internalProjectAccess).toBeDefined();
     const where = service.where(scope);
     expect(where.organizationId).toBe('org-a');
-    expect(where.project).toEqual(
-      expect.objectContaining({ organizationId: 'org-a' }),
-    );
-    expect(where.project).not.toEqual({ organizationId: 'org-a' });
+    expect(where.AND).toEqual(expect.arrayContaining([expect.objectContaining({ OR: expect.any(Array) })]));
+    expect(JSON.stringify(where)).toContain('building');
+    expect(JSON.stringify(where)).toContain('advisor-a');
   });
 
   it('keeps CLIENT_MANAGER empty scope fail-closed', async () => {

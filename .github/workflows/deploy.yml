@@ -101,6 +101,9 @@ jobs:
         working-directory: coro-backend
         run: npx prisma migrate deploy
 
+      - name: Install local OCR runtime
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils tesseract-ocr tesseract-ocr-fra tesseract-ocr-eng
+
       - name: Run backend tests
         working-directory: coro-backend
         run: npx jest --runInBand
@@ -112,8 +115,6 @@ jobs:
       - name: Build backend
         working-directory: coro-backend
         run: npm run build
-      - name: Install local OCR runtime
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils tesseract-ocr tesseract-ocr-fra tesseract-ocr-eng
 
       - name: Verify durable Knowledge runtime policy
         run: node --test ops/knowledge/*.test.mjs

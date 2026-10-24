@@ -28,8 +28,8 @@ describe('ProjectFilesService governed lifecycle', () => {
         if (where.lifecycleState && row.lifecycleState !== where.lifecycleState)
           return null;
         if (
-          where.project?.buildingId?.in &&
-          !where.project.buildingId.in.includes(row.project.buildingId)
+          where.OR?.[0]?.building?.id?.in &&
+          !where.OR[0].building.id.in.includes(row.project.buildingId)
         )
           return null;
         return { ...row };

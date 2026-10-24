@@ -8,6 +8,7 @@ export interface AuthorizedKnowledgeScope {
   organizationId: string;
   buildingIds?: string[];
   visibility?: 'shared';
+  clientId?: string;
   internalProjectAccess?: Prisma.ProjectWhereInput;
 }
 
@@ -42,11 +43,15 @@ export class KnowledgeAuthorizationService {
         organizationId: actor.organizationId,
         isActive: true,
       },
-      select: { role: true, buildingIds: true },
+      select: { role: true, buildingIds: true, clientId: true, email: true },
     });
     if (!client) throw new ForbiddenException('Identite client inactive.');
     if (client.role === 'CLIENT_CORPORATE')
-      return { organizationId: actor.organizationId, visibility: 'shared' };
+      return {
+        organizationId: actor.organizationId,
+        visibility: 'shared',
+        clientId: client.clientId,
+      };
 
     const now = new Date();
     const assignments = await this.prisma.customerPortfolioAssignment.findMany({
@@ -90,9 +95,30 @@ export class KnowledgeAuthorizationService {
             select: { buildingId: true },
           })
         : [];
+    const grants = await this.prisma.buildingDocumentGrant.findMany({
+      where: {
+        organizationId: actor.organizationId,
+        clientUserId: actor.id,
+        canUpload: true,
+      },
+      select: { buildingId: true },
+    });
+    const responsibleBuildings =
+      client.email && client.clientId
+        ? await this.prisma.building.findMany({
+            where: {
+              organizationId: actor.organizationId,
+              clientId: client.clientId,
+              responsableEmail: { equals: client.email, mode: 'insensitive' },
+            },
+            select: { id: true },
+          })
+        : [];
     const buildingIds = [
       ...new Set([
         ...client.buildingIds,
+        ...responsibleBuildings.map((b) => b.id),
+        ...grants.map((g) => g.buildingId),
         ...direct,
         ...memberships.map((item) => item.buildingId),
       ]),
@@ -101,6 +127,7 @@ export class KnowledgeAuthorizationService {
       organizationId: actor.organizationId,
       buildingIds,
       visibility: 'shared',
+      clientId: client.clientId,
     };
   }
 
@@ -125,13 +152,43 @@ export class KnowledgeAuthorizationService {
     return {
       organizationId: scope.organizationId,
       ...(scope.visibility ? { visibility: scope.visibility } : {}),
-      project: {
-        organizationId: scope.organizationId,
-        ...(scope.internalProjectAccess ?? {}),
-        ...(scope.buildingIds !== undefined
-          ? { buildingId: { in: scope.buildingIds } }
-          : {}),
-      },
+      AND: [
+        {
+          OR: [
+            {
+              building: {
+                organizationId: scope.organizationId,
+                ...(scope.clientId ? { clientId: scope.clientId } : {}),
+                ...(scope.buildingIds !== undefined
+                  ? { id: { in: scope.buildingIds } }
+                  : {}),
+              },
+              ...(scope.internalProjectAccess
+                ? {
+                    OR: [
+                      { projectId: null },
+                      { visibility: 'shared', approvedAt: { not: null } },
+                      { project: scope.internalProjectAccess },
+                    ],
+                  }
+                : {}),
+            },
+            {
+              buildingId: null,
+              project: {
+                organizationId: scope.organizationId,
+                ...(scope.clientId
+                  ? { building: { clientId: scope.clientId } }
+                  : {}),
+                ...(scope.internalProjectAccess ?? {}),
+                ...(scope.buildingIds !== undefined
+                  ? { buildingId: { in: scope.buildingIds } }
+                  : {}),
+              },
+            },
+          ],
+        },
+      ],
     };
   }
 }

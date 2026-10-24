@@ -1,85 +1,91 @@
 import { ProjectFilesClientController } from './project-files-client.controller';
 
-describe('ProjectFilesClientController building scope', () => {
-  const projectFiles = {
-    getFilesForProject: jest.fn(),
-  };
-  const offlineDocuments = {
-    issueLease: jest.fn(),
+describe('ProjectFilesClientController live client perimeter', () => {
+  const files = { getFilesForProject: jest.fn() };
+  const offline = { issueLease: jest.fn() };
+  const prisma: any = {
+    clientUser: { findFirst: jest.fn() },
+    buildingDocumentGrant: { findMany: jest.fn(async () => []) },
+    building: { findMany: jest.fn() },
+    customerPortfolioAssignment: { findMany: jest.fn(async () => []) },
+    customerPortfolioBuildingMembership: { findMany: jest.fn(async () => []) },
   };
   const controller = new ProjectFilesClientController(
-    projectFiles as never,
-    offlineDocuments as never,
+    prisma,
+    files as never,
+    offline as never,
   );
-
-  beforeEach(() => jest.clearAllMocks());
-
-  it('preserves organization-wide access for CLIENT_CORPORATE', async () => {
-    await controller.getFiles(
-      'project-1',
-      {
-        clientUser: {
-          role: 'CLIENT_CORPORATE',
-          organizationId: 'org-1',
-          buildingIds: [],
-        },
-      },
-      'shared',
-    );
-
-    expect(projectFiles.getFilesForProject).toHaveBeenCalledWith(
-      'project-1',
-      'shared',
-      'org-1',
-      undefined,
-    );
+  beforeEach(() => {
+    jest.clearAllMocks();
+    prisma.buildingDocumentGrant.findMany.mockResolvedValue([]);
   });
-
-  it.each([
-    ['zero buildings', []],
-    ['one building', ['building-1']],
-    ['multiple buildings', ['building-1', 'building-2']],
-  ])('preserves CLIENT_MANAGER scope with %s', async (_label, buildingIds) => {
-    await controller.getFiles(
-      'project-1',
-      {
-        clientUser: {
-          role: 'CLIENT_MANAGER',
-          organizationId: 'org-1',
-          buildingIds,
-        },
-      },
-      'shared',
-    );
-
-    expect(projectFiles.getFilesForProject).toHaveBeenCalledWith(
-      'project-1',
-      'shared',
-      'org-1',
-      buildingIds,
-    );
-  });
-
-  it('applies the same corporate scope to offline lease issuance', async () => {
-    await controller.issueOfflineLease(
-      'file-1',
-      { deviceId: 'device-1' },
-      {
-        clientUser: {
-          sub: 'user-1',
-          role: 'CLIENT_CORPORATE',
-          organizationId: 'org-1',
-          buildingIds: [],
-        },
-      },
-    );
-
-    expect(offlineDocuments.issueLease).toHaveBeenCalledWith({
-      clientUserId: 'user-1',
-      organizationId: 'org-1',
-      permittedBuildingIds: undefined,
-      deviceId: 'device-1',
-      fileId: 'file-1',
+  it('limits corporate access to the client, even when two clients share a provider organization', async () => {
+    prisma.clientUser.findFirst.mockResolvedValue({
+      clientId: 'client-a',
+      role: 'CLIENT_CORPORATE',
+      buildingIds: [],
     });
+    prisma.building.findMany.mockResolvedValue([{ id: 'building-a' }]);
+    await controller.getFiles(
+      'project-a',
+      { clientUser: { sub: 'user-a', organizationId: 'org-a' } },
+      'shared',
+    );
+    expect(prisma.building.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { organizationId: 'org-a', clientId: 'client-a' },
+      }),
+    );
+    expect(files.getFilesForProject).toHaveBeenCalledWith(
+      'project-a',
+      'shared',
+      'org-a',
+      ['building-a'],
+    );
+  });
+  it('uses current manager assignments and explicit grants, ignoring stale token building IDs', async () => {
+    prisma.clientUser.findFirst.mockResolvedValue({
+      clientId: 'client-a',
+      role: 'CLIENT_MANAGER',
+      buildingIds: ['building-a'],
+    });
+    prisma.buildingDocumentGrant.findMany.mockResolvedValue([
+      { buildingId: 'building-b' },
+    ]);
+    prisma.building.findMany.mockResolvedValue([
+      { id: 'building-a' },
+      { id: 'building-b' },
+    ]);
+    await controller.issueOfflineLease(
+      'file-a',
+      { deviceId: 'device-a' },
+      {
+        clientUser: {
+          sub: 'user-a',
+          organizationId: 'org-a',
+          buildingIds: ['forged'],
+        },
+      },
+    );
+    expect(prisma.building.findMany.mock.calls[0][0].where.OR[0].id.in).toEqual(
+      ['building-a', 'building-b'],
+    );
+    expect(offline.issueLease).toHaveBeenCalledWith(
+      expect.objectContaining({
+        permittedBuildingIds: ['building-a', 'building-b'],
+      }),
+    );
+  });
+  it('fails closed for inactive accounts', async () => {
+    prisma.clientUser.findFirst.mockResolvedValue(null);
+    await controller.getFiles('project-a', {
+      clientUser: { sub: 'inactive', organizationId: 'org-a' },
+    });
+    expect(files.getFilesForProject).toHaveBeenCalledWith(
+      'project-a',
+      'shared',
+      'org-a',
+      [],
+    );
   });
 });

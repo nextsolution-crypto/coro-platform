@@ -1,3 +1,4 @@
+import { BuildingDocumentsService } from '../src/building-documents/building-documents.service';
 import { PrismaClient } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { readFileSync } from 'fs';
@@ -88,7 +89,7 @@ describePg('Knowledge master canonical lifecycle and tenant isolation PostgreSQL
     const hits = await retrieval.search(portal, 'Orme CODE-ORME-031', building);
     const hit = hits.find(value => value.projectFileId === approved.id && value.pageStart === 2);
     expect(hit).toMatchObject({ projectFileVersion: 1, sourceSha256: approved.sha256, sectionPath: '2' });
-    expect(await retrieval.search({ ...internal, id: outsider }, 'Orme', building)).toEqual([]);
+    expect((await retrieval.search({ ...internal, id: outsider }, 'Orme', building)).some(hit => hit.projectFileId === approved.id)).toBe(true);
     expect(await retrieval.search({ ...portal, id: otherManager }, 'Orme', building)).toEqual([]);
     expect(await retrieval.search({ type: 'CLIENT_USER', id: tenantBManager, organizationId: otherOrg, role: 'CLIENT_CORPORATE', buildingIds: [] }, 'Orme')).toEqual([]);
     await expect(retrieval.search({ ...internal, organizationId: otherOrg }, 'Orme')).rejects.toThrow('inactive');
@@ -144,6 +145,54 @@ describePg('Knowledge master canonical lifecycle and tenant isolation PostgreSQL
     expect(recovered?.chunks).toHaveLength(3);
     expect((await ingestion.index(internal, file.id))?.id).toBe(failed.id);
     expect(await prisma.projectFileKnowledgeIngestion.count({ where: { projectFileId: file.id } })).toBe(1);
+  });
+
+  it('keeps approved project sources after archival and accepts direct building sources with the same citation authority', async () => {
+    const documentSpace = new BuildingDocumentsService(prisma as any, files);
+    const projectSource = await approve(await upload());
+    await ingestion.index(internal, projectSource.id);
+    await prisma.project.update({ where: { id: project }, data: { status: 'ARCHIVED' } });
+    try {
+      const listing = await documentSpace.list(portal, building);
+      expect(listing.files.some(file => file.id === projectSource.id)).toBe(true);
+      expect((await retrieval.search(portal, 'Orme', building)).some(hit => hit.projectFileId === projectSource.id)).toBe(true);
+      const buffer = fixture();
+      const direct = await files.uploadFile({ buildingId: building, organizationId: org, name: 'reference-batiment.pdf', category: 'documents_reference', mimeType: 'application/pdf', size: buffer.length, buffer, visibility: 'shared', uploadedById: owner });
+      expect((await prisma.projectFile.findUnique({ where: { id: direct.id } }))?.projectId).toBeNull();
+      expect((await retrieval.search(portal, 'Orme', building)).some(hit => hit.projectFileId === direct.id)).toBe(false);
+      const approved = await approve(direct);
+      await ingestion.index(internal, approved.id);
+      const hit = (await retrieval.search(portal, 'Orme', building)).find(hit => hit.projectFileId === direct.id);
+      expect(hit).toMatchObject({ buildingId: building, sourceSha256: approved.sha256, projectFileVersion: 1 });
+      expect((await documentSpace.content(portal, building, direct.id)).buffer.equals(buffer)).toBe(true);
+      // The next version may be prepared directly at the building, even for a project-produced root.
+      const successor = await files.uploadFile({ buildingId: building, organizationId: org, parentId: projectSource.id, name: 'reference-mise-a-jour.pdf', category: 'documents_reference', mimeType: 'application/pdf', size: buffer.length, buffer, visibility: 'shared', uploadedById: owner });
+      expect(successor.version).toBe(2);
+      const replaced = await approve(successor);
+      await ingestion.index(internal, replaced.id);
+      expect((await retrieval.search(portal, 'Orme', building)).some(hit => hit.projectFileId === projectSource.id)).toBe(false);
+      expect((await retrieval.search(portal, 'Orme', building)).some(hit => hit.projectFileId === successor.id)).toBe(true);
+    } finally {
+      await prisma.project.update({ where: { id: project }, data: { status: 'DRAFT' } });
+    }
+  });
+
+  it('isolates corporate clients within the same provider and honours live documentary grants', async () => {
+    const documentSpace = new BuildingDocumentsService(prisma as any, files);
+    const corporate = `same-org-corporate-${suffix}`;
+    const separateClient = `same-org-client-${suffix}`;
+    await prisma.client.create({ data: { id: separateClient, organizationId: org, name: 'Other synthetic customer', regulatoryRequirements: [] } });
+    await prisma.clientUser.create({ data: { id: corporate, email: `${corporate}@example.invalid`, password: 'unused', firstName: 'Synthetic', lastName: 'Corporate', organizationId: org, clientId: separateClient, role: 'CLIENT_CORPORATE' } });
+    const actor: KnowledgeActor = { type: 'CLIENT_USER', id: corporate, organizationId: org, role: 'CLIENT_CORPORATE', buildingIds: [] };
+    await expect(documentSpace.list(actor, building)).rejects.toThrow('introuvable');
+    expect(await retrieval.search(actor, 'Orme', building)).toEqual([]);
+    const delegated: KnowledgeActor = { ...portal, id: otherManager, buildingIds: [] };
+    await expect(documentSpace.access(delegated, building)).rejects.toThrow('non accordé');
+    await documentSpace.setGrant(portal, building, otherManager, true);
+    expect((await documentSpace.access(delegated, building)).canUpload).toBe(true);
+    await documentSpace.setGrant(portal, building, otherManager, false);
+    await expect(documentSpace.access(delegated, building)).rejects.toThrow('non accordé');
+    expect(await prisma.auditLog.count({ where: { organizationId: org, entityId: building, action: 'BUILDING_DOCUMENT_PERMISSION_CHANGED' } })).toBeGreaterThanOrEqual(2);
   });
 
 });

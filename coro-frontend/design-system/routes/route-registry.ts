@@ -82,7 +82,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   // ── portfolio (9) ──
   { pattern: '/bookings', family: 'portfolio', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'], sensitivity: ['destructive', 'emergency-content'], validation: ['test:bookings', 'test:skin', 'test:design-system'] },
   { pattern: '/buildings', family: 'portfolio', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'], sensitivity: ['destructive'] },
-  { pattern: '/buildings/[id]', family: 'portfolio', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'] },
+  { pattern: '/buildings/[id]', family: 'portfolio', shell: 'app', status: 'beta', render: 'skin', styling: ['css-module', 'inline-hex', 'tailwind'], sensitivity: ['documents'], validation: ['test:design-system'] },
   { pattern: '/buildings/compliance', family: 'portfolio', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'] },
   { pattern: '/buildings/map', family: 'portfolio', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex'] },
   { pattern: '/clients', family: 'portfolio', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'], sensitivity: ['destructive'] },

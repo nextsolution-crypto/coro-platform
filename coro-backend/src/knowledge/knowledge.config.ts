@@ -29,7 +29,7 @@ export class KnowledgeConfig {
     4000,
   );
   readonly maxResults = integer('KNOWLEDGE_MAX_RESULTS', 12, 1, 50);
-  readonly pipelineVersion = 'PROJECTFILE_KNOWLEDGE_V2';
+  readonly pipelineVersion = 'BUILDING_KNOWLEDGE_V3';
   readonly localOcrEnabled = process.env.KNOWLEDGE_LOCAL_OCR_ENABLED === 'true';
   readonly ocrMaxPages = integer('KNOWLEDGE_OCR_MAX_PAGES', 8, 1, 20);
   readonly ocrMinConfidence = integer('KNOWLEDGE_OCR_MIN_CONFIDENCE', 80, 50, 100);
