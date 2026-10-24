@@ -1,0 +1,27 @@
+.page { display: grid; gap: 24px; color: var(--cg-text-primary, #203449); }
+.back { width: fit-content; text-decoration: none; color: inherit; font-size: 14px; }
+.header, .panelHeader { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; }
+.header h1 { font-size: clamp(26px, 3vw, 36px); line-height: 1.2; margin: 10px 0; overflow-wrap: anywhere; }
+.header p, .panel p { line-height: 1.6; font-size: 14px; }
+.eyebrow { display: flex; align-items: center; gap: 8px; font-size: 12px !important; letter-spacing: .08em; }
+.operations { display: flex; flex-wrap: wrap; gap: 10px; }
+.operations a, .panelHeader > a { display: inline-flex; gap: 8px; align-items: center; padding: 12px 16px; border: 1px solid var(--cg-border, #c3cdd9); border-radius: 8px; color: inherit; text-decoration: none; min-height: 44px; }
+.sections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.sections button { display: flex; gap: 16px; align-items: flex-start; padding: 24px; text-align: left; cursor: pointer; color: inherit; background: var(--cg-glass-bg-strong, #fff); border: 1px solid var(--cg-border, #c3cdd9); border-radius: 12px; }
+.sections button[aria-pressed="true"] { border-color: var(--cg-accent, #176ca9); box-shadow: inset 0 0 0 1px var(--cg-accent, #176ca9); }
+.sections button > svg { flex-shrink: 0; }
+.sections button > span { display: grid; gap: 8px; }
+.sections strong { font-size: 18px; }
+.sections small, .sections span span { font-size: 13px; line-height: 1.5; }
+.sections span span { font-weight: 600; }
+.panel { border: 1px solid var(--cg-border, #c3cdd9); border-radius: 12px; padding: 24px; background: var(--cg-glass-bg-strong, #fff); }
+.panel[hidden] { display: none; }
+.panel h2 { font-size: 22px; margin: 0 0 8px; }
+.panelHeader { margin-bottom: 24px; }
+.projects { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 16px; }
+.project { display: flex; align-items: center; gap: 14px; padding: 20px; border: 1px solid var(--cg-border, #c3cdd9); border-radius: 10px; color: inherit; text-decoration: none; }
+.project > div { flex: 1; min-width: 0; }
+.project h3 { font-size: 16px; margin: 6px 0; overflow-wrap: anywhere; }
+.project span { font-size: 12px; font-weight: 700; }
+.page :is(a,button):focus-visible { outline: 3px solid #65c5ff; outline-offset: 4px; }
+@media (max-width: 700px) { .sections { grid-template-columns: 1fr; } .sections button, .panel { padding: 18px; } .operations { width: 100%; } }

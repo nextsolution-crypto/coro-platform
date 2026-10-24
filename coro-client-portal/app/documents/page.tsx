@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiGet, getUser } from "../store/auth";
 import PortalLayout from "../components/PortalLayout";
+import { belongsToBuilding } from "../buildings/building-projects";
 import styles from "./documents.module.css";
 import {
   Search,
@@ -82,6 +83,8 @@ export default function DocumentsPage() {
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
+  const [buildingFilter, setBuildingFilter] = useState("");
+  const [buildings, setBuildings] = useState<Array<{id: string; name: string}>>([]);
   const [filterStatus, setFilterStatus] = useState("");
   const [filterType, setFilterType] = useState("");
 
@@ -94,6 +97,8 @@ export default function DocumentsPage() {
     }
 
     setUser(currentUser);
+    setBuildingFilter(new URLSearchParams(window.location.search).get("building") || "");
+    apiGet("/client-portal/buildings").then(value => setBuildings(value || [])).catch(console.error);
     fetchProjects();
   }, [router]);
 
@@ -108,7 +113,8 @@ export default function DocumentsPage() {
     }
   };
 
-  const filtered = projects.filter((p) => {
+  const scopedProjects = projects.filter(p => belongsToBuilding(p, buildingFilter));
+  const filtered = scopedProjects.filter((p) => {
     if (filterStatus && p.status !== filterStatus) {
       return false;
     }
@@ -133,11 +139,11 @@ export default function DocumentsPage() {
     return true;
   });
 
-  const signedCount = projects.filter(
+  const signedCount = scopedProjects.filter(
     (project) =>
       Array.isArray(project.signatures) && project.signatures.length > 0,
   ).length;
-  const reviewCount = projects.filter(
+  const reviewCount = scopedProjects.filter(
     (project) => project.status === "REVIEW",
   ).length;
   const grouped = filtered.reduce<Record<string, any[]>>((groups, project) => {
@@ -183,7 +189,7 @@ export default function DocumentsPage() {
       <div className={styles.page}>
         {/* En-tête */}
         <header className={styles.header}>
-          <p className={styles.eyebrow}>Documents</p>
+          <p className={styles.eyebrow}>Conformité</p>
 
           <h1 className={styles.title}>Vos documents de conformité</h1>
           <p className={styles.context}>
@@ -206,8 +212,8 @@ export default function DocumentsPage() {
 
         <section className={styles.summary} aria-label="Resume des documents">
           <div>
-            <strong>{projects.length}</strong>
-            <span>Documents</span>
+            <strong>{scopedProjects.length}</strong>
+            <span>Dossiers de conformité</span>
           </div>
           <div>
             <strong>{signedCount}</strong>
@@ -242,6 +248,11 @@ export default function DocumentsPage() {
             />
           </div>
 
+          <select value={buildingFilter} onChange={e => setBuildingFilter(e.target.value)} aria-label="Filtrer par bâtiment" className={styles.control}>
+            <option value="">Tous les bâtiments</option>
+            {buildings.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+          {buildingFilter && <a href={`/buildings/${encodeURIComponent(buildingFilter)}`}>Ouvrir la fiche bâtiment et sa documentation</a>}
           {/* Statut */}
           <select
             value={filterStatus}

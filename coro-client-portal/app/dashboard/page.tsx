@@ -14,7 +14,7 @@ const READINESS_CONFIG: Record<string, { label: string; color: string; bg: strin
   READY:    { label: 'Opérationnel',     color: '#27AE60', bg: '#EAFAF1', border: '#A9DFBF', icon: '🟢' },
   REDUCED:  { label: 'Capacité réduite', color: '#E67E22', bg: '#FEF9E7', border: '#FAD7A0', icon: '🟠' },
   CRITICAL: { label: 'Critique',         color: '#C0392B', bg: '#FDEDEC', border: '#F1948A', icon: '🔴' },
-  NO_TEAM:  { label: 'Non configuré',    color: '#ADB5BD', bg: '#F8F9FA', border: '#DEE2E6', icon: '⚪' },
+  NO_TEAM:  { label: 'Sentinelle non configurée',    color: '#ADB5BD', bg: '#F8F9FA', border: '#DEE2E6', icon: '⚪' },
 };
 
 const PAGE_SIZE = 20;
@@ -99,14 +99,14 @@ export default function DashboardPage() {
           Bonjour, {user.firstName} 👋
         </h1>
         <p style={{ margin: 0, fontSize: 14, color: '#6C757D' }}>
-          {user.clientName} — Voici l'état de vos documents de conformité.
+          {user.clientName} — Retrouvez vos bâtiments, leur conformité et leur documentation.
         </p>
       </header>
 
       {/* ── Stats ── */}
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 28 }}>
         {[
-          { label: 'Total documents', value: stats?.total      || 0, color: '#2C3E50', Icon: FileText    },
+          { label: 'Dossiers de conformité', value: stats?.total      || 0, color: '#2C3E50', Icon: FileText    },
           { label: 'Validés',         value: stats?.validated  || 0, color: '#27AE60', Icon: CheckCircle },
           { label: 'En cours',        value: stats?.inProgress || 0, color: '#2980B9', Icon: Clock       },
         ].map(s => (
@@ -148,7 +148,7 @@ export default function DashboardPage() {
             <p style={{ margin: 0, color: '#ADB5BD', fontSize: 15 }}>Aucun bâtiment associé à votre compte.</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: 16 }}>
             {pagedBuildings.map((b: any) => {
               const r    = readiness[b.id];
               const rcfg = r ? READINESS_CONFIG[r.status as keyof typeof READINESS_CONFIG] : null;
@@ -169,7 +169,7 @@ export default function DashboardPage() {
                         style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }}
                       />
                     ) : (
-                      <div style={{ width: '100%', height: 120, backgroundColor: '#EBF5FB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: '100%', height: 160, backgroundColor: '#EBF5FB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Building2 size={40} color="#AED6F1" />
                       </div>
                     )}
@@ -213,7 +213,7 @@ export default function DashboardPage() {
                     {/* Métriques */}
                     <div style={{ display: 'flex', gap: 0, marginBottom: 14, borderRadius: 8, overflow: 'hidden', border: '1px solid #F1F3F5' }}>
                       {[
-                        { label: 'document' + ((b.projectCount || 0) !== 1 ? 's' : ''), value: b.projectCount  || 0, color: '#2C3E50' },
+                        { label: 'dossier' + ((b.projectCount || 0) !== 1 ? 's' : ''), value: b.projectCount  || 0, color: '#2C3E50' },
                         { label: 'validé'   + ((b.validatedCount || 0) !== 1 ? 's' : ''), value: b.validatedCount || 0, color: '#27AE60' },
                         { label: 'en cours',                                                value: b.activeCount   || 0, color: '#2980B9' },
                       ].map((m, i) => (
@@ -242,14 +242,14 @@ export default function DashboardPage() {
                     )}
 
                     {/* Actions */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginTop: 'auto' }}>
-                      <button type="button" onClick={() => router.push(`/documents?building=${b.id}`)}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 6, marginTop: 'auto' }}>
+                      <button type="button" onClick={() => router.push(`/buildings/${b.id}`)}
                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                           padding: '9px 6px', borderRadius: 7, fontSize: 12, fontWeight: 600,
                           backgroundColor: '#EBF5FB', color: '#2980B9', border: '1px solid #AED6F1', cursor: 'pointer' }}
                         onMouseEnter={e => e.currentTarget.style.backgroundColor = '#D6EAF8'}
                         onMouseLeave={e => e.currentTarget.style.backgroundColor = '#EBF5FB'}>
-                        <FileText size={13} /> Documents
+                        <Building2 size={13} /> Ouvrir le bâtiment
                       </button>
                       <button type="button" onClick={() => router.push(`/sentinelle/${b.id}/resilience`)}
                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,

@@ -21,6 +21,7 @@ import {
   HardDriveDownload,
   BookOpenCheck,
 } from "lucide-react";
+import workspace from "./PortalWorkspace.module.css";
 import { resolveActivePortalNavigationPath } from "./active-navigation";
 
 export default function PortalLayout({
@@ -119,10 +120,10 @@ export default function PortalLayout({
 
   const onlineNavItems = [
     { label: "Tableau de bord", path: "/dashboard", icon: LayoutDashboard },
-    { label: "Documents", path: "/documents", icon: FileText },
-    { label: "Connaissances", path: "/knowledge", icon: BookOpenCheck },
-    { label: "Manuel d’utilisation", path: "/manual", icon: BookOpenCheck },
     { label: "Bâtiments", path: "/buildings", icon: Building2 },
+    { label: "Conformité", path: "/documents", icon: FileText },
+    { label: "CORO AI", path: "/knowledge", icon: BookOpenCheck },
+    { label: "Manuel d’utilisation", path: "/manual", icon: BookOpenCheck },
     { label: "Carte", path: "/map", icon: Map },
     { label: "Activités", path: "/activities", icon: Calendar },
     { label: "Intelligence", path: "/intelligence", icon: Shield },
@@ -225,7 +226,7 @@ export default function PortalLayout({
       >
         <div
           style={{
-            maxWidth: 1400 /* ← 1200 → 1400 */,
+            maxWidth: "none",
             margin: "0 auto",
             padding: "0 clamp(16px, 3vw, 32px)" /* ← padding adaptatif */,
             display: "flex",
@@ -283,7 +284,7 @@ export default function PortalLayout({
 
           {/* ── Navigation desktop — icônes seules sur md, texte sur xl ── */}
           <nav
-            className="hidden md:flex"
+            className={`hidden md:flex ${workspace.navigation}`}
             style={{
               alignItems: "center",
               gap: 2,
@@ -332,7 +333,7 @@ export default function PortalLayout({
                 >
                   <Icon size={17} />
                   {/* Texte visible seulement à partir de xl (1280px) */}
-                  <span className="hidden 2xl:inline">{item.label}</span>
+                  <span className={workspace.navigationLabel}>{item.label}</span>
 
                   {/* Badge notification */}
                   {(item as any).badge > 0 && (
@@ -600,8 +601,9 @@ export default function PortalLayout({
 
       {/* ── Contenu principal ── */}
       <main
+        className={workspace.workspace}
         style={{
-          maxWidth: 1400 /* ← 1200 → 1400 */,
+          maxWidth: "none",
           margin: "0 auto",
           width: "100%",
           padding:

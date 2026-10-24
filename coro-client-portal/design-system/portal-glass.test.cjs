@@ -280,12 +280,15 @@ test("isolation : le portail n’importe rien de l’application interne et n’
   );
 });
 
-test("navigation : les libellés complets attendent 1536px pour éviter le débordement du bandeau", () => {
+test("navigation : les libellés complets attendent un écran large pour éviter le débordement du bandeau", () => {
   const layout = fs.readFileSync(
     path.join(ROOT, "app", "components", "PortalLayout.tsx"),
     "utf8",
   );
-  assert.equal((layout.match(/hidden 2xl:inline/g) || []).length, 2);
+  assert.match(layout, /className=\{workspace.navigationLabel\}/);
+  const responsive = fs.readFileSync(path.join(ROOT, "app/components/PortalWorkspace.module.css"), "utf8");
+  assert.match(responsive, /min-width: 1900px/);
+  assert.match(responsive, /overflow-x: auto/);
   assert.match(layout, /className="hidden 2xl:block"/);
   assert.doesNotMatch(layout, /hidden xl:inline/);
 });
