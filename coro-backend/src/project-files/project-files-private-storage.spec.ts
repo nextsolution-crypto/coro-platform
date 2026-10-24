@@ -14,6 +14,7 @@ describe('ProjectFilesService private storage authority', () => {
     };
     const rows: any[] = [];
     const prisma: any = {
+      building: { findFirst: jest.fn(async () => ({ id: 'building-a' })) },
       project: {
         findFirst: jest.fn(async ({ where }: any) =>
           where.id === project.id &&
@@ -29,8 +30,8 @@ describe('ProjectFilesService private storage authority', () => {
           if (where.visibility && row.visibility !== where.visibility)
             return null;
           if (
-            where.project?.buildingId?.in &&
-            !where.project.buildingId.in.includes(project.buildingId)
+            where.OR?.[0]?.building?.id?.in &&
+            !where.OR[0].building.id.in.includes(project.buildingId)
           )
             return null;
           return row;
@@ -84,14 +85,14 @@ describe('ProjectFilesService private storage authority', () => {
     expect(h.storage.uploadPrivateImmutable).toHaveBeenCalledWith(
       bytes,
       expect.stringMatching(
-        /^tenant-org-a\/project-files\/project-a\/[0-9a-f-]+\/plan\.pdf$/,
+        /^tenant-org-a\/building-files\/building-a\/[0-9a-f-]+\/plan\.pdf$/,
       ),
       'application/pdf',
     );
     expect(result.url).toBe('private:project-file');
     expect(result).not.toHaveProperty('storageKey');
     expect(h.rows[0].storageKey).toContain(
-      'tenant-org-a/project-files/project-a/',
+      'tenant-org-a/building-files/building-a/',
     );
   });
 
