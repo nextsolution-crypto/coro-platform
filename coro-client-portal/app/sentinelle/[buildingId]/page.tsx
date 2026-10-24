@@ -314,8 +314,8 @@ export default function SentinelleDashboard() {
           📧 Invitations visiteurs
         </button>
         <button type="button" onClick={() => router.push(`/sentinelle/${buildingId}/historique`)}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#2C3E50' }}>
-          📋 Historique
+          style={{ minHeight: 44, display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#2C3E50' }}>
+          📋 Historique des présences
         </button>
         <button type="button" onClick={() => router.push(`/sentinelle/${buildingId}/rapports`)}
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#2C3E50' }}>
@@ -330,8 +330,8 @@ export default function SentinelleDashboard() {
           🚨 Déclencher un incident
         </button>
         <button type="button" onClick={() => router.push(`/sentinelle/${buildingId}/incidents`)}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#6C757D' }}>
-          📋 Historique
+          style={{ minHeight: 44, display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#6C757D' }}>
+          📋 Historique des incidents
         </button>
       </div>
 

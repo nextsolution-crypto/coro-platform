@@ -129,7 +129,7 @@ export async function apiGet(path: string) {
 
   if (res.status === 401) {
     handleUnauthorized();
-    throw new Error("Non autorisé");
+    throw new ApiError("Non autorisé", 401);
   }
 
   const data = await parseResponse(res);
