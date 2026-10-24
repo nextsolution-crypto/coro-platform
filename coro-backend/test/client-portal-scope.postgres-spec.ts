@@ -40,6 +40,11 @@ describe('Client Portal project and building scope', () => {
     otherProject: `cp002-other-project-${suffix}`,
     user: `cp002-user-${suffix}`,
     otherUser: `cp002-other-user-${suffix}`,
+    manager: `cp006-manager-${suffix}`,
+    corporate: `cp006-corporate-${suffix}`,
+    commentB: `cp006-comment-b-${suffix}`,
+    versionB: `cp006-version-b-${suffix}`,
+    engagementB: `cp006-engagement-b-${suffix}`,
   };
   let service: any;
 
@@ -164,10 +169,71 @@ describe('Client Portal project and building scope', () => {
         },
       ],
     });
+    await prisma.clientUser.createMany({
+      data: [
+        {
+          id: ids.manager,
+          email: `cp006-manager-${suffix}@example.invalid`,
+          password: 'unused',
+          firstName: 'Building',
+          lastName: 'Manager',
+          role: ClientUserRole.CLIENT_MANAGER,
+          buildingIds: [ids.buildingA],
+          clientId: ids.clientA,
+          organizationId: ids.org,
+        },
+        {
+          id: ids.corporate,
+          email: `cp006-corporate-${suffix}@example.invalid`,
+          password: 'unused',
+          firstName: 'Corporate',
+          lastName: 'Manager',
+          role: ClientUserRole.CLIENT_CORPORATE,
+          buildingIds: [],
+          clientId: ids.clientA,
+          organizationId: ids.org,
+        },
+      ],
+    });
+    await prisma.projectComment.create({
+      data: {
+        id: ids.commentB,
+        projectId: ids.projectB,
+        userId: ids.user,
+        organizationId: ids.org,
+        contenu: 'Protected client B comment',
+      },
+    });
+    await prisma.projectVersion.create({
+      data: {
+        id: ids.versionB,
+        projectId: ids.projectB,
+        versionNumber: 1,
+        label: 'Protected client B version',
+        snapshot: {},
+      },
+    });
+    await prisma.documentEngagement.create({
+      data: {
+        id: ids.engagementB,
+        projectId: ids.projectB,
+        clientUserId: ids.corporate,
+        event: 'opened',
+        device: 'desktop',
+      },
+    });
     service = new ClientPortalService(prisma, {}, {}, {}, {}, {}, {}, {}, {});
   });
 
   afterAll(async () => {
+    await prisma.documentEngagement.deleteMany({
+      where: { id: ids.engagementB },
+    });
+    await prisma.projectVersion.deleteMany({ where: { id: ids.versionB } });
+    await prisma.projectComment.deleteMany({ where: { id: ids.commentB } });
+    await prisma.clientUser.deleteMany({
+      where: { id: { in: [ids.manager, ids.corporate] } },
+    });
     await prisma.project.deleteMany({
       where: { id: { in: [ids.projectA, ids.projectB, ids.otherProject] } },
     });
@@ -264,5 +330,65 @@ describe('Client Portal project and building scope', () => {
         [],
       ),
     ).resolves.toBeNull();
+  });
+
+  it('denies annex metadata and writes for a manager outside client scope', async () => {
+    const actor = {
+      sub: ids.manager,
+      email: `cp006-manager-${suffix}@example.invalid`,
+      clientId: ids.clientA,
+      organizationId: ids.org,
+      role: ClientUserRole.CLIENT_MANAGER,
+      buildingIds: [ids.buildingA, ids.buildingB],
+    };
+    const before = await prisma.documentEngagement.count({
+      where: { projectId: ids.projectB },
+    });
+
+    await expect(service.getComments(ids.projectB, actor)).rejects.toThrow(
+      'Projet introuvable',
+    );
+    await expect(
+      service.getProjectVersionHistory(ids.projectB, actor),
+    ).rejects.toThrow('Projet introuvable');
+    await expect(service.getEngagement(ids.projectB, actor)).rejects.toThrow(
+      'Projet introuvable',
+    );
+    await expect(
+      service.trackEngagement(
+        {
+          projectId: ids.projectB,
+          clientUserId: ids.manager,
+          event: 'downloaded',
+        },
+        actor,
+      ),
+    ).rejects.toThrow('Projet introuvable');
+
+    await expect(
+      prisma.documentEngagement.count({ where: { projectId: ids.projectB } }),
+    ).resolves.toBe(before);
+  });
+
+  it('allows corporate annex reads across clients in the same organization', async () => {
+    const actor = {
+      sub: ids.corporate,
+      clientId: ids.clientA,
+      organizationId: ids.org,
+      role: ClientUserRole.CLIENT_CORPORATE,
+      buildingIds: [],
+    };
+
+    await expect(service.getComments(ids.projectB, actor)).resolves.toEqual([
+      expect.objectContaining({ id: ids.commentB }),
+    ]);
+    await expect(
+      service.getProjectVersionHistory(ids.projectB, actor),
+    ).resolves.toEqual([
+      expect.objectContaining({ versionNumber: 1 }),
+    ]);
+    await expect(service.getEngagement(ids.projectB, actor)).resolves.toEqual(
+      expect.objectContaining({ totalOpens: 1 }),
+    );
   });
 });

@@ -1190,6 +1190,40 @@ export class ClientPortalService {
     return project;
   }
 
+  async assertProjectAccess(
+    projectId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    const project = await this.prisma.project.findFirst({
+      where: {
+        id: projectId,
+        organizationId: actor.organizationId,
+        ...(actor.role === 'CLIENT_MANAGER'
+          ? {
+              clientId: actor.clientId,
+              buildingId: { in: actor.buildingIds ?? [] },
+            }
+          : actor.role === 'CLIENT_CORPORATE'
+            ? {}
+            : { id: '__CLIENT_ROLE_NOT_AUTHORIZED__' }),
+      },
+      select: {
+        id: true,
+        organizationId: true,
+        clientId: true,
+        buildingId: true,
+      },
+    });
+
+    if (!project) throw new NotFoundException('Projet introuvable');
+    return project;
+  }
+
   async getActivities(
     clientId: string,
     organizationId: string,
@@ -1244,6 +1278,7 @@ export class ClientPortalService {
     clientUser: any,
     data: { fullName: string; comment?: string; ipAddress?: string },
   ) {
+    await this.assertProjectAccess(projectId, clientUser);
     // La signature doit toujours être rattachée à la version documentaire
     // actuellement approuvée. Une signature d'une ancienne version ne doit
     // jamais rendre la nouvelle version "signée".
@@ -1349,6 +1384,7 @@ export class ClientPortalService {
   }
 
   async getSignatureStatus(projectId: string, clientUser: any) {
+    await this.assertProjectAccess(projectId, clientUser);
     const latestVersion = await this.prisma.projectVersion.findFirst({
       where: { projectId },
       orderBy: { versionNumber: 'desc' },
@@ -1405,6 +1441,7 @@ export class ClientPortalService {
   }
 
   async retryOfficialPdfGeneration(projectId: string, clientUser: any) {
+    await this.assertProjectAccess(projectId, clientUser);
     const latestVersion = await this.prisma.projectVersion.findFirst({
       where: { projectId },
       orderBy: { versionNumber: 'desc' },
@@ -1614,6 +1651,7 @@ export class ClientPortalService {
     organizationId: string,
     contenu: string,
   ) {
+    await this.assertProjectAccess(projectId, clientUser);
     return this.prisma.projectComment.create({
       data: {
         projectId,
@@ -1624,7 +1662,8 @@ export class ClientPortalService {
     });
   }
 
-  async getComments(projectId: string) {
+  async getComments(projectId: string, clientUser: any) {
+    await this.assertProjectAccess(projectId, clientUser);
     return this.prisma.projectComment.findMany({
       where: { projectId },
       include: {
@@ -1716,7 +1755,8 @@ export class ClientPortalService {
     event: string;
     device?: string;
     duration?: number;
-  }) {
+  }, clientUser: any) {
+    await this.assertProjectAccess(data.projectId, clientUser);
     return this.prisma.documentEngagement.create({
       data: {
         projectId: data.projectId,
@@ -1728,7 +1768,12 @@ export class ClientPortalService {
     });
   }
 
-  async getEngagement(projectId: string) {
+  async getEngagement(projectId: string, clientUser: any) {
+    await this.assertProjectAccess(projectId, clientUser);
+    return this.getEngagementForAuthorizedProject(projectId);
+  }
+
+  async getEngagementForAuthorizedProject(projectId: string) {
     const engagements = await this.prisma.documentEngagement.findMany({
       where: { projectId },
       include: {
@@ -1939,7 +1984,8 @@ export class ClientPortalService {
 
   // ── Historique des versions (côté portail client et côté org) ─────────────
 
-  async getProjectVersionHistory(projectId: string) {
+  async getProjectVersionHistory(projectId: string, clientUser: any) {
+    await this.assertProjectAccess(projectId, clientUser);
     const versions = await this.prisma.projectVersion.findMany({
       where: { projectId },
       orderBy: { versionNumber: 'desc' },

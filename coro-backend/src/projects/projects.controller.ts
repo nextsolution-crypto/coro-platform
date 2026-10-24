@@ -204,12 +204,13 @@ export class ProjectsController {
   @Get(':id/comments')
   @UseGuards(AuthGuard('jwt'))
   async getComments(@Param('id') id: string, @Request() req: any) {
-    return this.projectsService.getComments(id, req.user.organizationId);
+    return this.projectsService.getComments(id, req.user);
   }
 
   @Get(':id/engagement')
   @UseGuards(AuthGuard('jwt'))
-  async getEngagement(@Param('id') id: string) {
-    return this.clientPortalService.getEngagement(id);
+  async getEngagement(@Param('id') id: string, @Request() req: any) {
+    await this.projectsService.findOne(id, req.user);
+    return this.clientPortalService.getEngagementForAuthorizedProject(id);
   }
 }
