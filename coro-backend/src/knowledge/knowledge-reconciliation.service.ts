@@ -1,3 +1,4 @@
+import { INDEXABLE_DOCUMENT_MIMES } from '../building-documents/building-documents.service';
 import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
@@ -44,6 +45,7 @@ export class KnowledgeReconciliationService {
           lifecycleState: 'APPROVED',
           sha256: { not: null },
           url: 'private:project-file',
+          mimeType: { in: INDEXABLE_DOCUMENT_MIMES },
           OR: [{ effectiveAt: null }, { effectiveAt: { lte: now } }],
           AND: [
             { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
@@ -63,7 +65,7 @@ export class KnowledgeReconciliationService {
             },
           } },
         },
-        select: { id: true },
+        select: { id: true, mimeType: true },
         orderBy: { approvedAt: 'asc' },
         take: 10,
       });
