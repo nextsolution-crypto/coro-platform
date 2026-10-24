@@ -82,6 +82,7 @@ export default function KnowledgePage() {
             <p>
               Les réponses proviennent uniquement des versions ProjectFile actuelles auxquelles vous avez accès.
             </p>
+            <p><Link href="/manual">Comment utiliser CORO ? Interroger le manuel avec l’aide CORO AI.</Link></p>
           </div>
           <span className={styles.provider}><ShieldCheck size={16} /> {answer?.provider === "AWS_BEDROCK_CA_CENTRAL_1" ? "CORO AI · AWS Canada" : answer?.provider === "DETERMINISTIC_SIMULATED" ? "IA simulée locale" : "Réponses avec sources"}</span>
         </header>

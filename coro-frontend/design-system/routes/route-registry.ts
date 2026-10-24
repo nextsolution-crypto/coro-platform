@@ -63,6 +63,7 @@ export interface RouteEntry {
 }
 
 export const ROUTE_REGISTRY: readonly RouteEntry[] = [
+  { pattern: '/manual', family: 'work', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'css-module'] },
   // ── pilot (2) ──
   { pattern: '/dashboard', family: 'pilot', shell: 'app', status: 'ga', styling: ['inline-hex', 'tailwind'] },
   { pattern: '/profile', family: 'pilot', shell: 'app', status: 'ga', styling: ['inline-hex', 'tailwind'], sensitivity: ['destructive'] },

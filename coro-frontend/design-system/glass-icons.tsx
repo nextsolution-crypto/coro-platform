@@ -1,5 +1,5 @@
 import {
-  Activity, ArrowLeftRight, BadgeCheck, BarChart3, Bell, Building2, Calculator, CalendarCheck, CalendarDays,
+  Activity, ArrowLeftRight, BadgeCheck, BarChart3, Bell, BookOpen, Building2, Calculator, CalendarCheck, CalendarDays,
   CalendarRange, ChevronDown, ClipboardList, Circle, Coins, FilePlus2, FileSignature, FileText, FileWarning,
   Files, FolderKanban, FolderTree, Gauge, Gem, Gift, Globe, HeartPulse, History, Landmark, LayoutDashboard,
   KeyRound, Library, ListChecks, Map as MapIcon, Menu, MessageSquare, Package, PenLine, Pilcrow, Radar, Route, Scale,
@@ -22,6 +22,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   '/buildings/map': MapIcon,
   '/buildings/compliance': ShieldCheck,
   '/library': Library,
+  '/manual': BookOpen,
   '/settings': Settings,
   '/bookings': CalendarCheck,
   '/settings/users': UserCog,

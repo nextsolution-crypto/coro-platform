@@ -22,6 +22,7 @@ test("le registre du portail ne contient aucune destination dupliquée", () => {
 
 for (const [pathname, expected] of [
   ["/dashboard", "/dashboard"],
+  ["/manual#knowledge", "/manual"],
   ["/documents", "/documents"],
   ["/documents/document-1", "/documents"],
   ["/buildings/building-1", "/buildings"],
