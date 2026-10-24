@@ -1,0 +1,6 @@
+# Generated reports depend on the exact audited checkout and executed test run.
+inventory.json
+FUNCTION-MATRIX.md
+MODULE-MATRIX.md
+evidence.json
+MATRICE-CORO.html
