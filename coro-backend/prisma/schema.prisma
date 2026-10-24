@@ -2413,13 +2413,15 @@ model BookingAssignment {
 }
 
 model Building {
-  id                   String   @id @default(uuid())
+  documentaryFiles     ProjectFile[]
+  documentaryGrants    BuildingDocumentGrant[]
+  id                   String                  @id @default(uuid())
   name                 String
   address              String
   city                 String
   province             String
-  timeZone             String   @default("America/Toronto")
-  timeZoneVerified     Boolean  @default(false)
+  timeZone             String                  @default("America/Toronto")
+  timeZoneVerified     Boolean                 @default(false)
   postalCode           String?
   floors               Int?
   units                Int?
@@ -2432,9 +2434,9 @@ model Building {
   responsablePhone     String?
   latitude             Float?
   longitude            Float?
-  isActive             Boolean  @default(true)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  isActive             Boolean                 @default(true)
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
@@ -3340,6 +3342,7 @@ model ClientUser {
   bookings                     Booking[]
   mfaCode                      String?
   mfaCodeExpiry                DateTime?
+  documentaryGrants            BuildingDocumentGrant[]
   uploadedFiles                ProjectFile[]                 @relation("ClientFileUploader")
   trustedDevices               ClientTrustedDevice[]
   passwordResetTokens          ClientPasswordResetToken[]
@@ -3657,27 +3660,29 @@ model BookingNotification {
 }
 
 model ProjectFile {
-  id                               String                        @id @default(uuid())
-  projectId                        String
-  project                          Project                       @relation(fields: [projectId], references: [id])
+  id                               String                          @id @default(uuid())
+  projectId                        String?
+  project                          Project?                        @relation(fields: [projectId], references: [id], onDelete: Restrict)
   organizationId                   String
-  organization                     Organization                  @relation(fields: [organizationId], references: [id])
+  organization                     Organization                    @relation(fields: [organizationId], references: [id])
+  buildingId                       String?
+  building                         Building?                       @relation(fields: [buildingId], references: [id], onDelete: Restrict)
   name                             String
   category                         String // 'plans_evacuation', 'plans_operation', 'plans_implantation', 'documents_reference', 'fichiers_client', 'autre'
   size                             Int
   mimeType                         String
   storageKey                       String
   url                              String
-  version                          Int                           @default(1)
+  version                          Int                             @default(1)
   parentId                         String?
-  parent                           ProjectFile?                  @relation("FileVersions", fields: [parentId], references: [id])
-  versions                         ProjectFile[]                 @relation("FileVersions")
+  parent                           ProjectFile?                    @relation("FileVersions", fields: [parentId], references: [id])
+  versions                         ProjectFile[]                   @relation("FileVersions")
   uploadedById                     String?
-  uploadedBy                       User?                         @relation("FileUploader", fields: [uploadedById], references: [id])
+  uploadedBy                       User?                           @relation("FileUploader", fields: [uploadedById], references: [id])
   uploadedByClientId               String?
-  uploadedByClient                 ClientUser?                   @relation("ClientFileUploader", fields: [uploadedByClientId], references: [id])
-  visibility                       String                        @default("shared") // 'shared', 'internal'
-  status                           String                        @default("en_revision") // 'en_revision', 'valide'
+  uploadedByClient                 ClientUser?                     @relation("ClientFileUploader", fields: [uploadedByClientId], references: [id])
+  visibility                       String                          @default("shared") // 'shared', 'internal'
+  status                           String                          @default("en_revision") // 'en_revision', 'valide'
   lifecycleState                   ProjectFileLifecycleState?
   sha256                           String?
   reviewRequestedAt                DateTime?
@@ -3693,8 +3698,8 @@ model ProjectFile {
   revokedAt                        DateTime?
   revokedById                      String?
   revocationReason                 String?
-  lockVersion                      Int                           @default(0)
-  offlineClassification            OfflineDocumentClassification @default(PROHIBITED)
+  lockVersion                      Int                             @default(0)
+  offlineClassification            OfflineDocumentClassification   @default(PROHIBITED)
   offlineApprovedAt                DateTime?
   offlineApprovedById              String?
   offlineApprovalReason            String?
@@ -3703,8 +3708,8 @@ model ProjectFile {
   historicalDownloadReason         String?
   documentResponsibleUserId        String?
   expiryEscalationUserId           String?
-  createdAt                        DateTime                      @default(now())
-  officialExerciseReport           ExerciseReport?               @relation("ExerciseReportOfficialFile")
+  createdAt                        DateTime                        @default(now())
+  officialExerciseReport           ExerciseReport?                 @relation("ExerciseReportOfficialFile")
   lifecycleEvents                  ProjectFileLifecycleEvent[]
   offlineLeases                    OfflineDocumentLease[]
   expiryReminders                  ProjectFileExpiryReminder[]
@@ -3712,6 +3717,7 @@ model ProjectFile {
   knowledgeCitations               ProjectFileKnowledgeCitation[]
 
   @@index([organizationId, projectId, lifecycleState])
+  @@index([buildingId, lifecycleState])
   @@index([expiresAt])
   @@index([organizationId, parentId, effectiveAt])
 }
@@ -3837,7 +3843,7 @@ model ProjectFileLifecycleEvent {
   projectFileId  String
   projectFile    ProjectFile                @relation(fields: [projectFileId], references: [id], onDelete: Restrict)
   organizationId String
-  projectId      String
+  projectId      String?
   requestId      String
   action         String
   fromState      ProjectFileLifecycleState?
@@ -3881,32 +3887,32 @@ enum CoroKnowledgeAnswerStatus {
 /// Reconstructible projection of one canonical ProjectFile version.
 /// ProjectFile remains the only document and lifecycle authority.
 model ProjectFileKnowledgeIngestion {
-  id                 String                              @id @default(uuid())
-  organizationId     String
-  projectFileId      String
-  projectFile        ProjectFile                         @relation(fields: [projectFileId], references: [id], onDelete: Restrict)
-  projectId          String
-  buildingId         String
-  sourceVersion      Int
-  sourceSha256       String
-  sourceLifecycle    ProjectFileLifecycleState
-  sourceEffectiveAt  DateTime?
-  sourceExpiresAt    DateTime?
-  sourceVisibility   String
-  status             ProjectFileKnowledgeIngestionStatus @default(QUEUED)
-  extractionMethod   ProjectFileKnowledgeExtractionMethod @default(NATIVE_TEXT)
-  extractorName      String
-  extractorVersion   String
-  pipelineVersion    String
-  idempotencyKey     String                              @unique
-  attemptCount       Int                                 @default(0)
-  lastErrorCode      String?
-  indexedAt          DateTime?
-  staleAt            DateTime?
-  createdAt          DateTime                            @default(now())
-  updatedAt          DateTime                            @updatedAt
-  chunks             ProjectFileKnowledgeChunk[]
-  citations          ProjectFileKnowledgeCitation[]
+  id                String                               @id @default(uuid())
+  organizationId    String
+  projectFileId     String
+  projectFile       ProjectFile                          @relation(fields: [projectFileId], references: [id], onDelete: Restrict)
+  projectId         String?
+  buildingId        String
+  sourceVersion     Int
+  sourceSha256      String
+  sourceLifecycle   ProjectFileLifecycleState
+  sourceEffectiveAt DateTime?
+  sourceExpiresAt   DateTime?
+  sourceVisibility  String
+  status            ProjectFileKnowledgeIngestionStatus  @default(QUEUED)
+  extractionMethod  ProjectFileKnowledgeExtractionMethod @default(NATIVE_TEXT)
+  extractorName     String
+  extractorVersion  String
+  pipelineVersion   String
+  idempotencyKey    String                               @unique
+  attemptCount      Int                                  @default(0)
+  lastErrorCode     String?
+  indexedAt         DateTime?
+  staleAt           DateTime?
+  createdAt         DateTime                             @default(now())
+  updatedAt         DateTime                             @updatedAt
+  chunks            ProjectFileKnowledgeChunk[]
+  citations         ProjectFileKnowledgeCitation[]
 
   @@unique([projectFileId, sourceSha256, pipelineVersion])
   @@index([organizationId, buildingId, status])
@@ -3914,22 +3920,22 @@ model ProjectFileKnowledgeIngestion {
 }
 
 model ProjectFileKnowledgeChunk {
-  id                String                         @id @default(uuid())
-  organizationId    String
-  ingestionId       String
-  ingestion         ProjectFileKnowledgeIngestion  @relation(fields: [ingestionId], references: [id], onDelete: Cascade)
-  ordinal           Int
-  pageStart         Int
-  pageEnd           Int
-  sectionPath       String?
-  sectionTitle      String?
-  text              String
-  contentHash       String
-  tokenCountApprox  Int
-  characterCount    Int
-  embedding         Float[]
-  createdAt         DateTime                       @default(now())
-  citations         ProjectFileKnowledgeCitation[]
+  id                 String                           @id @default(uuid())
+  organizationId     String
+  ingestionId        String
+  ingestion          ProjectFileKnowledgeIngestion    @relation(fields: [ingestionId], references: [id], onDelete: Cascade)
+  ordinal            Int
+  pageStart          Int
+  pageEnd            Int
+  sectionPath        String?
+  sectionTitle       String?
+  text               String
+  contentHash        String
+  tokenCountApprox   Int
+  characterCount     Int
+  embedding          Float[]
+  createdAt          DateTime                         @default(now())
+  citations          ProjectFileKnowledgeCitation[]
   interactionSources CoroKnowledgeInteractionSource[]
 
   @@unique([ingestionId, ordinal])
@@ -3938,22 +3944,22 @@ model ProjectFileKnowledgeChunk {
 }
 
 model ProjectFileKnowledgeCitation {
-  id             String                         @id @default(uuid())
-  organizationId String
-  projectFileId  String
-  projectFile    ProjectFile                    @relation(fields: [projectFileId], references: [id], onDelete: Restrict)
-  ingestionId    String
-  ingestion      ProjectFileKnowledgeIngestion  @relation(fields: [ingestionId], references: [id], onDelete: Cascade)
-  chunkId        String
-  chunk          ProjectFileKnowledgeChunk      @relation(fields: [chunkId], references: [id], onDelete: Cascade)
-  sourceSha256   String
-  pageStart      Int
-  pageEnd        Int
-  sectionPath    String?
-  startOffset    Int?
-  endOffset      Int?
-  contentHash    String
-  createdAt      DateTime                       @default(now())
+  id                 String                           @id @default(uuid())
+  organizationId     String
+  projectFileId      String
+  projectFile        ProjectFile                      @relation(fields: [projectFileId], references: [id], onDelete: Restrict)
+  ingestionId        String
+  ingestion          ProjectFileKnowledgeIngestion    @relation(fields: [ingestionId], references: [id], onDelete: Cascade)
+  chunkId            String
+  chunk              ProjectFileKnowledgeChunk        @relation(fields: [chunkId], references: [id], onDelete: Cascade)
+  sourceSha256       String
+  pageStart          Int
+  pageEnd            Int
+  sectionPath        String?
+  startOffset        Int?
+  endOffset          Int?
+  contentHash        String
+  createdAt          DateTime                         @default(now())
   interactionSources CoroKnowledgeInteractionSource[]
 
   @@unique([ingestionId, chunkId])
@@ -3961,7 +3967,7 @@ model ProjectFileKnowledgeCitation {
 }
 
 model CoroKnowledgeInteraction {
-  id                    String                    @id @default(uuid())
+  id                    String                           @id @default(uuid())
   organizationId        String
   actorType             CoroKnowledgeActorType
   actorId               String
@@ -3971,13 +3977,13 @@ model CoroKnowledgeInteraction {
   status                CoroKnowledgeAnswerStatus
   questionFingerprint   String
   answerFingerprint     String?
-  providerCode          String                    @default("DETERMINISTIC_SIMULATED")
-  sourceCount           Int                       @default(0)
-  usedSourceCount       Int                       @default(0)
+  providerCode          String                           @default("DETERMINISTIC_SIMULATED")
+  sourceCount           Int                              @default(0)
+  usedSourceCount       Int                              @default(0)
   uncertainty           String?
-  suspiciousContent     Boolean                   @default(false)
-  correlationId         String                    @unique
-  createdAt             DateTime                  @default(now())
+  suspiciousContent     Boolean                          @default(false)
+  correlationId         String                           @unique
+  createdAt             DateTime                         @default(now())
   completedAt           DateTime?
   sources               CoroKnowledgeInteractionSource[]
 
@@ -3986,17 +3992,17 @@ model CoroKnowledgeInteraction {
 }
 
 model CoroKnowledgeInteractionSource {
-  id             String                        @id @default(uuid())
+  id             String                       @id @default(uuid())
   interactionId  String
-  interaction    CoroKnowledgeInteraction      @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  interaction    CoroKnowledgeInteraction     @relation(fields: [interactionId], references: [id], onDelete: Cascade)
   citationId     String
-  citation       ProjectFileKnowledgeCitation  @relation(fields: [citationId], references: [id], onDelete: Restrict)
+  citation       ProjectFileKnowledgeCitation @relation(fields: [citationId], references: [id], onDelete: Restrict)
   chunkId        String
-  chunk          ProjectFileKnowledgeChunk     @relation(fields: [chunkId], references: [id], onDelete: Restrict)
+  chunk          ProjectFileKnowledgeChunk    @relation(fields: [chunkId], references: [id], onDelete: Restrict)
   retrievalRank  Int
   retrievalScore Float
-  usedInAnswer   Boolean                       @default(false)
-  createdAt      DateTime                      @default(now())
+  usedInAnswer   Boolean                      @default(false)
+  createdAt      DateTime                     @default(now())
 
   @@unique([interactionId, citationId])
   @@index([citationId, createdAt])
@@ -7732,4 +7738,21 @@ model CommercialConfigurationDeployment {
   @@index([definitionCode, definitionVersion, status], map: "CommercialConfigDeployment_definition_status_idx")
   @@index([priceBookId], map: "CommercialConfigDeployment_priceBook_idx")
   @@index([costAssumptionVersionId], map: "CommercialConfigDeployment_cost_version_idx")
+}
+
+// Explicit delegation within a client's own building perimeter.
+model BuildingDocumentGrant {
+  id             String     @id @default(uuid())
+  buildingId     String
+  building       Building   @relation(fields: [buildingId], references: [id], onDelete: Restrict)
+  clientUserId   String
+  clientUser     ClientUser @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  organizationId String
+  canUpload      Boolean    @default(true)
+  grantedById    String
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([buildingId, clientUserId])
+  @@index([organizationId, buildingId])
 }
