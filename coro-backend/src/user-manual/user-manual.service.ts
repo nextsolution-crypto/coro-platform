@@ -72,7 +72,7 @@ export class UserManualService {
           coverage: matched.length / Math.max(1, terms.length),
         };
       })
-      .filter((r) => r.score > 0 && r.coverage >= 0.5)
+      .filter((r) => r.score > 0 && r.coverage >= 2 / 3)
       .sort(
         (a, b) =>
           b.score - a.score ||
