@@ -1,4 +1,6 @@
 import {
+  BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -1589,28 +1591,61 @@ export class ClientPortalService {
   }
 
   async refuseDocument(projectId: string, clientUser: any, comment: string) {
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
+    if (!['CLIENT_MANAGER', 'CLIENT_CORPORATE'].includes(clientUser.role)) {
+      throw new ForbiddenException('Permission de refus documentaire requise');
+    }
+    const refusalComment = comment?.trim();
+    if (!refusalComment) {
+      throw new BadRequestException('Un motif de refus est requis');
+    }
+
+    await this.assertProjectAccess(projectId, clientUser);
+    const project = await this.prisma.project.findFirst({
+      where: {
+        id: projectId,
+        organizationId: clientUser.organizationId,
+        ...(clientUser.role === 'CLIENT_MANAGER'
+          ? {
+              clientId: clientUser.clientId,
+              buildingId: { in: clientUser.buildingIds ?? [] },
+            }
+          : {}),
+      },
       include: { client: true, building: true, user: true },
     });
 
-    if (!project) throw new Error('Projet introuvable');
+    if (!project) throw new NotFoundException('Projet introuvable');
+    if (project.status === 'IN_PROGRESS') {
+      return { success: true, alreadyRefused: true };
+    }
+    if (!['VALIDATED', 'EXPORTED'].includes(project.status)) {
+      throw new ConflictException(
+        "L'état du projet ne permet pas un refus documentaire",
+      );
+    }
 
-    // Remettre en édition active — le client a refusé, ce n'est pas une révision interne
-    await this.prisma.project.update({
-      where: { id: projectId },
-      data: { status: 'IN_PROGRESS' },
+    const transitioned = await this.prisma.$transaction(async (tx) => {
+      const update = await tx.project.updateMany({
+        where: {
+          id: projectId,
+          organizationId: clientUser.organizationId,
+          status: { in: ['VALIDATED', 'EXPORTED'] },
+        },
+        data: { status: 'IN_PROGRESS' },
+      });
+      if (update.count !== 1) return false;
+      await tx.projectComment.create({
+        data: {
+          projectId,
+          actorType: 'CLIENT_USER',
+          clientUserId: clientUser.sub,
+          organizationId: project.organizationId,
+          contenu: `[Refus client] ${refusalComment}`,
+        },
+      });
+      return true;
     });
-
-    // Sauvegarder le commentaire — utiliser l'userId du conseiller responsable du projet
-    await this.prisma.projectComment.create({
-      data: {
-        projectId,
-        userId: project.userId,
-        organizationId: project.organizationId,
-        contenu: `[Refus client - ${clientUser.email}] ${comment}`,
-      },
-    });
+    if (!transitioned) return { success: true, alreadyRefused: true };
 
     // Notifier le conseiller par email
     try {
@@ -1620,7 +1655,7 @@ export class ClientPortalService {
           toName: `${project.user.firstName} ${project.user.lastName}`,
           projectName: project.name,
           clientName: project.client.name,
-          comment,
+          comment: refusalComment,
           portalUrl: 'https://app.getcoro.io',
         });
       }
@@ -1642,7 +1677,7 @@ export class ClientPortalService {
       console.error('Erreur notification refus:', e);
     }
 
-    return { success: true };
+    return { success: true, alreadyRefused: false };
   }
 
   async addComment(
