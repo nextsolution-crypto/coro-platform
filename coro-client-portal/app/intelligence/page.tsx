@@ -46,6 +46,7 @@ export default function IntelligencePage() {
 
   const [data, setData]         = useState<any>(null);
   const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState<string | null>(null);
   const [filter, setFilter]     = useState<'all' | 'CRITICAL' | 'WARNING' | 'INFO'>('all');
   const [buildingFilter, setBuildingFilter] = useState<string>('all');
   const [lastUpdate, setLastUpdate]   = useState<Date | null>(null);
@@ -93,11 +94,16 @@ export default function IntelligencePage() {
 
   const fetchData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await clientFetch('/client-portal/intelligence/overview');
       setData(res);
       setLastUpdate(new Date());
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      setData(null);
+      setError("L'intelligence organisationnelle est temporairement indisponible.");
+    }
     finally { setLoading(false); }
   };
 
@@ -109,7 +115,43 @@ export default function IntelligencePage() {
     </PortalLayout>
   );
 
-  if (!data) return null;
+  if (error || !data) return (
+    <PortalLayout>
+      <div
+        role="alert"
+        style={{
+          maxWidth: 680,
+          margin: '32px auto',
+          padding: 24,
+          border: '1px solid #F1948A',
+          borderRadius: 12,
+          backgroundColor: '#FDEDEC',
+          color: '#922B21',
+        }}
+      >
+        <h1 style={{ margin: '0 0 8px', fontSize: 20 }}>Intelligence indisponible</h1>
+        <p style={{ margin: '0 0 16px', lineHeight: 1.5 }}>
+          {error || "Les données autorisées n'ont pas pu être chargées."}
+        </p>
+        <button
+          type="button"
+          onClick={fetchData}
+          style={{
+            minHeight: 44,
+            padding: '10px 16px',
+            border: '1px solid #922B21',
+            borderRadius: 8,
+            backgroundColor: '#FFFFFF',
+            color: '#922B21',
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          Réessayer
+        </button>
+      </div>
+    </PortalLayout>
+  );
 
   const globalScfg = STATUS_CONFIG[data.globalStatus as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.CRITICAL;
 
