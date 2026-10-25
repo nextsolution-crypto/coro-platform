@@ -2,8 +2,10 @@
 
 Date : 25 octobre 2026
 
-Branche candidate : `feature/sentinelle-simultaneous-presence`
-Base : `148324aced8f2a7fcaf3dbe5f531f41456e2f81c`
+Branche de réalisation : `feature/sentinelle-simultaneous-presence`
+Commits de réalisation : `bac1e0fa`, `66f70ec9`
+PR : `#72`
+Commit fusionné et déployé : `4bbcd8f5842c25115cc214d7265d65d950c9fc9b`
 
 ## Flux utilisateur retenu
 
@@ -44,7 +46,7 @@ la base ne conserve que son SHA-256. Le PIN et l'identité ne sont pas persisté
 dans le navigateur. Le chemin PIN statique antérieur refuse désormais toute
 mutation et invite à scanner le QR courant.
 
-## Preuves candidate
+## Preuves d'acceptation
 
 | Contrôle | Résultat | Preuve |
 |---|---|---|
@@ -93,6 +95,25 @@ ne sont pas rouverts.
 
 ## État de livraison
 
-La candidate est validée localement et en QA synthétique. Aucun commit, PR,
-déploiement ou mutation de production n'est encore revendiqué dans ce document.
+La correction a été publiée par la PR `#72`, puis déployée par le workflow
+gouverné `40221424378`, conclu `SUCCESS`. L'inspection post-release en lecture
+seule `40222413709` est également conclue `SUCCESS` avec
+`inspectionExecution: PASS` et `releaseReadiness: GO`.
+
+État vérifié après release :
+
+- SHA actif : `4bbcd8f5842c25115cc214d7265d65d950c9fc9b`;
+- PostgreSQL : 155 migrations, head
+  `20261109010000_sentinelle_presence_sessions`;
+- sauvegarde : `REMOTE_VERIFIED`, empreinte distante vérifiée et VersionId
+  présent;
+- restauration : `RESTORE_VERIFIED`;
+- rollback : quatre images disponibles;
+- release : `SUCCEEDED`, étape `COMPLETED`, verrou de déploiement libre;
+- preuve assainie :
+  `D:\CORO-QA\tracking\client-portal\sentinelle-simultaneous-presence\2026-10-25\post-release\production-inspection-report.json`.
+
+La preuve navigateur 12/12 demeure une preuve QA synthétique authentifiée. La
+production a fait l'objet d'une inspection technique en lecture seule; aucune
+présence réelle, invitation externe ou opération d'urgence n'a été déclenchée.
 Le verdict commercial global demeure `PILOTE ENCADRÉ`.
