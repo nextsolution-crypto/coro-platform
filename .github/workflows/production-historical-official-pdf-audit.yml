@@ -1,0 +1,56 @@
+name: Audit Historical Official PDFs Read Only
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: node --test ops/maintenance/historical-official-pdf-audit.test.cjs
+
+  audit:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Validate pinned host identity
+        env:
+          HOST_FINGERPRINT: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+        run: '[[ "$HOST_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]'
+      - name: Execute aggregate read-only audit
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            script="$(mktemp /tmp/coro-historical-pdf-audit.XXXXXX.cjs)"
+            evidence="$(mktemp /tmp/coro-historical-pdf-audit.XXXXXX.json)"
+            trap 'rm -f -- "$script" "$evidence"' EXIT
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
+            git -C "$repo" show "$SOURCE_SHA:ops/maintenance/historical-official-pdf-audit.cjs" >"$script"
+            cd "$repo"
+            docker compose exec -T backend node - <"$script" >"$evidence"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||r.readOnly!==true)process.exit(1);const s=JSON.stringify(r);if(/https?:|coro-private|documents\/|@|projectId|organizationId/i.test(s))process.exit(1);' "$evidence"
+            cat "$evidence"
+      - name: Record evidence boundary
+        if: always()
+        run: echo 'Only aggregate counts are emitted; references, content and personal identifiers remain undisclosed.'
