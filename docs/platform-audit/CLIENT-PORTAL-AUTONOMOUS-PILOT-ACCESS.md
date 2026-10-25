@@ -15,10 +15,11 @@ Verdict commercial maintenu : `PILOTE ENCADRÉ`
 ## Mécanisme d’activation
 
 La variable serveur `CLIENT_PORTAL_RESTRICTED_PILOT_ORGANIZATION_IDS` contient
-la liste explicite des organisations admises au pilote restreint. Elle n’est ni
-exposée ni modifiable par les comptes clients. Les organisations absentes
-conservent leurs droits historiques. Ce contrôle complète les autorisations
-tenant, client, bâtiment et ressource existantes; il ne les remplace pas.
+la liste explicite des organisations auxquelles les restrictions du pilote sont
+appliquées. Elle n’accorde aucun accès au portail, n’est ni exposée ni modifiable
+par les comptes clients. Les organisations absentes conservent leurs droits et
+leur comportement historiques. Ce contrôle complète les autorisations tenant,
+client, bâtiment et ressource existantes; il ne les remplace pas.
 
 ## Conditions de clôture
 
@@ -77,8 +78,8 @@ dans le nom de migration a été corrigé séparément par les PR `#61`, `#62` e
 
 Cette décision signifie que les quatre contrôles techniques sont démontrés et
 déployés. Elle n’ouvre pas le pilote : aucune organisation ni aucun participant
-n’a été activé. L’ouverture exige encore la sélection formelle des
-organisations et la configuration gouvernée de leurs identifiants, ainsi que
-les champs opérationnels encore marqués « À COMPLÉTER » dans la fiche
-d’exploitation. Le verdict commercial reste `PILOTE ENCADRÉ` et ne constitue
-pas une validation commerciale générale.
+n’a été activé. L’ouverture exige encore la sélection formelle des organisations,
+la configuration gouvernée de leurs identifiants et l’approbation de la fiche
+unique [CLIENT-PORTAL-PILOT-OPERATING-SHEET.md](./CLIENT-PORTAL-PILOT-OPERATING-SHEET.md).
+Le verdict commercial reste `PILOTE ENCADRÉ` et ne constitue pas une validation
+commerciale générale.
