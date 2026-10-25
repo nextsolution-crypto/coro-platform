@@ -8,11 +8,29 @@ import { IncidentController } from './incident.controller';
 import { PrismaService } from '../prisma/prisma.service';
 import { PopulationModule } from '../population/population.module';
 import { IncidentNotificationDispatcherService } from './incident-notification-dispatcher.service';
+import { PresenceFlowService } from './presence-flow.service';
 
 @Module({
   imports: [PopulationModule],
-  controllers: [OccupancyController, OccupancyEmployeesController, IncidentController],
-  providers: [OccupancyService, OccupancyEmployeesService, IncidentService, IncidentNotificationDispatcherService, PrismaService],
-  exports: [OccupancyService, OccupancyEmployeesService, IncidentService, IncidentNotificationDispatcherService],
+  controllers: [
+    OccupancyController,
+    OccupancyEmployeesController,
+    IncidentController,
+  ],
+  providers: [
+    OccupancyService,
+    OccupancyEmployeesService,
+    PresenceFlowService,
+    IncidentService,
+    IncidentNotificationDispatcherService,
+    PrismaService,
+  ],
+  exports: [
+    OccupancyService,
+    OccupancyEmployeesService,
+    PresenceFlowService,
+    IncidentService,
+    IncidentNotificationDispatcherService,
+  ],
 })
 export class OccupancyModule {}
