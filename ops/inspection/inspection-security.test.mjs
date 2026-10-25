@@ -886,6 +886,8 @@ test("workflow has no command input and uses the dedicated inspection identity",
   assert.match(source, /schemaPhase/);
   assert.match(source, /mainFreezeReadiness/);
   assert.match(source, />"\$RUNNER_TEMP\/production-inspection-report\.json"/);
+  assert.match(source, /h!==mh\.at\(-1\)\?\.name/);
+  assert.match(source, /replaceAll\(JSON\.stringify\(h\)/);
   assert.doesNotMatch(
     source,
     /username: root|production-release|docker compose/,
@@ -903,7 +905,7 @@ test("maintenance workflow is pinned to two inspector files and has no remote co
   assert.match(source, /environment: production/);
   assert.match(
     source,
-    /AUTHORIZED_SOURCE_SHA: d8e2e87a3ab605eb802bfcc4ba2efd2eca794720/,
+    /AUTHORIZED_SOURCE_SHA: 7a4258a0523bea7ca3689475718dc95cfd802fdc/,
   );
   assert.match(source, /uses: appleboy\/ssh-action@v1\.0\.3/);
   assert.match(source, /Validate pinned ECDSA host fingerprint/);
