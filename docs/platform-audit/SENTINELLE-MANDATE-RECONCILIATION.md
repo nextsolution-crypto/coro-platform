@@ -16,7 +16,7 @@ Version produit inspectée au départ : `4bbcd8f5842c25115cc214d7265d65d950c9fc9
 | Plusieurs affichages par bâtiment | VALIDÉ | Deux `PresenceKioskDisplay` nommés pour un même bâtiment, listés et utilisés dans le scénario PostgreSQL. |
 | Transaction commencée avant rotation du QR | VALIDÉ | Le challenge est requis au démarrage; la transaction possède ensuite sa propre échéance de cinq minutes. Test PostgreSQL après expiration/rotation du challenge. |
 | Historique avancé | VALIDÉ | Autorisation bâtiment/tenant déjà couverte; état d'erreur distinct de l'état vide et reprise; Chrome authentifié 12/12. |
-| Rapports d'évacuation avancés | NOT_VERIFIED | Route, autorisation et erreurs liste/détail explicites validées en Chrome 12/12. Aucun rapport peuplé issu d'un exercice synthétique n'a été ouvert/exporté; aucun exercice d'urgence réel n'a été déclenché. |
+| Rapports d'évacuation avancés | VALIDÉ | Exercice QA sans alarme : quatre présences synthétiques (deux employés, un visiteur, un contracteur), deux personnes comptabilisées et deux manquantes. Cohérence API/PostgreSQL `7/7`, refus inter-tenant et anonyme, ouverture Chrome et export PDF lisible, erreur 503 puis reprise, matrice responsive/thèmes `12/12`. |
 | Exactitude de l'indice de résilience | VALIDÉ | Test déterministe des composantes rôles 40 %, qualifications 20 %, plans 25 %, exercices 15 %, ainsi que du cas sans sources (score 0, état critique). |
 | Récupération par mot de passe oublié | VALIDÉ | Fournisseur simulé : réponse anti-énumération, jeton SHA-256, durée 30 min, claim atomique, politique de mot de passe, révocation des sessions et appareils. Livraison courriel réelle non vérifiée. |
 | Magic link | VALIDÉ | Jeton nouvellement stocké en SHA-256, consommation atomique, refus des identités inactives/rejeux, session versionnée; compatibilité des anciens liens limitée à leur durée maximale de 72 h. Livraison réelle non vérifiée. |
@@ -46,6 +46,9 @@ Version produit inspectée au départ : `4bbcd8f5842c25115cc214d7265d65d950c9fc9
 - Build des images candidates backend et Client Portal : PASS.
 - Chrome authentifié : `12/12`, quatre viewports × Classic/Glass Light/Glass
   Dark, plus `7/7` états de panne.
+- Rapport d'évacuation peuplé : API/PostgreSQL `7/7`, navigateur `13/13`
+  (matrice `12/12` et erreur/reprise), PDF A4 d'une page ouvert, extrait et
+  rendu visuellement. Aucun appel d'alarme ou fournisseur externe.
 - Preuves assainies :
   `D:\CORO-QA\tracking\client-portal\sentinelle-reconciliation\2026-10-25`.
 
@@ -57,7 +60,9 @@ n'est pas utilisé pour rouvrir une campagne indépendante.
 
 - Courriel/récupération : comportement applicatif validé avec adaptateur ou
   panne simulée; `REAL_EMAIL_DELIVERY: NOT_VERIFIED`.
-- Carte : `REAL_MAP_DEPENDENCIES: NOT_VERIFIED`.
+- Carte : `REAL_MAP_DEPENDENCIES: NOT_VERIFIED`; fournisseur actuel documenté
+  dans `SENTINELLE-MAP-PROVIDER-FACT-SHEET.md` (Leaflet via UNPKG, tuiles
+  OpenStreetMap, sans clé ni SLA démontré).
 - Aucun SMS, courriel réel, participant réel ni opération d'urgence n'a été
   déclenché.
 - Appareil personnel : mémorisation facultative et révocable.

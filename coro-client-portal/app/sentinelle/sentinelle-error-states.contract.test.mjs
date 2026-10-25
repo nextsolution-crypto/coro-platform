@@ -27,3 +27,10 @@ test('advanced report list and detail failures are not displayed as empty data',
   assert.match(reportsSource, /role="alert"/);
   assert.match(reportsSource, /Réessayer/);
 });
+
+test('populated evacuation reports remain responsive and preserve a zero-minute duration', () => {
+  assert.match(reportsSource, /evacuation-report-layout/);
+  assert.match(reportsSource, /@media \(max-width: 760px\)/);
+  assert.match(reportsSource, /grid-template-columns: minmax\(0, 1fr\) !important/);
+  assert.match(reportsSource, /durationMinutes !== null && selected\.durationMinutes !== undefined/);
+});
