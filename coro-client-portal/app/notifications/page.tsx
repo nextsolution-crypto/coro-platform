@@ -16,6 +16,7 @@ export default function NotificationsPage() {
   const [user, setUser] = useState<any>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     const currentUser = getUser();
@@ -25,11 +26,14 @@ export default function NotificationsPage() {
   }, [router]);
 
   const fetchNotifications = async () => {
+    setLoadError('');
+    setLoading(true);
     try {
       const res = await apiGet('/client-portal/notifications');
       setNotifications(res || []);
     } catch (err) {
       console.error(err);
+      setLoadError('Impossible de charger les notifications. Réessayez après avoir vérifié votre connexion.');
     } finally {
       setLoading(false);
     }
@@ -61,13 +65,20 @@ export default function NotificationsPage() {
         </h1>
       </header>
 
-      {notifications.length === 0 ? (
+      {loadError && (
+        <div role="alert" style={{ marginBottom: 20, padding: 16, border: '1px solid #F1948A', borderRadius: 10, backgroundColor: '#FDEDEC', color: '#922B21' }}>
+          <p style={{ margin: '0 0 10px' }}>{loadError}</p>
+          <button type="button" onClick={() => void fetchNotifications()} style={{ minHeight: 44, padding: '8px 14px' }}>Réessayer</button>
+        </div>
+      )}
+
+      {!loadError && notifications.length === 0 ? (
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF', padding: 64, textAlign: 'center' }}>
           <Bell size={40} color="#DEE2E6" style={{ margin: '0 auto 16px' }} />
           <p style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 600, color: '#6C757D' }}>Aucune notification</p>
           <p style={{ margin: 0, fontSize: 14, color: '#ADB5BD' }}>Tous vos documents sont à jour.</p>
         </div>
-      ) : (
+      ) : !loadError ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
           {/* Priorité haute */}
@@ -106,7 +117,7 @@ export default function NotificationsPage() {
             </section>
           )}
         </div>
-      )}
+      ) : null}
     </PortalLayout>
   );
 }
