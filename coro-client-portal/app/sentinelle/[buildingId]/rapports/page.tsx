@@ -61,7 +61,9 @@ export default function RapportsPage() {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
     });
-    const duration = selected.durationMinutes ? `${selected.durationMinutes} minutes` : 'En cours';
+    const duration = selected.durationMinutes !== null && selected.durationMinutes !== undefined
+      ? `${selected.durationMinutes} minutes`
+      : 'En cours';
     const pct = selected.totalPresent > 0
       ? Math.round((selected.accounted / selected.totalPresent) * 100)
       : 0;
@@ -176,7 +178,7 @@ export default function RapportsPage() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: selected ? '300px 1fr' : '1fr', gap: 20 }}>
+      <div className="evacuation-report-layout" style={{ display: 'grid', gridTemplateColumns: selected ? 'minmax(0, 300px) minmax(0, 1fr)' : 'minmax(0, 1fr)', gap: 20 }}>
         {/* Liste évacuations */}
         <section style={{ backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF', overflow: 'hidden', alignSelf: 'start' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #E9ECEF' }}>
@@ -224,9 +226,9 @@ export default function RapportsPage() {
         {/* Détail */}
         {selected && (
           <section style={{ backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF', overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E9ECEF', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="evacuation-report-header" style={{ padding: '16px 20px', borderBottom: '1px solid #E9ECEF', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
               <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#2C3E50' }}>Rapport détaillé</h2>
-              <button type="button" onClick={handleExportPDF}
+              <button className="evacuation-report-export" type="button" onClick={handleExportPDF}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: 'none', backgroundColor: '#C0392B', color: '#FFFFFF', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                 <FileText size={13} /> Exporter PDF
               </button>
@@ -237,12 +239,12 @@ export default function RapportsPage() {
               </div>
             ) : (
               <div style={{ padding: 20 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 20 }}>
+                <div className="evacuation-report-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10, marginBottom: 20 }}>
                   {[
                     { label: 'Présents', value: selected.totalPresent, color: '#2C3E50' },
                     { label: 'Comptabilisés', value: selected.accounted, color: '#27AE60' },
                     { label: 'Manquants', value: selected.missing, color: '#C0392B' },
-                    { label: 'Durée', value: selected.durationMinutes ? `${selected.durationMinutes}m` : '—', color: '#6C757D' },
+                    { label: 'Durée', value: selected.durationMinutes !== null && selected.durationMinutes !== undefined ? `${selected.durationMinutes}m` : '—', color: '#6C757D' },
                   ].map(s => (
                     <div key={s.label} style={{ backgroundColor: '#F8F9FA', borderRadius: 10, padding: '12px', textAlign: 'center' }}>
                       <p style={{ margin: 0, fontSize: 22, fontWeight: 900, color: s.color, lineHeight: 1 }}>{s.value}</p>
@@ -255,7 +257,7 @@ export default function RapportsPage() {
                     const r = c.occupantRecord;
                     if (!r) return null;
                     return (
-                      <div key={c.id} style={{
+                      <div className="evacuation-report-person" key={c.id} style={{
                         padding: '10px 14px', borderRadius: 8,
                         backgroundColor: c.isAccountedFor ? '#EAFAF1' : '#FDEDEC',
                         display: 'flex', alignItems: 'center', gap: 10,
@@ -264,7 +266,7 @@ export default function RapportsPage() {
                           ? <CheckCircle size={16} color="#27AE60" style={{ flexShrink: 0 }} />
                           : <AlertTriangle size={16} color="#C0392B" style={{ flexShrink: 0 }} />
                         }
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: '1 1 150px', minWidth: 0 }}>
                           <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#2C3E50' }}>{r.firstName} {r.lastName}</p>
                           <p style={{ margin: '2px 0 0', fontSize: 11, color: '#6C757D' }}>{r.type}{r.company ? ` · ${r.company}` : ''}</p>
                         </div>
@@ -280,6 +282,27 @@ export default function RapportsPage() {
           </section>
         )}
       </div>
+      <style jsx>{`
+        @media (max-width: 760px) {
+          .evacuation-report-layout {
+            grid-template-columns: minmax(0, 1fr) !important;
+          }
+          .evacuation-report-header {
+            align-items: flex-start !important;
+            flex-wrap: wrap;
+          }
+          .evacuation-report-export {
+            min-height: 44px;
+          }
+          .evacuation-report-stats {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+          .evacuation-report-person {
+            align-items: flex-start !important;
+            flex-wrap: wrap;
+          }
+        }
+      `}</style>
     </PortalLayout>
   );
 }
