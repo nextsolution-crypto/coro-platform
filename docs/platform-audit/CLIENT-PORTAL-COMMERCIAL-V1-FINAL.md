@@ -59,7 +59,9 @@ Le provisionnement demeure une opération CORO gouvernée : organisation et clie
 - Inspection après l'arrêt : run `40236035556`, `GO`; production inchangée sur `c5adf5d4586879a7875abc4ea5be93fdda775115`, 155 migrations, services sains, sauvegarde `REMOTE_VERIFIED`, restauration `RESTORE_VERIFIED` et quatre images de rollback disponibles.
 - Audit capacité : run `40236091898`; 19 555 102 720 octets libres pour 19 700 723 075 requis, soit un déficit de 145 620 355 octets.
 - Maintenance gouvernée : dry-run `40236196093`, puis exécution `40236267787`; 32 images de cache non référencées âgées d'au moins 12 heures supprimées, aucune image active ou de rollback touchée, espace libre porté à 38 285 385 728 octets.
-- La release ayant un état terminal `FAILED`, le présent successeur documentaire constitue le nouveau candidat traçable; aucun état de release n'est réinitialisé ni contourné.
+- La release ayant un état terminal `FAILED`, aucun état n'a été réinitialisé ni contourné. Le successeur documentaire a été fusionné par la PR `#79` dans `43e58ea90656b100c02561397eec75e4ac0b91db`.
+- Release successeur : run `40236972004`, `SUCCESS`; les quatre images immuables ont été construites et la release réconciliée.
+- Inspection post-release : run `40237897714`, `GO/PASS`; SHA actif `43e58ea90656b100c02561397eec75e4ac0b91db`, 155 migrations sans échec, sauvegarde `REMOTE_VERIFIED`, restauration `RESTORE_VERIFIED`, quatre images de rollback, verrou de déploiement libre et disque à 57 %.
 
 ## Réserves actionnables
 
