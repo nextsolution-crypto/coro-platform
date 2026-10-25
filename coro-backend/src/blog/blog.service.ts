@@ -31,8 +31,12 @@ export class BlogService {
   }
 
   async findPublished() {
+    const now = new Date();
     return this.prisma.blogPost.findMany({
-      where: { isPublished: true },
+      where: {
+        isPublished: true,
+        publishedAt: { not: null, lte: now },
+      },
       orderBy: { publishedAt: 'desc' },
       select: {
         id: true,
@@ -50,9 +54,40 @@ export class BlogService {
     });
   }
 
+  async findPublishedForFeed() {
+    const now = new Date();
+    return this.prisma.blogPost.findMany({
+      where: {
+        isPublished: true,
+        publishedAt: { not: null, lte: now },
+      },
+      orderBy: [{ publishedAt: 'desc' }, { id: 'asc' }],
+      select: {
+        id: true,
+        slug: true,
+        titleFr: true,
+        titleEn: true,
+        excerptFr: true,
+        excerptEn: true,
+        contentFr: true,
+        contentEn: true,
+        coverImage: true,
+        category: true,
+        authorName: true,
+        authorTitle: true,
+        publishedAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
   async findBySlug(slug: string) {
-    return this.prisma.blogPost.findUnique({
-      where: { slug },
+    return this.prisma.blogPost.findFirst({
+      where: {
+        slug,
+        isPublished: true,
+        publishedAt: { not: null, lte: new Date() },
+      },
     });
   }
 
