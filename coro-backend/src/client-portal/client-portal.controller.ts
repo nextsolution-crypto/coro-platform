@@ -433,13 +433,8 @@ export class ClientPortalController {
     }
 
     try {
-      const remoteResponse = await fetch(pdfUrl, { redirect: 'follow' });
-
-      if (!remoteResponse.ok) {
-        throw new Error(`Stockage distant: HTTP ${remoteResponse.status}`);
-      }
-
-      const pdfBuffer = Buffer.from(await remoteResponse.arrayBuffer());
+      const pdfBuffer =
+        await this.clientPortalService.downloadOfficialPdf(pdfUrl);
 
       if (
         pdfBuffer.length < 5 ||

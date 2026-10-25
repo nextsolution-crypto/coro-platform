@@ -16,6 +16,7 @@ import type { ExportOptions } from './export.service';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { projectAccessWhere } from '../auth/project-access';
+import { StorageService } from '../storage/storage.service';
 
 @Controller('projects/:projectId/export')
 @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
@@ -24,6 +25,7 @@ export class ExportController {
     private readonly exportService: ExportService,
     private readonly auditService: AuditService,
     private readonly prisma: PrismaService,
+    private readonly storageService: StorageService,
   ) {}
 
   @Post()
@@ -176,7 +178,8 @@ export class ExportController {
     }
 
     try {
-      const pdfBuffer = await this.fetchPdfBuffer(pdfUrl);
+      const pdfBuffer =
+        await this.storageService.downloadOfficialPdfReference(pdfUrl);
 
       const documentType = this.sanitizeFilenamePart(
         project.documentType || 'DOCUMENT',
@@ -209,22 +212,6 @@ export class ExportController {
         message: 'Impossible de récupérer le PDF officiel',
       });
     }
-  }
-
-  private async fetchPdfBuffer(url: string): Promise<Buffer> {
-    const response = await fetch(url, { redirect: 'follow' });
-
-    if (!response.ok) {
-      throw new Error(`Stockage distant: HTTP ${response.status}`);
-    }
-
-    const buffer = Buffer.from(await response.arrayBuffer());
-
-    if (buffer.length < 5 || buffer.subarray(0, 5).toString('ascii') !== '%PDF-') {
-      throw new Error('Le fichier distant récupéré n’est pas un PDF valide');
-    }
-
-    return buffer;
   }
 
   private sanitizeFilenamePart(value: string): string {

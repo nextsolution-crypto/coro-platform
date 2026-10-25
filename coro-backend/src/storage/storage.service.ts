@@ -5,6 +5,8 @@ import * as crypto from 'crypto';
 
 @Injectable()
 export class StorageService {
+  private static readonly OFFICIAL_PDF_REFERENCE_PREFIX = 'coro-private:v1:';
+  private static readonly MAX_OFFICIAL_PDF_BYTES = 50 * 1024 * 1024;
   private readonly logger = new Logger(StorageService.name);
   private readonly endpoint =
     process.env.DO_SPACES_ENDPOINT || 'https://tor1.digitaloceanspaces.com';
@@ -251,6 +253,173 @@ export class StorageService {
 
   async downloadPrivate(storageKey: string): Promise<Buffer> {
     return this.privateRequest('GET', storageKey);
+  }
+
+  async storeOfficialPdfImmutable(input: {
+    organizationId: string;
+    projectId: string;
+    projectVersionId: string;
+    language: 'fr' | 'en';
+    bytes: Buffer;
+  }): Promise<string> {
+    this.assertPdf(input.bytes);
+    const storageKey = [
+      `tenant-${this.safeKeyPart(input.organizationId)}`,
+      'official-project-pdfs',
+      this.safeKeyPart(input.projectId),
+      this.safeKeyPart(input.projectVersionId),
+      `${input.language}.pdf`,
+    ].join('/');
+
+    try {
+      const existing = await this.downloadPrivate(storageKey);
+      if (!this.buffersEqual(existing, input.bytes)) {
+        throw new Error('OFFICIAL_PDF_IMMUTABLE_CONFLICT');
+      }
+    } catch (error: unknown) {
+      if (
+        !(error instanceof Error) ||
+        error.message !== 'PRIVATE_OBJECT_NOT_FOUND'
+      ) {
+        throw error;
+      }
+      try {
+        await this.uploadPrivateImmutable(
+          input.bytes,
+          storageKey,
+          'application/pdf',
+        );
+      } catch (uploadError: unknown) {
+        if (
+          !(uploadError instanceof Error) ||
+          uploadError.message !== 'PRIVATE_OBJECT_ALREADY_EXISTS'
+        ) {
+          throw uploadError;
+        }
+        const racedObject = await this.downloadPrivate(storageKey);
+        if (!this.buffersEqual(racedObject, input.bytes)) {
+          throw new Error('OFFICIAL_PDF_IMMUTABLE_CONFLICT');
+        }
+      }
+    }
+
+    return `${StorageService.OFFICIAL_PDF_REFERENCE_PREFIX}${Buffer.from(
+      storageKey,
+      'utf8',
+    ).toString('base64url')}`;
+  }
+
+  async downloadOfficialPdfReference(reference: string): Promise<Buffer> {
+    const prefix = StorageService.OFFICIAL_PDF_REFERENCE_PREFIX;
+    let bytes: Buffer;
+    if (reference.startsWith(prefix)) {
+      const encoded = reference.slice(prefix.length);
+      if (!encoded || !/^[A-Za-z0-9_-]+$/.test(encoded)) {
+        throw new Error('INVALID_PRIVATE_OFFICIAL_PDF_REFERENCE');
+      }
+      const storageKey = Buffer.from(encoded, 'base64url').toString('utf8');
+      if (
+        !/^tenant-[A-Za-z0-9._-]+\/official-project-pdfs\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\/(fr|en)\.pdf$/.test(
+          storageKey,
+        )
+      ) {
+        throw new Error('INVALID_PRIVATE_OFFICIAL_PDF_REFERENCE');
+      }
+      bytes = await this.downloadPrivate(storageKey);
+    } else {
+      bytes = await this.downloadHistoricalOfficialPdf(reference);
+    }
+    this.assertPdf(bytes);
+    return bytes;
+  }
+
+  private async downloadHistoricalOfficialPdf(
+    reference: string,
+  ): Promise<Buffer> {
+    let candidate: URL;
+    let allowedOrigin: URL;
+    try {
+      candidate = new URL(reference);
+      allowedOrigin = new URL(this.cdnUrl);
+    } catch {
+      throw new Error('UNSUPPORTED_HISTORICAL_OFFICIAL_PDF_REFERENCE');
+    }
+    if (
+      candidate.protocol !== 'https:' ||
+      candidate.origin !== allowedOrigin.origin ||
+      candidate.username ||
+      candidate.password ||
+      candidate.search ||
+      candidate.hash ||
+      !candidate.pathname.startsWith('/documents/')
+    ) {
+      throw new Error('UNSUPPORTED_HISTORICAL_OFFICIAL_PDF_REFERENCE');
+    }
+
+    return new Promise((resolve, reject) => {
+      const request = https.request(
+        {
+          protocol: 'https:',
+          hostname: candidate.hostname,
+          port: candidate.port || undefined,
+          path: candidate.pathname,
+          method: 'GET',
+          timeout: 10_000,
+          headers: { Accept: 'application/pdf' },
+        },
+        (response) => {
+          if (response.statusCode !== 200) {
+            response.resume();
+            return reject(
+              new Error(
+                `Historical storage GET failed: ${response.statusCode}`,
+              ),
+            );
+          }
+          const chunks: Buffer[] = [];
+          let size = 0;
+          response.on('data', (chunk) => {
+            size += chunk.length;
+            if (size > StorageService.MAX_OFFICIAL_PDF_BYTES) {
+              response.destroy(new Error('OFFICIAL_PDF_TOO_LARGE'));
+              return;
+            }
+            chunks.push(Buffer.from(chunk));
+          });
+          response.on('end', () => resolve(Buffer.concat(chunks)));
+          response.on('error', reject);
+        },
+      );
+      request.on('timeout', () =>
+        request.destroy(new Error('OFFICIAL_PDF_TIMEOUT')),
+      );
+      request.on('error', reject);
+      request.end();
+    });
+  }
+
+  private safeKeyPart(value: string): string {
+    if (!/^[A-Za-z0-9._-]+$/.test(value)) {
+      throw new Error('INVALID_OFFICIAL_PDF_STORAGE_ID');
+    }
+    return value;
+  }
+
+  private buffersEqual(left: Buffer, right: Buffer): boolean {
+    if (left.length !== right.length) return false;
+    const leftHash = crypto.createHash('sha256').update(left).digest();
+    const rightHash = crypto.createHash('sha256').update(right).digest();
+    return crypto.timingSafeEqual(leftHash, rightHash);
+  }
+
+  private assertPdf(bytes: Buffer): void {
+    if (
+      bytes.length < 5 ||
+      bytes.length > StorageService.MAX_OFFICIAL_PDF_BYTES ||
+      bytes.subarray(0, 5).toString('ascii') !== '%PDF-'
+    ) {
+      throw new Error('INVALID_OFFICIAL_PDF');
+    }
   }
 
   async uploadFile(

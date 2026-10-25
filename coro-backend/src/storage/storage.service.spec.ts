@@ -226,4 +226,105 @@ describe('StorageService public/private separation', () => {
       'Credential=qa-access-key/',
     );
   });
+
+  it('stocke un PDF officiel sous une cle privee deterministe et retourne une reference opaque', async () => {
+    enableQaStorage();
+    const bytes = Buffer.from('%PDF-official');
+    const request = mockHttpRequests([
+      { statusCode: 404 },
+      { statusCode: 404 },
+      { statusCode: 200 },
+      { statusCode: 200, response: bytes },
+    ]);
+    const reference = await new StorageService().storeOfficialPdfImmutable({
+      organizationId: 'org-a',
+      projectId: 'project-a',
+      projectVersionId: 'version-1',
+      language: 'fr',
+      bytes,
+    });
+
+    expect(reference).toMatch(/^coro-private:v1:/);
+    expect(reference).not.toContain('http');
+    expect(requestOptions(request, 2)).toMatchObject({
+      method: 'PUT',
+      path: '/coro-private-qa/tenant-org-a/official-project-pdfs/project-a/version-1/fr.pdf',
+    });
+    expect(requestOptions(request, 2).headers['x-amz-acl']).toBeUndefined();
+  });
+
+  it('reutilise sans ecriture un PDF officiel identique lors d une reprise', async () => {
+    enableQaStorage();
+    const bytes = Buffer.from('%PDF-official');
+    const request = mockHttpRequests([{ statusCode: 200, response: bytes }]);
+    await expect(
+      new StorageService().storeOfficialPdfImmutable({
+        organizationId: 'org-a',
+        projectId: 'project-a',
+        projectVersionId: 'version-1',
+        language: 'en',
+        bytes,
+      }),
+    ).resolves.toMatch(/^coro-private:v1:/);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(requestOptions(request, 0).method).toBe('GET');
+  });
+
+  it('refuse de remplacer un PDF officiel existant dont le contenu diverge', async () => {
+    enableQaStorage();
+    const request = mockHttpRequests([
+      { statusCode: 200, response: Buffer.from('%PDF-existing') },
+    ]);
+    await expect(
+      new StorageService().storeOfficialPdfImmutable({
+        organizationId: 'org-a',
+        projectId: 'project-a',
+        projectVersionId: 'version-1',
+        language: 'fr',
+        bytes: Buffer.from('%PDF-different'),
+      }),
+    ).rejects.toThrow('OFFICIAL_PDF_IMMUTABLE_CONFLICT');
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it('resout une reference officielle privee sans requete publique', async () => {
+    enableQaStorage();
+    const key = 'tenant-org-a/official-project-pdfs/project-a/version-1/fr.pdf';
+    const reference = `coro-private:v1:${Buffer.from(key).toString('base64url')}`;
+    const bytes = Buffer.from('%PDF-private');
+    mockHttpRequests([{ statusCode: 200, response: bytes }]);
+    await expect(
+      new StorageService().downloadOfficialPdfReference(reference),
+    ).resolves.toEqual(bytes);
+    expect(https.request).not.toHaveBeenCalled();
+  });
+
+  it('refuse une ancienne URL hors de l origine et du repertoire historiques autorises', async () => {
+    await expect(
+      new StorageService().downloadOfficialPdfReference(
+        'https://attacker.invalid/documents/file.pdf',
+      ),
+    ).rejects.toThrow('UNSUPPORTED_HISTORICAL_OFFICIAL_PDF_REFERENCE');
+    await expect(
+      new StorageService().downloadOfficialPdfReference(
+        'https://coro-storage.tor1.digitaloceanspaces.com/private/file.pdf',
+      ),
+    ).rejects.toThrow('UNSUPPORTED_HISTORICAL_OFFICIAL_PDF_REFERENCE');
+    expect(https.request).not.toHaveBeenCalled();
+  });
+
+  it('lit une ancienne reference uniquement depuis l origine CORO sans redirection', async () => {
+    const bytes = Buffer.from('%PDF-legacy');
+    const request = mockRequests([{ statusCode: 200, response: bytes }]);
+    await expect(
+      new StorageService().downloadOfficialPdfReference(
+        'https://coro-storage.tor1.digitaloceanspaces.com/documents/legacy.pdf',
+      ),
+    ).resolves.toEqual(bytes);
+    expect(requestOptions(request, 0)).toMatchObject({
+      hostname: 'coro-storage.tor1.digitaloceanspaces.com',
+      method: 'GET',
+      path: '/documents/legacy.pdf',
+    });
+  });
 });
