@@ -60,18 +60,17 @@ Mise à jour : 24 octobre 2026, America/Toronto.
   tenant, TypeScript et build; CI `40117984030` SUCCESS.
 - **Livraison source :** PR #50, SHA
   `e94e4f3d7b3a00406dcc56f0e5123a38235a3492`.
-- **Release :** `40119347659` arrêtée fail-closed avant mutation. L’audit
-  `40120197159` mesure un déficit de marge de 2 174 227 685 octets. Le dry-run
-  `40120299651` ne trouve que 908 545 341 octets de caches admissibles à 12 h,
-  insuffisants; aucune suppression n’est effectuée.
-- **Production vérifiée :** inspection `40120103415` PASS/GO sur le SHA antérieur
-  `3829afc…`, migration 153, backup/restore vérifiés et quatre rollback intacts.
-- **Statut :** À VÉRIFIER — source corrigée et CI verte, déploiement non réalisé.
+- **Recette finale :** API 8/8 PASS; navigateur 16/16 PASS avec 12/12
+  viewports/thèmes, F5, chargement, périmètre vide et erreur explicite.
+- **Release finale :** `40192799857` SUCCESS au SHA
+  `5d6e370c7a52c55fefacc2676c37142fccf4117b`.
+- **Production vérifiée :** inspection `40193617786` PASS/GO, migration 153,
+  backup `REMOTE_VERIFIED`, restore `RESTORE_VERIFIED`, quatre rollback.
+- **Statut :** CLOS.
 
 ## Limite transversale
 
-La matrice navigateur authentifiée n’a pas été rejouée dans cette session : le
-runtime Chrome/QA local n’était pas disponible. Les preuves négatives serveur
-et PostgreSQL sont réelles, mais ne doivent pas être présentées comme une
-preuve visuelle 12/12. Cette limite n’autorise ni la réouverture de CP-002/003
-sans régression ni un feu vert commercial global.
+La matrice navigateur CP-004 est maintenant démontrée. Les limites restantes
+concernent les scénarios DOC-01 explicitement `NOT_VERIFIED`; elles sont
+documentées dans `CP004-CORE01-DOC01-ACCEPTANCE.md` et maintiennent le verdict
+commercial global ouvert.

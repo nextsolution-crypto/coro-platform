@@ -38,22 +38,22 @@ active et preuve de recette appropriée.
 |---|---|---|---|---|
 | CP-002 | Les listes projets/bâtiments d’un `CLIENT_MANAGER` n’imposaient pas le `clientId` en plus des bâtiments affectés | BLOQUANT | CLOS | PR #45, CI PostgreSQL synthétique et inspection post-release PASS |
 | CP-003 | La lecture directe projet était plus stricte que la liste; alignement explicite requis | BLOQUANT | CLOS | Matrice liste/direct manager PASS; portée corporate préservée; inspection post-release PASS |
-| CP-004 | Intelligence agrégeait par organisation sans transmettre le client ni les bâtiments autorisés | BLOQUANT | À VÉRIFIER — CORRIGÉ/CI VERT, RELEASE BLOQUÉE CAPACITÉ | PR #50 fusionnée `e94e4f3d…`; filtrage pré-agrégation et matrice PostgreSQL PASS; production demeure sur `3829afc…` |
+| CP-004 | Intelligence agrégeait par organisation sans transmettre le client ni les bâtiments autorisés | BLOQUANT | CLOS | PR #50 + état d'erreur PR #53; API 8/8 et navigateur 16/16 PASS; release `40192799857`, inspection `40193617786` PASS/GO, SHA actif `5d6e370c…` |
 | CP-005 | Le refus documentaire chargeait le projet par identifiant puis écrivait statut, commentaire et notifications sans contrôle préalable | BLOQUANT | CLOS | PR #49; contrôle parent/rôle/état avant mutation, transaction/idempotence; release `40118313963` et inspection `40119271708` PASS |
 | CP-006 | Commentaires, versions et engagements n’héritaient pas du contrôle canonique du projet; la portée corporate ProjectFile était artificiellement limitée au client d’origine | BLOQUANT | CLOS | PR #47; garde parent avant accès, matrice synthétique PASS; release `40116294651` et inspection `40117291362` PASS |
 | CP-007 | `addComment` utilisait l’identifiant `ClientUser` comme `userId` de commentaire, sans provenance d’acteur typée | MAJEUR | CLOS | PR #48; migration additive 153 et contrainte exactement-un-auteur; release `40118313963` et inspection `40119271708` PASS |
 
 ## Limites actionnables actuelles
 
-### LIMITATION — CP-004 non déployé
+### LIMITATION — aptitude commerciale globale non établie
 
-- **IMPACT :** aucun feu vert commercial global du portail.
-- **CONDITION DE LEVÉE :** rétablir au moins 2 174 227 685 octets de marge de
-  release supplémentaire, déployer le SHA CP-004 exact et réussir
-  l’inspection post-release. Le nettoyage gouverné à 12 h ne récupérerait
-  qu’environ 909 Mo et n’est donc pas exécuté isolément.
+- **IMPACT :** CP-004 est clos, mais les parcours non vérifiés de DOC-01 et les
+  autres campagnes du registre ne permettent pas un feu vert global.
+- **CONDITION DE LEVÉE :** exécuter les scénarios encore `NOT_VERIFIED`, dont
+  objet archivé, reprise après panne de génération, PDF officiel signé dans une
+  campagne autorisée et Knowledge représentatif.
 - **RESPONSABLE :** équipe technique CORO.
-- **STATUT :** bloquant pour une ouverture commerciale non limitée.
+- **STATUT :** compatible avec un pilote encadré sur le périmètre prouvé.
 
 ## Preuves CP-004 à CP-007
 

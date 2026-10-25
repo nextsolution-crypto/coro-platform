@@ -1,6 +1,6 @@
 # Point de reprise — chantier CORO Client
 
-Mise à jour : 24 octobre 2026, America/Toronto.
+Mise à jour : 25 octobre 2026, America/Toronto.
 
 ## Objectif et périmètre
 
@@ -18,10 +18,10 @@ invitation, signature ou changement de permission n’est autorisé pour la rece
 
 ## Références
 
-- Dernier commit produit fusionné :
-  `e94e4f3d7b3a00406dcc56f0e5123a38235a3492`, PR #50 (CP-004).
+- Dernier commit produit déployé :
+  `5d6e370c7a52c55fefacc2676c37142fccf4117b`, PR #53.
 - Production active vérifiée :
-  `3829afc6563da5c196942b22d59f50131cea1e88` (CP-005 + CP-007).
+  `5d6e370c7a52c55fefacc2676c37142fccf4117b`.
 - Worktree isolé : `F:\coro-platform\.worktrees\client-project-scope`.
 - Worktree principal `F:\coro-platform` et travaux P-5 : préservés, non modifiés.
 
@@ -41,8 +41,8 @@ invitation, signature ou changement de permission n’est autorisé pour la rece
 - CP-005 : le refus vérifie accès, rôle et état avant transaction; une victoire
   concurrente unique produit le commentaire et les notifications, une répétition
   est sans effet.
-- CP-004 : la correction de portée Intelligence est fusionnée et CI verte, mais
-  n’est pas encore active en production.
+- CP-004 : portée Intelligence filtrée avant agrégation et échec API présenté
+  explicitement avec reprise utilisateur.
 
 ## Tests exécutés
 
@@ -63,26 +63,27 @@ invitation, signature ou changement de permission n’est autorisé pour la rece
 - CP-004 : CI PR `40117984030` SUCCESS. La release `40119347659` a échoué
   fail-closed avant mutation. L’audit capacité `40120197159` mesure
   11 846 500 352 octets libres pour 14 020 728 037 requis.
+- CP-004 recette finale : API 8/8 PASS; navigateur 16/16 PASS, dont matrice
+  12/12; release `40192799857` SUCCESS; inspection `40193617786` PASS/GO;
+  153 migrations, backup/restore vérifiés et quatre rollback disponibles.
+- CORE-01/DOC-01 : API 14/14 PASS; navigateur interne 13/13 PASS; PDF de
+  4 003 607 octets ouvert et parsé (98 pages), empreinte conservée dans le
+  rapport d'acceptation.
 
 ## Constats ouverts
 
-Voir `CLIENT-PORTAL-FINDINGS.md`. CP-001, CP-002, CP-003, CP-005, CP-006 et
-CP-007 sont CLOS. CP-004 est corrigé, fusionné et validé en CI, mais demeure
-`À VÉRIFIER` tant que sa release exacte et son inspection post-release ne sont
-pas réussies. Le verdict commercial global demeure ouvert; la fermeture des
-constats de sécurité ne remplace pas l’audit fonctionnel restant.
+Voir `CLIENT-PORTAL-FINDINGS.md`. CP-001 à CP-007 sont CLOS. Le verdict
+commercial global demeure ouvert; la campagne conclut seulement à un pilote
+encadré pour CP-004 et les sous-parcours CORE-01/DOC-01 explicitement prouvés.
 
 ## Opérations au résultat incertain
 
 - Aucune mutation métier ou communication n’est en cours.
-- La tentative CP-004 `40119347659` est terminale `FAILURE`; l’inspection
-  `40120103415` confirme que production est restée sur `3829afc…` et migration
-  153. Il n’existe donc pas de déploiement CP-004 ambigu.
+- Aucune opération importante ne demeure ambiguë. La release finale
+  `40192799857` est terminale SUCCESS et réconciliée par `40193617786`.
 
 ## Prochaine action concrète
 
-Rétablir la marge de capacité sans supprimer les quatre images de rollback,
-les backups ou les preuves protégées; relancer ensuite la release gouvernée de
-CP-004 et son inspection. Après clôture, reprendre l’audit fonctionnel restant
-du portail à partir de `PRODUCT-MATRIX.md` et `JOURNEYS.md` sans rouvrir
-CP-002/CP-003 hors preuve de régression.
+Lever séparément les limites DOC-01 `NOT_VERIFIED` consignées dans
+`CP004-CORE01-DOC01-ACCEPTANCE.md`, puis reprendre les campagnes suivantes du
+registre sans rouvrir CP-002/CP-003 hors preuve de régression.
