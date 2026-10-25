@@ -16,6 +16,11 @@ export class BlogController {
     return this.blogService.findPublished();
   }
 
+  @Get('public/feed')
+  async getPublishedFeed() {
+    return this.blogService.findPublishedForFeed();
+  }
+
   @Get('public/:slug')
   async getBySlug(@Param('slug') slug: string) {
     return this.blogService.findBySlug(slug);

@@ -103,7 +103,16 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   // landing pages: canonical already excludes query (see lib/site/seo.ts), and we noindex,follow
   // them explicitly so the crawl doesn't treat every category/tag combination as its own page.
   const isFiltered = Boolean(params.category || params.tag);
-  return buildPageMetadata({ path: '/blog', locale, title: t.metaTitle, description: t.metaDescription, absoluteTitle: true, indexable: !isFiltered });
+  const metadata = buildPageMetadata({ path: '/blog', locale, title: t.metaTitle, description: t.metaDescription, absoluteTitle: true, indexable: !isFiltered });
+  return {
+    ...metadata,
+    alternates: {
+      ...metadata.alternates,
+      types: {
+        'application/rss+xml': locale === 'en' ? '/blog/feed.xml?lang=en' : '/blog/feed.xml',
+      },
+    },
+  };
 }
 
 function articleHref(slug: string, locale: Locale): string {
