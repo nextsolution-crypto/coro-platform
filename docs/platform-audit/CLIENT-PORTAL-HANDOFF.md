@@ -154,6 +154,15 @@ sans indice de régression.
   Chrome mesurées; preuves sous
   `D:\CORO-QA\tracking\client-portal\sentinelle-simultaneous-presence\2026-10-25`.
 
+### Réconciliation du mandat Sentinelle
+
+Le dossier `SENTINELLE-MANDATE-RECONCILIATION.md` couvre les points techniques
+restés ouverts après les PR #72/#73 : téléphone reconnu et révocable, rotation
+QR, affichages multiples, historiques/rapports, exactitude de la résilience et
+récupération de compte. La carte avec fournisseurs réseau réels et la politique
+terrain des appareils partagés demeurent des décisions attendues. Le verdict
+reste `PILOTE ENCADRÉ`.
+
 Le MASTER portail est figé pour son périmètre audité. Les documents
 `CLIENT-PORTAL-PILOT-CLOSURE.md`, `CLIENT-PORTAL-PILOT-OPERATING-SHEET.md` et
 `CLIENT-PORTAL-REMAINING-WORK-PACKAGES.md` définissent respectivement la

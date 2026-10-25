@@ -279,11 +279,7 @@ export default function PresencePage() {
               <button
                 type="button"
                 style={{ ...button, background: '#edf2f5' }}
-                onClick={() => {
-                  setIdentity(null);
-                  setAction(null);
-                  setView('pin');
-                }}
+                onClick={() => void forget()}
               >
                 Ce n’est pas moi
               </button>

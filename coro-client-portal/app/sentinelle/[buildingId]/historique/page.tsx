@@ -19,6 +19,7 @@ export default function HistoriquePage() {
   const [user, setUser] = useState<any>(null);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
 
   const today = new Date().toISOString().split('T')[0];
@@ -35,13 +36,18 @@ export default function HistoriquePage() {
 
   const fetchHistory = async () => {
     setLoading(true);
+    setError('');
     try {
       // Récupérer le token kiosque d'abord
       const kioskRes = await apiGet(`/client-portal/buildings/${buildingId}/sentinelle/kiosk-token`);
       const kioskToken = kioskRes.token;
       const res = await apiGet(`/occupancy/buildings/${buildingId}/history-public?token=${kioskToken}&from=${from}&to=${to}`);
       setData(res);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      setData(null);
+      setError("Impossible de charger l'historique. Vérifiez votre connexion et réessayez.");
+    }
     finally { setLoading(false); }
   };
 
@@ -104,6 +110,15 @@ export default function HistoriquePage() {
           </button>
         </div>
       </header>
+
+      {error && (
+        <div role="alert" style={{ marginBottom: 20, padding: '14px 16px', borderRadius: 10, border: '1px solid #F1948A', backgroundColor: '#FDEDEC', color: '#922B21', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span>{error}</span>
+          <button type="button" onClick={fetchHistory} style={{ minHeight: 44, padding: '8px 14px', borderRadius: 8, border: '1px solid #C0392B', backgroundColor: '#FFFFFF', color: '#922B21', fontWeight: 700, cursor: 'pointer' }}>
+            Réessayer
+          </button>
+        </div>
+      )}
 
       {/* Filtres date */}
       <div style={{ marginBottom: 20, padding: '16px 20px', backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF', display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>

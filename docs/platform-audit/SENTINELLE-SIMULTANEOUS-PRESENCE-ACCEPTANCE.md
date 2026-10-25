@@ -117,3 +117,12 @@ La preuve navigateur 12/12 demeure une preuve QA synthétique authentifiée. La
 production a fait l'objet d'une inspection technique en lecture seule; aucune
 présence réelle, invitation externe ou opération d'urgence n'a été déclenchée.
 Le verdict commercial global demeure `PILOTE ENCADRÉ`.
+
+## Réconciliation postérieure
+
+La vérification détaillée des points laissés ouverts et les corrections
+associées sont consignées dans
+`SENTINELLE-MANDATE-RECONCILIATION.md`. Elle remplace les statuts
+`NOT_VERIFIED` de cette page uniquement lorsqu'une preuve explicite y est
+référencée; la carte réelle et la politique terrain des appareils partagés
+restent des décisions attendues.
