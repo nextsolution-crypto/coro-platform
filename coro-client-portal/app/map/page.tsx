@@ -46,7 +46,6 @@ export default function MapPage() {
   const [loadError, setLoadError] = useState('');
   const [selected, setSelected] = useState<any>(null);
   const [fullscreen, setFullscreen] = useState(false);
-  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     const currentUser = getUser();
@@ -72,17 +71,18 @@ export default function MapPage() {
   useEffect(() => {
     if (loading || !mapRef.current || buildings.length === 0 || mapInstanceRef.current) return;
 
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
-
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.onload = () => { initMap(); setMapReady(true); };
-    document.head.appendChild(script);
+    let cancelled = false;
+    import('leaflet')
+      .then((leaflet) => {
+        if (cancelled) return;
+        initMap(leaflet.default);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError('Impossible de charger la carte. Utilisez la liste des bâtiments et réessayez plus tard.');
+      });
 
     return () => {
+      cancelled = true;
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -90,8 +90,7 @@ export default function MapPage() {
     };
   }, [loading, buildings]);
 
-  const initMap = () => {
-    const L = (window as any).L;
+  const initMap = (L: typeof import('leaflet')) => {
     if (!mapRef.current || !L) return;
 
     const withCoords = buildings.filter(b => b.latitude && b.longitude);
@@ -112,8 +111,8 @@ export default function MapPage() {
 
     mapInstanceRef.current = map;
 
-    // Tuiles OSM avec filtre CSS sombre — 100% gratuit, aucune clé requise
-    const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // Tuiles publiques OSM avec attribution; aucun SLA n'est présumé.
+    const tileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
       maxZoom: 19,
     });

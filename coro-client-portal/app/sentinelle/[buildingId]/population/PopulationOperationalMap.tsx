@@ -37,8 +37,6 @@ type GeoJsonGeometry = {
   coordinates: unknown;
 };
 
-const LEAFLET_CSS_ID = 'coro-population-leaflet-css';
-const LEAFLET_SCRIPT_ID = 'coro-population-leaflet-script';
 const LEAFLET_MAP_STYLE_ID = 'coro-population-leaflet-map-style';
 
 function isValidCoordinate(value: number | null): value is number {
@@ -62,24 +60,9 @@ function isSupportedGeometry(value: unknown): value is GeoJsonGeometry {
   );
 }
 
-function loadLeaflet(): Promise<any> {
+async function loadLeaflet(): Promise<typeof import('leaflet')> {
   if (typeof window === 'undefined') {
-    return Promise.reject(new Error('Leaflet requires a browser.'));
-  }
-
-  const existingLeaflet = (window as any).L;
-
-  if (existingLeaflet) {
-    return Promise.resolve(existingLeaflet);
-  }
-
-  if (!document.getElementById(LEAFLET_CSS_ID)) {
-    const link = document.createElement('link');
-    link.id = LEAFLET_CSS_ID;
-    link.rel = 'stylesheet';
-    link.href =
-      'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
+    throw new Error('Leaflet requires a browser.');
   }
 
   if (!document.getElementById(LEAFLET_MAP_STYLE_ID)) {
@@ -117,63 +100,8 @@ function loadLeaflet(): Promise<any> {
     document.head.appendChild(style);
   }
 
-  return new Promise((resolve, reject) => {
-    const existingScript = document.getElementById(
-      LEAFLET_SCRIPT_ID,
-    ) as HTMLScriptElement | null;
-
-    if (existingScript) {
-      const checkLeaflet = () => {
-        const leaflet = (window as any).L;
-
-        if (leaflet) {
-          resolve(leaflet);
-        } else {
-          reject(new Error('Leaflet did not initialize.'));
-        }
-      };
-
-      if ((window as any).L) {
-        resolve((window as any).L);
-        return;
-      }
-
-      existingScript.addEventListener('load', checkLeaflet, {
-        once: true,
-      });
-
-      existingScript.addEventListener(
-        'error',
-        () => reject(new Error('Leaflet could not be loaded.')),
-        { once: true },
-      );
-
-      return;
-    }
-
-    const script = document.createElement('script');
-
-    script.id = LEAFLET_SCRIPT_ID;
-    script.src =
-      'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.async = true;
-
-    script.onload = () => {
-      const leaflet = (window as any).L;
-
-      if (leaflet) {
-        resolve(leaflet);
-      } else {
-        reject(new Error('Leaflet did not initialize.'));
-      }
-    };
-
-    script.onerror = () => {
-      reject(new Error('Leaflet could not be loaded.'));
-    };
-
-    document.body.appendChild(script);
-  });
+  const leaflet = await import('leaflet');
+  return leaflet.default;
 }
 
 function formatProtectiveAction(action: string | null) {
@@ -248,7 +176,7 @@ export default function PopulationOperationalMap({
         mapInstanceRef.current = map;
 
         L.tileLayer(
-          'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           {
             attribution: '© OpenStreetMap contributors',
             maxZoom: 19,
@@ -322,11 +250,11 @@ export default function PopulationOperationalMap({
           if (isSupportedGeometry(zone.geometry)) {
             try {
               layer = L.geoJSON(
-                {
+                ({
                   type: 'Feature',
                   properties: {},
                   geometry: zone.geometry,
-                },
+                } as any),
                 {
                   style: zoneStyle,
                 },

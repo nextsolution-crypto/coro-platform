@@ -88,18 +88,18 @@ export default function KioskPage() {
               body: JSON.stringify({ qrToken, kioskToken: token }),
             });
             setMessage({
-              text: `Au revoir, ${name} ! Votre sortie a été enregistrée.`,
+              text: 'Sortie enregistrée.',
               type: 'success',
             });
           } else {
             setMessage({
-              text: `${name} est déjà enregistré(e) en entrée.`,
+              text: 'Cette personne est déjà enregistrée en entrée.',
               type: 'success',
             });
           }
         } else {
           setMessage({
-            text: `Bienvenue, ${name} ! Entrée enregistrée automatiquement.`,
+            text: 'Entrée enregistrée.',
             type: 'success',
           });
         }
@@ -115,9 +115,8 @@ export default function KioskPage() {
         body: JSON.stringify({ qrToken, kioskToken: token }),
       });
       if (resInv.ok) {
-        const data = await resInv.json();
         setMessage({
-          text: `Bienvenue, ${data.invitation.firstName} ! Votre invitation a été validée.`,
+          text: 'Invitation validée et entrée enregistrée.',
           type: 'success',
         });
         setScreen('success');
@@ -134,7 +133,7 @@ export default function KioskPage() {
         });
         if (resOut.ok) {
           setMessage({
-            text: `Au revoir, ${info.firstName} ! Votre sortie a été enregistrée.`,
+            text: 'Sortie enregistrée.',
             type: 'success',
           });
           setScreen('success');
@@ -287,7 +286,7 @@ export default function KioskPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Erreur');
       setMessage({
-        text: `Bienvenue, ${form.firstName} ! Votre entrée a été enregistrée.`,
+        text: 'Entrée enregistrée.',
         type: 'success',
       });
       setScreen('success');
@@ -316,7 +315,7 @@ export default function KioskPage() {
     }
   };
 
-  const handleCheckout = async (recordId: string, name: string) => {
+  const handleCheckout = async (recordId: string) => {
     setLoading(true);
     try {
       await fetch(`${API_URL}/occupancy/checkout`, {
@@ -325,7 +324,7 @@ export default function KioskPage() {
         body: JSON.stringify({ recordId, kioskToken: token }),
       });
       setMessage({
-        text: `Au revoir, ${name} ! Votre sortie a été enregistrée.`,
+        text: 'Sortie enregistrée.',
         type: 'success',
       });
       setScreen('success');
@@ -873,7 +872,7 @@ export default function KioskPage() {
               <button
                 key={r.id}
                 type="button"
-                onClick={() => handleCheckout(r.id, `${r.firstName} ${r.lastName}`)}
+                onClick={() => handleCheckout(r.id)}
                 style={{
                   padding: '16px 20px',
                   borderRadius: 12,
