@@ -2,7 +2,7 @@
 
 Date : 2026-10-25  
 Branche candidate : `master/client-portal-v1-final`  
-Baseline : `1ff9a5b230cd73ce59170722b6bf33a28e254efb`
+Commit produit fusionné : `ca3cbc814309b0661cec1370e90903332557b8b8`
 
 ## Verdict
 
@@ -50,6 +50,16 @@ Le provisionnement demeure une opération CORO gouvernée : organisation et clie
 - Sauvegarde/restauration : preuves récentes `REMOTE_VERIFIED` et `RESTORE_VERIFIED`; quatre images de rollback conservées.
 - Carte : service public OSM sans SLA; la liste des bâtiments reste le parcours de repli complet.
 - Courriel : le fournisseur et le domaine sont configurés, mais la réception réelle des trois modèles doit être constatée avant de promettre un onboarding autonome.
+
+## Traçabilité de release
+
+- PR produit : `#78`, fusionnée dans `ca3cbc814309b0661cec1370e90903332557b8b8`.
+- CI principale : run `40234879018`, `SUCCESS`.
+- Première release : run `40235215704`, images immuables construites avec succès, puis arrêt fail-closed avant sauvegarde, migration ou remplacement de conteneur avec `RELEASE_CAPACITY_INSUFFICIENT`.
+- Inspection après l'arrêt : run `40236035556`, `GO`; production inchangée sur `c5adf5d4586879a7875abc4ea5be93fdda775115`, 155 migrations, services sains, sauvegarde `REMOTE_VERIFIED`, restauration `RESTORE_VERIFIED` et quatre images de rollback disponibles.
+- Audit capacité : run `40236091898`; 19 555 102 720 octets libres pour 19 700 723 075 requis, soit un déficit de 145 620 355 octets.
+- Maintenance gouvernée : dry-run `40236196093`, puis exécution `40236267787`; 32 images de cache non référencées âgées d'au moins 12 heures supprimées, aucune image active ou de rollback touchée, espace libre porté à 38 285 385 728 octets.
+- La release ayant un état terminal `FAILED`, le présent successeur documentaire constitue le nouveau candidat traçable; aucun état de release n'est réinitialisé ni contourné.
 
 ## Réserves actionnables
 
