@@ -132,10 +132,27 @@ sans rouvrir CP-002/CP-003 hors preuve de régression.
 
 CP-001 à CP-009 sont clos. Le verdict reste `PILOTE ENCADRÉ`; signature/PDF
 officiel, mutation des projets archivés, réservations réussies, invitations
-externes, tuiles cartographiques et parcours Sentinelle non prouvés demeurent
-exclus ou `NOT_VERIFIED`. La prochaine campagne doit partir de l'inventaire et
-ne reprendre que ces limites, sans rouvrir les contrôles clos sans indice de
-régression.
+externes, tuiles cartographiques et parcours Sentinelle avancés non prouvés
+demeurent exclus ou `NOT_VERIFIED`. L'enregistrement simultané Sentinelle par
+QR temporaire et confirmation individuelle est désormais validé en QA et
+déployé; les fournisseurs réels, appareils partagés et rapports avancés ne
+sont pas inclus dans cette preuve. La prochaine campagne doit partir de
+l'inventaire et ne reprendre que ces limites, sans rouvrir les contrôles clos
+sans indice de régression.
+
+## Livraison Sentinelle — présence simultanée
+
+- Réalisation : `bac1e0fa`, preuve QA : `66f70ec9`, PR `#72`.
+- Merge et SHA actif : `4bbcd8f5842c25115cc214d7265d65d950c9fc9b`.
+- CI/release gouvernée : `40221424378` `SUCCESS`.
+- Inspection post-release : `40222413709` `SUCCESS`, `PASS/GO`.
+- PostgreSQL : 155 migrations, head
+  `20261109010000_sentinelle_presence_sessions`.
+- Sauvegarde/restauration : `REMOTE_VERIFIED` / `RESTORE_VERIFIED`;
+  quatre images de rollback disponibles.
+- Recette synthétique : concurrence multi-téléphones et 12/12 configurations
+  Chrome mesurées; preuves sous
+  `D:\CORO-QA\tracking\client-portal\sentinelle-simultaneous-presence\2026-10-25`.
 
 Le MASTER portail est figé pour son périmètre audité. Les documents
 `CLIENT-PORTAL-PILOT-CLOSURE.md`, `CLIENT-PORTAL-PILOT-OPERATING-SHEET.md` et
