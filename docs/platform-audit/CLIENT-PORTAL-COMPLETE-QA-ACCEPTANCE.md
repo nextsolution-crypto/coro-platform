@@ -62,15 +62,24 @@ PREUVES :
   succès, conflit immuable, reprise, format historique autorisé et rejet SSRF;
 - TypeScript `--noEmit` et construction de l'image backend QA : PASS.
 
+LIVRAISON : PR #66 fusionnée au SHA
+`c7ad9e46f15b7422bb4b5052c708a50688ee50ba`. CI de branche principale
+`40212425790` et release gouvernée `40212760340` : SUCCESS. L'inspection
+post-release en lecture seule `40213744144` confirme le même SHA actif, la
+release `SUCCEEDED/COMPLETED`, la migration
+`20261108010000_client_password_change_audit`, les quatre images applicatives
+immuables actives, PostgreSQL sain, la sauvegarde `REMOTE_VERIFIED`, la
+restauration `RESTORE_VERIFIED` et quatre images de rollback disponibles.
+
 LIMITES : la panne privée a été injectée de façon déterministe au niveau du
 service; un arrêt réseau réel du stockage privé pendant une nouvelle signature
 n'a pas été rejoué. Aucune signature fournisseur réelle ni valeur juridique du
-document n'est démontrée. La version corrigée n'est pas encore publiée ni
-déployée en production.
+document n'est démontrée. L'exposition publique éventuelle de références
+historiques n'a pas été inspectée et demeure un chantier de remédiation séparé.
 
-STATUT : le parcours technique est validé en QA synthétique. Son inclusion dans
-le pilote reste soumise à la publication, à la CI, à la release gouvernée et à
-l'inspection de la version effectivement déployée.
+STATUT : le parcours technique SIGN-01 est validé en QA synthétique, publié et
+déployé dans la production privée. Cela ne valide ni un fournisseur de signature
+réel ni la valeur juridique du document.
 
 ### SENT-ADV-01 — PARTIAL
 
@@ -103,9 +112,9 @@ STATUT : compatible avec un pilote utilisant la liste/repli.
 ## Verdict courant
 
 `PILOTE ENCADRÉ` est conservé. BOOK-01, le chemin d'invitation avec fournisseur
-simulé et le chemin technique SIGN-01 en QA sont démontrés. SIGN-01 demeure
-exclu de la version de production active jusqu'à livraison gouvernée; sa preuve
-ne valide ni fournisseur réel ni valeur juridique. La livraison réelle de
+simulé et le chemin technique SIGN-01 sont démontrés; SIGN-01 est présent dans
+la version de production privée inspectée. Sa preuve ne valide ni fournisseur
+réel ni valeur juridique. La livraison réelle de
 courriel, les mutations Sentinelle avancées et les tuiles cartographiques
 réelles restent exclues tant que leurs preuves propres ne sont pas acquises.
 
