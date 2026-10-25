@@ -116,11 +116,23 @@ sans rouvrir CP-002/CP-003 hors preuve de régression.
 - Preuves : `D:\CORO-QA\runs\cp-portal-inventory` et inventaire détaillé
   `CLIENT-PORTAL-FUNCTIONAL-INVENTORY.md`.
 
+## Livraison CP-008/CP-009
+
+- Commit candidat : `fb8f347db5918c39e14f4eb54648524c150b4049`.
+- PR #57, merge : `7ad50c4b4ca436ee646e550986218a41e8357eab`.
+- CI PR : workflows `40198125864` et `40198125889` SUCCESS.
+- Préflight production : inspection `40198456592` PASS/GO.
+- Release gouvernée : `40198512542` SUCCESS; aucune nouvelle migration.
+- Inspection post-release : `40199449644` PASS/GO; SHA actif et release
+  `7ad50c4b4ca436ee646e550986218a41e8357eab`, 153 migrations, backup
+  `REMOTE_VERIFIED`, restore `RESTORE_VERIFIED`, quatre rollback disponibles,
+  verrou libre et services sans redémarrage.
+
 ## Point de reprise courant
 
-Publier le lot CP-008/CP-009 uniquement après les validations locales finales,
-CI verte et revue du diff exact. Puis exécuter la release gouvernée et une
-inspection post-release avant de passer CP-008/CP-009 à `CLOS`. Le verdict
-reste `PILOTE ENCADRÉ`; signature/PDF officiel, mutation des projets archivés,
-réservations réussies, invitations externes et parcours Sentinelle non prouvés
-demeurent exclus ou `NOT_VERIFIED`.
+CP-001 à CP-009 sont clos. Le verdict reste `PILOTE ENCADRÉ`; signature/PDF
+officiel, mutation des projets archivés, réservations réussies, invitations
+externes, tuiles cartographiques et parcours Sentinelle non prouvés demeurent
+exclus ou `NOT_VERIFIED`. La prochaine campagne doit partir de l'inventaire et
+ne reprendre que ces limites, sans rouvrir les contrôles clos sans indice de
+régression.

@@ -5,7 +5,11 @@ Date : 25 octobre 2026
 Verdict conservé : `PILOTE ENCADRÉ`
 
 Base publiée au démarrage : `e1972e888155fcc6d5c4edf1dec8cf211ea07c2b` (PR #56)
-Version active de production vérifiée dans les registres : `5d6e370c7a52c55fefacc2676c37142fccf4117b`
+
+Correctifs CP-008/009 publiés : PR #57, merge
+`7ad50c4b4ca436ee646e550986218a41e8357eab`; release gouvernée
+`40198512542` SUCCESS; inspection post-release `40199449644` PASS/GO.
+Version active de production vérifiée : `7ad50c4b4ca436ee646e550986218a41e8357eab`
 
 Cet inventaire ne transforme pas l'ouverture d'une page en preuve fonctionnelle.
 `VALIDÉ` signifie que le parcours indiqué a une preuve API ou navigateur
@@ -63,6 +67,9 @@ si sa page de consultation est validée.
    l'envoi du courriel. Une panne fournisseur retournait donc une erreur avec
    une ressource persistée. La création est maintenant compensée dans le même
    service en cas d'échec, empêchant les doublons lors d'une nouvelle tentative.
+
+Ces deux constats sont clos sur la version active
+`7ad50c4b4ca436ee646e550986218a41e8357eab`.
 
 Preuves :
 
