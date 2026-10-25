@@ -81,6 +81,33 @@ STATUT : le parcours technique SIGN-01 est validé en QA synthétique, publié e
 déployé dans la production privée. Cela ne valide ni un fournisseur de signature
 réel ni la valeur juridique du document.
 
+### SIGN-01-HISTORIQUE — REMÉDIÉ_PRODUCTION
+
+INVENTAIRE : l'audit en lecture seule `40215430217` a couvert les deux projets
+portant une référence officielle, soit quatre références FR/EN. Il a démontré
+quatre références HTTPS historiques, quatre objets existants accessibles sans
+authentification, aucune référence absente, cassée ou non vérifiable. Seuls des
+compteurs agrégés ont été journalisés; aucune référence, donnée personnelle ou
+contenu documentaire n'a été publié.
+
+REMÉDIATION : le SHA `2e1245a80fda6b3d106bbccc0779d73f9b3789f9`
+authentifie aussi la lecture des références historiques. La procédure gouvernée
+`40217599442` a créé et vérifié quatre copies privées immuables, retiré l'accès
+public aux quatre objets d'origine, démontré leur refus anonyme, puis remplacé
+les quatre références avec contrôle de concurrence. L'origine configurée était
+le point de terminaison du stockage et non un CDN distinct; aucune purge de
+cache séparée n'était applicable. Le retour arrière conserve les références
+privées et ne rétablit jamais une ACL publique.
+
+VÉRIFICATION FINALE : l'audit `40217679351` retrouve quatre références
+canoniques privées, zéro référence HTTPS historique, zéro objet public, zéro
+objet absent ou cassé et zéro résultat non vérifiable. L'inspection de production
+post-migration `40217732206` est PASS.
+
+STATUT : constat d'exposition historique clos. Le fournisseur de signature réel
+et la valeur juridique demeurent `NOT_VERIFIED` et distincts de cette preuve de
+stockage.
+
 ### SENT-ADV-01 — PARTIAL
 
 LIMITATION : les listes employés, invitations, évacuations, historique,

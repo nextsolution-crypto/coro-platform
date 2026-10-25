@@ -52,7 +52,7 @@ si sa page de consultation est validée.
 
 | Fonction | Motif | Condition de levée | Statut |
 |---|---|---|---|
-| Signature et PDF officiel | Fournisseur réel et chaîne de signature non exercés | Campagne séparée avec document, signataires et destinataires fictifs explicitement autorisés | NOT_VERIFIED |
+| Signature et PDF officiel | Génération, stockage privé, téléchargement et remédiation des anciennes références validés avec signature synthétique; fournisseur réel et valeur juridique non exercés | Audit/remédiation historiques clos; campagne fournisseur séparée avec document, signataires et destinataires fictifs explicitement autorisés | PARTIAL — technique validée, intégration réelle NOT_VERIFIED |
 | Régénération ou mutation d'un projet archivé | Règle métier non approuvée; la capacité technique subsiste | Décision « lecture seule, réouverture explicite et tracée », puis implémentation et test | NOT_VERIFIED |
 | Alertes population, SMS, courriels externes et actions d'urgence | Effets externes neutralisés; P-5 demeure différé | Mandat et destinataires de test autorisés, fournisseur disponible et preuve E2E | HORS PÉRIMÈTRE |
 | Analyse de formats sans extracteur | Aucun contenu ne doit être inventé | Ajouter et valider un extracteur local gouverné | HORS PÉRIMÈTRE |
