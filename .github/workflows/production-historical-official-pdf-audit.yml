@@ -48,7 +48,7 @@ jobs:
             git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
             git -C "$repo" show "$SOURCE_SHA:ops/maintenance/historical-official-pdf-audit.cjs" >"$script"
             cd "$repo"
-            docker compose exec -T backend node - <"$script" >"$evidence"
+            docker compose exec -T -e CORO_HISTORICAL_PDF_AUDIT_RUN=true backend node - <"$script" >"$evidence"
             node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||r.readOnly!==true)process.exit(1);const s=JSON.stringify(r);if(/https?:|coro-private|documents\/|@|projectId|organizationId/i.test(s))process.exit(1);' "$evidence"
             cat "$evidence"
       - name: Record evidence boundary

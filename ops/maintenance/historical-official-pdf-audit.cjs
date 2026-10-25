@@ -141,9 +141,12 @@ async function main() {
   }
 }
 
-module.exports = { anonymousProbe, emptyReport, runAudit, safeLegacyKey };
+module.exports = { anonymousProbe, emptyReport, main, runAudit, safeLegacyKey };
 
-if (require.main === module) {
+if (
+  require.main === module ||
+  process.env.CORO_HISTORICAL_PDF_AUDIT_RUN === 'true'
+) {
   main().catch(() => {
     process.stdout.write(`${JSON.stringify({ schemaVersion: 1, execution: 'FAILED', readOnly: true })}\n`);
     process.exitCode = 1;

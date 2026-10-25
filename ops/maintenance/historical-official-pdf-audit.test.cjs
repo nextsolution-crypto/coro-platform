@@ -42,3 +42,11 @@ test('returns aggregate evidence only and checks objects through canonical stora
   const serialized = JSON.stringify(report);
   assert.doesNotMatch(serialized, /opaque|legacy\.pdf|cdn\.example/);
 });
+
+test('requires an explicit runtime switch when delivered through stdin', () => {
+  const source = require('node:fs').readFileSync(
+    require('node:path').join(__dirname, 'historical-official-pdf-audit.cjs'),
+    'utf8',
+  );
+  assert.match(source, /CORO_HISTORICAL_PDF_AUDIT_RUN === 'true'/);
+});
