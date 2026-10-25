@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import 'leaflet/dist/leaflet.css';
 import '../design-system/tokens.css';
 import '../design-system/primitives.css';
 import { ThemeProvider } from '../design-system/theme/ThemeProvider';

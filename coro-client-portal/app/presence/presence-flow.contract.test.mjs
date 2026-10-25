@@ -35,6 +35,16 @@ test('remembered phone uses an HttpOnly server cookie and offers revocation', ()
   assert.match(presence, /Oublier ce téléphone/);
 });
 
+test('shared kiosk clears identity after confirmation and inactivity', () => {
+  assert.match(kiosk, /setTimeout\(resetToHome, 30000\)/);
+  assert.match(kiosk, /setTimeout\(resetToHome, 4000\)/);
+  assert.match(kiosk, /firstName: ''/);
+  assert.match(kiosk, /lastName: ''/);
+  assert.doesNotMatch(kiosk, /text: `Bienvenue, \$\{/);
+  assert.doesNotMatch(kiosk, /text: `Au revoir, \$\{/);
+  assert.doesNotMatch(kiosk, /text: `\$\{name\} est déjà/);
+});
+
 test('legacy static PIN mutation is closed and PostgreSQL enforces one open presence', () => {
   assert.match(controller, /Ce parcours a été remplacé/);
   assert.match(migration, /OccupancyRecord_one_open_employee_idx/);
