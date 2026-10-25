@@ -313,7 +313,7 @@ describe('StorageService public/private separation', () => {
     expect(https.request).not.toHaveBeenCalled();
   });
 
-  it('lit une ancienne reference uniquement depuis l origine CORO sans redirection', async () => {
+  it('lit une ancienne reference CORO avec l autorite du stockage prive', async () => {
     const bytes = Buffer.from('%PDF-legacy');
     const request = mockRequests([{ statusCode: 200, response: bytes }]);
     await expect(
@@ -326,5 +326,8 @@ describe('StorageService public/private separation', () => {
       method: 'GET',
       path: '/documents/legacy.pdf',
     });
+    expect(requestOptions(request, 0).headers.Authorization).toMatch(
+      /^AWS4-HMAC-SHA256 /,
+    );
   });
 });

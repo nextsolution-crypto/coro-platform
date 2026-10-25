@@ -356,46 +356,15 @@ export class StorageService {
       throw new Error('UNSUPPORTED_HISTORICAL_OFFICIAL_PDF_REFERENCE');
     }
 
-    return new Promise((resolve, reject) => {
-      const request = https.request(
-        {
-          protocol: 'https:',
-          hostname: candidate.hostname,
-          port: candidate.port || undefined,
-          path: candidate.pathname,
-          method: 'GET',
-          timeout: 10_000,
-          headers: { Accept: 'application/pdf' },
-        },
-        (response) => {
-          if (response.statusCode !== 200) {
-            response.resume();
-            return reject(
-              new Error(
-                `Historical storage GET failed: ${response.statusCode}`,
-              ),
-            );
-          }
-          const chunks: Buffer[] = [];
-          let size = 0;
-          response.on('data', (chunk) => {
-            size += chunk.length;
-            if (size > StorageService.MAX_OFFICIAL_PDF_BYTES) {
-              response.destroy(new Error('OFFICIAL_PDF_TOO_LARGE'));
-              return;
-            }
-            chunks.push(Buffer.from(chunk));
-          });
-          response.on('end', () => resolve(Buffer.concat(chunks)));
-          response.on('error', reject);
-        },
-      );
-      request.on('timeout', () =>
-        request.destroy(new Error('OFFICIAL_PDF_TIMEOUT')),
-      );
-      request.on('error', reject);
-      request.end();
-    });
+    const storageKey = candidate.pathname
+      .slice(1)
+      .split('/')
+      .map((segment) => decodeURIComponent(segment))
+      .join('/');
+    if (!storageKey || storageKey.includes('..') || storageKey.includes('\\')) {
+      throw new Error('UNSUPPORTED_HISTORICAL_OFFICIAL_PDF_REFERENCE');
+    }
+    return this.downloadPrivate(storageKey);
   }
 
   private safeKeyPart(value: string): string {
