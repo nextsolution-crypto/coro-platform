@@ -15,6 +15,8 @@ export default function RapportsPage() {
   const [selected, setSelected] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [error, setError] = useState('');
+  const [detailError, setDetailError] = useState('');
 
   useEffect(() => {
     const currentUser = getUser();
@@ -25,19 +27,28 @@ export default function RapportsPage() {
 
   const fetchEvacuations = async () => {
     setLoading(true);
+    setError('');
     try {
       const res = await apiGet(`/client-portal/buildings/${buildingId}/sentinelle/evacuations`);
       setEvacuations(res);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      setEvacuations([]);
+      setError("Impossible de charger les rapports d'évacuation.");
+    }
     finally { setLoading(false); }
   };
 
   const fetchDetail = async (id: string) => {
     setLoadingDetail(true);
+    setDetailError('');
     try {
       const res = await apiGet(`/client-portal/buildings/${buildingId}/sentinelle/evacuations/${id}`);
       setSelected(res);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      setDetailError("Impossible de charger ce rapport détaillé.");
+    }
     finally { setLoadingDetail(false); }
   };
 
@@ -151,6 +162,19 @@ export default function RapportsPage() {
         <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.08em' }}>CORO Sentinelle</p>
         <h1 style={{ margin: 0, fontSize: 'clamp(20px, 5vw, 26px)', fontWeight: 800, color: '#2C3E50' }}>Rapports d&apos;évacuation</h1>
       </header>
+
+      {error && (
+        <div role="alert" style={{ marginBottom: 20, padding: '14px 16px', borderRadius: 10, border: '1px solid #F1948A', backgroundColor: '#FDEDEC', color: '#922B21', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span>{error}</span>
+          <button type="button" onClick={fetchEvacuations} style={{ minHeight: 44, padding: '8px 14px', borderRadius: 8, border: '1px solid #C0392B', backgroundColor: '#FFFFFF', color: '#922B21', fontWeight: 700, cursor: 'pointer' }}>Réessayer</button>
+        </div>
+      )}
+
+      {detailError && (
+        <div role="alert" style={{ marginBottom: 20, padding: '14px 16px', borderRadius: 10, border: '1px solid #F1948A', backgroundColor: '#FDEDEC', color: '#922B21' }}>
+          {detailError}
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: selected ? '300px 1fr' : '1fr', gap: 20 }}>
         {/* Liste évacuations */}

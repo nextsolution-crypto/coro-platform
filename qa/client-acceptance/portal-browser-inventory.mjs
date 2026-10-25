@@ -22,7 +22,7 @@ const routes = [
   ["map", "/map", /carte|bâtiment/i], ["offline", "/offline-documents", /hors ligne|coffre/i],
   ["sentinelle", `/sentinelle/${building}`, /sentinelle/i], ["employees", `/sentinelle/${building}/employes`, /employé/i],
   ["invitations", `/sentinelle/${building}/invitations`, /invitation/i], ["history", `/sentinelle/${building}/historique`, /historique/i],
-  ["reports", `/sentinelle/${building}/rapports`, /rapport/i],
+  ["reports", `/sentinelle/${building}/rapports`, /rapport/i], ["resilience", `/sentinelle/${building}/resilience`, /résilience|resilience/i],
 ];
 function geometry() {
   const root = document.documentElement;
@@ -82,6 +82,9 @@ try {
     ["notifications-error", "/notifications", "/client-portal/notifications", "Impossible de charger les notifications"],
     ["map-error", "/map", "/client-portal/buildings", "Impossible de charger la carte"],
     ["bookings-error", "/bookings", "/client-portal/bookings", "Impossible de charger les réservations"],
+    ["sentinelle-history-error", `/sentinelle/${building}/historique`, "/history-public", "Impossible de charger l'historique"],
+    ["sentinelle-reports-error", `/sentinelle/${building}/rapports`, "/sentinelle/evacuations", "Impossible de charger les rapports d'évacuation"],
+    ["sentinelle-resilience-error", `/sentinelle/${building}/resilience`, "/readiness-enriched", "Impossible de charger l'indice de résilience"],
   ]) {
     await page.goto(`${runtime.portalUrl}/login`, { waitUntil: "domcontentloaded" });
     await page.evaluate(({ token, user }) => {

@@ -59,6 +59,8 @@ export default function ResiliencePage() {
   const [activeTab, setActiveTab]     = useState<'overview' | 'roles' | 'intel' | 'trend'>('overview');
   const [history, setHistory]         = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [error, setError] = useState('');
+  const [historyError, setHistoryError] = useState('');
 
   useEffect(() => {
     const u = getUser();
@@ -72,33 +74,46 @@ export default function ResiliencePage() {
       setKioskToken(kiosk.token);
       await fetchData(kiosk.token);
       await fetchHistory();
-    } catch (err) { console.error(err); setLoading(false); }
+    } catch (err) {
+      console.error(err);
+      setError("Impossible de charger l'indice de résilience. Vérifiez votre accès et réessayez.");
+      setLoading(false);
+    }
   };
 
   const fetchHistory = useCallback(async () => {
     setLoadingHistory(true);
+    setHistoryError('');
     try {
       const res = await fetch(`${API}/client-portal/buildings/${buildingId}/resilience-history?days=90`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('coro_client_token')}` },
       });
-      if (res.ok) setHistory(await res.json());
-    } catch { /* silencieux */ }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setHistory(await res.json());
+    } catch {
+      setHistoryError("Impossible de charger l'historique de résilience.");
+    }
     finally { setLoadingHistory(false); }
   }, [buildingId]);
 
   const forceSnapshot = async () => {
+    setHistoryError('');
     try {
-      await fetch(`${API}/client-portal/buildings/${buildingId}/resilience-snapshot`, {
+      const res = await fetch(`${API}/client-portal/buildings/${buildingId}/resilience-snapshot`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${localStorage.getItem('coro_client_token')}` },
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await fetchHistory();
-    } catch { /* silencieux */ }
+    } catch {
+      setHistoryError("Le snapshot n'a pas été créé. Aucun succès n'a été enregistré; réessayez.");
+    }
   };
 
   const fetchData = useCallback(async (token?: string) => {
     const t = token || kioskToken;
     if (!t) return;
+    setError('');
     try {
       const res = await fetch(`${API}/occupancy/buildings/${buildingId}/readiness-enriched?token=${t}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('coro_client_token')}` },
@@ -107,7 +122,10 @@ export default function ResiliencePage() {
       const json = await res.json();
       setData(json);
       setLastUpdate(new Date());
-    } catch { /* silencieux */ }
+    } catch {
+      setData(null);
+      setError("Impossible de charger l'indice de résilience. Vérifiez votre accès et réessayez.");
+    }
     finally { setLoading(false); }
   }, [buildingId, kioskToken]);
 
@@ -121,6 +139,17 @@ export default function ResiliencePage() {
     <PortalLayout>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
         <p className="animate-pulse" style={{ color: '#ADB5BD', fontSize: 14 }}>Analyse en cours...</p>
+      </div>
+    </PortalLayout>
+  );
+
+  if (error) return (
+    <PortalLayout>
+      <div role="alert" style={{ margin: '32px auto', maxWidth: 720, padding: 20, borderRadius: 12, border: '1px solid #F1948A', backgroundColor: '#FDEDEC', color: '#922B21' }}>
+        <p style={{ margin: '0 0 12px', fontWeight: 700 }}>{error}</p>
+        <button type="button" onClick={() => init()} style={{ minHeight: 44, padding: '8px 16px', borderRadius: 8, border: '1px solid #C0392B', backgroundColor: '#FFFFFF', color: '#922B21', fontWeight: 700, cursor: 'pointer' }}>
+          Réessayer
+        </button>
       </div>
     </PortalLayout>
   );
@@ -455,6 +484,11 @@ export default function ResiliencePage() {
       {/* ── Onglet Tendance ── */}
       {activeTab === 'trend' && (
         <div>
+          {historyError && (
+            <div role="alert" style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 10, border: '1px solid #F1948A', backgroundColor: '#FDEDEC', color: '#922B21' }}>
+              {historyError}
+            </div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
             <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#2C3E50', display: 'flex', alignItems: 'center', gap: 6 }}>
               <TrendingUp size={15} color="#6C757D" /> Évolution de l'indice — 90 derniers jours

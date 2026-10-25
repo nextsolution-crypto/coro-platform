@@ -439,37 +439,39 @@ export class ClientAuthService {
 
   async generateMagicLink(clientUserId: string): Promise<string> {
     const token = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72h
 
     await this.prisma.magicLink.create({
-      data: { token, userId: clientUserId, expiresAt },
+      data: { token: tokenHash, userId: clientUserId, expiresAt },
     });
 
     return `https://client.getcoro.io/magic?token=${token}`;
   }
 
   async validateMagicLink(token: string) {
-    const magicLink = await this.prisma.magicLink.findUnique({
-      where: { token },
-      include: {
-        user: {
-          include: { client: true },
-        },
-      },
+    if (!/^[a-f0-9]{64}$/i.test(token))
+      throw new UnauthorizedException('Lien invalide.');
+    const now = new Date();
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const clientUser = await this.prisma.$transaction(async (tx) => {
+      // Le second candidat conserve pendant 72 h au plus la compatibilité des
+      // liens créés avant le stockage haché. Les nouveaux liens ne sont jamais
+      // persistés en clair.
+      const magicLink = await tx.magicLink.findFirst({
+        where: { token: { in: [tokenHash, token] } },
+        include: { user: { include: { client: true } } },
+      });
+      if (!magicLink || !magicLink.user.isActive)
+        throw new UnauthorizedException('Lien invalide.');
+      const claimed = await tx.magicLink.updateMany({
+        where: { id: magicLink.id, usedAt: null, expiresAt: { gt: now } },
+        data: { usedAt: now },
+      });
+      if (claimed.count !== 1)
+        throw new UnauthorizedException('Lien invalide ou expiré.');
+      return magicLink.user;
     });
-
-    if (!magicLink) throw new UnauthorizedException('Lien invalide.');
-    if (magicLink.usedAt) throw new UnauthorizedException('Lien déjà utilisé.');
-    if (magicLink.expiresAt < new Date())
-      throw new UnauthorizedException('Lien expiré.');
-
-    // Marquer comme utilisé
-    await this.prisma.magicLink.update({
-      where: { token },
-      data: { usedAt: new Date() },
-    });
-
-    const clientUser = magicLink.user;
 
     const jwtToken = this.clientToken(clientUser);
 

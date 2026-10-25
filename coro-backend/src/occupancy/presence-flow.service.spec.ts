@@ -111,4 +111,73 @@ describe('PresenceFlowService', () => {
     expect(result.occupancyRecordId).toBe('presence-a');
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
+
+  it('recognizes only an active, unexpired and non-revoked personal device', async () => {
+    prisma.presenceSession.updateMany.mockResolvedValue({ count: 1 });
+    prisma.presenceSession.findUnique.mockResolvedValue({
+      id: 'session-a',
+      buildingId: 'building-a',
+      transactionExpiresAt: future,
+      entryLabel: 'Entrance East',
+      building: { name: 'QA Building' },
+    });
+    prisma.presenceDeviceSession.findFirst.mockResolvedValue({
+      id: 'device-a',
+      employeeId: 'employee-a',
+      employee: { firstName: 'Ariane', lastName: 'Test' },
+    });
+    prisma.occupancyRecord.findFirst.mockResolvedValue(null);
+    prisma.$transaction.mockResolvedValue([]);
+
+    const result = await service.start('session-a', 'valid-challenge', 'opaque-device-token');
+
+    expect(prisma.presenceDeviceSession.findFirst).toHaveBeenCalledWith({
+      where: {
+        tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        buildingId: 'building-a',
+        revokedAt: null,
+        expiresAt: { gt: expect.any(Date) },
+        employee: { isActive: true },
+      },
+      include: { employee: true },
+    });
+    expect(result.recognized).toEqual({
+      firstName: 'Ariane',
+      lastName: 'Test',
+      action: 'CHECK_IN',
+    });
+  });
+
+  it.each(['expired', 'revoked', 'inactive'])('fails closed for a %s device session', async () => {
+    prisma.presenceSession.updateMany.mockResolvedValue({ count: 1 });
+    prisma.presenceSession.findUnique.mockResolvedValue({
+      id: 'session-a',
+      buildingId: 'building-a',
+      transactionExpiresAt: future,
+      entryLabel: 'Entrance East',
+      building: { name: 'QA Building' },
+    });
+    prisma.presenceDeviceSession.findFirst.mockResolvedValue(null);
+
+    const result = await service.start('session-a', 'valid-challenge', 'unusable-device-token');
+
+    expect(result.recognized).toBeNull();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('revokes the current device token without exposing it', async () => {
+    prisma.presenceDeviceSession.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(service.forgetDevice('opaque-device-token')).resolves.toEqual({ forgotten: true });
+    expect(prisma.presenceDeviceSession.updateMany).toHaveBeenCalledWith({
+      where: {
+        tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        revokedAt: null,
+      },
+      data: { revokedAt: expect.any(Date) },
+    });
+    expect(JSON.stringify(prisma.presenceDeviceSession.updateMany.mock.calls[0][0])).not.toContain(
+      'opaque-device-token',
+    );
+  });
 });

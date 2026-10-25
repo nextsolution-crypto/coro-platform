@@ -27,6 +27,11 @@ test('remembered phone uses an HttpOnly server cookie and offers revocation', ()
   assert.match(controller, /httpOnly: true/);
   assert.match(controller, /sameSite: 'strict'/);
   assert.match(controller, /presence\/device\/forget/);
+  assert.equal(
+    presence.match(/onClick=\{\(\) => void forget\(\)\}/g)?.length,
+    2,
+    'both "not me" and explicit forget must revoke the remembered identity',
+  );
   assert.match(presence, /Oublier ce téléphone/);
 });
 

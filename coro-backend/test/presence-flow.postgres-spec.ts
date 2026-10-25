@@ -9,7 +9,9 @@ describe('Sentinelle simultaneous presence (PostgreSQL)', () => {
   let secondOrganizationId: string;
   let buildingId: string;
   let employeeId: string;
+  let secondEmployeeId: string;
   let displayToken: string;
+  let secondDisplayToken: string;
 
   beforeAll(async () => {
     await prisma.$connect();
@@ -66,6 +68,16 @@ describe('Sentinelle simultaneous presence (PostgreSQL)', () => {
       },
     });
     employeeId = employee.id;
+    const secondEmployee = await prisma.buildingEmployee.create({
+      data: {
+        buildingId,
+        organizationId,
+        firstName: 'Chloe',
+        lastName: 'Alpha',
+        pin: '5678',
+      },
+    });
+    secondEmployeeId = secondEmployee.id;
     await prisma.buildingEmployee.create({
       data: {
         buildingId: secondBuilding.id,
@@ -79,6 +91,10 @@ describe('Sentinelle simultaneous presence (PostgreSQL)', () => {
       data: { buildingId, organizationId, label: 'Entrée Est' },
     });
     displayToken = display.publicToken;
+    const secondDisplay = await prisma.presenceKioskDisplay.create({
+      data: { buildingId, organizationId, label: 'Entrance West' },
+    });
+    secondDisplayToken = secondDisplay.publicToken;
   });
 
   afterAll(async () => {
@@ -160,5 +176,85 @@ describe('Sentinelle simultaneous presence (PostgreSQL)', () => {
         where: { employeeId, status: 'OUT' },
       }),
     ).toBe(1);
+  });
+
+  it('keeps a started transaction valid after QR rotation and exposes both building displays', async () => {
+    const issued = await service.issueChallenge(displayToken);
+    await service.start(issued.sessionId, issued.challenge);
+    await prisma.presenceSession.update({
+      where: { id: issued.sessionId },
+      data: { challengeExpiresAt: new Date(Date.now() - 1_000) },
+    });
+
+    const identity = await service.identify(issued.sessionId, '1234');
+    expect(identity.firstName).toBe('Ariane');
+    expect(identity.action).toBe('CHECK_IN');
+    await expect(
+      service.confirm(issued.sessionId, 'CHECK_IN', `rotated-${issued.sessionId}`, false),
+    ).resolves.toEqual(expect.objectContaining({ action: 'CHECK_IN' }));
+
+    const displays = await service.listDisplays(buildingId, organizationId);
+    expect(displays.map((item) => item.publicToken)).toEqual(
+      expect.arrayContaining([displayToken, secondDisplayToken]),
+    );
+    expect(displays).toHaveLength(2);
+    expect(displays.map((item) => item.label)).toContain('Entrance West');
+  });
+
+  it('recognizes a remembered phone, revokes it, then allows a different user', async () => {
+    const first = await identifiedSession();
+    expect(first.action).toBe('CHECK_OUT');
+    const remembered = await service.confirm(
+      first.id,
+      'CHECK_OUT',
+      `remember-${first.id}`,
+      true,
+    );
+    expect(remembered.deviceToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
+
+    const recognizedChallenge = await service.issueChallenge(displayToken);
+    const recognized = await service.start(
+      recognizedChallenge.sessionId,
+      recognizedChallenge.challenge,
+      remembered.deviceToken,
+    );
+    expect(recognized.recognized).toEqual(
+      expect.objectContaining({ firstName: 'Ariane', action: 'CHECK_IN' }),
+    );
+
+    await service.forgetDevice(remembered.deviceToken);
+    const changedChallenge = await service.issueChallenge(displayToken);
+    const changed = await service.start(
+      changedChallenge.sessionId,
+      changedChallenge.challenge,
+      remembered.deviceToken,
+    );
+    expect(changed.recognized).toBeNull();
+    const secondIdentity = await service.identify(changedChallenge.sessionId, '5678');
+    expect(secondIdentity.firstName).toBe('Chloe');
+    expect(
+      await prisma.presenceSession.findUnique({
+        where: { id: changedChallenge.sessionId },
+        select: { employeeId: true },
+      }),
+    ).toEqual({ employeeId: secondEmployeeId });
+
+    const secondRemembered = await service.confirm(
+      changedChallenge.sessionId,
+      'CHECK_IN',
+      `change-user-${changedChallenge.sessionId}`,
+      true,
+    );
+    await prisma.presenceDeviceSession.updateMany({
+      where: { employeeId: secondEmployeeId, revokedAt: null },
+      data: { expiresAt: new Date(Date.now() - 1_000) },
+    });
+    const expiredChallenge = await service.issueChallenge(secondDisplayToken);
+    const expired = await service.start(
+      expiredChallenge.sessionId,
+      expiredChallenge.challenge,
+      secondRemembered.deviceToken,
+    );
+    expect(expired.recognized).toBeNull();
   });
 });
