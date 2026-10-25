@@ -2447,6 +2447,9 @@ model Building {
   occupancyRecords       OccupancyRecord[]
   evacuationEvents       EvacuationEvent[]
   kioskToken             BuildingKioskToken?
+  presenceSessions       PresenceSession[]
+  presenceDeviceSessions PresenceDeviceSession[]
+  presenceDisplays       PresenceKioskDisplay[]
   alarmToken             BuildingAlarmToken?
   employees              BuildingEmployee[]
   visitorInvitations     VisitorInvitation[]
@@ -3201,18 +3204,18 @@ model MandateServiceOperation {
 }
 
 model ProjectComment {
-  id               String         @id @default(uuid())
-  projectId        String
-  project          Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  actorType         AuditActorType @default(INTERNAL_USER)
-  userId            String?
-  user              User?          @relation(fields: [userId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  clientUserId      String?
-  clientUser        ClientUser?    @relation(fields: [clientUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  contenu           String
-  organizationId   String
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  id             String         @id @default(uuid())
+  projectId      String
+  project        Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  actorType      AuditActorType @default(INTERNAL_USER)
+  userId         String?
+  user           User?          @relation(fields: [userId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  clientUserId   String?
+  clientUser     ClientUser?    @relation(fields: [clientUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  contenu        String
+  organizationId String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   @@index([clientUserId, createdAt])
 }
@@ -5754,6 +5757,84 @@ model BuildingEmployee {
   isEmergencyMember Boolean                 @default(false)
   smsConsent        Boolean                 @default(false)
   incidentTasks     IncidentTask[]
+  presenceSessions  PresenceSession[]
+  presenceDevices   PresenceDeviceSession[]
+}
+
+enum PresenceSessionStatus {
+  ISSUED
+  STARTED
+  IDENTIFIED
+  COMPLETED
+  EXPIRED
+}
+
+enum PresenceAction {
+  CHECK_IN
+  CHECK_OUT
+}
+
+// Transaction courte ouverte par un QR de borne. Le QR doit être valide au
+// démarrage; une transaction démarrée dispose ensuite de sa propre échéance.
+model PresenceSession {
+  id                   String                @id @default(uuid())
+  buildingId           String
+  building             Building              @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  organizationId       String
+  kioskTokenId         String
+  entryLabel           String?
+  challengeHash        String                @unique
+  challengeExpiresAt   DateTime
+  transactionExpiresAt DateTime
+  startedAt            DateTime?
+  identifiedAt         DateTime?
+  completedAt          DateTime?
+  status               PresenceSessionStatus @default(ISSUED)
+  employeeId           String?
+  employee             BuildingEmployee?     @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  intendedAction       PresenceAction?
+  idempotencyKey       String?               @unique
+  occupancyRecordId    String?
+  failedAttempts       Int                   @default(0)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  @@index([buildingId, status, challengeExpiresAt])
+  @@index([employeeId, createdAt])
+}
+
+model PresenceKioskDisplay {
+  id             String   @id @default(uuid())
+  buildingId     String
+  building       Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  organizationId String
+  label          String
+  publicToken    String   @unique @default(uuid())
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([buildingId, isActive])
+  @@index([organizationId])
+}
+
+// Session opaque d'un téléphone personnel reconnu. Seul le condensat du
+// jeton est persisté; aucune identité ni aucun PIN n'est stocké côté navigateur.
+model PresenceDeviceSession {
+  id             String           @id @default(uuid())
+  tokenHash      String           @unique
+  employeeId     String
+  employee       BuildingEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  buildingId     String
+  building       Building         @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  organizationId String
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  lastUsedAt     DateTime?
+  createdAt      DateTime         @default(now())
+
+  @@index([employeeId, revokedAt, expiresAt])
+  @@index([buildingId, revokedAt, expiresAt])
 }
 
 model EmployeeEmergencyRole {

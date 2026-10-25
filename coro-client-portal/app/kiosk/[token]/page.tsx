@@ -5,9 +5,27 @@ import { useParams } from 'next/navigation';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
 
 const TYPE_OPTIONS = [
-  { value: 'EMPLOYE',     label: 'Employé',     emoji: '👤', color: '#2980B9', bg: '#EBF5FB' },
-  { value: 'VISITEUR',    label: 'Visiteur',    emoji: '🪪', color: '#8E44AD', bg: '#F5EEF8' },
-  { value: 'CONTRACTEUR', label: 'Contracteur', emoji: '🔧', color: '#E67E22', bg: '#FEF5E7' },
+  {
+    value: 'EMPLOYE',
+    label: 'Employé',
+    emoji: '👤',
+    color: '#2980B9',
+    bg: '#EBF5FB',
+  },
+  {
+    value: 'VISITEUR',
+    label: 'Visiteur',
+    emoji: '🪪',
+    color: '#8E44AD',
+    bg: '#F5EEF8',
+  },
+  {
+    value: 'CONTRACTEUR',
+    label: 'Contracteur',
+    emoji: '🔧',
+    color: '#E67E22',
+    bg: '#FEF5E7',
+  },
 ];
 
 type Screen = 'loading' | 'error' | 'home' | 'checkin-type' | 'checkin-form' | 'checkout' | 'scanner' | 'success';
@@ -19,15 +37,29 @@ export default function KioskPage() {
   const [screen, setScreen] = useState<Screen>('loading');
   const [buildingId, setBuildingId] = useState<string>('');
   const [selectedType, setSelectedType] = useState<string>('');
-  const [form, setForm] = useState({ firstName: '', lastName: '', company: '', reason: '', hostName: '', floor: '' });
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    company: '',
+    reason: '',
+    hostName: '',
+    floor: '',
+  });
   const [checkoutSearch, setCheckoutSearch] = useState('');
   const [checkoutResults, setCheckoutResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'offline' } | null>(null);
+  const [message, setMessage] = useState<{
+    text: string;
+    type: 'success' | 'error' | 'offline';
+  } | null>(null);
   const [isOnline, setIsOnline] = useState(true);
   const [currentTime, setCurrentTime] = useState('');
   const [scannerStarted, setScannerStarted] = useState(false);
-  const [activeIncident, setActiveIncident] = useState<{ publicAccessToken: string; type: string; status: string } | null>(null);
+  const [activeIncident, setActiveIncident] = useState<{
+    publicAccessToken: string;
+    type: string;
+    status: string;
+  } | null>(null);
 
   const handleQrScan = async (qrToken: string) => {
     if (!buildingId || loading) return;
@@ -55,12 +87,21 @@ export default function KioskPage() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ qrToken, kioskToken: token }),
             });
-            setMessage({ text: `Au revoir, ${name} ! Votre sortie a été enregistrée.`, type: 'success' });
+            setMessage({
+              text: `Au revoir, ${name} ! Votre sortie a été enregistrée.`,
+              type: 'success',
+            });
           } else {
-            setMessage({ text: `${name} est déjà enregistré(e) en entrée.`, type: 'success' });
+            setMessage({
+              text: `${name} est déjà enregistré(e) en entrée.`,
+              type: 'success',
+            });
           }
         } else {
-          setMessage({ text: `Bienvenue, ${name} ! Entrée enregistrée automatiquement.`, type: 'success' });
+          setMessage({
+            text: `Bienvenue, ${name} ! Entrée enregistrée automatiquement.`,
+            type: 'success',
+          });
         }
         setScreen('success');
         setTimeout(resetToHome, 4000);
@@ -92,7 +133,10 @@ export default function KioskPage() {
           body: JSON.stringify({ qrToken, kioskToken: token }),
         });
         if (resOut.ok) {
-          setMessage({ text: `Au revoir, ${info.firstName} ! Votre sortie a été enregistrée.`, type: 'success' });
+          setMessage({
+            text: `Au revoir, ${info.firstName} ! Votre sortie a été enregistrée.`,
+            type: 'success',
+          });
           setScreen('success');
           setTimeout(resetToHome, 4000);
           return;
@@ -111,7 +155,13 @@ export default function KioskPage() {
 
   // Horloge
   useEffect(() => {
-    const tick = () => setCurrentTime(new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }));
+    const tick = () =>
+      setCurrentTime(
+        new Date().toLocaleTimeString('fr-CA', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      );
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
@@ -124,7 +174,10 @@ export default function KioskPage() {
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
     setIsOnline(navigator.onLine);
-    return () => { window.removeEventListener('online', onOnline); window.removeEventListener('offline', onOffline); };
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
   }, []);
 
   // Résoudre buildingId AU CHARGEMENT — bloquer tant que pas résolu
@@ -132,8 +185,8 @@ export default function KioskPage() {
     if (!token) return;
     setScreen('loading');
     fetch(`${API_URL}/occupancy/kiosk/resolve/${token}`, { cache: 'no-store' })
-      .then(r => r.json())
-      .then(d => {
+      .then((r) => r.json())
+      .then((d) => {
         if (d?.buildingId) {
           setBuildingId(d.buildingId);
           // Sauvegarder le token kiosque pour la page QR landing
@@ -164,10 +217,16 @@ export default function KioskPage() {
 
     const checkIncident = () => {
       fetch(`${API_URL}/occupancy/kiosk/${token}/active-incident`)
-        .then(r => r.json())
-        .then(d => {
+        .then((r) => r.json())
+        .then((d) => {
           if (cancelled) return;
-          const next = d?.active ? { publicAccessToken: d.publicAccessToken, type: d.type, status: d.status } : null;
+          const next = d?.active
+            ? {
+                publicAccessToken: d.publicAccessToken,
+                type: d.type,
+                status: d.status,
+              }
+            : null;
           setActiveIncident(next);
           timer = setTimeout(checkIncident, next?.status === 'PRE_ALERT' ? 5000 : 15000);
         })
@@ -176,13 +235,23 @@ export default function KioskPage() {
         });
     };
     checkIncident();
-    return () => { cancelled = true; clearTimeout(timer); };
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [token]);
 
   const resetToHome = () => {
     setScreen('home');
     setSelectedType('');
-    setForm({ firstName: '', lastName: '', company: '', reason: '', hostName: '', floor: '' });
+    setForm({
+      firstName: '',
+      lastName: '',
+      company: '',
+      reason: '',
+      hostName: '',
+      floor: '',
+    });
     setCheckoutSearch('');
     setCheckoutResults([]);
     setMessage(null);
@@ -190,11 +259,17 @@ export default function KioskPage() {
 
   const handleCheckin = async () => {
     if (!form.firstName.trim() || !form.lastName.trim()) {
-      setMessage({ text: 'Le prénom et le nom sont obligatoires.', type: 'error' });
+      setMessage({
+        text: 'Le prénom et le nom sont obligatoires.',
+        type: 'error',
+      });
       return;
     }
     if (!buildingId) {
-      setMessage({ text: 'Erreur — bâtiment non résolu. Rechargez la page.', type: 'error' });
+      setMessage({
+        text: 'Erreur — bâtiment non résolu. Rechargez la page.',
+        type: 'error',
+      });
       return;
     }
     setLoading(true);
@@ -202,15 +277,26 @@ export default function KioskPage() {
       const res = await fetch(`${API_URL}/occupancy/checkin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ buildingId, kioskToken: token, type: selectedType, ...form }),
+        body: JSON.stringify({
+          buildingId,
+          kioskToken: token,
+          type: selectedType,
+          ...form,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Erreur');
-      setMessage({ text: `Bienvenue, ${form.firstName} ! Votre entrée a été enregistrée.`, type: 'success' });
+      setMessage({
+        text: `Bienvenue, ${form.firstName} ! Votre entrée a été enregistrée.`,
+        type: 'success',
+      });
       setScreen('success');
       setTimeout(resetToHome, 4000);
     } catch (err: any) {
-      setMessage({ text: err.message || 'Errée lors de l\'enregistrement.', type: 'error' });
+      setMessage({
+        text: err.message || "Errée lors de l'enregistrement.",
+        type: 'error',
+      });
     } finally {
       setLoading(false);
     }
@@ -223,8 +309,11 @@ export default function KioskPage() {
       const res = await fetch(`${API_URL}/occupancy/buildings/${buildingId}/search?q=${encodeURIComponent(checkoutSearch)}&token=${token}`);
       const data = await res.json();
       setCheckoutResults(Array.isArray(data) ? data : []);
-    } catch { setCheckoutResults([]); }
-    finally { setLoading(false); }
+    } catch {
+      setCheckoutResults([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCheckout = async (recordId: string, name: string) => {
@@ -235,19 +324,35 @@ export default function KioskPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recordId, kioskToken: token }),
       });
-      setMessage({ text: `Au revoir, ${name} ! Votre sortie a été enregistrée.`, type: 'success' });
+      setMessage({
+        text: `Au revoir, ${name} ! Votre sortie a été enregistrée.`,
+        type: 'success',
+      });
       setScreen('success');
       setTimeout(resetToHome, 4000);
     } catch {
-      setMessage({ text: 'Erreur lors de l\'enregistrement.', type: 'error' });
-    } finally { setLoading(false); }
+      setMessage({ text: "Erreur lors de l'enregistrement.", type: 'error' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ── ÉCRAN CHARGEMENT ──
   if (screen === 'loading') {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#2C3E50', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#ADB5BD', fontSize: 14 }} className="animate-pulse">Initialisation de la borne...</p>
+      <div
+        style={{
+          minHeight: '100vh',
+          backgroundColor: '#2C3E50',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <p style={{ color: '#ADB5BD', fontSize: 14 }} className="animate-pulse">
+          Initialisation de la borne...
+        </p>
       </div>
     );
   }
@@ -255,9 +360,29 @@ export default function KioskPage() {
   // ── ÉCRAN ERREUR ──
   if (screen === 'error') {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#2C3E50', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center' }}>
+      <div
+        style={{
+          minHeight: '100vh',
+          backgroundColor: '#2C3E50',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 32,
+          textAlign: 'center',
+        }}
+      >
         <p style={{ fontSize: 48, margin: '0 0 16px' }}>⚠️</p>
-        <h2 style={{ color: '#FFFFFF', fontSize: 20, fontWeight: 800, margin: '0 0 8px' }}>Borne non configurée</h2>
+        <h2
+          style={{
+            color: '#FFFFFF',
+            fontSize: 20,
+            fontWeight: 800,
+            margin: '0 0 8px',
+          }}
+        >
+          Borne non configurée
+        </h2>
         <p style={{ color: '#ADB5BD', fontSize: 14 }}>Token invalide ou expiré. Contactez votre administrateur.</p>
       </div>
     );
@@ -267,18 +392,67 @@ export default function KioskPage() {
   if (screen === 'home') {
     if (activeIncident?.status === 'PRE_ALERT') {
       return (
-        <div style={{ minHeight: '100vh', backgroundColor: '#B9770E', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, userSelect: 'none', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 900, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+        <div
+          style={{
+            minHeight: '100vh',
+            backgroundColor: '#B9770E',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 32,
+            userSelect: 'none',
+            textAlign: 'center',
+          }}
+        >
+          <p
+            style={{
+              margin: '0 0 6px',
+              fontSize: 14,
+              fontWeight: 900,
+              color: '#FFFFFF',
+              textTransform: 'uppercase',
+              letterSpacing: '0.12em',
+            }}
+          >
             🔔 Signal du panneau d'alarme
           </p>
-          <p style={{ margin: '0 0 12px', fontSize: 22, fontWeight: 800, color: '#FFF8E8', maxWidth: 380 }}>
+          <p
+            style={{
+              margin: '0 0 12px',
+              fontSize: 22,
+              fontWeight: 800,
+              color: '#FFF8E8',
+              maxWidth: 380,
+            }}
+          >
             En attente de confirmation par un coordonnateur
           </p>
-          <p style={{ margin: 0, fontSize: 14, color: 'rgba(255,255,255,0.85)', maxWidth: 340 }}>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 14,
+              color: 'rgba(255,255,255,0.85)',
+              maxWidth: 340,
+            }}
+          >
             Si aucune action n'est prise, l'alerte sera automatiquement confirmée et l'équipe d'urgence sera notifiée.
           </p>
-          <button type="button" onClick={() => setScreen('checkin-type')}
-            style={{ marginTop: 32, padding: '14px 24px', borderRadius: 10, border: '2px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+          <button
+            type="button"
+            onClick={() => setScreen('checkin-type')}
+            style={{
+              marginTop: 32,
+              padding: '14px 24px',
+              borderRadius: 10,
+              border: '2px solid rgba(255,255,255,0.4)',
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              color: '#FFFFFF',
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
             Enregistrer ma présence
           </button>
         </div>
@@ -286,21 +460,76 @@ export default function KioskPage() {
     }
     if (activeIncident) {
       return (
-        <div style={{ minHeight: '100vh', backgroundColor: '#C0392B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, userSelect: 'none' }}>
-          <p style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 900, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+        <div
+          style={{
+            minHeight: '100vh',
+            backgroundColor: '#C0392B',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 32,
+            userSelect: 'none',
+          }}
+        >
+          <p
+            style={{
+              margin: '0 0 6px',
+              fontSize: 14,
+              fontWeight: 900,
+              color: '#FFFFFF',
+              textTransform: 'uppercase',
+              letterSpacing: '0.12em',
+            }}
+          >
             🚨 Incident en cours
           </p>
-          <p style={{ margin: '0 0 28px', fontSize: 22, fontWeight: 800, color: '#FFF0EE', textAlign: 'center' }}>
+          <p
+            style={{
+              margin: '0 0 28px',
+              fontSize: 22,
+              fontWeight: 800,
+              color: '#FFF0EE',
+              textAlign: 'center',
+            }}
+          >
             Fiche d'intervention disponible
           </p>
-          <div style={{ padding: 20, borderRadius: 16, backgroundColor: '#FFFFFF' }}>
+          <div
+            style={{
+              padding: 20,
+              borderRadius: 16,
+              backgroundColor: '#FFFFFF',
+            }}
+          >
             <IncidentQrDisplay token={activeIncident.publicAccessToken} />
           </div>
-          <p style={{ margin: '20px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.75)', textAlign: 'center', maxWidth: 340 }}>
+          <p
+            style={{
+              margin: '20px 0 0',
+              fontSize: 13,
+              color: 'rgba(255,255,255,0.75)',
+              textAlign: 'center',
+              maxWidth: 340,
+            }}
+          >
             Scannez pour accéder aux informations critiques du bâtiment (accès, matières dangereuses, points de rassemblement, contacts).
           </p>
-          <button type="button" onClick={() => setScreen('checkin-type')}
-            style={{ marginTop: 32, padding: '14px 24px', borderRadius: 10, border: '2px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+          <button
+            type="button"
+            onClick={() => setScreen('checkin-type')}
+            style={{
+              marginTop: 32,
+              padding: '14px 24px',
+              borderRadius: 10,
+              border: '2px solid rgba(255,255,255,0.4)',
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              color: '#FFFFFF',
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
             Enregistrer ma présence
           </button>
         </div>
@@ -308,38 +537,176 @@ export default function KioskPage() {
     }
 
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#2C3E50', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, userSelect: 'none' }}>
+      <div
+        style={{
+          minHeight: '100vh',
+          backgroundColor: '#2C3E50',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 32,
+          userSelect: 'none',
+        }}
+      >
         <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.1em' }}>CORO Sentinelle</p>
-          <p style={{ margin: '0 0 4px', fontSize: 'clamp(48px, 10vw, 72px)', fontWeight: 900, color: '#FFFFFF', lineHeight: 1 }}>{currentTime}</p>
-          <p style={{ margin: '8px 0 0', fontSize: 14, color: '#ADB5BD' }}>{new Date().toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+          <p
+            style={{
+              margin: '0 0 8px',
+              fontSize: 13,
+              fontWeight: 700,
+              color: '#ADB5BD',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+            }}
+          >
+            CORO Sentinelle
+          </p>
+          <p
+            style={{
+              margin: '0 0 4px',
+              fontSize: 'clamp(48px, 10vw, 72px)',
+              fontWeight: 900,
+              color: '#FFFFFF',
+              lineHeight: 1,
+            }}
+          >
+            {currentTime}
+          </p>
+          <p style={{ margin: '8px 0 0', fontSize: 14, color: '#ADB5BD' }}>
+            {new Date().toLocaleDateString('fr-CA', {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+            })}
+          </p>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', maxWidth: 420 }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 16,
+            width: '100%',
+            maxWidth: 420,
+          }}
+        >
           {/* QR de la borne — l'employé scanne avec son téléphone */}
-          <div style={{ padding: '20px 24px', borderRadius: 16, border: '2px solid rgba(255,255,255,0.2)', backgroundColor: 'rgba(255,255,255,0.06)', textAlign: 'center' }}>
-            <p style={{ margin: '0 0 12px', fontSize: 12, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <div
+            style={{
+              padding: '20px 24px',
+              borderRadius: 16,
+              border: '2px solid rgba(255,255,255,0.2)',
+              backgroundColor: 'rgba(255,255,255,0.06)',
+              textAlign: 'center',
+            }}
+          >
+            <p
+              style={{
+                margin: '0 0 12px',
+                fontSize: 12,
+                fontWeight: 700,
+                color: '#ADB5BD',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+              }}
+            >
               📷 Scannez pour pointer votre présence
             </p>
             <KioskQrDisplay kioskToken={token} />
-            <p style={{ margin: '10px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+            <p
+              style={{
+                margin: '10px 0 0',
+                fontSize: 11,
+                color: 'rgba(255,255,255,0.4)',
+              }}
+            >
               Se régénère automatiquement
             </p>
           </div>
-          <button type="button" onClick={() => setScreen('checkin-type')}
-            style={{ padding: '28px 32px', borderRadius: 16, border: 'none', backgroundColor: '#27AE60', cursor: 'pointer', textAlign: 'center', boxShadow: '0 8px 24px rgba(39,174,96,0.3)' }}>
+          <button
+            type="button"
+            onClick={() => setScreen('checkin-type')}
+            style={{
+              padding: '28px 32px',
+              borderRadius: 16,
+              border: 'none',
+              backgroundColor: '#27AE60',
+              cursor: 'pointer',
+              textAlign: 'center',
+              boxShadow: '0 8px 24px rgba(39,174,96,0.3)',
+            }}
+          >
             <p style={{ margin: '0 0 4px', fontSize: 28 }}>✅</p>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#FFFFFF' }}>Entrée</p>
-            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>Enregistrer mon arrivée</p>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 22,
+                fontWeight: 800,
+                color: '#FFFFFF',
+              }}
+            >
+              Entrée
+            </p>
+            <p
+              style={{
+                margin: '4px 0 0',
+                fontSize: 13,
+                color: 'rgba(255,255,255,0.75)',
+              }}
+            >
+              Enregistrer mon arrivée
+            </p>
           </button>
-          <button type="button" onClick={() => setScreen('checkout')}
-            style={{ padding: '28px 32px', borderRadius: 16, border: '2px solid rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.08)', cursor: 'pointer', textAlign: 'center' }}>
+          <button
+            type="button"
+            onClick={() => setScreen('checkout')}
+            style={{
+              padding: '28px 32px',
+              borderRadius: 16,
+              border: '2px solid rgba(255,255,255,0.15)',
+              backgroundColor: 'rgba(255,255,255,0.08)',
+              cursor: 'pointer',
+              textAlign: 'center',
+            }}
+          >
             <p style={{ margin: '0 0 4px', fontSize: 28 }}>🚪</p>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#FFFFFF' }}>Sortie</p>
-            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>Enregistrer mon départ</p>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 22,
+                fontWeight: 800,
+                color: '#FFFFFF',
+              }}
+            >
+              Sortie
+            </p>
+            <p
+              style={{
+                margin: '4px 0 0',
+                fontSize: 13,
+                color: 'rgba(255,255,255,0.6)',
+              }}
+            >
+              Enregistrer mon départ
+            </p>
           </button>
         </div>
-        <div style={{ marginTop: 40, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: isOnline ? '#27AE60' : '#E74C3C' }} />
+        <div
+          style={{
+            marginTop: 40,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <div
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              backgroundColor: isOnline ? '#27AE60' : '#E74C3C',
+            }}
+          />
           <p style={{ margin: 0, fontSize: 12, color: '#ADB5BD' }}>{isOnline ? 'En ligne' : 'Hors ligne'}</p>
         </div>
       </div>
@@ -351,12 +718,38 @@ export default function KioskPage() {
     return (
       <KioskWrapper onBack={resetToHome} title="Vous êtes...">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {TYPE_OPTIONS.map(opt => (
-            <button key={opt.value} type="button" onClick={() => { setSelectedType(opt.value); setScreen('checkin-form'); }}
-              style={{ padding: '24px 28px', borderRadius: 14, border: `2px solid ${opt.bg}`, backgroundColor: opt.bg, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 18, textAlign: 'left' }}>
+          {TYPE_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                setSelectedType(opt.value);
+                setScreen('checkin-form');
+              }}
+              style={{
+                padding: '24px 28px',
+                borderRadius: 14,
+                border: `2px solid ${opt.bg}`,
+                backgroundColor: opt.bg,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 18,
+                textAlign: 'left',
+              }}
+            >
               <span style={{ fontSize: 36 }}>{opt.emoji}</span>
               <div>
-                <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: opt.color }}>{opt.label}</p>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 20,
+                    fontWeight: 800,
+                    color: opt.color,
+                  }}
+                >
+                  {opt.label}
+                </p>
                 <p style={{ margin: '3px 0 0', fontSize: 13, color: '#6C757D' }}>
                   {opt.value === 'EMPLOYE' && 'Je travaille dans ce bâtiment'}
                   {opt.value === 'VISITEUR' && 'Je viens pour une rencontre ou une visite'}
@@ -372,25 +765,56 @@ export default function KioskPage() {
 
   // ── ÉCRAN FORMULAIRE ──
   if (screen === 'checkin-form') {
-    const typeInfo = TYPE_OPTIONS.find(t => t.value === selectedType);
+    const typeInfo = TYPE_OPTIONS.find((t) => t.value === selectedType);
     return (
       <KioskWrapper onBack={() => setScreen('checkin-type')} title={`Entrée — ${typeInfo?.label}`}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {message?.type === 'error' && (
-            <div style={{ padding: '12px 16px', backgroundColor: '#FDEDEC', borderRadius: 8, border: '1px solid #F1948A' }}>
-              <p style={{ margin: 0, fontSize: 13, color: '#C0392B', fontWeight: 600 }}>{message.text}</p>
+            <div
+              style={{
+                padding: '12px 16px',
+                backgroundColor: '#FDEDEC',
+                borderRadius: 8,
+                border: '1px solid #F1948A',
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 13,
+                  color: '#C0392B',
+                  fontWeight: 600,
+                }}
+              >
+                {message.text}
+              </p>
             </div>
           )}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <KioskInput label="Prénom *" value={form.firstName} onChange={v => setForm(f => ({ ...f, firstName: v }))} />
-            <KioskInput label="Nom *" value={form.lastName} onChange={v => setForm(f => ({ ...f, lastName: v }))} />
+            <KioskInput label="Prénom *" value={form.firstName} onChange={(v) => setForm((f) => ({ ...f, firstName: v }))} />
+            <KioskInput label="Nom *" value={form.lastName} onChange={(v) => setForm((f) => ({ ...f, lastName: v }))} />
           </div>
-          {selectedType !== 'EMPLOYE' && <KioskInput label="Entreprise" value={form.company} onChange={v => setForm(f => ({ ...f, company: v }))} />}
-          {selectedType === 'VISITEUR' && <KioskInput label="Personne visitée" value={form.hostName} onChange={v => setForm(f => ({ ...f, hostName: v }))} />}
-          <KioskInput label="Raison de la visite" value={form.reason} onChange={v => setForm(f => ({ ...f, reason: v }))} />
-          <KioskInput label="Étage / Zone" value={form.floor} onChange={v => setForm(f => ({ ...f, floor: v }))} />
-          <button type="button" onClick={handleCheckin} disabled={loading}
-            style={{ marginTop: 8, padding: '20px', borderRadius: 12, border: 'none', backgroundColor: '#27AE60', cursor: loading ? 'not-allowed' : 'pointer', fontSize: 18, fontWeight: 800, color: '#FFFFFF', opacity: loading ? 0.7 : 1 }}>
+          {selectedType !== 'EMPLOYE' && <KioskInput label="Entreprise" value={form.company} onChange={(v) => setForm((f) => ({ ...f, company: v }))} />}
+          {selectedType === 'VISITEUR' && <KioskInput label="Personne visitée" value={form.hostName} onChange={(v) => setForm((f) => ({ ...f, hostName: v }))} />}
+          <KioskInput label="Raison de la visite" value={form.reason} onChange={(v) => setForm((f) => ({ ...f, reason: v }))} />
+          <KioskInput label="Étage / Zone" value={form.floor} onChange={(v) => setForm((f) => ({ ...f, floor: v }))} />
+          <button
+            type="button"
+            onClick={handleCheckin}
+            disabled={loading}
+            style={{
+              marginTop: 8,
+              padding: '20px',
+              borderRadius: 12,
+              border: 'none',
+              backgroundColor: '#27AE60',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontSize: 18,
+              fontWeight: 800,
+              color: '#FFFFFF',
+              opacity: loading ? 0.7 : 1,
+            }}
+          >
             {loading ? 'Enregistrement...' : '✅ Confirmer mon entrée'}
           </button>
         </div>
@@ -400,13 +824,7 @@ export default function KioskPage() {
 
   // ── ÉCRAN SCANNER QR ──
   if (screen === 'scanner') {
-    return (
-      <QrScannerScreen
-        onScan={handleQrScan}
-        onBack={resetToHome}
-        started={scannerStarted}
-      />
-    );
+    return <QrScannerScreen onScan={handleQrScan} onBack={resetToHome} started={scannerStarted} />;
   }
 
   // ── ÉCRAN CHECKOUT ──
@@ -415,25 +833,83 @@ export default function KioskPage() {
       <KioskWrapper onBack={resetToHome} title="Enregistrer ma sortie">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'flex', gap: 10 }}>
-            <input type="text" placeholder="Rechercher par nom..." value={checkoutSearch}
-              onChange={e => setCheckoutSearch(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && searchForCheckout()}
-              style={{ flex: 1, padding: '16px 18px', borderRadius: 10, border: '2px solid #E9ECEF', fontSize: 16, backgroundColor: '#F8F9FA', outline: 'none' }} />
-            <button type="button" onClick={searchForCheckout} disabled={loading}
-              style={{ padding: '16px 22px', borderRadius: 10, border: 'none', backgroundColor: '#2C3E50', cursor: 'pointer', fontSize: 15, fontWeight: 700, color: '#FFFFFF' }}>
+            <input
+              type="text"
+              placeholder="Rechercher par nom..."
+              value={checkoutSearch}
+              onChange={(e) => setCheckoutSearch(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && searchForCheckout()}
+              style={{
+                flex: 1,
+                padding: '16px 18px',
+                borderRadius: 10,
+                border: '2px solid #E9ECEF',
+                fontSize: 16,
+                backgroundColor: '#F8F9FA',
+                outline: 'none',
+              }}
+            />
+            <button
+              type="button"
+              onClick={searchForCheckout}
+              disabled={loading}
+              style={{
+                padding: '16px 22px',
+                borderRadius: 10,
+                border: 'none',
+                backgroundColor: '#2C3E50',
+                cursor: 'pointer',
+                fontSize: 15,
+                fontWeight: 700,
+                color: '#FFFFFF',
+              }}
+            >
               🔍
             </button>
           </div>
           {checkoutResults.map((r: any) => {
-            const cfg = TYPE_OPTIONS.find(t => t.value === r.type);
+            const cfg = TYPE_OPTIONS.find((t) => t.value === r.type);
             return (
-              <button key={r.id} type="button" onClick={() => handleCheckout(r.id, `${r.firstName} ${r.lastName}`)}
-                style={{ padding: '16px 20px', borderRadius: 12, border: '2px solid #E9ECEF', backgroundColor: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left' }}>
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => handleCheckout(r.id, `${r.firstName} ${r.lastName}`)}
+                style={{
+                  padding: '16px 20px',
+                  borderRadius: 12,
+                  border: '2px solid #E9ECEF',
+                  backgroundColor: '#FFFFFF',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 14,
+                  textAlign: 'left',
+                }}
+              >
                 <span style={{ fontSize: 28 }}>{cfg?.emoji}</span>
                 <div style={{ flex: 1 }}>
-                  <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#2C3E50' }}>{r.firstName} {r.lastName}</p>
-                  <p style={{ margin: '3px 0 0', fontSize: 12, color: '#ADB5BD' }}>
-                    {cfg?.label} · Arrivé à {new Date(r.checkedInAt).toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 16,
+                      fontWeight: 700,
+                      color: '#2C3E50',
+                    }}
+                  >
+                    {r.firstName} {r.lastName}
+                  </p>
+                  <p
+                    style={{
+                      margin: '3px 0 0',
+                      fontSize: 12,
+                      color: '#ADB5BD',
+                    }}
+                  >
+                    {cfg?.label} · Arrivé à{' '}
+                    {new Date(r.checkedInAt).toLocaleTimeString('fr-CA', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                   </p>
                 </div>
                 <span style={{ fontSize: 13, color: '#C0392B', fontWeight: 700 }}>Sortie →</span>
@@ -441,7 +917,16 @@ export default function KioskPage() {
             );
           })}
           {checkoutResults.length === 0 && checkoutSearch.length >= 2 && !loading && (
-            <p style={{ textAlign: 'center', color: '#ADB5BD', fontSize: 14, padding: '20px 0' }}>Aucun occupant trouvé avec ce nom.</p>
+            <p
+              style={{
+                textAlign: 'center',
+                color: '#ADB5BD',
+                fontSize: 14,
+                padding: '20px 0',
+              }}
+            >
+              Aucun occupant trouvé avec ce nom.
+            </p>
           )}
         </div>
       </KioskWrapper>
@@ -452,12 +937,40 @@ export default function KioskPage() {
   if (screen === 'success') {
     const isOffline = message?.type === 'offline';
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: isOffline ? '#FEF5E7' : '#EAFAF1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center' }}>
+      <div
+        style={{
+          minHeight: '100vh',
+          backgroundColor: isOffline ? '#FEF5E7' : '#EAFAF1',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 32,
+          textAlign: 'center',
+        }}
+      >
         <p style={{ fontSize: 80, margin: '0 0 20px' }}>{isOffline ? '📡' : '✅'}</p>
-        <h2 style={{ margin: '0 0 12px', fontSize: 28, fontWeight: 900, color: isOffline ? '#E67E22' : '#27AE60' }}>
+        <h2
+          style={{
+            margin: '0 0 12px',
+            fontSize: 28,
+            fontWeight: 900,
+            color: isOffline ? '#E67E22' : '#27AE60',
+          }}
+        >
           {isOffline ? 'Enregistré hors ligne' : 'Enregistrement réussi'}
         </h2>
-        <p style={{ margin: 0, fontSize: 16, color: '#6C757D', maxWidth: 360, lineHeight: 1.6 }}>{message?.text}</p>
+        <p
+          style={{
+            margin: 0,
+            fontSize: 16,
+            color: '#6C757D',
+            maxWidth: 360,
+            lineHeight: 1.6,
+          }}
+        >
+          {message?.text}
+        </p>
         <p style={{ margin: '24px 0 0', fontSize: 13, color: '#ADB5BD' }}>Retour automatique dans quelques secondes...</p>
       </div>
     );
@@ -468,11 +981,51 @@ export default function KioskPage() {
 
 function KioskWrapper({ children, onBack, title }: { children: React.ReactNode; onBack: () => void; title: string }) {
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#F8F9FA', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 24px' }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: '#F8F9FA',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '32px 24px',
+      }}
+    >
       <div style={{ width: '100%', maxWidth: 480 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
-          <button type="button" onClick={onBack} style={{ padding: '10px 16px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 13, color: '#6C757D', fontWeight: 600 }}>← Retour</button>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#2C3E50' }}>{title}</h1>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            marginBottom: 28,
+          }}
+        >
+          <button
+            type="button"
+            onClick={onBack}
+            style={{
+              padding: '10px 16px',
+              borderRadius: 8,
+              border: '1px solid #E9ECEF',
+              backgroundColor: '#FFFFFF',
+              cursor: 'pointer',
+              fontSize: 13,
+              color: '#6C757D',
+              fontWeight: 600,
+            }}
+          >
+            ← Retour
+          </button>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: 20,
+              fontWeight: 800,
+              color: '#2C3E50',
+            }}
+          >
+            {title}
+          </h1>
         </div>
         {children}
       </div>
@@ -487,7 +1040,7 @@ function QrScannerScreen({ onScan, onBack, started }: { onScan: (token: string) 
   useEffect(() => {
     if (!started) return;
     let scanner: any = null;
-        const initScanner = async () => {
+    const initScanner = async () => {
       try {
         const { Html5Qrcode } = await import('html5-qrcode');
         scanner = new Html5Qrcode(divId);
@@ -518,7 +1071,7 @@ function QrScannerScreen({ onScan, onBack, started }: { onScan: (token: string) 
             scanner.stop().catch(() => {});
             onScan(qrToken);
           },
-          () => {} // Erreur de scan ignorée
+          () => {}, // Erreur de scan ignorée
         );
 
         // Intercepter tous les clics dans le div scanner pour éviter navigation
@@ -526,7 +1079,6 @@ function QrScannerScreen({ onScan, onBack, started }: { onScan: (token: string) 
         if (scanDiv) {
           scanDiv.addEventListener('click', (e) => e.preventDefault(), true);
         }
-
       } catch (err) {
         console.error('[CORO Scanner]', err);
       }
@@ -538,17 +1090,75 @@ function QrScannerScreen({ onScan, onBack, started }: { onScan: (token: string) 
   }, [started]);
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#2C3E50', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-      <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.1em' }}>CORO Sentinelle</p>
-      <h2 style={{ margin: '0 0 24px', fontSize: 22, fontWeight: 800, color: '#FFFFFF' }}>Scanner votre QR Code</h2>
-      <div style={{ width: 300, height: 300, borderRadius: 16, overflow: 'hidden', border: '3px solid rgba(255,255,255,0.2)', backgroundColor: '#000' }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: '#2C3E50',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 32,
+      }}
+    >
+      <p
+        style={{
+          margin: '0 0 8px',
+          fontSize: 13,
+          fontWeight: 700,
+          color: '#ADB5BD',
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
+        }}
+      >
+        CORO Sentinelle
+      </p>
+      <h2
+        style={{
+          margin: '0 0 24px',
+          fontSize: 22,
+          fontWeight: 800,
+          color: '#FFFFFF',
+        }}
+      >
+        Scanner votre QR Code
+      </h2>
+      <div
+        style={{
+          width: 300,
+          height: 300,
+          borderRadius: 16,
+          overflow: 'hidden',
+          border: '3px solid rgba(255,255,255,0.2)',
+          backgroundColor: '#000',
+        }}
+      >
         <div id={divId} style={{ width: '100%', height: '100%' }} />
       </div>
-      <p style={{ margin: '20px 0', fontSize: 13, color: '#ADB5BD', textAlign: 'center' }}>
+      <p
+        style={{
+          margin: '20px 0',
+          fontSize: 13,
+          color: '#ADB5BD',
+          textAlign: 'center',
+        }}
+      >
         Pointez la caméra vers votre code QR
       </p>
-      <button type="button" onClick={onBack}
-        style={{ padding: '12px 24px', borderRadius: 10, border: '2px solid rgba(255,255,255,0.2)', backgroundColor: 'transparent', color: '#FFFFFF', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+      <button
+        type="button"
+        onClick={onBack}
+        style={{
+          padding: '12px 24px',
+          borderRadius: 10,
+          border: '2px solid rgba(255,255,255,0.2)',
+          backgroundColor: 'transparent',
+          color: '#FFFFFF',
+          fontSize: 14,
+          fontWeight: 600,
+          cursor: 'pointer',
+        }}
+      >
         ← Retour
       </button>
     </div>
@@ -557,41 +1167,73 @@ function QrScannerScreen({ onScan, onBack, started }: { onScan: (token: string) 
 
 function KioskQrDisplay({ kioskToken }: { kioskToken: string }) {
   const [qrDataUrl, setQrDataUrl] = useState('');
+  const [expiresAt, setExpiresAt] = useState('');
+  const [error, setError] = useState('');
 
   const generateQr = async () => {
     try {
+      const response = await fetch(`${API_URL}/occupancy/presence/challenge/${encodeURIComponent(kioskToken)}`, { cache: 'no-store' });
+      const challenge = await response.json();
+      if (!response.ok) throw new Error(challenge.message || 'Borne indisponible');
       const QRCode = (await import('qrcode')).default;
-      const presenceUrl = `${window.location.origin}/presence/${kioskToken}`;
+      const presenceUrl = `${window.location.origin}/presence/${challenge.sessionId}?challenge=${encodeURIComponent(challenge.challenge)}`;
       const url = await QRCode.toDataURL(presenceUrl, {
         width: 180,
         margin: 1,
         color: { dark: '#2C3E50', light: '#FFFFFF' },
       });
       setQrDataUrl(url);
+      setExpiresAt(challenge.challengeExpiresAt);
+      setError('');
     } catch (err) {
       console.error('[CORO QR]', err);
+      setError('QR temporairement indisponible');
     }
   };
 
   useEffect(() => {
     generateQr();
     // Régénérer toutes les 60 secondes
-    const interval = setInterval(generateQr, 60000);
+    const interval = setInterval(generateQr, 30000);
     return () => clearInterval(interval);
   }, [kioskToken]);
 
-  if (!qrDataUrl) return (
-    <div style={{ width: 180, height: 180, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ color: '#ADB5BD', fontSize: 12 }}>Chargement...</p>
-    </div>
-  );
+  if (!qrDataUrl)
+    return (
+      <div
+        style={{
+          width: 180,
+          height: 180,
+          backgroundColor: 'rgba(255,255,255,0.1)',
+          borderRadius: 12,
+          margin: '0 auto',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <p style={{ color: error ? '#F1948A' : '#ADB5BD', fontSize: 12 }}>{error || 'Chargement...'}</p>
+      </div>
+    );
 
   return (
-    <img
-      src={qrDataUrl}
-      alt="QR Code borne"
-      style={{ width: 180, height: 180, borderRadius: 12, display: 'block', margin: '0 auto' }}
-    />
+    <div style={{ textAlign: 'center' }}>
+      <img
+        src={qrDataUrl}
+        alt="QR Code temporaire de présence"
+        style={{
+          width: 180,
+          height: 180,
+          borderRadius: 12,
+          display: 'block',
+          margin: '0 auto',
+        }}
+      />
+      <p style={{ margin: '8px 0 0', color: '#ADB5BD', fontSize: 11 }}>
+        Code renouvelé toutes les 30 secondes
+        {expiresAt ? ` · valide jusqu’à ${new Date(expiresAt).toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : ''}
+      </p>
+    </div>
   );
 }
 
@@ -613,14 +1255,25 @@ function IncidentQrDisplay({ token }: { token: string }) {
         console.error('[CORO Incident QR]', err);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
-  if (!qrDataUrl) return (
-    <div style={{ width: 220, height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ color: '#ADB5BD', fontSize: 12 }}>Chargement...</p>
-    </div>
-  );
+  if (!qrDataUrl)
+    return (
+      <div
+        style={{
+          width: 220,
+          height: 220,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <p style={{ color: '#ADB5BD', fontSize: 12 }}>Chargement...</p>
+      </div>
+    );
 
   return <img src={qrDataUrl} alt="QR fiche d'intervention" style={{ width: 220, height: 220, display: 'block' }} />;
 }
@@ -628,9 +1281,34 @@ function IncidentQrDisplay({ token }: { token: string }) {
 function KioskInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div>
-      <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#6C757D', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
-      <input type="text" value={value} onChange={e => onChange(e.target.value)}
-        style={{ width: '100%', padding: '14px 16px', borderRadius: 10, border: '2px solid #E9ECEF', fontSize: 16, backgroundColor: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }} />
+      <label
+        style={{
+          display: 'block',
+          fontSize: 12,
+          fontWeight: 700,
+          color: '#6C757D',
+          marginBottom: 6,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+        }}
+      >
+        {label}
+      </label>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          width: '100%',
+          padding: '14px 16px',
+          borderRadius: 10,
+          border: '2px solid #E9ECEF',
+          fontSize: 16,
+          backgroundColor: '#FFFFFF',
+          outline: 'none',
+          boxSizing: 'border-box',
+        }}
+      />
     </div>
   );
 }
