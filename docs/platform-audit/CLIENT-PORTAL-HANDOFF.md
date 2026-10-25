@@ -69,12 +69,18 @@ invitation, signature ou changement de permission n’est autorisé pour la rece
 - CORE-01/DOC-01 : API 14/14 PASS; navigateur interne 13/13 PASS; PDF de
   4 003 607 octets ouvert et parsé (98 pages), empreinte conservée dans le
   rapport d'acceptation.
+- Limites restantes : archive/listes/versions/Knowledge PASS; panne réelle de
+  base sur la génération + message navigateur + reprise PASS; remplacement,
+  archivage et révocation Knowledge PASS. Les preuves sont sous
+  `D:\CORO-QA\runs\cp004-core-doc\acceptance\remaining-limits`.
 
 ## Constats ouverts
 
 Voir `CLIENT-PORTAL-FINDINGS.md`. CP-001 à CP-007 sont CLOS. Le verdict
 commercial global demeure ouvert; la campagne conclut seulement à un pilote
 encadré pour CP-004 et les sous-parcours CORE-01/DOC-01 explicitement prouvés.
+La mutation des projets archivés requiert une politique produit et la signature
+officielle demeure `NOT_VERIFIED`.
 
 ## Opérations au résultat incertain
 
@@ -84,6 +90,7 @@ encadré pour CP-004 et les sous-parcours CORE-01/DOC-01 explicitement prouvés.
 
 ## Prochaine action concrète
 
-Lever séparément les limites DOC-01 `NOT_VERIFIED` consignées dans
-`CP004-CORE01-DOC01-ACCEPTANCE.md`, puis reprendre les campagnes suivantes du
-registre sans rouvrir CP-002/CP-003 hors preuve de régression.
+Obtenir la politique produit sur les mutations d'un projet archivé. Maintenir
+la signature/PDF officiel hors pilote jusqu'à une campagne expressément
+autorisée. Reprendre ensuite les autres campagnes fonctionnelles du registre
+sans rouvrir CP-002/CP-003 hors preuve de régression.

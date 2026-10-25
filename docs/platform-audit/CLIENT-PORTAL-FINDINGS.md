@@ -49,11 +49,31 @@ active et preuve de recette appropriée.
 
 - **IMPACT :** CP-004 est clos, mais les parcours non vérifiés de DOC-01 et les
   autres campagnes du registre ne permettent pas un feu vert global.
-- **CONDITION DE LEVÉE :** exécuter les scénarios encore `NOT_VERIFIED`, dont
-  objet archivé, reprise après panne de génération, PDF officiel signé dans une
-  campagne autorisée et Knowledge représentatif.
+- **CONDITION DE LEVÉE :** approuver la politique des mutations sur projet
+  archivé et exécuter le PDF officiel signé dans une campagne autorisée. La
+  reprise après panne de base et Knowledge représentatif sont désormais
+  prouvés dans le stack QA synthétique.
 - **RESPONSABLE :** équipe technique CORO.
 - **STATUT :** compatible avec un pilote encadré sur le périmètre prouvé.
+
+### LIMITATION — politique de mutation des projets archivés absente
+
+- **IMPACT :** l'objet, ses versions et sa documentation permanente sont bien
+  conservés et cloisonnés, mais une régénération demeure techniquement possible
+  après archivage.
+- **CONDITION DE LEVÉE :** décider si `ARCHIVED` est strictement en lecture
+  seule ou réouvrable, puis tester les actions autorisées/interdites.
+- **RESPONSABLE :** autorité produit CORO.
+- **STATUT :** exclusion du pilote; non bloquant pour les projets actifs.
+
+### LIMITATION — signature et PDF officiel
+
+- **IMPACT :** aucune preuve de bout en bout du fournisseur réel; cette fonction
+  ne peut pas être vendue comme validée.
+- **CONDITION DE LEVÉE :** campagne explicitement autorisée avec document,
+  signataires et destinataires fictifs, suivie d'une validation fournisseur.
+- **RESPONSABLE :** autorité produit et fournisseur de signature.
+- **STATUT :** exclusion explicite du pilote actuel.
 
 ## Preuves CP-004 à CP-007
 
