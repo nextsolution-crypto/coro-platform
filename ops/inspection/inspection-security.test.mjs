@@ -197,16 +197,18 @@ test("allows validated public migration identifiers containing secret-like words
     "5",
   );
   const history = [
-    ...migrations138.slice(0, -1),
+    ...migrations138,
     passwordMigration,
-    migration138,
   ];
   const root = fixture({
     sourceMigrations: history,
     database: {
       migrationCount: history.length,
+      migrationHead: passwordMigration.name,
       migrationHistory: history,
     },
+    release: { expectedMigrationHead: passwordMigration.name },
+    releaseState: { migrationHead: passwordMigration.name },
   });
   try {
     const result = run(root);
