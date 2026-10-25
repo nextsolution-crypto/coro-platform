@@ -1,0 +1,63 @@
+name: Remediate Historical Official PDFs
+
+on:
+  workflow_dispatch:
+    inputs:
+      remediation_approval:
+        description: Exact approval token
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - run: |
+          test '${{ inputs.remediation_approval }}' = REMEDIATE_HISTORICAL_OFFICIAL_PDFS
+          node --test ops/maintenance/historical-official-pdf-remediate.test.cjs
+  remediate:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Validate pinned host identity
+        env: { HOST_FINGERPRINT: '${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}' }
+        run: '[[ "$HOST_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]'
+      - name: Execute governed remediation
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          REMEDIATION_APPROVAL: ${{ inputs.remediation_approval }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,REMEDIATION_APPROVAL
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            script="$(mktemp /tmp/coro-historical-pdf-remediate.XXXXXX.cjs)"
+            evidence="$(mktemp /tmp/coro-historical-pdf-remediate.XXXXXX.json)"
+            trap 'rm -f -- "$script" "$evidence"' EXIT
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
+            git -C "$repo" show "$SOURCE_SHA:ops/maintenance/historical-official-pdf-remediate.cjs" >"$script"
+            systemctl start coro-db-backup.service
+            test "$(systemctl show -p Result --value coro-db-backup.service)" = success
+            cd "$repo"
+            docker compose exec -T -e CORO_HISTORICAL_PDF_REMEDIATION_RUN=true -e HISTORICAL_PDF_REMEDIATION_APPROVAL="$REMEDIATION_APPROVAL" backend node - <"$script" >"$evidence"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||r.mutation!==true||r.migratedReferences!==r.anonymousFinalDenial)process.exit(1);if(/https?:|coro-private|documents\/|@|projectId|organizationId/i.test(JSON.stringify(r)))process.exit(1);' "$evidence"
+            cat "$evidence"
+      - name: Record safety boundary
+        if: always()
+        run: echo 'The workflow preserves verified private copies; rollback never restores public references.'
