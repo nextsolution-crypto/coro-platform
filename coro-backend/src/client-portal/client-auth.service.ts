@@ -252,14 +252,67 @@ export class ClientAuthService {
     return { clientUser, password, alreadyExists: false };
   }
 
-  async changePassword(clientUserId: string, newPassword: string) {
+  async changePassword(
+    clientUserId: string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    if (typeof currentPassword !== 'string' || !currentPassword) {
+      throw new BadRequestException('Le mot de passe actuel est requis.');
+    }
     validateClientPassword(newPassword);
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await this.prisma.clientUser.update({
-      where: { id: clientUserId },
-      data: { password: hashedPassword },
+    const current = await this.prisma.clientUser.findFirst({
+      where: { id: clientUserId, isActive: true },
+      select: { password: true, organizationId: true },
     });
-    return { success: true };
+    if (!current || !(await bcrypt.compare(currentPassword, current.password))) {
+      throw new UnauthorizedException('Le mot de passe actuel est invalide.');
+    }
+    if (await bcrypt.compare(newPassword, current.password)) {
+      throw new BadRequestException(
+        'Le nouveau mot de passe doit être différent du mot de passe actuel.',
+      );
+    }
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "ClientUser" WHERE id = ${clientUserId} FOR UPDATE`;
+      const locked = await tx.clientUser.findUnique({
+        where: { id: clientUserId },
+        select: { password: true, organizationId: true, isActive: true },
+      });
+      if (
+        !locked?.isActive ||
+        !(await bcrypt.compare(currentPassword, locked.password))
+      ) {
+        throw new UnauthorizedException('Le mot de passe actuel est invalide.');
+      }
+      await tx.clientUser.update({
+        where: { id: clientUserId },
+        data: {
+          password: hashedPassword,
+          sessionVersion: { increment: 1 },
+          mfaCode: null,
+          mfaCodeExpiry: null,
+        },
+      });
+      await tx.clientTrustedDevice.deleteMany({ where: { userId: clientUserId } });
+      await tx.magicLink.updateMany({
+        where: { userId: clientUserId, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+      await tx.clientPasswordResetToken.updateMany({
+        where: { clientUserId, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+      await tx.clientSecurityAuditEvent.create({
+        data: {
+          clientUserId,
+          organizationId: locked.organizationId,
+          eventType: 'PASSWORD_CHANGED',
+        },
+      });
+    });
+    return { success: true, sessionsRevoked: true };
   }
 
   async forgotPassword(email: string) {

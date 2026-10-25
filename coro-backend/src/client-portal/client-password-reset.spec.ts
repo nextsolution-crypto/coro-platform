@@ -113,9 +113,42 @@ describe('Client password reset', () => {
   it('change-password et reset partagent la meme politique', async () => {
     for (const password of ['short', 'lowercase1!', 'UPPERCASE1!', 'NoNumber!', 'NoSpecial1']) {
       expect(() => validateClientPassword(password)).toThrow(BadRequestException);
-      await expect(harness().service.changePassword(user.id, password)).rejects.toBeInstanceOf(BadRequestException);
+      await expect(harness().service.changePassword(user.id, 'OldPassword1!', password)).rejects.toBeInstanceOf(BadRequestException);
       await expect(harness().service.resetPassword('a'.repeat(43), password)).rejects.toBeInstanceOf(BadRequestException);
     }
+  });
+
+  it('change-password exige le secret actuel, revoque les sessions et audite', async () => {
+    const currentHash = await bcrypt.hash('OldPassword1!', 10);
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({
+      password: currentHash,
+      organizationId: user.organizationId,
+    });
+    h.tx.clientUser.findUnique.mockResolvedValue({
+      password: currentHash,
+      organizationId: user.organizationId,
+      isActive: true,
+    });
+
+    await expect(
+      h.service.changePassword(user.id, 'wrong', 'NewPassword2!'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(h.prisma.$transaction).not.toHaveBeenCalled();
+
+    await expect(
+      h.service.changePassword(user.id, 'OldPassword1!', 'NewPassword2!'),
+    ).resolves.toEqual({ success: true, sessionsRevoked: true });
+    expect(h.tx.clientUser.update).toHaveBeenCalledWith({
+      where: { id: user.id },
+      data: expect.objectContaining({ sessionVersion: { increment: 1 } }),
+    });
+    expect(h.tx.clientTrustedDevice.deleteMany).toHaveBeenCalledWith({
+      where: { userId: user.id },
+    });
+    expect(h.tx.clientSecurityAuditEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ eventType: 'PASSWORD_CHANGED' }),
+    });
   });
 
   it('accepte les chiffres ASCII des exemples synthetiques sans modifier les espaces', () => {

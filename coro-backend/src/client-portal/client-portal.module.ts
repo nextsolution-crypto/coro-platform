@@ -16,6 +16,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { PopulationModule } from '../population/population.module';
 import { requireJwtSecret } from '../auth/auth-security.config';
 import { AuthModule } from '../auth/auth.module';
+import { ClientPilotPolicyService } from './client-pilot-policy.service';
 
 @Module({
   imports: [
@@ -36,10 +37,11 @@ import { AuthModule } from '../auth/auth.module';
   providers: [
     ClientPortalService,
     ClientAuthService,
+    ClientPilotPolicyService,
     EmailService,
     CorrectiveActionsService,
     CorrectiveActionEvidenceService,
   ],
-  exports: [ClientPortalService, EmailService],
+  exports: [ClientPortalService, EmailService, ClientPilotPolicyService],
 })
 export class ClientPortalModule {}

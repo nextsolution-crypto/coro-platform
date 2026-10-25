@@ -16,6 +16,7 @@ export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
 
   const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
@@ -74,6 +75,8 @@ export default function ProfilePage() {
           },
 
           body: JSON.stringify({
+            currentPassword:
+              passwordForm.currentPassword,
             newPassword:
               passwordForm.newPassword,
           }),
@@ -81,23 +84,27 @@ export default function ProfilePage() {
       );
 
       if (!res.ok) {
+        const payload = await res.json().catch(() => null);
         throw new Error(
-          'Erreur lors du changement de mot de passe'
+          payload?.message || 'Erreur lors du changement de mot de passe'
         );
       }
 
             setSaved(true);
       setPasswordForm({
+        currentPassword: '',
         newPassword: '',
         confirmPassword: '',
       });
-      toast('Mot de passe modifié avec succès.');
-      window.setTimeout(() => {
-        setSaved(false);
-      }, 3000);
-    } catch {
-      setError('Erreur lors du changement de mot de passe.');
-      toast('Erreur lors du changement de mot de passe.', 'error');
+      toast('Mot de passe modifié. Reconnectez-vous avec le nouveau mot de passe.');
+      clearAuth();
+      router.replace('/login');
+    } catch (cause) {
+      const message = cause instanceof Error
+        ? cause.message
+        : 'Erreur lors du changement de mot de passe.';
+      setError(message);
+      toast(message, 'error');
     } finally {
       setSaving(false);
     }
@@ -352,6 +359,36 @@ export default function ProfilePage() {
           </h2>
 
           <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: 16 }}>
+              <label
+                htmlFor="current-password"
+                style={{
+                  display: 'block',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: '#495057',
+                  marginBottom: 6,
+                }}
+              >
+                Mot de passe actuel
+              </label>
+              <input
+                id="current-password"
+                name="current-password"
+                type="password"
+                autoComplete="current-password"
+                value={passwordForm.currentPassword}
+                onChange={(e) =>
+                  setPasswordForm({
+                    ...passwordForm,
+                    currentPassword: e.target.value,
+                  })
+                }
+                required
+                style={inputStyle}
+              />
+            </div>
+
             {/* Nouveau mot de passe */}
             <div
               style={{
@@ -493,6 +530,7 @@ export default function ProfilePage() {
               type="submit"
               disabled={
                 saving ||
+                !passwordForm.currentPassword ||
                 !passwordForm.newPassword
               }
               style={{

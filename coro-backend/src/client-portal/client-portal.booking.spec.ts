@@ -264,4 +264,25 @@ describe('ClientPortalService booking scope', () => {
       undefined,
     );
   });
+
+  it('denies cancellation for an archived pilot project before the booking mutation', async () => {
+    bookingsService.getBookingForClientCancellation.mockResolvedValue({
+      projectId: 'project',
+    });
+    (service.getProject as jest.Mock).mockResolvedValue({
+      id: 'project',
+      buildingId: 'building-a',
+      status: 'ARCHIVED',
+    });
+    (service as any).pilotPolicy = {
+      assertAllowed: jest.fn(() => {
+        throw new ForbiddenException('pilot archive restriction');
+      }),
+    };
+
+    await expect(
+      service.cancelBookingFromClient('booking', actor),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(bookingsService.cancelBooking).not.toHaveBeenCalled();
+  });
 });

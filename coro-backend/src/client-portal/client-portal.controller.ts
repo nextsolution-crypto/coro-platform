@@ -80,6 +80,13 @@ export class ClientPortalController {
     );
   }
 
+  @Get('pilot-policy')
+  getPilotPolicy(@Request() req: any) {
+    return this.clientPortalService.getPilotPolicy(
+      req.clientUser.organizationId,
+    );
+  }
+
   @Get('projects')
   async getProjects(@Request() req: any) {
     return this.clientPortalService.getProjects(
@@ -281,9 +288,13 @@ export class ClientPortalController {
       buildingId,
       req.clientUser,
     );
+    const policy = this.clientPortalService.getPilotPolicy(
+      req.clientUser.organizationId,
+    );
     return this.occupancyEmployeesService.createEmployee(
       { ...body, buildingId },
       req.clientUser.organizationId,
+      policy.externalEmployeeEmail,
     );
   }
 
@@ -348,6 +359,11 @@ export class ClientPortalController {
       buildingId,
       req.clientUser,
     );
+    // The server-side policy is authoritative; listing remains available.
+    this.clientPortalService.assertPilotOperationAllowed(
+      req.clientUser.organizationId,
+      'EXTERNAL_INVITATION',
+    );
     return this.occupancyEmployeesService.createInvitation(
       { ...body, buildingId },
       req.clientUser.organizationId,
@@ -396,6 +412,15 @@ export class ClientPortalController {
 
     if (!project) {
       return res.status(404).json({ message: 'Projet introuvable' });
+    }
+
+    if (
+      !this.clientPortalService.getPilotPolicy(req.clientUser.organizationId)
+        .officialPdf
+    ) {
+      return res.status(403).json({
+        message: 'Le PDF officiel n’est pas disponible dans ce pilote.',
+      });
     }
 
     const pdfUrl =
@@ -1786,11 +1811,14 @@ export class ClientPortalController {
       body.buildingId,
       req.clientUser,
     );
+    const policy = this.clientPortalService.getPilotPolicy(
+      req.clientUser.organizationId,
+    );
     return this.occupancyEmployeesService.importEmployeesCsv(
       body.buildingId,
       body.csvContent,
       req.clientUser.organizationId,
-      body.sendEmails !== false,
+      policy.externalEmployeeEmail && body.sendEmails !== false,
     );
   }
 

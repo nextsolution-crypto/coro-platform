@@ -15,6 +15,9 @@ les campagnes réussies sans changement pertinent ou indice de régression.
 - Acceptation : refus serveur avant mutation, notification, tâche ou fichier;
   accès légitimes du périmètre validé préservés.
 
+Statut : `VALIDÉ_QA — RELEASE ET ACTIVATION GOUVERNÉE EN ATTENTE`. Voir
+`CLIENT-PORTAL-AUTONOMOUS-PILOT-ACCESS.md`.
+
 ## Priorité 1
 
 ### BOOK-01 — réservation réussie et annulation
@@ -34,6 +37,9 @@ les campagnes réussies sans changement pertinent ou indice de régression.
 - Effets externes : aucun courriel réel.
 - Acceptation : mutation auditée, politique de mot de passe appliquée, aucune
   fuite de secret et session conforme.
+
+Statut : `VALIDÉ_QA`; la campagne synthétique restaure le secret de fixture et
+prouve la révocation de l’ancienne session.
 
 ### ARCHIVE-POLICY — décision métier
 
