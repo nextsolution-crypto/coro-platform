@@ -1598,21 +1598,21 @@ export class ClientPortalService {
       );
     }
 
-    const timestamp = Date.now();
-
     const [officialPdfFr, officialPdfEn] = await Promise.all([
-      this.storageService.uploadFile(
-        result.fr,
-        `${projectId}-${timestamp}-FR-OFFICIEL.pdf`,
-        'documents',
-        'application/pdf',
-      ),
-      this.storageService.uploadFile(
-        result.en,
-        `${projectId}-${timestamp}-EN-OFFICIEL.pdf`,
-        'documents',
-        'application/pdf',
-      ),
+      this.storageService.storeOfficialPdfImmutable({
+        organizationId: project.organizationId,
+        projectId,
+        projectVersionId: latestVersion.id,
+        language: 'fr',
+        bytes: result.fr,
+      }),
+      this.storageService.storeOfficialPdfImmutable({
+        organizationId: project.organizationId,
+        projectId,
+        projectVersionId: latestVersion.id,
+        language: 'en',
+        bytes: result.en,
+      }),
     ]);
 
     await this.prisma.project.update({
@@ -1630,6 +1630,10 @@ export class ClientPortalService {
       officialPdfFr,
       officialPdfEn,
     };
+  }
+
+  async downloadOfficialPdf(reference: string): Promise<Buffer> {
+    return this.storageService.downloadOfficialPdfReference(reference);
   }
 
   async refuseDocument(projectId: string, clientUser: any, comment: string) {
