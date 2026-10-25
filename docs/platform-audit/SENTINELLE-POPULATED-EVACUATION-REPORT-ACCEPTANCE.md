@@ -57,3 +57,14 @@ Elles comprennent le résultat JSON structuré, douze captures navigateur, le PD
 ## CI documentaire #75
 
 Le workflow GitHub Actions `40226780106` sur `ac097c1ff335f3cf832524898bd894ec0cf75963` est terminé avec la conclusion `SUCCESS`. Les typechecks, tests backend, intégrations PostgreSQL et build du Client Portal sont réussis. Les jobs images et production ont été ignorés conformément au caractère documentaire de la PR.
+
+## Livraison et inspection
+
+- Correctif source : `5f9e562264afd08229583d4daa0ecd57ffe00111`, fusionné par la PR #76.
+- Version déployée : `c5adf5d4586879a7875abc4ea5be93fdda775115`.
+- Release gouvernée : workflow `40230270715`, conclusion `SUCCESS`; tous les jobs de validation, construction des quatre images immuables et déploiement sont réussis.
+- Inspection post-release en lecture seule : workflow `40231254160`, conclusion `SUCCESS`, évaluation `GO` et exécution `PASS`.
+- Production réconciliée : quatre services applicatifs actifs sans redémarrage, PostgreSQL 16.15 sain, 155 migrations appliquées, tête `20261109010000_sentinelle_presence_sessions`.
+- Sauvegarde et reprise : sauvegarde `REMOTE_VERIFIED`, restauration `RESTORE_VERIFIED`, quatre images de retour arrière disponibles et verrou de déploiement libre.
+
+La vérification post-release confirme le déploiement exact du correctif. Elle ne rejoue pas l'exercice synthétique en production et ne déclenche aucune alarme, communication externe ou mutation opérationnelle réelle.
