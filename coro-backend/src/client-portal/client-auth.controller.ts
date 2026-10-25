@@ -45,9 +45,13 @@ export class ClientAuthController {
   @Throttle({ short: { ttl: 60000, limit: 3 } })
   async changePassword(
     @Request() req: any,
-    @Body() body: { newPassword: string },
+    @Body() body: { currentPassword: string; newPassword: string },
   ) {
-    return this.clientAuthService.changePassword(req.clientUser.sub, body.newPassword);
+    return this.clientAuthService.changePassword(
+      req.clientUser.sub,
+      body.currentPassword,
+      body.newPassword,
+    );
   }
 
   @Post('magic-link/validate')

@@ -101,6 +101,7 @@ export default function DocumentDetailPage() {
   const [refusing,        setRefusing]        = useState(false);
   const [versionHistory,  setVersionHistory]  = useState<any[]>([]);
   const [signatureStatus, setSignatureStatus] = useState<any>(null);
+  const [pilotPolicy, setPilotPolicy] = useState<any>(null);
 
   useEffect(() => {
     const currentUser = getUser();
@@ -130,6 +131,7 @@ export default function DocumentDetailPage() {
 
   const fetchData = async () => {
   try {
+    const pilotPolicyRes = await apiGet('/client-portal/pilot-policy');
     const [
       projectRes,
       commentsRes,
@@ -143,12 +145,19 @@ export default function DocumentDetailPage() {
       // IMPORTANT :
       // cet endpoint vérifie uniquement la signature liée à la
       // ProjectVersion courante.
-      apiGet(`/client-portal/projects/${projectId}/sign-status`).catch(() => ({
-        status: 'NOT_SIGNED',
-        signature: null,
-        officialPdfFr: null,
-        officialPdfEn: null,
-      })),
+      pilotPolicyRes.officialPdf === false
+        ? Promise.resolve({
+            status: 'NOT_SIGNED',
+            signature: null,
+            officialPdfFr: null,
+            officialPdfEn: null,
+          })
+        : apiGet(`/client-portal/projects/${projectId}/sign-status`).catch(() => ({
+            status: 'NOT_SIGNED',
+            signature: null,
+            officialPdfFr: null,
+            officialPdfEn: null,
+          })),
     ]);
 
     setProject(projectRes);
@@ -160,6 +169,7 @@ export default function DocumentDetailPage() {
         signature: null,
       },
     );
+    setPilotPolicy(pilotPolicyRes);
   } catch (err) {
     console.error(err);
   } finally {
@@ -752,12 +762,18 @@ const mySignature =
                       >
                         Ouvrir dans un nouvel onglet ↗
                       </a>
+                      {pilotPolicy?.officialPdf !== false ? (
                       <button
                         onClick={() => setShowPdfViewer(false)}
                         style={{ background: 'none', border: 'none', color: '#ADB5BD', cursor: 'pointer', fontSize: 20 }}
                       >
                         ✕
                       </button>
+                      ) : (
+                        <p style={{ margin: '9px 0 0', fontSize: 12, color: '#7D6608', fontWeight: 600 }}>
+                          La relance du PDF officiel est exclue de ce pilote.
+                        </p>
+                      )}
                     </div>
                   </div>
                   <iframe
@@ -800,7 +816,7 @@ const mySignature =
                 </div>
               )}
 
-              {mySignature && (project?.officialPdfFr || project?.officialPdfEn) && (
+              {mySignature && (project?.officialPdfFr || project?.officialPdfEn) && pilotPolicy?.officialPdf !== false && (
                 <div
                   style={{
                     display: 'grid',
@@ -868,6 +884,14 @@ const mySignature =
                       {downloading ? 'Downloading...' : 'Download PDF (EN)'}
                     </button>
                   )}
+                </div>
+              )}
+
+              {mySignature && pilotPolicy?.officialPdf === false && (
+                <div role="status" style={{ width: '100%', marginTop: 24, padding: '14px 16px', borderRadius: 7, backgroundColor: '#FEF9E7', border: '1px solid #F7DC6F' }}>
+                  <p style={{ margin: 0, fontSize: 13, color: '#7D6608', fontWeight: 600 }}>
+                    La récupération du PDF officiel est exclue de ce pilote. Les documents ordinaires autorisés restent téléchargeables depuis l’espace de fichiers.
+                  </p>
                 </div>
               )}
 
@@ -964,6 +988,7 @@ const mySignature =
                   <button
                     type="button"
                     onClick={() => setShowRefuseModal(true)}
+                    disabled={project.status === 'ARCHIVED' && pilotPolicy?.archivedProjectMutation === false}
                     style={{
                       minHeight: 46,
                       display: 'flex',
@@ -977,7 +1002,8 @@ const mySignature =
                       backgroundColor: '#FFFFFF',
                       color: '#C0392B',
                       border: '2px solid #C0392B',
-                      cursor: 'pointer',
+                      cursor: project.status === 'ARCHIVED' && pilotPolicy?.archivedProjectMutation === false ? 'not-allowed' : 'pointer',
+                      opacity: project.status === 'ARCHIVED' && pilotPolicy?.archivedProjectMutation === false ? 0.55 : 1,
                       width: '100%',
                       minWidth: 0,
                     }}
@@ -990,6 +1016,8 @@ const mySignature =
                     onClick={() =>
                       setShowSignModal(true)
                     }
+                    disabled={pilotPolicy?.documentSignature === false}
+                    title={pilotPolicy?.documentSignature === false ? 'Fonction exclue du pilote' : undefined}
                     style={{
                       minHeight: 46,
                       display: 'flex',
@@ -1000,15 +1028,17 @@ const mySignature =
                       borderRadius: 7,
                       fontSize: 14,
                       fontWeight: 600,
-                      backgroundColor: '#27AE60',
+                      backgroundColor: pilotPolicy?.documentSignature === false ? '#ADB5BD' : '#27AE60',
                       color: '#FFFFFF',
                       border: 'none',
-                      cursor: 'pointer',
+                      cursor: pilotPolicy?.documentSignature === false ? 'not-allowed' : 'pointer',
                       width: '100%',
                       minWidth: 0,
                     }}
                   >
-                    ✓ Signer le document
+                    {pilotPolicy?.documentSignature === false
+                      ? 'Signature exclue du pilote'
+                      : '✓ Signer le document'}
                   </button>
                 </div>
               )}
@@ -1547,6 +1577,7 @@ const mySignature =
                 }
                 placeholder="Ajouter un commentaire..."
                 rows={3}
+                disabled={project.status === 'ARCHIVED' && pilotPolicy?.archivedProjectMutation === false}
                 style={{
                   width: '100%',
                   minHeight: 96,
@@ -1574,7 +1605,8 @@ const mySignature =
                 onClick={handleAddComment}
                 disabled={
                   addingComment ||
-                  !newComment.trim()
+                  !newComment.trim() ||
+                  (project.status === 'ARCHIVED' && pilotPolicy?.archivedProjectMutation === false)
                 }
                 style={{
                   minHeight: 44,
@@ -1588,12 +1620,14 @@ const mySignature =
                   fontWeight: 600,
                   cursor:
                     addingComment ||
-                    !newComment.trim()
+                    !newComment.trim() ||
+                    (project.status === 'ARCHIVED' && pilotPolicy?.archivedProjectMutation === false)
                       ? 'not-allowed'
                       : 'pointer',
                   opacity:
                     addingComment ||
-                    !newComment.trim()
+                    !newComment.trim() ||
+                    (project.status === 'ARCHIVED' && pilotPolicy?.archivedProjectMutation === false)
                       ? 0.5
                       : 1,
                   display: 'flex',

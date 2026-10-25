@@ -59,7 +59,12 @@ describe('ClientPortalService annex resource authorization', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    delete process.env.CLIENT_PORTAL_RESTRICTED_PILOT_ORGANIZATION_IDS;
     prisma.$transaction.mockImplementation((callback: any) => callback(prisma));
+  });
+
+  afterAll(() => {
+    delete process.env.CLIENT_PORTAL_RESTRICTED_PILOT_ORGANIZATION_IDS;
   });
 
   it('fails closed before reading or writing any annex resource', async () => {
@@ -118,6 +123,71 @@ describe('ClientPortalService annex resource authorization', () => {
     expect(notificationsService.create).not.toHaveBeenCalled();
   });
 
+  it('denies pilot signature before creating a signature, PDF, email or notification', async () => {
+    process.env.CLIENT_PORTAL_RESTRICTED_PILOT_ORGANIZATION_IDS = 'org-a';
+    prisma.project.findFirst.mockResolvedValueOnce({
+      id: 'project-a',
+      organizationId: 'org-a',
+      clientId: 'client-a',
+      buildingId: 'building-a',
+      status: 'VALIDATED',
+    });
+
+    await expect(
+      service.signDocument('project-a', manager, { fullName: 'Manager A' }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.documentSignature.create).not.toHaveBeenCalled();
+    expect(prisma.projectVersion.update).not.toHaveBeenCalled();
+    expect(prisma.project.update).not.toHaveBeenCalled();
+    expect(exportService.generatePdf).not.toHaveBeenCalled();
+    expect(storageService.uploadFile).not.toHaveBeenCalled();
+    expect(emailService.sendDocumentSigned).not.toHaveBeenCalled();
+    expect(notificationsService.create).not.toHaveBeenCalled();
+  });
+
+  it('denies pilot signature status and PDF retry before exposing URLs or scheduling work', async () => {
+    process.env.CLIENT_PORTAL_RESTRICTED_PILOT_ORGANIZATION_IDS = 'org-a';
+    prisma.project.findFirst.mockResolvedValue({
+      id: 'project-a',
+      organizationId: 'org-a',
+      clientId: 'client-a',
+      buildingId: 'building-a',
+      status: 'VALIDATED',
+    });
+
+    await expect(
+      service.getSignatureStatus('project-a', manager),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.retryOfficialPdfGeneration('project-a', manager),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(prisma.projectVersion.findFirst).not.toHaveBeenCalled();
+    expect(prisma.documentSignature.findFirst).not.toHaveBeenCalled();
+    expect(exportService.generatePdf).not.toHaveBeenCalled();
+    expect(storageService.uploadFile).not.toHaveBeenCalled();
+  });
+
+  it('keeps archived pilot projects readable but denies comments without writes', async () => {
+    process.env.CLIENT_PORTAL_RESTRICTED_PILOT_ORGANIZATION_IDS = 'org-a';
+    prisma.project.findFirst.mockResolvedValue({
+      id: 'project-a',
+      organizationId: 'org-a',
+      clientId: 'client-a',
+      buildingId: 'building-a',
+      status: 'ARCHIVED',
+    });
+    prisma.projectVersion.findMany.mockResolvedValue([{ id: 'version-a' }]);
+
+    await expect(
+      service.getProjectVersionHistory('project-a', manager),
+    ).resolves.toHaveLength(1);
+    await expect(
+      service.addComment('project-a', manager, 'mutation interdite'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.projectComment.create).not.toHaveBeenCalled();
+  });
+
   it('uses organization, client and assigned buildings for a manager', async () => {
     prisma.project.findFirst.mockResolvedValue({
       id: 'project-a',
@@ -142,6 +212,7 @@ describe('ClientPortalService annex resource authorization', () => {
         organizationId: true,
         clientId: true,
         buildingId: true,
+        status: true,
       },
     });
   });
@@ -165,6 +236,7 @@ describe('ClientPortalService annex resource authorization', () => {
         organizationId: true,
         clientId: true,
         buildingId: true,
+        status: true,
       },
     });
   });

@@ -76,6 +76,16 @@ The database, backend, portal and provider-fake loopback ports are independently
 configurable, allowing concurrent isolated campaigns without a shared host-port
 collision.
 
+For the restricted Client Portal pilot, pass the synthetic organization through
+`-RestrictedPilotOrganizationId` when starting `identity-stack.ps1`, then run
+`npm run client-pilot-access:acceptance` and
+`npm run client-pilot-access:browser` from this package. The API campaign proves
+direct denials, zero side effects, archive read continuity and password/session
+rotation. The browser campaign records the measured 12-combination responsive
+matrix under `D:\CORO-QA`; it requires a QA portal image built with the governed
+Glass preview token. Neither runner accepts production origins or provider
+delivery.
+
 When the backend is intentionally not published to the Windows host,
 `internal-runner.mjs` runs one of three allowlisted API scripts in the backend
 network namespace and exposes a fixed loopback-only 3155→3002 proxy there. It

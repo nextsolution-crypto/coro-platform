@@ -23,7 +23,11 @@ export class OccupancyEmployeesService {
     });
   }
 
-  async createEmployee(body: any, organizationId: string) {
+  async createEmployee(
+    body: any,
+    organizationId: string,
+    sendExternalEmail: boolean = true,
+  ) {
     const building = await this.prisma.building.findFirst({
       where: { id: body.buildingId, organizationId },
     });
@@ -79,7 +83,7 @@ export class OccupancyEmployeesService {
     }
 
     // Envoyer le PIN par courriel si email fourni
-    if (body.email) {
+    if (body.email && sendExternalEmail) {
       try {
         await this.sendPinEmail(employee, building);
       } catch (error) {

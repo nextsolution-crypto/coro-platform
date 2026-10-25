@@ -9,6 +9,7 @@ param(
   [ValidateRange(1024, 65535)][int]$ProviderPort = 34641,
   [string]$BackendImage = 'coro-p61-backend:local',
   [string]$PortalImage = 'coro-p61-portal:local',
+  [string]$RestrictedPilotOrganizationId = '',
   [switch]$NetworkFixtures
 )
 
@@ -119,6 +120,7 @@ Invoke-Docker @('run', '-d', '--name', "$prefix-backend", '--network', $internal
   '-e', "FRONTEND_URL=http://127.0.0.1:$PortalPort", '-e', 'MFA_QA_CAPTURE_ENABLED=true',
   '-e', 'MFA_QA_CAPTURE_DIR=/tmp/coro-mfa', '-e', 'MFA_QA_ALLOWED_RECIPIENT_SUFFIXES=global-e2e.test',
   '-e', 'MFA_QA_NETWORK_ISOLATED=true',
+  '-e', "CLIENT_PORTAL_RESTRICTED_PILOT_ORGANIZATION_IDS=$RestrictedPilotOrganizationId",
   '-e', 'PRIVATE_STORAGE_QA_MODE=true', '-e', 'PRIVATE_STORAGE_QA_ENDPOINT=http://private-storage-qa:34642',
   '-e', 'PRIVATE_STORAGE_QA_ACCESS_KEY=qa-storage-access', '-e', 'PRIVATE_STORAGE_QA_SECRET_KEY=qa-storage-secret',
   '-e', 'PRIVATE_STORAGE_QA_BUCKET=coro-private-qa',

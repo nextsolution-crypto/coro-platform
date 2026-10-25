@@ -16,7 +16,9 @@ Statut : `PRÉPARATION — PARTICIPANTS NON ENCORE AUTORISÉS`
 - Organisation synthétique ou organisation pilote autorisée : **À COMPLÉTER**
 - Bâtiments explicitement autorisés : **À COMPLÉTER**
 - Comptes nommés, actifs, MFA obligatoire et affectations revues.
-- Aucun projet archivé dans le périmètre participant.
+- Les projets archivés demeurent consultables et téléchargeables selon les
+  droits existants; toute mutation ou régénération est bloquée par la politique
+  serveur du pilote.
 - Aucun destinataire réel de courriel, SMS ou alerte externe.
 - Aucun secret, donnée Petra ou donnée d'un autre client.
 
@@ -28,17 +30,20 @@ Statut : `PRÉPARATION — PARTICIPANTS NON ENCORE AUTORISÉS`
 - Knowledge sur sources approuvées et formats pris en charge;
 - coffre hors ligne pour documents non sensibles admissibles;
 - activités et notifications en consultation;
-- profil en consultation, persistance de session et déconnexion;
+- profil, changement de mot de passe validé, persistance de session et
+  déconnexion;
+- gestion locale des employés Sentinelle sans livraison externe, si ce module
+  est explicitement inclus pour l’organisation pilote;
 - manuel et navigation secondaire validée.
 
 ## Fonctions fermées
 
-- signature et PDF officiel;
+- signature et PDF officiel, bloqués côté serveur pour le pilote;
 - réservations et annulations;
-- changement de mot de passe jusqu'à recette synthétique;
-- Sentinelle tant que l'invitation externe n'est pas techniquement neutralisée;
+- invitations Sentinelle et envois externes, bloqués côté serveur; les autres
+  fonctions Sentinelle non validées restent fermées;
 - alertes, communications externes et opérations d'urgence;
-- projets archivés et leur régénération;
+- mutations et régénérations de projets archivés;
 - carte externe comme parcours obligatoire.
 
 ## Accompagnement et support

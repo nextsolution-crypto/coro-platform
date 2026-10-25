@@ -26,6 +26,7 @@ import { UpdatePopulationAlertDraftDto } from '../population/dto/update-populati
 import { ClosePopulationOperationalEventDto } from '../population/dto/close-population-operational-event.dto';
 import { PopulationEvidenceService } from '../population/population-evidence.service';
 import { PopulationEvidenceReportService } from '../population/population-evidence-report.service';
+import { ClientPilotPolicyService } from './client-pilot-policy.service';
 
 @Injectable()
 export class ClientPortalService {
@@ -39,7 +40,36 @@ export class ClientPortalService {
     private populationService: PopulationService,
     private populationEvidenceService: PopulationEvidenceService,
     private populationEvidenceReportService: PopulationEvidenceReportService,
+    private pilotPolicy: ClientPilotPolicyService = new ClientPilotPolicyService(),
   ) {}
+
+  getPilotPolicy(organizationId: string) {
+    return this.pilotPolicy.getPolicy(organizationId);
+  }
+
+  assertPilotOperationAllowed(
+    organizationId: string,
+    operation:
+      | 'DOCUMENT_SIGNATURE'
+      | 'OFFICIAL_PDF'
+      | 'EXTERNAL_INVITATION'
+      | 'EXTERNAL_EMPLOYEE_EMAIL'
+      | 'ARCHIVED_PROJECT_MUTATION',
+  ) {
+    this.pilotPolicy.assertAllowed(organizationId, operation);
+  }
+
+  private assertKnownProjectMutationAllowed(
+    project: { status?: string | null },
+    clientUser: { organizationId: string },
+  ) {
+    if (project.status === 'ARCHIVED') {
+      this.pilotPolicy.assertAllowed(
+        clientUser.organizationId,
+        'ARCHIVED_PROJECT_MUTATION',
+      );
+    }
+  }
 
   async generatePopulationEvidence(
     buildingId: string,
@@ -1219,6 +1249,7 @@ export class ClientPortalService {
         organizationId: true,
         clientId: true,
         buildingId: true,
+        status: true,
       },
     });
 
@@ -1280,7 +1311,12 @@ export class ClientPortalService {
     clientUser: any,
     data: { fullName: string; comment?: string; ipAddress?: string },
   ) {
-    await this.assertProjectAccess(projectId, clientUser);
+    const accessibleProject = await this.assertProjectAccess(projectId, clientUser);
+    this.pilotPolicy.assertAllowed(
+      clientUser.organizationId,
+      'DOCUMENT_SIGNATURE',
+    );
+    this.assertKnownProjectMutationAllowed(accessibleProject, clientUser);
     // La signature doit toujours être rattachée à la version documentaire
     // actuellement approuvée. Une signature d'une ancienne version ne doit
     // jamais rendre la nouvelle version "signée".
@@ -1387,6 +1423,10 @@ export class ClientPortalService {
 
   async getSignatureStatus(projectId: string, clientUser: any) {
     await this.assertProjectAccess(projectId, clientUser);
+    // A status response can contain directly usable official-document URLs.
+    // Treat it as part of the official-PDF retrieval boundary, not as harmless
+    // project metadata.
+    this.pilotPolicy.assertAllowed(clientUser.organizationId, 'OFFICIAL_PDF');
     const latestVersion = await this.prisma.projectVersion.findFirst({
       where: { projectId },
       orderBy: { versionNumber: 'desc' },
@@ -1443,7 +1483,9 @@ export class ClientPortalService {
   }
 
   async retryOfficialPdfGeneration(projectId: string, clientUser: any) {
-    await this.assertProjectAccess(projectId, clientUser);
+    const accessibleProject = await this.assertProjectAccess(projectId, clientUser);
+    this.pilotPolicy.assertAllowed(clientUser.organizationId, 'OFFICIAL_PDF');
+    this.assertKnownProjectMutationAllowed(accessibleProject, clientUser);
     const latestVersion = await this.prisma.projectVersion.findFirst({
       where: { projectId },
       orderBy: { versionNumber: 'desc' },
@@ -1599,7 +1641,8 @@ export class ClientPortalService {
       throw new BadRequestException('Un motif de refus est requis');
     }
 
-    await this.assertProjectAccess(projectId, clientUser);
+    const accessibleProject = await this.assertProjectAccess(projectId, clientUser);
+    this.assertKnownProjectMutationAllowed(accessibleProject, clientUser);
     const project = await this.prisma.project.findFirst({
       where: {
         id: projectId,
@@ -1685,7 +1728,8 @@ export class ClientPortalService {
     clientUser: any,
     contenu: string,
   ) {
-    await this.assertProjectAccess(projectId, clientUser);
+    const accessibleProject = await this.assertProjectAccess(projectId, clientUser);
+    this.assertKnownProjectMutationAllowed(accessibleProject, clientUser);
     return this.prisma.projectComment.create({
       data: {
         projectId,
@@ -1902,7 +1946,11 @@ export class ClientPortalService {
       buildingIds?: string[];
     };
   }) {
-    await this.assertBookingProjectAccess(data.projectId, data.actor);
+    const accessibleProject = await this.assertBookingProjectAccess(
+      data.projectId,
+      data.actor,
+    );
+    this.assertKnownProjectMutationAllowed(accessibleProject, data.actor);
     const booking = await this.bookingsService.createBooking(data);
     return toCustomerSafeBooking(booking);
   }
@@ -1934,6 +1982,7 @@ export class ClientPortalService {
     ) {
       throw new ForbiddenException('Activité inaccessible');
     }
+    this.assertKnownProjectMutationAllowed(activity.project, data.actor);
     if (
       !activity.clientVisible ||
       !activity.clientBookable ||
@@ -2003,7 +2052,11 @@ export class ClientPortalService {
       actor.sub,
       actor.organizationId,
     );
-    await this.assertBookingProjectAccess(booking.projectId, actor);
+    const accessibleProject = await this.assertBookingProjectAccess(
+      booking.projectId,
+      actor,
+    );
+    this.assertKnownProjectMutationAllowed(accessibleProject, actor);
     return this.bookingsService.cancelBooking(
       bookingId,
       {

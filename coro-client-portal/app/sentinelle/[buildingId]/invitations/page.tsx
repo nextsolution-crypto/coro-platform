@@ -18,6 +18,7 @@ export default function InvitationsPage() {
 
   const [user, setUser] = useState<any>(null);
   const [invitations, setInvitations] = useState<any[]>([]);
+  const [pilotPolicy, setPilotPolicy] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -38,8 +39,12 @@ export default function InvitationsPage() {
   const fetchInvitations = async () => {
     setLoading(true);
     try {
-      const res = await apiGet(`/client-portal/buildings/${buildingId}/sentinelle/invitations`);
+      const [res, policy] = await Promise.all([
+        apiGet(`/client-portal/buildings/${buildingId}/sentinelle/invitations`),
+        apiGet('/client-portal/pilot-policy'),
+      ]);
       setInvitations(res);
+      setPilotPolicy(policy);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -81,11 +86,21 @@ export default function InvitationsPage() {
             <h1 style={{ margin: 0, fontSize: 'clamp(20px, 5vw, 26px)', fontWeight: 800, color: '#2C3E50' }}>Invitations visiteurs</h1>
           </div>
           <button type="button" onClick={() => setShowForm(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 8, border: 'none', backgroundColor: '#C0392B', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+            disabled={pilotPolicy?.externalInvitation === false}
+            title={pilotPolicy?.externalInvitation === false ? 'Fonction exclue du pilote' : undefined}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 8, border: 'none', backgroundColor: pilotPolicy?.externalInvitation === false ? '#ADB5BD' : '#C0392B', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: pilotPolicy?.externalInvitation === false ? 'not-allowed' : 'pointer' }}>
             <Mail size={16} /> Inviter un visiteur
           </button>
         </div>
       </header>
+
+      {pilotPolicy?.externalInvitation === false && (
+        <div role="status" style={{ marginBottom: 16, padding: '14px 18px', backgroundColor: '#FEF9E7', border: '1px solid #F7DC6F', borderRadius: 10 }}>
+          <p style={{ margin: 0, fontSize: 14, color: '#7D6608', fontWeight: 700 }}>
+            Les invitations externes sont désactivées pour ce pilote. La gestion locale des employés demeure disponible.
+          </p>
+        </div>
+      )}
 
       {/* Confirmation envoi */}
       {saved && (

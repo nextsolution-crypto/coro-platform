@@ -36,7 +36,10 @@ const ids = Object.freeze({
   clientA: "30000000-0000-4000-8000-000000000001",
   clientB: "30000000-0000-4000-8000-000000000002",
   buildingA: "40000000-0000-4000-8000-000000000001",
+  buildingB: "40000000-0000-4000-8000-000000000002",
   projectA: "50000000-0000-4000-8000-000000000001",
+  archivedProjectA: "50000000-0000-4000-8000-000000000002",
+  projectB: "50000000-0000-4000-8000-000000000003",
   mandateA: "60000000-0000-4000-8000-000000000001",
   portalManager: "70000000-0000-4000-8000-000000000001",
   portalUser: "70000000-0000-4000-8000-000000000002",
@@ -129,6 +132,19 @@ try {
       clientId: ids.clientA,
     },
   });
+  await prisma.building.upsert({
+    where: { id: ids.buildingB },
+    update: {},
+    create: {
+      id: ids.buildingB,
+      name: "Synthetic Building B",
+      address: "2 QA Street",
+      city: "Testville",
+      province: "QC",
+      organizationId: ids.orgB,
+      clientId: ids.clientB,
+    },
+  });
   await prisma.project.upsert({
     where: { id: ids.projectA },
     update: {},
@@ -141,6 +157,50 @@ try {
       clientId: ids.clientA,
       buildingId: ids.buildingA,
       userId: ids.advisorA,
+    },
+  });
+  await prisma.project.upsert({
+    where: { id: ids.archivedProjectA },
+    update: { status: "ARCHIVED" },
+    create: {
+      id: ids.archivedProjectA,
+      name: "Synthetic Archived PMU Project",
+      documentType: "PMU",
+      year: 2025,
+      status: "ARCHIVED",
+      organizationId: ids.orgA,
+      clientId: ids.clientA,
+      buildingId: ids.buildingA,
+      userId: ids.advisorA,
+    },
+  });
+  await prisma.projectVersion.upsert({
+    where: {
+      projectId_versionNumber: {
+        projectId: ids.archivedProjectA,
+        versionNumber: 1,
+      },
+    },
+    update: {},
+    create: {
+      projectId: ids.archivedProjectA,
+      versionNumber: 1,
+      label: "Synthetic archived v1",
+      snapshot: { synthetic: true, source: "global-e2e" },
+    },
+  });
+  await prisma.project.upsert({
+    where: { id: ids.projectB },
+    update: {},
+    create: {
+      id: ids.projectB,
+      name: "Synthetic Customer B Project",
+      documentType: "PMU",
+      year: 2026,
+      organizationId: ids.orgB,
+      clientId: ids.clientB,
+      buildingId: ids.buildingB,
+      userId: ids.adminB,
     },
   });
   await prisma.projectMandate.upsert({

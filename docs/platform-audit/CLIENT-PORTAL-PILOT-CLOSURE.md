@@ -62,3 +62,18 @@ pas la levée de ces conditions.
 - CP-004/CORE-01/DOC-01 : `CP004-CORE01-DOC01-ACCEPTANCE.md`;
 - preuves QA : `D:\CORO-QA\runs\cp-portal-inventory` et
   `D:\CORO-QA\runs\cp004-core-doc`.
+
+## Lot distinct — accès autonome au pilote
+
+Le lot `security/client-portal-autonomous-pilot` ajoute des restrictions serveur
+opposables, limitées aux organisations explicitement inscrites dans la
+configuration du pilote. Les quatre conditions d’ouverture autonome ont été
+validées dans le stack synthétique : signature/PDF officiel, invitations
+externes, changement de mot de passe et mutations de projets archivés.
+
+La matrice Chrome est `12/12 PASS`; les appels directs et l’absence d’effets
+secondaires sont couverts dans
+`CLIENT-PORTAL-AUTONOMOUS-PILOT-ACCESS.md`. Le verdict commercial reste
+`PILOTE ENCADRÉ`. L’autorisation effective de participants demeure conditionnée
+à la release gouvernée, à l’inspection, à la configuration explicite des
+organisations et aux champs opérationnels encore « À COMPLÉTER ».

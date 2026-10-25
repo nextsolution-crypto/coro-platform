@@ -19,6 +19,7 @@
     "test:population-profile": "node app/population/populationContactProfile.contract.test.mjs",
     "test:bookings": "node app/bookings/bookings.contract.test.mjs",
     "test:offline-documents": "node app/offline-documents/offline-security.contract.test.mjs"
+    ,"test:pilot-restrictions": "node app/pilot-restrictions.contract.test.mjs"
   },
   "dependencies": {
     "html5-qrcode": "^2.3.8",
