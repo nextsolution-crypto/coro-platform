@@ -105,6 +105,7 @@ export default function BookingsPage() {
   const [projects, setProjects] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -133,6 +134,8 @@ export default function BookingsPage() {
   }, [router]);
 
   const fetchData = async () => {
+    setLoadError('');
+    setLoading(true);
     try {
       const [projectsRes, bookingsRes] =
         await Promise.all([
@@ -151,6 +154,7 @@ export default function BookingsPage() {
       setBookings(bookingsRes || []);
     } catch (err) {
       console.error(err);
+      setLoadError('Impossible de charger les réservations. Réessayez après avoir vérifié votre connexion.');
     } finally {
       setLoading(false);
     }
@@ -313,6 +317,12 @@ export default function BookingsPage() {
 
   return (
     <PortalLayout>
+      {loadError && (
+        <div role="alert" style={{ marginBottom: 20, padding: 16, border: '1px solid #F1948A', borderRadius: 10, background: '#FDEDEC', color: '#922B21' }}>
+          <p style={{ margin: '0 0 10px' }}>{loadError}</p>
+          <button type="button" onClick={() => void fetchData()} style={{ minHeight: 44, padding: '8px 14px' }}>Réessayer</button>
+        </div>
+      )}
       <div className="w-full max-w-5xl mx-auto">
 
       {/* ═══════════════════════════════════

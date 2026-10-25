@@ -80,7 +80,15 @@ export class OccupancyEmployeesService {
 
     // Envoyer le PIN par courriel si email fourni
     if (body.email) {
-      await this.sendPinEmail(employee, building);
+      try {
+        await this.sendPinEmail(employee, building);
+      } catch (error) {
+        // The API must not report a failed creation while leaving an employee
+        // that the client cannot safely retry. Related role/qualification rows
+        // are removed by their existing cascade constraints.
+        await this.prisma.buildingEmployee.delete({ where: { id: employee.id } });
+        throw error;
+      }
     }
 
     return employee;
@@ -269,7 +277,15 @@ export class OccupancyEmployeesService {
     });
 
     // Envoyer le courriel avec QR code
-    await this.sendInvitationEmail(invitation, building);
+    try {
+      await this.sendInvitationEmail(invitation, building);
+    } catch (error) {
+      // Invitation creation and delivery are one client-visible operation.
+      // Roll back the new row when the provider did not confirm acceptance so
+      // that a retry cannot create a silent duplicate.
+      await this.prisma.visitorInvitation.delete({ where: { id: invitation.id } });
+      throw error;
+    }
 
     return invitation;
   }

@@ -94,3 +94,33 @@ Obtenir la politique produit sur les mutations d'un projet archivé. Maintenir
 la signature/PDF officiel hors pilote jusqu'à une campagne expressément
 autorisée. Reprendre ensuite les autres campagnes fonctionnelles du registre
 sans rouvrir CP-002/CP-003 hors preuve de régression.
+
+## Campagne d'inventaire du 25 octobre 2026
+
+- Branche candidate : `audit/client-portal-full-inventory`, basée sur la PR #56
+  fusionnée au SHA `e1972e888155fcc6d5c4edf1dec8cf211ea07c2b`.
+- Stack synthétique : `cp-portal-inventory`, PostgreSQL 16, 153 migrations,
+  stockage privé et fournisseur local, réseau sortant refusé par défaut.
+- API : périmètres bâtiment/tenant et opérations de consultation PASS. La
+  création de réservation réussie reste `NOT_VERIFIED`, faute de conseiller
+  explicitement admissible dans la fixture canonique.
+- Navigateur : 12/12 PASS sur 13 routes, quatre viewports et trois thèmes;
+  états 503 Activités/Notifications/Carte/Réservations 4/4 PASS; F5, session et
+  déconnexion PASS.
+- CP-008 : faux états vides reproduits et corrigés sur les quatre pages.
+- CP-009 : écritures partielles employé/invitation reproduites sur panne du
+  fournisseur et compensées; aucune ressource ne subsiste après la réponse 500.
+- Dépendance cartographique : les scripts/tuiles `unpkg.com` et OpenStreetMap
+  sont bloqués par le réseau QA; la liste des bâtiments reste le parcours de
+  navigation admis dans le pilote.
+- Preuves : `D:\CORO-QA\runs\cp-portal-inventory` et inventaire détaillé
+  `CLIENT-PORTAL-FUNCTIONAL-INVENTORY.md`.
+
+## Point de reprise courant
+
+Publier le lot CP-008/CP-009 uniquement après les validations locales finales,
+CI verte et revue du diff exact. Puis exécuter la release gouvernée et une
+inspection post-release avant de passer CP-008/CP-009 à `CLOS`. Le verdict
+reste `PILOTE ENCADRÉ`; signature/PDF officiel, mutation des projets archivés,
+réservations réussies, invitations externes et parcours Sentinelle non prouvés
+demeurent exclus ou `NOT_VERIFIED`.

@@ -61,6 +61,7 @@ export default function ActivitiesPage() {
   const [user, setUser] = useState<any>(null);
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [planningId, setPlanningId] = useState<string | null>(null);
   const [requestedDate, setRequestedDate] = useState('');
@@ -94,11 +95,14 @@ export default function ActivitiesPage() {
   }, [router]);
 
   const fetchActivities = async () => {
+    setLoadError('');
+    setLoading(true);
     try {
       const res = await apiGet('/client-portal/activities');
       setActivities(res || []);
     } catch (err) {
       console.error(err);
+      setLoadError('Impossible de charger les activités. Réessayez après avoir vérifié votre connexion.');
     } finally {
       setLoading(false);
     }
@@ -383,6 +387,13 @@ export default function ActivitiesPage() {
           Calendrier des activités
         </h1>
       </header>
+
+      {loadError && (
+        <div role="alert" style={{ marginBottom: 20, padding: 16, border: '1px solid #F1948A', borderRadius: 10, background: '#FDEDEC', color: '#922B21' }}>
+          <p style={{ margin: '0 0 10px' }}>{loadError}</p>
+          <button type="button" onClick={() => void fetchActivities()} style={{ minHeight: 44, padding: '8px 14px' }}>Réessayer</button>
+        </div>
+      )}
 
       {/* Filtre */}
       <div

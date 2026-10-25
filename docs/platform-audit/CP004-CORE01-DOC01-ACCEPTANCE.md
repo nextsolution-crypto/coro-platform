@@ -146,3 +146,16 @@ Verdict maintenu : `PILOTE ENCADRÉ`.
 Mathieu peut démontrer et proposer en pilote uniquement les modules ci-dessus.
 Le portail n'est pas déclaré fonctionnel à 100 % et les autres fonctions ne
 bénéficient d'aucune validation implicite.
+
+## Inventaire fonctionnel complémentaire
+
+La campagne postérieure à la PR #56 a inventorié les autres routes du portail
+sans rouvrir CP-002/003. Elle confirme une matrice navigateur 12/12 sur les
+écrans de consultation ciblés, les quatre états d'erreur API et la persistance
+de session/déconnexion. Deux défauts candidats CP-008/009 ont été reproduits et
+corrigés; ils ne seront clos qu'après publication et inspection de la version
+active.
+
+La liste exhaustive, les exclusions et la décision commerciale limitée sont
+dans `CLIENT-PORTAL-FUNCTIONAL-INVENTORY.md`. Le verdict demeure
+`PILOTE ENCADRÉ`.

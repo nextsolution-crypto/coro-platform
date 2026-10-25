@@ -43,6 +43,7 @@ export default function MapPage() {
   const [user, setUser] = useState<any>(null);
   const [buildings, setBuildings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [selected, setSelected] = useState<any>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [mapReady, setMapReady] = useState(false);
@@ -55,11 +56,14 @@ export default function MapPage() {
   }, [router]);
 
   const fetchBuildings = async () => {
+    setLoadError('');
+    setLoading(true);
     try {
       const res = await apiGet('/client-portal/buildings');
       setBuildings(res || []);
     } catch (err) {
       console.error(err);
+      setLoadError('Impossible de charger la carte des bâtiments. Réessayez après avoir vérifié votre connexion.');
     } finally {
       setLoading(false);
     }
@@ -622,7 +626,12 @@ export default function MapPage() {
         </div>
       </header>
 
-      {withCoords.length === 0 ? (
+      {loadError ? (
+        <div role="alert" style={{ marginBottom: 20, padding: 16, border: '1px solid #F1948A', borderRadius: 10, background: '#FDEDEC', color: '#922B21' }}>
+          <p style={{ margin: '0 0 10px' }}>{loadError}</p>
+          <button type="button" onClick={() => void fetchBuildings()} style={{ minHeight: 44, padding: '8px 14px' }}>Réessayer</button>
+        </div>
+      ) : withCoords.length === 0 ? (
         <div data-cg-keep="" style={{
           backgroundColor: '#0F1923', borderRadius: 12,
           border: '1px solid rgba(255,255,255,0.06)',
