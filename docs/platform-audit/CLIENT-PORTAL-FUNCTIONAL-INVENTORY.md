@@ -97,3 +97,9 @@ Preuves :
 `VALIDÉ` et incluses, avec les restrictions ci-dessus. Les autres fonctions ne
 doivent ni être promises ni présentées comme validées. Le portail n'est pas
 déclaré fonctionnel à 100 %.
+
+La clôture d'exploitation et la vérification de l'applicabilité des exclusions
+sont consignées dans `CLIENT-PORTAL-PILOT-CLOSURE.md`. Avant l'accueil de
+participants autonomes, les restrictions signature, invitation Sentinelle,
+changement de mot de passe exclu et projet archivé doivent être rendues
+opposables côté serveur/configuration ou retirées du périmètre accessible.

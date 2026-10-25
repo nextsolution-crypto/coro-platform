@@ -136,3 +136,10 @@ externes, tuiles cartographiques et parcours Sentinelle non prouvés demeurent
 exclus ou `NOT_VERIFIED`. La prochaine campagne doit partir de l'inventaire et
 ne reprendre que ces limites, sans rouvrir les contrôles clos sans indice de
 régression.
+
+Le MASTER portail est figé pour son périmètre audité. Les documents
+`CLIENT-PORTAL-PILOT-CLOSURE.md`, `CLIENT-PORTAL-PILOT-OPERATING-SHEET.md` et
+`CLIENT-PORTAL-REMAINING-WORK-PACKAGES.md` définissent respectivement la
+clôture, les conditions d'exploitation et les lots indépendants. Aucun
+participant ne doit être invité tant que les restrictions identifiées comme
+`NON APPLICABLE` ne sont pas levées ou effectivement retirées de son périmètre.
