@@ -42,8 +42,8 @@ active et preuve de recette appropriée.
 | CP-005 | Le refus documentaire chargeait le projet par identifiant puis écrivait statut, commentaire et notifications sans contrôle préalable | BLOQUANT | CLOS | PR #49; contrôle parent/rôle/état avant mutation, transaction/idempotence; release `40118313963` et inspection `40119271708` PASS |
 | CP-006 | Commentaires, versions et engagements n’héritaient pas du contrôle canonique du projet; la portée corporate ProjectFile était artificiellement limitée au client d’origine | BLOQUANT | CLOS | PR #47; garde parent avant accès, matrice synthétique PASS; release `40116294651` et inspection `40117291362` PASS |
 | CP-007 | `addComment` utilisait l’identifiant `ClientUser` comme `userId` de commentaire, sans provenance d’acteur typée | MAJEUR | CLOS | PR #48; migration additive 153 et contrainte exactement-un-auteur; release `40118313963` et inspection `40119271708` PASS |
-| CP-008 | Activités, notifications, carte et réservations pouvaient présenter un faux état vide après une panne API | MAJEUR | À VÉRIFIER | Défaut reproduit; correction candidate; 4/4 états 503 avec message et reprise PASS, navigateur 12/12 PASS; publication/inspection requises |
-| CP-009 | Employés et invitations Sentinelle étaient persistés avant l'envoi du courriel; une panne fournisseur laissait une ressource après une réponse 500 | MAJEUR | À VÉRIFIER | Défaut reproduit; compensation candidate; 2 tests atomiques + matrice API candidate PASS; publication/inspection requises |
+| CP-008 | Activités, notifications, carte et réservations pouvaient présenter un faux état vide après une panne API | MAJEUR | CLOS | PR #57; 4/4 états 503 avec message et reprise PASS, navigateur 12/12 PASS; release `40198512542`, inspection `40199449644` PASS/GO |
+| CP-009 | Employés et invitations Sentinelle étaient persistés avant l'envoi du courriel; une panne fournisseur laissait une ressource après une réponse 500 | MAJEUR | CLOS | PR #57; 2 tests atomiques + matrice API candidate PASS; release `40198512542`, inspection `40199449644` PASS/GO |
 
 ## Limites actionnables actuelles
 
