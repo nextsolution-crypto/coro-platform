@@ -38,10 +38,10 @@ si sa page de consultation est validée.
 
 | Fonction / routes | Usage annoncé | Preuve disponible / manque | Statut | Pilote |
 |---|---|---|---|---|
-| Réservations `/bookings` | Planifier ou annuler une activité | Liste, refus inter-tenant, panne 503 et reprise sont prouvés. La fixture ne contient aucun conseiller explicitement admissible; création réussie et annulation restent non démontrées. | NOT_VERIFIED | Exclure les mutations; consultation permise |
-| Changement de mot de passe `/profile` | Modifier le mot de passe du compte courant | Validation et build présents; aucune mutation du secret synthétique n'a été exercée dans cette campagne. | NOT_VERIFIED | Exclu du scénario pilote |
+| Réservations `/bookings` | Planifier ou annuler une activité | BOOK-01 : création canonique, conseiller admissible et disponible, annulation, panne/reprise et refus inter-tenant démontrés dans le stack synthétique | VALIDÉ_QA | Inclus pour le parcours démontré; aucun fournisseur externe |
+| Changement de mot de passe `/profile` | Modifier le mot de passe du compte courant | Secret actuel, politique canonique, nouveau secret accepté, ancien refusé, ancien JWT révoqué, audit et restauration de fixture démontrés; migration 154 active | VALIDÉ_QA_DÉPLOYÉ | Inclus selon la politique de session validée |
 | Carte `/map` | Visualiser et ouvrir les bâtiments géolocalisés | Autorisation des bâtiments, 12/12 et erreur API explicite prouvées. Le rendu des tuiles dépend de `unpkg.com` et OpenStreetMap, bloqués dans le réseau QA deny-by-default. | NOT_VERIFIED | Navigation de secours par liste; carte non promise |
-| Invitations Sentinelle `/sentinelle/:buildingId/invitations` | Créer une invitation et envoyer un courriel | Lecture/refus et atomicité sur panne fournisseur prouvés. Aucun courriel réel ni succès fournisseur n'a été exécuté. | NOT_VERIFIED | Exclu des mutations du pilote |
+| Invitations Sentinelle `/sentinelle/:buildingId/invitations` | Créer une invitation et envoyer un courriel | Création persistée après acceptation du faux fournisseur, atomicité sur panne et refus prouvés. Aucune livraison réelle n'est revendiquée. | PARTIAL — fournisseur simulé PASS, livraison réelle NOT_VERIFIED | Exclu des communications réelles du pilote |
 | Historique Sentinelle `/sentinelle/:buildingId/historique` | Historique de présence/évacuation | Refus 403 correctement présenté pour l'acteur corporate; aucun acteur doté de la permission de succès n'a été exercé. | NOT_VERIFIED | Exclu |
 | Historique incidents `/sentinelle/:buildingId/incidents` | Historique des incidents | États vide/erreur/refus corrigés par CP-001; acteur courant refusé 403. Le succès avec contenu autorisé n'est pas repris ici. | NOT_VERIFIED | Exclu hors démonstration dédiée |
 | Présences, visiteurs et kiosques `/presence/:token`, `/kiosk/:token` | Enregistrement local et suivi des occupants | Routes inventoriées, mais cycle complet kiosque/visiteur non exécuté dans cette campagne. | NOT_VERIFIED | Exclu |
@@ -52,7 +52,7 @@ si sa page de consultation est validée.
 
 | Fonction | Motif | Condition de levée | Statut |
 |---|---|---|---|
-| Signature et PDF officiel | Fournisseur réel et chaîne de signature non exercés | Campagne séparée avec document, signataires et destinataires fictifs explicitement autorisés | NOT_VERIFIED |
+| Signature et PDF officiel | Génération, stockage privé, téléchargement et remédiation des anciennes références validés avec signature synthétique; fournisseur réel et valeur juridique non exercés | Audit/remédiation historiques clos; campagne fournisseur séparée avec document, signataires et destinataires fictifs explicitement autorisés | PARTIAL — technique validée, intégration réelle NOT_VERIFIED |
 | Régénération ou mutation d'un projet archivé | Règle métier non approuvée; la capacité technique subsiste | Décision « lecture seule, réouverture explicite et tracée », puis implémentation et test | NOT_VERIFIED |
 | Alertes population, SMS, courriels externes et actions d'urgence | Effets externes neutralisés; P-5 demeure différé | Mandat et destinataires de test autorisés, fournisseur disponible et preuve E2E | HORS PÉRIMÈTRE |
 | Analyse de formats sans extracteur | Aucun contenu ne doit être inventé | Ajouter et valider un extracteur local gouverné | HORS PÉRIMÈTRE |
