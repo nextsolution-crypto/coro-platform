@@ -56,7 +56,9 @@ active et preuve de recette appropriée.
   reprise après panne de base et Knowledge représentatif sont désormais
   prouvés dans le stack QA synthétique.
 - **RESPONSABLE :** équipe technique CORO.
-- **STATUT :** compatible avec un pilote encadré sur le périmètre prouvé.
+- **STATUT :** compatible avec la préparation d'un pilote encadré sur le
+  périmètre prouvé. L'accueil autonome de participants reste conditionné aux
+  gates effectifs recensés dans `CLIENT-PORTAL-PILOT-CLOSURE.md`.
 
 ### LIMITATION — politique de mutation des projets archivés absente
 
