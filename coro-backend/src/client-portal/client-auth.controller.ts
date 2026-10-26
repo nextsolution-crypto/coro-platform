@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, UseGuards, Request, Put } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  UseGuards,
+  Request,
+  Put,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ClientAuthService } from './client-auth.service';
 import { ClientJwtGuard } from './client-jwt.guard';
@@ -18,18 +26,30 @@ export class ClientAuthController {
 
   @Post('login')
   @Throttle({ short: { ttl: 60000, limit: 5 } })
-  async login(@Body() body: { email: string; password: string; trustedToken?: string }) {
-    return this.clientAuthService.login(body.email, body.password, body.trustedToken);
+  async login(
+    @Body() body: { email: string; password: string; trustedToken?: string },
+  ) {
+    return this.clientAuthService.login(
+      body.email,
+      body.password,
+      body.trustedToken,
+    );
   }
 
   @Post('forgot-password')
-  @Throttle({ short: { ttl: 60000, limit: 3 }, reset: { ttl: 900000, limit: 5 } })
+  @Throttle({
+    short: { ttl: 60000, limit: 3 },
+    reset: { ttl: 900000, limit: 5 },
+  })
   async forgotPassword(@Body() body: { email: string }) {
     return this.clientAuthService.forgotPassword(body?.email);
   }
 
   @Post('reset-password')
-  @Throttle({ short: { ttl: 60000, limit: 5 }, reset: { ttl: 900000, limit: 15 } })
+  @Throttle({
+    short: { ttl: 60000, limit: 5 },
+    reset: { ttl: 900000, limit: 15 },
+  })
   async resetPassword(@Body() body: { token: string; newPassword: string }) {
     return this.clientAuthService.resetPassword(body?.token, body?.newPassword);
   }
@@ -58,5 +78,14 @@ export class ClientAuthController {
   @Throttle({ short: { ttl: 60000, limit: 5 } })
   async validateMagicLink(@Body() body: { token: string }) {
     return this.clientAuthService.validateMagicLink(body.token);
+  }
+
+  @Post('magic-link/request')
+  @Throttle({
+    short: { ttl: 60000, limit: 3 },
+    reset: { ttl: 900000, limit: 5 },
+  })
+  async requestMagicLink(@Body() body: { email: string }) {
+    return this.clientAuthService.requestMagicLink(body?.email);
   }
 }

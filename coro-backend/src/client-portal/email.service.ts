@@ -1,19 +1,49 @@
 import { Injectable } from '@nestjs/common';
 
+export type EmailSendResult = { success: boolean; messageId?: string };
+
 @Injectable()
 export class EmailService {
+  private clientPortalBaseUrl(): string {
+    const configured = process.env.CLIENT_PORTAL_PUBLIC_URL?.trim();
+    return configured && /^https?:\/\//i.test(configured)
+      ? configured.replace(/\/$/, '')
+      : 'https://client.getcoro.io';
+  }
 
-  private async sendEmail(to: { email: string; name: string }, subject: string, htmlContent: string) {
+  private recipientAllowed(email: string): boolean {
+    const configured = process.env.CLIENT_EMAIL_RECIPIENT_ALLOWLIST;
+    if (!configured?.trim()) return true;
+    const allowed = new Set(
+      configured
+        .split(',')
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean),
+    );
+    return allowed.has(email.trim().toLowerCase());
+  }
+
+  private async sendEmail(
+    to: { email: string; name: string },
+    subject: string,
+    htmlContent: string,
+  ): Promise<EmailSendResult> {
     try {
       const apiKey = process.env.BREVO_API_KEY || '';
+      if (!apiKey.trim() || !this.recipientAllowed(to.email)) {
+        return { success: false };
+      }
       const res = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'api-key': process.env.BREVO_API_KEY || '',
+          'api-key': apiKey,
         },
         body: JSON.stringify({
-          sender: { name: 'CORO — Portail Client', email: 'info@getcoro.io' },
+          sender: {
+            name: 'CORO — Portail Client',
+            email: process.env.BREVO_SENDER_EMAIL || 'info@getcoro.io',
+          },
           to: [{ email: to.email, name: to.name }],
           subject,
           htmlContent,
@@ -25,15 +55,40 @@ export class EmailService {
         return { success: false };
       }
 
-      return { success: true };
+      const payload: unknown =
+        typeof (res as { json?: unknown }).json === 'function'
+          ? await res.json().catch(() => null)
+          : null;
+      const messageId =
+        payload &&
+        typeof payload === 'object' &&
+        'messageId' in payload &&
+        typeof payload.messageId === 'string'
+          ? payload.messageId
+          : undefined;
+      return { success: true, ...(messageId ? { messageId } : {}) };
     } catch {
       console.error('Erreur reseau Brevo');
       return { success: false };
     }
   }
 
-  async sendClientPasswordReset(data: { toEmail: string; toName: string; resetUrl: string }) {
-    const safeName = data.toName.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
+  async sendClientPasswordReset(data: {
+    toEmail: string;
+    toName: string;
+    resetUrl: string;
+  }): Promise<EmailSendResult> {
+    const safeName = data.toName.replace(
+      /[&<>"']/g,
+      (char) =>
+        ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;',
+        })[char]!,
+    );
     const htmlContent = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#263238">
       <h1 style="font-size:22px">Reinitialisation de votre mot de passe CORO</h1>
       <p>Bonjour ${safeName},</p>
@@ -42,7 +97,42 @@ export class EmailService {
       <p>Ce lien expire dans 30 minutes et ne peut etre utilise qu'une fois.</p>
       <p>Si vous n'avez pas fait cette demande, ignorez ce courriel.</p>
     </div>`;
-    return this.sendEmail({ email: data.toEmail, name: data.toName }, 'Réinitialisation de votre mot de passe CORO', htmlContent);
+    return this.sendEmail(
+      { email: data.toEmail, name: data.toName },
+      'Réinitialisation de votre mot de passe CORO',
+      htmlContent,
+    );
+  }
+
+  async sendClientMagicLink(data: {
+    toEmail: string;
+    toName: string;
+    magicUrl: string;
+  }): Promise<EmailSendResult> {
+    const safeName = data.toName.replace(
+      /[&<>"']/g,
+      (char) =>
+        ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;',
+        })[char]!,
+    );
+    const htmlContent = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#263238">
+      <h1 style="font-size:22px">Votre lien de connexion CORO</h1>
+      <p>Bonjour ${safeName},</p>
+      <p>Utilisez ce lien pour accéder au Portail Client CORO.</p>
+      <p><a href="${data.magicUrl}">Se connecter au Portail Client</a></p>
+      <p>Ce lien expire dans 15 minutes et ne peut être utilisé qu’une fois.</p>
+      <p>Si vous n’avez pas fait cette demande, ignorez ce courriel.</p>
+    </div>`;
+    return this.sendEmail(
+      { email: data.toEmail, name: data.toName },
+      'Votre lien de connexion CORO',
+      htmlContent,
+    );
   }
 
   async sendClientInvitation(data: {
@@ -51,7 +141,8 @@ export class EmailService {
     clientName: string;
     temporaryPassword: string;
     organizationName: string;
-  }) {
+  }): Promise<EmailSendResult> {
+    const portalUrl = this.clientPortalBaseUrl();
     const subject = `Votre accès au portail client CORO — ${data.clientName}`;
     const htmlContent = `
 <!DOCTYPE html>
@@ -79,11 +170,11 @@ export class EmailService {
       <p style="font-size:22px;font-weight:700;color:#2C3E50;">Bonjour ${data.toName},</p>
       <p style="font-size:15px;color:#6C757D;line-height:1.7;"><strong>${data.organizationName}</strong> vous a créé un accès au portail client CORO pour <strong>${data.clientName}</strong>.</p>
       <div class="credentials">
-        <p class="cred-label">Portail</p><p class="cred-value">client.getcoro.io</p>
+        <p class="cred-label">Portail</p><p class="cred-value">${portalUrl}</p>
         <p class="cred-label">Courriel</p><p class="cred-value">${data.toEmail}</p>
         <p class="cred-label">Mot de passe temporaire</p><p class="cred-value">${data.temporaryPassword}</p>
       </div>
-      <a href="https://client.getcoro.io" class="btn">Accéder au portail →</a>
+      <a href="${portalUrl}" class="btn">Accéder au portail →</a>
       <div class="warning">⚠️ Changez votre mot de passe lors de votre première connexion.</div>
     </div>
     <div class="footer">© 2026 CORO — <a href="https://getcoro.io" style="color:#ADB5BD;">getcoro.io</a></div>
@@ -91,7 +182,11 @@ export class EmailService {
 </body>
 </html>`;
 
-    return this.sendEmail({ email: data.toEmail, name: data.toName }, subject, htmlContent);
+    return this.sendEmail(
+      { email: data.toEmail, name: data.toName },
+      subject,
+      htmlContent,
+    );
   }
 
   async sendDocumentAvailable(data: {
@@ -107,7 +202,7 @@ export class EmailService {
       ? `<a href="${data.magicLink}" style="display:inline-block;background:#C0392B;color:#FFFFFF;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:700;font-size:15px;">
            Accéder au document →
          </a>
-         <p style="font-size:12px;color:#ADB5BD;margin:12px 0 0;">Ce lien est valide 72 heures et à usage unique. Après expiration, connectez-vous sur <a href="https://client.getcoro.io" style="color:#ADB5BD;">client.getcoro.io</a></p>`
+         <p style="font-size:12px;color:#ADB5BD;margin:12px 0 0;">Ce lien est valide 15 minutes et à usage unique. Après expiration, connectez-vous sur <a href="https://client.getcoro.io" style="color:#ADB5BD;">client.getcoro.io</a></p>`
       : `<a href="https://client.getcoro.io" style="display:inline-block;background:#C0392B;color:#FFFFFF;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:700;">Consulter →</a>`;
 
     const htmlContent = `
@@ -144,7 +239,11 @@ export class EmailService {
 </body>
 </html>`;
 
-    return this.sendEmail({ email: data.toEmail, name: data.toName }, subject, htmlContent);
+    return this.sendEmail(
+      { email: data.toEmail, name: data.toName },
+      subject,
+      htmlContent,
+    );
   }
 
   async sendDocumentRefused(data: {
@@ -194,7 +293,11 @@ export class EmailService {
   </div>
 </body>
 </html>`;
-    return this.sendEmail({ email: data.toEmail, name: data.toName }, subject, htmlContent);
+    return this.sendEmail(
+      { email: data.toEmail, name: data.toName },
+      subject,
+      htmlContent,
+    );
   }
 
   async sendDocumentSigned(data: {
@@ -240,10 +343,14 @@ export class EmailService {
   </div>
 </body>
 </html>`;
-    return this.sendEmail({ email: data.toEmail, name: data.toName }, subject, htmlContent);
+    return this.sendEmail(
+      { email: data.toEmail, name: data.toName },
+      subject,
+      htmlContent,
+    );
   }
 
-    async sendWelcomeTeamMember(data: {
+  async sendWelcomeTeamMember(data: {
     toEmail: string;
     toFirstName: string;
     toLastName: string;
