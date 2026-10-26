@@ -14,12 +14,12 @@ const css = read('app/sentinelle-population/page.module.css');
 
 test('registry ends with /sentinelle-population; nothing else is added', () => {
   assert.deepEqual([...migratedV2Routes].slice(9, 21), ['/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue']);
-  assert.equal(migratedV2Routes.length, 26); // TFN-01: '/sms-terms' added
+  assert.equal(migratedV2Routes.length, 28); // TFN-01: '/sms-terms' added
   assert.equal(isLegacyFooterVisible('/sentinelle-population'), false);
 });
 
 test('V2Shell owns the chrome; no lucide, no next/image import, V1 tokens only', () => {
-  assert.match(page, /<V2Shell locale=\{l\} pathname="\/sentinelle-population" englishAvailable=\{false\}>/);
+  assert.match(page, /<V2Shell locale=\{l\} pathname="\/sentinelle-population">/);
   assert.doesNotMatch(code, /lucide-react|from 'next\/image'|<main\b|<nav\b|<footer\b/);
   assert.doesNotMatch(css, /gradient|box-shadow|#[0-9a-fA-F]{3,8}\b|--coro-(?!v1)/);
 });
@@ -30,11 +30,13 @@ test('baseline: V1 had FAQPage only, 15 images and an English copy identical to 
   assert.equal(baseline.en.mainText, baseline.fr.mainText);
 });
 
-test('FR ONLY: hasEnglish false, canonical FR, hreflang fr-CA + x-default, fr_CA, no language control', () => {
-  assert.match(page, /hasEnglish: false/);
-  const m = buildPageMetadata({ path: '/sentinelle-population', locale: 'en', hasEnglish: false, title: 't', description: 'd' });
-  assert.equal(m.alternates?.canonical, 'https://getcoro.io/sentinelle-population');
-  assert.deepEqual(Object.keys(m.alternates?.languages ?? {}), ['fr-CA', 'x-default']);
+test('FR and EN have localized content and reciprocal metadata', () => {
+  assert.doesNotMatch(page, /hasEnglish: false|englishAvailable=\{false\}/);
+  assert.match(page, /localeFromSearchParams/);
+  const m = buildPageMetadata({ path: '/sentinelle-population', locale: 'en', title: 'English title', description: 'English description' });
+  assert.equal(m.alternates?.canonical, 'https://getcoro.io/sentinelle-population?lang=en');
+  assert.deepEqual(Object.keys(m.alternates?.languages ?? {}), ['fr-CA', 'en-CA', 'x-default']);
+  assert.equal((m.openGraph as { locale?: string }).locale, 'en_CA');
 });
 
 test('SCENARIO PRESERVED: the ten V1 steps, in order, with their exact titles and copy, and the V1 h1 and headings', () => {
@@ -101,11 +103,11 @@ test('language of the internal mode is customer-facing: no SANDBOX', () => {
 });
 
 test('metadata, JSON-LD and links: brand-free title, FAQPage only from the visible FAQ, links only to /sentinelle and the official regulation', () => {
-  assert.match(page, /title: 'Alerte à la population et plan d’urgence environnementale \(PUE\)'/);
+  assert.match(page, /metaTitle: 'Alerte à la population et plan d’urgence environnementale \(PUE\)'/);
   assert.ok(page.includes('faqJsonLd(t.faqs.map(([q, a]) => ({ question: q, answer: a })))'));
   assert.ok(page.includes('items={t.faqs.map(([q, a], i) => ({ id: `faq-${i}`, question: q, answer: a }))}'));
   assert.doesNotMatch(code, /SoftwareApplication|BreadcrumbList|Organization/);
-  assert.match(code, /href="\/sentinelle"/);
+  assert.ok(code.includes("localizedHref('/sentinelle', l)"));
   assert.doesNotMatch(code, /\/coro-incident|\/coro-exercices|\/plateforme|\/guides/);
   assert.match(code, /localizedHref\('\/#demo', l\)/);
 });
@@ -137,7 +139,7 @@ test('ROADMAP: the future PUE configurator is not promoted; PUE stays as the pla
 test('recomposition: no ten-card grid, one break between the scenario and its frame, secondary blocks grouped', () => {
   assert.ok(page.indexOf('population-frame-title') > page.indexOf('population-act-4'));
   assert.doesNotMatch(css, /box-shadow/);
-  assert.equal((page.match(/<PageSection /g) ?? []).length, 14);
+  assert.equal((page.match(/<PageSection /g) ?? []).length, 15);
 });
 
 test('MIG-03C-E: the image with the questionable 1-800 number (alerte.webp) is never rendered nor used in metadata; the OG image is the hero-ammoniac artwork', () => {

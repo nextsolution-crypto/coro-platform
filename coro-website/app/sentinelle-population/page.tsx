@@ -9,7 +9,7 @@ import { SplitContent } from '@/components/page/SplitContent';
 import { V2Shell } from '@/components/site/V2Shell';
 import { Button } from '@/components/ui/Button';
 import { faqJsonLd } from '@/lib/site/json-ld';
-import { localeFromSearchParams, localizedHref, resolveAvailableLocale } from '@/lib/site/locale';
+import { localeFromSearchParams, localizedHref } from '@/lib/site/locale';
 import { buildPageMetadata } from '@/lib/site/seo';
 import styles from './page.module.css';
 
@@ -19,7 +19,7 @@ type P = { searchParams?: Promise<Record<string, string | string[] | undefined>>
  * /sentinelle-population (MIG-03C) — OUTSIDE the site: the external population potentially affected by an industrial / environmental emergency.
  * NOT Sentinelle (building occupants, MIG-03B). The V1 fictional scenario (ammonia release, fictitious "Installation industrielle Prémont", Boucherville)
  * is the narrative source of truth and is PRESERVED step by step; all its images are generated MARKETING ILLUSTRATIONS (never product proof).
- * LANGUAGE: FR ONLY (the V1 English copy object was empty and ?lang=en rendered the French text) => englishAvailable={false}, canonical FR, hreflang fr-CA + x-default.
+ * Complete French and English editorial content; illustrative scenario assets retain their original language.
  * PRODUCT TRUTH (backend src/population): SMS and email are the only CORO delivery channels (Brevo), subscriber consent and verification, a public citizen portal,
  * scenario / zone / message preparation, approval, frozen recipients, sending, delivery status, SANDBOX vs LIVE mode, evidence report. NO voice, siren, social-media,
  * municipal-system or 911 integration exists; those appear in the hero illustration only as concepts and are not claimed.
@@ -61,18 +61,52 @@ const copy = {
     distinct: 'Deux périmètres complémentaires, une même résilience.', final: 'Votre PUE est-il prêt à passer du document à l’action?', finalText: 'Découvrez comment Sentinelle Population peut soutenir la préparation et la mise en œuvre du volet d’alerte à la population de votre organisation.',
     faqs: [['Sentinelle Population remplace-t-il un PUE?', 'Non. Le PUE demeure le cadre de planification et d’intervention.'], ['Garantit-il la conformité réglementaire?', 'Non. CORO est un outil de soutien; l’organisation demeure responsable de ses obligations et décisions.'], ['Peut-on préparer les communications à l’avance?', 'Oui. Scénarios, zones et instructions peuvent être préparés avant une alerte autorisée.'], ['Peut-on l’utiliser lors d’un exercice?', 'Oui, dans un cadre contrôlé, notamment en mode simulation, sans envoi réel aux abonnés.'], ['Remplace-t-il Québec En Alerte?', 'Non. Les autorités et systèmes publics conservent leurs responsabilités et mécanismes.']],
   },
+  en: {
+    home: 'Home', lang: 'FR', demo: 'Request a demonstration', discover: 'See how it works',
+    h1: 'Your environmental emergency plan includes public alerting. Sentinelle Population supports its implementation.',
+    lead: 'From preparation to response, Sentinelle Population helps industrial facilities prepare, activate, distribute and document communications to the public during an environmental emergency.',
+    note: 'Designed in particular for facilities subject to the Environmental Emergency Regulations, 2019.',
+    problem: 'An alerting plan should not stay in a binder.', problemText: 'The environmental emergency plan defines scenarios, responsibilities and measures. When an event occurs, staff need to turn preparation into traceable decisions and communications.',
+    plan: ['Scenarios', 'Responsibilities', 'Zones and populations', 'Instructions', 'Communication channels'], execute: ['Activation', 'Assessment', 'Affected area', 'Message', 'Distribution and follow-up'],
+    scenario: '10:17 a.m. — An ammonia leak is reported.', scenarioText: 'Fictional scenario: actual decisions depend on the environmental emergency plan, assessment of the event and competent authorities.',
+    steps: [
+      ['Detection', 'An NH₃ leak is reported. CORO does not detect the leak; the information comes from site operations.', 'sentinelle-population-fuite-ammoniac.webp'],
+      ['Implement the plan', 'The organization follows its prepared procedure: roles, immediate measures, notifications and decision criteria.', 'sentinelle-population-activation-pue.webp'],
+      ['Assessment', 'The team assesses the potentially affected area using the applicable methods and responsibilities.', 'sentinelle-population-zone-impact.webp'],
+      ['Activate public communications', 'When an authorized person makes the appropriate decision, Sentinelle Population supports its implementation.', 'sentinelle-population-dashboard.webp'],
+      ['Affected subscribers', 'The prepared zone is applied to active subscribers.', 'sentinelle-population-zone.webp'],
+      ['Message', 'Staff prepare a suitable communication. Instructions remain those approved for the actual situation.', 'sentinelle-population-messages.webp'],
+      ['Distribution', 'After human approval, eligible communications are distributed through enabled channels.', 'sentinelle-population-diffusion.webp'],
+      ['Follow-up', 'The interface distinguishes preparation, distribution, provider acceptance and available delivery evidence.', 'sentinelle-population-incident.webp'],
+      ['All-clear', 'A communication supports the return to normal when the appropriate decision is made.', 'sentinelle-population-fin-alerte.webp'],
+      ['Traceability and lessons learned', 'The timeline, actions, messages and statuses support review after the event.', 'sentinelle-population-tracabilite.webp'],
+    ],
+    phases: [['BEFORE', 'Prepare', 'Facility, scenario, zone, instructions, channels and governance.'], ['DURING', 'Alert', 'Assess, target, prepare, approve, distribute and follow up.'], ['AFTER', 'Document', 'All-clear, timeline, available evidence and lessons learned.']],
+    portal: 'A citizen portal for registration.', portalText: 'Residents can give consent, verify their channels and register their alert area.',
+    zone: 'From the potentially affected zone to communication.', flow: ['FACILITY', 'SCENARIO', 'POTENTIALLY AFFECTED ZONE', 'SUBSCRIBERS', 'COMMUNICATION'],
+    value: 'What Sentinelle Population supports.', values: [['Advance preparation', 'Structure the program, zones and instructions before an event.'], ['Controlled activation', 'Move from a prepared scenario to an alert governed by explicit permissions.'], ['Targeted communication', 'Calculate aggregates and prepare the channels actually available.'], ['Distribution tracking', 'Track operational states and available evidence.'], ['Traceability', 'Keep a usable history for review.']],
+    continuity: 'Continuity from planning to response.', reg: 'Supporting structured preparedness.',
+    regText: 'The Environmental Emergency Regulations, 2019, under the Canadian Environmental Protection Act, 1999, include provisions concerning the area surrounding a facility and communications with members of the public who may be affected.',
+    disclaimer: 'CORO supports planning, response and traceability. Its use alone does not guarantee compliance or replace the obligations, decisions or communications of competent authorities.',
+    trace: 'A distributed alert should remain traceable.', traceText: 'CORO retains preparation and approval steps, the frozen message, channels, aggregates, attempts and available statuses.',
+    distinct: 'Two complementary scopes supporting resilience.', final: 'Is your environmental emergency plan ready to support action?', finalText: 'Explore how Sentinelle Population can support preparation and implementation of your public alerting arrangements.',
+    faqs: [['Does Sentinelle Population replace an environmental emergency plan?', 'No. The plan remains the framework for preparation and response.'], ['Does it guarantee regulatory compliance?', 'No. CORO is a support tool; the organization remains responsible for its obligations and decisions.'], ['Can communications be prepared in advance?', 'Yes. Scenarios, zones and instructions can be prepared before an authorized alert.'], ['Can it support exercises?', 'Yes, in a controlled simulation setting without actual messages to subscribers.'], ['Does it replace Québec En Alerte?', 'No. Public authorities and systems retain their own responsibilities and mechanisms.']],
+  },
+
 };
 
 const REG_URL = 'https://laws-lois.justice.gc.ca/fra/reglements/DORS-2019-51/';
 const IMG = '/images/sentinelle_population';
-const t = copy.fr;
-const channelNote = 'Canaux de diffusion directs de CORO : SMS et courriel, auprès des abonnés qui ont consenti. Les sirènes, les médias, les réseaux sociaux et les systèmes municipaux relèvent des autorités et de l’organisation; CORO ne les active pas.';
-const mapMeaning = 'La carte illustre le principe : le scénario définit un territoire potentiellement concerné, organisé en zones autour de l’installation. Ces zones servent à considérer la population et les établissements sensibles susceptibles d’être touchés, puis à cibler les communications.';
-const illus = 'Illustration de mise en situation fictive';
+
+const interfaceCopy = {
+ fr: { metaTitle: 'Alerte à la population et plan d’urgence environnementale (PUE)', description: 'Sentinelle Population aide les installations industrielles à préparer, mettre en œuvre et documenter leurs communications à la population dans le cadre de leur planification d’urgence environnementale.', channelNote: 'Canaux de diffusion directs de CORO : SMS et courriel, auprès des abonnés qui ont consenti. Les sirènes, les médias, les réseaux sociaux et les systèmes municipaux relèvent des autorités et de l’organisation; CORO ne les active pas.', mapMeaning: 'La carte illustre le principe : le scénario définit un territoire potentiellement concerné, organisé en zones autour de l’installation. Ces zones servent à considérer la population et les établissements sensibles susceptibles d’être touchés, puis à cibler les communications.', illus: 'Illustration de mise en situation fictive', planLabel: 'Planifier', executeLabel: 'Exécuter', plan: '01 · PLANIFIER', execute: '02 · EXÉCUTER', operations: 'PUE → OPÉRATIONS', scenario: 'MISE EN SITUATION · FUITE NH₃', fourActs: 'Une seule situation, quatre actes.', act: 'ACTE', acts: ['Détecter et comprendre', 'Déterminer qui peut être concerné', 'Informer et suivre', 'Fermer et apprendre'], zoneNote: 'Zones et chiffres illustratifs d’un scénario fictif : ils ne constituent pas une analyse d’impact.', after: 'APRÈS LE SCÉNARIO', frame: 'Ce qui soutient ce scénario.', phases: 'Préparer. Alerter. Documenter.', citizen: 'PORTAIL CITOYEN', brand: 'Installation industrielle Prémont (site fictif) · Sentinelle Population · Propulsé par CORO.', continuity: [['LE PUE PRÉPARE', 'Scénarios · responsabilités · mesures · zones · communications'], ['SENTINELLE POPULATION OPÉRATIONNALISE', 'Population concernée · messages · approbation · diffusion · suivi'], ['CORO DOCUMENTE', 'Chronologie · actions · communications · preuves disponibles · REX']], digital: 'Une continuité numérique, de la préparation à l’amélioration.', ecosystem: 'Écosystème CORO', eco: ['Documentation / planification', 'PUE', 'Sentinelle Population', 'Gestion de l’incident', 'Intervention', 'Traçabilité', 'Exercices / REX'], responders: 'L’installation agit au sein d’un écosystème d’intervention.', respondersText: 'Sentinelle Population ne remplace ni l’organisation d’urgence, ni les municipalités, ni les services d’urgence, ni les autorités environnementales. La plateforme soutient les communications relevant du plan et des responsabilités de l’installation.', regulation: 'Consulter le règlement officiel (site du gouvernement du Canada)', occupants: 'Qui est présent dans mon bâtiment?', occupantsText: 'Occupation, visiteurs, employés, évacuation et point de rassemblement.', sentinelle: 'En savoir plus sur CORO Sentinelle', population: 'Qui pourrait être touché autour de mon installation?', populationText: 'Zone, population abonnée, messages, diffusion et traçabilité.', faq: 'Questions fréquentes', scope: 'Sentinelle Population fait l’objet d’un cadrage et d’une activation distincts. Ses communications externes ne sont pas incluses dans le périmètre du portail Client V1.' },
+ en: { metaTitle: 'Public alerting and environmental emergency planning', description: 'Sentinelle Population helps industrial facilities prepare, implement and document public communications as part of environmental emergency planning.', channelNote: 'CORO’s direct distribution channels are SMS and email for consenting subscribers. Sirens, media, social networks and municipal systems remain the responsibility of authorities and the organization; CORO does not activate them.', mapMeaning: 'The map illustrates a principle: a scenario defines a potentially affected territory divided into zones around a facility. Zones help consider people and sensitive facilities that may be affected and target communications.', illus: 'Fictional scenario illustration; embedded interface text may be in French', planLabel: 'Plan', executeLabel: 'Execute', plan: '01 · PLAN', execute: '02 · EXECUTE', operations: 'ENVIRONMENTAL PLAN → OPERATIONS', scenario: 'FICTIONAL SCENARIO · NH₃ LEAK', fourActs: 'One situation, four acts.', act: 'ACT', acts: ['Detect and understand', 'Identify who may be affected', 'Inform and follow up', 'Close and learn'], zoneNote: 'Zones and figures illustrate a fictional scenario; they are not an impact assessment.', after: 'AFTER THE SCENARIO', frame: 'What supports this scenario.', phases: 'Prepare. Alert. Document.', citizen: 'CITIZEN PORTAL', brand: 'Prémont industrial facility (fictional site) · Sentinelle Population · Powered by CORO.', continuity: [['THE PLAN PREPARES', 'Scenarios · responsibilities · measures · zones · communications'], ['SENTINELLE POPULATION SUPPORTS ACTION', 'Affected subscribers · messages · approval · distribution · follow-up'], ['CORO DOCUMENTS', 'Timeline · actions · communications · available evidence · lessons learned']], digital: 'Digital continuity from preparation to improvement.', ecosystem: 'CORO ecosystem', eco: ['Documentation / planning', 'Environmental emergency plan', 'Sentinelle Population', 'Incident management', 'Response', 'Traceability', 'Exercises / lessons learned'], responders: 'The facility acts within a response ecosystem.', respondersText: 'Sentinelle Population does not replace emergency organizations, municipalities, emergency services or environmental authorities. It supports communications within the facility’s plan and responsibilities.', regulation: 'Read the official regulations (Government of Canada)', occupants: 'Who is registered in my building?', occupantsText: 'Occupancy, visitors, employees, evacuation and assembly points.', sentinelle: 'Learn about CORO Sentinelle', population: 'Who may be affected around my facility?', populationText: 'Zones, subscribers, messages, distribution and traceability.', faq: 'Frequently asked questions', scope: 'Sentinelle Population requires separate scoping and activation. Its external communications are not included in Client Portal V1.' },
+} as const;
 
 export async function generateMetadata({ searchParams }: P): Promise<Metadata> {
   const requested = localeFromSearchParams((await searchParams) ?? {});
-  return buildPageMetadata({ path: '/sentinelle-population', locale: requested, hasEnglish: false, title: 'Alerte à la population et plan d’urgence environnementale (PUE)', description: 'Sentinelle Population aide les installations industrielles à préparer, mettre en œuvre et documenter leurs communications à la population dans le cadre de leur planification d’urgence environnementale.', image: IMG + '/sentinelle-population-hero-ammoniac.webp' });
+  const ui = interfaceCopy[requested];
+  return buildPageMetadata({ path: '/sentinelle-population', locale: requested, title: ui.metaTitle, description: ui.description, image: IMG + '/sentinelle-population-hero-ammoniac.webp' });
 }
 
 function JsonLd({ value }: { value: object }) {
@@ -80,11 +114,15 @@ function JsonLd({ value }: { value: object }) {
 }
 
 export default async function Page({ searchParams }: P) {
-  const l = resolveAvailableLocale(localeFromSearchParams((await searchParams) ?? {}), false);
+  const l = localeFromSearchParams((await searchParams) ?? {});
+  const t = copy[l];
+  const ui = interfaceCopy[l];
+  const { channelNote, mapMeaning, illus } = ui;
   const demo = localizedHref('/#demo', l);
   return (
-    <V2Shell locale={l} pathname="/sentinelle-population" englishAvailable={false}>
+    <V2Shell locale={l} pathname="/sentinelle-population">
       <JsonLd value={faqJsonLd(t.faqs.map(([q, a]) => ({ question: q, answer: a })))} />
+      <PageSection tone="soft"><p>{ui.scope}</p></PageSection>
 
       <EditorialHero id="population-title" label="CORO · Sentinelle Population" title={[t.h1]} lead={t.lead} detail={t.note}
         photo={{ src: '/website-v2/sentinel/sentinelle-population-alert-territory.webp', side: 'end', position: '52% 50%', mobilePosition: '52% 50%', coverage: 58, mobileRatio: '16 / 11' }}
@@ -92,23 +130,23 @@ export default async function Page({ searchParams }: P) {
 
       <PageSection tone="white" labelledBy="population-problem-title">
         <div className={styles.stack}>
-          <EditorialBlock id="population-problem-title" label="PUE → OPÉRATIONS" heading={t.problem}><p>{t.problemText}</p></EditorialBlock>
+          <EditorialBlock id="population-problem-title" label={ui.operations} heading={t.problem}><p>{t.problemText}</p></EditorialBlock>
           <div className={styles.bridge}>
-            <section aria-label="Planifier"><h3>01 · PLANIFIER</h3><ol>{t.plan.map((x) => <li key={x}>{x}</li>)}</ol></section>
+            <section aria-label={ui.planLabel}><h3>{ui.plan}</h3><ol>{t.plan.map((x) => <li key={x}>{x}</li>)}</ol></section>
             <p className={styles.bridgeMid}>PUE <span aria-hidden="true">→</span> Sentinelle Population</p>
-            <section aria-label="Exécuter"><h3>02 · EXÉCUTER</h3><ol>{t.execute.map((x) => <li key={x}>{x}</li>)}</ol></section>
+            <section aria-label={ui.executeLabel}><h3>{ui.execute}</h3><ol>{t.execute.map((x) => <li key={x}>{x}</li>)}</ol></section>
           </div>
         </div>
       </PageSection>
 
       <PageSection tone="navy" id="scenario" labelledBy="population-scenario-title">
-        <EditorialBlock id="population-scenario-title" label="MISE EN SITUATION · FUITE NH₃" heading={t.scenario}><p>{t.scenarioText}</p><p className={styles.illusOnDark}>{illus}. Une seule situation, quatre actes.</p></EditorialBlock>
+        <EditorialBlock id="population-scenario-title" label={ui.scenario} heading={t.scenario}><p>{t.scenarioText}</p><p className={styles.illusOnDark}>{illus}. {ui.fourActs}</p></EditorialBlock>
       </PageSection>
 
       {/* ACTE I — Détecter et comprendre: the field photograph is the large narrative moment; the two interfaces are operational proof. */}
       <PageSection tone="white" labelledBy="population-act-1">
         <div className={styles.stack}>
-          <p className={styles.act}>ACTE I</p><h2 id="population-act-1" className={styles.actTitle}>Détecter et comprendre</h2>
+          <p className={styles.act}>{ui.act} I</p><h2 id="population-act-1" className={styles.actTitle}>{ui.acts[0]}</h2>
           <div className={styles.strip}>
             <div className={`${styles.panel}`}><MediaFrame src={`${IMG}/${t.steps[0][2]}`} alt="" ratio={1466 / 1073} sizes="(min-width: 68rem) 620px, 100vw" /><div className={styles.pbody}><p className={styles.big}>{String(1).padStart(2, '0')}<span>/10</span></p><h3 id="population-step-1">{t.steps[0][0]}</h3><p>{t.steps[0][1]}</p></div></div>
             <div className={`${styles.panel}`}><MediaFrame src={`${IMG}/${t.steps[1][2]}`} alt="" ratio={1536 / 1024} sizes="(min-width: 68rem) 620px, 100vw" /><div className={styles.pbody}><p className={styles.big}>{String(2).padStart(2, '0')}<span>/10</span></p><h3 id="population-step-2">{t.steps[1][0]}</h3><p>{t.steps[1][1]}</p></div></div>
@@ -120,7 +158,7 @@ export default async function Page({ searchParams }: P) {
       {/* ACTE II — Déterminer qui peut être concerné: step 5 is the signature section, dominated by the territorial map. */}
       <PageSection tone="soft" labelledBy="population-act-2">
         <div className={styles.stack}>
-          <p className={styles.act}>ACTE II</p><h2 id="population-act-2" className={styles.actTitle}>Déterminer qui peut être concerné</h2>
+          <p className={styles.act}>{ui.act} II</p><h2 id="population-act-2" className={styles.actTitle}>{ui.acts[1]}</h2>
           <div className={styles.strip}>
             <div className={`${styles.panel}`}><MediaFrame src={`${IMG}/${t.steps[3][2]}`} alt="" ratio={1536 / 1024} sizes="(min-width: 68rem) 620px, 100vw" /><div className={styles.pbody}><p className={styles.big}>{String(4).padStart(2, '0')}<span>/10</span></p><h3 id="population-step-4">{t.steps[3][0]}</h3><p>{t.steps[3][1]}</p></div></div>
             <div className={`${styles.panel} ${styles.wide}`}>
@@ -131,7 +169,7 @@ export default async function Page({ searchParams }: P) {
                   <p className={styles.kicker}>{t.zone}</p>
                   <ol className={styles.flow} aria-label={t.zone}>{t.flow.map((x) => <li key={x}>{x}</li>)}</ol>
                   <p>{mapMeaning}</p>
-                  <p className={styles.illus}>Zones et chiffres illustratifs d’un scénario fictif : ils ne constituent pas une analyse d’impact. {illus}.</p>
+                  <p className={styles.illus}>{ui.zoneNote} {illus}.</p>
                 </div>
               </div>
             </div>
@@ -142,7 +180,7 @@ export default async function Page({ searchParams }: P) {
       {/* ACTE III — Informer et suivre: interfaces as operational proof. */}
       <PageSection tone="white" labelledBy="population-act-3">
         <div className={styles.stack}>
-          <p className={styles.act}>ACTE III</p><h2 id="population-act-3" className={styles.actTitle}>Informer et suivre</h2>
+          <p className={styles.act}>{ui.act} III</p><h2 id="population-act-3" className={styles.actTitle}>{ui.acts[2]}</h2>
           <div className={styles.strip}>
             <div className={`${styles.panel}`}><MediaFrame src={`${IMG}/${t.steps[5][2]}`} alt="" ratio={1536 / 1024} sizes="(min-width: 68rem) 620px, 100vw" /><div className={styles.pbody}><p className={styles.big}>{String(6).padStart(2, '0')}<span>/10</span></p><h3 id="population-step-6">{t.steps[5][0]}</h3><p>{t.steps[5][1]}</p></div></div>
             <div className={`${styles.panel}`}><MediaFrame src={`${IMG}/${t.steps[6][2]}`} alt="" ratio={1536 / 1024} sizes="(min-width: 68rem) 620px, 100vw" /><div className={styles.pbody}><p className={styles.big}>{String(7).padStart(2, '0')}<span>/10</span></p><h3 id="population-step-7">{t.steps[6][0]}</h3><p>{t.steps[6][1]}</p><p className={styles.channels}>{channelNote}</p></div></div>
@@ -154,7 +192,7 @@ export default async function Page({ searchParams }: P) {
       {/* ACTE IV — Fermer et apprendre: the closing photograph, then traceability. */}
       <PageSection tone="soft" labelledBy="population-act-4">
         <div className={styles.stack}>
-          <p className={styles.act}>ACTE IV</p><h2 id="population-act-4" className={styles.actTitle}>Fermer et apprendre</h2>
+          <p className={styles.act}>{ui.act} IV</p><h2 id="population-act-4" className={styles.actTitle}>{ui.acts[3]}</h2>
           <div className={styles.strip}>
             <div className={`${styles.panel}`}><MediaFrame src={`${IMG}/${t.steps[8][2]}`} alt="" ratio={1536 / 1024} sizes="(min-width: 68rem) 620px, 100vw" /><div className={styles.pbody}><p className={styles.big}>{String(9).padStart(2, '0')}<span>/10</span></p><h3 id="population-step-9">{t.steps[8][0]}</h3><p>{t.steps[8][1]}</p></div></div>
             <div className={`${styles.panel}`}><MediaFrame src={`${IMG}/${t.steps[9][2]}`} alt="" ratio={1536 / 1024} sizes="(min-width: 68rem) 620px, 100vw" /><div className={styles.pbody}><p className={styles.big}>{String(10).padStart(2, '0')}<span>/10</span></p><h3 id="population-step-10">{t.steps[9][0]}</h3><p>{t.steps[9][1]}</p><p className={styles.trace}><strong>{t.trace}</strong> {t.traceText}</p></div></div>
@@ -165,12 +203,12 @@ export default async function Page({ searchParams }: P) {
 
       {/* Break: from the scenario to what supports it. */}
       <PageSection tone="navy" labelledBy="population-frame-title">
-        <EditorialBlock id="population-frame-title" label="APRÈS LE SCÉNARIO" heading="Ce qui soutient ce scénario." />
+        <EditorialBlock id="population-frame-title" label={ui.after} heading={ui.frame} />
       </PageSection>
 
       <PageSection tone="white" labelledBy="population-phases-title">
         <div className={styles.stack}>
-          <EditorialBlock id="population-phases-title" heading="Préparer. Alerter. Documenter." />
+          <EditorialBlock id="population-phases-title" heading={ui.phases} />
           <ol className={styles.timeline}>{t.phases.map(([a, b, c], i) => <li key={a} data-stage={i}><p className={styles.stageKicker}>{a}</p><h3>{b}</h3><p>{c}</p></li>)}</ol>
           <h2 className={styles.subTitle}>{t.value}</h2>
           <ol className={styles.values}>{t.values.map(([a, b]) => <li key={a}><h3>{a}</h3><p>{b}</p></li>)}</ol>
@@ -180,30 +218,28 @@ export default async function Page({ searchParams }: P) {
       <PageSection tone="soft" labelledBy="population-portal-title">
         <SplitContent order="media-text" ratio="5-7" align="center"
           media={<MediaFrame src={`${IMG}/sentinelle-population-portail.webp`} alt="" ratio={1536 / 1024} sizes="(min-width: 68rem) 720px, 100vw" />}
-          text={<div className={styles.stack}><EditorialBlock id="population-portal-title" label="PORTAIL CITOYEN" heading={t.portal}><p>{t.portalText}</p></EditorialBlock><p className={styles.illus}>Installation industrielle Prémont (site fictif) · Sentinelle Population · Propulsé par CORO. {illus}.</p></div>} />
+          text={<div className={styles.stack}><EditorialBlock id="population-portal-title" label={ui.citizen} heading={t.portal}><p>{t.portalText}</p></EditorialBlock><p className={styles.illus}>{ui.brand} {illus}.</p></div>} />
       </PageSection>
 
       <PageSection tone="navy" labelledBy="population-continuity-title">
         <div className={styles.stack}>
           <EditorialBlock id="population-continuity-title" heading={t.continuity} />
           <div className={styles.columns}>
-            <section><h3>LE PUE PRÉPARE</h3><p>Scénarios · responsabilités · mesures · zones · communications</p></section>
-            <section><h3>SENTINELLE POPULATION OPÉRATIONNALISE</h3><p>Population concernée · messages · approbation · diffusion · suivi</p></section>
-            <section><h3>CORO DOCUMENTE</h3><p>Chronologie · actions · communications · preuves disponibles · REX</p></section>
+            {ui.continuity.map(([title, text]) => <section key={title}><h3>{title}</h3><p>{text}</p></section>)}
           </div>
-          <h3 className={styles.subTitleDark}>Une continuité numérique, de la préparation à l’amélioration.</h3><ol className={styles.eco} aria-label="Écosystème CORO">{['Documentation / planification', 'PUE', 'Sentinelle Population', 'Gestion de l’incident', 'Intervention', 'Traçabilité', 'Exercices / REX'].map((x) => <li key={x} data-self={x === 'Sentinelle Population' ? 'true' : undefined}>{x}</li>)}</ol>
+          <h3 className={styles.subTitleDark}>{ui.digital}</h3><ol className={styles.eco} aria-label={ui.ecosystem}>{ui.eco.map((x) => <li key={x} data-self={x === 'Sentinelle Population' ? 'true' : undefined}>{x}</li>)}</ol>
         </div>
       </PageSection>
 
       <PageSection tone="white" labelledBy="population-responders-title">
         <SplitContent ratio="5-7" align="center"
-          text={<div className={styles.stack}><EditorialBlock id="population-responders-title" heading="L’installation agit au sein d’un écosystème d’intervention."><p>Sentinelle Population ne remplace ni l’organisation d’urgence, ni les municipalités, ni les services d’urgence, ni les autorités environnementales. La plateforme soutient les communications relevant du plan et des responsabilités de l’installation.</p></EditorialBlock></div>}
+          text={<div className={styles.stack}><EditorialBlock id="population-responders-title" heading={ui.responders}><p>{ui.respondersText}</p></EditorialBlock></div>}
           media={<MediaFrame src={`${IMG}/sentinelle-population-intervention.webp`} alt="" ratio={1536 / 1024} sizes="(min-width: 68rem) 720px, 100vw" />} />
       </PageSection>
 
       <PageSection tone="soft" labelledBy="population-reg-title">
         <SplitContent ratio="5-7" align="start"
-          text={<div className={styles.stack}><EditorialBlock id="population-reg-title" label="RUE / E2" heading={t.reg}><p>{t.regText}</p></EditorialBlock><a className={styles.ext} href={REG_URL} target="_blank" rel="noreferrer">Consulter le règlement officiel (site du gouvernement du Canada)<span aria-hidden="true"> ↗</span></a></div>}
+          text={<div className={styles.stack}><EditorialBlock id="population-reg-title" label="RUE / E2" heading={t.reg}><p>{t.regText}</p></EditorialBlock><a className={styles.ext} href={l === 'en' ? 'https://laws-lois.justice.gc.ca/eng/regulations/SOR-2019-51/' : REG_URL} target="_blank" rel="noreferrer">{ui.regulation}<span aria-hidden="true"> ↗</span></a></div>}
           media={<p className={styles.statement}>{t.disclaimer}</p>} />
       </PageSection>
 
@@ -211,16 +247,16 @@ export default async function Page({ searchParams }: P) {
         <div className={styles.stack}>
           <EditorialBlock id="population-distinct-title" heading={t.distinct} />
           <div className={styles.columns2}>
-            <section><h3>CORO Sentinelle</h3><p className={styles.q}>Qui est présent dans mon bâtiment?</p><p>Occupation, visiteurs, employés, évacuation et point de rassemblement.</p><a href="/sentinelle">En savoir plus sur CORO Sentinelle<span aria-hidden="true"> →</span></a></section>
-            <section><h3>Sentinelle Population</h3><p className={styles.q}>Qui pourrait être touché autour de mon installation?</p><p>Zone, population abonnée, messages, diffusion et traçabilité.</p></section>
+            <section><h3>CORO Sentinelle</h3><p className={styles.q}>{ui.occupants}</p><p>{ui.occupantsText}</p><a href={localizedHref('/sentinelle', l)}>{ui.sentinelle}<span aria-hidden="true"> →</span></a></section>
+            <section><h3>Sentinelle Population</h3><p className={styles.q}>{ui.population}</p><p>{ui.populationText}</p></section>
           </div>
         </div>
       </PageSection>
 
       <PageSection tone="soft" labelledBy="population-faq-title">
         <div className={styles.stack}>
-          <EditorialBlock id="population-faq-title" label="FAQ" heading="Questions fréquentes" />
-          <Accordion label="Questions fréquentes" items={t.faqs.map(([q, a], i) => ({ id: `faq-${i}`, question: q, answer: a }))} />
+          <EditorialBlock id="population-faq-title" label="FAQ" heading={ui.faq} />
+          <Accordion label={ui.faq} items={t.faqs.map(([q, a], i) => ({ id: `faq-${i}`, question: q, answer: a }))} />
         </div>
       </PageSection>
 

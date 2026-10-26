@@ -9,23 +9,13 @@ import { SplitContent } from '@/components/page/SplitContent';
 import { V2Shell } from '@/components/site/V2Shell';
 import { Button } from '@/components/ui/Button';
 import { faqJsonLd } from '@/lib/site/json-ld';
-import { localeFromSearchParams, localizedHref, resolveAvailableLocale } from '@/lib/site/locale';
+import { localeFromSearchParams, localizedHref } from '@/lib/site/locale';
 import { buildPageMetadata } from '@/lib/site/seo';
 import styles from './page.module.css';
 
 type P = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
 
-/**
- * /coro-incident (MIG-03D) — NEW page (no V1 existed). What happens when an event becomes an active incident in CORO.
- * Product truth authority: docs/website-v2/05-migration/MIG-03D-INCIDENT-AUDIT.md. LANGUAGE: FR ONLY (englishAvailable={false}).
- * VERIFIED and used: 15 incident types each linked to a procedure; occupancy and emergency-team snapshots taken at activation; coordinator tasks;
- * email, and SMS only with consent (no voice, no app notification); timestamped journal with manual notes; contained / resolved states; PDF report;
- * REX (4 free-text fields); corrective actions module; exercise mode; simultaneous incidents; an intervention link valid only while the incident is active.
- * NOT published: fire-panel bridge (PARTIAL), 911 or dispatch integration, a "QR Intervention" claim (the QR workflow is not verified),
- * a link validity duration or manual revocation (none exists), internal procedure codes, standards or compliance, retention, timestamps.
- * PROOF: only the intervention sheet (PUBLICATION-BLOCKER: visible address; SANITIZE OR RECAPTURE BEFORE GO-LIVE). No Incident dashboard is fabricated.
- * The hero is a MARKETING ILLUSTRATION (decorative, alt="").
- */
+/** Incident capabilities depend on permissions, configuration and the agreed scope of service. */
 const LOGIN = 'https://client.getcoro.io/login';
 
 const copy = {
@@ -90,9 +80,67 @@ const copy = {
   support: 'Découvrez comment CORO Incident garde le contexte, la chronologie et l’information utile au même endroit.',
 };
 
+const english = {
+  metaTitle: 'Incident management: activation, timeline and reporting',
+  description: 'CORO Incident connects activation, emergency team tasks, timestamped records, responder information and incident reporting.',
+  label: 'CORO Incident', lines: ['When an incident starts,', 'every action matters.'],
+  lead: 'When an event becomes an active incident, CORO captures the context, supports team coordination, records the timeline and keeps information and reporting together.',
+  demo: 'Request a demonstration', access: 'Access CORO Client',
+  types: ['Smoke', 'Fire alert', 'Fire alarm', 'Gas leak', 'Active threat', 'Medical emergency', 'Toxic gas', 'Suspicious package', 'Power outage', 'Hazardous materials', 'Bomb threat', 'Lithium battery', 'Flooding', 'High winds', 'Other situation'],
+  s1: { n: '01', label: 'An event becomes an incident', title: 'An incident type and its procedure.', text: 'An authorized user selects an incident type. Each of the 15 types is linked to a procedure, with coordinator steps captured at activation.' },
+  s2: { n: '02', label: 'Context captured at activation', title: 'Who is registered and who can act at that moment.', text: 'CORO captures the people registered as present in Sentinelle and the building’s available emergency team, including roles. This snapshot stays in the incident record.', sent: 'Learn about CORO Sentinelle' },
+  s3: { n: '03', label: 'Mobilize and act', title: 'Tasks for each role.', text: 'The coordinator follows the procedure steps. Available team members receive their tasks through configured channels and acknowledge them.', items: ['Email to designated recipients', 'SMS only for recipients who have consented', 'Role-based tasks and progress tracking'] },
+  s4: { n: '04', label: 'Actions build the timeline', title: 'A timeline from activation to lessons learned.', lead: 'Each step contributes to the incident record.' },
+  steps: [
+    ['Activation', 'An authorized user activates the incident; its type and linked procedure are recorded.'],
+    ['Mobilization', 'The available emergency team is notified and receives its tasks through configured channels.'],
+    ['Action', 'The coordinator checks procedure steps and team members acknowledge their assignments.'],
+    ['Update', 'Notes include time and author; the incident can be marked as contained.'],
+    ['Closure', 'The incident is resolved with closing notes.'],
+    ['Report', 'A PDF brings together identification, timeline, occupants at activation, procedure and lessons learned.'],
+    ['Lessons learned', 'The organization records what worked, what needs improvement and its recommendations.'],
+  ] as const,
+  s5: { n: '05', label: 'Information for responders', title: 'A protected intervention link.', text: 'An incident has a bearer link that gives its holder access to essential building and incident information without an account. It remains valid only while the incident is active, and views are counted. Share it only with intended recipients.', items: ['Can be emailed to selected recipients when the channel is enabled', 'Stops working when the incident is no longer active'],
+    alt: 'CORO responder information sheet (French interface shown): assembly point, access, fire protection, hazardous materials, utility shut-offs and people requiring assistance.',
+    cartouche: ['CORO Incident · Responder information', 'Information for responders', 'French interface shown'] as const,
+    panLabel: 'Screenshot, horizontally scrollable', onScreen: 'On this screen', legend: ['Assembly point', 'Access', 'Fire protection', 'Hazardous materials', 'Utility shut-offs', 'People requiring assistance'] },
+  s6: { n: '06', label: 'Close and report', title: 'Keep a record of what happened.', text: 'After resolution, a PDF report can be generated from the incident. It includes identification, the timestamped timeline, occupants at activation, the team, procedure progress and lessons learned.' },
+  s7: { n: '07', label: 'Learn and improve', title: 'The report records events. Lessons learned inform change.', text: 'The incident record includes a lessons-learned form. Corrective actions can then be tracked with an owner, due date and status.', rex: ['What worked well', 'Areas for improvement', 'Recommendations', 'Proposed corrective actions'], rexLabel: 'Four lessons-learned sections' },
+  extra: [
+    { title: 'Exercise mode', text: 'Exercise messages are marked [EXERCISE]. Occupants are not notified, but the emergency team and responsible staff may receive communications through enabled channels. Plan exercises accordingly.' },
+    { title: 'Simultaneous incidents', text: 'Several incidents can be active, each with its own record, tasks and report.' },
+  ],
+  eco: 'This part of the platform', explore: 'Explore',
+  links: [
+    { name: 'Operational resilience', text: 'Preparedness, the resilience index, emergency roles and lessons learned.', href: '/resilience-operationnelle' },
+    { name: 'Sentinelle', text: 'The occupancy register captured at incident activation.', href: '/sentinelle' },
+  ],
+  resources: { label: 'Resources', title: 'Explore incident preparedness.', items: [
+    { title: 'How to know which emergency team members are available', text: 'A team complete on paper may not be complete when needed.', href: '/blog/equipe-urgence-disponible-batiment' },
+    { title: 'Testing an emergency plan with a tabletop exercise', text: 'Practise decisions and communications before an incident.', href: '/blog/exercice-sur-table-tester-plan-urgence' },
+    { title: 'Finding gaps in emergency preparedness', text: 'Identify gaps and track corrective actions.', href: '/blog/identifier-lacunes-organisation-mesures-urgence' },
+  ] },
+  faqTitle: 'Frequently asked questions',
+  faq: [
+    ['How many incident types are supported?', 'Fifteen categories, including an “other situation” category. Each is linked to a procedure.'],
+    ['Who receives notifications?', 'Recipients depend on roles, configuration and enabled channels. SMS requires consent. External communications are subject to separate activation and acceptance.'],
+    ['Does an exercise notify occupants?', 'Not through the exercise occupant-notification flow. The emergency team and responsible staff can still be notified through enabled channels.'],
+    ['Can several incidents be managed at once?', 'Yes. Each has its own record, tasks and report.'],
+    ['When does the intervention link expire?', 'It works only while the incident is active. It is no longer valid once resolved or cancelled.'],
+    ['Does a report guarantee regulatory compliance?', 'No. It documents the incident; the organization remains responsible for applicable requirements.'],
+  ] as const,
+  statement: 'When an incident starts, every action matters.', support: 'See how CORO Incident keeps context, actions and reporting together.',
+};
+const translations = { fr: copy, en: english };
+const interfaceCopy = {
+  fr: { types: 'Types d’incidents', people: 'Personnes inscrites comme présentes', snapshot: 'Liste figée', team: 'Équipe d’urgence mobilisable', roles: 'Rôles inclus', report: 'Le rapport est le dossier de l’incident, mis en forme.', extra: 'Deux capacités complémentaires.', eco: 'Incident, dans la plateforme.', scope: 'Les communications externes et les opérations d’urgence demandent une activation et une recette distinctes. Elles ne sont pas incluses dans le périmètre commercial du portail Client V1.' },
+  en: { types: 'Incident types', people: 'People registered as present', snapshot: 'Captured list', team: 'Available emergency team', roles: 'Roles included', report: 'The report presents the incident record.', extra: 'Two complementary capabilities.', eco: 'Incident within the platform.', scope: 'External communications and emergency operations require separate activation and acceptance. They are not included in the commercial scope of Client Portal V1.' },
+};
+
 export async function generateMetadata({ searchParams }: P): Promise<Metadata> {
   const requested = localeFromSearchParams((await searchParams) ?? {});
-  return buildPageMetadata({ path: '/coro-incident', locale: requested, hasEnglish: false, title: copy.metaTitle, description: copy.description });
+  const copy = translations[requested];
+  return buildPageMetadata({ path: '/coro-incident', locale: requested, title: copy.metaTitle, description: copy.description });
 }
 
 function JsonLd({ value }: { value: object }) {
@@ -100,12 +148,14 @@ function JsonLd({ value }: { value: object }) {
 }
 
 export default async function Page({ searchParams }: P) {
-  const l = resolveAvailableLocale(localeFromSearchParams((await searchParams) ?? {}), false);
-  const t = copy;
+  const l = localeFromSearchParams((await searchParams) ?? {});
+  const t = translations[l];
+  const ui = interfaceCopy[l];
   const demo = localizedHref('/#demo', l);
   return (
-    <V2Shell locale={l} pathname="/coro-incident" englishAvailable={false}>
+    <V2Shell locale={l} pathname="/coro-incident">
       <JsonLd value={faqJsonLd(t.faq.map(([q, a]) => ({ question: q, answer: a })))} />
+      <PageSection tone="soft"><p>{ui.scope}</p></PageSection>
 
       <EditorialHero id="incident-title" label={t.label} title={t.lines} lead={t.lead}
         photo={{ src: '/website-v2/sentinel/first-responders-arrival.webp', side: 'end', position: '30% 50%', mobilePosition: '30% 50%', coverage: 55, mobileRatio: '16 / 11' }}
@@ -116,14 +166,14 @@ export default async function Page({ searchParams }: P) {
           <MediaFrame src="/website-v2/incident/incident-building.webp" alt="" ratio={1672 / 941} aspect="21 / 9" position="50% 40%" sizes="(min-width: 80rem) 1240px, 100vw" />
           <SplitContent ratio="5-7" align="start"
             text={<EditorialBlock id="incident-s1-title" label={`${t.s1.n} — ${t.s1.label}`} heading={t.s1.title}><p>{t.s1.text}</p></EditorialBlock>}
-            media={<ul className={styles.types} aria-label="Types d’incidents">{t.types.map((x) => <li key={x}>{x}</li>)}</ul>} />
+            media={<ul className={styles.types} aria-label={ui.types}>{t.types.map((x) => <li key={x}>{x}</li>)}</ul>} />
         </div>
       </PageSection>
 
       <PageSection tone="soft" labelledBy="incident-s2-title">
         <SplitContent ratio="7-5" align="start"
-          text={<EditorialBlock id="incident-s2-title" label={`${t.s2.n} — ${t.s2.label}`} heading={t.s2.title}><p>{t.s2.text}</p><p><a className={styles.link} href="/sentinelle">{t.s2.sent}<span aria-hidden="true"> →</span></a></p></EditorialBlock>}
-          media={<dl className={styles.snap}><div><dt>Personnes inscrites comme présentes</dt><dd>Liste figée</dd></div><div><dt>Équipe d’urgence mobilisable</dt><dd>Rôles inclus</dd></div></dl>} />
+          text={<EditorialBlock id="incident-s2-title" label={`${t.s2.n} — ${t.s2.label}`} heading={t.s2.title}><p>{t.s2.text}</p><p><a className={styles.link} href={localizedHref('/sentinelle', l)}>{t.s2.sent}<span aria-hidden="true"> →</span></a></p></EditorialBlock>}
+          media={<dl className={styles.snap}><div><dt>{ui.people}</dt><dd>{ui.snapshot}</dd></div><div><dt>{ui.team}</dt><dd>{ui.roles}</dd></div></dl>} />
       </PageSection>
 
       <PageSection tone="white" labelledBy="incident-s3-title">
@@ -148,7 +198,7 @@ export default async function Page({ searchParams }: P) {
       <PageSection tone="white" labelledBy="incident-s6-title">
         <SplitContent ratio="5-7" align="start"
           text={<EditorialBlock id="incident-s6-title" label={`${t.s6.n} — ${t.s6.label}`} heading={t.s6.title}><p>{t.s6.text}</p></EditorialBlock>}
-          media={<p className={styles.statement}>Le rapport est le dossier de l’incident, mis en forme.</p>} />
+          media={<p className={styles.statement}>{ui.report}</p>} />
       </PageSection>
 
       <PageSection tone="soft" labelledBy="incident-s7-title">
@@ -162,14 +212,14 @@ export default async function Page({ searchParams }: P) {
 
       <PageSection tone="white" labelledBy="incident-extra-title">
         <div className={styles.stack}>
-          <EditorialBlock id="incident-extra-title" heading="Deux capacités complémentaires." />
+          <EditorialBlock id="incident-extra-title" heading={ui.extra} />
           <div className={styles.columns}>{t.extra.map((e) => <section key={e.title}><h3>{e.title}</h3><p>{e.text}</p></section>)}</div>
         </div>
       </PageSection>
 
       <PageSection tone="soft" labelledBy="incident-eco-title">
         <div className={styles.stack}>
-          <EditorialBlock id="incident-eco-title" label={t.eco} heading="Incident, dans la plateforme." />
+          <EditorialBlock id="incident-eco-title" label={t.eco} heading={ui.eco} />
           <ul className={styles.connect}>{t.links.map((c) => <li key={c.name}><h3>{c.name}</h3><p>{c.text}</p><a href={localizedHref(c.href, l)} aria-label={`${t.explore} ${c.name}`}>{t.explore}<span aria-hidden="true"> →</span></a></li>)}</ul>
         </div>
       </PageSection>

@@ -15,13 +15,13 @@ const css = read('app/sentinelle/page.module.css');
 const strip = (s: string) => decodeURIComponent(s).replace(new RegExp('^https?://[^/]+'), '');
 
 test('registry ends with /sentinelle after the nine approved routes; Population stays legacy', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/sms-terms', '/blog', '/']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/sms-terms', '/blog', '/', '/coro-knowledge', '/coro-ai']);
   assert.equal(isLegacyFooterVisible('/sentinelle'), false);
   assert.equal(isLegacyFooterVisible('/sentinelle-population'), false); // migrated in MIG-03C
 });
 
 test('V2Shell owns the chrome; V1 tokens only; no inline stylesheet, img, lucide or old pricing block', () => {
-  assert.match(page, /<V2Shell locale=\{l\} pathname="\/sentinelle" englishAvailable=\{false\}>/);
+  assert.match(page, /<V2Shell locale=\{l\} pathname="\/sentinelle">/);
   assert.doesNotMatch(code, /<style|<img\b|<nav\b|<main\b|<footer\b|lucide-react|pricingPlans|149 \$|249 \$/);
   assert.doesNotMatch(css, /gradient|box-shadow|#[0-9a-fA-F]{3,8}\b|--coro-(?!v1)/);
 });
@@ -32,15 +32,13 @@ test('baseline: legacy page had 8 images, SoftwareApplication + FAQPage, and ?la
   assert.equal(baseline.en.canonical, 'https://getcoro.io/sentinelle');
 });
 
-test('FR ONLY: hasEnglish false, canonical FR even with ?lang=en, hreflang fr-CA + x-default, fr_CA, no en-CA', () => {
-  assert.match(page, /hasEnglish: false/);
-  assert.match(page, /resolveAvailableLocale\(localeFromSearchParams\(\(await searchParams\) \?\? \{\}\), false\)/);
-  const m = buildPageMetadata({ path: '/sentinelle', locale: 'en', hasEnglish: false, title: 't', description: 'd' });
-  assert.equal(m.alternates?.canonical, 'https://getcoro.io/sentinelle');
-  assert.deepEqual(Object.keys(m.alternates?.languages ?? {}), ['fr-CA', 'x-default']);
-  assert.equal((m.openGraph as { locale?: string }).locale, 'fr_CA');
-  assert.equal(publicRoutes.find((r) => r.path === '/sentinelle')?.en, false);
-  assert.doesNotMatch(read('lib/site/sitemap.ts') + '', /sentinelle\?lang=en/);
+test('FR and EN have localized content and reciprocal metadata', () => {
+  assert.doesNotMatch(page, /hasEnglish: false|englishAvailable=\{false\}/);
+  assert.match(page, /localeFromSearchParams/);
+  const m = buildPageMetadata({ path: '/sentinelle', locale: 'en', title: 'English title', description: 'English description' });
+  assert.equal(m.alternates?.canonical, 'https://getcoro.io/sentinelle?lang=en');
+  assert.deepEqual(Object.keys(m.alternates?.languages ?? {}), ['fr-CA', 'en-CA', 'x-default']);
+  assert.equal((m.openGraph as { locale?: string }).locale, 'en_CA');
 });
 
 test('hero: exact approved photograph, decorative marketing illustration; body photos decorative too', () => {
@@ -87,7 +85,7 @@ test('PRODUCT TRUTH: check-in/out, PIN, visitors and contractors, evacuation acc
 test('NO GEOLOCATION and no tracking claim: presence is not location, missing = not yet confirmed', () => {
   for (const f of ['../coro-client-portal/app/presence/[kioskToken]/page.tsx', '../coro-client-portal/app/kiosk/[token]/page.tsx', '../coro-client-portal/app/sentinelle/[buildingId]/evacuation/page.tsx']) assert.doesNotMatch(read(f), /geolocation|watchPosition|getCurrentPosition/);
   assert.match(code, /Sentinelle enregistre les entrées, les sorties et les statuts opérationnels déclarés; le registre d’occupation n’assure pas la géolocalisation continue des personnes./);
-  assert.match(code, /englishAvailable={false}/);
+  assert.doesNotMatch(code, /englishAvailable={false}/);
   assert.match(read('components/site/SiteHeader.tsx'), /englishAvailable && <LanguageSwitcher/);
   assert.match(code, /N’est ni un contrôle d’accès physique ni un outil de surveillance des employés/);
   assert.doesNotMatch(code, /localiser\?|qui doit maintenant être localisé|localisation précise|GPS/);
@@ -116,7 +114,7 @@ test('metadata and FAQ: brand-free title, FAQPage only, from the visible source,
   assert.ok(page.includes('faqJsonLd(copy.faqItems.map((item) => ({ question: item.q, answer: item.a })))'));
   assert.ok(page.includes('items={copy.faqItems.map((item, i) => ({ id: `faq-${i}`, question: item.q, answer: item.a }))}'));
   assert.doesNotMatch(code, /SoftwareApplication|BreadcrumbList|Organization/);
-  assert.equal((page.match(/\{ q: /g) ?? []).length, 8);
+  assert.equal((page.match(/\{ q: /g) ?? []).length, 16);
 });
 
 test('accessibility: labelled sections, native FAQ, ordered lists', () => {
