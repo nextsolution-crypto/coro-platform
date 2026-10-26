@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 
 @Injectable()
 export class NotificationsService {
@@ -87,25 +88,19 @@ export class NotificationsService {
   }
 
   // ── Vérifier les délais de livraison ────────────────────
-  async checkMandateDelays(organizationId: string, userId: string, userRole: string): Promise<any[]> {
+  async checkMandateDelays(actor: AdviserActor): Promise<any[]> {
     const today = new Date();
 
     const mandates = await this.prisma.projectMandate.findMany({
       where: {
-        organizationId,
+        organizationId: actor.organizationId,
         typeMandat: 'FORFAITAIRE',
         dateLimite: { not: null },
         alerteActive: true,
         project: {
+          ...projectAccessWhere(actor),
           isActive: true,
           status: { notIn: ['VALIDATED', 'EXPORTED', 'ARCHIVED'] },
-          // Conseiller voit seulement ses mandats, Admin voit tout
-          ...(userRole === 'OPERATOR' ? {
-            OR: [
-              { userId },
-              { mandate: { ownerId: userId } },
-            ]
-          } : {}),
         },
       },
       include: {

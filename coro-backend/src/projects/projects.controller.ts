@@ -34,12 +34,12 @@ export class ProjectsController {
 
   @Get('search')
   globalSearch(@Query('q') q: string, @Request() req: any) {
-    return this.projectsService.globalSearch(q || '', req.user.organizationId);
+    return this.projectsService.globalSearch(q || '', req.user);
   }
 
   @Get('upcoming-updates')
   findUpcomingUpdates(@Request() req: any) {
-    return this.projectsService.findUpcomingUpdates(req.user.organizationId);
+    return this.projectsService.findUpcomingUpdates(req.user);
   }
 
   @Get('buildings-compliance')
@@ -49,10 +49,12 @@ export class ProjectsController {
 
   @Get('pending-approval')
   findPendingApproval(@Request() req: any) {
-    return this.projectsService.findPendingApproval(
-      req.user.organizationId,
-      req.user.userId,
-    );
+    return this.projectsService.findPendingApproval(req.user);
+  }
+
+  @Get('dashboard/late-tasks')
+  findLateTasks(@Request() req: any) {
+    return this.projectsService.findLateTasks(req.user);
   }
 
   @Get(':id/quality-score')

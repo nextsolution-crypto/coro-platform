@@ -5,7 +5,11 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { getLimitsForLicense } from '../organizations/license-limits';
-import { AdviserActor, projectAccessWhere } from '../auth/project-access';
+import {
+  AdviserActor,
+  projectAccessWhere,
+  requireProjectApprover,
+} from '../auth/project-access';
 
 @Injectable()
 export class ProjectsService {
@@ -177,9 +181,13 @@ export class ProjectsService {
       throw new ForbiddenException('Accès refusé à cette ressource.');
     }
   }
-  async findUpcomingUpdates(organizationId: string) {
+  async findUpcomingUpdates(actor: AdviserActor) {
     const projects = await this.prisma.project.findMany({
-      where: { organizationId, isActive: true, status: { not: 'ARCHIVED' } },
+      where: {
+        ...projectAccessWhere(actor),
+        isActive: true,
+        status: { not: 'ARCHIVED' },
+      },
       include: {
         client: { select: { name: true } },
         building: { select: { name: true } },
@@ -616,12 +624,13 @@ export class ProjectsService {
     });
   }
 
-  async findPendingApproval(organizationId: string, userId: string) {
+  async findPendingApproval(actor: AdviserActor) {
+    requireProjectApprover(actor);
     return this.prisma.project.findMany({
       where: {
-        organizationId,
+        ...projectAccessWhere(actor),
         status: 'REVIEW',
-        submittedById: { not: userId },
+        submittedById: { not: actor.userId },
       },
       include: {
         client: { select: { name: true } },
@@ -639,20 +648,65 @@ export class ProjectsService {
       data: { status: 'IN_PROGRESS', submittedById: null },
     });
   }
-  async globalSearch(query: string, organizationId: string) {
+  async findLateTasks(actor: AdviserActor) {
+    const tasks = await this.prisma.projectTask.findMany({
+      where: {
+        organizationId: actor.organizationId,
+        assigneeId: actor.userId,
+        dueDate: { lt: new Date() },
+        status: { notIn: ['fait', 'termine', 'annule'] },
+        project: { is: { ...projectAccessWhere(actor), isActive: true } },
+      },
+      orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
+      select: {
+        id: true,
+        projectId: true,
+        taskTitle: true,
+        dueDate: true,
+        status: true,
+        project: {
+          select: {
+            name: true,
+            client: { select: { name: true } },
+            building: { select: { name: true } },
+          },
+        },
+      },
+    });
+    return tasks.map((task) => ({
+      id: task.id,
+      projectId: task.projectId,
+      taskTitle: task.taskTitle,
+      dueDate: task.dueDate,
+      status: task.status,
+      projectName: task.project.name,
+      clientName: task.project.client.name,
+      buildingName: task.project.building.name,
+      isAssignedToMe: true,
+      isLate: true,
+    }));
+  }
+
+  async globalSearch(query: string, actor: AdviserActor) {
     const q = query.trim().toLowerCase();
     if (!q || q.length < 2) return { projects: [], clients: [], buildings: [] };
+
+    const projectScope = projectAccessWhere(actor);
 
     const [projects, clients, buildings] = await Promise.all([
       this.prisma.project.findMany({
         where: {
           isActive: true,
-          organizationId,
-          OR: [
-            { name: { contains: q, mode: 'insensitive' } },
-            { client: { name: { contains: q, mode: 'insensitive' } } },
-            { building: { name: { contains: q, mode: 'insensitive' } } },
-            { building: { address: { contains: q, mode: 'insensitive' } } },
+          AND: [
+            projectScope,
+            {
+              OR: [
+                { name: { contains: q, mode: 'insensitive' } },
+                { client: { name: { contains: q, mode: 'insensitive' } } },
+                { building: { name: { contains: q, mode: 'insensitive' } } },
+                { building: { address: { contains: q, mode: 'insensitive' } } },
+              ],
+            },
           ],
         },
         include: {
@@ -665,7 +719,10 @@ export class ProjectsService {
       this.prisma.client.findMany({
         where: {
           isActive: true,
-          organizationId,
+          organizationId: actor.organizationId,
+          ...(actor.role === 'OPERATOR'
+            ? { projects: { some: projectScope } }
+            : {}),
           OR: [
             { name: { contains: q, mode: 'insensitive' } },
             { city: { contains: q, mode: 'insensitive' } },
@@ -677,7 +734,10 @@ export class ProjectsService {
       this.prisma.building.findMany({
         where: {
           isActive: true,
-          organizationId,
+          organizationId: actor.organizationId,
+          ...(actor.role === 'OPERATOR'
+            ? { projects: { some: projectScope } }
+            : {}),
           OR: [
             { name: { contains: q, mode: 'insensitive' } },
             { address: { contains: q, mode: 'insensitive' } },

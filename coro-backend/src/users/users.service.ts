@@ -162,6 +162,13 @@ export class UsersService {
     });
   }
 
+  async getDashboardSummary(organizationId: string) {
+    const activeOperatorCount = await this.prisma.user.count({
+      where: { organizationId, role: UserRole.OPERATOR, isActive: true },
+    });
+    return { activeOperatorCount };
+  }
+
   async createInOrganization(organizationId: string, data: {
     email: string;
     password: string;
