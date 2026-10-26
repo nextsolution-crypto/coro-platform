@@ -209,6 +209,16 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
     validation: ["test:skin"],
   },
   {
+    pattern: "/magic-link",
+    family: "auth",
+    shell: "none",
+    status: "beta",
+    render: "skin",
+    styling: ["none"],
+    sensitivity: ["auth"],
+    validation: ["test:skin"],
+  },
+  {
     pattern: "/map",
     family: "portal",
     shell: "none",
