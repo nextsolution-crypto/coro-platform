@@ -1,5 +1,7 @@
 'use strict';
 
+const crypto = require('crypto');
+
 const ACCIDENTAL_CLIENT_ID = '3a4fa159-7957-4240-b9c0-1194d034c654';
 const RECIPIENT = 'info@getcoro.io';
 const ACCIDENTAL_CLIENT_NAME = 'CORO QA V1 EMAIL 2026-10-26';
@@ -41,6 +43,14 @@ function assertQaCollision(entity, expectedName, type) {
   if (entity && entity.name !== expectedName) throw new Error(`${type} reserved ID collision.`);
 }
 
+function signHs256(payload, secret, nowSeconds = Math.floor(Date.now() / 1000)) {
+  const encode = (value) => Buffer.from(JSON.stringify(value)).toString('base64url');
+  const header = encode({ alg: 'HS256', typ: 'JWT' });
+  const body = encode({ ...payload, iat: nowSeconds, exp: nowSeconds + 300 });
+  const signature = crypto.createHmac('sha256', secret).update(`${header}.${body}`).digest('base64url');
+  return `${header}.${body}.${signature}`;
+}
+
 async function requestMe(token) {
   const origin = process.env.CLIENT_EMAIL_QA_BACKEND_ORIGIN || 'http://127.0.0.1:3002';
   const response = await fetch(`${origin}/api/client-auth/me`, {
@@ -53,8 +63,6 @@ async function run(env = process.env) {
   assertApproval(env);
   if (!env.JWT_SECRET) throw new Error('JWT_SECRET is required in the backend runtime.');
   const { PrismaClient } = require('@prisma/client');
-  const { JwtService } = require('@nestjs/jwt');
-  const jwt = new JwtService({ secret: env.JWT_SECRET });
   const prisma = new PrismaClient();
   await prisma.$connect();
   try {
@@ -78,7 +86,7 @@ async function run(env = process.env) {
       throw new Error('QA building scope collision.');
     }
 
-    const oldToken = jwt.sign({
+    const oldToken = signHs256({
       sub: clientUser.id,
       email: clientUser.email,
       role: clientUser.role,
@@ -89,7 +97,7 @@ async function run(env = process.env) {
       operationalReviewPermissions: clientUser.operationalReviewPermissions,
       correctiveActionPermissions: clientUser.correctiveActionPermissions,
       sessionVersion: clientUser.sessionVersion,
-    }, env.JWT_SECRET, { expiresIn: '5m' });
+    }, env.JWT_SECRET);
     const beforeStatus = await requestMe(oldToken);
     if (beforeStatus !== 200) throw new Error(`Pre-remediation session proof failed with HTTP ${beforeStatus}.`);
 
@@ -192,4 +200,4 @@ if (!module.parent) {
   });
 }
 
-module.exports = { assertApproval, assertAccidentalFixture, assertQaCollision, run };
+module.exports = { assertApproval, assertAccidentalFixture, assertQaCollision, signHs256, run };
