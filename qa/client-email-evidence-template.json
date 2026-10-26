@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 2,
+  "runId": "REQUIRED_UNIQUE_RUN_ID",
+  "createdAt": "REQUIRED_UTC_TIMESTAMP",
+  "sourceCommit": "REQUIRED_COMMIT",
+  "environment": "QA",
+  "recipient": "info@getcoro.io",
+  "scenarios": {
+    "INVITATION": { "milestones": {} },
+    "PASSWORD_RESET": { "milestones": {} },
+    "MAGIC_LINK": { "milestones": {} }
+  }
+}
