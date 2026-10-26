@@ -87,6 +87,7 @@ async function run(env = process.env) {
     }
 
     const oldToken = signHs256({
+      type: 'CLIENT',
       sub: clientUser.id,
       email: clientUser.email,
       role: clientUser.role,
