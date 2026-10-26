@@ -74,5 +74,7 @@ async function execute(env = process.env) {
   }
 }
 
-if (require.main === module) execute().then((r) => process.stdout.write(JSON.stringify(r))).catch((e) => { console.error(e.message); process.exitCode = 1; });
+// Production executes this file through `node -`; in that mode require.main is
+// undefined while module.parent remains null. Test imports always have a parent.
+if (!module.parent) execute().then((r) => process.stdout.write(`${JSON.stringify(r)}\n`)).catch((e) => { console.error(e.message); process.exitCode = 1; });
 module.exports = { assertApproval, assertFoundation, execute };
