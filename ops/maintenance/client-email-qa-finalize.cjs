@@ -19,8 +19,8 @@ async function run(env = process.env) {
     const user = await prisma.clientUser.findUnique({ where: { id: USER_ID } });
     assertTarget(user);
     await prisma.$transaction(async (tx) => {
-      await tx.clientTrustedDevice.deleteMany({ where: { clientUserId: USER_ID } });
-      await tx.clientMagicLink.updateMany({ where: { clientUserId: USER_ID, usedAt: null }, data: { usedAt: new Date() } });
+      await tx.clientTrustedDevice.deleteMany({ where: { userId: USER_ID } });
+      await tx.magicLink.updateMany({ where: { userId: USER_ID, usedAt: null }, data: { usedAt: new Date() } });
       await tx.clientPasswordResetToken.updateMany({ where: { clientUserId: USER_ID, usedAt: null }, data: { usedAt: new Date() } });
       if (user.isActive) await tx.clientUser.update({ where: { id: USER_ID }, data: { isActive: false, sessionVersion: { increment: 1 }, mfaCode: null, mfaCodeExpiry: null } });
       await tx.adminAuditEvent.create({ data: {
@@ -32,9 +32,9 @@ async function run(env = process.env) {
     });
     const [finalUser, links, resets, devices] = await Promise.all([
       prisma.clientUser.findUnique({ where: { id: USER_ID } }),
-      prisma.clientMagicLink.count({ where: { clientUserId: USER_ID, usedAt: null } }),
+      prisma.magicLink.count({ where: { userId: USER_ID, usedAt: null } }),
       prisma.clientPasswordResetToken.count({ where: { clientUserId: USER_ID, usedAt: null } }),
-      prisma.clientTrustedDevice.count({ where: { clientUserId: USER_ID } }),
+      prisma.clientTrustedDevice.count({ where: { userId: USER_ID } }),
     ]);
     return { schemaVersion: 1, execution: !finalUser.isActive && links === 0 && resets === 0 && devices === 0 ? 'PASS' : 'FAIL', productionMutation: true, clientUserId: USER_ID, disabled: !finalUser.isActive, activeMagicLinks: links, activePasswordResetLinks: resets, trustedDevices: devices };
   } finally { await prisma.$disconnect(); }
