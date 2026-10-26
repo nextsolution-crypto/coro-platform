@@ -182,7 +182,10 @@ async function run(env = process.env) {
   }
 }
 
-if (require.main === module) {
+// Production executes this file through `node -`; in that mode require.main is
+// undefined while module.parent remains null. Imports used by focused tests do
+// have a parent and therefore never execute the maintenance routine.
+if (!module.parent) {
   run().then((result) => process.stdout.write(`${JSON.stringify(result)}\n`)).catch((error) => {
     process.stderr.write(`${error.message}\n`);
     process.exitCode = 1;
