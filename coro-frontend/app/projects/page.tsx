@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
@@ -72,9 +73,14 @@ export default function ProjectsPage() {
   const [buildings, setBuildings]             = useState<Building[]>([]);
   const [filteredBuildings, setFilteredBuildings] = useState<Building[]>([]);
   const [loading, setLoading]                 = useState(true);
+  const [loadError, setLoadError]             = useState<string | null>(null);
+  const [partialWarning, setPartialWarning]   = useState<string | null>(null);
+  const [dataStale, setDataStale]             = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt]     = useState<Date | null>(null);
   const [showModal, setShowModal]             = useState(false);
   const [activeTab, setActiveTab]             = useState<'actifs' | 'archives'>('actifs');
   const [maxProjects, setMaxProjects]         = useState<number | null>(null);
+  const [quotaUsed, setQuotaUsed]             = useState(0);
   const [userFilter, setUserFilter]           = useState<string>('tous');
   const [form, setForm] = useState({
     name: '', documentType: '',
@@ -87,6 +93,7 @@ export default function ProjectsPage() {
   const [selectedIds, setSelectedIds]     = useState<Set<string>>(new Set());
   const [showBulkDelete, setShowBulkDelete] = useState(false);
   const [bulkDeleting, setBulkDeleting]   = useState(false);
+  const [createSubmitting, setCreateSubmitting] = useState(false);
 
   const documentTypes = [
     { value: 'PMU', label: "PMU — Plan de mesures d'urgence", available: true },
@@ -97,6 +104,8 @@ export default function ProjectsPage() {
     { value: 'PUE', label: "PUE — Plan d'urgence environnementale", available: false },
   ];
   const pollRef = useRef<NodeJS.Timeout | null>(null);
+  const requestSequence = useRef(0);
+  const pollSequence = useRef(0);
 
   useEffect(() => { initAuth(); }, []);
 
@@ -119,42 +128,89 @@ export default function ProjectsPage() {
     }
   }, [form.clientId, buildings]);
 
-  const fetchProjectsOnly = async () => {
+  async function fetchProjectsOnly() {
+    const sequence = ++pollSequence.current;
     try {
       const res = await api.get('/projects');
+      if (sequence !== pollSequence.current) return;
       setProjects(res.data);
-    } catch (err) { console.error(err); }
-  };
+      setSelectedIds(prev => new Set(Array.from(prev).filter(id => res.data.some((p: Project) => p.id === id))));
+      setDataStale(false);
+      setLastUpdatedAt(new Date());
+    } catch (err) {
+      if (sequence !== pollSequence.current) return;
+      console.error(err);
+      setDataStale(true);
+    }
+  }
 
-  const fetchData = async () => {
+  async function fetchData() {
+    const sequence = ++requestSequence.current;
+    setLoading(true);
+    setLoadError(null);
+    setPartialWarning(null);
+    setClients([]);
+    setBuildings([]);
+    setOrgUsers([]);
+    setTemplates([]);
+    setQuotaUsed(0);
+    setMaxProjects(null);
     try {
-      const [pr, cl, bl, orgRes, usersRes] = await Promise.all([
-        api.get('/projects'),
+      const pr = await api.get('/projects');
+      if (sequence !== requestSequence.current) return;
+      setProjects(pr.data);
+      setSelectedIds(new Set());
+      setDataStale(false);
+      setLastUpdatedAt(new Date());
+
+      const secondary = await Promise.allSettled([
         api.get('/clients'),
         api.get('/buildings'),
-        api.get('/organizations/me/info').catch(() => ({ data: null })),
-        api.get('/users/organization').catch(() => ({ data: [] })),
+        api.get('/projects/list-summary'),
+        api.get('/projects/filter-users'),
+        api.get('/templates'),
       ]);
-      const projectsData = pr.data;
-      setProjects(projectsData);
-      setClients(cl.data);
-      setBuildings(bl.data);
-      setOrgUsers(usersRes.data || []);
+      if (sequence !== requestSequence.current) return;
+      const [cl, bl, summary, usersRes, templatesResult] = secondary;
+      if (cl.status === 'fulfilled') setClients(cl.value.data);
+      if (bl.status === 'fulfilled') setBuildings(bl.value.data);
+      if (summary.status === 'fulfilled') {
+        setQuotaUsed(summary.value.data.quotaUsed);
+        setMaxProjects(summary.value.data.maxProjects);
+      }
+      if (usersRes.status === 'fulfilled') setOrgUsers(usersRes.value.data || []);
+      if (templatesResult.status === 'fulfilled') setTemplates(templatesResult.value.data || []);
+      if (secondary.some(result => result.status === 'rejected')) {
+        setPartialWarning('Certaines informations secondaires sont temporairement indisponibles.');
+      }
 
       // Charger les modèles disponibles
-      try {
-        const templatesRes = await api.get('/templates');
-        setTemplates(templatesRes.data || []);
-      } catch { setTemplates([]); }
+    } catch (err: any) {
+      if (sequence !== requestSequence.current) return;
+      console.error(err);
+      const status = err?.response?.status;
+      setProjects([]);
+      setSelectedIds(new Set());
+      setLoadError(status === 401
+        ? 'Votre session a expire. Reconnectez-vous pour consulter les projets.'
+        : status === 403
+          ? "Vous n'avez pas l'autorisation de consulter ces projets."
+          : 'La liste des projets est temporairement indisponible.');
+    } finally {
+      if (sequence === requestSequence.current) setLoading(false);
+    }
+  }
 
-      if (orgRes.data) {
-        const limits: Record<string, number | null> = {
-          ESSAI_GRATUIT: 1, STANDARD: null, ENTREPRISE: null,
-        };
-        setMaxProjects(limits[orgRes.data.licenseType] ?? null);
-      }
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+  const changeUserFilter = (filter: string) => {
+    setSelectedIds(new Set());
+    setShowBulkDelete(false);
+    setUserFilter(filter);
+  };
+
+  const changeTab = (tab: 'actifs' | 'archives') => {
+    setSelectedIds(new Set());
+    setShowBulkDelete(false);
+    setActiveTab(tab);
   };
 
   // Filtres combinés
@@ -167,27 +223,17 @@ export default function ProjectsPage() {
     return archiveMatch && userMatch;
   });
 
-  const handleReactivate = async (projectId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      await api.put(`/projects/${projectId}`, { status: 'IN_PROGRESS' });
-      fetchData();
-      toast('Projet réactivé.');
-    } catch (err) {
-      toast('Erreur lors de la réactivation.', 'error');
-    }
-  };
-
   const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
     setBulkDeleting(true);
     try {
-      await Promise.all(Array.from(selectedIds).map(id => api.delete(`/projects/${id}`)));
+      await api.post('/projects/bulk-deactivate', { projectIds: ids });
       setSelectedIds(new Set());
       setShowBulkDelete(false);
-      fetchData();
-      toast(`${selectedIds.size} projet${selectedIds.size > 1 ? 's' : ''} supprimé${selectedIds.size > 1 ? 's' : ''}.`);
+      await fetchData();
+      toast(`${ids.length} projet${ids.length > 1 ? 's' : ''} désactivé${ids.length > 1 ? 's' : ''}.`);
     } catch (err) {
-      toast('Erreur lors de la suppression des projets.', 'error');
+      toast("Aucun projet n'a été désactivé. Actualisez la liste et réessayez.", 'error');
     } finally {
       setBulkDeleting(false);
     }
@@ -212,6 +258,8 @@ export default function ProjectsPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (createSubmitting) return;
+    setCreateSubmitting(true);
     try {
       await api.post('/projects', { ...form, year: parseInt(form.year) });
       setShowModal(false);
@@ -221,6 +269,8 @@ export default function ProjectsPage() {
     } catch (err: any) {
       const message = err?.response?.data?.message || 'Erreur lors de la création du projet.';
       toast(Array.isArray(message) ? message[0] : message, 'error');
+    } finally {
+      setCreateSubmitting(false);
     }
   };
 
@@ -229,12 +279,12 @@ export default function ProjectsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-                      <PageTitle subtitle={`${visibleProjects.length} / ${maxProjects === null ? 'illimité' : maxProjects} projet${visibleProjects.length !== 1 ? 's' : ''}`}>
+                      <PageTitle subtitle={`${visibleProjects.length} affiché${visibleProjects.length !== 1 ? 's' : ''} · Quota organisation : ${quotaUsed} / ${maxProjects === null ? 'illimité' : maxProjects}`}>
               Projets
             </PageTitle>
         </div>
         <div className="flex items-center gap-2">
-          {selectedIds.size > 0 && (
+          {activeTab === 'actifs' && selectedIds.size > 0 && (
             <button
               onClick={() => setShowBulkDelete(true)}
               className="text-sm font-medium px-4 py-2 rounded transition-colors flex items-center gap-2"
@@ -242,15 +292,15 @@ export default function ProjectsPage() {
               onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F1948A22'}
               onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
             >
-              🗑 Supprimer ({selectedIds.size})
+              Désactiver ({selectedIds.size})
             </button>
           )}
           <button
             onClick={() => setShowModal(true)}
-            disabled={maxProjects !== null && projects.filter(p => p.status !== 'ARCHIVED').length >= maxProjects}
+            disabled={maxProjects !== null && quotaUsed >= maxProjects}
             className="text-white text-sm font-medium px-4 py-2.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed cg-primary-action"
             style={{ backgroundColor: '#C0392B' }}
-            onMouseEnter={e => { if (!(maxProjects !== null && projects.filter(p => p.status !== 'ARCHIVED').length >= maxProjects)) e.currentTarget.style.backgroundColor = '#A93226'; }}
+            onMouseEnter={e => { if (!(maxProjects !== null && quotaUsed >= maxProjects)) e.currentTarget.style.backgroundColor = '#A93226'; }}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
           >
             + Nouveau projet
@@ -258,7 +308,7 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      {maxProjects !== null && projects.filter(p => p.status !== 'ARCHIVED').length >= maxProjects && (
+      {maxProjects !== null && quotaUsed >= maxProjects && (
         <div className="rounded-md p-4 mb-4 flex items-center gap-3"
           style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}>
           <span style={{ color: '#F39C12', fontSize: '18px' }}>⚠</span>
@@ -268,10 +318,22 @@ export default function ProjectsPage() {
         </div>
       )}
 
+      {(partialWarning || dataStale) && !loadError && (
+        <div className="rounded-md p-3 mb-4 flex items-center justify-between gap-3"
+          style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0', color: '#7D6608' }}>
+          <p className="text-sm">
+            {dataStale
+              ? `Actualisation impossible. Données conservées${lastUpdatedAt ? ` depuis ${lastUpdatedAt.toLocaleTimeString('fr-CA')}` : ''}.`
+              : partialWarning}
+          </p>
+          <button onClick={fetchData} className="text-xs font-semibold underline">Réessayer</button>
+        </div>
+      )}
+
       {/* Filtres par utilisateur */}
       <div className="flex flex-wrap gap-2 mb-4">
         <button
-          onClick={() => setUserFilter('tous')}
+          onClick={() => changeUserFilter('tous')}
           className="px-3 py-1.5 text-xs rounded-full font-medium transition-colors"
           style={{
             backgroundColor: userFilter === 'tous' ? '#2C3E50' : '#F8F9FA',
@@ -282,7 +344,7 @@ export default function ProjectsPage() {
           Tous les projets ({projects.filter(p => p.status !== 'ARCHIVED').length})
         </button>
         <button
-          onClick={() => setUserFilter('moi')}
+          onClick={() => changeUserFilter('moi')}
           className="px-3 py-1.5 text-xs rounded-full font-medium transition-colors"
           style={{
             backgroundColor: userFilter === 'moi' ? '#C0392B' : '#F8F9FA',
@@ -295,7 +357,7 @@ export default function ProjectsPage() {
         {orgUsers.filter(u => u.id !== user?.id).map(u => (
           <button
             key={u.id}
-            onClick={() => setUserFilter(u.id)}
+            onClick={() => changeUserFilter(u.id)}
             className="px-3 py-1.5 text-xs rounded-full font-medium transition-colors"
             style={{
               backgroundColor: userFilter === u.id ? '#2980B9' : '#F8F9FA',
@@ -314,7 +376,7 @@ export default function ProjectsPage() {
           { key: 'actifs', label: 'Actifs' },
           { key: 'archives', label: 'Archivés' },
         ] as const).map(tab => (
-          <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+          <button key={tab.key} onClick={() => changeTab(tab.key)}
             className="px-4 py-2.5 text-sm font-medium transition-colors"
             style={{
               color: activeTab === tab.key ? '#C0392B' : '#6C757D',
@@ -326,7 +388,7 @@ export default function ProjectsPage() {
       </div>
 
       {/* Barre de sélection */}
-      {visibleProjects.length > 0 && (
+      {activeTab === 'actifs' && visibleProjects.length > 0 && (
         <div className="flex items-center gap-3 mb-3">
           <button
             onClick={toggleSelectAll}
@@ -356,6 +418,14 @@ export default function ProjectsPage() {
         <div className="text-center py-12">
           <p className="text-sm animate-pulse" style={{ color: '#ADB5BD' }}>Chargement...</p>
         </div>
+      ) : loadError ? (
+        <div className="rounded-md p-10 text-center" role="alert"
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid #F1948A' }}>
+          <p className="font-semibold mb-2" style={{ color: '#C0392B' }}>Impossible de charger les projets</p>
+          <p className="text-sm mb-5" style={{ color: '#6C757D' }}>{loadError}</p>
+          <button onClick={fetchData} className="text-white text-sm font-medium px-5 py-2.5 rounded"
+            style={{ backgroundColor: '#C0392B' }}>Réessayer</button>
+        </div>
       ) : visibleProjects.length === 0 ? (
         <div>
           {projects.length === 0 && clients.length === 0 ? (
@@ -368,7 +438,7 @@ export default function ProjectsPage() {
               <h3 className="text-xl font-black mb-6" style={{ color: '#2C3E50' }}>
                 3 étapes pour créer votre premier projet
               </h3>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
                   {
                     num: '①',
@@ -423,12 +493,18 @@ export default function ProjectsPage() {
               style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
               <p className="text-4xl mb-4">📁</p>
               <p className="text-sm font-semibold mb-2" style={{ color: '#2C3E50' }}>
-                Aucun projet pour le moment
+                {projects.length === 0
+                  ? 'Aucun projet pour le moment'
+                  : activeTab === 'archives'
+                    ? 'Aucun projet archivé'
+                    : 'Aucun projet ne correspond à ce filtre'}
               </p>
               <p className="text-xs mb-6" style={{ color: '#ADB5BD' }}>
-                Créez votre premier projet pour commencer à produire des documents de mesures d'urgence.
+                {projects.length === 0
+                  ? "Créez votre premier projet pour commencer à produire des documents de mesures d'urgence."
+                  : 'Modifiez le filtre ou changez d’onglet pour afficher d’autres projets.'}
               </p>
-              <button
+              {projects.length === 0 && <button
                 onClick={() => setShowModal(true)}
                 className="text-white text-sm font-medium px-6 py-2.5 rounded"
                 style={{ backgroundColor: '#C0392B' }}
@@ -436,7 +512,7 @@ export default function ProjectsPage() {
                 onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}
               >
                 + Créer un projet maintenant
-              </button>
+              </button>}
             </div>
           )}
         </div>
@@ -452,8 +528,7 @@ export default function ProjectsPage() {
 
             return (
               <div key={project.id}
-                onClick={() => selectedIds.size > 0 ? toggleSelect(project.id, { stopPropagation: () => {} } as any) : router.push(`/projects/${project.id}`)}
-                className="rounded-md p-5 cursor-pointer transition-all flex gap-3"
+                className="rounded-md p-5 transition-all flex gap-3"
                 style={{
                   backgroundColor: selectedIds.has(project.id) ? '#FDEDEC' : '#FFFFFF',
                   border: `1px solid ${selectedIds.has(project.id) ? '#F1948A' : wasRecentlyEdited && !isMyProject ? '#AED6F1' : '#E9ECEF'}`,
@@ -468,16 +543,18 @@ export default function ProjectsPage() {
                   e.currentTarget.style.borderColor = selectedIds.has(project.id) ? '#F1948A' : wasRecentlyEdited && !isMyProject ? '#AED6F1' : '#E9ECEF';
                 }}>
                 {/* Checkbox */}
-                <div className="flex-shrink-0 pt-1">
+                {activeTab === 'actifs' && <div className="flex-shrink-0 pt-1">
                   <input
                     type="checkbox"
+                    aria-label={`Sélectionner le projet ${project.name}`}
                     checked={selectedIds.has(project.id)}
                     onChange={() => {}}
                     onClick={e => toggleSelect(project.id, e)}
                     style={{ accentColor: '#C0392B', width: '16px', height: '16px', cursor: 'pointer' }}
                   />
-                </div>
-                <div className="flex-1 min-w-0">
+                </div>}
+                <Link href={`/projects/${project.id}`} className="flex-1 min-w-0 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-red-700"
+                  aria-label={`Ouvrir le projet ${project.name}`}>
 
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -575,17 +652,12 @@ export default function ProjectsPage() {
                   </div>
 
                   {activeTab === 'archives' && (
-                    <button
-                      onClick={e => handleReactivate(project.id, e)}
-                      className="text-xs font-medium px-3 py-1.5 rounded transition-colors"
-                      style={{ border: '1px solid #DEE2E6', color: '#27AE60' }}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EAFAF1'}
-                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                      Réactiver
-                    </button>
+                    <span className="text-xs font-medium" style={{ color: '#6C757D' }}>
+                      Lecture seule
+                    </span>
                   )}
                 </div>
-                </div>
+                </Link>
               </div>
             );
           })}
@@ -752,11 +824,12 @@ export default function ProjectsPage() {
                   Annuler
                 </button>
                 <button type="submit"
+                  disabled={createSubmitting}
                   className="flex-1 text-white font-medium py-2.5 rounded text-sm"
                   style={{ backgroundColor: '#C0392B' }}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}>
-                  Créer
+                  {createSubmitting ? 'Création...' : 'Créer'}
                 </button>
               </div>
             </form>
@@ -772,11 +845,11 @@ export default function ProjectsPage() {
             <div className="flex items-center gap-3 mb-4">
               <span style={{ fontSize: '24px' }}>⚠️</span>
               <h3 className="font-semibold text-lg" style={{ color: '#C0392B' }}>
-                Supprimer {selectedIds.size} projet{selectedIds.size > 1 ? 's' : ''}
+                Désactiver {selectedIds.size} projet{selectedIds.size > 1 ? 's' : ''}
               </h3>
             </div>
             <p className="text-sm mb-2" style={{ color: '#2C3E50' }}>
-              Cette action est <strong>irréversible</strong>. Les projets suivants et toutes leurs données seront supprimés définitivement :
+              Les projets suivants seront retirés des listes actives. Leurs données sont conservées. Cette action ne s'applique pas aux projets archivés :
             </p>
             <div className="rounded-md p-3 mb-6 space-y-1"
               style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
@@ -800,7 +873,7 @@ export default function ProjectsPage() {
                 disabled={bulkDeleting}
                 className="flex-1 text-white font-medium py-2.5 rounded text-sm disabled:opacity-50"
                 style={{ backgroundColor: '#C0392B' }}>
-                {bulkDeleting ? 'Suppression...' : `🗑 Supprimer ${selectedIds.size} projet${selectedIds.size > 1 ? 's' : ''}`}
+                {bulkDeleting ? 'Désactivation...' : `Désactiver ${selectedIds.size} projet${selectedIds.size > 1 ? 's' : ''}`}
               </button>
             </div>
           </div>

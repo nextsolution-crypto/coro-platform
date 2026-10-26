@@ -32,6 +32,21 @@ export class ProjectsController {
     return this.projectsService.findAll(req.user);
   }
 
+  @Get('list-summary')
+  getListSummary(@Request() req: any) {
+    return this.projectsService.getListSummary(req.user);
+  }
+
+  @Get('filter-users')
+  getFilterUsers(@Request() req: any) {
+    return this.projectsService.getFilterUsers(req.user);
+  }
+
+  @Post('bulk-deactivate')
+  bulkDeactivate(@Body() body: { projectIds?: string[] }, @Request() req: any) {
+    return this.projectsService.bulkDeactivate(body.projectIds || [], req.user);
+  }
+
   @Get('search')
   globalSearch(@Query('q') q: string, @Request() req: any) {
     return this.projectsService.globalSearch(q || '', req.user);
