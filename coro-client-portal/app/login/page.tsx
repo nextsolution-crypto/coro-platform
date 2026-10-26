@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { setAuth } from '../store/auth';
 import Link from 'next/link';
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+const MAGIC_MFA_EMAIL_KEY = 'coro_magic_mfa_email';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,6 +18,18 @@ export default function LoginPage() {
   const [view, setView] = useState<'login' | 'mfa'>('login');
   const [mfaCode, setMfaCode] = useState('');
   const [mfaLoading, setMfaLoading] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const email = sessionStorage.getItem(MAGIC_MFA_EMAIL_KEY);
+      sessionStorage.removeItem(MAGIC_MFA_EMAIL_KEY);
+      if (email) {
+        setForm((current) => ({ ...current, email }));
+        setView('mfa');
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const handleLogin = async () => {
     if (!form.email || !form.password) {
@@ -229,6 +242,9 @@ export default function LoginPage() {
 
         <p style={{ textAlign: 'center', fontSize: 13, lineHeight: 1.5, margin: '24px 0 0', padding: '0 8px' }}>
           <Link href="/forgot-password">Mot de passe oublié ? Réinitialiser mon mot de passe</Link>
+        </p>
+        <p style={{ textAlign: 'center', fontSize: 13, lineHeight: 1.5, margin: '10px 0 0', padding: '0 8px' }}>
+          <Link href="/magic-link">Recevoir un lien de connexion à usage unique</Link>
         </p>
         <p style={{ textAlign: 'center', fontSize: 13, color: '#6C757D', margin: '12px 0 0' }}>
           Autre problème d&apos;accès ? Communiquez avec votre administrateur.

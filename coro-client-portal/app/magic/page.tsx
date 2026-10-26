@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   'http://localhost:3002/api';
+const MAGIC_MFA_EMAIL_KEY = 'coro_magic_mfa_email';
 
 function MagicLinkHandler() {
   const router = useRouter();
@@ -48,25 +49,15 @@ function MagicLinkHandler() {
         );
       }
 
-      const {
-        token: jwtToken,
-        user,
-      } = payload;
-
-      localStorage.setItem(
-        'coro_client_token',
-        jwtToken
-      );
-
-      localStorage.setItem(
-        'coro_client_user',
-        JSON.stringify(user)
-      );
-
-      router.push('/dashboard');
-    } catch (err: any) {
+      if (payload?.mfaRequired && typeof payload.email === 'string') {
+        sessionStorage.setItem(MAGIC_MFA_EMAIL_KEY, payload.email);
+        router.replace('/login');
+        return;
+      }
+      throw new Error('Le défi MFA requis n’a pas été créé.');
+    } catch (err: unknown) {
       setError(
-        err?.message ||
+        (err instanceof Error ? err.message : '') ||
         'Lien invalide ou expiré.'
       );
     } finally {
@@ -75,7 +66,8 @@ function MagicLinkHandler() {
   }, [token, router]);
 
   useEffect(() => {
-    validateToken();
+    const timer = window.setTimeout(() => void validateToken(), 0);
+    return () => window.clearTimeout(timer);
   }, [validateToken]);
 
 
