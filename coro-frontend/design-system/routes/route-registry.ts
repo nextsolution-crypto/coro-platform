@@ -73,7 +73,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { pattern: '/notifications', family: 'work', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['destructive'] },
   { pattern: '/planning', family: 'work', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'css-module'], sensitivity: ['destructive'] },
   { pattern: '/profile/rendement', family: 'work', shell: 'app', status: 'beta', render: 'skin', styling: ['tailwind'], validation: ['test:rendement', 'test:skin'] },
-  { pattern: '/projects', family: 'work', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'], sensitivity: ['destructive'] },
+  { pattern: '/projects', family: 'work', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'], sensitivity: [] },
   { pattern: '/projects/[id]', family: 'work', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'], sensitivity: ['destructive', 'documents'], validation: ['test:skin', 'test:design-system'] },
   { pattern: '/projects/[id]/activities', family: 'work', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind', 'css-module'], sensitivity: ['destructive'] },
   { pattern: '/projects/[id]/mandate', family: 'work', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'], sensitivity: ['destructive', 'emergency-content'], validation: ['test:skin', 'test:design-system'] },

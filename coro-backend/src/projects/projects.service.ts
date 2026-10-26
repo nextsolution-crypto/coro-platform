@@ -15,6 +15,55 @@ import {
 export class ProjectsService {
   constructor(private prisma: PrismaService) {}
 
+  private async getOrganizationProjectLimit(organizationId: string) {
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { licenseType: true },
+    });
+    if (!organization) throw new NotFoundException('Organisation introuvable');
+    return getLimitsForLicense(organization.licenseType).maxProjects;
+  }
+
+  async getListSummary(actor: AdviserActor) {
+    const [quotaUsed, maxProjects] = await Promise.all([
+      this.prisma.project.count({
+        where: { organizationId: actor.organizationId, isActive: true },
+      }),
+      this.getOrganizationProjectLimit(actor.organizationId),
+    ]);
+    return { quotaUsed, maxProjects };
+  }
+
+  async getFilterUsers(actor: AdviserActor) {
+    const projects = await this.prisma.project.findMany({
+      where: { isActive: true, ...projectAccessWhere(actor) },
+      select: {
+        user: {
+          select: { id: true, firstName: true, lastName: true, isActive: true },
+        },
+      },
+    });
+    const users = new Map<
+      string,
+      { id: string; firstName: string; lastName: string }
+    >();
+    for (const project of projects) {
+      if (project.user.isActive) {
+        users.set(project.user.id, {
+          id: project.user.id,
+          firstName: project.user.firstName,
+          lastName: project.user.lastName,
+        });
+      }
+    }
+    return [...users.values()].sort((a, b) =>
+      `${a.firstName} ${a.lastName}`.localeCompare(
+        `${b.firstName} ${b.lastName}`,
+        'fr',
+      ),
+    );
+  }
+
   async findAll(actor: AdviserActor) {
     const where = { isActive: true, ...projectAccessWhere(actor) };
 
@@ -124,7 +173,6 @@ export class ProjectsService {
   }
 
   async update(id: string, data: any, actor: AdviserActor) {
-    await this.assertAccess(id, actor);
     if (['REVIEW', 'VALIDATED', 'EXPORTED'].includes(data?.status)) {
       throw new ForbiddenException(
         'Transition documentaire reservee au workflow canonique',
@@ -132,6 +180,7 @@ export class ProjectsService {
     }
     const protectedFields = [
       'organizationId',
+      'isActive',
       'userId',
       'lastEditedById',
       'submittedById',
@@ -146,20 +195,79 @@ export class ProjectsService {
     ) {
       throw new ForbiddenException('Reaffectation de projet interdite');
     }
-    return this.prisma.project.update({
-      where: { id },
+    const result = await this.prisma.project.updateMany({
+      where: {
+        id,
+        isActive: true,
+        status: { not: 'ARCHIVED' },
+        ...projectAccessWhere(actor),
+      },
       data: {
         ...data,
         lastEditedById: actor.userId,
       },
     });
+    if (result.count !== 1) {
+      throw new ForbiddenException(
+        'Projet inaccessible ou archive en lecture seule',
+      );
+    }
+    return this.findOne(id, actor);
   }
 
   async remove(id: string, actor: AdviserActor) {
-    await this.assertAccess(id, actor);
-    return this.prisma.project.update({
-      where: { id },
+    const result = await this.prisma.project.updateMany({
+      where: {
+        id,
+        isActive: true,
+        status: { not: 'ARCHIVED' },
+        ...projectAccessWhere(actor),
+      },
       data: { isActive: false },
+    });
+    if (result.count !== 1) {
+      throw new ForbiddenException(
+        'Projet inaccessible ou archive en lecture seule',
+      );
+    }
+    return { id, isActive: false };
+  }
+
+  async bulkDeactivate(projectIds: string[], actor: AdviserActor) {
+    const ids = [...new Set(projectIds.filter(Boolean))];
+    if (ids.length === 0 || ids.length > 100) {
+      throw new ForbiddenException('Selection de projets invalide');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const eligible = await tx.project.count({
+        where: {
+          id: { in: ids },
+          isActive: true,
+          status: { not: 'ARCHIVED' },
+          ...projectAccessWhere(actor),
+        },
+      });
+      if (eligible !== ids.length) {
+        throw new ForbiddenException(
+          'La selection contient un projet inaccessible ou archive',
+        );
+      }
+      const result = await tx.project.updateMany({
+        where: {
+          id: { in: ids },
+          isActive: true,
+          status: { not: 'ARCHIVED' },
+          ...projectAccessWhere(actor),
+        },
+        data: { isActive: false },
+      });
+      if (result.count !== ids.length) {
+        throw new ForbiddenException(
+          'La selection a change; aucune desactivation partielle acceptee',
+        );
+      }
+      return { count: result.count };
     });
   }
 
