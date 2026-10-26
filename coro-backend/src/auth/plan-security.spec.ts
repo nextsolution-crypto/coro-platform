@@ -48,8 +48,7 @@ describe('plan document security boundaries', () => {
     async (operation) => {
       const prisma: any = {
         project: {
-          findFirst: jest.fn().mockResolvedValue(null),
-          update: jest.fn(),
+          updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         },
       };
       const service = new ProjectsService(prisma);
@@ -58,7 +57,16 @@ describe('plan document security boundaries', () => {
           ? service.update('project-a', { name: 'Blocked' }, operator)
           : service.remove('project-a', operator);
       await expect(action).rejects.toBeInstanceOf(ForbiddenException);
-      expect(prisma.project.update).not.toHaveBeenCalled();
+      expect(prisma.project.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: 'project-a',
+            organizationId: 'org-a',
+            isActive: true,
+            status: { not: 'ARCHIVED' },
+          }),
+        }),
+      );
     },
   );
 
