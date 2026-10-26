@@ -43,7 +43,7 @@ test("le registre couvre exactement les pages de app/ (rien en trop, rien d’ou
   const b = new Set(ROUTE_REGISTRY.map((e) => e.pattern));
   assert.equal(
     a.size,
-    46,
+    47,
     "nombre de routes du portail : mettre à jour l’inventaire si une page est ajoutée",
   );
   assert.deepEqual(
@@ -122,11 +122,24 @@ test("toutes les routes : sans shell Glass natif, re-teintées, bêta uniquement
       /^\/(sentinelle|kiosk|presence|intervention|population)/.test(e.pattern)
     )
       assert.ok(e.sensitivity.includes("emergency-content"), e.pattern);
-    if (/^\/(login|forgot-password|reset-password|magic)$/.test(e.pattern))
+    if (/^\/(login|forgot-password|reset-password|magic|magic-link)$/.test(e.pattern))
       assert.ok(e.sensitivity.includes("auth"), e.pattern);
     if (/^\/(documents|files)/.test(e.pattern))
       assert.ok(e.sensitivity.includes("documents"), e.pattern);
   }
+});
+
+test("routes d'authentification : inventaire sensible complet et sans doublon", () => {
+  const authPatterns = ROUTE_REGISTRY.filter((e) => e.family === "auth").map(
+    (e) => e.pattern,
+  );
+  assert.deepEqual(authPatterns.sort(), [
+    "/forgot-password",
+    "/login",
+    "/magic",
+    "/magic-link",
+    "/reset-password",
+  ]);
 });
 
 test("sans jeton de préproduction, AUCUNE route du portail n’est rendue en Glass (portail client livré strictement Classique)", () => {
