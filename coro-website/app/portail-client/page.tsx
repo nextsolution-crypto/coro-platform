@@ -16,21 +16,7 @@ import styles from './page.module.css';
 
 type P = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
 
-/**
- * /portail-client (MIG-02D) — CORO Client: access and visibility for the client. Family: product (client-viewpoint silhouette).
- * PRODUCT TRUTH (audited in coro-client-portal and the backend): the client signs in (password, MFA), sees a dashboard, buildings, a map,
- * visible activities, documents with versions and history, and can comment on, sign or refuse a document; it can also request and cancel
- * bookings and reach the enabled modules (incidents, Sentinelle). Booking is NOT published here (production readiness unverified), and no
- * claim goes beyond the already published Client copy in lib/site/product-content.ts, except the explicit "see / act" lists below, which only
- * name verified actions (comment, sign, refuse). PRODUCT PROOF: two V1 screenshots audited against the current portal code are kept (map; document page:
- * PUBLICATION-BLOCKER, visible names and addresses are not confirmed fictitious or authorised). The other four V1 images are not used: dashboard,
- * buildings and activities show controls or panels that the current portal no longer has (extra stats, a documents panel, add-building, add-activity),
- * and the advisor-workspace image is the advisor app, not CORO Client. RECAPTURE REQUIRED BEFORE GO-LIVE: dashboard, buildings and activities screenshots.
- * PUBLICATION-BLOCKER — CLIENT PORTAL SCREENSHOT DATA PROVENANCE applies to the two kept screenshots. The public copy makes NO Booking/reservation claim
- * (the portal does expose request, list and cancel, but nothing beyond the published copy is stated here). The hero photograph (a marketing illustration containing
- * a fictitious portal screen and baked-in text) is decorative and cropped so that its screen and text stay out of frame.
- * Network (a concept that is not part of the current product) is no longer referenced on the public page.
- */
+/** Client V1: building sources complement project deliverables. Screenshots show the French interface, not a promise of every enabled capability. */
 const LOGIN = 'https://client.getcoro.io/login';
 const copy = {
   fr: {
@@ -40,7 +26,7 @@ const copy = {
     demo: 'Demander une démonstration', access: 'Accéder à CORO Client',
     viewpoint: 'Le point de vue du client',
     see: 'Ce que le client peut voir', seeItems: ['Ses bâtiments, sur un tableau de bord et une carte', 'Ses documents, leurs versions et leur historique', 'Les activités visibles et les échanges associés'],
-    act: 'Ce qu’il peut faire', actItems: ['Commenter un document', 'Signer ou refuser un document'],
+    act: 'Ce qu’il peut faire', actItems: ['Commenter ou refuser un document selon ses droits', 'Ajouter des documents techniques avec une autorisation', 'Interroger les sources admissibles avec CORO AI'],
     seeAct: 'Voir et agir, sans confusion',
     mapLabel: 'Portefeuille', mapTitle: 'Situer le portefeuille', panLabel: 'Capture d’écran, défilable horizontalement', onScreen: 'Sur cet écran',
     mapAlt: 'Carte CORO Client (interface en français) : bâtiments d’un portefeuille sur une carte, légende des états (à jour, en cours, à renouveler, aucun document) et fiche du bâtiment sélectionné.',
@@ -59,7 +45,7 @@ const copy = {
     demo: 'Request a demonstration', access: 'Access CORO Client',
     viewpoint: 'The client’s point of view',
     see: 'What the client can see', seeItems: ['Their buildings, on a dashboard and a map', 'Their documents, versions and history', 'Visible activities and related exchanges'],
-    act: 'What they can do', actItems: ['Comment on a document', 'Sign or refuse a document'],
+    act: 'What they can do', actItems: ['Comment on or refuse a document according to permissions', 'Upload technical documents when authorized', 'Ask about eligible sources with CORO AI'],
     seeAct: 'See and act, without confusion',
     mapLabel: 'Portfolio', mapTitle: 'Locate the portfolio', panLabel: 'Screenshot, horizontally scrollable', onScreen: 'On this screen',
     mapAlt: 'CORO Client map (French interface shown): the buildings of a portfolio on a map, a legend of statuses (up to date, in progress, to renew, no document) and the selected building panel.',
@@ -72,6 +58,11 @@ const copy = {
     faq: 'FAQ', faqTitle: 'Frequently asked questions', statement: 'Your organization. Your buildings. Your information.',
   },
 } as const satisfies Record<Locale, unknown>;
+
+const buildingLibrary = {
+ fr: { label: 'La documentation du bâtiment', title: 'Conformité et documentation technique : deux espaces clairs.', complianceTitle: 'Documents de conformité', compliance: 'Retrouvez les livrables préparés par votre prestataire, leurs versions et les échanges du dossier.', technicalTitle: 'Documentation technique', technical: 'Conservez plans, notices, tableaux et fichiers utiles directement dans la fiche bâtiment. Les responsables et utilisateurs autorisés peuvent alimenter cette base.', knowledgeTitle: 'Une base qui reste avec le bâtiment', knowledge: 'Les sources approuvées des projets enrichissent Knowledge. L’archivage d’un projet ne retire pas à lui seul cette base ; les droits et les statuts des documents continuent de s’appliquer.', ai: 'CORO AI aide à interroger les sources admissibles indexées, avec des citations à vérifier. Un fichier conservé n’est pas nécessairement analysable.', knowledgeLink: 'Découvrir Knowledge', aiLink: 'Découvrir CORO AI', limits: 'La signature fournisseur et le PDF officiel associé ne sont pas inclus dans le périmètre commercial Client V1 validé. Une capture montrant des signatures n’en constitue pas une promesse de disponibilité.' },
+ en: { label: 'Building documentation', title: 'Compliance and technical documentation: two clear spaces.', complianceTitle: 'Compliance documents', compliance: 'Find deliverables prepared by your provider, their versions and related project discussions.', technicalTitle: 'Technical documentation', technical: 'Keep plans, manuals, spreadsheets and useful files directly in the building record. Managers and authorized users can contribute to this library.', knowledgeTitle: 'A library that stays with the building', knowledge: 'Approved project sources enrich Knowledge. Archiving a project alone does not remove the building library; document permissions and statuses still apply.', ai: 'CORO AI helps query eligible indexed sources, with citations to check. A stored file is not necessarily analysable.', knowledgeLink: 'Explore Knowledge', aiLink: 'Explore CORO AI', limits: 'Provider-based signing and the associated official PDF are not included in the validated Client V1 commercial scope. A screenshot showing signatures is not a promise of availability.' },
+} as const;
 
 export async function generateMetadata({ searchParams }: P): Promise<Metadata> {
   const l = localeFromSearchParams((await searchParams) ?? {});
@@ -86,6 +77,7 @@ export default async function Page({ searchParams }: P) {
   const l = localeFromSearchParams((await searchParams) ?? {});
   const t = copy[l];
   const p = productContent.client[l];
+  const library = buildingLibrary[l];
   const demo = localizedHref('/#demo', l);
   return (
     <V2Shell locale={l} pathname="/portail-client">
@@ -98,6 +90,19 @@ export default async function Page({ searchParams }: P) {
         <SplitContent ratio="5-7" align="start"
           text={<EditorialBlock id="client-flow-title" label={t.viewpoint} heading={p.flowTitle} />}
           media={<ol className={styles.descent} aria-label={p.flowTitle}>{p.flow.map((word) => <li key={word}>{word}</li>)}</ol>} />
+      </PageSection>
+
+      <PageSection tone="white" labelledBy="client-library-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="client-library-title" label={library.label} heading={library.title} />
+          <SplitContent ratio="5-7" align="start"
+            text={<EditorialBlock heading={library.complianceTitle}><p>{library.compliance}</p></EditorialBlock>}
+            media={<EditorialBlock heading={library.technicalTitle}><p>{library.technical}</p></EditorialBlock>} />
+          <EditorialBlock heading={library.knowledgeTitle}><p>{library.knowledge}</p><p>{library.ai}</p></EditorialBlock>
+          <p><a href={localizedHref('/coro-knowledge', l)}>{library.knowledgeLink} →</a></p>
+          <p><a href={localizedHref('/coro-ai', l)}>{library.aiLink} →</a></p>
+          <p>{library.limits}</p>
+        </div>
       </PageSection>
 
       <PageSection tone="soft" labelledBy="client-map-title">

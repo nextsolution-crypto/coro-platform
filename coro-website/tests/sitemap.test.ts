@@ -14,8 +14,8 @@ type Baseline = { urls: { url: string; alternates: Record<string, string>; lastM
 const baseline = JSON.parse(readFileSync(join(process.cwd(), 'tests/fixtures/sitemap-static-baseline.json'), 'utf8')) as Baseline;
 
 // Intentional corrections against the pre-MIG-00B.3 sitemap (English is not genuinely available on these two routes).
-const REMOVED_ON_PURPOSE = ['https://getcoro.io/sentinelle?lang=en', 'https://getcoro.io/sentinelle-population?lang=en'];
-const NEW_ON_PURPOSE = ['https://getcoro.io/coro-incident', 'https://getcoro.io/guides', 'https://getcoro.io/sms-terms', 'https://getcoro.io/sms-terms?lang=en']; // MIG-03D, MIG-05A, TFN-01
+const REMOVED_ON_PURPOSE: string[] = [];
+const NEW_ON_PURPOSE = ['https://getcoro.io/coro-incident', 'https://getcoro.io/coro-incident?lang=en', 'https://getcoro.io/coro-knowledge', 'https://getcoro.io/coro-knowledge?lang=en', 'https://getcoro.io/coro-ai', 'https://getcoro.io/coro-ai?lang=en', 'https://getcoro.io/guides', 'https://getcoro.io/sms-terms', 'https://getcoro.io/sms-terms?lang=en']; // MIG-03D, MIG-05A, TFN-01
 const ALTERNATES_DROPPED_ON_PURPOSE = ['https://getcoro.io/sentinelle', 'https://getcoro.io/sentinelle-population'];
 
 test('every previously valid static URL is preserved, except the documented intentional corrections', () => {
@@ -36,12 +36,13 @@ test('no URL is added beyond the baseline', () => {
   for (const url of urls) assert.ok(known.has(url) || NEW_ON_PURPOSE.includes(url), `${url} is new`);
 });
 
-test('Sentinelle and Sentinelle Population expose no English URL or alternate: their English content is not genuine', () => {
-  for (const path of ['/sentinelle', '/sentinelle-population', '/coro-incident']) {
-    const entry = byUrl.get(`https://getcoro.io${path}`);
-    assert.ok(entry, path);
-    assert.equal(entry.alternates, undefined, `${path} must not declare alternates`);
-    assert.ok(!urls.includes(`https://getcoro.io${path}?lang=en`));
+test('Operational and Knowledge pages expose their complete English versions', () => {
+  for (const path of ['/sentinelle', '/sentinelle-population', '/coro-incident', '/coro-knowledge', '/coro-ai']) {
+    const fr = byUrl.get(`https://getcoro.io${path}`);
+    const en = byUrl.get(`https://getcoro.io${path}?lang=en`);
+    assert.ok(fr && en, path);
+    assert.equal(fr.alternates?.languages['en-CA'], en.url);
+    assert.deepEqual(en.alternates, fr.alternates);
   }
 });
 
@@ -71,7 +72,7 @@ test('only discoverable, implemented, sitemap-enabled routes are listed; every o
     if (['BUILD-NOW-HIDDEN', 'FUTURE', 'HIDDEN', 'REVIEW'].includes(route.publication)) assert.equal(listed, false, `${route.path} (${route.publication}) must not be listed`);
     if (!route.implemented) assert.equal(listed, false, `${route.path} is not implemented`);
   }
-  for (const path of ['/plateforme', '/coro-exercices', '/conformite-reglementation', '/coro-knowledge', '/coro-ai', '/coro-network', '/coro-campus', '/coro-ops', '/qr-intervention', '/solutions/multi-sites', '/ressources', '/design-lab']) {
+  for (const path of ['/plateforme', '/coro-exercices', '/conformite-reglementation', '/coro-network', '/coro-campus', '/coro-ops', '/qr-intervention', '/solutions/multi-sites', '/ressources', '/design-lab']) {
     assert.ok(!urls.some((url) => url.includes(path)), `${path} must not be in the sitemap`);
   }
 });
@@ -93,7 +94,7 @@ test('no PUBLISH-NOW route is currently unimplemented', () => {
 });
 
 test('publication status is independent from implementation and from V2 migration', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/sms-terms', '/blog', '/']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/sms-terms', '/blog', '/', '/coro-knowledge', '/coro-ai']);
   assert.ok(publicRoutes.some((r) => r.publication === 'PUBLISH-NOW' && r.implemented), 'published and implemented, yet not V2 migrated');
   assert.ok(publicRoutes.some((r) => r.publication === 'BUILD-NOW-HIDDEN' && !r.implemented), 'published target, not implemented (guides was the last PUBLISH-NOW gap; MIG-05A closed it)');
   assert.ok(!('v2Migrated' in publicRoutes[0]) && !('migrated' in publicRoutes[0]), 'the route registry does not own migration state');

@@ -16,17 +16,19 @@ const svc = read('../coro-backend/src/occupancy/incident.service.ts');
 
 test('route: implemented, in the sitemap, FR only; registry ends with /coro-incident', () => {
   const r = getRoute('incident');
-  assert.equal(r?.implemented, true); assert.equal(r?.sitemap, true); assert.equal(r?.en, false);
+  assert.equal(r?.implemented, true); assert.equal(r?.sitemap, true); assert.equal(r?.en, true);
   assert.ok(staticSitemapRoutes.some((x) => x.path === '/coro-incident'));
   assert.ok(migratedV2Routes.includes('/coro-incident')); assert.ok(migratedV2Routes.indexOf('/coro-incident') < migratedV2Routes.indexOf('/security'));
   assert.equal(isLegacyFooterVisible('/coro-incident'), false);
 });
 
-test('FR ONLY: hasEnglish false, englishAvailable false, canonical FR, hreflang fr-CA + x-default', () => {
-  assert.match(page, /hasEnglish: false/); assert.match(page, /englishAvailable=\{false\}/);
-  const m = buildPageMetadata({ path: '/coro-incident', locale: 'en', hasEnglish: false, title: 't', description: 'd' });
-  assert.equal(m.alternates?.canonical, 'https://getcoro.io/coro-incident');
-  assert.deepEqual(Object.keys(m.alternates?.languages ?? {}), ['fr-CA', 'x-default']);
+test('FR and EN have localized content and reciprocal metadata', () => {
+  assert.doesNotMatch(page, /hasEnglish: false|englishAvailable=\{false\}/);
+  assert.match(page, /localeFromSearchParams/);
+  const m = buildPageMetadata({ path: '/coro-incident', locale: 'en', title: 'English title', description: 'English description' });
+  assert.equal(m.alternates?.canonical, 'https://getcoro.io/coro-incident?lang=en');
+  assert.deepEqual(Object.keys(m.alternates?.languages ?? {}), ['fr-CA', 'en-CA', 'x-default']);
+  assert.equal((m.openGraph as { locale?: string }).locale, 'en_CA');
 });
 
 test('approved H1 and exact hero: decorative marketing illustration', () => {
@@ -88,7 +90,7 @@ test('exercise mode and simultaneous incidents match the code; the fire-panel br
 test('links and CTAs: Résilience and Sentinelle only; demonstration; exact CORO Client login; no Population, no future route', () => {
   assert.match(page, /const LOGIN = 'https:\/\/client\.getcoro\.io\/login';/);
   assert.match(code, /localizedHref\('\/#demo', l\)/);
-  assert.ok(page.includes("href: '/resilience-operationnelle'") && page.includes('href="/sentinelle"'));
+  assert.ok(page.includes("href: '/resilience-operationnelle'") && page.includes("localizedHref('/sentinelle', l)"));
   assert.doesNotMatch(code, /sentinelle-population|\/coro-exercices|\/plateforme|\/qr-intervention/);
 });
 
@@ -108,7 +110,7 @@ test('metadata, JSON-LD and structure: brand-free title, FAQPage from the visibl
 test('editorial resources: three existing blog articles between ecosystem and FAQ, real titles, no future route (verified against the public blog API on 2026-09-26)', () => {
   const slugs = ['equipe-urgence-disponible-batiment', 'exercice-sur-table-tester-plan-urgence', 'identifier-lacunes-organisation-mesures-urgence'];
   for (const slug of slugs) assert.ok(page.includes(`href: '/blog/${slug}'`), slug);
-  assert.equal((page.match(/href: '\/blog\//g) ?? []).length, 3);
+  assert.equal((page.match(/href: '\/blog\//g) ?? []).length, 6);
   assert.ok(page.indexOf('incident-eco-title') < page.indexOf('incident-res-title') && page.indexOf('incident-res-title') < page.indexOf('incident-faq-title'));
   assert.match(css, /\.resources a:focus-visible/);
 });

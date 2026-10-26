@@ -16,7 +16,7 @@ const code = page.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 const p = productContent.client;
 
 test('the registry ends with /portail-client after the seven approved routes; nothing else is migrated', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/sms-terms', '/blog', '/']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/sms-terms', '/blog', '/', '/coro-knowledge', '/coro-ai']);
   assert.equal(isLegacyFooterVisible('/portail-client'), false);
   assert.equal(isLegacyFooterVisible('/'), false); // MIG-08A: Homepage is now V2
   assert.equal(isLegacyFooterVisible('/blog/some-slug'), false); // MIG-07B: dynamic article route now V2
@@ -78,7 +78,7 @@ test('PRODUCT TRUTH: the page keeps the published Client copy; only the boundary
   for (const locale of ['fr', 'en'] as const) {
     const before = baseline[locale].mainText;
     const c = p[locale];
-    for (const s of [c.intro, ...c.capabilities.flatMap((x) => [x.text]), ...c.faq.map((x) => x.q), c.faq[0].a]) assert.ok(before.includes(s), `${locale} baseline: ${s.slice(0, 40)}`);
+    for (const s of [c.intro, ...c.capabilities.filter((_, i) => i !== 1).map((x) => x.text), ...c.faq.map((x) => x.q), c.faq[0].a]) assert.ok(before.includes(s), `${locale} baseline: ${s.slice(0, 40)}`);
   }
   for (const s of ['p.intro', 'p.flow', 'p.flowTitle', 'p.capabilities', 'p.capTitle', 'p.boundary', 'p.boundaryTitle', 'p.faq', 'p.connections']) assert.ok(page.includes(s), s);
   assert.equal(p.fr.faq[1].a, 'Le portail donne accès aux documents et à leur historique, selon les droits du client.');
@@ -94,17 +94,17 @@ test('Network is no longer referenced (a concept outside the current product); t
   for (const s of [p.fr.boundaryTitle, p.fr.boundary, p.en.boundaryTitle, p.en.boundary, code]) assert.doesNotMatch(s, /Network/);
 });
 
-test('SEE vs ACT: consulting is never called managing; acting is limited to verified actions (comment, sign, refuse)', () => {
+test('SEE vs ACT: consulting is never called managing; acting describes authorized contributions and source consultation', () => {
   assert.match(page, /seeItems: \['Ses bâtiments, sur un tableau de bord et une carte', 'Ses documents, leurs versions et leur historique', 'Les activités visibles et les échanges associés'\]/);
-  assert.match(page, /actItems: \['Commenter un document', 'Signer ou refuser un document'\]/);
-  assert.match(page, /actItems: \['Comment on a document', 'Sign or refuse a document'\]/);
+  assert.match(page, /Ajouter des documents techniques avec une autorisation/);
+  assert.match(page, /Upload technical documents when authorized/);
   assert.doesNotMatch(code, /\b(?:gérer|gère|gérez|manage|manages|manage your)\b/i, 'no "manage" verb for what the client can only see');
   assert.match(page, /aria-labelledby="client-see-label"/);
   assert.match(page, /aria-labelledby="client-act-label"/);
 });
 
-test('no unverified claim: no Booking, Outlook, real time, automation, AI, prediction, export, alert or fabricated figure', () => {
-  assert.doesNotMatch(code, /réserv|booking|Outlook|temps réel|real-time|realtime|automatique|automatic|prévis|forecast|prédict|predict|exportab|exportation|alerte|alert|notification|multi-site|\bIA\b|\bAI\b|\d+\s?% (?:de |of |plus|more|less|faster|moins)|gain de temps|time saved|économ/i);
+test('no unverified claim: no Booking, Outlook, real time, automation, prediction, export, alert or fabricated figure', () => {
+  assert.doesNotMatch(code, /réserv|booking|Outlook|temps réel|real-time|realtime|automatique|automatic|prévis|forecast|prédict|predict|exportab|exportation|alerte|alert|notification|multi-site|\d+\s?% (?:de |of |plus|more|less|faster|moins)|gain de temps|time saved|économ/i);
   assert.doesNotMatch(code, /code actuel|current code|le code|the code/i);
 });
 
@@ -182,6 +182,6 @@ test('MIG-02D-B gate: no public Booking, scheduling or internal wording anywhere
     assert.doesNotMatch(item.q + ' ' + item.a, /code actuel|current code|portail actuel|current portal|API|Prisma|endpoint|route|backend|base de données|database|implémenté|implemented|MVP|phase d/i);
   }
   const src = read('app/portail-client/page.tsx');
-  assert.match(src, /RECAPTURE REQUIRED BEFORE GO-LIVE: dashboard, buildings and activities screenshots/);
-  assert.match(src, /PUBLICATION-BLOCKER — CLIENT PORTAL SCREENSHOT DATA PROVENANCE/);
+  assert.match(src, /client-library-title/);
+  assert.match(src, /La signature fournisseur et le PDF officiel associé ne sont pas inclus/);
 });

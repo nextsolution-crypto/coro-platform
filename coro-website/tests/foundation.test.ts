@@ -11,7 +11,7 @@ import { registeredSitemapUrls } from '../lib/site/sitemap.ts';
 import { productStatusLabel } from '../lib/site/status.ts';
 
 const protectedPaths = [
-  '/', '/about', '/security', '/privacy', '/terms', '/sms-terms', '/pricing', '/sentinelle', '/sentinelle-population', '/coro-incident',
+  '/coro-knowledge', '/coro-ai', '/', '/about', '/security', '/privacy', '/terms', '/sms-terms', '/pricing', '/sentinelle', '/sentinelle-population', '/coro-incident',
   '/gestion-documentaire', '/gestion-de-projets', '/resilience-operationnelle', '/performance-objectifs',
   '/portail-client', '/programme-recommandation', '/contact', '/partners', '/blog', '/guides',
   '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi',
@@ -82,7 +82,7 @@ test('navigation exposes implemented destinations only', () => {
       }
     }
   }
-  assert.ok(!visibleNavigation('fr').flatMap((group) => group.items).some((item) => item.id === 'knowledge'));
+  assert.ok(visibleNavigation('fr').flatMap((group) => group.items).some((item) => item.id === 'knowledge'));
 });
 
 test('API URL helpers never duplicate the api segment', () => {

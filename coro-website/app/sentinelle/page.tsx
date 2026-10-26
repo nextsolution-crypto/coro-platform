@@ -9,27 +9,13 @@ import { SplitContent } from '@/components/page/SplitContent';
 import { V2Shell } from '@/components/site/V2Shell';
 import { Button } from '@/components/ui/Button';
 import { faqJsonLd } from '@/lib/site/json-ld';
-import { localeFromSearchParams, localizedHref, resolveAvailableLocale } from '@/lib/site/locale';
+import { localeFromSearchParams, localizedHref } from '@/lib/site/locale';
 import { buildPageMetadata } from '@/lib/site/seo';
 import styles from './page.module.css';
 
 type P = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
 
-/**
- * /sentinelle (MIG-03B) — CORO Sentinelle: who is in the building, and who is not yet confirmed after an evacuation.
- * LANGUAGE: FR ONLY. The V1 page was French; ?lang=en only translated the nav link and the pricing block (a partial translation).
- * The page therefore always renders French: canonical FR even with ?lang=en, hreflang fr-CA + x-default only, og:locale fr_CA, lang="fr".
- * PRODUCT TRUTH (audited in coro-backend/src/occupancy and coro-client-portal): check-in / check-out with timestamps (employees, visitors, contractors),
- * personal 4-digit PIN for employees on the kiosk QR page, a short form for visitors and contractors, visitor invitations, the occupancy register
- * with counts by type, evacuation events with an accounted-for / not-yet-confirmed status per person, an evacuation history and PDF report,
- * and "trigger an incident" from the register. NO geolocation code exists in the presence, kiosk, registry or evacuation pages.
- * NOT claimed: registry search and filtering (only the kiosk exit lookup exists), "other occupant categories" (the type is a fixed enum),
- * multi-site occupancy view, real-time wording, ISO / CNPI / CNESST / NFPA / CCOHS compliance, Loi 25 compliance, a retention period,
- * alarm-panel automation, the intervention QR, population alerting (Sentinelle Population is a separate product, MIG-03C), pricing.
- * The V1 pricing block (three plans with prices and unverified claims) is removed and recorded, not migrated.
- * NO PRODUCT SCREENSHOT: every V1 Sentinelle image is a generated marketing scene with invented interfaces, and the only real registry
- * capture is outdated and shows a kiosk token. Body photographs are approved V2 MARKETING ILLUSTRATIONS (decorative). RECAPTURE REQUIRED BEFORE GO-LIVE.
- */
+/** Occupancy is declared by users. Translations describe the same scoped capabilities. */
 const copy = {
   metaTitle: 'Registre d’occupation et décompte des occupants en évacuation',
   description: 'CORO Sentinelle tient un registre numérique des occupants d’un bâtiment et soutient le décompte lors d’une évacuation, du pointage à l’entrée jusqu’au point de rassemblement.',
@@ -47,10 +33,10 @@ const copy = {
     { title: 'Connaître les présences', text: 'Les personnes actuellement enregistrées peuvent être consultées dans une interface centralisée par les utilisateurs autorisés.' },
     { title: 'Faciliter le décompte', text: 'Lors d’une évacuation, cette information contribue au recensement des occupants et au suivi des personnes qui n’ont pas encore été confirmées.' },
   ],
-  entryLabel: 'Entrée', entryTitle: 'Un QR code à l’entrée. Un PIN pour s’identifier.',
+  entryLabel: 'Entrée', entryTitle: 'Un QR temporaire. Plusieurs arrivées en parallèle.',
   entrySteps: [
-    { n: 'Étape 01', title: 'Un QR code à l’entrée du bâtiment', text: 'Une borne ou une signalisation Sentinelle permet à l’utilisateur de démarrer son enregistrement depuis son propre téléphone.', items: ['Aucune application à installer pour l’utilisateur', 'Accès rapide depuis un téléphone intelligent'] },
-    { n: 'Étape 02', title: 'Identification rapide', text: 'Après avoir scanné le QR code, l’employé saisit son PIN personnel à 4 chiffres; les visiteurs et contracteurs s’enregistrent au moyen d’un court formulaire.', items: ['Interface mobile simplifiée', 'Arrivée et départ enregistrés avec l’heure'] },
+    { n: 'Étape 01', title: 'Un QR code à l’entrée du bâtiment', text: 'Le QR est renouvelé toutes les 30 secondes sur les écrans Sentinelle. Plusieurs personnes peuvent le scanner et s’enregistrer simultanément depuis leur téléphone, à plusieurs entrées du même bâtiment.', items: ['Aucune application à installer pour l’utilisateur', 'Une identification commencée avec un QR valide peut se terminer pendant une courte fenêtre, même si le QR change'] },
+    { n: 'Étape 02', title: 'Identification rapide', text: 'L’employé s’identifie avec son PIN personnel ou choisit la reconnaissance de son téléphone personnel pour les passages suivants. Il vérifie son identité et confirme explicitement son arrivée ou son départ. Les visiteurs et contracteurs utilisent le parcours prévu pour leur catégorie.', items: ['Reconnaissance facultative, révocable et limitée dans le temps', 'Sur appareil partagé : aucune reconnaissance persistante et aucune identité laissée après confirmation'] },
   ],
   registerLabel: 'Registre d’occupation', registerTitle: 'Une vision actualisée des personnes présentes.',
   registerText: 'Les responsables autorisés peuvent consulter les informations nécessaires pour connaître les personnes actuellement enregistrées dans l’établissement.',
@@ -112,11 +98,93 @@ const copy = {
   ctaSupport: 'Découvrez comment CORO Sentinelle peut intégrer la gestion des présences à votre organisation et soutenir vos procédures d’évacuation.',
 } as const;
 
+const english = {
+  metaTitle: 'Occupancy register and evacuation accountability',
+  description: 'CORO Sentinelle records declared building occupancy and supports evacuation accountability, from entry to the assembly point.',
+  label: 'CORO Sentinelle', lines: ['Know who is present.', 'Know who is not yet accounted for.'],
+  lead: 'CORO Sentinelle is a digital occupancy register for buildings and organizations. Employees, visitors and contractors check in on arrival, giving authorized staff useful information when every minute counts.',
+  demo: 'Request a demonstration', how: 'See how it works', access: 'Access CORO Client',
+  problemLabel: 'Presence and safety', problemTitle: 'An occupancy register built for real situations.',
+  problemText: 'Knowing who entered a building is not enough. When an alarm occurs, the question becomes: who was registered as present, and who has not yet been accounted for?',
+  statement: 'The daily register becomes operational information during an emergency.',
+  principlesLabel: 'A simple approach', principlesTitle: 'From arrival to evacuation.',
+  principlesLead: 'Sentinelle connects daily check-in with the information an organization needs during an emergency.',
+  principles: [
+    { title: 'Check in', text: 'People scan the building QR code, identify themselves on their phone and confirm their presence.' },
+    { title: 'View registered occupants', text: 'Authorized users can consult the people currently registered as present in one interface.' },
+    { title: 'Support accountability', text: 'During an evacuation, the register helps staff account for occupants and follow up on people not yet confirmed.' },
+  ],
+  entryLabel: 'Entry', entryTitle: 'A temporary QR code. Several arrivals in parallel.',
+  entrySteps: [
+    { n: 'Step 01', title: 'A QR code at the building entrance', text: 'The QR code refreshes every 30 seconds on Sentinelle displays. Several people can scan and check in simultaneously on their own phones, at multiple entrances to the same building.', items: ['No app installation required', 'A check-in started with a valid QR code can finish within a short window, even after the displayed code changes'] },
+    { n: 'Step 02', title: 'Identify and confirm', text: 'Employees identify themselves with their personal PIN or opt to recognize their personal phone for later visits. They check their identity and explicitly confirm arrival or departure. Visitors and contractors use the flow for their category.', items: ['Optional phone recognition that expires and can be revoked', 'Shared devices: no persistent recognition and no identity left on screen after confirmation'] },
+  ],
+  registerLabel: 'Occupancy register', registerTitle: 'An updated view of registered occupants.',
+  registerText: 'Authorized staff can consult the information needed to identify people currently registered as present in the building.',
+  registerTypes: [{ name: 'Employees', text: 'Regular staff and building users.' }, { name: 'Visitors', text: 'Clients, guests and occasional visitors.' }, { name: 'Contractors', text: 'External workers and service providers.' }],
+  registerNote: 'Registered presence can be viewed in a central interface.',
+  evacLabel: 'When an emergency occurs', evacTitle: 'The register takes on a new role.',
+  evacText: 'During an evacuation, a count alone is not enough. Staff need to know which people have been accounted for and which still require follow-up.',
+  evacItems: ['Support occupant accountability', 'Help evacuation staff', 'Identify people not yet accounted for', 'Bring available information together'],
+  seqLabel: 'From the building to the assembly point', seqTitle: 'Continuity of information.',
+  seq: [
+    { k: '01 — Before', title: 'Presence', text: 'The organization has a list of people registered as present.' },
+    { k: '02 — Alarm', title: 'Evacuation', text: 'Occupants leave the building following its procedures.' },
+    { k: '03 — Outside', title: 'Accountability', text: 'Staff account for occupants at the assembly point.' },
+    { k: '04 — Review', title: 'Follow-up', text: 'The information collected identifies people not yet accounted for.' },
+  ],
+  assemblyLabel: 'Assembly point', assemblyTitle: 'Move from “how many?” to “who?”.',
+  assemblyText: ['The assembly point is a key part of evacuation. CORO Sentinelle helps staff establish the clearest possible picture after occupants leave.', 'Sentinelle supports a named comparison between people registered as present and people accounted for.', 'A person not yet accounted for is someone whose status has not been confirmed during accountability. Sentinelle records declared arrivals, departures and operational statuses; the occupancy register does not continuously track people’s locations.'],
+  boundaryLabel: 'What Sentinelle does', boundaryTitle: 'An occupancy register, not a tracking system.',
+  boundaryItems: ['Records declared arrival and departure', 'Does not continuously geolocate people', 'Is neither a physical access control system nor an employee surveillance tool', 'The register is available to authorized users'],
+  usesLabel: 'Use cases', usesTitle: 'Suited to different environments.',
+  uses: [
+    { kicker: 'Buildings', name: 'Office towers', text: 'Daily occupancy registration and support for building evacuation procedures.' },
+    { kicker: 'Industry', name: 'Industrial sites', text: 'Identify employees, contractors and suppliers registered on site.' },
+    { kicker: 'Institutions', name: 'Multi-user organizations', text: 'A structured occupancy approach adapted to the organization’s operations.' },
+    { kicker: 'Portfolios', name: 'Property portfolios', text: 'A common approach across several buildings or facilities.' },
+  ],
+  ecoLabel: 'Beyond the register', ecoTitle: 'Sentinelle is part of CORO.',
+  ecoLead: 'CORO helps organizations and professionals structure preparedness, documentation and tools for emergency management and business continuity.',
+  ecoStatement: 'Sentinelle connects planning with declared presence on site.', platform: 'This part of the platform', explore: 'Explore',
+  products: [
+    { name: 'Operational resilience', text: 'Presence informs the resilience index and emergency organization. Authorized users can access incident functions from the register.', href: '/resilience-operationnelle' },
+    { name: 'Documents', text: 'Structures information and deliverables.', href: '/gestion-documentaire' },
+    { name: 'Client', text: 'Makes authorized information available to clients.', href: '/portail-client' },
+  ],
+  resLabel: 'Resources', resTitle: 'Learn about occupancy and evacuation.', read: 'Read the article',
+  articles: [
+    { slug: 'comment-faire-decompte-occupants-evacuation', title: 'Accounting for occupants during an evacuation' },
+    { slug: 'registre-occupation-batiment-situation-urgence', title: 'Why a building occupancy register matters' },
+    { slug: 'registre-papier-ou-numerique', title: 'Paper or digital occupancy registers' },
+    { slug: 'gerer-visiteurs-contracteurs-evacuation', title: 'Visitors and contractors during evacuation' },
+    { slug: 'savoir-si-tout-le-monde-a-evacue-batiment', title: 'How to check whether a building has been evacuated' },
+    { slug: 'registre-occupation-evacuation-informations-a-recueillir', title: 'What information an occupancy register needs' },
+    { slug: 'qr-code-registre-visiteurs-enregistrement-batiment', title: 'How QR visitor registration works' },
+    { slug: 'controle-acces-vs-registre-occupation-difference', title: 'Access control and occupancy registers' },
+  ],
+  faq: 'FAQ', faqTitle: 'Questions about CORO Sentinelle.',
+  faqItems: [
+    { q: 'What is a digital occupancy register?', a: 'It records and displays people registered as present in a building, including employees, visitors and contractors.' },
+    { q: 'How does CORO Sentinelle work?', a: 'People scan a rotating entrance QR code, identify themselves on their phone and confirm arrival or departure. Several people can use the flow at once.' },
+    { q: 'Can Sentinelle support evacuation?', a: 'Yes. Authorized staff can compare people registered as present with those accounted for after evacuation.' },
+    { q: 'Does Sentinelle replace an emergency plan?', a: 'No. It supports operations and does not replace the organization’s emergency plan or evacuation procedures.' },
+    { q: 'Can visitors use Sentinelle?', a: 'Yes. The register supports employees, visitors and contractors.' },
+    { q: 'Why record who is present?', a: 'The list helps staff account for occupants and identify people whose status still requires follow-up.' },
+    { q: 'Can Sentinelle serve several buildings?', a: 'Yes, according to the organization’s configuration and access permissions.' },
+    { q: 'Is an app installation required?', a: 'No. The registration flow opens on the person’s phone from the QR code. Personal phone recognition is optional and can be revoked.' },
+  ],
+  ctaStatement: 'Does your organization know who is registered as present when an emergency occurs?',
+  ctaSupport: 'See how CORO Sentinelle can support occupancy registration and your evacuation procedures.',
+} as const;
+const translations = { fr: copy, en: english };
+
 const LOGIN = 'https://client.getcoro.io/login';
 
 export async function generateMetadata({ searchParams }: P): Promise<Metadata> {
   const requested = localeFromSearchParams((await searchParams) ?? {});
-  return buildPageMetadata({ path: '/sentinelle', locale: requested, hasEnglish: false, title: copy.metaTitle, description: copy.description, image: '/images/sentinelle/coro-sentinelle-registre-presence.webp' });
+  const copy = translations[requested];
+  return buildPageMetadata({ path: '/sentinelle', locale: requested, title: copy.metaTitle, description: copy.description, image: '/images/sentinelle/coro-sentinelle-registre-presence.webp' });
 }
 
 function JsonLd({ value }: { value: object }) {
@@ -124,10 +192,11 @@ function JsonLd({ value }: { value: object }) {
 }
 
 export default async function Page({ searchParams }: P) {
-  const l = resolveAvailableLocale(localeFromSearchParams((await searchParams) ?? {}), false);
+  const l = localeFromSearchParams((await searchParams) ?? {});
+  const copy = translations[l];
   const demo = localizedHref('/#demo', l);
   return (
-    <V2Shell locale={l} pathname="/sentinelle" englishAvailable={false}>
+    <V2Shell locale={l} pathname="/sentinelle">
       <JsonLd value={faqJsonLd(copy.faqItems.map((item) => ({ question: item.q, answer: item.a })))} />
 
       <EditorialHero id="sentinelle-title" label={copy.label} title={copy.lines} lead={copy.lead}
@@ -209,7 +278,7 @@ export default async function Page({ searchParams }: P) {
       <PageSection tone="soft" labelledBy="sentinelle-res-title">
         <div className={styles.stack}>
           <EditorialBlock id="sentinelle-res-title" label={copy.resLabel} heading={copy.resTitle} />
-          <ul className={styles.articles}>{copy.articles.map((a) => <li key={a.slug}><a href={`/blog/${a.slug}`}>{a.title}<span aria-hidden="true"> →</span></a></li>)}</ul>
+          <ul className={styles.articles}>{copy.articles.map((a) => <li key={a.slug}><a href={localizedHref(`/blog/${a.slug}`, l)}>{a.title}<span aria-hidden="true"> →</span></a></li>)}</ul>
         </div>
       </PageSection>
 
