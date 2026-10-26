@@ -46,3 +46,7 @@ Critère de sortie : parcours complet au clavier et absence d'acteurs révoqués
 
 Ces améliorations doivent rester séparées des corrections bloquantes afin de conserver une revue compréhensible.
 
+## Exécution autorisée
+
+Les lots A à D ont été implémentés ensemble dans le correctif ciblé, sans ajout de recherche, tri configurable, pagination ni nouveau filtre métier. Le résultat est **VALIDÉ_QA_EN_ATTENTE_DE_RELEASE** sur les preuves sanitaires du 26 octobre 2026.
+

@@ -79,3 +79,17 @@
 - Impact : scalabilité et localisation d'un mandat limitées lorsque le portefeuille grandit.
 - Condition : décision produit sur les champs recherchables, les filtres et la pagination serveur.
 
+## Réconciliation du lot autorisé
+
+| Constat | Statut après correction | Preuve |
+|---|---|---|
+| PROJ-LIST-001 | **CLOS_QA** | refus atomique update/delete/lot; archive consultable en lecture seule |
+| PROJ-LIST-002 | **CLOS_QA** | 503 explicite, aucun faux zéro/onboarding, Réessayer présent |
+| PROJ-LIST-003 | **CLOS_QA** | sélection contextualisée et désactivation transactionnelle tout-ou-rien |
+| PROJ-LIST-004 | **CLOS_QA** | endpoint minimal limité aux responsables actifs et visibles |
+| PROJ-LIST-005 | **CLOS_QA** | quota serveur séparé du nombre affiché/filtré |
+| PROJ-LIST-006 | **CLOS_QA** | lien natif, focus et libellé accessible des cases |
+| PROJ-LIST-007 | **NON_APPLICABLE / DIFFÉRÉ** | aucune recherche, pagination ou nouveau filtre ajouté |
+
+La clôture production reste conditionnée à la PR fusionnée, la release gouvernée et l'inspection post-release.
+

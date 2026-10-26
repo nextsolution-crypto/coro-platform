@@ -44,3 +44,15 @@
 - Défaillances confirmées : archives lecture seule et état erreur principal.
 - Les preuves du dashboard PR #99 ont servi uniquement de contexte; les résultats ci-dessus viennent de la campagne Projets dédiée.
 
+## Matrice après correction
+
+- Archives lecture seule : **PASS QA** (serveur et navigateur).
+- Erreur principale 503 : **PASS QA** (erreur explicite, Réessayer, aucun onboarding).
+- Désactivation multiple : **PASS QA** (transaction tout-ou-rien et aucun effet sur sélection mixte).
+- Filtre responsable minimal : **PASS QA**.
+- Quota canonique : **PASS QA**.
+- Navigation native et responsive : **PASS QA**.
+- Chrome : **12/12 PASS** à 390×844, 768×1024, 1440×900 et 2560×1440, en Classic, Glass Light et Glass Dark.
+- Campagne consolidée : **21/21 PASS**.
+- Production : **PENDING_RELEASE**.
+

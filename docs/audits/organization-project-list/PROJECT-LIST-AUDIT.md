@@ -80,3 +80,15 @@ Le score qualité est prévu dans l'interface mais n'est pas chargé par `findAl
 - Les onglets internes de la fiche projet sont hors périmètre.
 - Aucun fournisseur externe, document, signature, invitation ou notification n'a été déclenché.
 
+## Correction et recette du 26 octobre 2026
+
+- Branche candidate : `fix/organization-project-list`, issue de `44772a7e8841378e1fd760bef843c7f5a979b33d`.
+- Archives : mutations `PUT`, `DELETE` et lot refusées atomiquement lorsque l'état persistant est `ARCHIVED`; consultation conservée; réactivation retirée.
+- Désactivation multiple : endpoint transactionnel tout-ou-rien, sélection vidée au changement d'onglet ou de responsable et vocabulaire conforme à `isActive=false`.
+- Résilience : panne principale distincte du vrai vide avec Réessayer; dépendances secondaires isolées; dernier succès signalé comme périmé si le polling échoue.
+- Exactitude : quota d'organisation calculé par le serveur selon la même règle que la création; nombre affiché explicitement séparé.
+- Minimisation : filtre limité aux responsables actifs des projets visibles, sans courriel ni rôle.
+- Accessibilité : lien projet natif, cases nommées et archives explicitement en lecture seule.
+- Preuves : 13 tests Jest ciblés, TypeScript backend/frontend, builds backend/frontend, et campagne authentifiée Chrome **21/21 PASS**, dont matrice responsive/thèmes **12/12 PASS**.
+- Preuves sanitaires : `D:\CORO-QA\audits\organization-project-list\2026-10-26-correction`.
+
