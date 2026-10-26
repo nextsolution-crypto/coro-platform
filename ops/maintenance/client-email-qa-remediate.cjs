@@ -128,9 +128,6 @@ async function run(env = process.env) {
         },
       });
       await tx.client.update({ where: { id: client.id }, data: { contactEmail: null, isActive: false } });
-      await tx.clientSecurityAuditEvent.create({
-        data: { clientUserId: clientUser.id, organizationId: clientUser.organizationId, eventType: 'QA_CLIENT_USER_REMEDIATED_AND_REVOKED' },
-      });
       await tx.adminAuditEvent.create({
         data: {
           actorType: 'SYSTEM', systemActorKey: 'GOVERNED_CLIENT_EMAIL_QA_REMEDIATION',
