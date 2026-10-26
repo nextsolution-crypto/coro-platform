@@ -55,15 +55,22 @@ test('pending approvals support zero, one and multiple records without masking t
 
 test('Dashboard keeps the approval API, data and project navigation contract', () => {
   assert.match(dashboard, /api\.get\('\/projects\/pending-approval'\)/);
-  assert.match(dashboard, /setPendingApprovals\(approvalsRes\.data \|\| \[\]\)/);
+  assert.match(dashboard, /setPendingApprovals\(dataAt\(2, 'approvals'\) \|\| \[\]\)/);
   assert.match(dashboard, /pendingApprovals\.map\(approval =>/);
-  assert.match(dashboard, /router\.push\(`\/projects\/\$\{approval\.id\}`\)/);
+  assert.match(dashboard, /href=\{`\/projects\/\$\{approval\.id\}`\}/);
   assert.match(dashboard, /approval\.documentType/);
   assert.match(dashboard, /approval\.client\?\.name/);
   assert.doesNotMatch(dashboard, /pendingApprovals\.map\(p =>/);
 });
 
+test('Dashboard does not expose approval data to non-admin roles', () => {
+  assert.match(dashboard, /const admin = user\?\.role === 'ADMIN' \|\| user\?\.role === 'SUPER_ADMIN'/);
+  assert.match(dashboard, /admin \? api\.get\('\/projects\/pending-approval'\) : Promise\.resolve\(\{ data: \[\] \}\)/);
+});
+
 test('AppLayout keeps the same notification action and submitter projection', () => {
+  assert.match(appLayout, /const canReviewApprovals = user\?\.role === 'ADMIN' \|\| user\?\.role === 'SUPER_ADMIN'/);
+  assert.match(appLayout, /canReviewApprovals\s*\? api\.get\('\/projects\/pending-approval'\)\s*:\s*Promise\.resolve\(\{ data: \[\] \}\)/);
   assert.match(appLayout, /pendingApprovals\.map\(approval =>/);
   assert.match(appLayout, /router\.push\(`\/projects\/\$\{approval\.id\}`\); setShowNotif\(false\)/);
   assert.match(appLayout, /approval\.submittedBy\?\.firstName/);

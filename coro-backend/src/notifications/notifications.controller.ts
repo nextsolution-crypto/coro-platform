@@ -19,11 +19,7 @@ export class NotificationsController {
 
   @Get('mandate-delays')
   checkDelays(@Request() req: any) {
-    return this.service.checkMandateDelays(
-      req.user.organizationId,
-      req.user.userId,
-      req.user.role,
-    );
+    return this.service.checkMandateDelays(req.user);
   }
 
   @Put(':id/read')

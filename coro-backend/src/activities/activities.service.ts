@@ -547,13 +547,14 @@ export class ActivitiesService {
     }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
   }
   // Activités récurrentes à renouveler (date passée depuis > 10 mois)
-  async getRecurringToRenew(organizationId: string) {
+  async getRecurringToRenew(actor: AdviserActor) {
     const tenMonthsAgo = new Date();
     tenMonthsAgo.setMonth(tenMonthsAgo.getMonth() - 10);
 
     const activities = await this.prisma.projectActivity.findMany({
       where: {
-        organizationId,
+        organizationId: actor.organizationId,
+        project: { is: projectAccessWhere(actor) },
         isRecurring: true,
         scheduledDate: { lte: tenMonthsAgo },
         status: { not: 'annule' },
@@ -585,14 +586,15 @@ export class ActivitiesService {
   }
 
   // Activités des 30 prochains jours
-  async getUpcoming(organizationId: string) {
+  async getUpcoming(actor: AdviserActor) {
     const now = new Date();
     const in30Days = new Date();
     in30Days.setDate(in30Days.getDate() + 30);
 
     return this.prisma.projectActivity.findMany({
       where: {
-        organizationId,
+        organizationId: actor.organizationId,
+        project: { is: projectAccessWhere(actor) },
         scheduledDate: { gte: now, lte: in30Days },
         status: { notIn: ['annule', 'termine'] },
       },

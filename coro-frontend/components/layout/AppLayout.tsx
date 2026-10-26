@@ -256,13 +256,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [notifUnreadCount, setNotifUnreadCount] = useState(0);
+  const canReviewApprovals = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
 
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
         const [updatesRes, approvalsRes, unreadRes] = await Promise.all([
           api.get('/projects/upcoming-updates'),
-          api.get('/projects/pending-approval'),
+          canReviewApprovals
+            ? api.get('/projects/pending-approval')
+            : Promise.resolve({ data: [] }),
           api.get('/notifications/unread-count').catch(() => ({ data: { count: 0 } })),
         ]);
         setUpdates(updatesRes.data || []);
@@ -277,7 +280,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     // Rafraîchir toutes les 30 secondes
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [canReviewApprovals]);
 
   // ── Fermer panneaux si clic extérieur ──
   useEffect(() => {

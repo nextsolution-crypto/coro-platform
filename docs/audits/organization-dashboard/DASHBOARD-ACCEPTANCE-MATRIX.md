@@ -1,5 +1,24 @@
 # Matrice de recette proposée — dashboard organisation
 
+## Résultat exécuté — 2026-10-26
+
+- Serveur/PostgreSQL réel isolé : **PASS**, 12 scénarios consolidés.
+- Autorisation OPERATOR : **PASS** pour projets, recherche, mises à jour, activités récurrentes/à venir, délais et tâches.
+- Portée ADMIN et isolation inter-organisation : **PASS**.
+- Identité inactive et approbation refusée à l'OPERATOR : **PASS**.
+- Panne partielle, message accessible et nouvelle tentative : **PASS**.
+- États principal/partiel, fraîcheur et protection contre réponses anciennes : **PASS** par contrats ciblés et build TypeScript.
+- Matrice navigateur : **12/12 PASS**, zéro débordement global/composant, zéro interaction `div[role=button]`, zéro erreur console critique.
+
+| Viewport | Classic | Glass Light | Glass Dark |
+|---|---|---|---|
+| 390 × 844 | PASS | PASS | PASS |
+| 768 × 1024 | PASS | PASS | PASS |
+| 1440 × 900 | PASS | PASS | PASS |
+| 2560 × 1440 | PASS | PASS | PASS |
+
+La campagne utilise des données exclusivement synthétiques et n'émet aucune communication ni opération d'urgence. Les scénarios de mutation sur les écrans de destination restent hors de ce lot dashboard.
+
 ## Interactions
 
 | Élément | Résultat attendu | ADMIN | OPERATOR | Production observée | Statut actuel |

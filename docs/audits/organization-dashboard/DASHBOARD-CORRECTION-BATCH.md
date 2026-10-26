@@ -1,6 +1,8 @@
 # Lot de correction proposé — dashboard organisation
 
-Ce lot est prêt à autoriser, mais n'est pas lancé par cet audit.
+Ce lot a été autorisé et exécuté sur `fix/organization-dashboard`. Il est validé dans le stack QA isolé; la publication et la preuve production sont consignées après passage des gates gouvernés.
+
+Choix « Mes tâches » : réutilisation de l'autorité `ProjectTask`, sans nouveau moteur métier. La lecture retourne uniquement les tâches affectées à l'acteur, non terminées et dont l'échéance est passée, après application du périmètre projet canonique.
 
 ## 1. Autorisation canonique des sources — prioritaire
 

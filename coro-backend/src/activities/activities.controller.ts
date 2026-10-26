@@ -185,11 +185,11 @@ export class ActivitiesController {
 
   @Get('activities/recurring-to-renew')
   getRecurringToRenew(@Request() req: AuthenticatedRequest) {
-    return this.service.getRecurringToRenew(req.user.organizationId);
+    return this.service.getRecurringToRenew(req.user);
   }
 
   @Get('activities/upcoming')
   getUpcoming(@Request() req: AuthenticatedRequest) {
-    return this.service.getUpcoming(req.user.organizationId);
+    return this.service.getUpcoming(req.user);
   }
 }

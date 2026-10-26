@@ -15,6 +15,13 @@ export class UsersController {
     }
   }
 
+  @Get('organization/dashboard-summary')
+  @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
+  async getOrganizationDashboardSummary(@Request() req: any) {
+    this.assertAdmin(req);
+    return this.usersService.getDashboardSummary(req.user.organizationId);
+  }
+
   @Get('organization')
   @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
   async getOrganizationUsers(@Request() req: any) {

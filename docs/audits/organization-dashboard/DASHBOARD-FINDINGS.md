@@ -1,5 +1,22 @@
 # Registre des constats du dashboard
 
+## Réconciliation du lot de correction — 2026-10-26
+
+| ID | Statut après correction | Preuve actuelle |
+|---|---|---|
+| DASH-001 | CLOSED_QA | `dashboard-scope.spec.ts` (7/7) et campagne réelle PostgreSQL/API : OPERATOR limité à ses projets affectés pour listes, recherche, mises à jour, activités, délais et tâches; ADMIN conserve la portée organisationnelle; aucune donnée de l'organisation B. |
+| DASH-002 | CLOSED_QA | `Promise.allSettled`, erreurs principale/partielles explicites, retry local et scénario navigateur de panne secondaire PASS. |
+| DASH-003 | CLOSED_QA | Source canonique retenue : `ProjectTask` affectée à l'acteur, non terminée et échue, filtrée par `projectAccessWhere(actor)` via `/projects/dashboard/late-tasks`. |
+| DASH-004 | CLOSED_QA | Résumé scalaire administrateur `activeOperatorCount`; identité inactive exclue et erreur affichée comme indisponible. |
+| DASH-005 | CLOSED_QA | Liens et boutons natifs; aucun `div[role=button]` résiduel dans les 12 configurations mesurées. |
+| DASH-006 | CLOSED_QA | Erreur principale accessible, KPI non trompeurs et nouvelle tentative. |
+| DASH-007 | PARTIAL_PRODUCT | Fraîcheur réelle affichée. Les définitions commerciales détaillées des KPI restent une amélioration produit non bloquante. |
+| DASH-008 | CLOSED_QA | 12/12 : 390×844, 768×1024, 1440×900 et 2560×1440, Classic/Glass Light/Glass Dark; aucun overflow global/composant et aucune erreur console critique. |
+| DASH-009 | CLOSED_QA | MFA réelle du lab; utilisateur inactif refusé; session persistée/F5 exercés dans la matrice. |
+| DASH-010 | CLOSED_QA_SCOPE | Navigation native du dashboard vérifiée; aucune prétention sur les actions métier des écrans de destination hors périmètre. |
+
+Preuves structurées et captures : `D:\CORO-QA\runs\org-dashboard\acceptance`. La preuve est synthétique et locale; la vérification production reste à effectuer après la release gouvernée.
+
 | ID | Catégorie | Gravité | Statut | Emplacement | Constat et preuve | Critère de recette |
 |---|---|---:|---|---|---|---|
 | DASH-001 | Sécurité / périmètre | Haute | FAIL | `projects.controller/service`, `activities.controller/service`, recherche du shell | Les endpoints secondaires prennent seulement `organizationId`, contrairement à `/projects` qui emploie `projectAccessWhere(actor)`. | Deux organisations et deux OPERATOR d'une même organisation : chaque widget, compteur et résultat de recherche ne contient que les projets autorisés; aucun identifiant étranger ni métadonnée annexe. |

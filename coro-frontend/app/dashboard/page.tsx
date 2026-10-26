@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuthStore } from '@/stores/auth.store';
 import AppLayout from '@/components/layout/AppLayout';
 import api from '@/lib/api';
@@ -60,6 +61,11 @@ export default function DashboardPage() {
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
   const [recurringToRenew, setRecurringToRenew] = useState<any[]>([]);
   const [mandateDelays, setMandateDelays] = useState<any[]>([]);
+  const [activeOperatorCount, setActiveOperatorCount] = useState<number | null>(null);
+  const [coreError, setCoreError] = useState(false);
+  const [zoneErrors, setZoneErrors] = useState<Record<string, boolean>>({});
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
+  const requestSequence = useRef(0);
 
   useEffect(() => {
     if (!isAuthenticated) router.push('/login');
@@ -72,32 +78,62 @@ export default function DashboardPage() {
   }, [isAuthenticated]);
 
   const fetchAll = async () => {
+    const sequence = ++requestSequence.current;
+    setLoading(true);
+    setCoreError(false);
+    setZoneErrors({});
     try {
-      const [projetsRes, updatesRes, approvalsRes, recurringRes, upcomingRes, delaysRes] = await Promise.all([
+      const admin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+      const results = await Promise.allSettled([
         api.get('/projects?limit=200'),
-        api.get('/projects/upcoming-updates').catch(() => ({ data: [] })),
-        api.get('/projects/pending-approval').catch(() => ({ data: [] })),
-        api.get('/activities/recurring-to-renew').catch(() => ({ data: [] })),
-        api.get('/activities/upcoming').catch(() => ({ data: [] })),
-        api.get('/notifications/mandate-delays').catch(() => ({ data: [] })),
+        api.get('/projects/upcoming-updates'),
+        admin ? api.get('/projects/pending-approval') : Promise.resolve({ data: [] }),
+        api.get('/activities/recurring-to-renew'),
+        api.get('/activities/upcoming'),
+        api.get('/notifications/mandate-delays'),
+        api.get('/projects/dashboard/late-tasks'),
+        admin ? api.get('/users/organization/dashboard-summary') : Promise.resolve({ data: null }),
       ]);
+      if (sequence !== requestSequence.current) return;
 
-      const allProjets = projetsRes.data?.projects || projetsRes.data || [];
-      setProjets(allProjets);
-      setUpdates(updatesRes.data || []);
-      setPendingApprovals(approvalsRes.data || []);
-      setRecurringToRenew(recurringRes.data || []);
-      setMandateDelays(delaysRes.data || []);
+      const errors: Record<string, boolean> = {};
+      const dataAt = (index: number, zone: string) => {
+        const result = results[index];
+        if (result.status === 'fulfilled') return result.value.data;
+        errors[zone] = true;
+        return [];
+      };
 
-      const upcomingFromApi = (upcomingRes.data || []).map((a: any) => ({
+      const projectsResult = results[0];
+      if (projectsResult.status === 'fulfilled') {
+        const data = projectsResult.value.data;
+        setProjets(data?.projects || data || []);
+        setLastUpdatedAt(new Date());
+      } else {
+        setProjets([]);
+        setCoreError(true);
+      }
+      setUpdates(dataAt(1, 'updates') || []);
+      setPendingApprovals(dataAt(2, 'approvals') || []);
+      setRecurringToRenew(dataAt(3, 'recurring') || []);
+      const upcoming = dataAt(4, 'upcoming') || [];
+      setMandateDelays(dataAt(5, 'delays') || []);
+      setLateTasks(dataAt(6, 'tasks') || []);
+      const summary = dataAt(7, 'team');
+      setActiveOperatorCount(summary?.activeOperatorCount ?? null);
+      setUpcomingActivities(upcoming.map((a: any) => ({
         ...a,
         projectName: a.project?.name || '—',
         clientName: a.project?.client?.name || '—',
         projectId: a.projectId,
-      }));
-      setUpcomingActivities(upcomingFromApi.slice(0, 10));
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+      })).slice(0, 10));
+      setZoneErrors(errors);
+    } catch (err) {
+      if (sequence === requestSequence.current) setCoreError(true);
+      console.error(err);
+    } finally {
+      if (sequence === requestSequence.current) setLoading(false);
+    }
   };
 
   if (!user) return null;
@@ -125,12 +161,13 @@ export default function DashboardPage() {
   const onboardingItems = [
         { label: 'Logo de l\'organisation téléversé', done: !!(user as any).companyLogoB64, path: '/settings' },
     { label: 'Informations entreprise complètes', done: !!((user as any).companyName && (user as any).companyPhone && (user as any).companyEmail), path: '/settings' },
-    { label: 'Au moins un conseiller dans l\'équipe', done: projets.length >= 0 && isAdmin, path: '/settings/team' },
+    { label: 'Au moins un conseiller actif dans l\'équipe', done: activeOperatorCount !== null && activeOperatorCount > 0, path: '/settings/team', unavailable: zoneErrors.team },
     { label: 'Premier client créé', done: projets.some(p => p.client), path: '/clients' },
     { label: 'Premier projet lancé', done: projets.length > 0, path: '/projects' },
   ];
   const onboardingDone = onboardingItems.filter(i => i.done).length;
   const onboardingComplete = onboardingDone === onboardingItems.length;
+  const hasPartialError = Object.keys(zoneErrors).length > 0;
 
   const kpis = [
     { label: 'Projets actifs',    value: projetsActifs, icon: 'folder' as KpiIconName, color: p.text('#C0392B'), bg: p.bg('#FDEDEC'), path: '/projects' },
@@ -149,7 +186,11 @@ export default function DashboardPage() {
             </p>
             <PageTitle
               subtitle={
-                upcomingActivities.length > 0
+                loading
+                  ? 'Chargement des données du tableau de bord'
+                  : zoneErrors.upcoming
+                  ? 'Les activités sont temporairement indisponibles'
+                  : upcomingActivities.length > 0
                   ? `${upcomingActivities.length} activité${upcomingActivities.length > 1 ? 's' : ''} prévue${upcomingActivities.length > 1 ? 's' : ''} dans les 30 prochains jours`
                   : 'Aucune activité prévue dans les 30 prochains jours'
               }
@@ -172,6 +213,40 @@ export default function DashboardPage() {
         </button>
       </div>
 
+      {coreError && (
+        <div role="alert" className="mb-4 rounded-md p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+          style={{ backgroundColor: p.bg('#FDEDEC'), border: `1px solid ${p.line('#F1948A')}`, color: p.text('#922B21') }}>
+          <div>
+            <p className="text-sm font-bold">Données principales indisponibles</p>
+            <p className="text-xs mt-1">Les compteurs et les projets ne sont pas affichés comme vides. Réessayez lorsque le service est disponible.</p>
+          </div>
+          <button type="button" onClick={fetchAll} className="text-sm font-semibold px-3 py-2 rounded self-start sm:self-auto"
+            style={{ backgroundColor: p.bg('#FFFFFF'), border: `1px solid ${p.line('#C0392B')}` }}>
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      {!coreError && hasPartialError && (
+        <div role="status" className="mb-4 rounded-md p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+          style={{ backgroundColor: p.bg('#FEF9E7'), border: `1px solid ${p.line('#FAD7A0')}`, color: p.text('#7D6608') }}>
+          <div>
+            <p className="text-sm font-bold">Certaines informations sont temporairement indisponibles</p>
+            <p className="text-xs mt-1">Les zones concernées affichent un état explicite; les autres données restent utilisables.</p>
+          </div>
+          <button type="button" onClick={fetchAll} className="text-sm font-semibold px-3 py-2 rounded self-start sm:self-auto"
+            style={{ backgroundColor: p.bg('#FFFFFF'), border: `1px solid ${p.line('#F39C12')}` }}>
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      {!loading && lastUpdatedAt && !coreError && (
+        <p className="text-xs mb-4" style={{ color: p.text('#6C757D') }}>
+          Actualisé à {lastUpdatedAt.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}
+        </p>
+      )}
+
       {/* ── Checklist onboarding ── */}
       {isAdmin && !onboardingComplete && (
         <div className={`mb-6 rounded-md overflow-hidden${gc}`} style={{ border: `1px solid ${p.line('#AED6F1')}`, backgroundColor: p.bg('#EBF5FB') }}>
@@ -192,15 +267,15 @@ export default function DashboardPage() {
           </div>
           <div className="px-4 sm:px-5 py-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
             {onboardingItems.map((item, i) => (
-              <div key={i} onClick={() => !item.done && router.push(item.path)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors"
-                style={{ backgroundColor: item.done ? p.bg('#EAFAF1') : p.bg('#FFFFFF'), border: `1px solid ${item.done ? p.line('#A9DFBF') : p.line('#DEE2E6')}`, cursor: item.done ? 'default' : 'pointer' }}
-                onMouseEnter={e => { if (!item.done) e.currentTarget.style.borderColor = p.line('#2980B9'); }}
-                onMouseLeave={e => { if (!item.done) e.currentTarget.style.borderColor = p.line('#DEE2E6'); }}>
-                <span style={{ fontSize: 16, flexShrink: 0 }}>{item.done ? '✅' : '○'}</span>
+              <button key={i} type="button" disabled={item.done || item.unavailable}
+                onClick={() => router.push(item.path)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-left w-full disabled:cursor-default"
+                style={{ backgroundColor: item.done ? p.bg('#EAFAF1') : p.bg('#FFFFFF'), border: `1px solid ${item.done ? p.line('#A9DFBF') : p.line('#DEE2E6')}` }}>
+                <span style={{ fontSize: 16, flexShrink: 0 }}>{item.done ? '✅' : item.unavailable ? '⚠️' : '○'}</span>
                 <span className="text-xs font-medium" style={{ color: item.done ? p.text('#27AE60') : p.text('#2C3E50') }}>{item.label}</span>
-                {!item.done && <span className="text-xs ml-auto flex-shrink-0" style={{ color: p.text('#2980B9') }}>→</span>}
-              </div>
+                {item.unavailable && <span className="text-xs ml-auto" style={{ color: p.text('#C0392B') }}>Indisponible</span>}
+                {!item.done && !item.unavailable && <span className="text-xs ml-auto flex-shrink-0" style={{ color: p.text('#2980B9') }}>→</span>}
+              </button>
             ))}
           </div>
         </div>
@@ -209,9 +284,8 @@ export default function DashboardPage() {
       {/* ── KPIs ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
         {kpis.map(kpi => (
-          <div key={kpi.label}
-            onClick={() => router.push(kpi.path)}
-            className={`rounded-md p-4 sm:p-5 cursor-pointer transition-all min-w-0${gc}${glass ? ' cg-lift' : ''}`}
+          <Link key={kpi.label} href={kpi.path}
+            className={`rounded-md p-4 sm:p-5 transition-all min-w-0${gc}${glass ? ' cg-lift' : ''}`}
             style={{ backgroundColor: p.bg('#FFFFFF'), border: `1px solid ${p.line('#E9ECEF')}` }}
             onMouseEnter={e => { if (glass) return; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; e.currentTarget.style.borderColor = p.line('#CED4DA'); }}
             onMouseLeave={e => { if (glass) return; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = p.line('#E9ECEF'); }}>
@@ -224,7 +298,7 @@ export default function DashboardPage() {
                 <div className="min-w-0">
                   <p className="text-xs font-medium mb-0.5" style={{ color: p.text('#6C757D') }}>{kpi.label}</p>
                   <p className="text-3xl font-black leading-none" style={{ color: kpi.color }}>
-                    {loading ? '…' : kpi.value}
+                    {loading ? '…' : coreError ? '—' : kpi.value}
                   </p>
                 </div>
               </div>
@@ -232,11 +306,11 @@ export default function DashboardPage() {
               <>
                 <p className="text-xs font-medium mb-1" style={{ color: p.text('#6C757D') }}>{kpi.label}</p>
                 <p className="text-3xl font-black" style={{ color: kpi.color }}>
-                  {loading ? '…' : kpi.value}
+                  {loading ? '…' : coreError ? '—' : kpi.value}
                 </p>
               </>
             )}
-          </div>
+          </Link>
         ))}
       </div>
 
@@ -268,9 +342,8 @@ export default function DashboardPage() {
                 </p>
                 <div className="space-y-2">
                   {pendingApprovals.map(approval => (
-                    <div key={approval.id}
-                      onClick={() => router.push(`/projects/${approval.id}`)}
-                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded cursor-pointer transition-colors"
+                    <Link key={approval.id} href={`/projects/${approval.id}`}
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded transition-colors"
                       style={{ backgroundColor: p.bg('#FFFFFF'), border: `1px solid ${p.line('#F1948A')}` }}
                       onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#FEF9E7')}
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = p.bg('#FFFFFF')}>
@@ -281,7 +354,7 @@ export default function DashboardPage() {
                         <span className="text-xs break-words" style={{ color: p.text('#6C757D') }}>— {approval.client?.name}</span>
                       </div>
                       <span className="text-xs font-medium" style={{ color: p.text('#C0392B') }}>Réviser →</span>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -305,9 +378,8 @@ export default function DashboardPage() {
                     .map(d => {
                       const isUrgent = ['DEPASSE', 'CRITIQUE'].includes(d.level);
                       return (
-                        <div key={d.mandateId}
-                          onClick={() => router.push(`/projects/${d.projectId}/mandate`)}
-                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded cursor-pointer transition-colors"
+                        <Link key={d.mandateId} href={`/projects/${d.projectId}/mandate`}
+                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded transition-colors"
                           style={{ backgroundColor: p.bg('#FFFFFF'), border: `1px solid ${isUrgent ? p.line('#F1948A') : p.line('#FAD7A0')}` }}
                           onMouseEnter={e => e.currentTarget.style.backgroundColor = isUrgent ? p.bg('#FDEDEC') : p.bg('#FEF9E7')}
                           onMouseLeave={e => e.currentTarget.style.backgroundColor = p.bg('#FFFFFF')}>
@@ -332,7 +404,7 @@ export default function DashboardPage() {
                               {new Date(d.dateLimite).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' })}
                             </p>
                           </div>
-                        </div>
+                        </Link>
                       );
                     })}
                 </div>
@@ -348,9 +420,8 @@ export default function DashboardPage() {
                 </p>
                 <div className="space-y-2">
                   {updates.filter(u => u.level === 'URGENT').map(u => (
-                    <div key={u.id}
-                      onClick={() => router.push(`/projects/${u.id}`)}
-                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded cursor-pointer"
+                    <Link key={u.id} href={`/projects/${u.id}`}
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded"
                       style={{ backgroundColor: p.bg('#FFFFFF'), border: `1px solid ${p.line('#F1948A')}` }}
                       onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#FEF9E7')}
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = p.bg('#FFFFFF')}>
@@ -365,7 +436,7 @@ export default function DashboardPage() {
                       <p className="text-sm font-bold w-full sm:w-auto sm:flex-shrink-0 text-left sm:text-right" style={{ color: p.text('#C0392B') }}>
                         {u.monthsAgo} mois ⚠
                       </p>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -380,9 +451,8 @@ export default function DashboardPage() {
                 </p>
                 <div className="space-y-2">
                   {recurringToRenew.map(a => (
-                    <div key={a.id}
-                      onClick={() => router.push(`/projects/${a.projectId}/activities`)}
-                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded cursor-pointer transition-colors"
+                    <Link key={a.id} href={`/projects/${a.projectId}/activities`}
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded transition-colors"
                       style={{ backgroundColor: p.bg('#FFFFFF'), border: `1px solid ${p.line('#FAD7A0')}` }}
                       onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#FFFBF0')}
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = p.bg('#FFFFFF')}>
@@ -393,7 +463,7 @@ export default function DashboardPage() {
                       <p className="text-sm font-bold w-full sm:w-auto sm:flex-shrink-0 text-left sm:text-right" style={{ color: p.text('#F39C12') }}>
                         {a.monthsAgo} mois
                       </p>
-                    </div>
+                    </Link>
                   ))}
                 </div>
                 <p className="text-xs mt-3" style={{ color: p.text('#ADB5BD') }}>
@@ -436,6 +506,11 @@ export default function DashboardPage() {
           </div>
           {loading ? (
             <p className="text-sm text-center py-8 animate-pulse" style={{ color: p.text('#ADB5BD') }}>Chargement...</p>
+          ) : zoneErrors.upcoming ? (
+            <div role="alert" className="text-center py-8 px-4">
+              <p className="text-sm font-medium" style={{ color: p.text('#C0392B') }}>Activités indisponibles</p>
+              <button type="button" onClick={fetchAll} className="text-xs underline mt-2" style={{ color: p.text('#2980B9') }}>Réessayer</button>
+            </div>
           ) : upcomingActivities.length === 0 ? (
             <div className="text-center py-10">
               <p className="text-2xl mb-2">📅</p>
@@ -448,9 +523,8 @@ export default function DashboardPage() {
                 const label = activity.customLabel || activity.label;
                 const daysLeft = Math.ceil((new Date(activity.scheduledDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
                 return (
-                  <div key={activity.id}
-                    onClick={() => router.push(`/projects/${activity.projectId}/activities`)}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 sm:px-5 py-3 cursor-pointer transition-colors"
+                  <Link key={activity.id} href={`/projects/${activity.projectId}/activities`}
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 sm:px-5 py-3 transition-colors"
                     style={{ borderBottom: idx < upcomingActivities.length - 1 ? `1px solid ${p.line('#F8F9FA')}` : 'none' }}
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#F8F9FA')}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
@@ -470,7 +544,7 @@ export default function DashboardPage() {
                         {status.label}
                       </span>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
@@ -485,6 +559,11 @@ export default function DashboardPage() {
           </div>
           {loading ? (
             <p className="text-sm text-center py-8 animate-pulse" style={{ color: p.text('#ADB5BD') }}>Chargement...</p>
+          ) : zoneErrors.tasks ? (
+            <div role="alert" className="text-center py-8 px-4">
+              <p className="text-sm font-medium" style={{ color: p.text('#C0392B') }}>Tâches indisponibles</p>
+              <button type="button" onClick={fetchAll} className="text-xs underline mt-2" style={{ color: p.text('#2980B9') }}>Réessayer</button>
+            </div>
           ) : lateTasks.length === 0 ? (
             <div className="text-center py-10">
               <p className="text-2xl mb-2">✅</p>
@@ -493,9 +572,8 @@ export default function DashboardPage() {
           ) : (
             <div>
               {lateTasks.map((task, idx) => (
-                <div key={task.id}
-                  onClick={() => router.push(`/projects/${task.projectId}/mandate`)}
-                  className="px-4 sm:px-5 py-3 cursor-pointer transition-colors"
+                <Link key={task.id} href={`/projects/${task.projectId}/mandate`}
+                  className="block px-4 sm:px-5 py-3 transition-colors"
                   style={{ borderBottom: idx < lateTasks.length - 1 ? `1px solid ${p.line('#F8F9FA')}` : 'none' }}
                   onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#FEF9E7')}
                   onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
@@ -511,7 +589,7 @@ export default function DashboardPage() {
                       </span>
                     )}
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
@@ -532,9 +610,8 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-2">
             {updates.filter(u => u.level === 'AVERTISSEMENT').map(u => (
-              <div key={u.id}
-                onClick={() => router.push(`/projects/${u.id}`)}
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded cursor-pointer transition-colors"
+              <Link key={u.id} href={`/projects/${u.id}`}
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded transition-colors"
                 style={{ backgroundColor: p.bg('#FEF9E7'), border: `1px solid ${p.line('#FAD7A0')}` }}
                 onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
                 onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
@@ -549,7 +626,7 @@ export default function DashboardPage() {
                 <p className="text-sm font-bold w-full sm:w-auto sm:flex-shrink-0 text-left sm:text-right" style={{ color: p.text('#F39C12') }}>
                   {u.monthsAgo} mois ○
                 </p>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -599,6 +676,11 @@ export default function DashboardPage() {
     >
       Chargement...
     </p>
+  ) : coreError ? (
+    <div role="alert" className="text-center py-10 px-4">
+      <p className="text-sm font-medium" style={{ color: p.text('#C0392B') }}>Projets indisponibles</p>
+      <button type="button" onClick={fetchAll} className="text-xs underline mt-2" style={{ color: p.text('#2980B9') }}>Réessayer</button>
+    </div>
   ) : projetsRecents.length === 0 ? (
     <div className="text-center py-12">
       <p
@@ -618,12 +700,10 @@ export default function DashboardPage() {
             statusConfig['DRAFT'];
 
           return (
-            <div
+            <Link
               key={projet.id}
-              onClick={() =>
-                router.push(`/projects/${projet.id}`)
-              }
-              className="p-4 cursor-pointer transition-colors"
+              href={`/projects/${projet.id}`}
+              className="block p-4 transition-colors"
               style={{
                 borderBottom:
                   idx < projetsRecents.length - 1
@@ -726,7 +806,7 @@ export default function DashboardPage() {
                   />
                 </div>
               </div>
-            </div>
+            </Link>
           );
         })}
       </div>
@@ -771,10 +851,7 @@ export default function DashboardPage() {
               return (
                 <tr
                   key={projet.id}
-                  onClick={() =>
-                    router.push(`/projects/${projet.id}`)
-                  }
-                  className="cursor-pointer transition-colors"
+                  className="transition-colors"
                   style={{
                     borderBottom:
                       idx < projetsRecents.length - 1
@@ -794,7 +871,9 @@ export default function DashboardPage() {
                     className="px-4 py-3 font-medium"
                     style={{ color: p.text('#2C3E50') }}
                   >
-                    {projet.name}
+                    <Link href={`/projects/${projet.id}`} className="underline-offset-2 hover:underline focus:underline">
+                      {projet.name}
+                    </Link>
                   </td>
 
                   <td
