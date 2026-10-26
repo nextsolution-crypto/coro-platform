@@ -1,0 +1,77 @@
+name: Backend PR Checks
+
+# Validation only: no publication, deployment, production secret or provider call.
+on:
+  pull_request:
+    paths:
+      - "coro-backend/**"
+      - ".github/workflows/backend-pr-checks.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  DATABASE_URL: postgresql://ci_validation:ci_validation@127.0.0.1:5432/ci_validation
+
+jobs:
+  backend-checks:
+    name: Backend security checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: coro-backend
+    steps:
+      - name: Checkout (read-only, no persisted credentials)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: coro-backend/package-lock.json
+
+      - name: Install dependencies (lockfile)
+        run: npm ci
+
+      - name: TypeScript
+        run: npx tsc --noEmit --incremental false
+
+      - name: Runtime, authentication and email security tests
+        run: >-
+          npx jest --runInBand
+          runtime.config.spec.ts
+          client-portal/client-magic-link.spec.ts
+          client-portal/client-password-reset.spec.ts
+          client-portal/email.service.spec.ts
+
+      - name: Prisma schema validation
+        run: npx prisma validate
+
+      - name: Production build
+        run: npm run build
+
+      - name: Reject high-confidence secrets in the PR patch
+        working-directory: .
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --unified=0 "$BASE_SHA"...HEAD -- . ':!**/package-lock.json' \
+            | sed -n 's/^+//p' \
+            | if grep -E '(-----BEGIN ([A-Z ]+ )?PRIVATE KEY-----|xkeysib-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16})'; then
+                echo 'A high-confidence credential pattern is present in the PR patch.' >&2
+                exit 1
+              else
+                exit 0
+              fi
