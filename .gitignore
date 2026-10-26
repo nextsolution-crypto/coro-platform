@@ -6,6 +6,7 @@ node_modules
 # Build outputs
 dist
 .next
+.next-*
 *.tsbuildinfo
 
 # Environment variables — JAMAIS dans Git
@@ -35,6 +36,7 @@ Thumbs.db
 
 # Tests
 coverage
+qa-evidence/
 
 # Temp
 *.tmp
