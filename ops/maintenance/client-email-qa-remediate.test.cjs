@@ -37,11 +37,11 @@ test('fails closed on reserved QA identifier collisions', () => {
 });
 
 test('creates a five-minute HS256 proof token without external JWT options', () => {
-  const token = signHs256({ sub: 'qa-user', sessionVersion: 0 }, 'test-secret', 1000);
+  const token = signHs256({ type: 'CLIENT', sub: 'qa-user', sessionVersion: 0 }, 'test-secret', 1000);
   const [header, payload, signature] = token.split('.');
   assert.deepEqual(JSON.parse(Buffer.from(header, 'base64url')), { alg: 'HS256', typ: 'JWT' });
   assert.deepEqual(JSON.parse(Buffer.from(payload, 'base64url')), {
-    sub: 'qa-user', sessionVersion: 0, iat: 1000, exp: 1300,
+    type: 'CLIENT', sub: 'qa-user', sessionVersion: 0, iat: 1000, exp: 1300,
   });
   assert.ok(signature.length > 20);
 });
