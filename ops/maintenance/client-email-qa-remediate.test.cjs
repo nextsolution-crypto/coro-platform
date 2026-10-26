@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { assertApproval, assertAccidentalFixture, assertQaCollision } = require('./client-email-qa-remediate.cjs');
+const { assertApproval, assertAccidentalFixture, assertQaCollision, signHs256 } = require('./client-email-qa-remediate.cjs');
 
 const client = {
   id: '3a4fa159-7957-4240-b9c0-1194d034c654', name: 'CORO QA V1 EMAIL 2026-10-26',
@@ -34,4 +34,14 @@ test('fails closed on reserved QA identifier collisions', () => {
   assert.doesNotThrow(() => assertQaCollision(null, 'expected', 'QA organization'));
   assert.doesNotThrow(() => assertQaCollision({ name: 'expected' }, 'expected', 'QA organization'));
   assert.throws(() => assertQaCollision({ name: 'other' }, 'expected', 'QA organization'), /collision/);
+});
+
+test('creates a five-minute HS256 proof token without external JWT options', () => {
+  const token = signHs256({ sub: 'qa-user', sessionVersion: 0 }, 'test-secret', 1000);
+  const [header, payload, signature] = token.split('.');
+  assert.deepEqual(JSON.parse(Buffer.from(header, 'base64url')), { alg: 'HS256', typ: 'JWT' });
+  assert.deepEqual(JSON.parse(Buffer.from(payload, 'base64url')), {
+    sub: 'qa-user', sessionVersion: 0, iat: 1000, exp: 1300,
+  });
+  assert.ok(signature.length > 20);
 });
