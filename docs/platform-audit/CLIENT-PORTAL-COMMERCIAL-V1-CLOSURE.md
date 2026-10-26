@@ -13,7 +13,7 @@ Destinataire autorisé : `info@getcoro.io`. Identités et données métier enti�
 | Récupération | Demande anti-énumération, réception, ouverture, nouveau secret accepté; ancienne session révoquée à la requête suivante; ancien secret refusé; nouvelle connexion et MFA réussies | VALIDÉ EN PRODUCTION |
 | Magic link | Réception, ouverture, MFA et session réussies; seconde ouverture refusée « lien invalide ou expiré » | VALIDÉ EN PRODUCTION |
 
-Le premier ClientUser créé par erreur (`06213348-afd5-4194-867e-d37d899459a4`) a été désactivé, ses sessions révoquées et ses liens invalidés sans modifier l’identité interne `User` homonyme. La preuve idempotente est le run `40362002143` (PASS). Le compte final isolé (`7a366320-0505-4280-a915-e3e784d22407`) appartenait uniquement à l’organisation, au client et au bâtiment QA réservés; aucune donnée de bâtiment réel n’a été consultée. Sa neutralisation finale est assurée par le workflow `Governed Client Email QA Finalization` et doit être reliée ici à son run réussi.
+Le premier ClientUser créé par erreur (`06213348-afd5-4194-867e-d37d899459a4`) a été désactivé, ses sessions révoquées et ses liens invalidés sans modifier l’identité interne `User` homonyme. La preuve idempotente est le run `40362002143` (PASS). Le compte final isolé (`7a366320-0505-4280-a915-e3e784d22407`) appartenait uniquement à l’organisation, au client et au bâtiment QA réservés; aucune donnée de bâtiment réel n’a été consultée. Sa neutralisation finale est prouvée par le run `40370002846` (PASS) : compte désactivé, version de session incrémentée, liens magic/reset actifs à zéro et appareils de confiance à zéro. Le premier run `40368360670` a échoué avant mutation sur un nom de relation Prisma incorrect; la correction testée a été livrée par la PR #95.
 
 Provisionnement gouverné : PR #92 et #93, SHA `07d72ee3d9b51da9215710db0cfd45ec230a5b2b`, run `40364440998` PASS.
 
@@ -31,7 +31,15 @@ Provisionnement gouverné : PR #92 et #93, SHA `07d72ee3d9b51da9215710db0cfd45ec
 
 ## Autorisation de création client
 
-Le contrôle ciblé a démontré un défaut exploitable : `POST /clients` était accessible à tout `User` interne authentifié et actif. Un `OPERATOR` pouvait donc provoquer la création d’un client, d’un `CLIENT_CORPORATE` et d’une invitation. Le correctif impose `ADMIN` ou `SUPER_ADMIN` avant l’appel du service. L’organisation est toujours dérivée du jeton serveur; le rôle du contact demeure le rôle canonique `CLIENT_CORPORATE`. Les tests prouvent qu’un refus n’appelle pas le service et ne produit donc aucun client, compte, invitation ou notification.
+Le contrôle ciblé a démontré un défaut exploitable : `POST /clients` était accessible à tout `User` interne authentifié et actif. Un `OPERATOR` pouvait donc provoquer la création d’un client, d’un `CLIENT_CORPORATE` et d’une invitation. Le correctif impose `ADMIN` ou `SUPER_ADMIN` avant l’appel du service. L’organisation est toujours dérivée du jeton serveur; le rôle du contact demeure le rôle canonique `CLIENT_CORPORATE`. Les tests autorisés/refusés prouvent qu’un refus n’appelle pas le service et ne produit donc aucun client, compte, invitation ou notification. Correction : PR #94, complétée par la PR #95 pour le finalizer, SHA déployé `e49603b78a71532474fce7f26254313e9d49a0e5`.
+
+## Livraison et inspection finales
+
+- CI main : run `40369446986`, SUCCESS.
+- Release gouvernée : run `40370210050`, SUCCESS, SHA exact `e49603b78a71532474fce7f26254313e9d49a0e5`.
+- Inspection post-release : run `40372166751`, `inspectionExecution: PASS`, `assessment: GO`, `releaseReadiness: GO`.
+- Production : quatre services applicatifs actifs sur des images immuables, sans redémarrage; PostgreSQL `16.15`, 155 migrations, head `20261109010000_sentinelle_presence_sessions`, aucune migration échouée.
+- Récupération : sauvegarde `REMOTE_VERIFIED`, restauration `RESTORE_VERIFIED`, quatre images de rollback disponibles et verrou de déploiement libre.
 
 ## Conditions et exclusions V1
 
