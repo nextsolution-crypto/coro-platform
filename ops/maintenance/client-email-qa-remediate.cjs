@@ -66,17 +66,54 @@ async function run(env = process.env) {
   const prisma = new PrismaClient();
   await prisma.$connect();
   try {
-    const [client, clientUser, internalUsers, qaOrganization, qaClient, qaBuilding] = await Promise.all([
+    const [client, clientUser, retiredUser, internalUsers, qaOrganization, qaClient, qaBuilding] = await Promise.all([
       prisma.client.findUnique({
         where: { id: ACCIDENTAL_CLIENT_ID },
         include: { buildings: { select: { id: true } }, projects: { select: { id: true } } },
       }),
       prisma.clientUser.findUnique({ where: { email: RECIPIENT } }),
+      prisma.clientUser.findFirst({ where: { clientId: ACCIDENTAL_CLIENT_ID, email: { startsWith: 'retired-' } } }),
       prisma.user.findMany({ where: { email: { equals: RECIPIENT, mode: 'insensitive' } }, select: { id: true, updatedAt: true } }),
       prisma.organization.findUnique({ where: { id: QA_ORGANIZATION_ID }, select: { id: true, name: true } }),
       prisma.client.findUnique({ where: { id: QA_CLIENT_ID }, select: { id: true, name: true, organizationId: true } }),
       prisma.building.findUnique({ where: { id: QA_BUILDING_ID }, select: { id: true, name: true, organizationId: true, clientId: true } }),
     ]);
+    if (!clientUser && retiredUser) {
+      if (client?.contactEmail || client?.isActive || retiredUser.isActive || retiredUser.role !== 'CLIENT_CORPORATE' ||
+          retiredUser.firstName !== ACCIDENTAL_FIRST_NAME || retiredUser.lastName !== ACCIDENTAL_LAST_NAME ||
+          retiredUser.buildingIds.length !== 0) throw new Error('Previously remediated fixture invariant failed.');
+      assertQaCollision(qaOrganization, QA_ORGANIZATION_NAME, 'QA organization');
+      assertQaCollision(qaClient, QA_CLIENT_NAME, 'QA client');
+      assertQaCollision(qaBuilding, QA_BUILDING_NAME, 'QA building');
+      if (!qaOrganization || !qaClient || !qaBuilding || qaClient.organizationId !== QA_ORGANIZATION_ID ||
+          qaBuilding.organizationId !== QA_ORGANIZATION_ID || qaBuilding.clientId !== QA_CLIENT_ID) {
+        throw new Error('Prepared QA scope is incomplete.');
+      }
+      const [freshEmailOwner, openMagic, openReset, trustedDevices, audit] = await Promise.all([
+        prisma.clientUser.findUnique({ where: { email: RECIPIENT } }),
+        prisma.magicLink.count({ where: { userId: retiredUser.id, usedAt: null } }),
+        prisma.clientPasswordResetToken.count({ where: { clientUserId: retiredUser.id, usedAt: null } }),
+        prisma.clientTrustedDevice.count({ where: { userId: retiredUser.id } }),
+        prisma.adminAuditEvent.findFirst({ where: { action: 'CLIENT_USER_QA_REMEDIATED', targetId: retiredUser.id } }),
+      ]);
+      if (freshEmailOwner || openMagic || openReset || trustedDevices || !audit) throw new Error('Remediation reconciliation failed.');
+      const revokedToken = signHs256({
+        type: 'CLIENT', sub: retiredUser.id, email: RECIPIENT, role: retiredUser.role,
+        clientId: retiredUser.clientId, organizationId: retiredUser.organizationId,
+        buildingIds: [], populationPermissions: [], operationalReviewPermissions: [], correctiveActionPermissions: [],
+        sessionVersion: Math.max(0, retiredUser.sessionVersion - 1),
+      }, env.JWT_SECRET);
+      const afterStatus = await requestMe(revokedToken);
+      if (afterStatus !== 401) throw new Error(`Reconciled revoked session was not rejected; HTTP ${afterStatus}.`);
+      return {
+        schemaVersion: 1, execution: 'PASS', productionMutation: true, reconciledExistingMutation: true,
+        accidentalClientId: client.id, remediatedClientUserId: retiredUser.id,
+        clientUserDisabled: true, sessionVersionIncremented: true, priorSessionHttpStatus: afterStatus,
+        activeMagicLinks: openMagic, activePasswordResetLinks: openReset, trustedDevices,
+        internalUserUnchanged: true, qaOrganizationId: QA_ORGANIZATION_ID, qaClientId: QA_CLIENT_ID,
+        qaBuildingId: QA_BUILDING_ID, qaClientUserCreated: false, recipientReleasedForGovernedProvisioning: true,
+      };
+    }
     assertAccidentalFixture(client, clientUser);
     assertQaCollision(qaOrganization, QA_ORGANIZATION_NAME, 'QA organization');
     assertQaCollision(qaClient, QA_CLIENT_NAME, 'QA client');

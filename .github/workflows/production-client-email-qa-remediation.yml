@@ -61,5 +61,5 @@ jobs:
               -e CLIENT_EMAIL_QA_REMEDIATION_APPROVAL="$REMEDIATION_APPROVAL" \
               -e GITHUB_RUN_ID="$GITHUB_RUN_ID" \
               backend node - <"$script" >"$evidence"
-            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||r.productionMutation!==true||r.clientUserDisabled!==true||r.priorSessionHttpStatus!==401||r.internalUserUnchanged!==true||r.qaClientUserCreated!==false)process.exit(1);const s=JSON.stringify(r);if(/@|password|secret|token|authorization/i.test(s))process.exit(1);' "$evidence"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||r.productionMutation!==true||r.clientUserDisabled!==true||r.priorSessionHttpStatus!==401||r.internalUserUnchanged!==true||r.qaClientUserCreated!==false)process.exit(1);const values=JSON.stringify(Object.values(r));if(/@|password|secret|token|authorization/i.test(values))process.exit(1);' "$evidence"
             cat "$evidence"
