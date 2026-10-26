@@ -58,12 +58,14 @@ export default function BuildingsPage() {
           <p style={{ margin: 0, color: '#ADB5BD', fontSize: 15 }}>Aucun bâtiment associé à votre compte.</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: 16 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
           {buildings.map((b: any) => (
             <div key={b.id} style={{
               backgroundColor: '#FFFFFF', borderRadius: 12,
               border: '1px solid #E9ECEF', overflow: 'hidden',
               boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+              flex: '1 1 340px', minWidth: 0, maxWidth: 445,
+              width: '100%', boxSizing: 'border-box',
             }}>
               {/* Photo ou placeholder */}
               {b.photoBase64 ? (
