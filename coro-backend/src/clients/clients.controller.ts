@@ -3,6 +3,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { ClientsService } from './clients.service';
 import { UpdateClientUserOperationalPermissionsDto } from './dto/update-client-user-operational-permissions.dto';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
+import { requireTenantAdmin } from '../auth/work-management-access';
 
 @Controller('clients')
 @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
@@ -54,6 +55,7 @@ export class ClientsController {
 
   @Post()
   create(@Body() body: any, @Request() req: any) {
+    requireTenantAdmin(req.user);
     return this.clientsService.create({ ...body, organizationId: req.user.organizationId });
   }
 

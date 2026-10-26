@@ -1,0 +1,55 @@
+name: Governed Client Email QA Finalization
+on:
+  workflow_dispatch:
+    inputs:
+      finalization_approval:
+        description: Exact approval token
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - run: |
+          test '${{ inputs.finalization_approval }}' = FINALIZE_CLIENT_EMAIL_QA_2026_10_26
+          node --test ops/maintenance/client-email-qa-finalize.test.cjs
+  finalize:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          FINALIZATION_APPROVAL: ${{ inputs.finalization_approval }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,FINALIZATION_APPROVAL,GITHUB_RUN_ID
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            script="$(mktemp /tmp/coro-client-email-qa-finalize.XXXXXX.cjs)"
+            evidence="$(mktemp /tmp/coro-client-email-qa-finalize.XXXXXX.json)"
+            trap 'rm -f -- "$script" "$evidence"' EXIT
+            exec 9>/run/lock/coro-production-deployment.lock
+            flock -n 9
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
+            git -C "$repo" show "$SOURCE_SHA:ops/maintenance/client-email-qa-finalize.cjs" >"$script"
+            systemctl start coro-db-backup.service
+            test "$(systemctl show -p Result --value coro-db-backup.service)" = success
+            cd "$repo"
+            docker compose exec -T -e CLIENT_EMAIL_QA_FINALIZE_RUN=true -e CLIENT_EMAIL_QA_FINALIZE_APPROVAL="$FINALIZATION_APPROVAL" -e GITHUB_RUN_ID="$GITHUB_RUN_ID" backend node - <"$script" >"$evidence"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.execution!=="PASS"||!r.disabled||r.activeMagicLinks||r.activePasswordResetLinks||r.trustedDevices)process.exit(1);' "$evidence"
+            cat "$evidence"
