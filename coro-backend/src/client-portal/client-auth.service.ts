@@ -16,9 +16,14 @@ import { MfaDeliveryService } from '../auth/mfa-delivery.service';
 const RESET_LIFETIME_MS = 30 * 60 * 1000;
 const RESET_WINDOW_MS = 15 * 60 * 1000;
 const RESET_WINDOW_LIMIT = 3;
+const MAGIC_LINK_LIFETIME_MS = 15 * 60 * 1000;
 const RESET_RESPONSE = {
   message:
     'Si un compte actif correspond à cette adresse, un lien de réinitialisation vous sera envoyé.',
+};
+const MAGIC_LINK_RESPONSE = {
+  message:
+    'Si un compte actif correspond à cette adresse, un lien de connexion vous sera envoyé.',
 };
 const INVALID_RESET =
   'Ce lien de réinitialisation est invalide ou n’est plus disponible.';
@@ -62,6 +67,15 @@ export class ClientAuthService {
       mfaVerifiedAt: mfaVerifiedAt?.toISOString() ?? null,
       type: 'CLIENT',
     });
+  }
+
+  private clientPortalUrl(path: string): string {
+    const configured = process.env.CLIENT_PORTAL_PUBLIC_URL?.trim();
+    const base =
+      configured && /^https?:\/\//i.test(configured)
+        ? configured.replace(/\/$/, '')
+        : 'https://client.getcoro.io';
+    return `${base}${path}`;
   }
 
   async getCurrentUser(clientUserId: string, organizationId: string) {
@@ -265,7 +279,10 @@ export class ClientAuthService {
       where: { id: clientUserId, isActive: true },
       select: { password: true, organizationId: true },
     });
-    if (!current || !(await bcrypt.compare(currentPassword, current.password))) {
+    if (
+      !current ||
+      !(await bcrypt.compare(currentPassword, current.password))
+    ) {
       throw new UnauthorizedException('Le mot de passe actuel est invalide.');
     }
     if (await bcrypt.compare(newPassword, current.password)) {
@@ -295,7 +312,9 @@ export class ClientAuthService {
           mfaCodeExpiry: null,
         },
       });
-      await tx.clientTrustedDevice.deleteMany({ where: { userId: clientUserId } });
+      await tx.clientTrustedDevice.deleteMany({
+        where: { userId: clientUserId },
+      });
       await tx.magicLink.updateMany({
         where: { userId: clientUserId, usedAt: null },
         data: { usedAt: new Date() },
@@ -362,13 +381,25 @@ export class ClientAuthService {
         return true;
       });
       if (created) {
-        const resetUrl = `https://client.getcoro.io/reset-password?token=${encodeURIComponent(rawToken)}`;
+        const resetUrl = this.clientPortalUrl(
+          `/reset-password?token=${encodeURIComponent(rawToken)}`,
+        );
         const sent = await this.emailService.sendClientPasswordReset({
           toEmail: clientUser.email,
           toName: clientUser.firstName,
           resetUrl,
         });
-        if (!sent.success) this.logger.warn('[CLIENT-AUTH] Echec envoi reset');
+        if (!sent.success) {
+          await this.prisma.clientPasswordResetToken.updateMany({
+            where: {
+              tokenHash,
+              clientUserId: clientUser.id,
+              usedAt: null,
+            },
+            data: { usedAt: new Date() },
+          });
+          this.logger.warn('[CLIENT-AUTH] Echec envoi reset');
+        }
       }
     } catch {
       this.logger.warn('[CLIENT-AUTH] Demande reset non traitee');
@@ -440,13 +471,69 @@ export class ClientAuthService {
   async generateMagicLink(clientUserId: string): Promise<string> {
     const token = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72h
+    const expiresAt = new Date(Date.now() + MAGIC_LINK_LIFETIME_MS);
 
     await this.prisma.magicLink.create({
       data: { token: tokenHash, userId: clientUserId, expiresAt },
     });
 
-    return `https://client.getcoro.io/magic?token=${token}`;
+    return this.clientPortalUrl(`/magic?token=${token}`);
+  }
+
+  async requestMagicLink(email: string) {
+    const startedAt = Date.now();
+    try {
+      const clientUser = await this.findClientByEmail(email);
+      if (!clientUser?.isActive) return MAGIC_LINK_RESPONSE;
+
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto
+        .createHash('sha256')
+        .update(rawToken)
+        .digest('hex');
+      const now = new Date();
+      const created = await this.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "ClientUser" WHERE id = ${clientUser.id} FOR UPDATE`;
+        const current = await tx.clientUser.findUnique({
+          where: { id: clientUser.id },
+          select: { isActive: true },
+        });
+        if (!current?.isActive) return false;
+        await tx.magicLink.updateMany({
+          where: { userId: clientUser.id, usedAt: null },
+          data: { usedAt: now },
+        });
+        await tx.magicLink.create({
+          data: {
+            token: tokenHash,
+            userId: clientUser.id,
+            expiresAt: new Date(now.getTime() + MAGIC_LINK_LIFETIME_MS),
+          },
+        });
+        return true;
+      });
+      if (!created) return MAGIC_LINK_RESPONSE;
+      const magicUrl = this.clientPortalUrl(`/magic?token=${rawToken}`);
+      const sent = await this.emailService.sendClientMagicLink({
+        toEmail: clientUser.email,
+        toName: clientUser.firstName,
+        magicUrl,
+      });
+      if (!sent.success) {
+        await this.prisma.magicLink.updateMany({
+          where: { token: tokenHash, userId: clientUser.id, usedAt: null },
+          data: { usedAt: new Date() },
+        });
+        this.logger.warn('[CLIENT-AUTH] Echec envoi magic link');
+      }
+    } catch {
+      this.logger.warn('[CLIENT-AUTH] Demande magic link non traitee');
+    } finally {
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.max(0, 600 - (Date.now() - startedAt))),
+      );
+    }
+    return MAGIC_LINK_RESPONSE;
   }
 
   async validateMagicLink(token: string) {
@@ -455,9 +542,9 @@ export class ClientAuthService {
     const now = new Date();
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const clientUser = await this.prisma.$transaction(async (tx) => {
-      // Le second candidat conserve pendant 72 h au plus la compatibilité des
-      // liens créés avant le stockage haché. Les nouveaux liens ne sont jamais
-      // persistés en clair.
+      // The raw-token candidate preserves compatibility only for legacy rows
+      // that still have an unexpired persisted expiresAt. New links are never
+      // stored in clear text.
       const magicLink = await tx.magicLink.findFirst({
         where: { token: { in: [tokenHash, token] } },
         include: { user: { include: { client: true } } },
@@ -473,23 +560,25 @@ export class ClientAuthService {
       return magicLink.user;
     });
 
-    const jwtToken = this.clientToken(clientUser);
-
-    return {
-      token: jwtToken,
-      user: {
-        id: clientUser.id,
-        email: clientUser.email,
-        firstName: clientUser.firstName,
-        lastName: clientUser.lastName,
-        role: clientUser.role,
-        clientId: clientUser.clientId,
-        clientName: clientUser.client?.name,
-        organizationId: clientUser.organizationId,
-        populationPermissions: clientUser.populationPermissions,
-        operationalReviewPermissions: clientUser.operationalReviewPermissions,
-        correctiveActionPermissions: clientUser.correctiveActionPermissions,
-      },
-    };
+    // A magic link proves possession of the mailbox, but it must not silently
+    // weaken CORO's MFA policy. Claim the link once, then issue the normal MFA
+    // challenge. The existing verify-mfa endpoint is the only session issuer.
+    const mfaCode = Math.floor(100000 + Math.random() * 900000).toString();
+    await this.prisma.clientUser.update({
+      where: { id: clientUser.id },
+      // Prisma client types on this baseline predate the MFA columns.
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      data: {
+        mfaCode,
+        mfaCodeExpiry: new Date(Date.now() + 10 * 60 * 1000),
+      } as any,
+    });
+    await this.mfaDelivery.send({
+      to: clientUser.email,
+      recipientName: `${clientUser.firstName} ${clientUser.lastName}`,
+      subject: `${mfaCode} — Votre code de connexion CORO`,
+      htmlContent: `<p>Votre code de connexion CORO est <strong>${mfaCode}</strong>. Il expire dans 10 minutes.</p>`,
+    });
+    return { mfaRequired: true, email: clientUser.email };
   }
 }
