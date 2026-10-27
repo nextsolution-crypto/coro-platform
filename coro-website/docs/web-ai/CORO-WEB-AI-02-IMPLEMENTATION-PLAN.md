@@ -2,7 +2,12 @@
 
 Date : 2026-10-27
 
-Statut : **PRÊT POUR DÉCISION DE DÉVELOPPEMENT — NON IMPLÉMENTÉ**
+Statut : **ARCHIVE DE CONCEPTION — IMPLÉMENTATION LOCALE TERMINÉE; VOIR `CORO-WEB-AI-02-FINAL-ACCEPTANCE.md`**
+
+> Ce document conserve le plan préalable. Le schéma minimal livré regroupe la
+> version courante dans `PublicKnowledgeSource` et génère les citations depuis
+> `PublicKnowledgeSource` + `PublicKnowledgeChunk`; les preuves effectives et
+> réserves se trouvent dans les rapports WEB-AI-02 finaux.
 
 ## 1. Architecture retenue
 
