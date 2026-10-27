@@ -138,7 +138,7 @@ test('components stay independent from production files and add no dependency, a
   for (const file of [...tsx, 'components/conversion/footer-content.ts', 'app/design-lab/ConversionStudies.tsx', 'app/design-lab/LeadFormDemo.tsx', 'app/design-lab/conversion-data.ts']) {
     for (const imp of read(file).match(/from '[^']+'/g) ?? []) assert.doesNotMatch(imp, /HomePageClient|DemoForm|CookieBanner|@\/app\/|components\/site\/|components\/(hero|spatial|operational|flow)/, `${file} ${imp}`);
   }
-  assert.deepEqual(Object.keys(JSON.parse(read('package.json')).dependencies).sort(), ['lucide-react', 'next', 'react', 'react-dom']);
+  assert.deepEqual(Object.keys(JSON.parse(read('package.json')).dependencies).sort(), ['jspdf', 'lucide-react', 'next', 'react', 'react-dom']);
   for (const file of [...tsx, 'app/design-lab/ConversionStudies.tsx']) assert.doesNotMatch(read(file), /next\/image|\/website-v2\/|gtag|analytics|pixel|recaptcha|hcaptcha/i, file);
   assert.match(read('app/design-lab/page.tsx'), /robots: \{ index: false, follow: false/);
   assert.ok(existsSync(join(root, 'app/components/CookieBanner.tsx')));

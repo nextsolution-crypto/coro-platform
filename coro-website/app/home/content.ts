@@ -198,6 +198,12 @@ const fr = {
       { label: 'Blogue', href: '/blog' },
       { label: 'Tarifs', href: '/pricing' },
     ],
+    diagnostic: {
+      title: 'Votre organisation est-elle réellement prête à faire face à une urgence ?',
+      text: "Évaluez votre préparation opérationnelle en huit questions et découvrez vos priorités d'amélioration.",
+      cta: { label: 'Évaluer ma préparation', href: '/diagnostic' },
+      details: 'Gratuit · Sans inscription · Résultat immédiat',
+    },
   },
 };
 
@@ -395,6 +401,12 @@ const en: HomeContent = {
       { label: 'Blog', href: '/blog?lang=en' },
       { label: 'Pricing', href: '/pricing?lang=en' },
     ],
+    diagnostic: {
+      title: 'Is your organization truly ready to face an emergency?',
+      text: 'Assess your operational preparedness in eight questions and discover your improvement priorities.',
+      cta: { label: 'Assess my preparedness', href: '/diagnostic?lang=en' },
+      details: 'Free · No registration · Immediate result',
+    },
   },
 };
 

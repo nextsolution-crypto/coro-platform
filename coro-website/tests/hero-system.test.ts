@@ -66,7 +66,7 @@ test('the Design Lab stays noindex and out of the sitemap with the hero zone add
 
 test('no runtime dependency was added for the hero system', () => {
   const pkg = JSON.parse(read('package.json'));
-  assert.deepEqual(Object.keys(pkg.dependencies).sort(), ['lucide-react', 'next', 'react', 'react-dom']);
+  assert.deepEqual(Object.keys(pkg.dependencies).sort(), ['jspdf', 'lucide-react', 'next', 'react', 'react-dom']);
 });
 
 test('visual asset files are unchanged since they were committed', (context) => {

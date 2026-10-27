@@ -45,6 +45,7 @@ export const footerGroups: readonly FooterGroup[] = [
     { path: '/partners', label: { fr: 'Partenaires', en: 'Partners' }, fr: true, en: true },
     { path: '/programme-recommandation', label: { fr: 'Programme de recommandation', en: 'Referral program' }, fr: true, en: true },
     { path: '/blog', label: { fr: 'Blogue', en: 'Blog' }, fr: true, en: true },
+    { path: '/diagnostic', label: { fr: 'Diagnostic Express', en: 'Express Diagnostic' }, fr: true, en: true },
     { path: '/contact', label: { fr: 'Contact', en: 'Contact' }, fr: true, en: true },
   ] },
   { id: 'legal', label: { fr: 'Légal', en: 'Legal' }, links: [

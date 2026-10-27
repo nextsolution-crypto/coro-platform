@@ -15,7 +15,7 @@ const baseline = JSON.parse(readFileSync(join(process.cwd(), 'tests/fixtures/sit
 
 // Intentional corrections against the pre-MIG-00B.3 sitemap (English is not genuinely available on these two routes).
 const REMOVED_ON_PURPOSE: string[] = [];
-const NEW_ON_PURPOSE = ['https://getcoro.io/coro-incident', 'https://getcoro.io/coro-incident?lang=en', 'https://getcoro.io/coro-knowledge', 'https://getcoro.io/coro-knowledge?lang=en', 'https://getcoro.io/coro-ai', 'https://getcoro.io/coro-ai?lang=en', 'https://getcoro.io/guides', 'https://getcoro.io/sms-terms', 'https://getcoro.io/sms-terms?lang=en']; // MIG-03D, MIG-05A, TFN-01
+const NEW_ON_PURPOSE = ['https://getcoro.io/coro-incident', 'https://getcoro.io/coro-incident?lang=en', 'https://getcoro.io/coro-knowledge', 'https://getcoro.io/coro-knowledge?lang=en', 'https://getcoro.io/coro-ai', 'https://getcoro.io/coro-ai?lang=en', 'https://getcoro.io/guides', 'https://getcoro.io/sms-terms', 'https://getcoro.io/sms-terms?lang=en', 'https://getcoro.io/diagnostic', 'https://getcoro.io/diagnostic?lang=en']; // MIG-03D, MIG-05A, TFN-01, DX-04
 const ALTERNATES_DROPPED_ON_PURPOSE = ['https://getcoro.io/sentinelle', 'https://getcoro.io/sentinelle-population'];
 
 test('every previously valid static URL is preserved, except the documented intentional corrections', () => {

@@ -551,6 +551,10 @@ export function Resources({ c }: { c: HomeContent }) {
           {c.resources.links.map((link) => <Link key={link.href} href={link.href} className={styles.resourcesLink}>{link.label} <span aria-hidden="true">→</span></Link>)}
         </div>
       </div>
+      <aside className={styles.diagnosticInvite} aria-labelledby="home-diagnostic-title">
+        <div><h3 id="home-diagnostic-title">{c.resources.diagnostic.title}</h3><p>{c.resources.diagnostic.text}</p></div>
+        <div className={styles.diagnosticInviteAction}><Link href={c.resources.diagnostic.cta.href}>{c.resources.diagnostic.cta.label} <span aria-hidden="true">→</span></Link><small>{c.resources.diagnostic.details}</small></div>
+      </aside>
     </PageSection>
   );
 }

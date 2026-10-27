@@ -16,6 +16,9 @@
  */
 export const migratedV2Routes: readonly string[] = ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/sms-terms', '/blog', '/', '/coro-knowledge', '/coro-ai'];
 
+/** V2-shell pages still under an explicit publication gate. They suppress legacy chrome without claiming migration approval. */
+export const draftV2Routes: readonly string[] = ['/diagnostic'];
+
 /**
  * Explicit, opt-in registry for MIGRATED dynamic routes. `migratedV2Routes` is exact-match only and can never
  * represent a resolved dynamic pathname (e.g. `/blog/my-article`), so a dynamic route is approved here instead,
@@ -45,5 +48,7 @@ export function isV2MigratedRoute(pathname: string | null | undefined, routes: r
 
 /** The legacy root footer renders on every route that is not migrated (static or dynamic). */
 export function isLegacyFooterVisible(pathname: string | null | undefined, routes: readonly string[] = migratedV2Routes, dynamicRoutes: readonly { base: string; pattern: RegExp }[] = migratedV2DynamicRoutes): boolean {
-  return !isV2MigratedRoute(pathname, routes, dynamicRoutes);
+  if (!pathname) return true;
+  const path = normalizePath(pathname);
+  return !draftV2Routes.includes(path) && !isV2MigratedRoute(path, routes, dynamicRoutes);
 }

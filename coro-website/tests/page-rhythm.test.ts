@@ -106,7 +106,7 @@ test('motion is progressive, dependency-free and off under reduced motion', () =
   assert.match(css, /@supports \(animation-timeline: view\(\)\)/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.doesNotMatch(css, /infinite/);
-  assert.deepEqual(Object.keys(JSON.parse(read('package.json')).dependencies).sort(), ['lucide-react', 'next', 'react', 'react-dom']);
+  assert.deepEqual(Object.keys(JSON.parse(read('package.json')).dependencies).sort(), ['jspdf', 'lucide-react', 'next', 'react', 'react-dom']);
 });
 
 test('Design Lab copy is bilingual with identical structure', () => {

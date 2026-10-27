@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, useState } from 'react';
+import type { DiagnosticCommercialSummary } from '@/lib/diagnostic/commercial';
 
 function getCookie(name: string): string | null {
   if (typeof document === 'undefined') {
@@ -20,7 +21,13 @@ function getCookie(name: string): string | null {
   return decodeURIComponent(cookie.substring(prefix.length));
 }
 
-export default function DemoForm({ lang }: { lang: 'fr' | 'en' }) {
+type DemoFormProps = {
+  lang: 'fr' | 'en';
+  variant?: 'demo' | 'diagnostic';
+  diagnosticSummary?: DiagnosticCommercialSummary;
+};
+
+export default function DemoForm({ lang, variant = 'demo', diagnosticSummary }: DemoFormProps) {
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -28,8 +35,11 @@ export default function DemoForm({ lang }: { lang: 'fr' | 'en' }) {
     organization: '',
     phone: '',
     buildingType: '',
+    buildingCount: '',
+    requestType: variant === 'diagnostic' ? 'DETAILED_ASSESSMENT' : '',
     message: '',
   });
+  const [includeDiagnosticSummary, setIncludeDiagnosticSummary] = useState(false);
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const uid = useId();
 
@@ -42,6 +52,11 @@ export default function DemoForm({ lang }: { lang: 'fr' | 'en' }) {
       phone: 'Téléphone (optionnel)',
       buildingType: 'Type de bâtiment',
       buildingTypes: ['Sélectionnez un type', 'Tour à bureaux', 'Bâtiment commercial', 'Site industriel', 'Établissement de santé', 'Institution d\'enseignement', 'Autre'],
+      buildingCount: 'Nombre approximatif de bâtiments (optionnel)',
+      requestType: 'Type de demande',
+      requestTypes: [['DETAILED_ASSESSMENT', 'Évaluation approfondie'], ['DEMO', 'Démonstration CORO']],
+      includeSummary: 'Joindre à ma demande un résumé de mon diagnostic.',
+      diagnosticPrivacy: 'Cette demande transmet vos coordonnées à Formspree, le service commercial utilisé par CORO. Elle ne vous inscrit pas à des communications marketing.',
       message: 'Décrivez votre besoin (optionnel)',
       submit: 'Envoyer la demande',
       sending: 'Envoi en cours...',
@@ -59,6 +74,11 @@ privacyLink: 'Politique de confidentialité',
       phone: 'Phone (optional)',
       buildingType: 'Building type',
       buildingTypes: ['Select a type', 'Office tower', 'Commercial building', 'Industrial site', 'Healthcare facility', 'Educational institution', 'Other'],
+      buildingCount: 'Approximate number of buildings (optional)',
+      requestType: 'Request type',
+      requestTypes: [['DETAILED_ASSESSMENT', 'In-depth assessment'], ['DEMO', 'CORO demonstration']],
+      includeSummary: 'Attach a summary of my diagnostic to my request.',
+      diagnosticPrivacy: 'This request sends your contact information to Formspree, the commercial service used by CORO. It does not subscribe you to marketing communications.',
       message: 'Describe your needs (optional)',
       submit: 'Send request',
       sending: 'Sending...',
@@ -103,7 +123,16 @@ privacyLink: 'Privacy Policy',
           Accept: 'application/json',
         },
         body: JSON.stringify({
-          ...form,
+          ...(variant === 'diagnostic' ? {
+            firstName: form.firstName,
+            lastName: form.lastName,
+            email: form.email,
+            organization: form.organization,
+            buildingCount: form.buildingCount,
+            requestType: form.requestType,
+            message: form.message,
+          } : form),
+          ...(variant === 'diagnostic' && includeDiagnosticSummary && diagnosticSummary ? diagnosticSummary : {}),
 
           referralCode:
             referralCode ?? '',
@@ -114,7 +143,7 @@ privacyLink: 'Privacy Policy',
           referralSource:
             referralCode ? 'LINK' : '',
 
-          _subject: `Demande de démo CORO — ${form.organization}`,
+          _subject: variant === 'diagnostic' ? `Diagnostic Express CORO — ${form.organization}` : `Demande de démo CORO — ${form.organization}`,
         }),
       }
     );
@@ -129,8 +158,11 @@ privacyLink: 'Privacy Policy',
         organization: '',
         phone: '',
         buildingType: '',
+        buildingCount: '',
+        requestType: variant === 'diagnostic' ? 'DETAILED_ASSESSMENT' : '',
         message: '',
       });
+      setIncludeDiagnosticSummary(false);
     } else {
       setStatus('error');
     }
@@ -199,7 +231,7 @@ privacyLink: 'Privacy Policy',
       </div>
 
       <div className="coro-demo-form-row">
-        <div>
+        <div style={variant === 'diagnostic' ? { gridColumn: '1 / -1' } : undefined}>
           <label htmlFor={`${uid}-3`} style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
             {t.organization} *
           </label>
@@ -213,7 +245,7 @@ privacyLink: 'Privacy Policy',
             onBlur={e => e.target.style.borderColor = '#DEE2E6'}
           />
         </div>
-        <div>
+        {variant === 'demo' && <div>
           <label htmlFor={`${uid}-4`} style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
             {t.phone}
           </label>
@@ -226,10 +258,10 @@ privacyLink: 'Privacy Policy',
             onFocus={e => e.target.style.borderColor = '#C0392B'}
             onBlur={e => e.target.style.borderColor = '#DEE2E6'}
           />
-        </div>
+        </div>}
       </div>
 
-      <div style={{ marginBottom: 16 }}>
+      {variant === 'demo' ? <div style={{ marginBottom: 16 }}>
         <label htmlFor={`${uid}-5`} style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
           {t.buildingType}
         </label>
@@ -244,7 +276,18 @@ privacyLink: 'Privacy Policy',
             </option>
           ))}
         </select>
-      </div>
+      </div> : <div className="coro-demo-form-row">
+        <div>
+          <label htmlFor={`${uid}-7`} style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>{t.buildingCount}</label>
+          <input id={`${uid}-7`} type="number" min="1" inputMode="numeric" value={form.buildingCount} onChange={e => setForm({ ...form, buildingCount: e.target.value })} style={inputStyle} />
+        </div>
+        <div>
+          <label htmlFor={`${uid}-8`} style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>{t.requestType} *</label>
+          <select id={`${uid}-8`} required value={form.requestType} onChange={e => setForm({ ...form, requestType: e.target.value })} style={inputStyle}>
+            {t.requestTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </div>
+      </div>}
 
       <div style={{ marginBottom: 32 }}>
         <label htmlFor={`${uid}-6`} style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
@@ -261,6 +304,13 @@ privacyLink: 'Privacy Policy',
           onBlur={e => e.target.style.borderColor = '#DEE2E6'}
         />
       </div>
+
+      {variant === 'diagnostic' && diagnosticSummary && <label htmlFor={`${uid}-9`} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 16, color: '#2C3E50', fontSize: 14, lineHeight: 1.5 }}>
+        <input id={`${uid}-9`} type="checkbox" checked={includeDiagnosticSummary} onChange={e => setIncludeDiagnosticSummary(e.target.checked)} style={{ marginTop: 3, inlineSize: 18, blockSize: 18 }} />
+        <span>{t.includeSummary}</span>
+      </label>}
+
+      {variant === 'diagnostic' && <p style={{ fontSize: 13, color: '#6C757D', lineHeight: 1.6, margin: '0 0 16px' }}>{t.diagnosticPrivacy}</p>}
 
       {status === 'error' && (
         <div role="alert" style={{

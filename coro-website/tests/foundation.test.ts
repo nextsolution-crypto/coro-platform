@@ -13,7 +13,7 @@ import { productStatusLabel } from '../lib/site/status.ts';
 const protectedPaths = [
   '/coro-knowledge', '/coro-ai', '/', '/about', '/security', '/privacy', '/terms', '/sms-terms', '/pricing', '/sentinelle', '/sentinelle-population', '/coro-incident',
   '/gestion-documentaire', '/gestion-de-projets', '/resilience-operationnelle', '/performance-objectifs',
-  '/portail-client', '/programme-recommandation', '/contact', '/partners', '/blog', '/guides',
+  '/portail-client', '/programme-recommandation', '/contact', '/partners', '/blog', '/guides', '/diagnostic',
   '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi',
   '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc',
   '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue',
