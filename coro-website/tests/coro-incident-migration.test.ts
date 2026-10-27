@@ -37,6 +37,8 @@ test('approved H1 and exact hero: decorative marketing illustration', () => {
   assert.ok(call.includes("src: '/website-v2/sentinel/first-responders-arrival.webp'"));
   assert.doesNotMatch(call, /alt:/);
   assert.ok(existsSync(join(process.cwd(), 'public/website-v2/sentinel/first-responders-arrival.webp')));
+  assert.ok(page.indexOf('<EditorialHero') < page.indexOf('<PageSection'), 'the hero is the first visible page section');
+  assert.doesNotMatch(page, /Les communications externes et les opérations d’urgence demandent une activation/);
 });
 
 test('incident types: the 15 listed types match the current enum size; no internal procedure codes', () => {

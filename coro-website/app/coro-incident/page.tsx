@@ -133,8 +133,8 @@ const english = {
 };
 const translations = { fr: copy, en: english };
 const interfaceCopy = {
-  fr: { types: 'Types d’incidents', people: 'Personnes inscrites comme présentes', snapshot: 'Liste figée', team: 'Équipe d’urgence mobilisable', roles: 'Rôles inclus', report: 'Le rapport est le dossier de l’incident, mis en forme.', extra: 'Deux capacités complémentaires.', eco: 'Incident, dans la plateforme.', scope: 'Les communications externes et les opérations d’urgence demandent une activation et une recette distinctes. Elles ne sont pas incluses dans le périmètre commercial du portail Client V1.' },
-  en: { types: 'Incident types', people: 'People registered as present', snapshot: 'Captured list', team: 'Available emergency team', roles: 'Roles included', report: 'The report presents the incident record.', extra: 'Two complementary capabilities.', eco: 'Incident within the platform.', scope: 'External communications and emergency operations require separate activation and acceptance. They are not included in the commercial scope of Client Portal V1.' },
+  fr: { types: 'Types d’incidents', people: 'Personnes inscrites comme présentes', snapshot: 'Liste figée', team: 'Équipe d’urgence mobilisable', roles: 'Rôles inclus', report: 'Le rapport est le dossier de l’incident, mis en forme.', extra: 'Deux capacités complémentaires.', eco: 'Incident, dans la plateforme.' },
+  en: { types: 'Incident types', people: 'People registered as present', snapshot: 'Captured list', team: 'Available emergency team', roles: 'Roles included', report: 'The report presents the incident record.', extra: 'Two complementary capabilities.', eco: 'Incident within the platform.' },
 };
 
 export async function generateMetadata({ searchParams }: P): Promise<Metadata> {
@@ -155,8 +155,6 @@ export default async function Page({ searchParams }: P) {
   return (
     <V2Shell locale={l} pathname="/coro-incident">
       <JsonLd value={faqJsonLd(t.faq.map(([q, a]) => ({ question: q, answer: a })))} />
-      <PageSection tone="soft"><p>{ui.scope}</p></PageSection>
-
       <EditorialHero id="incident-title" label={t.label} title={t.lines} lead={t.lead}
         photo={{ src: '/website-v2/sentinel/first-responders-arrival.webp', side: 'end', position: '30% 50%', mobilePosition: '30% 50%', coverage: 55, mobileRatio: '16 / 11' }}
         actions={<><Button href={demo} surface="dark">{t.demo}</Button><Button href={LOGIN} variant="ghost" surface="dark" external>{t.access}</Button></>} />
