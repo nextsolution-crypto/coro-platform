@@ -61,6 +61,8 @@ test('hero: the reserved approved photograph, decorative, not the Sentinelle her
   assert.ok(call.includes("src: '/website-v2/sentinel/sentinelle-population-alert-territory.webp'"));
   assert.doesNotMatch(call, /alt:/);
   assert.doesNotMatch(code, /sentinelle-occupancy-security|building-lobby|evacuation-stairs|assembly-point|first-responders/);
+  assert.ok(page.indexOf('<EditorialHero') < page.indexOf('<PageSection'), 'the hero is the first visible page section');
+  assert.doesNotMatch(page, /Sentinelle Population fait l’objet d’un cadrage et d’une activation distincts/);
 });
 
 test('V1 assets: all 15 V1 images are preserved on disk; the ones used are illustrations (alt empty, labelled fictional), none is presented as product proof', () => {
@@ -139,7 +141,7 @@ test('ROADMAP: the future PUE configurator is not promoted; PUE stays as the pla
 test('recomposition: no ten-card grid, one break between the scenario and its frame, secondary blocks grouped', () => {
   assert.ok(page.indexOf('population-frame-title') > page.indexOf('population-act-4'));
   assert.doesNotMatch(css, /box-shadow/);
-  assert.equal((page.match(/<PageSection /g) ?? []).length, 15);
+  assert.equal((page.match(/<PageSection /g) ?? []).length, 14);
 });
 
 test('MIG-03C-E: the image with the questionable 1-800 number (alerte.webp) is never rendered nor used in metadata; the OG image is the hero-ammoniac artwork', () => {
