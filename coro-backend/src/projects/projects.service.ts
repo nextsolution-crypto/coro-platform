@@ -2,7 +2,10 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { getLimitsForLicense } from '../organizations/license-limits';
 import {
@@ -10,6 +13,7 @@ import {
   projectAccessWhere,
   requireProjectApprover,
 } from '../auth/project-access';
+import { UpdateProjectDto } from './dto/update-project.dto';
 
 @Injectable()
 export class ProjectsService {
@@ -83,7 +87,7 @@ export class ProjectsService {
 
   async findOne(id: string, actor: AdviserActor) {
     const project = await this.prisma.project.findFirst({
-      where: { id, ...projectAccessWhere(actor) },
+      where: { id, isActive: true, ...projectAccessWhere(actor) },
       include: {
         client: true,
         building: true,
@@ -172,47 +176,121 @@ export class ProjectsService {
     });
   }
 
-  async update(id: string, data: any, actor: AdviserActor) {
+  async update(id: string, data: Record<string, any>, actor: AdviserActor) {
     if (['REVIEW', 'VALIDATED', 'EXPORTED'].includes(data?.status)) {
       throw new ForbiddenException(
         'Transition documentaire reservee au workflow canonique',
       );
     }
-    const protectedFields = [
-      'organizationId',
-      'isActive',
-      'userId',
-      'lastEditedById',
-      'submittedById',
-      'submittedAt',
-      'approvedById',
-      'approvedAt',
-    ];
+    const allowedFields = new Set([
+      'expectedUpdatedAt', 'name', 'documentType', 'year', 'progress',
+      'configData', 'status', 'clientId', 'buildingId',
+    ]);
     if (
-      protectedFields.some((field) =>
-        Object.prototype.hasOwnProperty.call(data || {}, field),
+      Object.entries(data || {}).some(
+        ([field, value]) => value !== undefined && !allowedFields.has(field),
       )
     ) {
-      throw new ForbiddenException('Reaffectation de projet interdite');
+      throw new ForbiddenException('Champ de mise a jour interdit');
     }
-    const result = await this.prisma.project.updateMany({
-      where: {
-        id,
-        isActive: true,
-        status: { not: 'ARCHIVED' },
-        ...projectAccessWhere(actor),
+    const { expectedUpdatedAt } = data as UpdateProjectDto;
+    const mutableFields = [
+      'name',
+      'documentType',
+      'year',
+      'progress',
+      'configData',
+      'status',
+      'clientId',
+      'buildingId',
+    ] as const;
+    const changes = Object.fromEntries(
+      mutableFields
+        .filter((field) => data[field] !== undefined)
+        .map((field) => [field, data[field]]),
+    ) as Omit<UpdateProjectDto, 'expectedUpdatedAt'>;
+    return this.prisma.$transaction(
+      async (tx) => {
+        const current = await tx.project.findFirst({
+          where: { id, isActive: true, ...projectAccessWhere(actor) },
+          select: {
+            id: true,
+            organizationId: true,
+            clientId: true,
+            buildingId: true,
+            status: true,
+            updatedAt: true,
+          },
+        });
+        if (!current) {
+          throw new ForbiddenException('Projet inaccessible');
+        }
+        if (current.status === 'ARCHIVED') {
+          throw new ForbiddenException('Projet archive en lecture seule');
+        }
+        if (!expectedUpdatedAt) {
+          throw new BadRequestException('expectedUpdatedAt requis');
+        }
+        const expected = new Date(expectedUpdatedAt);
+        if (current.updatedAt.getTime() !== expected.getTime()) {
+          throw new ConflictException('PROJECT_VERSION_CONFLICT');
+        }
+
+        const clientId = changes.clientId ?? current.clientId;
+        const buildingId = changes.buildingId ?? current.buildingId;
+        if (changes.clientId !== undefined || changes.buildingId !== undefined) {
+          const [client, building] = await Promise.all([
+            tx.client.findFirst({
+              where: { id: clientId, organizationId: current.organizationId },
+              select: { id: true },
+            }),
+            tx.building.findFirst({
+              where: {
+                id: buildingId,
+                organizationId: current.organizationId,
+                clientId,
+              },
+              select: { id: true },
+            }),
+          ]);
+          if (!client || !building) {
+            throw new ForbiddenException('Rattachement projet invalide');
+          }
+        }
+
+        const result = await tx.project.updateMany({
+          where: {
+            id,
+            isActive: true,
+            status: { not: 'ARCHIVED' },
+            updatedAt: expected,
+            ...projectAccessWhere(actor),
+          },
+          data: {
+            ...(changes as Prisma.ProjectUncheckedUpdateManyInput),
+            lastEditedById: actor.userId,
+          },
+        });
+        if (result.count !== 1) {
+          throw new ConflictException('PROJECT_VERSION_CONFLICT');
+        }
+        const updated = await tx.project.findFirst({
+          where: { id, isActive: true, ...projectAccessWhere(actor) },
+          include: {
+            client: true,
+            building: true,
+            user: true,
+            lastEditedBy: { select: { id: true, firstName: true, lastName: true } },
+            submittedBy: { select: { id: true, firstName: true, lastName: true } },
+            approvedBy: { select: { id: true, firstName: true, lastName: true } },
+            documents: true,
+          },
+        });
+        if (!updated) throw new ForbiddenException('Projet inaccessible');
+        return updated;
       },
-      data: {
-        ...data,
-        lastEditedById: actor.userId,
-      },
-    });
-    if (result.count !== 1) {
-      throw new ForbiddenException(
-        'Projet inaccessible ou archive en lecture seule',
-      );
-    }
-    return this.findOne(id, actor);
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   async remove(id: string, actor: AdviserActor) {
@@ -469,20 +547,20 @@ export class ProjectsService {
 
   async calculateQualityScore(
     projectId: string,
-    organizationId: string,
+    actor: AdviserActor,
   ): Promise<{
     score: number;
     level: 'EXCELLENT' | 'BON' | 'A_AMELIORER' | 'INCOMPLET';
     details: { label: string; points: number; earned: number; ok: boolean }[];
   }> {
     const project = await this.prisma.project.findFirst({
-      where: { id: projectId, organizationId },
+      where: { id: projectId, isActive: true, ...projectAccessWhere(actor) },
     });
-    if (!project) return { score: 0, level: 'INCOMPLET', details: [] };
+    if (!project) throw new NotFoundException('Projet introuvable');
 
     // ── Branche PCA ──
     if (project.documentType === 'PCA') {
-      return this.calculatePcaQualityScore(projectId, organizationId);
+      return this.calculatePcaQualityScore(projectId, actor.organizationId);
     }
 
     const doc = await this.prisma.document.findFirst({ where: { projectId } });

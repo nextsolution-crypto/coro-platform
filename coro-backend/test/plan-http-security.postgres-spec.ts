@@ -464,10 +464,17 @@ describe('Plan authenticated HTTP security boundaries', () => {
   });
 
   it('preserves canonical revision, submission and second-person approval over HTTP', async () => {
+    const projectBeforeUpdate = await prisma.project.findUniqueOrThrow({
+      where: { id: ids.pmu },
+      select: { updatedAt: true },
+    });
     await http
       .put(`/api/projects/${ids.pmu}`)
       .set(auth(tokens.operatorA))
-      .send({ name: 'HTTP PMU A1 updated' })
+      .send({
+        name: 'HTTP PMU A1 updated',
+        expectedUpdatedAt: projectBeforeUpdate.updatedAt.toISOString(),
+      })
       .expect(200);
     await http
       .post(`/api/projects/${ids.pmu}/submit`)

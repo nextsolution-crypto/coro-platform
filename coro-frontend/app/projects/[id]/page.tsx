@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
@@ -18,6 +18,9 @@ interface Project {
   status: string;
   year: number;
   progress: number;
+  updatedAt: string;
+  clientId: string;
+  buildingId: string;
   client: { id: string; name: string };
   building: { id: string; name: string; address: string };
   user: { id: string; firstName: string; lastName: string };
@@ -62,6 +65,10 @@ export default function ProjectDetailPage() {
 
   const [project,     setProject]     = useState<Project | null>(null);
   const [loading,     setLoading]     = useState(true);
+  const [loadError, setLoadError] = useState<{ kind: 'not-found' | 'forbidden' | 'session' | 'unavailable'; message: string } | null>(null);
+  const [secondaryWarning, setSecondaryWarning] = useState(false);
+  const [versionConflict, setVersionConflict] = useState(false);
+  const requestSequence = useRef(0);
   const [generating,  setGenerating]  = useState(false);
   const [hasDocument, setHasDocument] = useState(false);
   const [justGenerated, setJustGenerated] = useState(false);
@@ -151,16 +158,21 @@ export default function ProjectDetailPage() {
       const token = localStorage.getItem('coro_token');
       if (!token) router.push('/login');
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, projectId]);
 
   const fetchData = async () => {
   if (!projectId) return;
+  const sequence = ++requestSequence.current;
+  setLoading(true);
+  setLoadError(null);
+  setSecondaryWarning(false);
   try {
       const [projectRes, docRes, plansRes] = await Promise.all([
         api.get(`/projects/${projectId}`),
         api.get(`/generator/document/${projectId}`).catch(() => ({ data: null })),
         api.get(`/projects/${projectId}/building-plans`).catch(() => ({ data: [] })),
       ]);
+      if (sequence !== requestSequence.current) return;
       setProject(projectRes.data);
       setHasDocument(!!docRes.data);
       setHasPlans((plansRes.data || []).length > 0);
@@ -173,7 +185,12 @@ export default function ProjectDetailPage() {
           ]);
           setValidations(valRes.data || []);
           setQualityScore(scoreRes.data || null);
-        } catch { setValidations([]); }
+        } catch {
+          if (sequence === requestSequence.current) {
+            setValidations([]);
+            setSecondaryWarning(true);
+          }
+        }
       }
 
       // Observations et permission d'approuver
@@ -186,7 +203,7 @@ export default function ProjectDetailPage() {
         setObservations(obsRes.data || []);
         setCanApprove(canRes.data?.canApprove || false);
         setProjectComments(commentsRes.data || []);
-      } catch { }
+      } catch { if (sequence === requestSequence.current) setSecondaryWarning(true); }
 
       try {
         const versRes = await api.get(`/projects/${projectId}/versions`);
@@ -201,22 +218,33 @@ export default function ProjectDetailPage() {
           signedEmail:   v.snapshot?.signedEmail   ?? null,
         }));
         setVersionHistory(versions);
-      } catch { }
-    } catch (err) {
+      } catch { if (sequence === requestSequence.current) setSecondaryWarning(true); }
+    } catch (err: any) {
+      if (sequence !== requestSequence.current) return;
       console.error(err);
+      setProject(null);
+      const status = err?.response?.status;
+      if (status === 404) setLoadError({ kind: 'not-found', message: 'Projet introuvable.' });
+      else if (status === 401) setLoadError({ kind: 'session', message: 'Votre session a expiré. Reconnectez-vous pour continuer.' });
+      else if (status === 403) setLoadError({ kind: 'forbidden', message: 'Ce projet est introuvable ou inaccessible.' });
+      else setLoadError({ kind: 'unavailable', message: 'Impossible de charger le projet pour le moment.' });
     } finally {
-      setLoading(false);
+      if (sequence === requestSequence.current) setLoading(false);
     }
   };
 
   const handleChangeStatus = async (newStatus: string) => {
     setStatusChanging(true);
     try {
-      await api.put(`/projects/${projectId}`, { status: newStatus });
+      await api.put(`/projects/${projectId}`, { status: newStatus, expectedUpdatedAt: project?.updatedAt });
       await fetchData();
+      setVersionConflict(false);
       toast(newStatus === 'ARCHIVED' ? 'Projet archivé.' : 'Statut mis à jour.');
-    } catch (err) {
-      toast('Erreur lors du changement de statut.', 'error');
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        setVersionConflict(true);
+        toast('Le projet a été modifié dans une autre session. Rechargez la version actuelle.', 'error');
+      } else toast('Erreur lors du changement de statut.', 'error');
     } finally {
       setStatusChanging(false);
     }
@@ -442,12 +470,21 @@ export default function ProjectDetailPage() {
     </div>
   );
 
-  if (!project) return (
+  if (loadError) return (
     <div className="min-h-screen flex items-center justify-center"
       style={{ backgroundColor: '#F8F9FA' }}>
-      <p className="text-sm" style={{ color: '#ADB5BD' }}>Projet introuvable</p>
+      <div role="alert" className="max-w-md rounded-md border p-6 text-center" style={{ backgroundColor: '#FFFFFF', borderColor: '#F1948A' }}>
+        <p className="font-semibold" style={{ color: '#C0392B' }}>{loadError.message}</p>
+        {loadError.kind === 'unavailable' && (
+          <button type="button" onClick={() => void fetchData()} className="mt-4 rounded px-4 py-2 text-sm font-medium text-white" style={{ backgroundColor: '#C0392B' }}>
+            Réessayer
+          </button>
+        )}
+      </div>
     </div>
   );
+
+  if (!project) return null;
 
   const sc  = statusColors[project.status] || statusColors.DRAFT;
   const dc  = docTypeColors[project.documentType] || '#6C757D';
@@ -517,9 +554,9 @@ export default function ProjectDetailPage() {
       </button>
 
       {/* Header projet */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex flex-col lg:flex-row items-start justify-between gap-4 mb-8">
         <div>
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex flex-wrap items-center gap-3 mb-2">
             <span className="text-white text-sm font-bold px-3 py-1 rounded"
               style={{ backgroundColor: dc }}>
               {project.documentType}
@@ -536,7 +573,7 @@ export default function ProjectDetailPage() {
               {statusLabels[project.status]}
             </span>
           </div>
-          <div className="flex items-center gap-2 text-sm" style={{ color: '#6C757D' }}>
+          <div className="flex flex-wrap items-center gap-2 text-sm" style={{ color: '#6C757D' }}>
             <span>{project.client.name}</span>
             <span style={{ color: '#DEE2E6' }}>•</span>
             <span>{project.building.name}</span>
@@ -546,7 +583,7 @@ export default function ProjectDetailPage() {
         </div>
 
         {project.status !== 'ARCHIVED' && (
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex w-full lg:w-auto items-center gap-2 flex-wrap">
 
             {/* Soumettre pour approbation */}
             {project.status === 'IN_PROGRESS' && hasDocument && (
@@ -659,6 +696,22 @@ export default function ProjectDetailPage() {
           </div>
         )}
       </div>
+
+      {versionConflict && (
+        <div role="alert" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md border p-4" style={{ backgroundColor: '#FEF9E7', borderColor: '#F5CBA7', color: '#7D6608' }}>
+          <span>Une version plus récente du projet existe. Vos données n'ont pas écrasé cette version.</span>
+          <button type="button" onClick={() => { setVersionConflict(false); void fetchData(); }} className="rounded border px-3 py-2 text-sm font-medium" style={{ borderColor: '#B7950B' }}>
+            Recharger la version actuelle
+          </button>
+        </div>
+      )}
+
+      {secondaryWarning && (
+        <div role="alert" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md border p-4" style={{ backgroundColor: '#FEF9E7', borderColor: '#F5CBA7', color: '#7D6608' }}>
+          <span>Certaines informations complémentaires sont temporairement indisponibles.</span>
+          <button type="button" onClick={() => void fetchData()} className="rounded border px-3 py-2 text-sm font-medium" style={{ borderColor: '#B7950B' }}>Réessayer</button>
+        </div>
+      )}
 
 {/* Bannière statut approbation */}
       {project.status === 'REVIEW' && (
@@ -1042,7 +1095,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* 3 Étapes */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {steps.map(step => (
           <div key={step.num} className="rounded-md p-6"
             style={{
@@ -1420,7 +1473,7 @@ export default function ProjectDetailPage() {
         <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>
           Informations du projet
         </h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[
             { label: 'Client',            value: project.client.name },
             { label: 'Bâtiment',          value: project.building.name },

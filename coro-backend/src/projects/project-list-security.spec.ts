@@ -23,31 +23,27 @@ describe('ProjectsService project-list security', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     service = new ProjectsService(prisma);
+    prisma.$transaction.mockImplementation((callback: any) => callback(prisma));
   });
 
   it('refuses an archived or inaccessible update without a second write', async () => {
-    prisma.project.updateMany.mockResolvedValue({ count: 0 });
+    prisma.project.findFirst.mockResolvedValue({ id: 'archived-1', status: 'ARCHIVED', updatedAt: new Date('2026-01-01'), organizationId: 'org-1', clientId: 'client-1', buildingId: 'building-1' });
 
     await expect(
-      service.update('archived-1', { name: 'changed' }, operator),
+      service.update('archived-1', { name: 'changed', expectedUpdatedAt: '2026-01-01T00:00:00.000Z' }, operator),
     ).rejects.toBeInstanceOf(ForbiddenException);
 
-    expect(prisma.project.updateMany).toHaveBeenCalledTimes(1);
-    expect(prisma.project.updateMany.mock.calls[0][0].where).toMatchObject({
-      id: 'archived-1',
-      organizationId: 'org-1',
-      isActive: true,
-      status: { not: 'ARCHIVED' },
-      OR: [{ userId: 'operator-1' }, { lastEditedById: 'operator-1' }],
-    });
+    expect(prisma.project.updateMany).not.toHaveBeenCalled();
   });
 
   it('updates an eligible project and reloads it through canonical access', async () => {
     prisma.project.updateMany.mockResolvedValue({ count: 1 });
-    prisma.project.findFirst.mockResolvedValue({ id: 'project-1' });
+    prisma.project.findFirst
+      .mockResolvedValueOnce({ id: 'project-1', status: 'DRAFT', updatedAt: new Date('2026-01-01'), organizationId: 'org-1', clientId: 'client-1', buildingId: 'building-1' })
+      .mockResolvedValueOnce({ id: 'project-1' });
 
     await expect(
-      service.update('project-1', { name: 'Updated' }, operator),
+      service.update('project-1', { name: 'Updated', expectedUpdatedAt: '2026-01-01T00:00:00.000Z' }, operator),
     ).resolves.toEqual({ id: 'project-1' });
 
     expect(prisma.project.updateMany.mock.calls[0][0].data).toEqual({

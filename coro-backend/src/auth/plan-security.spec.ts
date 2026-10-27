@@ -49,24 +49,36 @@ describe('plan document security boundaries', () => {
       const prisma: any = {
         project: {
           updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+          findFirst: jest.fn().mockResolvedValue(null),
         },
+        $transaction: jest.fn(),
       };
+      prisma.$transaction.mockImplementation((callback: any) => callback(prisma));
       const service = new ProjectsService(prisma);
       const action =
         operation === 'update'
-          ? service.update('project-a', { name: 'Blocked' }, operator)
+          ? service.update('project-a', { name: 'Blocked', expectedUpdatedAt: '2026-01-01T00:00:00.000Z' }, operator)
           : service.remove('project-a', operator);
       await expect(action).rejects.toBeInstanceOf(ForbiddenException);
-      expect(prisma.project.updateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            id: 'project-a',
-            organizationId: 'org-a',
-            isActive: true,
-            status: { not: 'ARCHIVED' },
+      if (operation === 'update') {
+        expect(prisma.project.findFirst).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              id: 'project-a', organizationId: 'org-a', isActive: true,
+            }),
           }),
-        }),
-      );
+        );
+        expect(prisma.project.updateMany).not.toHaveBeenCalled();
+      } else {
+        expect(prisma.project.updateMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              id: 'project-a', organizationId: 'org-a', isActive: true,
+              status: { not: 'ARCHIVED' },
+            }),
+          }),
+        );
+      }
     },
   );
 
