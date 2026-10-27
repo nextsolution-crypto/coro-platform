@@ -123,7 +123,7 @@ describe('ProjectFilesService private storage authority', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('preserves historical public URLs without reading private storage', async () => {
+  it('never returns historical public URLs and resolves their stored key through private storage', async () => {
     const h = harness();
     h.rows.push({
       id: 'legacy-file',
@@ -138,13 +138,13 @@ describe('ProjectFilesService private storage authority', () => {
     await expect(
       h.service.getSignedUrl('legacy-file', 'org-a'),
     ).resolves.toEqual({
-      url: 'https://coro-storage.tor1.digitaloceanspaces.com/legacy.pdf',
+      url: '/api/project-files/legacy-file/content',
       name: 'legacy.pdf',
     });
     await expect(
       h.service.downloadPrivateFile('legacy-file', 'org-a'),
-    ).rejects.toBeInstanceOf(NotFoundException);
-    expect(h.storage.downloadPrivate).not.toHaveBeenCalled();
+    ).rejects.toThrow('PRIVATE_OBJECT_NOT_FOUND');
+    expect(h.storage.downloadPrivate).toHaveBeenCalledWith('legacy.pdf');
   });
 
   it('does not expose private storage keys in file or version metadata', async () => {

@@ -10,6 +10,7 @@ import { StorageService } from '../storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { createHash, randomUUID } from 'crypto';
 import { Prisma, ProjectFileLifecycleState } from '@prisma/client';
+import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 
 const PRIVATE_PROJECT_FILE_URL = 'private:project-file';
 const MIN_REASON_LENGTH = 8;
@@ -36,21 +37,45 @@ export class ProjectFilesService {
     uploadedByClientId?: string;
     parentId?: string;
     permittedBuildingIds?: string[];
+    actor?: AdviserActor;
   }) {
-    const project = data.projectId ? await this.prisma.project.findFirst({
-      where: { id: data.projectId, organizationId: data.organizationId,
-        ...(data.permittedBuildingIds !== undefined ? { buildingId: { in: data.permittedBuildingIds } } : {}) },
-    }) : null;
-    if (data.projectId && !project) throw new NotFoundException('Projet introuvable');
+    const project = data.projectId
+      ? await this.prisma.project.findFirst({
+          where: {
+            id: data.projectId,
+            organizationId: data.organizationId,
+            isActive: true,
+            ...(data.actor ? projectAccessWhere(data.actor) : {}),
+            ...(data.actor ? { status: { not: 'ARCHIVED' as const } } : {}),
+            ...(data.permittedBuildingIds !== undefined
+              ? { buildingId: { in: data.permittedBuildingIds } }
+              : {}),
+          },
+        })
+      : null;
+    if (data.projectId && !project)
+      throw new NotFoundException('Projet introuvable');
     const buildingId = project?.buildingId ?? data.buildingId;
-    const building = buildingId ? await this.prisma.building.findFirst({
-      where: { id: buildingId, organizationId: data.organizationId,
-        ...(data.permittedBuildingIds !== undefined ? { id: { in: data.permittedBuildingIds }, AND: { id: buildingId } } : {}) },
-      select: { id: true },
-    }) : null;
+    const building = buildingId
+      ? await this.prisma.building.findFirst({
+          where: {
+            id: buildingId,
+            organizationId: data.organizationId,
+            ...(data.permittedBuildingIds !== undefined
+              ? {
+                  id: { in: data.permittedBuildingIds },
+                  AND: { id: buildingId },
+                }
+              : {}),
+          },
+          select: { id: true },
+        })
+      : null;
     if (!building) throw new NotFoundException('Bâtiment introuvable');
-    if (!['shared', 'internal'].includes(data.visibility)) throw new BadRequestException('Visibilité invalide');
-    if (!data.buffer?.length || data.buffer.length > 50 * 1024 * 1024) throw new BadRequestException('Fichier vide ou supérieur à 50 Mo');
+    if (!['shared', 'internal'].includes(data.visibility))
+      throw new BadRequestException('Visibilité invalide');
+    if (!data.buffer?.length || data.buffer.length > 50 * 1024 * 1024)
+      throw new BadRequestException('Fichier vide ou supérieur à 50 Mo');
 
     // Déterminer la version
     let version = 1;
@@ -93,7 +118,13 @@ export class ProjectFilesService {
     const file = await this.prisma.$transaction(async (tx) => {
       if (parentId) {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`${data.organizationId}:${parentId}`}, 0))`;
-        const latest = await tx.projectFile.findFirst({ where: { organizationId: data.organizationId, OR: [{ id: parentId }, { parentId }] }, orderBy: { version: 'desc' } });
+        const latest = await tx.projectFile.findFirst({
+          where: {
+            organizationId: data.organizationId,
+            OR: [{ id: parentId }, { parentId }],
+          },
+          orderBy: { version: 'desc' },
+        });
         version = (latest?.version ?? 1) + 1;
       }
       const created = await tx.projectFile.create({
@@ -167,6 +198,7 @@ export class ProjectFilesService {
     fileId: string;
     organizationId: string;
     actorId: string;
+    actor?: AdviserActor;
     reason: string;
     requestId: string;
     lockVersion: number;
@@ -182,6 +214,7 @@ export class ProjectFilesService {
     fileId: string;
     organizationId: string;
     actorId: string;
+    actor?: AdviserActor;
     reason: string;
     requestId: string;
     lockVersion: number;
@@ -202,6 +235,7 @@ export class ProjectFilesService {
         data.fileId,
         data.organizationId,
         data.actorId,
+        data.actor,
       );
       const existingEvent = await tx.projectFileLifecycleEvent.findUnique({
         where: {
@@ -319,6 +353,7 @@ export class ProjectFilesService {
     organizationId: string,
     asOf = new Date(),
     permittedBuildingIds?: string[],
+    actor?: AdviserActor,
   ) {
     if (Number.isNaN(asOf.getTime()))
       throw new BadRequestException('Date de resolution invalide');
@@ -326,10 +361,29 @@ export class ProjectFilesService {
       where: {
         id: fileId,
         organizationId,
+        ...(actor
+          ? {
+              project: { is: { isActive: true, ...projectAccessWhere(actor) } },
+            }
+          : {}),
         OR: [
-          { building: { organizationId, ...(permittedBuildingIds !== undefined ? { id: { in: permittedBuildingIds } } : {}) } },
-          { buildingId: null, project: { organizationId,
-            ...(permittedBuildingIds !== undefined ? { buildingId: { in: permittedBuildingIds } } : {}) } },
+          {
+            building: {
+              organizationId,
+              ...(permittedBuildingIds !== undefined
+                ? { id: { in: permittedBuildingIds } }
+                : {}),
+            },
+          },
+          {
+            buildingId: null,
+            project: {
+              organizationId,
+              ...(permittedBuildingIds !== undefined
+                ? { buildingId: { in: permittedBuildingIds } }
+                : {}),
+            },
+          },
         ],
       },
       select: { id: true, parentId: true },
@@ -370,6 +424,7 @@ export class ProjectFilesService {
     fileId: string;
     organizationId: string;
     actorId: string;
+    actor?: AdviserActor;
     reason: string;
     requestId: string;
     lockVersion: number;
@@ -384,6 +439,7 @@ export class ProjectFilesService {
         data.fileId,
         data.organizationId,
         data.actorId,
+        data.actor,
       );
       if (!file.lifecycleState)
         throw new ConflictException('Document historique sans cycle gouverne');
@@ -464,13 +520,28 @@ export class ProjectFilesService {
     fileId: string;
     organizationId: string;
     actorId: string;
+    actor?: AdviserActor;
     reason: string;
     requestId: string;
     lockVersion: number;
   }) {
     this.assertTransitionInput(data.reason, data.requestId, data.lockVersion);
     const file = await this.prisma.projectFile.findFirst({
-      where: { id: data.fileId, organizationId: data.organizationId },
+      where: {
+        id: data.fileId,
+        organizationId: data.organizationId,
+        ...(data.actor
+          ? {
+              project: {
+                is: {
+                  isActive: true,
+                  status: { not: 'ARCHIVED' },
+                  ...projectAccessWhere(data.actor),
+                },
+              },
+            }
+          : {}),
+      },
     });
     if (!file) throw new NotFoundException('Fichier introuvable');
     if (!file.lifecycleState)
@@ -487,6 +558,7 @@ export class ProjectFilesService {
     fileId: string;
     organizationId: string;
     actorId: string;
+    actor?: AdviserActor;
     classification: 'PROHIBITED' | 'NON_SENSITIVE_EMERGENCY';
     reason: string;
     requestId: string;
@@ -499,6 +571,7 @@ export class ProjectFilesService {
         data.fileId,
         data.organizationId,
         data.actorId,
+        data.actor,
       );
       if (file.lifecycleState !== 'APPROVED')
         throw new ConflictException(
@@ -566,11 +639,14 @@ export class ProjectFilesService {
     visibility: string | undefined,
     organizationId: string,
     permittedBuildingIds?: string[],
+    actor?: AdviserActor,
   ) {
     const project = await this.prisma.project.findFirst({
       where: {
         id: projectId,
         organizationId,
+        isActive: true,
+        ...(actor ? projectAccessWhere(actor) : {}),
         ...(permittedBuildingIds !== undefined
           ? { buildingId: { in: permittedBuildingIds } }
           : {}),
@@ -631,13 +707,28 @@ export class ProjectFilesService {
     });
   }
 
-  async getSignedUrl(fileId: string, organizationId: string) {
+  async getSignedUrl(
+    fileId: string,
+    organizationId: string,
+    actor?: AdviserActor,
+  ) {
     const file = await this.prisma.projectFile.findFirst({
-      where: { id: fileId, organizationId },
+      where: {
+        id: fileId,
+        organizationId,
+        ...(actor
+          ? {
+              project: { is: { isActive: true, ...projectAccessWhere(actor) } },
+            }
+          : {}),
+      },
     });
     if (!file) throw new NotFoundException('Fichier introuvable');
-    // Retourner l'URL directe (déjà publique via Spaces)
-    return { url: file.url, name: file.name };
+    // Preserve the response shape without exposing the persisted reference.
+    return {
+      url: `/api/project-files/${file.id}/content`,
+      name: file.name,
+    };
   }
 
   async downloadPrivateFile(
@@ -645,21 +736,40 @@ export class ProjectFilesService {
     organizationId: string,
     permittedBuildingIds?: string[],
     sharedOnly = false,
+    actor?: AdviserActor,
   ) {
     const file = await this.prisma.projectFile.findFirst({
       where: {
         id: fileId,
         organizationId,
+        ...(actor
+          ? {
+              project: { is: { isActive: true, ...projectAccessWhere(actor) } },
+            }
+          : {}),
         ...(sharedOnly ? { visibility: 'shared' } : {}),
         OR: [
-          { building: { organizationId, ...(permittedBuildingIds !== undefined ? { id: { in: permittedBuildingIds } } : {}) } },
-          { buildingId: null, project: { organizationId,
-            ...(permittedBuildingIds !== undefined ? { buildingId: { in: permittedBuildingIds } } : {}) } },
+          {
+            building: {
+              organizationId,
+              ...(permittedBuildingIds !== undefined
+                ? { id: { in: permittedBuildingIds } }
+                : {}),
+            },
+          },
+          {
+            buildingId: null,
+            project: {
+              organizationId,
+              ...(permittedBuildingIds !== undefined
+                ? { buildingId: { in: permittedBuildingIds } }
+                : {}),
+            },
+          },
         ],
       },
     });
-    if (!file || file.url !== PRIVATE_PROJECT_FILE_URL)
-      throw new NotFoundException('Fichier prive introuvable');
+    if (!file) throw new NotFoundException('Fichier prive introuvable');
     if (file.lifecycleState === 'REVOKED')
       throw new NotFoundException('Fichier prive introuvable');
     if (
@@ -677,8 +787,18 @@ export class ProjectFilesService {
       throw new NotFoundException('Fichier prive introuvable');
     if (file.expiresAt && file.expiresAt.getTime() <= Date.now())
       throw new NotFoundException('Fichier prive introuvable');
+    const storageKey = file.storageKey;
+    if (
+      !storageKey ||
+      storageKey.startsWith('/') ||
+      storageKey.includes('..') ||
+      storageKey.includes('\\') ||
+      /^[a-z][a-z0-9+.-]*:/i.test(storageKey)
+    ) {
+      throw new NotFoundException('Reference documentaire historique invalide');
+    }
     return {
-      buffer: await this.storage.downloadPrivate(file.storageKey),
+      buffer: await this.storage.downloadPrivate(storageKey),
       mimeType: file.mimeType,
       name: file.name,
     };
@@ -688,15 +808,35 @@ export class ProjectFilesService {
     fileId: string,
     organizationId: string,
     permittedBuildingIds?: string[],
+    actor?: AdviserActor,
   ) {
     const file = await this.prisma.projectFile.findFirst({
       where: {
         id: fileId,
         organizationId,
+        ...(actor
+          ? {
+              project: { is: { isActive: true, ...projectAccessWhere(actor) } },
+            }
+          : {}),
         OR: [
-          { building: { organizationId, ...(permittedBuildingIds !== undefined ? { id: { in: permittedBuildingIds } } : {}) } },
-          { buildingId: null, project: { organizationId,
-            ...(permittedBuildingIds !== undefined ? { buildingId: { in: permittedBuildingIds } } : {}) } },
+          {
+            building: {
+              organizationId,
+              ...(permittedBuildingIds !== undefined
+                ? { id: { in: permittedBuildingIds } }
+                : {}),
+            },
+          },
+          {
+            buildingId: null,
+            project: {
+              organizationId,
+              ...(permittedBuildingIds !== undefined
+                ? { buildingId: { in: permittedBuildingIds } }
+                : {}),
+            },
+          },
         ],
       },
       select: { id: true },
@@ -744,16 +884,48 @@ export class ProjectFilesService {
     fileId: string,
     organizationId: string,
     actorId: string,
+    actor?: AdviserActor,
   ) {
     const file = await tx.projectFile.findFirst({
-      where: { id: fileId, organizationId },
-      include: { project: { select: { userId: true } } },
+      where: {
+        id: fileId,
+        organizationId,
+        ...(actor
+          ? {
+              project: {
+                is: {
+                  isActive: true,
+                  status: { not: 'ARCHIVED' },
+                  ...projectAccessWhere(actor),
+                },
+              },
+            }
+          : {}),
+      },
+      include: {
+        project: { select: { userId: true, status: true, isActive: true } },
+      },
     });
     if (!file) throw new NotFoundException('Fichier introuvable');
-    const buildingApprover = !file.project && file.buildingId
-      ? await tx.user.findFirst({ where: { id: actorId, organizationId, isActive: true,
-          OR: [{ role: { in: ['ADMIN', 'SUPER_ADMIN'] } }, { id: file.uploadedById ?? '' }] }, select: { id: true } })
-      : null;
+    if (file.project?.isActive === false)
+      throw new NotFoundException('Fichier introuvable');
+    if (file.project?.status === 'ARCHIVED')
+      throw new ForbiddenException('Projet archive en lecture seule');
+    const buildingApprover =
+      !file.project && file.buildingId
+        ? await tx.user.findFirst({
+            where: {
+              id: actorId,
+              organizationId,
+              isActive: true,
+              OR: [
+                { role: { in: ['ADMIN', 'SUPER_ADMIN'] } },
+                { id: file.uploadedById ?? '' },
+              ],
+            },
+            select: { id: true },
+          })
+        : null;
     if (file.project?.userId !== actorId && !buildingApprover)
       throw new ForbiddenException(
         'Transition réservée au conseiller responsable du projet',
@@ -766,6 +938,7 @@ export class ProjectFilesService {
       fileId: string;
       organizationId: string;
       actorId: string;
+      actor?: AdviserActor;
       reason: string;
       requestId: string;
       lockVersion: number;
@@ -781,6 +954,7 @@ export class ProjectFilesService {
         data.fileId,
         data.organizationId,
         data.actorId,
+        data.actor,
       );
       const existingEvent = await tx.projectFileLifecycleEvent.findUnique({
         where: {
