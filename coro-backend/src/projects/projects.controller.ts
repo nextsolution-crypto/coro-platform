@@ -9,6 +9,8 @@ import {
   UseGuards,
   Request,
   Query,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ProjectsService } from './projects.service';
@@ -16,6 +18,7 @@ import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 import { AuditService } from '../audit/audit.service';
 import { ClientPortalService } from '../client-portal/client-portal.service';
 import { ApprovalService } from '../approval/approval.service';
+import { UpdateProjectDto } from './dto/update-project.dto';
 
 @Controller('projects')
 @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
@@ -74,10 +77,7 @@ export class ProjectsController {
 
   @Get(':id/quality-score')
   getQualityScore(@Param('id') id: string, @Request() req: any) {
-    return this.projectsService.calculateQualityScore(
-      id,
-      req.user.organizationId,
-    );
+    return this.projectsService.calculateQualityScore(id, req.user);
   }
 
   @Get(':id')
@@ -98,9 +98,16 @@ export class ProjectsController {
   }
 
   @Put(':id')
+  @UsePipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  )
   async update(
     @Param('id') id: string,
-    @Body() body: any,
+    @Body() body: UpdateProjectDto,
     @Request() req: any,
   ) {
     const result = await this.projectsService.update(id, body, req.user);

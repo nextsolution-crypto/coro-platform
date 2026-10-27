@@ -67,3 +67,9 @@ Statuts : **PASS**, **FAIL**, **NOT_VERIFIED**, **NON_APPLICABLE**, **DÉCISION_
 - Intégrité concurrente : PROJ-DETAIL-006.
 
 La matrice n'étend pas l'acceptation aux sous-écrans ou aux opérations documentaires exclues.
+# Mise à jour de clôture
+
+La matrice ci-dessous conserve l'état initial audité. Le candidat corrigé et ses
+preuves sont réconciliés dans `PROJECT-DETAIL-CORRECTION-ACCEPTANCE.md` : 22/22
+contrôles API/navigateur et 12/12 configurations responsive passent en QA isolée.
+La vérification de production reste conditionnée à la release gouvernée.

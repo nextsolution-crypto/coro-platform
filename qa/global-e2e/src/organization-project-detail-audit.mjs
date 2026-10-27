@@ -39,6 +39,8 @@ const ids = {
   clientB: '30000000-0000-4000-8000-000000000002',
   buildingA: '40000000-0000-4000-8000-000000000001',
   buildingB: '40000000-0000-4000-8000-000000000002',
+  clientA2: '30000000-0000-4000-8000-000000000009',
+  buildingA2: '40000000-0000-4000-8000-000000000009',
   active: '50000000-0000-4000-8000-000000000001',
   archived: '50000000-0000-4000-8000-000000000002',
   foreign: '50000000-0000-4000-8000-000000000003',
@@ -73,6 +75,14 @@ try {
     update: { isActive: false },
     create: { id: ids.disabled, name: 'Synthetic Disabled Project', documentType: 'PMU', year: 2026, organizationId: ids.orgA, clientId: ids.clientA, buildingId: ids.buildingA, userId: ids.unassigned, isActive: false },
   });
+  await prisma.client.upsert({
+    where: { id: ids.clientA2 }, update: {},
+    create: { id: ids.clientA2, name: 'Synthetic Client A2', organizationId: ids.orgA, regulatoryRequirements: [] },
+  });
+  await prisma.building.upsert({
+    where: { id: ids.buildingA2 }, update: {},
+    create: { id: ids.buildingA2, name: 'Synthetic Building A2', address: '9 QA Street', city: 'Testville', province: 'QC', organizationId: ids.orgA, clientId: ids.clientA2 },
+  });
 
   const advisor = await lab.loginAs('advisor');
   const adminA = await rawLogin('customer-admin-a@global-e2e.test');
@@ -98,26 +108,33 @@ try {
   record('disabled-list-direct-consistency', disabledList.status === 200 && !disabledListed && [403, 404].includes(disabledRead.status), `list HTTP ${disabledList.status}; listed=${disabledListed}; direct HTTP ${disabledRead.status}`, 'security');
 
   const original = { clientId: authorized.data.clientId, buildingId: authorized.data.buildingId };
-  const forgedParent = await lab.call(`/projects/${ids.active}`, { method: 'PUT', token: advisor.token, body: { clientId: ids.clientB, buildingId: ids.buildingB } });
+  const sameOrgParent = await lab.call(`/projects/${ids.active}`, { method: 'PUT', token: advisor.token, body: { clientId: ids.clientA2, buildingId: ids.buildingA2, expectedUpdatedAt: authorized.data.updatedAt } });
+  record('same-tenant-parent-reassignment', sameOrgParent.status === 200 && sameOrgParent.data.clientId === ids.clientA2 && sameOrgParent.data.buildingId === ids.buildingA2, `HTTP ${sameOrgParent.status}`);
+  const restoredParent = await lab.call(`/projects/${ids.active}`, { method: 'PUT', token: advisor.token, body: { ...original, expectedUpdatedAt: sameOrgParent.data?.updatedAt } });
+  record('same-tenant-parent-restored', restoredParent.status === 200, `HTTP ${restoredParent.status}`, 'cleanup');
+
+  const forgedParent = await lab.call(`/projects/${ids.active}`, { method: 'PUT', token: advisor.token, body: { clientId: ids.clientB, buildingId: ids.buildingB, expectedUpdatedAt: restoredParent.data?.updatedAt } });
   const forgedRead = await lab.call(`/projects/${ids.active}`, { token: advisor.token });
   const crossParentAccepted = forgedParent.status < 300 && forgedRead.data?.buildingId === ids.buildingB;
   record('cross-tenant-parent-substitution-denial', !crossParentAccepted, `update HTTP ${forgedParent.status}; building=${forgedRead.data?.buildingId}; client=${forgedRead.data?.clientId}`, 'security');
   if (crossParentAccepted) {
-    const restored = await lab.call(`/projects/${ids.active}`, { method: 'PUT', token: advisor.token, body: original });
+    const restored = await lab.call(`/projects/${ids.active}`, { method: 'PUT', token: advisor.token, body: { ...original, expectedUpdatedAt: forgedRead.data?.updatedAt } });
     record('synthetic-parent-fixture-restored', restored.status < 300, `HTTP ${restored.status}`, 'cleanup');
   }
-  const forgedOrganization = await lab.call(`/projects/${ids.active}`, { method: 'PUT', token: advisor.token, body: { organizationId: ids.orgB } });
-  record('organization-substitution-denial', forgedOrganization.status === 403, `HTTP ${forgedOrganization.status}`, 'security');
-  const forgedResponsible = await lab.call(`/projects/${ids.active}`, { method: 'PUT', token: advisor.token, body: { userId: ids.unassigned } });
-  record('responsible-substitution-denial', forgedResponsible.status === 403, `HTTP ${forgedResponsible.status}`, 'security');
+  const currentBeforeProtected = await lab.call(`/projects/${ids.active}`, { token: advisor.token });
+  const forgedOrganization = await lab.call(`/projects/${ids.active}`, { method: 'PUT', token: advisor.token, body: { organizationId: ids.orgB, expectedUpdatedAt: currentBeforeProtected.data.updatedAt } });
+  record('organization-substitution-denial', forgedOrganization.status === 400 || forgedOrganization.status === 403, `HTTP ${forgedOrganization.status}`, 'security');
+  const forgedResponsible = await lab.call(`/projects/${ids.active}`, { method: 'PUT', token: advisor.token, body: { userId: ids.unassigned, expectedUpdatedAt: currentBeforeProtected.data.updatedAt } });
+  record('responsible-substitution-denial', forgedResponsible.status === 400 || forgedResponsible.status === 403, `HTTP ${forgedResponsible.status}`, 'security');
 
   const originalName = authorized.data.name;
-  const concurrentFirst = await lab.call(`/projects/${ids.active}`, { method: 'PUT', token: advisor.token, body: { name: 'Synthetic concurrent edit A' } });
-  const concurrentSecond = await lab.call(`/projects/${ids.active}`, { method: 'PUT', token: adminA.token, body: { name: 'Synthetic concurrent edit B' } });
+  const concurrencyBaseline = await lab.call(`/projects/${ids.active}`, { token: advisor.token });
+  const concurrentFirst = await lab.call(`/projects/${ids.active}`, { method: 'PUT', token: advisor.token, body: { name: 'Synthetic concurrent edit A', expectedUpdatedAt: concurrencyBaseline.data.updatedAt } });
+  const concurrentSecond = await lab.call(`/projects/${ids.active}`, { method: 'PUT', token: adminA.token, body: { name: 'Synthetic concurrent edit B', expectedUpdatedAt: concurrencyBaseline.data.updatedAt } });
   const concurrentFinal = await lab.call(`/projects/${ids.active}`, { token: advisor.token });
-  record('concurrent-stale-write-detection', !(concurrentFirst.status < 300 && concurrentSecond.status < 300 && concurrentFinal.data?.name === 'Synthetic concurrent edit B'), `first=${concurrentFirst.status}; second=${concurrentSecond.status}; final=${concurrentFinal.data?.name}`, 'integrity');
-  await lab.call(`/projects/${ids.active}`, { method: 'PUT', token: advisor.token, body: { name: originalName } });
-  const archiveUpdate = await lab.call(`/projects/${ids.archived}`, { method: 'PUT', token: advisor.token, body: { name: 'Forbidden archive mutation' } });
+  record('concurrent-stale-write-detection', concurrentFirst.status === 200 && concurrentSecond.status === 409 && concurrentFinal.data?.name === 'Synthetic concurrent edit A', `first=${concurrentFirst.status}; second=${concurrentSecond.status}; final=${concurrentFinal.data?.name}`, 'integrity');
+  await lab.call(`/projects/${ids.active}`, { method: 'PUT', token: advisor.token, body: { name: originalName, expectedUpdatedAt: concurrentFinal.data.updatedAt } });
+  const archiveUpdate = await lab.call(`/projects/${ids.archived}`, { method: 'PUT', token: advisor.token, body: { name: 'Forbidden archive mutation', expectedUpdatedAt: archiveRead.data.updatedAt } });
   record('archived-mutation-denial', archiveUpdate.status === 403, `HTTP ${archiveUpdate.status}`);
 
   browser = await puppeteer.launch({ headless: true });
