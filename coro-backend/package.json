@@ -23,6 +23,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "test:postgres": "jest --config ./test/jest-postgres.json --runInBand",
+    "knowledge:public:sync": "ts-node src/public-knowledge/sync-public-knowledge.ts",
     "demo:premont:population": "ts-node src/seed-demo-premont-population.ts",
     "demo:booking:planner": "ts-node src/seed-booking-planner-demo.ts",
     "admin:population-live-setup": "ts-node src/admin/setup-population-live-validation.ts",

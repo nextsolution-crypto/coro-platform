@@ -75,6 +75,7 @@ import { CommercialSubscriptionsModule } from './commercial-subscriptions/commer
 import { CommercialBillingModule } from './commercial-billing/commercial-billing.module';
 import { KnowledgeModule } from './knowledge/knowledge.module';
 import { UserManualModule } from './user-manual/user-manual.module';
+import { PublicKnowledgeModule } from './public-knowledge/public-knowledge.module';
 
 @Module({
   imports: [
@@ -100,6 +101,7 @@ import { UserManualModule } from './user-manual/user-manual.module';
     CommercialBillingModule,
     KnowledgeModule,
     UserManualModule,
+    PublicKnowledgeModule,
     AuthModule,
     UsersModule,
     ClientsModule,
