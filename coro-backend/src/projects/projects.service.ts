@@ -194,9 +194,6 @@ export class ProjectsService {
       throw new ForbiddenException('Champ de mise a jour interdit');
     }
     const { expectedUpdatedAt } = data as UpdateProjectDto;
-    if (!expectedUpdatedAt) {
-      throw new BadRequestException('expectedUpdatedAt requis');
-    }
     const mutableFields = [
       'name',
       'documentType',
@@ -230,6 +227,9 @@ export class ProjectsService {
         }
         if (current.status === 'ARCHIVED') {
           throw new ForbiddenException('Projet archive en lecture seule');
+        }
+        if (!expectedUpdatedAt) {
+          throw new BadRequestException('expectedUpdatedAt requis');
         }
         const expected = new Date(expectedUpdatedAt);
         if (current.updatedAt.getTime() !== expected.getTime()) {

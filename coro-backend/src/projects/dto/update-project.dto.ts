@@ -1,7 +1,6 @@
 import { DocumentType, ProjectStatus } from '@prisma/client';
 import {
   IsEnum,
-  IsDefined,
   IsISO8601,
   IsInt,
   IsEmpty,
@@ -15,7 +14,7 @@ import {
 } from 'class-validator';
 
 export class UpdateProjectDto {
-  @IsDefined()
+  @IsOptional()
   @IsISO8601()
   expectedUpdatedAt?: string;
 
