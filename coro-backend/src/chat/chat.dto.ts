@@ -43,6 +43,35 @@ export class ChatMessageDto {
   history: ChatHistoryMessageDto[] = [];
 }
 
+export class PublicAssistantPageContextDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(300)
+  pathname!: string;
+}
+
+export class PublicAssistantMessageDto {
+  @IsString()
+  @MinLength(2)
+  @MaxLength(2_000)
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  message!: string;
+
+  @IsIn(['fr-CA', 'en-CA'])
+  language!: 'fr-CA' | 'en-CA';
+
+  @IsOptional()
+  @IsUUID('4')
+  sessionId?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PublicAssistantPageContextDto)
+  pageContext?: PublicAssistantPageContextDto;
+}
+
 export class ChatNotifyDto {
   @IsEmail()
   @MaxLength(254)

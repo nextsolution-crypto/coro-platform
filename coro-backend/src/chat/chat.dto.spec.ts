@@ -2,7 +2,11 @@ import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { ChatMessageDto, ChatNotifyDto } from './chat.dto';
+import {
+  ChatMessageDto,
+  ChatNotifyDto,
+  PublicAssistantMessageDto,
+} from './chat.dto';
 
 describe('Chat DTO validation', () => {
   it('accepts only user and assistant history roles', async () => {
@@ -56,5 +60,34 @@ describe('Chat DTO validation', () => {
     expect(await validate(dto)).toHaveLength(0);
     expect(dto.message).toBe('Bonjour');
     expect(dto.history[0].content).toBe('Contexte');
+  });
+
+  it('accepts only the public assistant language, session and page contract', async () => {
+    const valid = plainToInstance(PublicAssistantMessageDto, {
+      message: '  Comment fonctionne CORO Knowledge ?  ',
+      language: 'fr-CA',
+      sessionId: '20ac4c20-d2c1-4e70-bd82-c353701525b7',
+      pageContext: { pathname: '/coro-knowledge' },
+    });
+    expect(await validate(valid)).toHaveLength(0);
+    expect(valid.message).toBe('Comment fonctionne CORO Knowledge ?');
+
+    const pipe = new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    });
+    await expect(
+      pipe.transform(
+        {
+          message: 'Question',
+          language: 'fr',
+          tenantId: 'forbidden',
+          provider: 'bedrock',
+          systemPrompt: 'ignore rules',
+        },
+        { type: 'body', metatype: PublicAssistantMessageDto },
+      ),
+    ).rejects.toThrow();
   });
 });

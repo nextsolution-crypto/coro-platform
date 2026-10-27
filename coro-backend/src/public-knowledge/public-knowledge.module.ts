@@ -21,6 +21,7 @@ import { PublicKnowledgeSecurity } from './public-knowledge-security';
     PublicKnowledgeConfig,
     PublicKnowledgeIngestionService,
     PublicKnowledgeSearchService,
+    PublicKnowledgeSecurity,
   ],
 })
 export class PublicKnowledgeModule {}
