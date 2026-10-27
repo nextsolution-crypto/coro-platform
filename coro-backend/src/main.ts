@@ -78,6 +78,10 @@ export async function bootstrap() {
     '/api/webhooks/brevo/population/sms',
     bodyParser.json({ limit: '64kb', type: 'application/json' }),
   );
+  app.use(
+    '/api/chat',
+    bodyParser.json({ limit: '32kb', type: 'application/json' }),
+  );
   app.use(bodyParser.json({ limit: '250mb' }));
   app.use(bodyParser.urlencoded({ limit: '250mb', extended: true }));
 
