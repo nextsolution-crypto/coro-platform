@@ -104,7 +104,7 @@ test('mobile recomposes vertically with a spine instead of shrinking the row', (
 });
 
 test('only committed assets, no new dependency, no production import, Lab stays noindex', () => {
-  assert.deepEqual(Object.keys(JSON.parse(read('package.json')).dependencies).sort(), ['lucide-react', 'next', 'react', 'react-dom']);
+  assert.deepEqual(Object.keys(JSON.parse(read('package.json')).dependencies).sort(), ['jspdf', 'lucide-react', 'next', 'react', 'react-dom']);
   for (const file of [...tsx, 'app/design-lab/FlowStudies.tsx', 'app/design-lab/flow-data.ts']) {
     for (const imp of read(file).match(/from '[^']+'/g) ?? []) assert.doesNotMatch(imp, /HomePageClient|ProductPage|Compositions|DemoForm|components\/(hero|page|spatial|operational)/, `${file} ${imp}`);
   }

@@ -411,6 +411,14 @@
 .resourcesLink span { color: var(--coro-v1-red-600); }
 .resourcesLink:hover { text-decoration: underline; text-underline-offset: .3em; }
 .resourcesLink:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
+.diagnosticInvite { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1.25rem 2rem; margin-block-start: 2rem; padding: 1.35rem 1.5rem; border: 1px solid var(--coro-v1-paper-line-strong); border-inline-start: 4px solid var(--coro-v1-red-600); background: var(--coro-v1-surface-1); }
+.diagnosticInvite h3 { max-inline-size: 34ch; margin: 0; color: var(--ink); font-size: clamp(1.15rem, 2vw, 1.45rem); line-height: 1.25; }
+.diagnosticInvite p { max-inline-size: 62ch; margin: .45rem 0 0; color: var(--muted); line-height: 1.55; }
+.diagnosticInviteAction { display: grid; justify-items: start; gap: .45rem; min-inline-size: 15rem; }
+.diagnosticInviteAction a { display: inline-flex; align-items: center; min-block-size: 44px; padding: .7rem 1rem; border-radius: var(--coro-v1-radius-control); background: var(--coro-v1-red-600); color: #fff; font-weight: 750; text-decoration: none; }
+.diagnosticInviteAction a:hover { background: var(--coro-v1-red-700); }
+.diagnosticInviteAction a:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
+.diagnosticInviteAction small { color: var(--muted); font-weight: 650; }
 
 /* Final panoramic CTA — full-bleed Montreal skyline at dusk. Left navy gradient carries the main copy, right
    navy gradient carries a short manifesto; the lit skyline band across the center stays clear of overlay. */
@@ -454,6 +462,8 @@
 @media (max-width: 68rem) {
   .resourcesStrip { grid-template-columns: 1fr; gap: var(--coro-v1-space-3); }
   .resourcesLinks { justify-self: start; }
+  .diagnosticInvite { grid-template-columns: 1fr; }
+  .diagnosticInviteAction { min-inline-size: 0; }
   .panoramicCta { block-size: auto; min-block-size: 30rem; }
   .panoramicCtaScrimLeft { inline-size: 100%; background: linear-gradient(180deg, var(--coro-v1-navy-950) 0%, color-mix(in srgb, var(--coro-v1-navy-950) 78%, transparent) 45%, color-mix(in srgb, var(--coro-v1-navy-950) 55%, transparent) 100%); }
   .panoramicCtaScrimRight { display: none; }

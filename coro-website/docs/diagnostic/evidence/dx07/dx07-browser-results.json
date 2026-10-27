@@ -1,0 +1,310 @@
+{
+  "generatedAt": "2026-10-27T19:23:43.630Z",
+  "environment": {
+    "baseUrl": "http://127.0.0.1:3419",
+    "browserTarget": "DDCF6D5C2B377D85B6F161E3E3B6C692"
+  },
+  "navigation": {
+    "home": {
+      "links": [
+        {
+          "text": "Évaluer ma préparation",
+          "href": "/diagnostic",
+          "footer": false
+        },
+        {
+          "text": "Évaluer ma préparation →",
+          "href": "/diagnostic",
+          "footer": false
+        },
+        {
+          "text": "Diagnostic Express",
+          "href": "/diagnostic",
+          "footer": true
+        }
+      ],
+      "title": "CORO | Plateforme de résilience opérationnelle et mesures d’urgence",
+      "overflow": false
+    },
+    "homeEn": {
+      "links": [
+        {
+          "text": "Assess my preparedness",
+          "href": "/diagnostic?lang=en",
+          "footer": false
+        },
+        {
+          "text": "Assess my preparedness →",
+          "href": "/diagnostic?lang=en",
+          "footer": false
+        },
+        {
+          "text": "Express Diagnostic",
+          "href": "/diagnostic?lang=en",
+          "footer": true
+        }
+      ],
+      "overflow": false
+    }
+  },
+  "journey": {
+    "intro": {
+      "h1": "Votre organisation est-elle réellement prête ?",
+      "start": true,
+      "storageBefore": 0,
+      "url": "http://127.0.0.1:3419/diagnostic"
+    },
+    "back": {
+      "checked": "A",
+      "question": "Sélectionnez une réponse pour continuer."
+    },
+    "languagePersistence": {
+      "lang": "en",
+      "checked": "B",
+      "url": "http://127.0.0.1:3419/diagnostic?lang=en",
+      "stored": true
+    },
+    "result": {
+      "score": [
+        "67 %",
+        "100 % (8/8)",
+        "Préparation structurée"
+      ],
+      "h2": [
+        "Portrait de résilience CORO",
+        "Forces identifiées",
+        "Priorités d'amélioration",
+        "Priorités de vérification",
+        "Recommandations détaillées",
+        "Plan d'amélioration",
+        "Capacités CORO pertinentes",
+        "Vous connaissez vos priorités. Découvrez comment passer à l’action.",
+        "Votre diagnostic est une première étape. Votre résilience se construit dans l'action.",
+        "Limites méthodologiques",
+        "Plateforme",
+        "Résilience et opérations",
+        "Entreprise"
+      ],
+      "radarAxes": 8,
+      "portraitRows": 8,
+      "pdf": true,
+      "share": true,
+      "commercial": true,
+      "temporary": true,
+      "url": "http://127.0.0.1:3419/diagnostic"
+    },
+    "resultEn": {
+      "lang": "en-CA",
+      "h1": "Structured preparation",
+      "pdf": true,
+      "commercial": true
+    },
+    "reset": {
+      "start": true,
+      "answers": null
+    }
+  },
+  "responsive": [
+    {
+      "width": 320,
+      "overflow": false,
+      "main": 320,
+      "minTarget": 35.5,
+      "result": {
+        "overflow": false,
+        "radar": 254,
+        "tableOverflowContained": true,
+        "formInitiallyAbsent": true
+      }
+    },
+    {
+      "width": 375,
+      "overflow": false,
+      "main": 375,
+      "minTarget": 35.5,
+      "result": {
+        "overflow": false,
+        "radar": 309,
+        "tableOverflowContained": true,
+        "formInitiallyAbsent": true
+      }
+    },
+    {
+      "width": 390,
+      "overflow": false,
+      "main": 390,
+      "minTarget": 35.5,
+      "result": {
+        "overflow": false,
+        "radar": 324,
+        "tableOverflowContained": true,
+        "formInitiallyAbsent": true
+      }
+    },
+    {
+      "width": 768,
+      "overflow": false,
+      "main": 753,
+      "minTarget": 16,
+      "result": {
+        "overflow": false,
+        "radar": 392.9375,
+        "tableOverflowContained": true,
+        "formInitiallyAbsent": true
+      }
+    },
+    {
+      "width": 1024,
+      "overflow": false,
+      "main": 1009,
+      "minTarget": 16,
+      "result": {
+        "overflow": false,
+        "radar": 602.453125,
+        "tableOverflowContained": true,
+        "formInitiallyAbsent": true
+      }
+    },
+    {
+      "width": 1440,
+      "overflow": false,
+      "main": 1425,
+      "minTarget": 16,
+      "result": {
+        "overflow": false,
+        "radar": 608,
+        "tableOverflowContained": true,
+        "formInitiallyAbsent": true
+      }
+    },
+    {
+      "width": 1920,
+      "overflow": false,
+      "main": 1905,
+      "minTarget": 16,
+      "result": {
+        "overflow": false,
+        "radar": 608,
+        "tableOverflowContained": true,
+        "formInitiallyAbsent": true
+      }
+    }
+  ],
+  "reducedMotion": {
+    "language": "en",
+    "preference": true,
+    "animationDurations": [
+      "1e-05s",
+      "1e-05s",
+      "1e-05s",
+      "1e-05s",
+      "1e-05s",
+      "1e-05s",
+      "1e-05s",
+      "1e-05s",
+      "1e-05s",
+      "1e-05s"
+    ]
+  },
+  "alternative": {
+    "scoreText": [
+      "—",
+      "0 % (0/8)",
+      "—",
+      "Scattered or outdated information can delay decisions and lead to inconsistent response.",
+      "Maintain one document inventory, assign an owner and periodically review critical data.",
+      "Identify the owner of each source and verify where the authoritative version is held.",
+      "Unapproved, outdated or hard-to-find plans can compromise a coordinated response.",
+      "Govern every document with an owner, approved version, effective date and scheduled review.",
+      "Confirm the approval status, current version and owner of each plan.",
+      "Poorly understood roles or missing backups can create delays and conflicting decisions.",
+      "Define responsibilities, maintain operational qualifications and designate backups.",
+      "Review the current list of roles, owners and operational qualifications.",
+      "Improvised coordination increases the risk of late, conflicting or untraceable action.",
+      "Prepare accessible procedures, an explicit command chain and tested escalation mechanisms.",
+      "Run a targeted check of instruction access with designated leaders.",
+      "Incomplete visibility can delay accountability and leave people without follow-up.",
+      "Define and test an occupancy and accountability method covering employees, visitors and contractors.",
+      "Test an accountability scenario and measure gaps between expected and confirmed presence.",
+      "An untested procedure may appear adequate without being executable in practice.",
+      "Plan exercises with objectives, observers, evidence, lessons learned and corrective actions.",
+      "Verify dates, reports and actions from recent exercises.",
+      "Without a reliable timeline, coordination, evidence and learning after an event become difficult.",
+      "Maintain a protected, timestamped and attributed log linking decisions, actions and evidence.",
+      "Reconstruct a recent incident to verify which decisions can actually be traced.",
+      "Findings without an owner, deadline or verification can recur without lasting improvement.",
+      "Link every finding to an action, owner, deadline, evidence and closure verification.",
+      "Sample recent findings and verify status, ownership and evidence."
+    ],
+    "polygon": false,
+    "alternative": true,
+    "rows": 8
+  },
+  "seo": {
+    "/diagnostic": {
+      "title": "Diagnostic de préparation organisationnelle | CORO",
+      "description": "Évaluez gratuitement votre préparation aux situations d'urgence en huit questions. Découvrez vos forces et vos priorités d'amélioration avec CORO.",
+      "canonical": "https://getcoro.io/diagnostic",
+      "alternates": [
+        {
+          "lang": "fr-CA",
+          "href": "https://getcoro.io/diagnostic"
+        },
+        {
+          "lang": "en-CA",
+          "href": "https://getcoro.io/diagnostic?lang=en"
+        },
+        {
+          "lang": "x-default",
+          "href": "https://getcoro.io/diagnostic"
+        }
+      ],
+      "og": "Diagnostic de préparation organisationnelle",
+      "robots": "index, follow"
+    },
+    "/diagnostic?lang=en": {
+      "title": "Organizational Preparedness Assessment | CORO",
+      "description": "Assess your organization's emergency preparedness in eight questions. Discover your strengths and improvement priorities with CORO.",
+      "canonical": "https://getcoro.io/diagnostic?lang=en",
+      "alternates": [
+        {
+          "lang": "fr-CA",
+          "href": "https://getcoro.io/diagnostic"
+        },
+        {
+          "lang": "en-CA",
+          "href": "https://getcoro.io/diagnostic?lang=en"
+        },
+        {
+          "lang": "x-default",
+          "href": "https://getcoro.io/diagnostic"
+        }
+      ],
+      "og": "Organizational Preparedness Assessment",
+      "robots": "index, follow"
+    },
+    "sitemapHasDiagnostic": true,
+    "robotsAllowsDiagnostic": true
+  },
+  "performance": {
+    "localLab": true,
+    "domContentLoadedMs": 24,
+    "loadMs": 25,
+    "lcpMs": 60,
+    "cls": 0,
+    "transferBytes": 4891,
+    "diagnosticImages": [
+      {
+        "name": "image?url=%2Fimages%2FCoro_Diagnostic%2Fcoro-diagnostic-hero.webp&w=384&q=75",
+        "transferSize": 0,
+        "duration": 0
+      }
+    ]
+  },
+  "privacy": {
+    "externalRequests": [],
+    "mutatingRequests": []
+  },
+  "consoleErrors": [],
+  "failedRequests": []
+}

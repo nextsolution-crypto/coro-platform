@@ -32,7 +32,8 @@ export const navigationGroups: readonly NavigationGroup[] = [
   ] },
   { id: 'resources', label: { fr: 'Ressources', en: 'Resources' }, items: [
     item('resources', 'Centre de ressources', 'Resource centre'), item('blog', 'Blogue', 'Blog'),
-    item('guides', 'Guides', 'Guides'), item('compliance-resources', 'Conformité & réglementation', 'Compliance & regulations'),
+    item('guides', 'Guides', 'Guides'), item('diagnostic', 'Évaluer ma préparation', 'Assess my preparedness'),
+    item('compliance-resources', 'Conformité & réglementation', 'Compliance & regulations'),
   ] },
 ];
 

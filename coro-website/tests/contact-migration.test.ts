@@ -43,7 +43,7 @@ test('DemoForm remains the production form and LeadForm is not integrated', () =
   assert.doesNotMatch(page, /LeadForm/);
 });
 
-test('DemoForm functional contract is unchanged: endpoint, method, JSON keys, buildingType values, referral cookies and fields', () => {
+test('DemoForm default contract is preserved while the diagnostic variant stays additive', () => {
   assert.match(form, /'https:\/\/formspree\.io\/f\/xnpadzyq'/);
   assert.match(form, /method: 'POST'/);
   assert.match(form, /'Content-Type': 'application\/json'/);
@@ -53,15 +53,15 @@ test('DemoForm functional contract is unchanged: endpoint, method, JSON keys, bu
   assert.match(form, /referralCode:\s*referralCode \?\? ''/);
   assert.match(form, /referralFirstTouchAt:\s*referralFirstTouchAt \?\? ''/);
   assert.match(form, /referralSource:\s*referralCode \? 'LINK' : ''/);
-  assert.match(form, /_subject: `Demande de démo CORO — \$\{form\.organization\}`/);
+  assert.match(form, /variant === 'diagnostic' \? `Diagnostic Express CORO — \$\{form\.organization\}` : `Demande de démo CORO — \$\{form\.organization\}`/);
   for (const bt of ['Tour à bureaux', 'Bâtiment commercial', 'Site industriel', 'Établissement de santé', "Institution d\\'enseignement", 'Autre']) assert.ok(form.includes(bt), bt);
   assert.match(form, /value=\{bt === t\.buildingTypes\[0\] \? '' : bt\}/);
   assert.doesNotMatch(form, /document\.cookie\s*=/, 'DemoForm only reads the referral cookies; capture stays on the homepage');
 });
 
 test('DemoForm accessibility fix is additive: every label is bound to its control, error is an alert, success a status', () => {
-  assert.equal((form.match(/<label htmlFor=\{`\$\{uid\}-\d`\}/g) ?? []).length, 7);
-  assert.equal((form.match(/id=\{`\$\{uid\}-\d`\}/g) ?? []).length, 7);
+  assert.equal((form.match(/<label htmlFor=\{`\$\{uid\}-\d`\}/g) ?? []).length, 10);
+  assert.equal((form.match(/id=\{`\$\{uid\}-\d`\}/g) ?? []).length, 10);
   assert.match(form, /role="alert"/);
   assert.match(form, /className="coro-demo-form-success" role="status"/);
   assert.match(form, /useId/);

@@ -104,7 +104,7 @@ test('recovery study treats the baked-in media text as a reference only', () => 
 test('only committed assets, no new dependency, no production import, Lab stays noindex', () => {
   for (const asset of Object.values(opsAsset)) assert.ok(existsSync(join(root, 'public', asset.src.slice(1))), asset.src);
   const deps = Object.keys(JSON.parse(read('package.json')).dependencies).sort();
-  assert.deepEqual(deps, ['lucide-react', 'next', 'react', 'react-dom']);
+  assert.deepEqual(deps, ['jspdf', 'lucide-react', 'next', 'react', 'react-dom']);
   for (const file of [...files.filter((f) => f.endsWith('.tsx')), 'app/design-lab/OperationalStudies.tsx']) {
     const imports = read(file).match(/from '[^']+'/g) ?? [];
     for (const imp of imports) assert.doesNotMatch(imp, /HomePageClient|ProductPage|Compositions|DemoForm|components\/hero|components\/spatial|components\/site\/(?!SiteHeader)/, `${file} ${imp}`);

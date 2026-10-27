@@ -1,0 +1,112 @@
+{
+  "generatedAt": "2026-10-27T19:24:21.979Z",
+  "focus": [
+    {
+      "tag": "A",
+      "text": "Aller au contenu principal",
+      "href": "#main-content",
+      "outline": "solid"
+    },
+    {
+      "tag": "A",
+      "text": "CORO",
+      "href": "/",
+      "outline": "solid"
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Ouvrir le menu☰",
+      "href": null,
+      "outline": "solid"
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Commencer le diagnostic",
+      "href": null,
+      "outline": "solid"
+    },
+    {
+      "tag": "A",
+      "text": "CORO",
+      "href": "/",
+      "outline": "solid"
+    },
+    {
+      "tag": "A",
+      "text": "Documents",
+      "href": "/gestion-documentaire",
+      "outline": "solid"
+    },
+    {
+      "tag": "A",
+      "text": "Projets",
+      "href": "/gestion-de-projets",
+      "outline": "solid"
+    },
+    {
+      "tag": "A",
+      "text": "Performance",
+      "href": "/performance-objectifs",
+      "outline": "solid"
+    },
+    {
+      "tag": "A",
+      "text": "Portail client",
+      "href": "/portail-client",
+      "outline": "solid"
+    },
+    {
+      "tag": "A",
+      "text": "Tarification",
+      "href": "/pricing",
+      "outline": "solid"
+    },
+    {
+      "tag": "A",
+      "text": "Résilience opérationnelle",
+      "href": "/resilience-operationnelle",
+      "outline": "solid"
+    },
+    {
+      "tag": "A",
+      "text": "Sentinelle",
+      "href": "/sentinelle",
+      "outline": "solid"
+    },
+    {
+      "tag": "A",
+      "text": "Sentinelle Population",
+      "href": "/sentinelle-population",
+      "outline": "solid"
+    },
+    {
+      "tag": "A",
+      "text": "À propos",
+      "href": "/about",
+      "outline": "solid"
+    }
+  ],
+  "radio": {
+    "checked": "A",
+    "fieldset": "K1KDsa_answers",
+    "legend": "Sélectionnez une réponse pour continuer.",
+    "progress": "1",
+    "focusTag": "INPUT"
+  },
+  "zoom": {
+    "scale": 2,
+    "layoutWidth": 764,
+    "visualWidth": 374.5,
+    "horizontalDocumentOverflow": false,
+    "focusedVisible": true
+  },
+  "structure": {
+    "h1": 1,
+    "main": 1,
+    "skipTarget": true,
+    "images": [],
+    "labels": true
+  },
+  "screenReader": "NOT_VERIFIED_NO_SCREEN_READER_AVAILABLE",
+  "pdfUa": "NOT_CLAIMED"
+}
