@@ -45,4 +45,13 @@ Les décisions produit non liées à ces défauts (dates métier, échéance, pa
 
 ## Publication et production
 
-À compléter après fusion : PR, SHA fusionné, workflow CI, workflow de release, digests et inspection post-release. Aucun constat n'est marqué vérifié en production avant ces preuves.
+- PR produit : `#101`, fusionnée dans `main` au SHA `87c5de5f40833c4384df5eda9fdc3739689678f0` ;
+- CI de fusion : `40431442904`, SUCCESS ;
+- première tentative de release : `40431775136`, arrêt fail-closed avant mutation (`RELEASE_CAPACITY_INSUFFICIENT`) ;
+- inspection après arrêt : `40432745757`, PASS/GO, production demeurée au SHA antérieur `2ff9db7b0858a12dd0119e8109efc02ffc392522`, migration 155 et quatre services sains ;
+- audit de capacité : `40432936727`, sauvegarde prête mais marge release de `-2598626150` octets ;
+- dry-run ciblé : `40433065615`, 40 images de cache non référencées admissibles, sans image active ou rollback ;
+- maintenance gouvernée : `40433168637`, 40/40 images listées retirées, espace libre passé de `17102553088` à `40521265152` octets ;
+- aucun volume, sauvegarde, manifeste, preuve ou image protégée n'a été supprimé.
+
+Le premier identifiant de release est terminal (`FAILED`) par conception. Le présent commit documentaire constitue un successeur traçable sans modification produit ; la vérification en production reste ouverte jusqu'à la release gouvernée de ce successeur et son inspection post-release.
