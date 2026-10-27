@@ -1,0 +1,416 @@
+{
+  "generatedAt": "2026-10-27T18:28:19.277Z",
+  "environment": {
+    "baseUrl": "http://127.0.0.1:3414",
+    "browserTarget": "29D8791AB1ECAC090CDD5D9705CA5E46",
+    "branch": "feature/coro-diagnostic-express-v1"
+  },
+  "responsive": [
+    {
+      "label": "home-fr",
+      "width": 320,
+      "path": "/",
+      "viewportWidth": 320,
+      "documentWidth": 320,
+      "bodyWidth": 320,
+      "overflow": false,
+      "offenders": [],
+      "main": {
+        "left": 0,
+        "right": 320,
+        "width": 320
+      },
+      "invite": {
+        "left": 16,
+        "right": 304,
+        "width": 288,
+        "top": 8609.15625,
+        "bottom": 8941.65625
+      }
+    },
+    {
+      "label": "diagnostic-fr",
+      "width": 320,
+      "path": "/diagnostic",
+      "viewportWidth": 320,
+      "documentWidth": 320,
+      "bodyWidth": 320,
+      "overflow": false,
+      "offenders": [],
+      "main": {
+        "left": 0,
+        "right": 320,
+        "width": 320
+      },
+      "invite": null
+    },
+    {
+      "label": "home-fr",
+      "width": 375,
+      "path": "/",
+      "viewportWidth": 375,
+      "documentWidth": 375,
+      "bodyWidth": 375,
+      "overflow": false,
+      "offenders": [],
+      "main": {
+        "left": 0,
+        "right": 375,
+        "width": 375
+      },
+      "invite": {
+        "left": 16,
+        "right": 359,
+        "width": 343,
+        "top": 8377.65625,
+        "bottom": 8690.96875
+      }
+    },
+    {
+      "label": "diagnostic-fr",
+      "width": 375,
+      "path": "/diagnostic",
+      "viewportWidth": 375,
+      "documentWidth": 375,
+      "bodyWidth": 375,
+      "overflow": false,
+      "offenders": [],
+      "main": {
+        "left": 0,
+        "right": 375,
+        "width": 375
+      },
+      "invite": null
+    },
+    {
+      "label": "home-fr",
+      "width": 390,
+      "path": "/",
+      "viewportWidth": 390,
+      "documentWidth": 390,
+      "bodyWidth": 390,
+      "overflow": false,
+      "offenders": [],
+      "main": {
+        "left": 0,
+        "right": 390,
+        "width": 390
+      },
+      "invite": {
+        "left": 16,
+        "right": 374,
+        "width": 358,
+        "top": 8343.734375,
+        "bottom": 8632.25
+      }
+    },
+    {
+      "label": "diagnostic-fr",
+      "width": 390,
+      "path": "/diagnostic",
+      "viewportWidth": 390,
+      "documentWidth": 390,
+      "bodyWidth": 390,
+      "overflow": false,
+      "offenders": [],
+      "main": {
+        "left": 0,
+        "right": 390,
+        "width": 390
+      },
+      "invite": null
+    },
+    {
+      "label": "home-fr",
+      "width": 768,
+      "path": "/",
+      "viewportWidth": 768,
+      "documentWidth": 753,
+      "bodyWidth": 753,
+      "overflow": false,
+      "offenders": [],
+      "main": {
+        "left": 0,
+        "right": 753,
+        "width": 753
+      },
+      "invite": {
+        "left": 24,
+        "right": 729,
+        "width": 705,
+        "top": 8362.53125,
+        "bottom": 8603.25
+      }
+    },
+    {
+      "label": "diagnostic-fr",
+      "width": 768,
+      "path": "/diagnostic",
+      "viewportWidth": 768,
+      "documentWidth": 753,
+      "bodyWidth": 753,
+      "overflow": false,
+      "offenders": [],
+      "main": {
+        "left": 0,
+        "right": 753,
+        "width": 753
+      },
+      "invite": null
+    },
+    {
+      "label": "home-fr",
+      "width": 1024,
+      "path": "/",
+      "viewportWidth": 1024,
+      "documentWidth": 1009,
+      "bodyWidth": 1009,
+      "overflow": false,
+      "offenders": [],
+      "main": {
+        "left": 0,
+        "right": 1009,
+        "width": 1009
+      },
+      "invite": {
+        "left": 24,
+        "right": 985,
+        "width": 961,
+        "top": 7576.796875,
+        "bottom": 7822.703125
+      }
+    },
+    {
+      "label": "diagnostic-fr",
+      "width": 1024,
+      "path": "/diagnostic",
+      "viewportWidth": 1024,
+      "documentWidth": 1009,
+      "bodyWidth": 1009,
+      "overflow": false,
+      "offenders": [],
+      "main": {
+        "left": 0,
+        "right": 1009,
+        "width": 1009
+      },
+      "invite": null
+    },
+    {
+      "label": "home-fr",
+      "width": 1440,
+      "path": "/",
+      "viewportWidth": 1440,
+      "documentWidth": 1425,
+      "bodyWidth": 1425,
+      "overflow": false,
+      "offenders": [
+        {
+          "tag": "UL",
+          "text": "SavoirConfirmerÉvacuerRassemblerProtéger",
+          "left": 1304.3,
+          "right": 1549.7,
+          "width": 245.4
+        },
+        {
+          "tag": "LI",
+          "text": "Savoir",
+          "left": 1331.3,
+          "right": 1525.7,
+          "width": 194.4
+        },
+        {
+          "tag": "LI",
+          "text": "Confirmer",
+          "left": 1331.3,
+          "right": 1525.7,
+          "width": 194.4
+        },
+        {
+          "tag": "LI",
+          "text": "Évacuer",
+          "left": 1331.3,
+          "right": 1525.7,
+          "width": 194.4
+        },
+        {
+          "tag": "LI",
+          "text": "Rassembler",
+          "left": 1331.3,
+          "right": 1525.7,
+          "width": 194.4
+        },
+        {
+          "tag": "LI",
+          "text": "Protéger",
+          "left": 1331.3,
+          "right": 1525.7,
+          "width": 194.4
+        }
+      ],
+      "main": {
+        "left": 0,
+        "right": 1425,
+        "width": 1425
+      },
+      "invite": {
+        "left": 52.5,
+        "right": 1372.5,
+        "width": 1320,
+        "top": 4955.4375,
+        "bottom": 5115.40625
+      }
+    },
+    {
+      "label": "diagnostic-fr",
+      "width": 1440,
+      "path": "/diagnostic",
+      "viewportWidth": 1440,
+      "documentWidth": 1425,
+      "bodyWidth": 1425,
+      "overflow": false,
+      "offenders": [],
+      "main": {
+        "left": 0,
+        "right": 1425,
+        "width": 1425
+      },
+      "invite": null
+    },
+    {
+      "label": "home-fr",
+      "width": 1920,
+      "path": "/",
+      "viewportWidth": 1920,
+      "documentWidth": 1905,
+      "bodyWidth": 1905,
+      "overflow": false,
+      "offenders": [],
+      "main": {
+        "left": 0,
+        "right": 1905,
+        "width": 1905
+      },
+      "invite": {
+        "left": 292.5,
+        "right": 1612.5,
+        "width": 1320,
+        "top": 5119.859375,
+        "bottom": 5279.828125
+      }
+    },
+    {
+      "label": "diagnostic-fr",
+      "width": 1920,
+      "path": "/diagnostic",
+      "viewportWidth": 1920,
+      "documentWidth": 1905,
+      "bodyWidth": 1905,
+      "overflow": false,
+      "offenders": [],
+      "main": {
+        "left": 0,
+        "right": 1905,
+        "width": 1905
+      },
+      "invite": null
+    }
+  ],
+  "resultFr": {
+    "title": "Préparation avancée",
+    "temporary": true,
+    "restart": true,
+    "mainCount": 1,
+    "sessionKeys": [],
+    "localKeys": [],
+    "cookies": ""
+  },
+  "resultEn": {
+    "title": "Advanced preparation",
+    "temporary": true,
+    "restart": true
+  },
+  "questionTitles": [
+    "Les informations essentielles de vos bâtiments sont-elles centralisées et à jour ?",
+    "Vos plans et procédures d'urgence sont-ils approuvés, à jour et facilement accessibles ?",
+    "Les membres de vos équipes d'urgence sont-ils formés et connaissent-ils leurs responsabilités ?",
+    "En cas d'urgence, les responsables disposent-ils rapidement des consignes et informations nécessaires pour agir ?",
+    "Lors d'une évacuation, pouvez-vous identifier les personnes présentes et suivre les confirmations de mise en sécurité ?",
+    "Vos procédures d'urgence sont-elles régulièrement testées lors d'exercices documentés et évalués ?",
+    "Les décisions et actions réalisées lors d'un incident peuvent-elles être retracées et documentées ?",
+    "Les constats d'audit, d'exercice ou d'incident donnent-ils lieu à des améliorations suivies jusqu'à leur réalisation ?"
+  ],
+  "restarted": {
+    "intro": true,
+    "sessionKeys": []
+  },
+  "storage": {
+    "initial": {
+      "local": [],
+      "session": [],
+      "cookies": ""
+    }
+  },
+  "seo": {
+    "fr": {
+      "title": "Diagnostic de préparation organisationnelle | CORO",
+      "description": "Évaluez gratuitement votre préparation aux situations d'urgence en huit questions. Découvrez vos forces et vos priorités d'amélioration avec CORO.",
+      "canonical": "https://getcoro.io/diagnostic",
+      "alternates": [
+        {
+          "lang": "fr-CA",
+          "href": "https://getcoro.io/diagnostic"
+        },
+        {
+          "lang": "en-CA",
+          "href": "https://getcoro.io/diagnostic?lang=en"
+        },
+        {
+          "lang": "x-default",
+          "href": "https://getcoro.io/diagnostic"
+        }
+      ],
+      "robots": "index, follow"
+    },
+    "en": {
+      "title": "Organizational Preparedness Assessment | CORO",
+      "description": "Assess your organization's emergency preparedness in eight questions. Discover your strengths and improvement priorities with CORO.",
+      "canonical": "https://getcoro.io/diagnostic?lang=en",
+      "alternates": [
+        {
+          "lang": "fr-CA",
+          "href": "https://getcoro.io/diagnostic"
+        },
+        {
+          "lang": "en-CA",
+          "href": "https://getcoro.io/diagnostic?lang=en"
+        },
+        {
+          "lang": "x-default",
+          "href": "https://getcoro.io/diagnostic"
+        }
+      ],
+      "robots": "index, follow"
+    },
+    "sitemapHasFr": true,
+    "sitemapHasEn": true
+  },
+  "integration": {
+    "fr": {
+      "nav": [
+        "http://127.0.0.1:3414/diagnostic"
+      ],
+      "footer": [
+        "http://127.0.0.1:3414/diagnostic"
+      ],
+      "footerGroups": 3
+    }
+  },
+  "network": {
+    "mutatingRequests": [],
+    "externalRequests": [],
+    "failedRequests": [],
+    "canceledNavigationRequests": 510
+  },
+  "consoleErrors": []
+}

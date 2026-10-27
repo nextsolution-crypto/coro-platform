@@ -1,0 +1,184 @@
+{
+  "generatedAt": "2026-10-27T19:04:02.766Z",
+  "environment": {
+    "baseUrl": "http://127.0.0.1:3417",
+    "browserTarget": "5C894A09D69AE2886791C5D4BD190C91"
+  },
+  "measurements": [
+    {
+      "width": 320,
+      "overflow": false,
+      "documentWidth": 320,
+      "buttons": [
+        {
+          "text": "Télécharger le rapport PDF",
+          "left": 16,
+          "right": 304,
+          "width": 288,
+          "height": 50
+        },
+        {
+          "text": "Partager le diagnostic",
+          "left": 16,
+          "right": 304,
+          "width": 288,
+          "height": 50
+        }
+      ]
+    },
+    {
+      "width": 375,
+      "overflow": false,
+      "documentWidth": 375,
+      "buttons": [
+        {
+          "text": "Télécharger le rapport PDF",
+          "left": 16,
+          "right": 359,
+          "width": 343,
+          "height": 50
+        },
+        {
+          "text": "Partager le diagnostic",
+          "left": 16,
+          "right": 359,
+          "width": 343,
+          "height": 50
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "overflow": false,
+      "documentWidth": 390,
+      "buttons": [
+        {
+          "text": "Télécharger le rapport PDF",
+          "left": 16,
+          "right": 374,
+          "width": 358,
+          "height": 50
+        },
+        {
+          "text": "Partager le diagnostic",
+          "left": 16,
+          "right": 374,
+          "width": 358,
+          "height": 50
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "overflow": false,
+      "documentWidth": 753,
+      "buttons": [
+        {
+          "text": "Télécharger le rapport PDF",
+          "left": 24,
+          "right": 274.390625,
+          "width": 250.390625,
+          "height": 50
+        },
+        {
+          "text": "Partager le diagnostic",
+          "left": 286.390625,
+          "right": 499.921875,
+          "width": 213.53125,
+          "height": 50
+        }
+      ]
+    },
+    {
+      "width": 1024,
+      "overflow": false,
+      "documentWidth": 1009,
+      "buttons": [
+        {
+          "text": "Télécharger le rapport PDF",
+          "left": 24,
+          "right": 274.390625,
+          "width": 250.390625,
+          "height": 50
+        },
+        {
+          "text": "Partager le diagnostic",
+          "left": 286.390625,
+          "right": 499.921875,
+          "width": 213.53125,
+          "height": 50
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "overflow": false,
+      "documentWidth": 1425,
+      "buttons": [
+        {
+          "text": "Télécharger le rapport PDF",
+          "left": 136.5,
+          "right": 386.890625,
+          "width": 250.390625,
+          "height": 50
+        },
+        {
+          "text": "Partager le diagnostic",
+          "left": 398.890625,
+          "right": 612.421875,
+          "width": 213.53125,
+          "height": 50
+        }
+      ]
+    },
+    {
+      "width": 1920,
+      "overflow": false,
+      "documentWidth": 1905,
+      "buttons": [
+        {
+          "text": "Télécharger le rapport PDF",
+          "left": 376.5,
+          "right": 626.890625,
+          "width": 250.390625,
+          "height": 50
+        },
+        {
+          "text": "Partager le diagnostic",
+          "left": 638.890625,
+          "right": 852.421875,
+          "width": 213.53125,
+          "height": 50
+        }
+      ]
+    }
+  ],
+  "downloads": {
+    "fr": {
+      "path": "F:\\coro-platform\\.worktrees\\coro-diagnostic-express-v1\\coro-website\\output\\pdf\\dx05\\browser\\coro-diagnostic-express-fr.pdf",
+      "size": 242283,
+      "signature": "%PDF-",
+      "durationMs": 434
+    },
+    "en": {
+      "path": "F:\\coro-platform\\.worktrees\\coro-diagnostic-express-v1\\coro-website\\output\\pdf\\dx05\\browser\\coro-diagnostic-express-en.pdf",
+      "size": 241897,
+      "signature": "%PDF-",
+      "durationMs": 316
+    }
+  },
+  "sharing": {
+    "fr": {
+      "title": "Votre organisation est-elle réellement prête ?",
+      "text": "Évaluez votre préparation opérationnelle en huit questions. Cette première lecture indicative vous aidera à structurer les prochaines étapes.",
+      "url": "http://127.0.0.1:3417/diagnostic"
+    },
+    "enClipboard": "http://127.0.0.1:3417/diagnostic?lang=en"
+  },
+  "privacy": {
+    "externalRequests": [],
+    "mutatingRequests": []
+  },
+  "consoleErrors": [],
+  "failedRequests": []
+}

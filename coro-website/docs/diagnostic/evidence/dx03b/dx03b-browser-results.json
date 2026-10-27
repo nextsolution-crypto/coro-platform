@@ -1,0 +1,162 @@
+{
+  "generatedAt": "2026-10-27T18:47:30.454Z",
+  "environment": {
+    "baseUrl": "http://127.0.0.1:3416",
+    "browserTarget": "F1B93A5E79526438DF8F566812CF28A8"
+  },
+  "measurements": [
+    {
+      "width": 320,
+      "overflow": false,
+      "documentWidth": 320,
+      "svg": {
+        "left": 33,
+        "right": 287,
+        "width": 254,
+        "height": 254
+      },
+      "table": {
+        "left": 17,
+        "right": 303,
+        "width": 286
+      },
+      "rows": 8,
+      "circles": 8,
+      "closedSurface": true
+    },
+    {
+      "width": 375,
+      "overflow": false,
+      "documentWidth": 375,
+      "svg": {
+        "left": 33,
+        "right": 342,
+        "width": 309,
+        "height": 309
+      },
+      "table": {
+        "left": 17,
+        "right": 358,
+        "width": 341
+      },
+      "rows": 8,
+      "circles": 8,
+      "closedSurface": true
+    },
+    {
+      "width": 390,
+      "overflow": false,
+      "documentWidth": 390,
+      "svg": {
+        "left": 33,
+        "right": 357,
+        "width": 324,
+        "height": 324
+      },
+      "table": {
+        "left": 17,
+        "right": 373,
+        "width": 356
+      },
+      "rows": 8,
+      "circles": 8,
+      "closedSurface": true
+    },
+    {
+      "width": 768,
+      "overflow": false,
+      "documentWidth": 753,
+      "svg": {
+        "left": 48.03125,
+        "right": 440.96875,
+        "width": 392.9375,
+        "height": 392.9375
+      },
+      "table": {
+        "left": 25,
+        "right": 728,
+        "width": 703
+      },
+      "rows": 8,
+      "circles": 8,
+      "closedSurface": true
+    },
+    {
+      "width": 1024,
+      "overflow": false,
+      "documentWidth": 1009,
+      "svg": {
+        "left": 55.71875,
+        "right": 658.171875,
+        "width": 602.453125,
+        "height": 602.453125
+      },
+      "table": {
+        "left": 25,
+        "right": 984,
+        "width": 959
+      },
+      "rows": 8,
+      "circles": 8,
+      "closedSurface": true
+    },
+    {
+      "width": 1440,
+      "overflow": false,
+      "documentWidth": 1425,
+      "svg": {
+        "left": 231.703125,
+        "right": 839.703125,
+        "width": 608,
+        "height": 608
+      },
+      "table": {
+        "left": 137.5,
+        "right": 1287.5,
+        "width": 1150
+      },
+      "rows": 8,
+      "circles": 8,
+      "closedSurface": true
+    },
+    {
+      "width": 1920,
+      "overflow": false,
+      "documentWidth": 1905,
+      "svg": {
+        "left": 471.703125,
+        "right": 1079.703125,
+        "width": 608,
+        "height": 608
+      },
+      "table": {
+        "left": 377.5,
+        "right": 1527.5,
+        "width": 1150
+      },
+      "rows": 8,
+      "circles": 8,
+      "closedSurface": true
+    }
+  ],
+  "mixed": {
+    "svg": true,
+    "closedSurface": false,
+    "circles": 4,
+    "unknownMarkers": 2,
+    "notApplicableMarkers": 2,
+    "rows": 8
+  },
+  "insufficient": {
+    "svg": false,
+    "note": "La couverture numérique est insuffisante pour former une surface radar interprétable. La liste structurée ci-dessous demeure la référence.",
+    "rows": 8
+  },
+  "noScore": {
+    "svg": false,
+    "rows": 8,
+    "scoreText": "—"
+  },
+  "consoleErrors": [],
+  "failedRequests": []
+}

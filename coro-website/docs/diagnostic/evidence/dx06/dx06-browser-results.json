@@ -1,0 +1,137 @@
+{
+  "generatedAt": "2026-10-27T19:15:10.779Z",
+  "environment": {
+    "baseUrl": "http://127.0.0.1:3418",
+    "browserTarget": "1FBFB07355B422B5EFD8738D560EF94D"
+  },
+  "closed": {
+    "form": false,
+    "pdf": true,
+    "recommendations": true,
+    "overflow": false
+  },
+  "invalid": {
+    "requestCreated": false,
+    "invalidControls": 5
+  },
+  "withoutSummary": {
+    "url": "https://formspree.io/f/xnpadzyq",
+    "method": "POST",
+    "postData": {
+      "firstName": "Ada",
+      "lastName": "Lovelace",
+      "email": "ada@example.test",
+      "organization": "Synthetic Org",
+      "buildingCount": "12",
+      "requestType": "DETAILED_ASSESSMENT",
+      "message": "Synthetic QA request",
+      "referralCode": "",
+      "referralFirstTouchAt": "",
+      "referralSource": "",
+      "_subject": "Diagnostic Express CORO — Synthetic Org"
+    }
+  },
+  "withSummary": {
+    "url": "https://formspree.io/f/xnpadzyq",
+    "method": "POST",
+    "postData": {
+      "firstName": "Ada",
+      "lastName": "Lovelace",
+      "email": "ada@example.test",
+      "organization": "Synthetic Org",
+      "buildingCount": "12",
+      "requestType": "DETAILED_ASSESSMENT",
+      "message": "Synthetic QA request",
+      "diagnosticVersion": "1.0",
+      "diagnosticScore": "56 %",
+      "diagnosticLevel": "Non attribué — résultat provisoire",
+      "diagnosticCoverage": "38 % (3/8)",
+      "diagnosticPriorities": "D3 — Préparation humaine | D2 — Conformité documentaire",
+      "referralCode": "",
+      "referralFirstTouchAt": "",
+      "referralSource": "",
+      "_subject": "Diagnostic Express CORO — Synthetic Org"
+    }
+  },
+  "errorState": {
+    "alert": "❌ An error occurred. Please try again or email info@getcoro.io",
+    "formStillAvailable": true
+  },
+  "mobile": {
+    "overflow": false,
+    "width": 390,
+    "formWidth": 358
+  },
+  "formRequests": [
+    {
+      "url": "https://formspree.io/f/xnpadzyq",
+      "method": "OPTIONS",
+      "postData": null
+    },
+    {
+      "url": "https://formspree.io/f/xnpadzyq",
+      "method": "POST",
+      "postData": {
+        "firstName": "Ada",
+        "lastName": "Lovelace",
+        "email": "ada@example.test",
+        "organization": "Synthetic Org",
+        "buildingCount": "12",
+        "requestType": "DETAILED_ASSESSMENT",
+        "message": "Synthetic QA request",
+        "referralCode": "",
+        "referralFirstTouchAt": "",
+        "referralSource": "",
+        "_subject": "Diagnostic Express CORO — Synthetic Org"
+      }
+    },
+    {
+      "url": "https://formspree.io/f/xnpadzyq",
+      "method": "POST",
+      "postData": {
+        "firstName": "Ada",
+        "lastName": "Lovelace",
+        "email": "ada@example.test",
+        "organization": "Synthetic Org",
+        "buildingCount": "12",
+        "requestType": "DETAILED_ASSESSMENT",
+        "message": "Synthetic QA request",
+        "diagnosticVersion": "1.0",
+        "diagnosticScore": "56 %",
+        "diagnosticLevel": "Non attribué — résultat provisoire",
+        "diagnosticCoverage": "38 % (3/8)",
+        "diagnosticPriorities": "D3 — Préparation humaine | D2 — Conformité documentaire",
+        "referralCode": "",
+        "referralFirstTouchAt": "",
+        "referralSource": "",
+        "_subject": "Diagnostic Express CORO — Synthetic Org"
+      }
+    },
+    {
+      "url": "https://formspree.io/f/xnpadzyq",
+      "method": "POST",
+      "postData": {
+        "firstName": "Ada",
+        "lastName": "Lovelace",
+        "email": "ada@example.test",
+        "organization": "Synthetic Org",
+        "buildingCount": "12",
+        "requestType": "DETAILED_ASSESSMENT",
+        "message": "Synthetic QA request",
+        "diagnosticVersion": "1.0",
+        "diagnosticScore": "79 %",
+        "diagnosticLevel": "Structured preparation",
+        "diagnosticCoverage": "100 % (8/8)",
+        "diagnosticPriorities": "D8 — Continuous improvement | D7 — Operational traceability | D6 — Exercises and validation",
+        "referralCode": "",
+        "referralFirstTouchAt": "",
+        "referralSource": "",
+        "_subject": "Diagnostic Express CORO — Synthetic Org"
+      }
+    }
+  ],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+  ],
+  "failedRequests": []
+}

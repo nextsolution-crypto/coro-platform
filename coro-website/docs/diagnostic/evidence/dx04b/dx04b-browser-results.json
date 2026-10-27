@@ -1,0 +1,235 @@
+{
+  "generatedAt": "2026-10-27T18:39:18.727Z",
+  "environment": {
+    "baseUrl": "http://127.0.0.1:3415",
+    "browserTarget": "0633F187687E766E989D229742555AC2"
+  },
+  "measurements": [
+    {
+      "width": 320,
+      "phase": "hero",
+      "overflow": false,
+      "documentWidth": 320,
+      "image": {
+        "left": 17,
+        "right": 303,
+        "width": 286,
+        "height": 150.140625,
+        "naturalWidth": 288,
+        "naturalHeight": 151,
+        "complete": true
+      }
+    },
+    {
+      "width": 320,
+      "phase": "conclusion",
+      "overflow": false,
+      "documentWidth": 320,
+      "image": {
+        "left": 16,
+        "right": 304,
+        "width": 288,
+        "height": 157.65625,
+        "naturalWidth": 288,
+        "naturalHeight": 156,
+        "complete": true
+      }
+    },
+    {
+      "width": 375,
+      "phase": "hero",
+      "overflow": false,
+      "documentWidth": 375,
+      "image": {
+        "left": 17,
+        "right": 358,
+        "width": 341,
+        "height": 179.015625,
+        "naturalWidth": 343,
+        "naturalHeight": 180,
+        "complete": true
+      }
+    },
+    {
+      "width": 375,
+      "phase": "conclusion",
+      "overflow": false,
+      "documentWidth": 375,
+      "image": {
+        "left": 16,
+        "right": 359,
+        "width": 343,
+        "height": 187.59375,
+        "naturalWidth": 343,
+        "naturalHeight": 186,
+        "complete": true
+      }
+    },
+    {
+      "width": 390,
+      "phase": "hero",
+      "overflow": false,
+      "documentWidth": 390,
+      "image": {
+        "left": 17,
+        "right": 373,
+        "width": 356,
+        "height": 186.890625,
+        "naturalWidth": 358,
+        "naturalHeight": 187,
+        "complete": true
+      }
+    },
+    {
+      "width": 390,
+      "phase": "conclusion",
+      "overflow": false,
+      "documentWidth": 390,
+      "image": {
+        "left": 16,
+        "right": 374,
+        "width": 358,
+        "height": 195.75,
+        "naturalWidth": 358,
+        "naturalHeight": 194,
+        "complete": true
+      }
+    },
+    {
+      "width": 768,
+      "phase": "hero",
+      "overflow": false,
+      "documentWidth": 753,
+      "image": {
+        "left": 409.703125,
+        "right": 728,
+        "width": 318.296875,
+        "height": 167.09375,
+        "naturalWidth": 337,
+        "naturalHeight": 177,
+        "complete": true
+      }
+    },
+    {
+      "width": 768,
+      "phase": "conclusion",
+      "overflow": false,
+      "documentWidth": 753,
+      "image": {
+        "left": 341.28125,
+        "right": 729,
+        "width": 387.71875,
+        "height": 211.921875,
+        "naturalWidth": 368,
+        "naturalHeight": 200,
+        "complete": true
+      }
+    },
+    {
+      "width": 1024,
+      "phase": "hero",
+      "overflow": false,
+      "documentWidth": 1009,
+      "image": {
+        "left": 548.96875,
+        "right": 983.984375,
+        "width": 435.015625,
+        "height": 228.375,
+        "naturalWidth": 450,
+        "naturalHeight": 236,
+        "complete": true
+      }
+    },
+    {
+      "width": 1024,
+      "phase": "conclusion",
+      "overflow": false,
+      "documentWidth": 1009,
+      "image": {
+        "left": 455.96875,
+        "right": 985,
+        "width": 529.03125,
+        "height": 289.390625,
+        "naturalWidth": 491,
+        "naturalHeight": 268,
+        "complete": true
+      }
+    },
+    {
+      "width": 1440,
+      "phase": "hero",
+      "overflow": false,
+      "documentWidth": 1425,
+      "image": {
+        "left": 768.890625,
+        "right": 1287.484375,
+        "width": 518.59375,
+        "height": 272.25,
+        "naturalWidth": 633,
+        "naturalHeight": 332,
+        "complete": true
+      }
+    },
+    {
+      "width": 1440,
+      "phase": "conclusion",
+      "overflow": false,
+      "documentWidth": 1425,
+      "image": {
+        "left": 653.6875,
+        "right": 1288.5,
+        "width": 634.8125,
+        "height": 347.09375,
+        "naturalWidth": 691,
+        "naturalHeight": 376,
+        "complete": true
+      }
+    },
+    {
+      "width": 1920,
+      "phase": "hero",
+      "overflow": false,
+      "documentWidth": 1905,
+      "image": {
+        "left": 1008.890625,
+        "right": 1527.484375,
+        "width": 518.59375,
+        "height": 272.25,
+        "naturalWidth": 844,
+        "naturalHeight": 443,
+        "complete": true
+      }
+    },
+    {
+      "width": 1920,
+      "phase": "conclusion",
+      "overflow": false,
+      "documentWidth": 1905,
+      "image": {
+        "left": 893.6875,
+        "right": 1528.5,
+        "width": 634.8125,
+        "height": 347.109375,
+        "naturalWidth": 921,
+        "naturalHeight": 502,
+        "complete": true
+      }
+    }
+  ],
+  "resources": [
+    {
+      "name": "http://127.0.0.1:3415/_next/image?url=%2Fimages%2FCoro_Diagnostic%2Fcoro-diagnostic-hero.webp&w=384&q=75",
+      "transferSize": 0,
+      "decodedBodySize": 11550,
+      "duration": 0.8999999985098839
+    },
+    {
+      "name": "http://127.0.0.1:3415/_next/image?url=%2Fimages%2FCoro_Diagnostic%2Fcoro-diagnostic-dimensions.webp&w=384&q=75",
+      "transferSize": 0,
+      "decodedBodySize": 6502,
+      "duration": 0.6999999992549419
+    }
+  ],
+  "consoleErrors": [],
+  "failedRequests": []
+}
