@@ -30,7 +30,11 @@ export default function ChatWidget() {
   const [transferred, setTransferred] = useState(false);
   const [visitorEmail, setVisitorEmail] = useState('');
   const [emailSent, setEmailSent] = useState(false);
+  const [contactConsent, setContactConsent] = useState(false);
+  const [contactSending, setContactSending] = useState(false);
+  const [contactError, setContactError] = useState('');
   const [isMobile, setIsMobile] = useState(false);
+  const contactRequestIdRef = useRef<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -73,19 +77,30 @@ export default function ChatWidget() {
   };
 
   const sendEmailWithHistory = async () => {
-    if (!visitorEmail.trim()) return;
+    if (!visitorEmail.trim() || !contactConsent || contactSending) return;
+    setContactSending(true);
+    setContactError('');
+    contactRequestIdRef.current ??= crypto.randomUUID();
     try {
-      const history = messages.map(m =>
-        `${m.role === 'user' ? '👤 Visiteur' : '🤖 Sophie (CORO IA)'} : ${m.content}`
-      ).join('\n\n');
-      await fetch(publicApiUrl('chat/notify'), {
+      const summary = messages
+        .filter(message => message.role === 'user')
+        .slice(-3)
+        .map(message => message.content)
+        .join('\n')
+        .slice(0, 1500);
+      const response = await fetch(publicApiUrl('chat/notify'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: visitorEmail, history }),
+        body: JSON.stringify({ email: visitorEmail.trim(), summary, consent: true, requestId: contactRequestIdRef.current }),
       });
+      const result = await response.json();
+      if (!response.ok || result.success !== true) throw new Error('CONTACT_NOT_SENT');
       setEmailSent(true);
+      contactRequestIdRef.current = null;
     } catch {
-      setEmailSent(true);
+      setContactError("La demande n'a pas été envoyée. Réessayez ou écrivez à info@getcoro.io.");
+    } finally {
+      setContactSending(false);
     }
   };
 
@@ -97,15 +112,17 @@ export default function ChatWidget() {
     setLoading(true);
 
     try {
-      const history = messages.slice(1).map(m => ({ role: m.role, content: m.content }));
+      const history = messages.slice(-10).map(m => ({ role: m.role, content: m.content.slice(0, 2000) }));
       const res = await fetch(publicApiUrl('chat/vitrine'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, history }),
       });
+      if (!res.ok) throw new Error('CHAT_UNAVAILABLE');
       const data = await res.json();
+      if (typeof data.reply !== 'string') throw new Error('INVALID_CHAT_RESPONSE');
       setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
-      if (data.transferToAgent) setTransferred(true);
+      if (data.contactSuggested ?? data.transferToAgent) setTransferred(true);
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Une erreur est survenue. Contactez-nous à info@getcoro.io.' }]);
     } finally {
@@ -152,7 +169,7 @@ export default function ChatWidget() {
             style={{ position: 'absolute', top: 6, right: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#ADB5BD', fontSize: 16 }}
           >✕</button>
           <p style={{ margin: 0, fontSize: 13, color: '#2C3E50', lineHeight: 1.5 }}>
-            👋 Besoin d'aide pour choisir le bon document de conformité ?
+            👋 Besoin d&apos;aide pour choisir le bon document de conformité ?
           </p>
         </div>
       )}
@@ -225,28 +242,35 @@ export default function ChatWidget() {
           {transferred && (
             <div style={{ backgroundColor: '#FEF9E7', borderBottom: '1px solid #FAD7A0', padding: '14px 16px', flexShrink: 0 }}>
               <p style={{ fontSize: 13, color: '#7D6608', margin: '0 0 10px', lineHeight: 1.5 }}>
-                💬 Laissez votre courriel et un conseiller vous contactera sous peu.
+                💬 Transmettez volontairement votre demande à l&apos;équipe CORO.
               </p>
               {!emailSent ? (
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div>
+                  <div style={{ display: 'flex', gap: 8 }}>
                   <input
                     type="email"
                     value={visitorEmail}
                     onChange={e => setVisitorEmail(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && sendEmailWithHistory()}
+                    onKeyDown={e => e.key === 'Enter' && contactConsent && sendEmailWithHistory()}
                     placeholder="votre@courriel.com"
                     style={{ flex: 1, border: '1px solid #FAD7A0', borderRadius: 6, padding: '8px 10px', fontSize: 13, outline: 'none', color: '#2C3E50', backgroundColor: '#FFFFFF' }}
                   />
                   <button
                     onClick={sendEmailWithHistory}
-                    disabled={!visitorEmail.trim()}
-                    style={{ backgroundColor: visitorEmail.trim() ? '#C0392B' : '#DEE2E6', color: '#FFFFFF', border: 'none', borderRadius: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: visitorEmail.trim() ? 'pointer' : 'default', whiteSpace: 'nowrap' }}
+                    disabled={!visitorEmail.trim() || !contactConsent || contactSending}
+                    style={{ backgroundColor: visitorEmail.trim() && contactConsent && !contactSending ? '#C0392B' : '#DEE2E6', color: '#FFFFFF', border: 'none', borderRadius: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: visitorEmail.trim() && contactConsent && !contactSending ? 'pointer' : 'default', whiteSpace: 'nowrap' }}
                   >
-                    Envoyer
+                    {contactSending ? 'Envoi…' : 'Envoyer'}
                   </button>
+                  </div>
+                  <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 8, fontSize: 11, color: '#7D6608', lineHeight: 1.4 }}>
+                    <input type="checkbox" checked={contactConsent} onChange={e => setContactConsent(e.target.checked)} />
+                    J&apos;accepte que mon courriel et un bref résumé de ma demande soient transmis à l&apos;équipe CORO.
+                  </label>
+                  {contactError && <p role="alert" style={{ margin: '8px 0 0', color: '#C0392B', fontSize: 11 }}>{contactError}</p>}
                 </div>
               ) : (
-                <p style={{ fontSize: 13, color: '#27AE60', margin: 0, fontWeight: 600 }}>✓ Merci ! Un conseiller vous contactera bientôt.</p>
+                <p style={{ fontSize: 13, color: '#27AE60', margin: 0, fontWeight: 600 }}>✓ Votre demande a été transmise à l&apos;équipe CORO.</p>
               )}
             </div>
           )}
@@ -328,6 +352,7 @@ export default function ChatWidget() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKey}
+              maxLength={2000}
               placeholder="Écrivez un message..."
               disabled={loading}
               style={{
