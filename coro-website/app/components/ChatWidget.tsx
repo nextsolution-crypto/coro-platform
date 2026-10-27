@@ -1,409 +1,766 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import { publicApiUrl } from '@/lib/site/api';
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { publicApiUrl } from "@/lib/site/api";
 
+type Language = "fr-CA" | "en-CA";
+interface Citation {
+  sourceId: string;
+  title: string;
+  url: string;
+  version: number;
+}
+interface SuggestedLink {
+  label: string;
+  url: string;
+}
 interface Message {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
+  citations?: Citation[];
+  links?: SuggestedLink[];
+  questions?: string[];
+}
+interface IntelligentResponse {
+  sessionId: string;
+  message: string;
+  status:
+    | "SUPPORTED"
+    | "PARTIALLY_SUPPORTED"
+    | "INSUFFICIENT_INFORMATION"
+    | "SERVICE_UNAVAILABLE";
+  citations: Citation[];
+  suggestedLinks: SuggestedLink[];
+  suggestedQuestions: string[];
 }
 
-const SUGGESTED_QUESTIONS = [
-  'Qu\'est-ce que CORO ?',
-  'Quels types de documents ?',
-  'Voir une démo',
-  'Tarifs et abonnements',
-];
+const INTELLIGENT_ASSISTANT_ENABLED =
+  process.env.NEXT_PUBLIC_WEB_AI_INTELLIGENT_ASSISTANT_ENABLED === "true";
+const COPY = {
+  "fr-CA": {
+    welcome:
+      "Bonjour ! Je suis CORO AI. Je peux vous aider à découvrir CORO, comprendre nos solutions et trouver les informations pertinentes. Comment puis-je vous aider ?",
+    suggestions: [
+      "Qu'est-ce que CORO ?",
+      "Comment CORO Knowledge fonctionne-t-il ?",
+      "Quels documents sont disponibles ?",
+      "Comment CORO protège-t-il les personnes ?",
+    ],
+    open: "Ouvrir CORO AI",
+    close: "Fermer CORO AI",
+    title: "CORO AI",
+    online: "Assistant documentaire public",
+    loading: "Recherche dans les sources CORO…",
+    placeholder: "Posez une question sur CORO…",
+    send: "Envoyer",
+    newConversation: "Nouvelle conversation",
+    sources: "Sources officielles",
+    explore: "À explorer",
+    unavailable:
+      "L'assistant documentaire est temporairement indisponible. Le site CORO demeure accessible.",
+    contactPrompt: "Transmettez volontairement votre demande à l'équipe CORO.",
+    emailPlaceholder: "votre@courriel.com",
+    consent:
+      "J'accepte que mon courriel et un bref résumé de ma demande soient transmis à l'équipe CORO.",
+    sending: "Envoi…",
+    sent: "Votre demande a été transmise à l'équipe CORO.",
+    contactError:
+      "La demande n'a pas été envoyée. Réessayez ou écrivez à info@getcoro.io.",
+    proactive:
+      "Besoin d’aide pour trouver une information officielle sur CORO ?",
+    grounded: "Réponses fondées sur les sources publiques CORO",
+    legacy: "Assistant public CORO",
+  },
+  "en-CA": {
+    welcome:
+      "Hello! I'm CORO AI. I can help you explore CORO, understand our solutions and find relevant information. How can I help you?",
+    suggestions: [
+      "What is CORO?",
+      "How does CORO Knowledge work?",
+      "Which documents are available?",
+      "How does CORO help protect people?",
+    ],
+    open: "Open CORO AI",
+    close: "Close CORO AI",
+    title: "CORO AI",
+    online: "Public document assistant",
+    loading: "Searching CORO sources…",
+    placeholder: "Ask a question about CORO…",
+    send: "Send",
+    newConversation: "New conversation",
+    sources: "Official sources",
+    explore: "Explore",
+    unavailable:
+      "The document assistant is temporarily unavailable. The CORO website remains accessible.",
+    contactPrompt: "Voluntarily send your request to the CORO team.",
+    emailPlaceholder: "you@example.com",
+    consent:
+      "I agree that my email and a short summary of my request may be sent to the CORO team.",
+    sending: "Sending…",
+    sent: "Your request was sent to the CORO team.",
+    contactError:
+      "The request was not sent. Try again or email info@getcoro.io.",
+    proactive: "Need help finding official information about CORO?",
+    grounded: "Answers grounded in CORO public sources",
+    legacy: "CORO public assistant",
+  },
+} as const;
 
+function languageFromLocation(): Language {
+  if (typeof window === "undefined") return "fr-CA";
+  return new URLSearchParams(window.location.search).get("lang") === "en"
+    ? "en-CA"
+    : "fr-CA";
+}
+function welcome(language: Language): Message {
+  return { role: "assistant", content: COPY[language].welcome };
+}
+function subscribeToLanguage(change: () => void) {
+  window.addEventListener("popstate", change);
+  return () => window.removeEventListener("popstate", change);
+}
+function languageServerSnapshot(): Language {
+  return "fr-CA";
+}
 export default function ChatWidget() {
+  const language = useSyncExternalStore(
+    subscribeToLanguage,
+    languageFromLocation,
+    languageServerSnapshot,
+  );
   const [open, setOpen] = useState(false);
   const [hasOpened, setHasOpened] = useState(false);
   const [showProactive, setShowProactive] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: 'Bonjour 👋 Je suis Sophie, l\'assistante IA de CORO. Je peux vous aider avec :\n\n• Les types de documents (PMU, PSI, PCA…)\n• La conformité réglementaire au Québec, Ontario et Alberta\n• Les fonctionnalités de la plateforme\n• Planifier une démo\n\nComment puis-je vous aider ?',
-    },
-  ]);
-  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [transferred, setTransferred] = useState(false);
-  const [visitorEmail, setVisitorEmail] = useState('');
-  const [emailSent, setEmailSent] = useState(false);
+  const [sessionId, setSessionId] = useState<string>();
+  const [contactSuggested, setContactSuggested] = useState(false);
+  const [visitorEmail, setVisitorEmail] = useState("");
   const [contactConsent, setContactConsent] = useState(false);
   const [contactSending, setContactSending] = useState(false);
-  const [contactError, setContactError] = useState('');
-  const [isMobile, setIsMobile] = useState(false);
+  const [contactSent, setContactSent] = useState(false);
+  const [contactError, setContactError] = useState("");
   const contactRequestIdRef = useRef<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const copy = COPY[language];
+  const displayedMessages = messages.length ? messages : [welcome(language)];
 
-  // Détection mobile
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
-
-  // Message proactif après 30 secondes
   useEffect(() => {
     if (hasOpened) return;
-    const timer = setTimeout(() => setShowProactive(true), 30000);
-    return () => clearTimeout(timer);
+    const timer = window.setTimeout(() => setShowProactive(true), 30_000);
+    return () => window.clearTimeout(timer);
   }, [hasOpened]);
-
-  // Scroll vers le bas
   useEffect(() => {
-    if (open) {
-      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-    }
+    if (open) messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, open]);
-
-  // Focus sur l'input à l'ouverture
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 300);
+    if (!open) return;
+    inputRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
-  const handleOpen = () => {
-    setOpen(true);
-    setHasOpened(true);
-    setShowProactive(false);
+  const resetConversation = () => {
+    setSessionId(undefined);
+    setMessages([]);
+    setContactSuggested(false);
+    setContactSent(false);
+    setContactConsent(false);
+    setContactError("");
+    contactRequestIdRef.current = null;
+    inputRef.current?.focus();
   };
-
-  const handleSuggestedQuestion = (q: string) => {
-    setInput(q);
-    setTimeout(() => sendMessage(q), 100);
-  };
-
-  const sendEmailWithHistory = async () => {
+  const sendContactRequest = async () => {
     if (!visitorEmail.trim() || !contactConsent || contactSending) return;
     setContactSending(true);
-    setContactError('');
+    setContactError("");
     contactRequestIdRef.current ??= crypto.randomUUID();
     try {
       const summary = messages
-        .filter(message => message.role === 'user')
+        .filter((message) => message.role === "user")
         .slice(-3)
-        .map(message => message.content)
-        .join('\n')
-        .slice(0, 1500);
-      const response = await fetch(publicApiUrl('chat/notify'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: visitorEmail.trim(), summary, consent: true, requestId: contactRequestIdRef.current }),
+        .map((message) => message.content)
+        .join("\n")
+        .slice(0, 1_500);
+      const response = await fetch(publicApiUrl("chat/notify"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: visitorEmail.trim(),
+          summary,
+          consent: true,
+          requestId: contactRequestIdRef.current,
+        }),
       });
-      const result = await response.json();
-      if (!response.ok || result.success !== true) throw new Error('CONTACT_NOT_SENT');
-      setEmailSent(true);
+      const result: unknown = await response.json();
+      if (
+        !response.ok ||
+        !result ||
+        typeof result !== "object" ||
+        (result as { success?: unknown }).success !== true
+      )
+        throw new Error("CONTACT_NOT_SENT");
+      setContactSent(true);
       contactRequestIdRef.current = null;
     } catch {
-      setContactError("La demande n'a pas été envoyée. Réessayez ou écrivez à info@getcoro.io.");
+      setContactError(copy.contactError);
     } finally {
       setContactSending(false);
     }
   };
-
-  const sendMessage = async (overrideInput?: string) => {
-    const text = (overrideInput || input).trim();
+  const sendMessage = async (override?: string) => {
+    const text = (override ?? input).trim();
     if (!text || loading) return;
-    setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: text }]);
+    const history = messages
+      .slice(-10)
+      .map((message) => ({
+        role: message.role,
+        content: message.content.slice(0, 2_000),
+      }));
+    setInput("");
+    setMessages((current) => [...current, { role: "user", content: text }]);
     setLoading(true);
-
     try {
-      const history = messages.slice(-10).map(m => ({ role: m.role, content: m.content.slice(0, 2000) }));
-      const res = await fetch(publicApiUrl('chat/vitrine'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      if (INTELLIGENT_ASSISTANT_ENABLED) {
+        const response = await fetch(publicApiUrl("chat/v1/public-assistant"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: text,
+            language,
+            ...(sessionId ? { sessionId } : {}),
+            pageContext: { pathname: window.location.pathname },
+          }),
+        });
+        if (!response.ok) throw new Error("PUBLIC_ASSISTANT_UNAVAILABLE");
+        const result = (await response.json()) as IntelligentResponse;
+        if (!result.sessionId || typeof result.message !== "string")
+          throw new Error("INVALID_PUBLIC_ASSISTANT_RESPONSE");
+        setSessionId(result.sessionId);
+        setMessages((current) => [
+          ...current,
+          {
+            role: "assistant",
+            content: result.message,
+            citations: result.citations,
+            links: result.suggestedLinks,
+            questions: result.suggestedQuestions,
+          },
+        ]);
+        return;
+      }
+      const response = await fetch(publicApiUrl("chat/vitrine"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text, history }),
       });
-      if (!res.ok) throw new Error('CHAT_UNAVAILABLE');
-      const data = await res.json();
-      if (typeof data.reply !== 'string') throw new Error('INVALID_CHAT_RESPONSE');
-      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
-      if (data.contactSuggested ?? data.transferToAgent) setTransferred(true);
+      if (!response.ok) throw new Error("CHAT_UNAVAILABLE");
+      const result = (await response.json()) as {
+        reply?: unknown;
+        contactSuggested?: unknown;
+        transferToAgent?: unknown;
+      };
+      if (typeof result.reply !== "string")
+        throw new Error("INVALID_CHAT_RESPONSE");
+      setMessages((current) => [
+        ...current,
+        { role: "assistant", content: result.reply as string },
+      ]);
+      if (result.contactSuggested ?? result.transferToAgent)
+        setContactSuggested(true);
     } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Une erreur est survenue. Contactez-nous à info@getcoro.io.' }]);
+      setMessages((current) => [
+        ...current,
+        { role: "assistant", content: copy.unavailable },
+      ]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleKey = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-  };
-
-  const showSuggestions = messages.length === 1 && !loading;
-
-  // Dimensions selon mobile
-  const widgetW = isMobile ? '100vw' : 360;
-  const widgetH = isMobile ? 'calc(100dvh - var(--coro-cookie-offset, 0px))' : 520;
-  const widgetBottom = isMobile ? 'var(--coro-cookie-offset, 0px)' : 92;
-  const widgetLeft = isMobile ? 0 : 24;
-  const widgetBorderRadius = isMobile ? 0 : 16;
-
   return (
     <>
-      {/* Bulle proactive */}
       {showProactive && !open && (
         <div
-          onClick={handleOpen}
           style={{
-            position: 'fixed',
-            bottom: 'calc(92px + var(--coro-cookie-offset, 0px))',
+            position: "fixed",
+            bottom: "calc(92px + var(--coro-cookie-offset, 0px))",
             left: 24,
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E9ECEF',
-            borderRadius: 12,
-            padding: '12px 16px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+            maxWidth: 260,
             zIndex: 9997,
-            cursor: 'pointer',
-            maxWidth: 240,
-            fontFamily: 'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+            padding: "12px 38px 12px 16px",
+            border: "1px solid #E9ECEF",
+            borderRadius: 12,
+            background: "#FFF",
+            boxShadow: "0 4px 20px rgba(0,0,0,.12)",
+            color: "#2C3E50",
+            fontSize: 13,
           }}
         >
           <button
-            onClick={e => { e.stopPropagation(); setShowProactive(false); }}
-            style={{ position: 'absolute', top: 6, right: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#ADB5BD', fontSize: 16 }}
-          >✕</button>
-          <p style={{ margin: 0, fontSize: 13, color: '#2C3E50', lineHeight: 1.5 }}>
-            👋 Besoin d&apos;aide pour choisir le bon document de conformité ?
-          </p>
+            type="button"
+            onClick={() => setShowProactive(false)}
+            aria-label={copy.close}
+            style={{
+              position: "absolute",
+              top: 5,
+              right: 7,
+              border: 0,
+              background: "transparent",
+              cursor: "pointer",
+              color: "#6C757D",
+            }}
+          >
+            ×
+          </button>
+          {copy.proactive}
         </div>
       )}
-
-      {/* Bulle d'ouverture */}
       <button
-        onClick={() => open ? setOpen(false) : handleOpen()}
+        type="button"
+        onClick={() => {
+          setOpen((current) => !current);
+          setHasOpened(true);
+          setShowProactive(false);
+        }}
+        aria-label={open ? copy.close : copy.open}
+        aria-expanded={open}
+        aria-controls="coro-ai-dialog"
         style={{
-          position: 'fixed',
-          bottom: 'calc(24px + var(--coro-cookie-offset, 0px))',
+          position: "fixed",
+          bottom: "calc(24px + var(--coro-cookie-offset, 0px))",
           left: 24,
           width: 56,
           height: 56,
-          borderRadius: '50%',
-          backgroundColor: '#C0392B',
-          color: '#FFFFFF',
-          border: 'none',
-          cursor: 'pointer',
-          fontSize: 22,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 4px 20px rgba(192,57,43,0.4)',
+          borderRadius: "50%",
+          border: 0,
           zIndex: 9999,
-          transition: 'transform 0.2s, box-shadow 0.2s',
+          background: "#C0392B",
+          color: "#FFF",
+          boxShadow: "0 4px 20px rgba(192,57,43,.4)",
+          cursor: "pointer",
+          fontSize: 22,
         }}
-        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; }}
-        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
-        aria-label={open ? 'Fermer le chat' : 'Ouvrir le chat'}
       >
-        {open ? '✕' : '💬'}
+        {open ? "×" : "◆"}
       </button>
-
-      {/* Fenêtre de chat */}
       {open && (
-        <div style={{
-          position: 'fixed',
-          bottom: widgetBottom,
-          left: widgetLeft,
-          width: widgetW,
-          height: widgetH,
-          backgroundColor: '#FFFFFF',
-          borderRadius: widgetBorderRadius,
-          boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
-          display: 'flex',
-          flexDirection: 'column',
-          zIndex: 9998,
-          overflow: 'hidden',
-          fontFamily: 'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-        }}>
-
-          {/* Header */}
-          <div style={{ backgroundColor: '#2C3E50', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-            <div style={{ position: 'relative' }}>
-              <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#C0392B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, color: '#FFFFFF' }}>S</div>
-              <div style={{ position: 'absolute', bottom: 1, right: 1, width: 10, height: 10, borderRadius: '50%', backgroundColor: '#27AE60', border: '2px solid #2C3E50' }} />
+        <div
+          id="coro-ai-dialog"
+          role="dialog"
+          aria-modal="false"
+          aria-labelledby="coro-ai-title"
+          style={{
+            position: "fixed",
+            bottom: 92,
+            left: 24,
+            width: 390,
+            maxWidth: "100vw",
+            height: 600,
+            background: "#FFF",
+            borderRadius: 16,
+            boxShadow: "0 8px 40px rgba(0,0,0,.18)",
+            display: "flex",
+            flexDirection: "column",
+            zIndex: 9998,
+            overflow: "hidden",
+            fontFamily: "var(--font-inter), sans-serif",
+          }}
+        >
+          <header
+            style={{
+              background: "#2C3E50",
+              padding: "12px 16px",
+              display: "flex",
+              gap: 12,
+              alignItems: "center",
+              flexShrink: 0,
+            }}
+          >
+            <div
+              aria-hidden="true"
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: "50%",
+                background: "#C0392B",
+                color: "#FFF",
+                display: "grid",
+                placeItems: "center",
+                fontWeight: 900,
+              }}
+            >
+              C
             </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, color: '#FFFFFF', fontWeight: 700, fontSize: 14 }}>Sophie · CORO IA</p>
-              <p style={{ margin: 0, color: '#BDC3C7', fontSize: 12 }}>
-                {loading ? '⏳ En train d\'écrire...' : '🟢 En ligne · Répond instantanément'}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p
+                id="coro-ai-title"
+                style={{
+                  margin: 0,
+                  color: "#FFF",
+                  fontWeight: 700,
+                  fontSize: 14,
+                }}
+              >
+                {copy.title}
+              </p>
+              <p style={{ margin: 0, color: "#D5DBDB", fontSize: 11 }}>
+                {loading ? copy.loading : copy.online}
               </p>
             </div>
-            {isMobile && (
-              <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', color: '#BDC3C7', fontSize: 20, cursor: 'pointer', padding: 4 }}>✕</button>
-            )}
-          </div>
-
-          {/* Bannière transfert + courriel */}
-          {transferred && (
-            <div style={{ backgroundColor: '#FEF9E7', borderBottom: '1px solid #FAD7A0', padding: '14px 16px', flexShrink: 0 }}>
-              <p style={{ fontSize: 13, color: '#7D6608', margin: '0 0 10px', lineHeight: 1.5 }}>
-                💬 Transmettez volontairement votre demande à l&apos;équipe CORO.
+            <button
+              type="button"
+              onClick={resetConversation}
+              style={{
+                border: "1px solid #85929E",
+                borderRadius: 6,
+                background: "transparent",
+                color: "#FFF",
+                padding: "6px 8px",
+                fontSize: 11,
+                cursor: "pointer",
+              }}
+            >
+              {copy.newConversation}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label={copy.close}
+              style={{
+                border: 0,
+                background: "transparent",
+                color: "#FFF",
+                fontSize: 20,
+                cursor: "pointer",
+              }}
+            >
+              ×
+            </button>
+          </header>
+          {contactSuggested && (
+            <section
+              style={{
+                padding: 12,
+                background: "#FEF9E7",
+                borderBottom: "1px solid #FAD7A0",
+              }}
+            >
+              <p style={{ margin: "0 0 8px", color: "#7D6608", fontSize: 12 }}>
+                {copy.contactPrompt}
               </p>
-              {!emailSent ? (
-                <div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                  <input
-                    type="email"
-                    value={visitorEmail}
-                    onChange={e => setVisitorEmail(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && contactConsent && sendEmailWithHistory()}
-                    placeholder="votre@courriel.com"
-                    style={{ flex: 1, border: '1px solid #FAD7A0', borderRadius: 6, padding: '8px 10px', fontSize: 13, outline: 'none', color: '#2C3E50', backgroundColor: '#FFFFFF' }}
-                  />
-                  <button
-                    onClick={sendEmailWithHistory}
-                    disabled={!visitorEmail.trim() || !contactConsent || contactSending}
-                    style={{ backgroundColor: visitorEmail.trim() && contactConsent && !contactSending ? '#C0392B' : '#DEE2E6', color: '#FFFFFF', border: 'none', borderRadius: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: visitorEmail.trim() && contactConsent && !contactSending ? 'pointer' : 'default', whiteSpace: 'nowrap' }}
-                  >
-                    {contactSending ? 'Envoi…' : 'Envoyer'}
-                  </button>
+              {!contactSent ? (
+                <>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      type="email"
+                      value={visitorEmail}
+                      onChange={(event) => setVisitorEmail(event.target.value)}
+                      placeholder={copy.emailPlaceholder}
+                      aria-label={copy.emailPlaceholder}
+                      style={{
+                        minWidth: 0,
+                        flex: 1,
+                        padding: "8px 10px",
+                        border: "1px solid #D5B45B",
+                        borderRadius: 6,
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={sendContactRequest}
+                      disabled={
+                        !visitorEmail.trim() ||
+                        !contactConsent ||
+                        contactSending
+                      }
+                      style={{
+                        border: 0,
+                        borderRadius: 6,
+                        padding: "8px 12px",
+                        background: "#C0392B",
+                        color: "#FFF",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {contactSending ? copy.sending : copy.send}
+                    </button>
                   </div>
-                  <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 8, fontSize: 11, color: '#7D6608', lineHeight: 1.4 }}>
-                    <input type="checkbox" checked={contactConsent} onChange={e => setContactConsent(e.target.checked)} />
-                    J&apos;accepte que mon courriel et un bref résumé de ma demande soient transmis à l&apos;équipe CORO.
+                  <label
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      marginTop: 8,
+                      color: "#7D6608",
+                      fontSize: 11,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={contactConsent}
+                      onChange={(event) =>
+                        setContactConsent(event.target.checked)
+                      }
+                    />
+                    {copy.consent}
                   </label>
-                  {contactError && <p role="alert" style={{ margin: '8px 0 0', color: '#C0392B', fontSize: 11 }}>{contactError}</p>}
-                </div>
+                  {contactError && (
+                    <p
+                      role="alert"
+                      style={{
+                        margin: "7px 0 0",
+                        color: "#C0392B",
+                        fontSize: 11,
+                      }}
+                    >
+                      {contactError}
+                    </p>
+                  )}
+                </>
               ) : (
-                <p style={{ fontSize: 13, color: '#27AE60', margin: 0, fontWeight: 600 }}>✓ Votre demande a été transmise à l&apos;équipe CORO.</p>
+                <p
+                  role="status"
+                  style={{ margin: 0, color: "#1E8449", fontSize: 12 }}
+                >
+                  {copy.sent}
+                </p>
               )}
-            </div>
+            </section>
           )}
-
-          {/* Messages */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '16px 14px 8px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {messages.map((m, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: 8 }}>
-                {m.role === 'assistant' && (
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: '#C0392B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: '#FFFFFF', flexShrink: 0 }}>S</div>
-                )}
-                <div style={{
-                  maxWidth: '78%',
-                  padding: '10px 14px',
-                  borderRadius: m.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                  backgroundColor: m.role === 'user' ? '#C0392B' : '#F1F3F5',
-                  color: m.role === 'user' ? '#FFFFFF' : '#2C3E50',
-                  fontSize: 13,
-                  lineHeight: 1.6,
-                  whiteSpace: 'pre-wrap',
-                }}>
-                  {m.content}
+          <div
+            aria-live="polite"
+            aria-busy={loading}
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              padding: "16px 14px 8px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+            }}
+          >
+          {displayedMessages.map((message, index) => (
+              <article
+                key={`${message.role}-${index}`}
+                style={{
+                  alignSelf:
+                    message.role === "user" ? "flex-end" : "flex-start",
+                  maxWidth: "88%",
+                }}
+              >
+                <div
+                  style={{
+                    padding: "10px 13px",
+                    borderRadius:
+                      message.role === "user"
+                        ? "16px 16px 4px 16px"
+                        : "16px 16px 16px 4px",
+                    background: message.role === "user" ? "#C0392B" : "#F1F3F5",
+                    color: message.role === "user" ? "#FFF" : "#2C3E50",
+                    fontSize: 13,
+                    lineHeight: 1.55,
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  {message.content}
                 </div>
-              </div>
-            ))}
-
-            {/* Indicateur "en train d'écrire" */}
-            {loading && (
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: '#C0392B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: '#FFFFFF' }}>S</div>
-                <div style={{ backgroundColor: '#F1F3F5', borderRadius: '16px 16px 16px 4px', padding: '12px 16px' }}>
-                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                    {[0, 1, 2].map(i => (
-                      <div key={i} style={{
-                        width: 7, height: 7, borderRadius: '50%', backgroundColor: '#ADB5BD',
-                        animation: 'bounce 1.2s infinite',
-                        animationDelay: `${i * 0.2}s`,
-                      }} />
+                {message.citations?.length ? (
+                  <div style={{ marginTop: 7, paddingLeft: 6 }}>
+                    <strong style={{ fontSize: 11, color: "#566573" }}>
+                      {copy.sources}
+                    </strong>
+                    <ul style={{ margin: "4px 0 0", paddingLeft: 16 }}>
+                      {message.citations.map((citation) => (
+                        <li
+                          key={`${citation.sourceId}-${citation.version}`}
+                          style={{ fontSize: 11, marginBottom: 3 }}
+                        >
+                          <a
+                            href={citation.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: "#9B2C20" }}
+                          >
+                            {citation.title} · v{citation.version}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                {message.links?.length ? (
+                  <nav
+                    aria-label={copy.explore}
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 6,
+                      marginTop: 7,
+                    }}
+                  >
+                    {message.links.map((link) => (
+                      <a
+                        key={link.url}
+                        href={link.url}
+                        style={{
+                          border: "1px solid #D5D8DC",
+                          borderRadius: 16,
+                          padding: "5px 9px",
+                          color: "#2C3E50",
+                          fontSize: 11,
+                          textDecoration: "none",
+                        }}
+                      >
+                        {link.label}
+                      </a>
+                    ))}
+                  </nav>
+                ) : null}
+                {message.questions?.length ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 6,
+                      marginTop: 7,
+                    }}
+                  >
+                    {message.questions.map((question) => (
+                      <button
+                        type="button"
+                        key={question}
+                        onClick={() => void sendMessage(question)}
+                        style={{
+                          border: "1px solid #D5D8DC",
+                          borderRadius: 16,
+                          padding: "5px 9px",
+                          background: "#FFF",
+                          color: "#2C3E50",
+                          fontSize: 11,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {question}
+                      </button>
                     ))}
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* Questions suggérées */}
-            {showSuggestions && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-                {SUGGESTED_QUESTIONS.map(q => (
+                ) : null}
+              </article>
+            ))}
+          {messages.length === 0 && !loading && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                {copy.suggestions.map((question) => (
                   <button
-                    key={q}
-                    onClick={() => handleSuggestedQuestion(q)}
+                    type="button"
+                    key={question}
+                    onClick={() => void sendMessage(question)}
                     style={{
-                      padding: '7px 12px',
-                      borderRadius: 20,
-                      border: '1px solid #DEE2E6',
-                      backgroundColor: '#FFFFFF',
-                      color: '#2C3E50',
-                      fontSize: 12,
-                      cursor: 'pointer',
-                      fontWeight: 500,
-                      transition: 'all 0.15s',
+                      padding: "7px 11px",
+                      borderRadius: 18,
+                      border: "1px solid #D5D8DC",
+                      background: "#FFF",
+                      color: "#2C3E50",
+                      fontSize: 11,
+                      cursor: "pointer",
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#C0392B'; e.currentTarget.style.color = '#C0392B'; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = '#DEE2E6'; e.currentTarget.style.color = '#2C3E50'; }}
                   >
-                    {q}
+                    {question}
                   </button>
                 ))}
               </div>
             )}
-
+            {loading && (
+              <p
+                role="status"
+                style={{ margin: 0, color: "#6C757D", fontSize: 12 }}
+              >
+                {copy.loading}
+              </p>
+            )}
             <div ref={messagesEndRef} />
           </div>
-
-          {/* Input */}
-          <div style={{ padding: '10px 12px', borderTop: '1px solid #E9ECEF', display: 'flex', gap: 8, flexShrink: 0, backgroundColor: '#FFFFFF' }}>
+          <div
+            style={{
+              padding: "10px 12px",
+              borderTop: "1px solid #E9ECEF",
+              display: "flex",
+              gap: 8,
+            }}
+          >
             <input
               ref={inputRef}
               value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKey}
-              maxLength={2000}
-              placeholder="Écrivez un message..."
+              onChange={(event) => setInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  void sendMessage();
+                }
+              }}
+              maxLength={2_000}
+              placeholder={copy.placeholder}
+              aria-label={copy.placeholder}
               disabled={loading}
               style={{
+                minWidth: 0,
                 flex: 1,
-                border: '1px solid #E9ECEF',
+                border: "1px solid #D5D8DC",
                 borderRadius: 20,
-                padding: '9px 16px',
-                fontSize: 13,
-                outline: 'none',
-                color: '#2C3E50',
-                backgroundColor: '#F8F9FA',
-                transition: 'border-color 0.15s',
+                padding: "9px 14px",
+                color: "#2C3E50",
+                background: "#F8F9FA",
               }}
-              onFocus={e => e.target.style.borderColor = '#C0392B'}
-              onBlur={e => e.target.style.borderColor = '#E9ECEF'}
             />
             <button
-              onClick={() => sendMessage()}
+              type="button"
+              onClick={() => void sendMessage()}
               disabled={loading || !input.trim()}
+              aria-label={copy.send}
               style={{
-                width: 38,
-                height: 38,
-                borderRadius: '50%',
-                backgroundColor: input.trim() ? '#C0392B' : '#E9ECEF',
-                border: 'none',
-                cursor: input.trim() ? 'pointer' : 'default',
-                color: '#FFFFFF',
-                fontSize: 16,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                transition: 'background-color 0.15s',
+                width: 40,
+                height: 40,
+                borderRadius: "50%",
+                border: 0,
+                background: input.trim() ? "#C0392B" : "#D5D8DC",
+                color: "#FFF",
+                cursor: input.trim() ? "pointer" : "default",
               }}
             >
-              ➤
+              →
             </button>
           </div>
-
-          {/* Footer */}
-          <p style={{ margin: 0, padding: '6px 14px 10px', fontSize: 11, color: '#ADB5BD', textAlign: 'center', flexShrink: 0, backgroundColor: '#FFFFFF' }}>
-            Propulsé par CORO IA · <a href="mailto:info@getcoro.io" style={{ color: '#ADB5BD' }}>info@getcoro.io</a>
+          <p
+            style={{
+              margin: 0,
+              padding: "4px 12px 8px",
+              color: "#6C757D",
+              background: "#FFF",
+              textAlign: "center",
+              fontSize: 10,
+            }}
+          >
+            {INTELLIGENT_ASSISTANT_ENABLED ? copy.grounded : copy.legacy}
           </p>
         </div>
       )}
-
-      {/* Animation CSS pour les points */}
       <style>{`
-        @keyframes bounce {
-          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-          30% { transform: translateY(-6px); opacity: 1; }
+        @media (max-width: 767px) {
+          #coro-ai-dialog {
+            inset: auto auto var(--coro-cookie-offset, 0px) 0 !important;
+            width: 100vw !important;
+            height: calc(100dvh - var(--coro-cookie-offset, 0px)) !important;
+            border-radius: 0 !important;
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          #coro-ai-dialog * { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
         }
       `}</style>
     </>
