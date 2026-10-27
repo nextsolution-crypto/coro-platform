@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DeterministicEmbeddingService } from '../knowledge/deterministic-embedding.service';
-import { PrismaService } from '../prisma/prisma.service';
 import { PublicKnowledgeConfig } from './public-knowledge.config';
+import { PublicKnowledgeDatabaseService } from './public-knowledge-database.service';
 import { PublicKnowledgeSecurity } from './public-knowledge-security';
 import {
   fromDbLanguage,
@@ -40,7 +40,7 @@ type SearchableSource = {
 @Injectable()
 export class PublicKnowledgeSearchService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly prisma: PublicKnowledgeDatabaseService,
     private readonly embeddings: DeterministicEmbeddingService,
     private readonly security: PublicKnowledgeSecurity,
     private readonly config: PublicKnowledgeConfig,

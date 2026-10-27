@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { DeterministicEmbeddingService } from '../src/knowledge/deterministic-embedding.service';
 import { PUBLIC_KNOWLEDGE_CATALOG } from '../src/public-knowledge/public-knowledge.catalog';
 import { PublicKnowledgeConfig } from '../src/public-knowledge/public-knowledge.config';
+import { PublicKnowledgeDatabaseService } from '../src/public-knowledge/public-knowledge-database.service';
 import { PublicKnowledgeIngestionService } from '../src/public-knowledge/public-knowledge-ingestion.service';
 import { PublicKnowledgeSearchService } from '../src/public-knowledge/public-knowledge-search.service';
 import { PublicKnowledgeSecurity } from '../src/public-knowledge/public-knowledge-security';
@@ -27,7 +28,7 @@ describe('Public Knowledge isolated PostgreSQL 16 authority', () => {
     config,
   );
   const search = new PublicKnowledgeSearchService(
-    prisma as unknown as PrismaService,
+    prisma as unknown as PublicKnowledgeDatabaseService,
     embeddings,
     security,
     config,
@@ -138,5 +139,41 @@ describe('Public Knowledge isolated PostgreSQL 16 authority', () => {
       `${JSON.stringify({ event: 'PUBLIC_KNOWLEDGE_PERFORMANCE', medianMs, p95Ms })}\n`,
     );
     expect(p95Ms).toBeLessThan(250);
+  });
+
+  it('supports a read-only public SQL identity and rejects private tables and writes', async () => {
+    const role = 'coro_public_knowledge_qa';
+    const password = 'public_knowledge_disposable_only';
+    await prisma.$executeRawUnsafe(`DROP ROLE IF EXISTS ${role}`);
+    await prisma.$executeRawUnsafe(
+      `CREATE ROLE ${role} LOGIN PASSWORD '${password}' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`,
+    );
+    await prisma.$executeRawUnsafe(`GRANT USAGE ON SCHEMA public TO ${role}`);
+    await prisma.$executeRawUnsafe(
+      `GRANT SELECT ON TABLE "PublicKnowledgeSource", "PublicKnowledgeChunk", "PublicKnowledgeCapability" TO ${role}`,
+    );
+
+    const limitedUrl = new URL(databaseUrl);
+    limitedUrl.username = role;
+    limitedUrl.password = password;
+    const limited = new PrismaClient({
+      datasources: { db: { url: limitedUrl.toString() } },
+    });
+    await limited.$connect();
+    try {
+      await expect(
+        limited.publicKnowledgeSource.count(),
+      ).resolves.toBeGreaterThan(0);
+      await expect(limited.projectFile.count()).rejects.toThrow();
+      await expect(
+        limited.publicKnowledgeSource.updateMany({
+          data: { authorityRank: 999 },
+        }),
+      ).rejects.toThrow();
+    } finally {
+      await limited.$disconnect();
+      await prisma.$executeRawUnsafe(`DROP OWNED BY ${role}`);
+      await prisma.$executeRawUnsafe(`DROP ROLE ${role}`);
+    }
   });
 });

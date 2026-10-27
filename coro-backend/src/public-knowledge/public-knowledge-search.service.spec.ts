@@ -1,7 +1,8 @@
-/* eslint-disable @typescript-eslint/require-await, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/require-await, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 import { DeterministicEmbeddingService } from '../knowledge/deterministic-embedding.service';
 import { PUBLIC_KNOWLEDGE_CATALOG } from './public-knowledge.catalog';
 import { PublicKnowledgeConfig } from './public-knowledge.config';
+import { PublicKnowledgeDatabaseService } from './public-knowledge-database.service';
 import { PUBLIC_KNOWLEDGE_EVALUATION_CASES } from './public-knowledge.evaluation';
 import { PublicKnowledgeSearchService } from './public-knowledge-search.service';
 import { PublicKnowledgeSecurity } from './public-knowledge-security';
@@ -44,7 +45,7 @@ describe('PublicKnowledgeSearchService', () => {
     },
   } as any;
   const service = new PublicKnowledgeSearchService(
-    prisma,
+    prisma as PublicKnowledgeDatabaseService,
     embeddings,
     security,
     config,

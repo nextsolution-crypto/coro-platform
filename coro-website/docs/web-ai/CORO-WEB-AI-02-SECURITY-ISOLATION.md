@@ -13,14 +13,18 @@
 | Injection dans une source | PASS — chunk exclu |
 | Citation depuis le registre serveur | PASS |
 | Flag inactif par défaut | PASS — HTTP 503 |
+| URL SQL dédiée obligatoire lorsque le flag est actif | PASS — démarrage fail-closed |
+| Identité SQL publique en lecture seule | PASS PostgreSQL |
+| Lecture `ProjectFile` avec l'identité publique | PASS — refus PostgreSQL |
+| Écriture avec l'identité publique | PASS — refus PostgreSQL |
 | Quotas dédiés | 8/minute, 60/heure |
 
 Le test PostgreSQL inspecte également `information_schema` : zéro colonne `organizationId`, `buildingId`, `projectFileId`, `tenantId` ou `clientUserId`, et zéro clé étrangère vers une table non `PublicKnowledge%`.
 
 ## Limites
 
-Les tables partagent actuellement la même base PostgreSQL, avec séparation logique et contraintes structurelles, plutôt qu'un compte SQL public à privilèges réduits. Une identité SQL dédiée reste recommandée avant activation publique. Les quotas Nest restent locaux au processus comme dans WEB-AI-00; une autorité distribuée sera nécessaire avant mise à l'échelle horizontale.
+Les tables partagent la même base PostgreSQL, mais le service de recherche possède désormais une connexion dédiée et exige `PUBLIC_KNOWLEDGE_DATABASE_URL` dès que le flag est actif. Le rôle minimal a été exercé sur PostgreSQL 16. Sa création et son secret de production restent une condition d'activation, pas une condition du déploiement désactivé. Les quotas Nest restent locaux au processus comme dans WEB-AI-00; une autorité distribuée sera nécessaire avant mise à l'échelle horizontale.
 
 ## Conclusion
 
-Isolation public/privé : **PASS pour le modèle, l'API et les tests PostgreSQL locaux; réserve opérationnelle sur le compte SQL dédié**.
+Isolation public/privé : **PASS pour le modèle, l'API, la connexion dédiée et les privilèges PostgreSQL minimaux. Activation publique interdite tant que le rôle et son secret de production ne sont pas provisionnés.**

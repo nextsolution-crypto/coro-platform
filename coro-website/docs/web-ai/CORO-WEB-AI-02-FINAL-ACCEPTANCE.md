@@ -26,7 +26,7 @@ Base : `2cd919b6a0fa52fd4af59b9bdf61a3fcb5691ccf`
 | Migration additive depuis zéro | PASS |
 | Synchronisation et reprise | PASS |
 | Recherche et citations | PASS |
-| Isolation public/privé | PASS avec réserve SQL opérationnelle |
+| Isolation public/privé | PASS — identité SQL de lecture dédiée testée; provisioning production requis avant activation |
 | API versionnée | PASS |
 | Tests ciblés | PASS — 17 unitaires/HTTP + 4 PostgreSQL |
 | Suite backend complète | PARTIAL — 2 212 PASS; OCR historique bloqué par `pdftoppm` absent; corrections WEB-AI-02 rejouées ciblées |
@@ -38,7 +38,7 @@ Base : `2cd919b6a0fa52fd4af59b9bdf61a3fcb5691ccf`
 ## Réserves
 
 1. La cause exacte du mode dégradé Anthropic en production reste indéterminée sans invocation ou télémétrie fournisseur supplémentaire.
-2. Un compte SQL dédié aux seules tables publiques doit être évalué avant activation Internet.
+2. Le rôle SQL public et son secret doivent être provisionnés en production avant une future activation; l'application refuse l'activation si l'URL dédiée manque.
 3. Les avis npm historiques restent suivis séparément.
 4. `pdftoppm` manque sur le poste Windows pour un test OCR historique indépendant.
 5. WEB-AI-03 devra réaliser le grounding final, valider chaque citation avant affichage et préserver un coupe-circuit immédiat.
