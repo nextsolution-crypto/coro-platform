@@ -97,6 +97,7 @@ const lifecycleLabel = (file: ProjectFile) =>
 export default function ProjectFiles({ projectId }: { projectId: string }) {
   const [files, setFiles] = useState<ProjectFile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filesError, setFilesError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -111,23 +112,31 @@ export default function ProjectFiles({ projectId }: { projectId: string }) {
   const [expandedVersions, setExpandedVersions] = useState<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const filesRequestRef = useRef(0);
 
   const fetchFiles = useCallback(async () => {
+    const requestId = ++filesRequestRef.current;
     setLoading(true);
+    setFilesError(null);
 
     try {
       const res = await api.get(`/project-files/project/${projectId}`);
 
-      setFiles(res.data || []);
+      if (requestId === filesRequestRef.current) setFiles(res.data || []);
     } catch (err) {
       console.error(err);
+      if (requestId === filesRequestRef.current) {
+        setFiles([]);
+        setFilesError("Impossible de charger les fichiers. Vérifiez votre session ou réessayez.");
+      }
     } finally {
-      setLoading(false);
+      if (requestId === filesRequestRef.current) setLoading(false);
     }
   }, [projectId]);
 
   useEffect(() => {
     fetchFiles();
+    return () => { filesRequestRef.current += 1; };
   }, [fetchFiles]);
 
   const resetUploadState = () => {
@@ -247,10 +256,6 @@ export default function ProjectFiles({ projectId }: { projectId: string }) {
 
   const handleDownload = async (file: ProjectFile) => {
     if (file.isDownloadable === false) return;
-    if (file.url !== "private:project-file") {
-      window.open(file.url, "_blank", "noopener,noreferrer");
-      return;
-    }
     try {
       const response = await api.get(`/project-files/${file.id}/content`, {
         responseType: "blob",
@@ -295,7 +300,7 @@ export default function ProjectFiles({ projectId }: { projectId: string }) {
   };
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0" data-testid="project-files-space">
       {/* ═══════════════════════════════════
           HEADER
       ═══════════════════════════════════ */}
@@ -401,6 +406,13 @@ export default function ProjectFiles({ projectId }: { projectId: string }) {
         >
           Chargement...
         </p>
+      ) : filesError ? (
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-6 text-center text-sm text-red-800">
+          <p>{filesError}</p>
+          <button type="button" onClick={() => void fetchFiles()} className="mt-4 min-h-[44px] rounded border border-red-300 bg-white px-4 py-2 font-medium">
+            Réessayer
+          </button>
+        </div>
       ) : files.length === 0 ? (
         /* ═══════════════════════════════════
            ÉTAT VIDE

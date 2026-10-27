@@ -37,3 +37,17 @@ Le runner `qa/global-e2e/src/organization-project-documents-audit.mjs` produit u
 `DÉFECTUEUX — CORRECTION DE SÉCURITÉ REQUISE AVANT ACCEPTATION DE CET ÉCRAN`.
 
 L’interface contient une base documentaire riche et le stockage privé moderne est présent, mais l’homogénéité d’autorisation entre la fiche projet et ses sous-ressources n’est pas démontrée dans le code actuel. La recette navigateur et le téléchargement réel restent ouverts.
+
+## Addendum de correction et validation — 27 octobre 2026
+
+Le lot applique désormais `projectAccessWhere(actor)` aux listes, dépôts, contenus, historiques et résolutions de version de l’application organisation. Un guard exécuté avant l’intercepteur multipart refuse un dépôt hors périmètre, archivé ou désactivé avant lecture du fichier; le service réapplique la décision.
+
+Les projets archivés actifs restent consultables et téléchargeables, mais leurs mutations documentaires sont refusées. Les projets désactivés ne sont plus accessibles par les sous-routes documentaires. Les téléchargements de l’interface passent tous par le contenu authentifié. Une ancienne référence n’est plus renvoyée au navigateur; seule sa clé persistée, syntaxiquement bornée, est résolue par le stockage privé. Aucune ACL ni référence historique de production n’a été modifiée.
+
+L’interface sépare maintenant chargement, vide et erreur, fournit une action `Réessayer`, efface les données précédentes et ignore les réponses obsolètes après changement de projet.
+
+Résultats : 33/33 tests backend ciblés, TypeScript et builds backend/frontend PASS, PostgreSQL 16 avec 155 migrations PASS, API/stockage/MFA 13/13, PDF synthétique téléchargé avec 41 octets et SHA-256 exact, matrice Chrome 12/12 et panne HTTP 503 suivie d’une reprise PASS.
+
+Preuves assainies : `D:\CORO-QA\runs\organization-project-documents\2026-10-27`.
+
+Verdict actualisé : `VALIDÉ_E2E_QA — LIVRAISON GOUVERNÉE REQUISE`. Ce verdict demeure limité à cet écran et ne valide pas la signature fournisseur, la génération officielle, l’éditeur ni Knowledge.

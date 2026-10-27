@@ -22,3 +22,19 @@
 | UX | 2560×1440 × 3 thèmes | NOT_VERIFIED_RUNTIME |
 
 La matrice 12/12 ne peut pas être déclarée PASS sans captures, géométrie mesurée et runtime réel.
+
+## Résultat après correction
+
+| Domaine | Résultat QA |
+|---|---|
+| Projet affecté et administrateur organisation | PASS |
+| Opérateur même organisation non affecté | PASS — refus 404 |
+| Organisation étrangère | PASS — refus 404 |
+| Projet désactivé | PASS — refus 404 |
+| Projet archivé en lecture | PASS |
+| Projet archivé en mutation | PASS — refus avant stockage |
+| Dépôt privé et historique | PASS |
+| Téléchargement et SHA-256 | PASS |
+| Refus de téléchargement sans octets protégés | PASS |
+| Erreur 503 et reprise | PASS |
+| Chrome quatre viewports × trois thèmes | PASS 12/12 |

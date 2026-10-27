@@ -13,3 +13,11 @@
 | PROJ-DOC-009 | Moyen | NOT_VERIFIED | Téléchargement effectif, octets/SHA, résistance aux pannes et 12/12 responsive non exécutés. | Docker local indisponible | Rejouer le plan avec PostgreSQL 16, stockage privé QA, MFA et Chrome. |
 
 Les constats de code n’autorisent aucune consultation de données étrangères en production. La démonstration négative devra utiliser uniquement des organisations synthétiques.
+
+## Réconciliation après correction
+
+- PROJ-DOC-001 à PROJ-DOC-006 : `CORRIGÉ_VALIDÉ_QA`.
+- PROJ-DOC-007 : `RÉSERVE_UX_NON_BLOQUANTE`; le serveur reste l’autorité et refuse les transitions non autorisées.
+- PROJ-DOC-008 : `AMÉLIORATION_DIFFÉRABLE`; aucune recherche, pagination ou volumétrie supplémentaire n’était autorisée dans ce lot.
+- PROJ-DOC-009 : `VALIDÉ_QA` avec API réelle, stockage privé, comparaison SHA-256, 12/12 navigateur et reprise après 503.
+- Exposition anonyme éventuelle d’anciens objets en production : `NON_DÉMONTRÉE`; aucune ACL historique n’a été modifiée.

@@ -18,6 +18,7 @@ import { ProjectFilesService } from './project-files.service';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 import { EvidenceReadAccess } from '../auth/organization-access.decorator';
 import { ProjectFileExpiryRemindersService } from './project-file-expiry-reminders.service';
+import { ProjectDocumentMutationGuard } from './project-document-mutation.guard';
 
 @Controller('project-files')
 @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
@@ -47,10 +48,13 @@ export class ProjectFilesController {
       projectId,
       visibility,
       req.user.organizationId,
+      undefined,
+      req.user,
     );
   }
 
   @Post('project/:projectId')
+  @UseGuards(ProjectDocumentMutationGuard)
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(
     @Param('projectId') projectId: string,
@@ -69,6 +73,7 @@ export class ProjectFilesController {
       visibility: body.visibility || 'shared',
       uploadedById: req.user.userId,
       parentId: body.parentId,
+      actor: req.user,
     });
   }
 
@@ -82,6 +87,7 @@ export class ProjectFilesController {
       fileId: id,
       organizationId: req.user.organizationId,
       actorId: req.user.userId,
+      actor: req.user,
       ...body,
     });
   }
@@ -103,6 +109,7 @@ export class ProjectFilesController {
       fileId: id,
       organizationId: req.user.organizationId,
       actorId: req.user.userId,
+      actor: req.user,
       ...body,
     });
   }
@@ -117,6 +124,7 @@ export class ProjectFilesController {
       fileId: id,
       organizationId: req.user.organizationId,
       actorId: req.user.userId,
+      actor: req.user,
       ...body,
     });
   }
@@ -137,6 +145,7 @@ export class ProjectFilesController {
       fileId: id,
       organizationId: req.user.organizationId,
       actorId: req.user.userId,
+      actor: req.user,
       ...body,
     });
   }
@@ -159,6 +168,7 @@ export class ProjectFilesController {
       fileId: id,
       organizationId: req.user.organizationId,
       actorId: req.user.userId,
+      actor: req.user,
       ...body,
     });
   }
@@ -174,13 +184,19 @@ export class ProjectFilesController {
       id,
       req.user.organizationId,
       asOf ? new Date(asOf) : new Date(),
+      undefined,
+      req.user,
     );
   }
 
   @Get(':id/download')
   @EvidenceReadAccess()
   getDownloadUrl(@Param('id') id: string, @Request() req: any) {
-    return this.projectFilesService.getSignedUrl(id, req.user.organizationId);
+    return this.projectFilesService.getSignedUrl(
+      id,
+      req.user.organizationId,
+      req.user,
+    );
   }
 
   @Get(':id/content')
@@ -189,6 +205,9 @@ export class ProjectFilesController {
     const file = await this.projectFilesService.downloadPrivateFile(
       id,
       req.user.organizationId,
+      undefined,
+      false,
+      req.user,
     );
     return new StreamableFile(file.buffer, {
       type: file.mimeType,
@@ -202,6 +221,8 @@ export class ProjectFilesController {
     return this.projectFilesService.getLifecycleHistory(
       id,
       req.user.organizationId,
+      undefined,
+      req.user,
     );
   }
 }

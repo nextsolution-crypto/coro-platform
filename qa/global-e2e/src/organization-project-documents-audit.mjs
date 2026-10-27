@@ -12,11 +12,11 @@ const component = await readFile(join(root, 'coro-frontend/components/ProjectFil
 const checks = [];
 const check = (id, pass, detail) => checks.push({ id, status: pass ? 'PASS' : 'FAIL', detail });
 check('baseline-controller-authenticated', controller.includes("@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)"), 'JWT and organization status guard are declared.');
-check('canonical-project-scope-on-list', /getFilesForProject\(\s*projectId,\s*visibility,\s*req\.user\.organizationId,\s*req\.user/.test(controller), 'Expected actor/project scope is forwarded to the service.');
-check('canonical-project-scope-on-upload', /uploadFile\([\s\S]*permittedBuildingIds|projectAccessWhere/.test(controller), 'Expected actor/project scope is enforced for upload.');
+check('canonical-project-scope-on-list', /getFilesForProject\(\s*projectId,\s*visibility,\s*req\.user\.organizationId,\s*undefined,\s*req\.user/.test(controller), 'Expected actor/project scope is forwarded to the service.');
+check('canonical-project-scope-on-upload', controller.includes('@UseGuards(ProjectDocumentMutationGuard)') && service.includes('projectAccessWhere(data.actor)'), 'Canonical actor/project scope is enforced before multipart parsing and in the service.');
 check('active-project-on-document-list', /id:\s*projectId,\s*organizationId,\s*isActive:\s*true/.test(service.slice(service.indexOf('async getFilesForProject'), service.indexOf('async getSignedUrl'))), 'Document listing requires an active project.');
-check('archive-write-denial', /uploadFile[\s\S]*?status:\s*\{\s*not:\s*['"]ARCHIVED/.test(service), 'Upload explicitly denies archived projects.');
-check('private-download-actor-scope', /downloadPrivate\([\s\S]*req\.user[\s\S]*permittedBuildingIds/.test(controller), 'Private download forwards actor scope.');
+check('archive-write-denial', service.includes("status: { not: 'ARCHIVED' as const }") && controller.includes('ProjectDocumentMutationGuard'), 'Upload explicitly denies archived projects.');
+check('private-download-actor-scope', /downloadPrivateFile\([\s\S]*?req\.user\.organizationId,[\s\S]*?req\.user,/.test(controller), 'Private download forwards actor scope.');
 check('no-legacy-direct-url', !component.includes('window.open(file.url') && !service.includes("return { url: file.url"), 'All downloads use the authenticated private-content authority.');
 check('truthful-list-error-state', /file(?:List|Fetch)Error|setFilesError/.test(component), 'The file list distinguishes errors from an empty collection.');
 check('retry-control', /R[eé]essayer/.test(component), 'A retry action is available after list/download failure.');
