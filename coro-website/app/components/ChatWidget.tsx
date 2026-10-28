@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { publicApiUrl } from "@/lib/site/api";
+import WebAICommercialQualification from "./WebAICommercialQualification";
 
 type Language = "fr-CA" | "en-CA";
 interface Citation {
@@ -33,6 +34,8 @@ interface IntelligentResponse {
   citations: Citation[];
   suggestedLinks: SuggestedLink[];
   suggestedQuestions: string[];
+  intent?: string;
+  commercialPrompt?: string;
 }
 
 const INTELLIGENT_ASSISTANT_ENABLED =
@@ -243,6 +246,7 @@ export default function ChatWidget() {
         if (!result.sessionId || typeof result.message !== "string")
           throw new Error("INVALID_PUBLIC_ASSISTANT_RESPONSE");
         setSessionId(result.sessionId);
+        if (result.commercialPrompt) setContactSuggested(true);
         setMessages((current) => [
           ...current,
           {
@@ -458,7 +462,10 @@ export default function ChatWidget() {
               ×
             </button>
           </header>
-          {contactSuggested && (
+          {contactSuggested && INTELLIGENT_ASSISTANT_ENABLED && (
+            <WebAICommercialQualification language={language} onCancel={() => setContactSuggested(false)} />
+          )}
+          {contactSuggested && !INTELLIGENT_ASSISTANT_ENABLED && (
             <section
               style={{
                 padding: 12,

@@ -86,6 +86,7 @@ const SUPER_ADMIN_PLATFORM_GROUP = {
   items: [
     { label: 'Control Center', path: '/admin/control-center', icon: '◉' },
     { label: 'Metering', path: '/admin/metering', icon: '∑' },
+    { label: 'CORO AI · Assistant Web', path: '/admin/web-ai', icon: 'AI' },
   ],
 };
 

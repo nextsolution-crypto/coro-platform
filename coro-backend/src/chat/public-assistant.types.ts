@@ -35,6 +35,8 @@ export interface PublicAssistantResponse {
   suggestedLinks: PublicAssistantSuggestedLink[];
   suggestedQuestions: string[];
   mode: 'DOCUMENTARY' | 'SIMULATED' | 'BEDROCK' | 'DEGRADED';
+  intent?: string;
+  commercialPrompt?: string;
 }
 
 export interface PublicAssistantTurn {

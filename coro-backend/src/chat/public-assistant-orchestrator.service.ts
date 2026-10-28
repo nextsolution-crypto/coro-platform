@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PublicKnowledgeSearchService } from '../public-knowledge/public-knowledge-search.service';
 import type { PublicKnowledgeAnswerContext } from '../public-knowledge/public-knowledge.types';
@@ -13,6 +13,8 @@ import {
   toAssistantContextSource,
 } from './public-assistant.types';
 import { PublicAssistantValidator } from './public-assistant-validator';
+import { classifyWebAIIntent, commercialPrompt, type WebAIIntent } from './web-ai-intent.classifier';
+import { WebAIObservabilityService } from './web-ai-observability.service';
 
 @Injectable()
 export class PublicAssistantOrchestratorService {
@@ -25,6 +27,7 @@ export class PublicAssistantOrchestratorService {
     private readonly provider: PublicAssistantProviderGateway,
     private readonly validator: PublicAssistantValidator,
     private readonly navigation: PublicAssistantNavigationRegistry,
+    @Optional() private readonly observability?: WebAIObservabilityService,
   ) {}
 
   async answer(input: {
@@ -33,6 +36,8 @@ export class PublicAssistantOrchestratorService {
     sessionId?: string;
     pagePath?: string;
   }): Promise<PublicAssistantResponse> {
+    const startedAt = Date.now();
+    const classification = classifyWebAIIntent(input.message);
     this.config.assertProviderConfiguration();
     const requestId = randomUUID();
     const session = this.sessions.open(input.sessionId);
@@ -46,19 +51,22 @@ export class PublicAssistantOrchestratorService {
       );
     } catch {
       this.logger.warn(`Public Knowledge unavailable requestId=${requestId}`);
-      return this.degraded(requestId, session.id, input.language);
+      const response = this.degraded(requestId, session.id, input.language, classification.intent);
+      await this.observe(response, classification.intent, startedAt, 0, 'KNOWLEDGE_UNAVAILABLE');
+      return response;
     }
     if (
       context.status === 'BLOCKED' ||
       context.status === 'INSUFFICIENT_INFORMATION' ||
       context.status === 'CONFLICTING_SOURCES'
     ) {
-      const response = this.abstention(requestId, session.id, input.language);
+      const response = this.abstention(requestId, session.id, input.language, classification.intent);
       this.sessions.append(
         session.id,
         { role: 'user', content: input.message },
         { role: 'assistant', content: response.message },
       );
+      await this.observe(response, classification.intent, startedAt, 0);
       return response;
     }
     const sources = context.sources
@@ -81,14 +89,18 @@ export class PublicAssistantOrchestratorService {
       providerMode = generated.mode;
     } catch {
       this.logger.warn(`Public provider unavailable requestId=${requestId}`);
-      return this.degraded(requestId, session.id, input.language);
+      const response = this.degraded(requestId, session.id, input.language, classification.intent);
+      await this.observe(response, classification.intent, startedAt, sources.length, 'PROVIDER_UNAVAILABLE');
+      return response;
     }
     const validated = this.validator.validate(raw, sources, input.language);
     if (!validated) {
       this.logger.warn(
         `Grounding rejected provider output requestId=${requestId}`,
       );
-      return this.abstention(requestId, session.id, input.language);
+      const response = this.abstention(requestId, session.id, input.language, classification.intent);
+      await this.observe(response, classification.intent, startedAt, sources.length, 'GROUNDING_REJECTED');
+      return response;
     }
     const response: PublicAssistantResponse = {
       requestId,
@@ -101,12 +113,15 @@ export class PublicAssistantOrchestratorService {
       suggestedLinks: validated.suggestedLinks,
       suggestedQuestions: validated.suggestedQuestions,
       mode: providerMode,
+      intent: classification.intent,
+      commercialPrompt: commercialPrompt(classification.intent, input.language),
     };
     this.sessions.append(
       session.id,
       { role: 'user', content: input.message },
       { role: 'assistant', content: response.message },
     );
+    await this.observe(response, classification.intent, startedAt, sources.length);
     return response;
   }
 
@@ -124,6 +139,7 @@ export class PublicAssistantOrchestratorService {
     requestId: string,
     sessionId: string,
     language: PublicAssistantLanguage,
+    intent: WebAIIntent,
   ): PublicAssistantResponse {
     return {
       requestId,
@@ -138,6 +154,8 @@ export class PublicAssistantOrchestratorService {
       suggestedLinks: this.navigation.links(['contact'], language),
       suggestedQuestions: [],
       mode: this.selectedMode(),
+      intent,
+      commercialPrompt: commercialPrompt(intent, language),
     };
   }
 
@@ -145,6 +163,7 @@ export class PublicAssistantOrchestratorService {
     requestId: string,
     sessionId: string,
     language: PublicAssistantLanguage,
+    intent: WebAIIntent,
   ): PublicAssistantResponse {
     return {
       requestId,
@@ -159,7 +178,26 @@ export class PublicAssistantOrchestratorService {
       suggestedLinks: this.navigation.links(['home', 'contact'], language),
       suggestedQuestions: [],
       mode: 'DEGRADED',
+      intent,
+      commercialPrompt: commercialPrompt(intent, language),
     };
+  }
+
+  private observe(response: PublicAssistantResponse, intent: WebAIIntent, startedAt: number, sourceCount: number, errorCode?: string) {
+    if (!this.observability) return Promise.resolve();
+    return this.observability.record({
+      eventType: 'ASSISTANT_RESPONSE',
+      intent,
+      language: response.language,
+      result: response.status === 'SERVICE_UNAVAILABLE' ? 'FAILURE' : response.status === 'INSUFFICIENT_INFORMATION' ? 'ABSTENTION' : errorCode === 'GROUNDING_REJECTED' ? 'REJECTED' : 'SUCCESS',
+      correlationId: response.requestId,
+      sessionId: response.sessionId,
+      providerMode: response.mode,
+      durationMs: Date.now() - startedAt,
+      sourceCount,
+      suggestedLinkCount: response.suggestedLinks.length,
+      errorCode,
+    });
   }
 
   private selectedMode(): 'DOCUMENTARY' | 'SIMULATED' | 'BEDROCK' {

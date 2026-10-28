@@ -36,6 +36,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   '/settings/feedback': MessageSquare,
   '/admin/control-center': Radar,
   '/admin/metering': Activity,
+  '/admin/web-ai': Activity,
   '/admin/commercial': TrendingUp,
   '/admin/commercial/journey': Route,
   '/admin/commercial/prospects': Target,

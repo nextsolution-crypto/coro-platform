@@ -3,6 +3,7 @@ import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
 import { PublicAssistantConfig } from './public-assistant.config';
 import { PublicAssistantOrchestratorService } from './public-assistant-orchestrator.service';
+import { WebAICommercialService } from './web-ai-commercial.service';
 
 describe('ChatController public assistant boundary', () => {
   const previousEnabled = process.env.WEB_AI_INTELLIGENT_ASSISTANT_ENABLED;
@@ -20,6 +21,7 @@ describe('ChatController public assistant boundary', () => {
       {} as ChatService,
       { answer } as unknown as PublicAssistantOrchestratorService,
       new PublicAssistantConfig(),
+      {} as WebAICommercialService,
     );
     return { instance, answer };
   }
