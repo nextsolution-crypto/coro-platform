@@ -99,7 +99,8 @@
     "typescript-eslint": "^8.20.0"
   },
   "overrides": {
-    "multer": "2.5.0"
+    "multer": "2.5.0",
+    "webpack": "5.112.2"
   },
   "jest": {
     "moduleFileExtensions": [
