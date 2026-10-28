@@ -6,8 +6,10 @@ import { Module } from '@nestjs/common';
 import { Module2Controller } from './module2.controller';
 import { Module2Service } from './module2.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { GeneratorModule } from '../generator/generator.module';
 
 @Module({
+  imports: [GeneratorModule],
   controllers: [Module2Controller],
   providers: [Module2Service, PrismaService],
   exports: [Module2Service],

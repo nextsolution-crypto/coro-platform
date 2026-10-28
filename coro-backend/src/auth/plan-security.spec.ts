@@ -5,6 +5,7 @@ import { ApprovalService } from '../approval/approval.service';
 import { ProjectFilesService } from '../project-files/project-files.service';
 import { PcaConfiguratorService } from '../pca/pca-configurator/pca-configurator.service';
 import { ProjectsService } from '../projects/projects.service';
+import { DocumentEditorIntegrityService } from '../generator/document-editor-integrity.service';
 
 jest.mock('../export/export.service', () => ({
   ExportService: class ExportService {},
@@ -53,18 +54,29 @@ describe('plan document security boundaries', () => {
         },
         $transaction: jest.fn(),
       };
-      prisma.$transaction.mockImplementation((callback: any) => callback(prisma));
+      prisma.$transaction.mockImplementation((callback: any) =>
+        callback(prisma),
+      );
       const service = new ProjectsService(prisma);
       const action =
         operation === 'update'
-          ? service.update('project-a', { name: 'Blocked', expectedUpdatedAt: '2026-01-01T00:00:00.000Z' }, operator)
+          ? service.update(
+              'project-a',
+              {
+                name: 'Blocked',
+                expectedUpdatedAt: '2026-01-01T00:00:00.000Z',
+              },
+              operator,
+            )
           : service.remove('project-a', operator);
       await expect(action).rejects.toBeInstanceOf(ForbiddenException);
       if (operation === 'update') {
         expect(prisma.project.findFirst).toHaveBeenCalledWith(
           expect.objectContaining({
             where: expect.objectContaining({
-              id: 'project-a', organizationId: 'org-a', isActive: true,
+              id: 'project-a',
+              organizationId: 'org-a',
+              isActive: true,
             }),
           }),
         );
@@ -73,7 +85,9 @@ describe('plan document security boundaries', () => {
         expect(prisma.project.updateMany).toHaveBeenCalledWith(
           expect.objectContaining({
             where: expect.objectContaining({
-              id: 'project-a', organizationId: 'org-a', isActive: true,
+              id: 'project-a',
+              organizationId: 'org-a',
+              isActive: true,
               status: { not: 'ARCHIVED' },
             }),
           }),
@@ -265,13 +279,17 @@ describe('plan document security boundaries', () => {
         },
         document: { findFirst: jest.fn(), update: jest.fn() },
       };
-      const service = new VersionsService(prisma);
+      const service = new VersionsService(
+        prisma,
+        new DocumentEditorIntegrityService(prisma),
+        { log: jest.fn() } as any,
+      );
       const action =
         operation === 'list'
           ? service.findAll('project-b', admin)
           : operation === 'restore'
-            ? service.restore('project-b', 'version-b', admin)
-            : service.remove('project-b', 'version-b', admin);
+            ? service.restore('project-b', 'version-b', 0, admin)
+            : service.remove('project-b', 'version-b', 0, admin);
       await expect(action).rejects.toBeInstanceOf(NotFoundException);
       expect(prisma.projectVersion.create).not.toHaveBeenCalled();
       expect(prisma.projectVersion.delete).not.toHaveBeenCalled();

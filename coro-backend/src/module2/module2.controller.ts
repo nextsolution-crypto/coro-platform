@@ -23,7 +23,6 @@ import { SaveModule2Dto } from './dto/save-module2.dto';
 @Controller('projects/:projectId/module2')
 @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class Module2Controller {
-
   constructor(private readonly module2Service: Module2Service) {}
 
   // --------------------------------------------------------
@@ -31,7 +30,7 @@ export class Module2Controller {
   // --------------------------------------------------------
   @Get()
   async getModule2(@Param('projectId') projectId: string, @Request() req: any) {
-    return this.module2Service.getModule2(projectId, req.user.organizationId);
+    return this.module2Service.getModule2(projectId, req.user);
   }
 
   // --------------------------------------------------------
@@ -44,6 +43,6 @@ export class Module2Controller {
     @Body() dto: SaveModule2Dto,
     @Request() req: any,
   ) {
-    return this.module2Service.saveModule2(projectId, dto, req.user.organizationId);
+    return this.module2Service.saveModule2(projectId, dto, req.user);
   }
 }

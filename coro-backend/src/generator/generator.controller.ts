@@ -1,4 +1,13 @@
-import { Controller, Post, Get, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Put,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { GeneratorService } from './generator.service';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
@@ -13,7 +22,11 @@ export class GeneratorController {
   ) {}
 
   @Post('generate/:projectId')
-  generate(@Param('projectId') projectId: string, @Body() config: any, @Request() req: any) {
+  generate(
+    @Param('projectId') projectId: string,
+    @Body() config: any,
+    @Request() req: any,
+  ) {
     return this.generatorService.generateAndSave(projectId, config, req.user);
   }
 
@@ -27,16 +40,23 @@ export class GeneratorController {
     @Param('documentId') documentId: string,
     @Param('moduleId') moduleId: string,
     @Param('sectionId') sectionId: string,
-    @Body() body: { content: string; language?: string },
+    @Body()
+    body: { content: string; language?: string; expectedLockVersion: number },
     @Request() req: any,
   ) {
     return this.generatorService.updateModuleContent(
-      documentId, moduleId, sectionId, body.content, body.language || 'fr', req.user
+      documentId,
+      moduleId,
+      sectionId,
+      body.content,
+      body.language || 'fr',
+      body.expectedLockVersion,
+      req.user,
     );
   }
 
   @Get('validate/:projectId')
   validate(@Param('projectId') projectId: string, @Request() req: any) {
-    return this.validationService.validate(projectId, req.user.organizationId);
+    return this.validationService.validate(projectId, req.user);
   }
 }

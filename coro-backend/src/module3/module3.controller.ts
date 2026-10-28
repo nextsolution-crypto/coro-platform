@@ -1,5 +1,13 @@
 import {
-  Controller, Get, Put, Param, Body, UseGuards, HttpCode, HttpStatus, Request,
+  Controller,
+  Get,
+  Put,
+  Param,
+  Body,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  Request,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Module3Service } from './module3.service';
@@ -8,12 +16,11 @@ import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 @Controller('projects/:projectId/module3')
 @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class Module3Controller {
-
   constructor(private readonly module3Service: Module3Service) {}
 
   @Get()
   async getModule3(@Param('projectId') projectId: string, @Request() req: any) {
-    return this.module3Service.getModule3(projectId, req.user.organizationId);
+    return this.module3Service.getModule3(projectId, req.user);
   }
 
   @Put()
@@ -23,6 +30,6 @@ export class Module3Controller {
     @Body() dto: any,
     @Request() req: any,
   ) {
-    return this.module3Service.saveModule3(projectId, dto, req.user.organizationId);
+    return this.module3Service.saveModule3(projectId, dto, req.user);
   }
 }

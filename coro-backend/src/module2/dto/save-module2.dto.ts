@@ -3,7 +3,15 @@
 // ============================================================
 
 import { Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 
 export class PhoneEntryDto {
   @IsString() @IsOptional() id?: string;
@@ -24,24 +32,44 @@ export class ExternalEntryDto {
 }
 
 export class SaveModule2Dto {
-  @IsArray() @ValidateNested({ each: true }) @Type(() => PhoneEntryDto) @IsOptional()
+  @IsInt()
+  @Min(0)
+  expectedLockVersion!: number;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PhoneEntryDto)
+  @IsOptional()
   section2_1?: PhoneEntryDto[];
 
-  @IsArray() @ValidateNested({ each: true }) @Type(() => PhoneEntryDto) @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PhoneEntryDto)
+  @IsOptional()
   section2_2?: PhoneEntryDto[];
 
-  @IsArray() @ValidateNested({ each: true }) @Type(() => PhoneEntryDto) @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PhoneEntryDto)
+  @IsOptional()
   section2_3?: PhoneEntryDto[];
 
-  @IsArray() @ValidateNested({ each: true }) @Type(() => ExternalEntryDto) @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ExternalEntryDto)
+  @IsOptional()
   section2_4?: ExternalEntryDto[];
 
-  @IsArray() @ValidateNested({ each: true }) @Type(() => ExternalEntryDto) @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ExternalEntryDto)
+  @IsOptional()
   section2_5?: ExternalEntryDto[];
 
-  @IsBoolean() @IsOptional()
+  @IsBoolean()
+  @IsOptional()
   section2_5Enabled?: boolean;
 
-  @IsString() @IsOptional()
+  @IsString()
+  @IsOptional()
   internalEmergencyNumber?: string;
 }

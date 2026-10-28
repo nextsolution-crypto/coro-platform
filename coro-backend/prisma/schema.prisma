@@ -2681,6 +2681,7 @@ model Document {
   content   Json?
   status    DocumentStatus @default(DRAFT)
   version   Int            @default(1)
+  lockVersion Int          @default(0)
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 

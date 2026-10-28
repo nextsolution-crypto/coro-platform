@@ -1,9 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import Module3OrgChart, { OrgRole } from './Module3OrgChart';
-import Module3MemberTable, { MemberEntry, QuartDef } from './Module3MemberTable';
-import api from '@/lib/api';
+import { useState, useEffect, useCallback, useRef } from "react";
+import Module3OrgChart, { OrgRole } from "./Module3OrgChart";
+import Module3MemberTable, {
+  MemberEntry,
+  QuartDef,
+} from "./Module3MemberTable";
+import api from "@/lib/api";
 
 // ============================================================
 // TYPES
@@ -19,20 +22,27 @@ interface Module3Data {
 interface Module3SectionProps {
   projectId: string;
   initialData: Module3Data;
-  language?: 'fr' | 'en';
+  language?: "fr" | "en";
   isIndustriel?: boolean;
-  initialActiveTab?: '3.1' | '3.2';
-  quartsOccupation?: { nomQuart: string; heureDebut: string; heureFin: string }[];
+  initialActiveTab?: "3.1" | "3.2";
+  quartsOccupation?: {
+    nomQuart: string;
+    heureDebut: string;
+    heureFin: string;
+  }[];
   onSave?: (data: Module3Data) => void;
+  onLockVersionChange?: (lockVersion: number) => void;
 }
 
 // ============================================================
 // UTILITAIRE IDs
 // ============================================================
 
-function ensureIds<T extends { id?: string }>(entries: T[]): (T & { id: string })[] {
+function ensureIds<T extends { id?: string }>(
+  entries: T[],
+): (T & { id: string })[] {
   if (!entries || !Array.isArray(entries)) return [];
-  return entries.map(e => ({
+  return entries.map((e) => ({
     ...e,
     id: e.id || Math.random().toString(36).slice(2, 9),
   }));
@@ -45,31 +55,32 @@ function ensureIds<T extends { id?: string }>(entries: T[]): (T & { id: string }
 export default function Module3Section({
   projectId,
   initialData,
-  language = 'fr',
+  language = "fr",
   isIndustriel = false,
-  initialActiveTab = '3.1',
+  initialActiveTab = "3.1",
   quartsOccupation = [],
   onSave,
+  onLockVersionChange,
 }: Module3SectionProps) {
-
-  const isFr = language === 'fr';
+  const isFr = language === "fr";
   const isFirstLoad = useRef(true);
+  const lockVersion = useRef<number | null>(null);
 
   // Convertit quartsOccupation (configurateur) en QuartDef pour le tableau 3.2
   const quarts: QuartDef[] = quartsOccupation.map((q: any) => ({
-    id: q.nomQuart.toLowerCase().replace(/\s+/g, '_'),
+    id: q.nomQuart.toLowerCase().replace(/\s+/g, "_"),
     label: q.nomQuart,
     hasWeekend: !!(q.occupantsSamedi || q.occupantsDimanche),
   }));
 
-  const [orgRoles, setOrgRoles]       = useState<OrgRole[]>([]);
-  const [members, setMembers]         = useState<MemberEntry[]>([]);
-  const [activeShifts, setActiveShifts] = useState<string[]>(['jour']);
-  const [saving, setSaving]           = useState(false);
-  const [lastSaved, setLastSaved]     = useState<Date | null>(null);
-  const [isDirty, setIsDirty]         = useState(false);
+  const [orgRoles, setOrgRoles] = useState<OrgRole[]>([]);
+  const [members, setMembers] = useState<MemberEntry[]>([]);
+  const [activeShifts, setActiveShifts] = useState<string[]>(["jour"]);
+  const [saving, setSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
-  const [activeTab, setActiveTab]     = useState<'3.1' | '3.2'>(initialActiveTab);
+  const [activeTab, setActiveTab] = useState<"3.1" | "3.2">(initialActiveTab);
 
   // ============================================================
   // CHARGEMENT — backend d'abord, fallback initialData
@@ -81,20 +92,23 @@ export default function Module3Section({
       try {
         const res = await api.get(`/projects/${projectId}/module3`);
         const saved = res.data?.module3;
+        lockVersion.current = res.data?.lockVersion;
+        if (Number.isInteger(lockVersion.current))
+          onLockVersionChange?.(lockVersion.current as number);
 
         if (saved && saved.orgRoles?.length > 0) {
           setOrgRoles(ensureIds(saved.orgRoles));
           setMembers(ensureIds(saved.members || []));
-          setActiveShifts(saved.activeShifts || ['jour']);
+          setActiveShifts(saved.activeShifts || ["jour"]);
         } else {
           setOrgRoles(ensureIds(initialData.orgRoles || []));
           setMembers(ensureIds(initialData.members || []));
-          setActiveShifts(initialData.activeShifts || ['jour']);
+          setActiveShifts(initialData.activeShifts || ["jour"]);
         }
       } catch {
         setOrgRoles(ensureIds(initialData.orgRoles || []));
         setMembers(ensureIds(initialData.members || []));
-        setActiveShifts(initialData.activeShifts || ['jour']);
+        setActiveShifts(initialData.activeShifts || ["jour"]);
       } finally {
         setLoadingData(false);
         isFirstLoad.current = false;
@@ -110,56 +124,69 @@ export default function Module3Section({
   // on met à jour automatiquement le tableau 3.2
   // ============================================================
 
-  const syncMembersFromRoles = useCallback((
-    roles: OrgRole[],
-    currentMembers: MemberEntry[],
-    shifts: string[]
-  ): MemberEntry[] => {
-    const activeRoles = roles.filter(r =>
-      r.isActive && r.id !== 'sys_agent_liaison'
-    );
-    const schedules: Array<'semaine' | 'weekend'> = ['semaine', 'weekend'];
-    const updatedMembers: MemberEntry[] = [];
-    const shiftsToUse = quarts.length > 0 ? quarts.map(q => q.id) : shifts;
+  const syncMembersFromRoles = useCallback(
+    (
+      roles: OrgRole[],
+      currentMembers: MemberEntry[],
+      shifts: string[],
+    ): MemberEntry[] => {
+      const activeRoles = roles.filter(
+        (r) => r.isActive && r.id !== "sys_agent_liaison",
+      );
+      const schedules: Array<"semaine" | "weekend"> = ["semaine", "weekend"];
+      const updatedMembers: MemberEntry[] = [];
+      const shiftsToUse = quarts.length > 0 ? quarts.map((q) => q.id) : shifts;
 
-    for (const role of activeRoles) {
-      for (const schedule of schedules) {
-        for (const shift of shiftsToUse) {
-          const entryId = `${role.id}_${schedule}_${shift}`;
-          // Garde les données existantes si la ligne existe déjà
-          const existing = currentMembers.find(m =>
-            m.roleId === role.id &&
-            m.schedule === schedule &&
-            m.shift === shift
-          );
-          updatedMembers.push(existing || {
-            id: entryId,
-            roleId: role.id,
-            roleLabel: role.label,
-            roleLabel_en: role.label_en,
-            shift,
-            schedule,
-            personneDesignee: '',
-            substitut: '',
-          });
+      for (const role of activeRoles) {
+        for (const schedule of schedules) {
+          for (const shift of shiftsToUse) {
+            const entryId = `${role.id}_${schedule}_${shift}`;
+            // Garde les données existantes si la ligne existe déjà
+            const existing = currentMembers.find(
+              (m) =>
+                m.roleId === role.id &&
+                m.schedule === schedule &&
+                m.shift === shift,
+            );
+            updatedMembers.push(
+              existing || {
+                id: entryId,
+                roleId: role.id,
+                roleLabel: role.label,
+                roleLabel_en: role.label_en,
+                shift,
+                schedule,
+                personneDesignee: "",
+                substitut: "",
+              },
+            );
+          }
         }
       }
-    }
 
-    return updatedMembers;
-  }, []);
+      return updatedMembers;
+    },
+    [],
+  );
 
   // ============================================================
   // HANDLERS
   // ============================================================
 
-  const handleRolesChange = useCallback((newRoles: OrgRole[]) => {
-    setOrgRoles(newRoles);
-    // Sync automatique du tableau membres
-    const syncedMembers = syncMembersFromRoles(newRoles, members, activeShifts);
-    setMembers(syncedMembers);
-    setIsDirty(true);
-  }, [members, activeShifts, syncMembersFromRoles]);
+  const handleRolesChange = useCallback(
+    (newRoles: OrgRole[]) => {
+      setOrgRoles(newRoles);
+      // Sync automatique du tableau membres
+      const syncedMembers = syncMembersFromRoles(
+        newRoles,
+        members,
+        activeShifts,
+      );
+      setMembers(syncedMembers);
+      setIsDirty(true);
+    },
+    [members, activeShifts, syncMembersFromRoles],
+  );
 
   const handleMembersChange = useCallback((newMembers: MemberEntry[]) => {
     setMembers(newMembers);
@@ -170,19 +197,27 @@ export default function Module3Section({
   // AUTOSAVE — 2 secondes après modification
   // ============================================================
 
-  const saveData = useCallback(async (data: Module3Data) => {
-    setSaving(true);
-    try {
-      await api.put(`/projects/${projectId}/module3`, data);
-      setLastSaved(new Date());
-      setIsDirty(false);
-      onSave?.(data);
-    } catch (err) {
-      console.error('Autosave Module 3 échoué :', err);
-    } finally {
-      setSaving(false);
-    }
-  }, [projectId, onSave]);
+  const saveData = useCallback(
+    async (data: Module3Data) => {
+      setSaving(true);
+      try {
+        const response = await api.put(`/projects/${projectId}/module3`, {
+          ...data,
+          expectedLockVersion: lockVersion.current,
+        });
+        lockVersion.current = response.data.lockVersion;
+        onLockVersionChange?.(response.data.lockVersion);
+        setLastSaved(new Date());
+        setIsDirty(false);
+        onSave?.(data);
+      } catch (err) {
+        console.error("Autosave Module 3 échoué :", err);
+      } finally {
+        setSaving(false);
+      }
+    },
+    [projectId, onSave, onLockVersionChange],
+  );
 
   useEffect(() => {
     if (isFirstLoad.current || !isDirty) return;
@@ -191,7 +226,7 @@ export default function Module3Section({
         orgRoles,
         members,
         activeShifts,
-        customRoles: orgRoles.filter(r => r.source === 'custom'),
+        customRoles: orgRoles.filter((r) => r.source === "custom"),
       });
     }, 2000);
     return () => clearTimeout(timer);
@@ -201,27 +236,30 @@ export default function Module3Section({
   // LABELS
   // ============================================================
 
-  const t = isFr ? {
-    module:   'RÔLES ET RESPONSABILITÉS',
-    subtitle: 'DE L\'ÉQUIPE D\'URGENCE',
-    tab31:    '3.1 Organigramme',
-    tab32:    '3.2 Liste des membres',
-    saving:   'Sauvegarde...',
-    saved:    'Sauvegardé',
-    unsaved:  'Non sauvegardé',
-    loading:  'Chargement...',
-    syncInfo: 'Le tableau 3.2 se met à jour automatiquement selon l\'organigramme 3.1',
-  } : {
-    module:   'ROLES AND RESPONSIBILITIES',
-    subtitle: 'OF THE EMERGENCY TEAM',
-    tab31:    '3.1 Org Chart',
-    tab32:    '3.2 Member List',
-    saving:   'Saving...',
-    saved:    'Saved',
-    unsaved:  'Unsaved changes',
-    loading:  'Loading...',
-    syncInfo: 'Table 3.2 updates automatically based on org chart 3.1',
-  };
+  const t = isFr
+    ? {
+        module: "RÔLES ET RESPONSABILITÉS",
+        subtitle: "DE L'ÉQUIPE D'URGENCE",
+        tab31: "3.1 Organigramme",
+        tab32: "3.2 Liste des membres",
+        saving: "Sauvegarde...",
+        saved: "Sauvegardé",
+        unsaved: "Non sauvegardé",
+        loading: "Chargement...",
+        syncInfo:
+          "Le tableau 3.2 se met à jour automatiquement selon l'organigramme 3.1",
+      }
+    : {
+        module: "ROLES AND RESPONSIBILITIES",
+        subtitle: "OF THE EMERGENCY TEAM",
+        tab31: "3.1 Org Chart",
+        tab32: "3.2 Member List",
+        saving: "Saving...",
+        saved: "Saved",
+        unsaved: "Unsaved changes",
+        loading: "Loading...",
+        syncInfo: "Table 3.2 updates automatically based on org chart 3.1",
+      };
 
   // ============================================================
   // RENDU
@@ -237,7 +275,6 @@ export default function Module3Section({
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
-
       {/* En-tête Module 3 */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -277,8 +314,10 @@ export default function Module3Section({
       </div>
 
       {/* Info sync */}
-      <div className="bg-blue-500/10 border border-blue-500/20 rounded px-4 py-2
-        mb-6 text-xs text-blue-400 flex items-center gap-2">
+      <div
+        className="bg-blue-500/10 border border-blue-500/20 rounded px-4 py-2
+        mb-6 text-xs text-blue-400 flex items-center gap-2"
+      >
         <span>🔗</span>
         <span>{t.syncInfo}</span>
       </div>
@@ -286,21 +325,25 @@ export default function Module3Section({
       {/* Tabs 3.1 / 3.2 — 3.2 visible seulement pour bâtiments industriels */}
       <div className="flex gap-1 mb-6 bg-gray-100 rounded p-1 w-fit">
         <button
-          onClick={() => setActiveTab('3.1')}
+          onClick={() => setActiveTab("3.1")}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors
-            ${activeTab === '3.1'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'}`}
+            ${
+              activeTab === "3.1"
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
         >
           {t.tab31}
         </button>
         {isIndustriel && (
           <button
-            onClick={() => setActiveTab('3.2')}
+            onClick={() => setActiveTab("3.2")}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors
-              ${activeTab === '3.2'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'}`}
+              ${
+                activeTab === "3.2"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
           >
             {t.tab32}
           </button>
@@ -308,7 +351,7 @@ export default function Module3Section({
       </div>
 
       {/* Contenu onglet actif */}
-      {activeTab === '3.1' && (
+      {activeTab === "3.1" && (
         <Module3OrgChart
           roles={orgRoles}
           onChange={handleRolesChange}
@@ -316,7 +359,7 @@ export default function Module3Section({
         />
       )}
 
-      {activeTab === '3.2' && isIndustriel && (
+      {activeTab === "3.2" && isIndustriel && (
         <Module3MemberTable
           members={members}
           quarts={quarts}
@@ -324,7 +367,6 @@ export default function Module3Section({
           language={language}
         />
       )}
-
     </div>
   );
 }

@@ -1,4 +1,16 @@
-import { Controller, Get, Put, Post, Delete, Param, Body, Query, UseGuards, Request, ForbiddenException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Put,
+  Post,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+  Request,
+  ForbiddenException,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ProceduresService } from './procedures.service';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
@@ -16,8 +28,14 @@ export class ProceduresController {
 
   // ── Toutes les procédures d'un projet (avec overrides) ─────
   @Get('project/:projectId')
-  findAllForProject(@Param('projectId') projectId: string, @Request() req: any) {
-    return this.proceduresService.findAllForProject(req.user.organizationId, projectId);
+  findAllForProject(
+    @Param('projectId') projectId: string,
+    @Request() req: any,
+  ) {
+    return this.proceduresService.findAllForProject(
+      req.user.organizationId,
+      projectId,
+    );
   }
 
   // ── Créer une nouvelle procédure par défaut (SUPER_ADMIN) ──
@@ -29,7 +47,7 @@ export class ProceduresController {
     return this.proceduresService.createDefault(body.content);
   }
 
-// ── Supprimer une procédure par défaut (SUPER_ADMIN) ───────
+  // ── Supprimer une procédure par défaut (SUPER_ADMIN) ───────
   @Delete(':id/default')
   deleteDefault(@Param('id') id: string, @Request() req: any) {
     if (req.user.role !== 'SUPER_ADMIN') {
@@ -40,8 +58,16 @@ export class ProceduresController {
 
   // ── Une procédure (avec override projet ou org si applicable) ──
   @Get(':id')
-  findOne(@Param('id') id: string, @Query('projectId') projectId: string, @Request() req: any) {
-    return this.proceduresService.findOne(id, req.user.organizationId, projectId);
+  findOne(
+    @Param('id') id: string,
+    @Query('projectId') projectId: string,
+    @Request() req: any,
+  ) {
+    return this.proceduresService.findOne(
+      id,
+      req.user.organizationId,
+      projectId,
+    );
   }
 
   // ── Sauvegarder un override par projet ─────────────────────
@@ -52,7 +78,12 @@ export class ProceduresController {
     @Body() body: { content: any },
     @Request() req: any,
   ) {
-    return this.proceduresService.updateForProject(id, req.user.organizationId, projectId, body.content);
+    return this.proceduresService.updateForProject(
+      id,
+      projectId,
+      body.content,
+      req.user,
+    );
   }
 
   // ── Activer/désactiver une procédure pour un projet ────────
@@ -63,7 +94,12 @@ export class ProceduresController {
     @Body() body: { isActive: boolean },
     @Request() req: any,
   ) {
-    return this.proceduresService.toggleActiveForProject(id, req.user.organizationId, projectId, body.isActive);
+    return this.proceduresService.toggleActiveForProject(
+      id,
+      projectId,
+      body.isActive,
+      req.user,
+    );
   }
 
   // ── Restaurer la version par défaut pour un projet ─────────
@@ -73,12 +109,16 @@ export class ProceduresController {
     @Param('projectId') projectId: string,
     @Request() req: any,
   ) {
-    return this.proceduresService.restoreForProject(id, req.user.organizationId, projectId);
+    return this.proceduresService.restoreForProject(id, projectId, req.user);
   }
 
   // ── Modifier la procédure par défaut (SUPER_ADMIN) ─────────
   @Put(':id/default')
-  updateDefault(@Param('id') id: string, @Body() body: { content: any }, @Request() req: any) {
+  updateDefault(
+    @Param('id') id: string,
+    @Body() body: { content: any },
+    @Request() req: any,
+  ) {
     if (req.user.role !== 'SUPER_ADMIN') {
       throw new ForbiddenException('Accès réservé au super-administrateur.');
     }

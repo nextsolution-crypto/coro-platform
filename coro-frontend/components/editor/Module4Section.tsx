@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from "react";
 import Module4ProcedureCard, {
   Procedure,
   LocalizedStepOverride,
   StepOverrideValue,
-} from './Module4ProcedureCard';
-import Module4Library from './Module4Library';
-import api from '@/lib/api';
-import { BookOpen, Plus } from 'lucide-react';
+} from "./Module4ProcedureCard";
+import Module4Library from "./Module4Library";
+import api from "@/lib/api";
+import { BookOpen, Plus } from "lucide-react";
 
 interface Module4Data {
   directivesGenerales?: any;
@@ -20,8 +20,9 @@ interface Module4Data {
 interface Module4SectionProps {
   projectId: string;
   initialData: Module4Data;
-  language?: 'fr' | 'en';
+  language?: "fr" | "en";
   onSave?: (data: any) => void;
+  onLockVersionChange?: (lockVersion: number) => void;
 }
 
 type StepOverridesMap = Record<string, LocalizedStepOverride>;
@@ -30,17 +31,17 @@ type CommentsMap = Record<string, string>;
 function normalizeStepOverrides(
   raw: Record<string, StepOverrideValue> | null | undefined,
 ): StepOverridesMap {
-  if (!raw || typeof raw !== 'object') return {};
+  if (!raw || typeof raw !== "object") return {};
 
   const normalized: StepOverridesMap = {};
 
   Object.entries(raw).forEach(([stepId, value]) => {
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       normalized[stepId] = { fr: value };
       return;
     }
 
-    if (value && typeof value === 'object') {
+    if (value && typeof value === "object") {
       normalized[stepId] = {
         ...(value.fr !== undefined ? { fr: value.fr } : {}),
         ...(value.en !== undefined ? { en: value.en } : {}),
@@ -54,11 +55,13 @@ function normalizeStepOverrides(
 export default function Module4Section({
   projectId,
   initialData,
-  language = 'fr',
+  language = "fr",
   onSave,
+  onLockVersionChange,
 }: Module4SectionProps) {
-  const isFr = language === 'fr';
+  const isFr = language === "fr";
   const isFirstLoad = useRef(true);
+  const lockVersion = useRef<number | null>(null);
 
   const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [, setDirectives] = useState<any>(null);
@@ -83,6 +86,9 @@ export default function Module4Section({
         ]);
 
         const saved = savedRes.data?.module4;
+        lockVersion.current = savedRes.data?.lockVersion;
+        if (Number.isInteger(lockVersion.current))
+          onLockVersionChange?.(lockVersion.current as number);
 
         const activeMap: Record<string, boolean> = {};
         (activeRes.data || []).forEach((p: any) => {
@@ -100,7 +106,9 @@ export default function Module4Section({
           const customIds: string[] = saved.customProcedureIds || [];
 
           setCustomProcedureIds(customIds);
-          setOverrides(normalizeStepOverrides(saved.procedureOverrides?.steps || {}));
+          setOverrides(
+            normalizeStepOverrides(saved.procedureOverrides?.steps || {}),
+          );
           setComments(saved.procedureOverrides?.comments || {});
 
           let allProcs: any[] = [...(initialData.procedures || [])];
@@ -108,8 +116,8 @@ export default function Module4Section({
           if (customIds.length > 0) {
             const customProcs = await Promise.all(
               customIds
-                .filter(id => !autoIds.includes(id))
-                .map(async id => {
+                .filter((id) => !autoIds.includes(id))
+                .map(async (id) => {
                   try {
                     const r = await api
                       .get(`/procedures/${id}`, { params: { projectId } })
@@ -119,7 +127,7 @@ export default function Module4Section({
                       return {
                         ...r.data.content,
                         id,
-                        sectionNumber: '',
+                        sectionNumber: "",
                         _isActive:
                           activeMap[id] !== undefined
                             ? activeMap[id]
@@ -135,9 +143,9 @@ export default function Module4Section({
                       return {
                         ...cr.data.content,
                         id,
-                        sectionNumber: '',
+                        sectionNumber: "",
                         _isCustomIA: true,
-                        _isActive: cr.data.status === 'ACTIVE',
+                        _isActive: cr.data.status === "ACTIVE",
                       };
                     }
 
@@ -152,7 +160,7 @@ export default function Module4Section({
           }
 
           setProcedures(
-            allProcs.map(p => ({
+            allProcs.map((p) => ({
               ...p,
               _isActive:
                 activeMap[p.id] !== undefined
@@ -162,19 +170,18 @@ export default function Module4Section({
           );
         } else {
           setProcedures(
-            (initialData.procedures || []).map(p => ({
+            (initialData.procedures || []).map((p) => ({
               ...p,
-              _isActive:
-                activeMap[p.id] !== undefined
-                  ? activeMap[p.id]
-                  : true,
+              _isActive: activeMap[p.id] !== undefined ? activeMap[p.id] : true,
             })),
           );
         }
       } catch {
         setProcedures(initialData.procedures || []);
         setDirectives(initialData.directivesGenerales || null);
-        setAutoActivatedIds((initialData.procedures || []).map((p: Procedure) => p.id));
+        setAutoActivatedIds(
+          (initialData.procedures || []).map((p: Procedure) => p.id),
+        );
       } finally {
         setLoadingData(false);
         isFirstLoad.current = false;
@@ -188,23 +195,33 @@ export default function Module4Section({
     setSaving(true);
 
     try {
-      await api.put(`/projects/${projectId}/module4`, {
+      const response = await api.put(`/projects/${projectId}/module4`, {
         customProcedureIds,
+        expectedLockVersion: lockVersion.current,
         procedureOverrides: {
           steps: overrides,
           comments,
         },
       });
+      lockVersion.current = response.data.lockVersion;
+      onLockVersionChange?.(response.data.lockVersion);
 
       setLastSaved(new Date());
       setIsDirty(false);
       onSave?.({ customProcedureIds, overrides, comments });
     } catch (err) {
-      console.error('Autosave Module 4 échoué:', err);
+      console.error("Autosave Module 4 échoué:", err);
     } finally {
       setSaving(false);
     }
-  }, [projectId, customProcedureIds, overrides, comments, onSave]);
+  }, [
+    projectId,
+    customProcedureIds,
+    overrides,
+    comments,
+    onSave,
+    onLockVersionChange,
+  ]);
 
   useEffect(() => {
     if (isFirstLoad.current || !isDirty) return;
@@ -214,8 +231,8 @@ export default function Module4Section({
   }, [customProcedureIds, overrides, comments, isDirty, saveData]);
 
   const handleOverride = useCallback(
-    (stepId: string, overrideLanguage: 'fr' | 'en', text: string) => {
-      setOverrides(prev => ({
+    (stepId: string, overrideLanguage: "fr" | "en", text: string) => {
+      setOverrides((prev) => ({
         ...prev,
         [stepId]: {
           ...(prev[stepId] || {}),
@@ -228,85 +245,99 @@ export default function Module4Section({
   );
 
   const handleComment = useCallback((stepId: string, comment: string) => {
-    setComments(prev => ({ ...prev, [stepId]: comment }));
+    setComments((prev) => ({ ...prev, [stepId]: comment }));
     setIsDirty(true);
   }, []);
 
-  const handleAddProcedure = useCallback(async (id: string) => {
-    try {
-      let proc: any = null;
+  const handleAddProcedure = useCallback(
+    async (id: string) => {
+      try {
+        let proc: any = null;
 
-      const res = await api
-        .get(`/procedures/${id}`, { params: { projectId } })
-        .catch(() => null);
-
-      if (res?.data?.content) {
-        proc = {
-          ...res.data.content,
-          _isActive: res.data.isActive !== false,
-        };
-      } else {
-        const cr = await api
-          .get(`/custom-procedures/${id}`)
+        const res = await api
+          .get(`/procedures/${id}`, { params: { projectId } })
           .catch(() => null);
 
-        if (cr?.data?.content) {
+        if (res?.data?.content) {
           proc = {
-            ...cr.data.content,
-            _isCustomIA: true,
-            _isActive: cr.data.status === 'ACTIVE',
+            ...res.data.content,
+            _isActive: res.data.isActive !== false,
           };
+        } else {
+          const cr = await api
+            .get(`/custom-procedures/${id}`)
+            .catch(() => null);
+
+          if (cr?.data?.content) {
+            proc = {
+              ...cr.data.content,
+              _isCustomIA: true,
+              _isActive: cr.data.status === "ACTIVE",
+            };
+          }
         }
+
+        if (!proc) return;
+
+        setProcedures((prev) =>
+          prev.some((p) => p.id === id)
+            ? prev
+            : [
+                ...prev,
+                {
+                  ...proc,
+                  id,
+                  sectionNumber: "",
+                  _isActive: proc._isActive !== false,
+                },
+              ],
+        );
+
+        setCustomProcedureIds((prev) =>
+          prev.includes(id) ? prev : [...prev, id],
+        );
+
+        // L'autosave conservera les overrides existants.
+        setIsDirty(true);
+      } catch (err) {
+        console.error("Erreur chargement procédure complète:", err);
       }
+    },
+    [projectId],
+  );
 
-      if (!proc) return;
+  const handleToggleActive = useCallback(
+    async (id: string, active: boolean) => {
+      try {
+        const proc = procedures.find((p) => p.id === id);
 
-      setProcedures(prev =>
-        prev.some(p => p.id === id)
-          ? prev
-          : [...prev, { ...proc, id, sectionNumber: '', _isActive: proc._isActive !== false }],
-      );
+        if ((proc as any)?._isCustomIA) {
+          await api.put(`/custom-procedures/${id}`, {
+            status: active ? "ACTIVE" : "DRAFT",
+          });
+        } else {
+          await api.put(`/procedures/${id}/project/${projectId}/toggle`, {
+            isActive: active,
+          });
+        }
 
-      setCustomProcedureIds(prev =>
-        prev.includes(id) ? prev : [...prev, id],
-      );
-
-      // L'autosave conservera les overrides existants.
-      setIsDirty(true);
-    } catch (err) {
-      console.error('Erreur chargement procédure complète:', err);
-    }
-  }, [projectId]);
-
-  const handleToggleActive = useCallback(async (id: string, active: boolean) => {
-    try {
-      const proc = procedures.find(p => p.id === id);
-
-      if ((proc as any)?._isCustomIA) {
-        await api.put(`/custom-procedures/${id}`, {
-          status: active ? 'ACTIVE' : 'DRAFT',
-        });
-      } else {
-        await api.put(`/procedures/${id}/project/${projectId}/toggle`, {
-          isActive: active,
-        });
+        setProcedures((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, _isActive: active } : p)),
+        );
+      } catch (err) {
+        console.error("Erreur toggle procédure:", err);
       }
-
-      setProcedures(prev =>
-        prev.map(p => p.id === id ? { ...p, _isActive: active } : p),
-      );
-    } catch (err) {
-      console.error('Erreur toggle procédure:', err);
-    }
-  }, [projectId, procedures]);
+    },
+    [projectId, procedures],
+  );
 
   const handleRemoveProcedure = useCallback((id: string) => {
-    setCustomProcedureIds(prev => prev.filter(p => p !== id));
+    setCustomProcedureIds((prev) => prev.filter((p) => p !== id));
     setIsDirty(true);
 
-    setAutoActivatedIds(autoIds => {
+    setAutoActivatedIds((autoIds) => {
       if (!autoIds.includes(id)) {
-        setProcedures(prev => prev.filter(p => p.id !== id));
+        setProcedures((prev) => prev.filter((p) => p.id !== id));
       }
       return autoIds;
     });
@@ -316,27 +347,29 @@ export default function Module4Section({
     new Set([...autoActivatedIds, ...customProcedureIds]),
   );
 
-  const t = isFr ? {
-    module: 'PROCÉDURES DES MEMBRES',
-    subtitle: 'DE L\'ÉQUIPE D\'URGENCE',
-    library: 'Bibliothèque de procédures',
-    saving: 'Sauvegarde...',
-    saved: 'Sauvegardé',
-    unsaved: 'Non sauvegardé',
-    loading: 'Chargement...',
-    empty: 'Aucune procédure active',
-    emptyHint: 'Utilisez la bibliothèque pour ajouter des procédures.',
-  } : {
-    module: 'EMERGENCY TEAM MEMBER',
-    subtitle: 'PROCEDURES',
-    library: 'Procedure Library',
-    saving: 'Saving...',
-    saved: 'Saved',
-    unsaved: 'Unsaved changes',
-    loading: 'Loading...',
-    empty: 'No active procedures',
-    emptyHint: 'Use the library to add procedures.',
-  };
+  const t = isFr
+    ? {
+        module: "PROCÉDURES DES MEMBRES",
+        subtitle: "DE L'ÉQUIPE D'URGENCE",
+        library: "Bibliothèque de procédures",
+        saving: "Sauvegarde...",
+        saved: "Sauvegardé",
+        unsaved: "Non sauvegardé",
+        loading: "Chargement...",
+        empty: "Aucune procédure active",
+        emptyHint: "Utilisez la bibliothèque pour ajouter des procédures.",
+      }
+    : {
+        module: "EMERGENCY TEAM MEMBER",
+        subtitle: "PROCEDURES",
+        library: "Procedure Library",
+        saving: "Saving...",
+        saved: "Saved",
+        unsaved: "Unsaved changes",
+        loading: "Loading...",
+        empty: "No active procedures",
+        emptyHint: "Use the library to add procedures.",
+      };
 
   if (loadingData) {
     return (
@@ -350,9 +383,15 @@ export default function Module4Section({
     <div className="max-w-4xl mx-auto px-6 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Module 4</p>
-          <h1 className="text-3xl font-black text-gray-900 uppercase leading-tight">{t.module}</h1>
-          <h2 className="text-xl font-black text-gray-700 uppercase leading-tight">{t.subtitle}</h2>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
+            Module 4
+          </p>
+          <h1 className="text-3xl font-black text-gray-900 uppercase leading-tight">
+            {t.module}
+          </h1>
+          <h2 className="text-xl font-black text-gray-700 uppercase leading-tight">
+            {t.subtitle}
+          </h2>
           <div className="h-1 w-16 bg-red-600 mt-2" />
         </div>
 
@@ -381,9 +420,13 @@ export default function Module4Section({
           <button
             onClick={() => setShowLibrary(true)}
             className="flex items-center gap-2 px-4 py-2 rounded text-white text-sm font-medium transition-colors"
-            style={{ backgroundColor: '#C0392B' }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}
+            style={{ backgroundColor: "#C0392B" }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.backgroundColor = "#A93226")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.backgroundColor = "#C0392B")
+            }
           >
             <BookOpen size={15} />
             {t.library}
@@ -392,17 +435,31 @@ export default function Module4Section({
       </div>
 
       {procedures.length === 0 ? (
-        <div className="text-center py-16 border-2 border-dashed rounded-md"
-          style={{ borderColor: '#DEE2E6' }}>
-          <BookOpen size={32} className="mx-auto mb-3" style={{ color: '#ADB5BD' }} />
-          <p className="font-medium" style={{ color: '#6C757D' }}>{t.empty}</p>
-          <p className="text-sm mt-1" style={{ color: '#ADB5BD' }}>{t.emptyHint}</p>
+        <div
+          className="text-center py-16 border-2 border-dashed rounded-md"
+          style={{ borderColor: "#DEE2E6" }}
+        >
+          <BookOpen
+            size={32}
+            className="mx-auto mb-3"
+            style={{ color: "#ADB5BD" }}
+          />
+          <p className="font-medium" style={{ color: "#6C757D" }}>
+            {t.empty}
+          </p>
+          <p className="text-sm mt-1" style={{ color: "#ADB5BD" }}>
+            {t.emptyHint}
+          </p>
           <button
             onClick={() => setShowLibrary(true)}
             className="mt-4 flex items-center gap-2 px-4 py-2 rounded text-white text-sm font-medium transition-colors mx-auto"
-            style={{ backgroundColor: '#C0392B' }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}
+            style={{ backgroundColor: "#C0392B" }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.backgroundColor = "#A93226")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.backgroundColor = "#C0392B")
+            }
           >
             <Plus size={15} />
             {t.library}
@@ -412,14 +469,14 @@ export default function Module4Section({
         (() => {
           const maxExisting = procedures.reduce((max, p) => {
             if (!p.sectionNumber) return max;
-            const num = parseInt(p.sectionNumber.split('.')[1] || '0', 10);
+            const num = parseInt(p.sectionNumber.split(".")[1] || "0", 10);
             return num > max ? num : max;
           }, 0);
 
           let extraCounter = maxExisting;
 
-          return procedures.map(procedure => {
-            const isP001 = (procedure as any).code === 'P001';
+          return procedures.map((procedure) => {
+            const isP001 = (procedure as any).code === "P001";
             let sectionNumber = procedure.sectionNumber;
 
             if (!isP001 && !sectionNumber) {
@@ -430,7 +487,10 @@ export default function Module4Section({
             return (
               <Module4ProcedureCard
                 key={procedure.id}
-                procedure={{ ...procedure, sectionNumber: isP001 ? '' : sectionNumber }}
+                procedure={{
+                  ...procedure,
+                  sectionNumber: isP001 ? "" : sectionNumber,
+                }}
                 projectId={projectId}
                 isActive={(procedure as any)._isActive !== false}
                 onToggleActive={handleToggleActive}

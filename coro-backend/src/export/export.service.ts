@@ -4,9 +4,19 @@ import { PDFDocument } from 'pdf-lib';
 import { PrismaService } from '../prisma/prisma.service';
 import { BASE_STYLES } from './templates/base.styles';
 import { COVER_STYLES } from './templates/cover.styles';
-import { generateCoverPage, generateLastPage } from './templates/cover.template';
-import { generateSeparatorPage, SEPARATOR_STYLES } from './templates/separator.template';
-import { generateTocPage, TOC_STYLES, TocEntry } from './templates/toc.template';
+import {
+  generateCoverPage,
+  generateLastPage,
+} from './templates/cover.template';
+import {
+  generateSeparatorPage,
+  SEPARATOR_STYLES,
+} from './templates/separator.template';
+import {
+  generateTocPage,
+  TOC_STYLES,
+  TocEntry,
+} from './templates/toc.template';
 import {
   renderModule1,
   renderModule1Section,
@@ -16,38 +26,68 @@ import {
 } from './templates/modules/simple-modules.template';
 import { renderModule7 } from './templates/modules/module7.template';
 import { renderModule3 } from './templates/modules/module3.template';
-import { renderModule4, renderProcedure } from './templates/modules/module4.template';
+import {
+  renderModule4,
+  renderProcedure,
+} from './templates/modules/module4.template';
 import { createDocumentBuilder } from './builders/document-builder.factory';
-import { generateCertificationPage, CertificationData, CERTIFICATION_STYLES } from './templates/certification.template';
+import {
+  generateCertificationPage,
+  CertificationData,
+  CERTIFICATION_STYLES,
+} from './templates/certification.template';
+import { sanitizeDocumentContent } from '../generator/document-content-security';
 
 export interface ExportOptions {
-  selectedModules: number[];   // ex: [1, 2, 3, 4, 7, 8]
-  moduleOrder: number[];       // ordre choisi par l'utilisateur
+  selectedModules: number[]; // ex: [1, 2, 3, 4, 7, 8]
+  moduleOrder: number[]; // ordre choisi par l'utilisateur
   language: 'fr' | 'en' | 'both';
   isPreview?: boolean;
 }
 
 type PdfSegment =
-  | { type: 'html'; content: string; sequentialNumber: number; subsectionId?: string; colorBar?: string }
+  | {
+      type: 'html';
+      content: string;
+      sequentialNumber: number;
+      subsectionId?: string;
+      colorBar?: string;
+    }
   | { type: 'separator'; html: string; sequentialNumber: number }
-  | { type: 'plans'; plans: { buffer: Buffer; section: string }[]; sequentialNumber: number };
+  | {
+      type: 'plans';
+      plans: { buffer: Buffer; section: string }[];
+      sequentialNumber: number;
+    };
 
 const DOCUMENT_TYPE_LABELS: Record<string, { fr: string; en: string }> = {
-  PMU: { fr: 'Plan de mesures d\'urgence', en: 'Emergency Response Plan' },
-  PSI: { fr: 'Plan de sécurité incendie',  en: 'Fire Safety Plan' },
-  PCA: { fr: 'Plan de continuité des affaires', en: 'Business Continuity Plan' },
-  PGC: { fr: 'Plan de gestion de crise',   en: 'Crisis Management Plan' },
+  PMU: { fr: "Plan de mesures d'urgence", en: 'Emergency Response Plan' },
+  PSI: { fr: 'Plan de sécurité incendie', en: 'Fire Safety Plan' },
+  PCA: {
+    fr: 'Plan de continuité des affaires',
+    en: 'Business Continuity Plan',
+  },
+  PGC: { fr: 'Plan de gestion de crise', en: 'Crisis Management Plan' },
   PRA: { fr: 'Plan de reprise des activités', en: 'Disaster Recovery Plan' },
-  PUE: { fr: 'Plan d\'urgence environnementale', en: 'Environmental Emergency Plan' },
+  PUE: {
+    fr: "Plan d'urgence environnementale",
+    en: 'Environmental Emergency Plan',
+  },
 };
 
 const MODULE_TITLES: Record<number, { fr: string; en: string }> = {
   1: { fr: 'Introduction', en: 'Introduction' },
   2: { fr: 'Liste téléphonique', en: 'Phone Directory' },
-  3: { fr: 'Rôles et responsabilités de l\'équipe d\'urgence', en: 'Emergency Team Roles and Responsibilities' },
+  3: {
+    fr: "Rôles et responsabilités de l'équipe d'urgence",
+    en: 'Emergency Team Roles and Responsibilities',
+  },
   4: { fr: 'Procédures', en: 'Procedures' },
   6: { fr: 'Plans techniques du bâtiment', en: 'Technical Building Plans' },
-  7: { fr: 'Description du site et équipements de sécurité', en: 'Site Description and Safety Equipment' },
+  7: {
+    fr: 'Description du site et équipements de sécurité',
+    en: 'Site Description and Safety Equipment',
+  },
   8: { fr: 'Registres et annexes', en: 'Records and Appendices' },
 };
 
@@ -59,7 +99,11 @@ export class ExportService {
   // POINT D'ENTRÉE PRINCIPAL
   // ============================================================
 
-  async generatePdf(projectId: string, options: ExportOptions, organizationId: string): Promise<{ fr?: Buffer; en?: Buffer }> {
+  async generatePdf(
+    projectId: string,
+    options: ExportOptions,
+    organizationId: string,
+  ): Promise<{ fr?: Buffer; en?: Buffer }> {
     const doc = await this.prisma.document.findFirst({
       where: { projectId, project: { organizationId } },
       include: {
@@ -70,7 +114,9 @@ export class ExportService {
     });
     if (!doc) throw new NotFoundException('Document introuvable');
 
-    const content = doc.content as any;
+    // Historical snapshots are sanitized at the last trusted boundary before
+    // HTML/PDF rendering; this does not rewrite or destroy their audit history.
+    const content = sanitizeDocumentContent(doc.content as any);
     const result: { fr?: Buffer; en?: Buffer } = {};
 
     // La certification est une couche documentaire CORO, distincte des modules.
@@ -81,10 +127,22 @@ export class ExportService {
       : await this.getCurrentVersionCertification(projectId);
 
     if (options.language === 'fr' || options.language === 'both') {
-      result.fr = await this.generateSingleLanguagePdf(doc, content, 'fr', options, certification);
+      result.fr = await this.generateSingleLanguagePdf(
+        doc,
+        content,
+        'fr',
+        options,
+        certification,
+      );
     }
     if (options.language === 'en' || options.language === 'both') {
-      result.en = await this.generateSingleLanguagePdf(doc, content, 'en', options, certification);
+      result.en = await this.generateSingleLanguagePdf(
+        doc,
+        content,
+        'en',
+        options,
+        certification,
+      );
     }
 
     // IMPORTANT : la génération PDF est un moteur de rendu, pas une étape
@@ -109,12 +167,18 @@ export class ExportService {
     const project = doc.project;
     const modules = lang === 'fr' ? content.modules_fr : content.modules_en;
     const isFr = lang === 'fr';
-    const isIndustrielForExport = project.building.buildingType?.toLowerCase() === 'industriel';
+    const isIndustrielForExport =
+      project.building.buildingType?.toLowerCase() === 'industriel';
 
     // ── Page de couverture ──
-    const docTypeLabel = DOCUMENT_TYPE_LABELS[project.documentType]?.[lang] || project.documentType;
+    const docTypeLabel =
+      DOCUMENT_TYPE_LABELS[project.documentType]?.[lang] ||
+      project.documentType;
     const historiqueList = content.config?.historiqueList || [];
-    const lastEntry = historiqueList.length > 0 ? historiqueList[historiqueList.length - 1] : null;
+    const lastEntry =
+      historiqueList.length > 0
+        ? historiqueList[historiqueList.length - 1]
+        : null;
     const versionNumber = historiqueList.length > 0 ? historiqueList.length : 1;
 
     const coverHtml = generateCoverPage({
@@ -129,11 +193,15 @@ export class ExportService {
       year: project.year,
       language: lang,
       clientLogoBase64: project.client.logoBase64,
-      coroLogoBase64: project.user?.companyLogoFullB64 || project.user?.companyLogoB64 || undefined,
+      coroLogoBase64:
+        project.user?.companyLogoFullB64 ||
+        project.user?.companyLogoB64 ||
+        undefined,
       coroPhone: project.user?.companyPhone || undefined,
       coroEmail: project.user?.companyEmail || undefined,
       revisionDate: lastEntry?.date || content.config?.dateReleve || undefined,
-      revisionType: lastEntry?.type || content.config?.versionDocument || undefined,
+      revisionType:
+        lastEntry?.type || content.config?.versionDocument || undefined,
       versionNumber,
     });
 
@@ -151,14 +219,17 @@ export class ExportService {
       </html>
     `;
 
-  // ── Instancie le builder selon le type de document ──
+    // ── Instancie le builder selon le type de document ──
     const builder = createDocumentBuilder(
       project.documentType,
       this.prisma,
       doc,
       content,
       lang,
-      { selectedModules: options.selectedModules, moduleOrder: options.moduleOrder },
+      {
+        selectedModules: options.selectedModules,
+        moduleOrder: options.moduleOrder,
+      },
     );
 
     const orderedModules = builder.orderedModules;
@@ -167,11 +238,20 @@ export class ExportService {
     const currentHtmlSeqNumber = { value: 0 };
 
     for (const moduleNum of orderedModules) {
-      await builder.buildModuleSegments(moduleNum, pdfSegments, currentHtmlChunk, currentHtmlSeqNumber);
+      await builder.buildModuleSegments(
+        moduleNum,
+        pdfSegments,
+        currentHtmlChunk,
+        currentHtmlSeqNumber,
+      );
     }
 
     if (currentHtmlChunk.value) {
-      pdfSegments.push({ type: 'html', content: currentHtmlChunk.value, sequentialNumber: currentHtmlSeqNumber.value });
+      pdfSegments.push({
+        type: 'html',
+        content: currentHtmlChunk.value,
+        sequentialNumber: currentHtmlSeqNumber.value,
+      });
     }
 
     const subsectionTitlesById = builder.subsectionTitlesById;
@@ -183,7 +263,13 @@ export class ExportService {
     });
 
     // Buffers de couverture + corps (sans le sommaire, généré après coup une fois les pages connues)
-    const bodyBuffersWithMeta: { buffer: Buffer; sequentialNumber: number; isSeparator: boolean; subsectionId?: string; colorBar?: string }[] = [];
+    const bodyBuffersWithMeta: {
+      buffer: Buffer;
+      sequentialNumber: number;
+      isSeparator: boolean;
+      subsectionId?: string;
+      colorBar?: string;
+    }[] = [];
 
     try {
       const headerTemplate = `
@@ -216,7 +302,11 @@ export class ExportService {
             displayHeaderFooter: false,
             margin: { top: '0', bottom: '0', left: '0', right: '0' },
           });
-          bodyBuffersWithMeta.push({ buffer: Buffer.from(sepBytes), sequentialNumber: segment.sequentialNumber, isSeparator: true });
+          bodyBuffersWithMeta.push({
+            buffer: Buffer.from(sepBytes),
+            sequentialNumber: segment.sequentialNumber,
+            isSeparator: true,
+          });
           await sepPage.close();
         } else if (segment.type === 'html') {
           const segmentHtml = `
@@ -237,13 +327,19 @@ export class ExportService {
             displayHeaderFooter: true,
             headerTemplate,
             footerTemplate,
-            margin: { top: '100px', bottom: '80px', left: '50px', right: '50px' },
+            margin: {
+              top: '100px',
+              bottom: '80px',
+              left: '50px',
+              right: '50px',
+            },
           });
           bodyBuffersWithMeta.push({
             buffer: Buffer.from(segBytes),
             sequentialNumber: segment.sequentialNumber,
             isSeparator: false,
-            subsectionId: segment.type === 'html' ? segment.subsectionId : undefined,
+            subsectionId:
+              segment.type === 'html' ? segment.subsectionId : undefined,
             colorBar: segment.type === 'html' ? segment.colorBar : undefined,
           });
           await segPage.close();
@@ -261,7 +357,9 @@ export class ExportService {
 
       // ── Helper : calcule la page de départ de chaque module ET de chaque
       // ── sous-section, étant donné le nombre de pages du sommaire ──
-      const computePageStarts = (tocPageCount: number): {
+      const computePageStarts = (
+        tocPageCount: number,
+      ): {
         moduleStarts: Record<number, number>;
         subsectionStarts: Record<string, number>; // clé "seqNum:subsectionId"
       } => {
@@ -272,7 +370,10 @@ export class ExportService {
         for (const item of bodyBuffersWithMeta) {
           const pageCount = pageCountsBySegment.get(item) as number;
 
-          if (item.isSeparator && moduleStarts[item.sequentialNumber] === undefined) {
+          if (
+            item.isSeparator &&
+            moduleStarts[item.sequentialNumber] === undefined
+          ) {
             moduleStarts[item.sequentialNumber] = runningPageCount + 1;
           }
           if (item.subsectionId) {
@@ -287,7 +388,10 @@ export class ExportService {
       };
 
       // Précalcule le nombre de pages de chaque buffer (évite de recharger 2x)
-      const pageCountsBySegment = new Map<typeof bodyBuffersWithMeta[number], number>();
+      const pageCountsBySegment = new Map<
+        (typeof bodyBuffersWithMeta)[number],
+        number
+      >();
       for (const item of bodyBuffersWithMeta) {
         const pdf = await PDFDocument.load(item.buffer);
         pageCountsBySegment.set(item, pdf.getPageCount());
@@ -300,11 +404,11 @@ export class ExportService {
         return Object.keys(moduleStarts)
           .map(Number)
           .sort((a, b) => a - b)
-          .map(seqNum => {
+          .map((seqNum) => {
             // Reconstruit les sous-sections de ce module avec leur vraie page
             const subsectionsForModule = Object.keys(subsectionTitlesById)
-              .filter(key => key.startsWith(`${seqNum}:`))
-              .map(key => {
+              .filter((key) => key.startsWith(`${seqNum}:`))
+              .map((key) => {
                 const subsectionId = key.split(':')[1];
                 return {
                   id: subsectionId,
@@ -315,14 +419,21 @@ export class ExportService {
 
             return {
               sequentialNumber: seqNum,
-              moduleTitle: this.findModuleTitleBySeq(orderedModules, seqNum, lang, doc.project.documentType),
+              moduleTitle: this.findModuleTitleBySeq(
+                orderedModules,
+                seqNum,
+                lang,
+                doc.project.documentType,
+              ),
               pageNumber: moduleStarts[seqNum],
               subsections: subsectionsForModule,
             };
           });
       };
 
-      const renderTocToPdf = async (entries: TocEntry[]): Promise<Uint8Array> => {
+      const renderTocToPdf = async (
+        entries: TocEntry[],
+      ): Promise<Uint8Array> => {
         const tocHtml = generateTocPage({ entries, isFr });
         const fullTocHtml = `
           <!DOCTYPE html>
@@ -348,14 +459,20 @@ export class ExportService {
 
       // ── PASSE 1 — sommaire provisoire (numéros approximatifs) juste pour mesurer sa taille ──
       const provisional = computePageStarts(1); // suppose 1 page pour la mesure initiale
-      const provisionalEntries = buildTocEntries(provisional.moduleStarts, provisional.subsectionStarts);
+      const provisionalEntries = buildTocEntries(
+        provisional.moduleStarts,
+        provisional.subsectionStarts,
+      );
       const provisionalTocBytes = await renderTocToPdf(provisionalEntries);
       const provisionalTocPdf = await PDFDocument.load(provisionalTocBytes);
       const realTocPageCount = provisionalTocPdf.getPageCount();
 
       // ── PASSE 2 — sommaire final, avec les vrais numéros de page une fois la taille réelle connue ──
       const final = computePageStarts(realTocPageCount);
-      const finalEntries = buildTocEntries(final.moduleStarts, final.subsectionStarts);
+      const finalEntries = buildTocEntries(
+        final.moduleStarts,
+        final.subsectionStarts,
+      );
       const tocBytes = await renderTocToPdf(finalEntries);
 
       // ── Couverture ──
@@ -375,7 +492,10 @@ export class ExportService {
       let certificationPageBytes: Uint8Array | null = null;
 
       if (certification) {
-        const certificationHtml = generateCertificationPage(certification, lang);
+        const certificationHtml = generateCertificationPage(
+          certification,
+          lang,
+        );
         const fullCertificationHtml = `
           <!DOCTYPE html>
           <html lang="${lang}">
@@ -391,7 +511,9 @@ export class ExportService {
         `;
 
         const certificationPage = await browser.newPage();
-        await certificationPage.setContent(fullCertificationHtml, { waitUntil: 'load' });
+        await certificationPage.setContent(fullCertificationHtml, {
+          waitUntil: 'load',
+        });
         certificationPageBytes = await certificationPage.pdf({
           format: 'Letter',
           printBackground: true,
@@ -404,7 +526,10 @@ export class ExportService {
       // ── Dernière page ──
       const lastPageHtml = generateLastPage({
         companyName: project.user?.companyName || undefined,
-        companyLogoFullB64: project.user?.companyLogoB64 || project.user?.companyLogoFullB64 || undefined,
+        companyLogoFullB64:
+          project.user?.companyLogoB64 ||
+          project.user?.companyLogoFullB64 ||
+          undefined,
         companyLogoB64: project.user?.companyLogoB64 || undefined,
         companyPhone: project.user?.companyPhone || undefined,
         companyEmail: project.user?.companyEmail || undefined,
@@ -418,16 +543,21 @@ export class ExportService {
       if (lastPageHtml) {
         const fullLastPageHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><style>@page{size:letter portrait;margin:0;}body{margin:0;padding:0;}</style></head><body>${lastPageHtml}</body></html>`;
         const lastPage = await browser.newPage();
-        await lastPage.setContent(fullLastPageHtml, { waitUntil: 'networkidle0' as any });
+        await lastPage.setContent(fullLastPageHtml, {
+          waitUntil: 'networkidle0' as any,
+        });
         // Attendre que les images base64 soient complètement rendues
         await lastPage.evaluate(() => {
           return Promise.all(
             Array.from(document.images)
-              .filter(img => !img.complete)
-              .map(img => new Promise(resolve => {
-                img.onload = resolve;
-                img.onerror = resolve;
-              }))
+              .filter((img) => !img.complete)
+              .map(
+                (img) =>
+                  new Promise((resolve) => {
+                    img.onload = resolve;
+                    img.onerror = resolve;
+                  }),
+              ),
           );
         });
         lastPageBytes = await lastPage.pdf({
@@ -443,8 +573,10 @@ export class ExportService {
       const allBuffers = [
         Buffer.from(coverBytes),
         Buffer.from(tocBytes),
-        ...bodyBuffersWithMeta.map(b => b.buffer),
-        ...(certificationPageBytes ? [Buffer.from(certificationPageBytes)] : []),
+        ...bodyBuffersWithMeta.map((b) => b.buffer),
+        ...(certificationPageBytes
+          ? [Buffer.from(certificationPageBytes)]
+          : []),
         ...(lastPageBytes ? [Buffer.from(lastPageBytes)] : []),
       ];
 
@@ -489,7 +621,11 @@ export class ExportService {
         separatorSourceIndices,
         Boolean(lastPageBytes),
       );
-      await this.drawProcedureColorBars(mergedPdf.pdfDoc, mergedPdf.pageRanges, bodyBuffersWithMeta);
+      await this.drawProcedureColorBars(
+        mergedPdf.pdfDoc,
+        mergedPdf.pageRanges,
+        bodyBuffersWithMeta,
+      );
 
       const finalBytes = await mergedPdf.pdfDoc.save();
       return Buffer.from(finalBytes);
@@ -554,18 +690,38 @@ export class ExportService {
   // RETROUVE LE TITRE DU MODULE POUR UN NUMÉRO SÉQUENTIEL DONNÉ
   // ============================================================
 
-  private findModuleTitleBySeq(orderedModules: number[], seqNum: number, lang: 'fr' | 'en', documentType?: string): string {
+  private findModuleTitleBySeq(
+    orderedModules: number[],
+    seqNum: number,
+    lang: 'fr' | 'en',
+    documentType?: string,
+  ): string {
     const moduleNum = orderedModules[seqNum - 1];
 
     const PCA_MODULE_TITLES: Record<number, { fr: string; en: string }> = {
-      1: { fr: 'Introduction et politique de continuité',     en: 'Introduction and Continuity Policy' },
-      2: { fr: 'Contexte organisationnel et gouvernance',     en: 'Organizational Context and Governance' },
-      3: { fr: 'Appréciation du risque (ARA)',                en: 'Risk Assessment' },
-      4: { fr: 'Bilan d\'impact sur les activités (BIA)',     en: 'Business Impact Analysis (BIA)' },
-      5: { fr: 'Stratégies de continuité',                    en: 'Continuity Strategies' },
-      6: { fr: 'Communication de crise',                      en: 'Crisis Communication' },
-      7: { fr: 'Activation et procédures de reprise',         en: 'Activation and Recovery Procedures' },
-      8: { fr: 'Exercices, registres et maintien du plan',    en: 'Exercises, Records and Plan Maintenance' },
+      1: {
+        fr: 'Introduction et politique de continuité',
+        en: 'Introduction and Continuity Policy',
+      },
+      2: {
+        fr: 'Contexte organisationnel et gouvernance',
+        en: 'Organizational Context and Governance',
+      },
+      3: { fr: 'Appréciation du risque (ARA)', en: 'Risk Assessment' },
+      4: {
+        fr: "Bilan d'impact sur les activités (BIA)",
+        en: 'Business Impact Analysis (BIA)',
+      },
+      5: { fr: 'Stratégies de continuité', en: 'Continuity Strategies' },
+      6: { fr: 'Communication de crise', en: 'Crisis Communication' },
+      7: {
+        fr: 'Activation et procédures de reprise',
+        en: 'Activation and Recovery Procedures',
+      },
+      8: {
+        fr: 'Exercices, registres et maintien du plan',
+        en: 'Exercises, Records and Plan Maintenance',
+      },
     };
 
     if (documentType === 'PCA') {
@@ -582,12 +738,31 @@ export class ExportService {
   private getModule4Procedures(content: any, project: any): any[] {
     const { getActiveProcedures } = require('../generator/procedures/index');
     const module4Content = content.module4 || {};
-    const module3Content = content.modules_fr?.find((m: any) => m.moduleNumber === 3);
-    const savedOrgRoles = module3Content?.sections?.find((s: any) => s.id === '3.1')?.orgRoles || [];
+    const module3Content = content.modules_fr?.find(
+      (m: any) => m.moduleNumber === 3,
+    );
+    const savedOrgRoles =
+      module3Content?.sections?.find((s: any) => s.id === '3.1')?.orgRoles ||
+      [];
 
-    const activeRoleCodes = savedOrgRoles.length > 0
-      ? savedOrgRoles.filter((r: any) => r.isActive).map((r: any) => r.roleCode).filter(Boolean)
-      : ['ROLE-AS', 'ROLE-CU', 'ROLE-EPI', 'ROLE-RM', 'ROLE-RPR', 'ROLE-SS', 'ROLE-BRI', 'ROLE-RS', 'ROLE-CHE', 'ROLE-ACC'];
+    const activeRoleCodes =
+      savedOrgRoles.length > 0
+        ? savedOrgRoles
+            .filter((r: any) => r.isActive)
+            .map((r: any) => r.roleCode)
+            .filter(Boolean)
+        : [
+            'ROLE-AS',
+            'ROLE-CU',
+            'ROLE-EPI',
+            'ROLE-RM',
+            'ROLE-RPR',
+            'ROLE-SS',
+            'ROLE-BRI',
+            'ROLE-RS',
+            'ROLE-CHE',
+            'ROLE-ACC',
+          ];
 
     return getActiveProcedures(
       content.config || {},
@@ -601,7 +776,11 @@ export class ExportService {
   // SAUVEGARDÉES PAR L'UTILISATEUR DANS L'ÉDITEUR MODULE 2
   // ============================================================
 
-  private mergeModule2SavedData(generatedSections: any[], savedModule2: any, lang: 'fr' | 'en'): any[] {
+  private mergeModule2SavedData(
+    generatedSections: any[],
+    savedModule2: any,
+    lang: 'fr' | 'en',
+  ): any[] {
     if (!savedModule2) return generatedSections;
 
     const sectionKeyMap: Record<string, string> = {
@@ -612,11 +791,12 @@ export class ExportService {
     };
 
     const isFr = lang === 'fr';
-    const section25Active = savedModule2.section2_5Enabled && savedModule2.section2_5?.length > 0;
+    const section25Active =
+      savedModule2.section2_5Enabled && savedModule2.section2_5?.length > 0;
 
     const merged = generatedSections
-      .filter(section => section.id !== '2.5' || section25Active)
-      .map(section => {
+      .filter((section) => section.id !== '2.5' || section25Active)
+      .map((section) => {
         const savedKey = sectionKeyMap[section.id];
         if (section.id === '2.5') {
           return {
@@ -628,7 +808,8 @@ export class ExportService {
         if (savedKey && savedModule2[savedKey]) {
           const updated = { ...section, entries: savedModule2[savedKey] };
           if (section.id === '2.1') {
-            updated.internalEmergencyNumber = savedModule2.internalEmergencyNumber || '';
+            updated.internalEmergencyNumber =
+              savedModule2.internalEmergencyNumber || '';
           }
           return updated;
         }
@@ -644,10 +825,13 @@ export class ExportService {
   // (rôles actifs, couleurs, positions, membres de l'équipe)
   // ============================================================
 
-  private mergeModule3SavedData(generatedSections: any[], savedModule3: any): any[] {
+  private mergeModule3SavedData(
+    generatedSections: any[],
+    savedModule3: any,
+  ): any[] {
     if (!savedModule3) return generatedSections;
 
-    return generatedSections.map(section => {
+    return generatedSections.map((section) => {
       if (section.id === '3.1' && savedModule3.orgRoles) {
         return { ...section, orgRoles: savedModule3.orgRoles };
       }
@@ -664,17 +848,27 @@ export class ExportService {
   // Seules les sections ayant au moins un plan uploadé apparaissent
   // ============================================================
 
-  private async getBuildingPlansSorted(projectId: string): Promise<{ buffer: Buffer; section: string }[]> {
+  private async getBuildingPlansSorted(
+    projectId: string,
+  ): Promise<{ buffer: Buffer; section: string }[]> {
     const plans = await this.prisma.buildingPlan.findMany({
       where: { projectId },
       orderBy: { order: 'asc' },
     });
 
-    const sectionOrder = ['IMPLANTATION', 'COUPE', 'OPERATION', 'SECTEURS', 'DIVERS'];
+    const sectionOrder = [
+      'IMPLANTATION',
+      'COUPE',
+      'OPERATION',
+      'SECTEURS',
+      'DIVERS',
+    ];
 
-    const sorted = sectionOrder.flatMap(section => plans.filter(p => p.section === section));
+    const sorted = sectionOrder.flatMap((section) =>
+      plans.filter((p) => p.section === section),
+    );
 
-    return sorted.map(plan => ({
+    return sorted.map((plan) => ({
       buffer: Buffer.from(plan.fileBase64, 'base64'),
       section: plan.section,
     }));
@@ -691,16 +885,21 @@ export class ExportService {
     pageRanges: { start: number; end: number; sourceIndex: number }[];
   }> {
     const mergedPdf = await PDFDocument.create();
-    const pageRanges: { start: number; end: number; sourceIndex: number }[] = [];
+    const pageRanges: { start: number; end: number; sourceIndex: number }[] =
+      [];
     let currentPage = 0;
 
     for (let i = 0; i < buffers.length; i++) {
       const pdf = await PDFDocument.load(buffers[i]);
       const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-      pages.forEach(page => mergedPdf.addPage(page));
+      pages.forEach((page) => mergedPdf.addPage(page));
 
       const pageCount = pdf.getPageCount();
-      pageRanges.push({ start: currentPage, end: currentPage + pageCount - 1, sourceIndex: i });
+      pageRanges.push({
+        start: currentPage,
+        end: currentPage + pageCount - 1,
+        sourceIndex: i,
+      });
       currentPage += pageCount;
     }
 
@@ -745,7 +944,10 @@ export class ExportService {
 
         // Type de document — centré horizontalement, même hauteur que le numéro
         const docTypeFontSize = 9;
-        const docTypeTextWidth = regularFont.widthOfTextAtSize(docTypeLabel, docTypeFontSize);
+        const docTypeTextWidth = regularFont.widthOfTextAtSize(
+          docTypeLabel,
+          docTypeFontSize,
+        );
         page.drawText(docTypeLabel, {
           x: (width - docTypeTextWidth) / 2,
           y: FOOTER_Y,
@@ -787,7 +989,10 @@ export class ExportService {
     const MAX_LOGO_HEIGHT = 30;
     const OPACITY = 0.35;
 
-    const computeFittedSize = (imgWidth: number, imgHeight: number): { width: number; height: number } => {
+    const computeFittedSize = (
+      imgWidth: number,
+      imgHeight: number,
+    ): { width: number; height: number } => {
       const scaleByWidth = MAX_LOGO_WIDTH / imgWidth;
       const scaleByHeight = MAX_LOGO_HEIGHT / imgHeight;
       const scale = Math.min(scaleByWidth, scaleByHeight);
@@ -800,9 +1005,14 @@ export class ExportService {
         const cleaned = base64.includes(',') ? base64.split(',')[1] : base64;
         const bytes = Buffer.from(cleaned, 'base64');
         const isPng = base64.includes('image/png') || bytes[0] === 0x89;
-        return isPng ? await pdfDoc.embedPng(bytes) : await pdfDoc.embedJpg(bytes);
+        return isPng
+          ? await pdfDoc.embedPng(bytes)
+          : await pdfDoc.embedJpg(bytes);
       } catch (err) {
-        console.warn('Avertissement: impossible d\'intégrer un logo filigrane :', err);
+        console.warn(
+          "Avertissement: impossible d'intégrer un logo filigrane :",
+          err,
+        );
         return null;
       }
     };
@@ -818,7 +1028,12 @@ export class ExportService {
     const lastSourceIndex = hasLastPage
       ? pageRanges[pageRanges.length - 1]?.sourceIndex
       : undefined;
-    const SKIP_SOURCE_INDICES = new Set([0, lastSourceIndex, ...planSourceIndices, ...separatorSourceIndices]);
+    const SKIP_SOURCE_INDICES = new Set([
+      0,
+      lastSourceIndex,
+      ...planSourceIndices,
+      ...separatorSourceIndices,
+    ]);
 
     for (const range of pageRanges) {
       if (SKIP_SOURCE_INDICES.has(range.sourceIndex)) continue;
@@ -828,7 +1043,10 @@ export class ExportService {
         const { width, height } = page.getSize();
 
         if (coroImage) {
-          const { width: logoW, height: logoH } = computeFittedSize(coroImage.width, coroImage.height);
+          const { width: logoW, height: logoH } = computeFittedSize(
+            coroImage.width,
+            coroImage.height,
+          );
           // Centre verticalement le logo sur la même ligne que le texte/numéro (FOOTER_Y=28, taille texte ~9-10px)
           const footerCenterY = 28 + 5;
           page.drawImage(coroImage, {
@@ -841,7 +1059,10 @@ export class ExportService {
         }
 
         if (clientImage) {
-          const { width: logoW, height: logoH } = computeFittedSize(clientImage.width, clientImage.height);
+          const { width: logoW, height: logoH } = computeFittedSize(
+            clientImage.width,
+            clientImage.height,
+          );
           page.drawImage(clientImage, {
             x: 40,
             y: height - logoH - 30,
@@ -907,7 +1128,10 @@ export class ExportService {
   // incluse, quand l'utilisateur active la case "version aperçu"
   // ============================================================
 
-  private async drawPreviewWatermark(pdfDoc: PDFDocument, isFr: boolean): Promise<void> {
+  private async drawPreviewWatermark(
+    pdfDoc: PDFDocument,
+    isFr: boolean,
+  ): Promise<void> {
     const { rgb, StandardFonts, degrees } = await import('pdf-lib');
     const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const label = isFr ? 'APERÇU' : 'PREVIEW';

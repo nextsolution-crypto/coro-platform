@@ -22,30 +22,56 @@ export class VersionsController {
     return this.versionsService.findAll(projectId, req.user);
   }
 
+  @Get(':versionId')
+  findOne(
+    @Param('projectId') projectId: string,
+    @Param('versionId') versionId: string,
+    @Request() req: any,
+  ) {
+    return this.versionsService.findOne(projectId, versionId, req.user);
+  }
+
   @Post()
   create(
     @Param('projectId') projectId: string,
-    @Body() body: { label?: string },
+    @Body() body: { label?: string; expectedLockVersion: number },
     @Request() req: any,
   ) {
-    return this.versionsService.create(projectId, body.label, req.user);
+    return this.versionsService.create(
+      projectId,
+      body.label,
+      body.expectedLockVersion,
+      req.user,
+    );
   }
 
   @Post(':versionId/restore')
   restore(
     @Param('projectId') projectId: string,
     @Param('versionId') versionId: string,
+    @Body() body: { expectedLockVersion: number },
     @Request() req: any,
   ) {
-    return this.versionsService.restore(projectId, versionId, req.user);
+    return this.versionsService.restore(
+      projectId,
+      versionId,
+      body.expectedLockVersion,
+      req.user,
+    );
   }
 
   @Delete(':versionId')
   remove(
     @Param('projectId') projectId: string,
     @Param('versionId') versionId: string,
+    @Body() body: { expectedLockVersion: number },
     @Request() req: any,
   ) {
-    return this.versionsService.remove(projectId, versionId, req.user);
+    return this.versionsService.remove(
+      projectId,
+      versionId,
+      body.expectedLockVersion,
+      req.user,
+    );
   }
 }
