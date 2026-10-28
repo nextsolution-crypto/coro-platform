@@ -235,6 +235,10 @@ try {
         token: advisor.token,
         method: "POST",
         body: {},
+        headers: {
+          "idempotency-key": `editor-audit-${projectId}`,
+          "x-expected-document-version": "0",
+        },
       });
       if (![200, 201].includes(generated.status))
         throw new Error(
