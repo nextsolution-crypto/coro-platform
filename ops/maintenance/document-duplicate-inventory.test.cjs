@@ -21,11 +21,11 @@ test('starts from stdin only when the explicit runtime switch is present', () =>
   assert.match(source, /require\.main === module \|\| process\.env\.CORO_DOCUMENT_DUPLICATE_INVENTORY_RUN === 'true'/);
 });
 
-test('retrieves protected evidence from the remote home using a relative SCP source', () => {
+test('publishes only a sanitized aggregate and removes temporary evidence', () => {
   const workflow = readFileSync(require.resolve('../../.github/workflows/production-document-duplicate-inventory.yml'), 'utf8');
-  assert.match(workflow, /evidence="\/root\/coro-document-duplicate-inventory-\$\{RUN_ID\}\.json"/);
-  assert.match(workflow, /source: root\/coro-document-duplicate-inventory-\$\{\{ github\.run_id \}\}\.json/);
-  assert.doesNotMatch(workflow, /source: \/tmp\/coro-document-duplicate-inventory/);
+  assert.match(workflow, /delete r\.groups;process\.stdout\.write/);
+  assert.match(workflow, /trap 'rm -f -- "\$script" "\$evidence"' EXIT/);
+  assert.doesNotMatch(workflow, /scp-action|upload-artifact|protected-evidence/);
 });
 
 test('reports a genuinely blocking duplicate and emits a sanitized public summary', async () => {
