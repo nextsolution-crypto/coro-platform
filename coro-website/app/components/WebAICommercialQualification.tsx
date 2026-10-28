@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { publicApiUrl } from "@/lib/site/api";
 
 type Language = "fr-CA" | "en-CA";
@@ -30,13 +30,16 @@ const TEXT = {
 export default function WebAICommercialQualification({ language, onCancel }: { language: Language; onCancel: () => void }) {
   const t = TEXT[language];
   const key = useRef<string>(crypto.randomUUID());
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const [state, setState] = useState({ requestType: "DEMO" as RequestType, contactName: "", organizationName: "", contactTitle: "", email: "", sector: "", buildingCount: "", estimatedUsers: "", primaryNeed: "", interestedModules: "", timeline: "", consentToProcess: false, marketingConsent: false });
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
 
+  useEffect(() => { titleRef.current?.focus(); }, []);
+
   const update = (name: keyof typeof state, value: string | boolean) => setState((current) => ({ ...current, [name]: value }));
-  const submit = async (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!state.contactName.trim() || !state.organizationName.trim() || !state.email.trim() || !state.consentToProcess) { setStatus("error"); return; }
+    if (!event.currentTarget.checkValidity() || !state.consentToProcess) { setStatus("error"); return; }
     setStatus("sending");
     try {
       const response = await fetch(publicApiUrl("chat/v1/commercial-requests"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
@@ -67,9 +70,9 @@ export default function WebAICommercialQualification({ language, onCancel }: { l
   if (status === "success") return <section role="status" style={{ padding: 12, background: "#EAF7EF", borderBottom: "1px solid #A9DFBF", color: "#1E8449", fontSize: 12 }}>{t.success}</section>;
   const input = { width: "100%", minWidth: 0, boxSizing: "border-box" as const, padding: "8px 10px", border: "1px solid #D5B45B", borderRadius: 6, fontSize: 12 };
   return <section aria-labelledby="web-ai-commercial-title" style={{ padding: 12, background: "#FEF9E7", borderBottom: "1px solid #FAD7A0", maxHeight: 390, overflowY: "auto" }}>
-    <h3 id="web-ai-commercial-title" style={{ margin: 0, color: "#7D6608", fontSize: 14 }}>{t.title}</h3>
+    <h3 ref={titleRef} tabIndex={-1} id="web-ai-commercial-title" style={{ margin: 0, color: "#7D6608", fontSize: 14 }}>{t.title}</h3>
     <p style={{ margin: "4px 0 10px", color: "#7D6608", fontSize: 11 }}>{t.optional}</p>
-    <form onSubmit={submit} noValidate style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+    <form onSubmit={submit} noValidate style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: 8 }}>
       <input aria-label={t.name} placeholder={`${t.name} *`} value={state.contactName} onChange={(e) => update("contactName", e.target.value)} style={input} required maxLength={160} />
       <input aria-label={t.organization} placeholder={`${t.organization} *`} value={state.organizationName} onChange={(e) => update("organizationName", e.target.value)} style={input} required maxLength={200} />
       <input aria-label={t.email} placeholder={`${t.email} *`} type="email" value={state.email} onChange={(e) => update("email", e.target.value)} style={{ ...input, gridColumn: "1 / -1" }} required maxLength={254} />

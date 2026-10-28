@@ -7,6 +7,9 @@ const widget = readFileSync(new URL('../app/components/ChatWidget.tsx', import.m
 
 test('commercial qualification is explicit, bilingual and idempotent', () => {
   assert.match(form, /crypto\.randomUUID\(\)/);
+  assert.match(form, /titleRef\.current\?\.focus\(\)/);
+  assert.match(form, /currentTarget\.checkValidity\(\)/);
+  assert.match(form, /auto-fit, minmax\(min\(100%, 180px\), 1fr\)/);
   assert.match(form, /consentToProcess/);
   assert.match(form, /marketingConsent/);
   assert.match(form, /facultative/);
