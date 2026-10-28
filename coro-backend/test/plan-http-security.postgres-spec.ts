@@ -303,6 +303,12 @@ describe('Plan authenticated HTTP security boundaries', () => {
   }, 60000);
 
   afterAll(async () => {
+    await prisma.documentReviewNotificationEvent.deleteMany({
+      where: { organizationId: { in: [ids.orgA, ids.orgB] } },
+    });
+    await prisma.documentReviewRequest.deleteMany({
+      where: { organizationId: { in: [ids.orgA, ids.orgB] } },
+    });
     await prisma.auditLog.deleteMany({
       where: { organizationId: { in: [ids.orgA, ids.orgB] } },
     });

@@ -56,6 +56,8 @@ PostgreSQL globale, sans assertion en échec. Le plafond du job a été porté �
 conditions des jobs d'image ou de production. Le harnais `plan-security` a
 également été aligné sur le contrat final : document canonique requis, PDF
 simulé terminé, attente de l'outbox et nettoyage des nouvelles relations.
+Le scénario HTTP intégré supprime lui aussi outbox et demandes avant les
+documents parents; sa recette locale passe (4/4).
 
 ## Contrôles de mandat
 
