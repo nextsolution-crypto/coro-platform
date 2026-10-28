@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AdviserActor, projectAccessWhere } from '../../auth/project-access';
+import { AdviserActor, mutableProjectAccessWhere, projectAccessWhere } from '../../auth/project-access';
 
 @Injectable()
 export class PcaConfiguratorService {
@@ -9,11 +9,12 @@ export class PcaConfiguratorService {
   private async ensureProjectAccess(
     projectId: string,
     actor: AdviserActor,
+    mutable = false,
   ) {
     const project = await this.prisma.project.findFirst({
       where: {
         id: projectId,
-        ...projectAccessWhere(actor),
+        ...(mutable ? mutableProjectAccessWhere(actor) : projectAccessWhere(actor)),
       },
       select: {
         id: true,
@@ -91,7 +92,7 @@ export class PcaConfiguratorService {
     const project = await this.prisma.project.findFirst({
       where: {
         id: projectId,
-        ...projectAccessWhere(actor),
+        ...mutableProjectAccessWhere(actor),
       },
       select: {
         id: true,
@@ -175,7 +176,7 @@ export class PcaConfiguratorService {
     procedureId: string,
     isActive: boolean,
   ) {
-    await this.ensureProjectAccess(projectId, actor);
+    await this.ensureProjectAccess(projectId, actor, true);
     const organizationId = actor.organizationId;
 
     const proc = await this.prisma.procedureDefault.findUnique({
@@ -219,7 +220,7 @@ export class PcaConfiguratorService {
     procedureId: string,
     content: any,
   ) {
-    await this.ensureProjectAccess(projectId, actor);
+    await this.ensureProjectAccess(projectId, actor, true);
     const organizationId = actor.organizationId;
 
     const proc = await this.prisma.procedureDefault.findUnique({
@@ -262,7 +263,7 @@ export class PcaConfiguratorService {
     projectId: string,
     procedureId: string,
   ) {
-    await this.ensureProjectAccess(projectId, actor);
+    await this.ensureProjectAccess(projectId, actor, true);
     const organizationId = actor.organizationId;
 
     const proc = await this.prisma.procedureDefault.findUnique({

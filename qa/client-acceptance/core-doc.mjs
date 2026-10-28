@@ -12,10 +12,10 @@ if (!password || !mfaDirectory || !output) throw new Error("QA configuration inc
 const projectId = "50000000-0000-4000-8000-000000000001";
 const report = { generatedAt: new Date().toISOString(), testedCommit: process.env.CORO_QA_TESTED_COMMIT, core: [], doc: [] };
 
-async function call(route, { token, method = "GET", body, binary = false } = {}) {
+async function call(route, { token, method = "GET", body, binary = false, headers = {} } = {}) {
   const response = await fetch(`${api}${route}`, {
     method,
-    headers: { ...(body === undefined ? {} : { "content-type": "application/json" }), ...(token ? { authorization: `Bearer ${token}` } : {}) },
+    headers: { ...(body === undefined ? {} : { "content-type": "application/json" }), ...(token ? { authorization: `Bearer ${token}` } : {}), ...headers },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const bytes = Buffer.from(await response.arrayBuffer());
@@ -79,7 +79,16 @@ const config = {
 const configured = await call(`/projects/${projectId}`, { token: advisor, method: "PUT", body: { configData: config } });
 check("doc", "configuration-canonical-save", configured.status === 200 && configured.data?.configData?.versionDocument === config.versionDocument, { httpStatus: configured.status, savedVersion: configured.data?.configData?.versionDocument });
 
-const generated = await call(`/generator/generate/${projectId}`, { token: advisor, method: "POST", body: {} });
+const currentDocument = await call(`/generator/document/${projectId}`, { token: advisor });
+const generated = await call(`/generator/generate/${projectId}`, {
+  token: advisor,
+  method: "POST",
+  body: {},
+  headers: {
+    "Idempotency-Key": crypto.randomUUID(),
+    "X-Expected-Document-Version": String(currentDocument.data?.version ?? 0),
+  },
+});
 const documentId = generated.data?.documentId;
 check("doc", "generation", generated.status === 201 && Boolean(documentId), { httpStatus: generated.status, documentId: documentId ?? null, version: generated.data?.version });
 

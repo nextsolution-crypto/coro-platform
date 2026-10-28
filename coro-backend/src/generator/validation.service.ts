@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 
@@ -22,10 +22,10 @@ export class ValidationService {
     actor: AdviserActor,
   ): Promise<ValidationResult[]> {
     const project = await this.prisma.project.findFirst({
-      where: { id: projectId, isActive: true, ...projectAccessWhere(actor) },
+      where: { id: projectId, ...projectAccessWhere(actor) },
       include: { building: true },
     });
-    if (!project) return [];
+    if (!project) throw new NotFoundException('Projet introuvable');
 
     const doc = await this.prisma.document.findFirst({ where: { projectId } });
     if (!doc)
