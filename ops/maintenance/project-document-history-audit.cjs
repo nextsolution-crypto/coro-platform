@@ -228,13 +228,26 @@ async function runInventory({ prisma, serviceHead, publicUrlForKey, allowedOrigi
   return report;
 }
 
+async function runReadOnlyInventory({ prisma, serviceHead, publicUrlForKey, allowedOrigins, probe = anonymousProbe }) {
+  return prisma.$transaction(async (transaction) => {
+    await transaction.$executeRawUnsafe('SET TRANSACTION READ ONLY');
+    return runInventory({
+      prisma: transaction,
+      serviceHead,
+      publicUrlForKey,
+      allowedOrigins,
+      probe,
+    });
+  }, { timeout: 300_000 });
+}
+
 async function main() {
   if (process.env.CORO_PROJECT_DOCUMENT_HISTORY_AUDIT_RUN !== 'true') throw new Error('EXPLICIT_RUNTIME_SWITCH_REQUIRED');
   const { PrismaClient } = require('/app/node_modules/@prisma/client');
   const prisma = new PrismaClient();
   try {
     const bucket = process.env.DO_SPACES_BUCKET || 'coro-storage';
-    const report = await runInventory({
+    const report = await runReadOnlyInventory({
       prisma,
       allowedOrigins: configuredOrigins(),
       serviceHead: (key) => signedServiceHead(key),
@@ -246,7 +259,7 @@ async function main() {
   }
 }
 
-module.exports = { anonymousProbe, classifyReference, configuredOrigins, emptyReport, main, runInventory, safeStorageKey, signedServiceHead };
+module.exports = { anonymousProbe, classifyReference, configuredOrigins, emptyReport, main, runInventory, runReadOnlyInventory, safeStorageKey, signedServiceHead };
 
 if (require.main === module) main().catch(() => {
   process.stdout.write(`${JSON.stringify({ schemaVersion: 1, execution: 'FAILED', readOnly: true })}\n`);

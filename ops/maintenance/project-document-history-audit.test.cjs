@@ -2,7 +2,7 @@
 
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { anonymousProbe, classifyReference, runInventory, safeStorageKey } = require('./project-document-history-audit.cjs');
+const { anonymousProbe, classifyReference, runInventory, runReadOnlyInventory, safeStorageKey } = require('./project-document-history-audit.cjs');
 
 const origins = new Set(['https://cdn.example']);
 const request = (responses) => async (_url, options) => {
@@ -76,4 +76,31 @@ test('paginates, deduplicates and emits only reconciled aggregate evidence', asy
   assert.equal(report.coverage.projectFileVersions, 1);
   assert.equal(report.coverage.archivedOrInactive, 1);
   assert.doesNotMatch(JSON.stringify(report), /documents\/a|tenant-a|cdn\.example|projectId|organizationId/);
+});
+
+test('enforces a PostgreSQL read-only transaction before inventory access', async () => {
+  const calls = [];
+  const transaction = {
+    $executeRawUnsafe: async (statement) => calls.push(statement),
+    projectFile: { findMany: async () => [] },
+    project: { findMany: async () => [] },
+  };
+  const prisma = {
+    $transaction: async (callback, options) => {
+      calls.push(options);
+      return callback(transaction);
+    },
+  };
+
+  const report = await runReadOnlyInventory({
+    prisma,
+    allowedOrigins: origins,
+    serviceHead: async () => 'EXISTS',
+    publicUrlForKey: () => null,
+  });
+
+  assert.equal(calls[0].timeout, 300_000);
+  assert.equal(calls[1], 'SET TRANSACTION READ ONLY');
+  assert.equal(report.readOnly, true);
+  assert.equal(report.coverage.references, 0);
 });
