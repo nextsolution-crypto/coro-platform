@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuthStore } from "@/stores/auth.store";
 import api from "@/lib/api";
@@ -133,6 +133,8 @@ export default function EditorPage() {
   const [navOpen, setNavOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const documentRequestRef = useRef(0);
+  const saveRequestRef = useRef(0);
 
   // ── Init ────────────────────────────────────────────────
 
@@ -149,6 +151,7 @@ export default function EditorPage() {
   }, [isAuthenticated]);
 
   const fetchDocument = async () => {
+    const requestId = ++documentRequestRef.current;
     try {
       const [docRes, plansRes] = await Promise.all([
         api.get(`/generator/document/${projectId}`),
@@ -156,20 +159,43 @@ export default function EditorPage() {
           .get(`/projects/${projectId}/building-plans`)
           .catch(() => ({ data: [] })),
       ]);
+      if (requestId !== documentRequestRef.current) return;
       setDocument(docRes.data);
       setHasPlans((plansRes.data || []).length > 0);
       try {
         const valRes = await api.get(`/generator/validate/${projectId}`);
-        setValidations(valRes.data || []);
+        if (requestId === documentRequestRef.current)
+          setValidations(valRes.data || []);
       } catch {
-        setValidations([]);
+        if (requestId === documentRequestRef.current) setValidations([]);
       }
     } catch (err) {
+      if (requestId !== documentRequestRef.current) return;
       console.error(err);
       router.push(`/projects/${projectId}`);
     } finally {
-      setLoading(false);
+      if (requestId === documentRequestRef.current) setLoading(false);
     }
+  };
+
+  const fetchCurrentDocument = async (): Promise<Document> => {
+    const response = await api.get(`/generator/document/${projectId}`);
+    return response.data;
+  };
+
+  const getSectionContent = (
+    current: Document,
+    moduleNumber: number,
+    sectionId: string,
+    lang: "fr" | "en",
+  ) => {
+    const modules =
+      lang === "fr"
+        ? current.content.modules_fr || []
+        : current.content.modules_en || [];
+    return modules
+      .find((module) => module.moduleNumber === moduleNumber)
+      ?.sections?.find((section) => section.id === sectionId)?.content;
   };
 
   // ── Helpers ─────────────────────────────────────────────
@@ -247,25 +273,29 @@ export default function EditorPage() {
 
   const handleSaveSection = async () => {
     if (!document) return;
+    const requestId = ++saveRequestRef.current;
+    const attemptedContent = editingContent;
+    const modules = getModules();
+    const currentModule = modules[activeModule];
+    const currentSection = currentModule.sections[activeSection];
     setSaving(true);
+    setSaved(false);
     setSaveError("");
     try {
-      const modules = getModules();
-      const currentModule = modules[activeModule];
-      const currentSection = currentModule.sections[activeSection];
       const response = await api.put(
         `/generator/document/${document.id}/module/${currentModule.moduleNumber}/section/${currentSection.id}`,
         {
-          content: editingContent,
+          content: attemptedContent,
           language,
           expectedLockVersion: document.lockVersion,
         },
       );
+      if (requestId !== saveRequestRef.current) return;
       const updatedDoc = { ...document };
       const modulesKey = language === "fr" ? "modules_fr" : "modules_en";
       updatedDoc.content[modulesKey][activeModule].sections[
         activeSection
-      ].content = editingContent;
+      ].content = attemptedContent;
       updatedDoc.lockVersion = response.data.lockVersion;
       setDocument(updatedDoc);
       setSaved(true);
@@ -273,7 +303,35 @@ export default function EditorPage() {
       setIsEditing(false);
       setTimeout(() => setSaved(false), 4000);
     } catch (err: any) {
+      if (requestId !== saveRequestRef.current) return;
       console.error(err);
+      const mayHaveReachedServer = !err?.response || err.response.status === 409;
+      if (mayHaveReachedServer) {
+        try {
+          const current = await fetchCurrentDocument();
+          if (requestId !== saveRequestRef.current) return;
+          const persistedContent = getSectionContent(
+            current,
+            currentModule.moduleNumber,
+            currentSection.id,
+            language,
+          );
+          setDocument(current);
+          if (persistedContent === attemptedContent) {
+            setSaved(true);
+            setLastSavedAt(new Date());
+            setIsEditing(false);
+            setTimeout(() => setSaved(false), 4000);
+            return;
+          }
+          setSaveError(
+            "Le document a changé dans une autre session. Votre brouillon est conservé; vérifiez-le avant de sauvegarder à nouveau.",
+          );
+          return;
+        } catch (reconciliationError) {
+          console.error(reconciliationError);
+        }
+      }
       setSaveError(
         err?.response?.status === 409
           ? "Le document a été modifié dans une autre session. Rechargez la page avant de reprendre."
@@ -291,13 +349,16 @@ export default function EditorPage() {
     content: string,
   ) => {
     if (!document) return;
+    const requestId = ++saveRequestRef.current;
     setSaving(true);
+    setSaved(false);
     setSaveError("");
     try {
       const response = await api.put(
         `/generator/document/${document.id}/module/${moduleNumber}/section/${sectionId}`,
         { content, language, expectedLockVersion: document.lockVersion },
       );
+      if (requestId !== saveRequestRef.current) return;
       setDocument((current) =>
         current
           ? { ...current, lockVersion: response.data.lockVersion }
@@ -306,7 +367,27 @@ export default function EditorPage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 4000);
     } catch (err: any) {
+      if (requestId !== saveRequestRef.current) return;
       console.error(err);
+      const mayHaveReachedServer = !err?.response || err.response.status === 409;
+      if (mayHaveReachedServer) {
+        try {
+          const current = await fetchCurrentDocument();
+          if (requestId !== saveRequestRef.current) return;
+          setDocument(current);
+          if (
+            getSectionContent(current, moduleNumber, sectionId, language) ===
+            content
+          ) {
+            setSaved(true);
+            setLastSavedAt(new Date());
+            setTimeout(() => setSaved(false), 4000);
+            return;
+          }
+        } catch (reconciliationError) {
+          console.error(reconciliationError);
+        }
+      }
       setSaveError(
         err?.response?.status === 409
           ? "Conflit de modification détecté. Rechargez le document."
