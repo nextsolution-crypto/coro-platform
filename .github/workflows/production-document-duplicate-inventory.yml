@@ -1,0 +1,83 @@
+name: Inventory Document Duplicates Read Only
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: node --test ops/maintenance/document-duplicate-inventory.test.cjs
+
+  inventory:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Validate pinned host identity
+        env:
+          HOST_FINGERPRINT: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+        run: '[[ "$HOST_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]'
+      - name: Execute database-enforced read-only inventory
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,RUN_ID
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            script="$(mktemp /tmp/coro-document-duplicate-inventory.XXXXXX.cjs)"
+            evidence="/tmp/coro-document-duplicate-inventory-${RUN_ID}.json"
+            trap 'rm -f -- "$script"' EXIT
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
+            git -C "$repo" show "$SOURCE_SHA:ops/maintenance/document-duplicate-inventory.cjs" >"$script"
+            cd "$repo"
+            docker compose exec -T -e CORO_DOCUMENT_DUPLICATE_INVENTORY_RUN=true backend node - <"$script" >"$evidence"
+            chmod 600 "$evidence"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||r.readOnly!==true||!Array.isArray(r.groups))process.exit(1);delete r.groups;process.stdout.write(JSON.stringify(r)+"\n");' "$evidence"
+      - name: Retrieve protected evidence
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          source: /tmp/coro-document-duplicate-inventory-${{ github.run_id }}.json
+          target: protected-evidence
+          strip_components: 1
+      - name: Upload protected evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: document-duplicate-inventory-${{ github.run_id }}
+          path: protected-evidence/coro-document-duplicate-inventory-${{ github.run_id }}.json
+          retention-days: 7
+          if-no-files-found: error
+      - name: Remove remote temporary evidence
+        if: always()
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          RUN_ID: ${{ github.run_id }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: RUN_ID
+          script: rm -f -- "/tmp/coro-document-duplicate-inventory-${RUN_ID}.json"
