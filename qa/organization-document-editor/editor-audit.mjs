@@ -127,7 +127,7 @@ try {
       method: "POST",
       body: {},
       headers: {
-        "idempotency-key": `editor-audit-${testedCommit}-${ids.project}`,
+        "idempotency-key": `editor-audit-${ids.project}`,
         "x-expected-document-version": "0",
       },
     });

@@ -98,7 +98,7 @@ const actor = await login("advisor-a@global-e2e.test");
 await prisma.project.update({ where: { id: projectId }, data: { status: "IN_PROGRESS" } });
 let doc = await call(`/generator/document/${projectId}`, { token: actor.token });
 if (doc.status === 404 || !doc.data?.id) {
-  await call(`/generator/generate/${projectId}`, { token: actor.token, method: "POST", body: {}, headers: { "idempotency-key": `editor-resilience-${testedCommit}-${projectId}`, "x-expected-document-version": "0" } });
+  await call(`/generator/generate/${projectId}`, { token: actor.token, method: "POST", body: {}, headers: { "idempotency-key": `editor-resilience-${projectId}`, "x-expected-document-version": "0" } });
   doc = await call(`/generator/document/${projectId}`, { token: actor.token });
 }
 const documentId = doc.data.id;
