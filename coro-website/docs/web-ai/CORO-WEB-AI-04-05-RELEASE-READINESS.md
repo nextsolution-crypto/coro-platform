@@ -5,7 +5,7 @@ Date de revue : 2026-10-28
 Base vérifiée : `origin/main` à `056ae9cbdd201409aefc57d2c8836f822a273077`
 
 Branche : `feature/web-ai-04-05-commercial-observability`
-HEAD fonctionnel initial : `44c914de6b74bb87d518e9400b447ca3a7d97c54`
+HEAD fonctionnel revu avant réconciliation du rapport : `2e8ba8ab`
 
 ## Identification et commits
 
@@ -58,7 +58,11 @@ Une base PostgreSQL 16 jetable a été créée, les 157 migrations ont été app
 
 Le workflow principal exécute validations, typage et tests lors des PR et des pushes sur `main`. La construction d'images et le job `production-release` sont limités à `workflow_dispatch`. La release utilise un environnement protégé, des approbations, des images immuables et un verrou de concurrence. Une fusion ne déclenche donc pas automatiquement le déploiement, mais le mandat impose néanmoins une décision humaine séparée.
 
-La CI de la PR constitue la gate définitive, notamment pour l'extracteur Office sous Linux. Son résultat sera ajouté après création de la PR.
+PR : [#114](https://github.com/nextsolution-crypto/coro-platform/pull/114).
+
+La première exécution a détecté deux incohérences TypeScript dans des tests de la branche : le constructeur du contrôleur public n'injectait pas le nouveau service commercial et les littéraux de consentement du test commercial étaient élargis en `string`. Le commit `2e8ba8ab` les corrige sans changement produit.
+
+La seconde exécution est entièrement réussie : sécurité backend, frontend, tests backend Linux, quatre typechecks, builds portail et Docker du site. Les jobs `build-images` et `production-release` sont explicitement ignorés sur une PR; aucune image ni release n'a été produite.
 
 ## Risques et réserves
 
@@ -76,4 +80,4 @@ Déploiement : non autorisé dans ce mandat; à planifier séparément après r�
 
 ## Verdict
 
-`READY_WITH_CONDITIONS` tant que la CI de PR et sa suite Linux ne sont pas terminales. Si elles réussissent, la PR devient `READY_TO_MERGE`, avec les réserves non bloquantes d'accessibilité et de navigateur Super Admin ci-dessus.
+`READY_TO_MERGE` sur décision humaine, avec les réserves non bloquantes d'accessibilité et de navigateur Super Admin ci-dessus. Ce verdict n'autorise ni fusion automatique ni déploiement.
