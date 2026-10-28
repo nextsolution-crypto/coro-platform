@@ -19,10 +19,10 @@ export class QaIdentityLab {
     this.sessions = new Map();
   }
 
-  async call(route, { method = "GET", token, body } = {}) {
+  async call(route, { method = "GET", token, body, headers = {} } = {}) {
     const response = await fetch(`${this.apiUrl}${route}`, {
       method,
-      headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}), ...headers },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     const text = await response.text();
