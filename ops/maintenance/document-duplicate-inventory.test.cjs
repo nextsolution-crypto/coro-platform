@@ -24,7 +24,7 @@ test('starts from stdin only when the explicit runtime switch is present', () =>
 test('retrieves protected evidence from the remote home using a relative SCP source', () => {
   const workflow = readFileSync(require.resolve('../../.github/workflows/production-document-duplicate-inventory.yml'), 'utf8');
   assert.match(workflow, /evidence="\/root\/coro-document-duplicate-inventory-\$\{RUN_ID\}\.json"/);
-  assert.match(workflow, /source: coro-document-duplicate-inventory-\$\{\{ github\.run_id \}\}\.json/);
+  assert.match(workflow, /source: root\/coro-document-duplicate-inventory-\$\{\{ github\.run_id \}\}\.json/);
   assert.doesNotMatch(workflow, /source: \/tmp\/coro-document-duplicate-inventory/);
 });
 
