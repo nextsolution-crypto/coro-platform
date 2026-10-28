@@ -11,7 +11,7 @@
 
 ## Migration
 
-`20261112010000_document_editor_integrity` ajoute `Document.lockVersion INTEGER NOT NULL DEFAULT 0`. La chaîne de 158 migrations passe depuis zéro sur PostgreSQL 16 jetable. Aucune migration de production.
+`20261112010000_document_editor_integrity` ajoute `Document.lockVersion INTEGER NOT NULL DEFAULT 0`. Après intégration ordonnée de la gouvernance de génération, la chaîne finale de 159 migrations passe depuis zéro sur PostgreSQL 16 jetable. Aucune migration de production n’a été exécutée pendant cette QA.
 
 ## Contrat de concurrence
 

@@ -3,7 +3,9 @@
 ## Traçabilité
 
 - Audit : `2673df4115735409c20316b24dd89333d4eab2fa`.
-- Baseline auditée/rapportée en production : `12766061c5b0458894dd2d0b3b9dac7a161a2296`.
+- Baseline candidate exécutée par la campagne QA : `12766061c5b0458894dd2d0b3b9dac7a161a2296`.
+- Production observée ultérieurement par l’inspection gouvernée du 28 octobre 2026 : `0654faeb6ad92e0f6f2a7cfbec1d9fc689fd90f4`.
+- Les résultats ci-dessous qualifient le candidat QA; ils ne constituent pas une preuve que `12766061…` était actif en production.
 - Branche : `fix/organization-document-editor-security`.
 - Preuves : `D:\CORO-QA\runs\organization-document-editor\2026-10-28`.
 - Stack `editor-fix` : PostgreSQL 16, ports 55474/3170/3171, réseau deny-by-default.
