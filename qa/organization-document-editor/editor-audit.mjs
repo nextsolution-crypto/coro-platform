@@ -23,7 +23,12 @@ if (
 ) {
   throw new Error("QA configuration incomplete");
 }
-if (!/127\.0\.0\.1:55474\/coro_qa_global_e2e$/.test(databaseUrl)) {
+const databaseTarget = new URL(databaseUrl);
+if (
+  databaseTarget.hostname !== "127.0.0.1" ||
+  !/^\d+$/.test(databaseTarget.port) ||
+  databaseTarget.pathname !== "/coro_qa_global_e2e"
+) {
   throw new Error("Refusing non-disposable database");
 }
 
