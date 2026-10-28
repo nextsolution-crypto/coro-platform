@@ -7,8 +7,11 @@ import {
   ChatService,
 } from './chat.service';
 import { PublicAssistantConfig } from './public-assistant.config';
+import { BedrockWebPublicProvider } from './bedrock-web-public.provider';
+import { DocumentaryPublicAssistantProvider } from './documentary-public-assistant.provider';
 import { PublicAssistantNavigationRegistry } from './public-assistant-navigation';
 import { PublicAssistantOrchestratorService } from './public-assistant-orchestrator.service';
+import { PublicAssistantProviderGateway } from './public-assistant-provider.gateway';
 import { PublicAssistantSessionService } from './public-assistant-session.service';
 import { PublicAssistantValidator } from './public-assistant-validator';
 import { SimulatedPublicAssistantProvider } from './simulated-public-assistant.provider';
@@ -27,7 +30,10 @@ const chatHttpClient: ChatHttpClient = (input, init) => fetch(input, init);
     PublicAssistantNavigationRegistry,
     PublicAssistantSessionService,
     PublicAssistantValidator,
+    DocumentaryPublicAssistantProvider,
     SimulatedPublicAssistantProvider,
+    BedrockWebPublicProvider,
+    PublicAssistantProviderGateway,
     PublicAssistantOrchestratorService,
     { provide: CHAT_HTTP_CLIENT, useValue: chatHttpClient },
   ],

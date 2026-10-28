@@ -9,6 +9,7 @@ interface Citation {
   title: string;
   url: string;
   version: number;
+  excerpt: string;
 }
 interface SuggestedLink {
   label: string;
@@ -276,7 +277,21 @@ export default function ChatWidget() {
     } catch {
       setMessages((current) => [
         ...current,
-        { role: "assistant", content: copy.unavailable },
+        {
+          role: "assistant",
+          content: copy.unavailable,
+          links: [
+            {
+              label: language === "fr-CA" ? "Découvrir CORO" : "Discover CORO",
+              url: language === "fr-CA" ? "/" : "/?lang=en",
+            },
+            {
+              label: language === "fr-CA" ? "Contacter CORO" : "Contact CORO",
+              url: language === "fr-CA" ? "/contact" : "/contact?lang=en",
+            },
+          ],
+          questions: [...copy.suggestions],
+        },
       ]);
     } finally {
       setLoading(false);
@@ -590,6 +605,15 @@ export default function ChatWidget() {
                           >
                             {citation.title} · v{citation.version}
                           </a>
+                          <p
+                            style={{
+                              margin: "3px 0 7px",
+                              color: "#566573",
+                              lineHeight: 1.45,
+                            }}
+                          >
+                            {citation.excerpt}
+                          </p>
                         </li>
                       ))}
                     </ul>
