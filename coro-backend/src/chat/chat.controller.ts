@@ -12,6 +12,8 @@ import {
   ChatNotifyDto,
   PublicAssistantMessageDto,
 } from './chat.dto';
+import { WebAICommercialRequestDto } from './web-ai-commercial.dto';
+import { WebAICommercialService } from './web-ai-commercial.service';
 import { ChatService } from './chat.service';
 import { PublicAssistantConfig } from './public-assistant.config';
 import { PublicAssistantOrchestratorService } from './public-assistant-orchestrator.service';
@@ -29,6 +31,7 @@ export class ChatController {
     private readonly chatService: ChatService,
     private readonly publicAssistant: PublicAssistantOrchestratorService,
     private readonly publicAssistantConfig: PublicAssistantConfig,
+    private readonly commercial: WebAICommercialService,
   ) {}
 
   @Post('vitrine')
@@ -38,6 +41,12 @@ export class ChatController {
   })
   chat(@Body() body: ChatMessageDto) {
     return this.chatService.handleMessage(body.message, body.history ?? []);
+  }
+
+  @Post('v1/commercial-requests')
+  @Throttle({ short: { ttl: 60_000, limit: 3 }, long: { ttl: 3_600_000, limit: 10 } })
+  commercialRequest(@Body() body: WebAICommercialRequestDto) {
+    return this.commercial.submit(body);
   }
 
   @Post('v1/public-assistant')

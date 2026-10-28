@@ -1684,9 +1684,121 @@ model CommercialProspect {
   createdBy               User?                           @relation("CommercialProspectCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
   proposals               CommercialProposal[]
   simulationWorkspaces    CommercialSimulationWorkspace[]
+  webAIRequests           WebAICommercialRequest[]
 
   @@index([status, createdAt])
   @@index([legalName])
+}
+
+enum WebAICommercialRequestType {
+  DEMO
+  QUOTE
+  CONTACT
+  PARTNERSHIP
+}
+
+enum WebAICommercialRequestStatus {
+  SUBMITTED
+  FAILED
+  PROCESSED
+}
+
+enum WebAITelemetryResult {
+  SUCCESS
+  ABSTENTION
+  REJECTED
+  FAILURE
+}
+
+enum WebAIImprovementStatus {
+  NEW
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+/// Public commercial intake. It is a governed admission record into the
+/// canonical CommercialProspect authority, not a second CRM.
+model WebAICommercialRequest {
+  id                    String                       @id @default(uuid())
+  idempotencyKey        String                       @unique @db.Uuid
+  payloadFingerprint    String                       @db.Char(64)
+  requestType           WebAICommercialRequestType
+  status                WebAICommercialRequestStatus @default(SUBMITTED)
+  prospectId            String?
+  contactName           String                       @db.VarChar(160)
+  organizationName      String                       @db.VarChar(200)
+  contactTitle          String?                      @db.VarChar(160)
+  email                 String                       @db.VarChar(254)
+  sector                String?                      @db.VarChar(80)
+  buildingCount         Int?
+  estimatedUsers        Int?
+  primaryNeed           String?                      @db.VarChar(500)
+  interestedModules     String[]
+  timeline              String?                      @db.VarChar(80)
+  preferredLanguage     PublicKnowledgeLanguage
+  consentToProcess      Boolean
+  consentTextVersion    String                       @db.VarChar(40)
+  consentAction         String                       @db.VarChar(80)
+  consentTimestamp      DateTime
+  marketingConsent      Boolean                      @default(false)
+  providerMode          String                       @default("SIMULATED") @db.VarChar(30)
+  providerCorrelationId String?                      @db.VarChar(120)
+  failureCode           String?                      @db.VarChar(80)
+  createdAt             DateTime                     @default(now())
+  updatedAt             DateTime                     @updatedAt
+  prospect              CommercialProspect?          @relation(fields: [prospectId], references: [id], onDelete: Restrict)
+
+  @@index([status, createdAt])
+  @@index([requestType, createdAt])
+  @@index([prospectId])
+}
+
+/// Minimized public-assistant telemetry. Raw questions, contact details and
+/// full conversations are deliberately excluded from this authority.
+model WebAITelemetryEvent {
+  id                  String                  @id @default(uuid())
+  eventKey            String                  @unique @db.Uuid
+  sessionPseudonym    String?                 @db.VarChar(64)
+  correlationId       String                  @db.VarChar(64)
+  eventType           String                  @db.VarChar(60)
+  category            String                  @db.VarChar(80)
+  language            PublicKnowledgeLanguage
+  result              WebAITelemetryResult
+  providerMode        String?                 @db.VarChar(30)
+  durationMs          Int?
+  sourceCount         Int?
+  suggestedLinkCount  Int?
+  tokenCount          Int?
+  estimatedCostMicros BigInt?
+  errorCode           String?                 @db.VarChar(80)
+  classifierVersion   String                  @db.VarChar(40)
+  createdAt           DateTime                @default(now())
+
+  @@index([createdAt, eventType])
+  @@index([category, createdAt])
+  @@index([result, createdAt])
+}
+
+model WebAIImprovementRecommendation {
+  id                String                 @id @default(uuid())
+  category          String                 @db.VarChar(80)
+  findingCode       String                 @db.VarChar(100)
+  description       String                 @db.VarChar(500)
+  frequencyObserved Int                    @default(1)
+  sourceStatistic   String                 @db.VarChar(120)
+  proposedPriority  String                 @db.VarChar(20)
+  status            WebAIImprovementStatus @default(NEW)
+  firstObservedAt   DateTime               @default(now())
+  lastObservedAt    DateTime               @default(now())
+  decidedAt         DateTime?
+  decision          String?                @db.VarChar(500)
+  closedAt          DateTime?
+
+  @@unique([category, findingCode])
+  @@index([status, proposedPriority])
 }
 
 model CommercialProposal {
