@@ -1,10 +1,16 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const { readFileSync } = require('node:fs');
 const test = require('node:test');
 const { anonymousProbe, classifyReference, runInventory, runReadOnlyInventory, safeStorageKey } = require('./project-document-history-audit.cjs');
 
 const origins = new Set(['https://cdn.example']);
+
+test('starts from stdin only when the explicit runtime switch is present', () => {
+  const source = readFileSync(require.resolve('./project-document-history-audit.cjs'), 'utf8');
+  assert.match(source, /require\.main === module \|\| process\.env\.CORO_PROJECT_DOCUMENT_HISTORY_AUDIT_RUN === 'true'/);
+});
 const request = (responses) => async (_url, options) => {
   const next = responses.shift();
   assert.equal(options.method, next.method);

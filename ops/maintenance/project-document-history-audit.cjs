@@ -261,7 +261,7 @@ async function main() {
 
 module.exports = { anonymousProbe, classifyReference, configuredOrigins, emptyReport, main, runInventory, runReadOnlyInventory, safeStorageKey, signedServiceHead };
 
-if (require.main === module) main().catch(() => {
+if (require.main === module || process.env.CORO_PROJECT_DOCUMENT_HISTORY_AUDIT_RUN === 'true') main().catch(() => {
   process.stdout.write(`${JSON.stringify({ schemaVersion: 1, execution: 'FAILED', readOnly: true })}\n`);
   process.exitCode = 1;
 });
