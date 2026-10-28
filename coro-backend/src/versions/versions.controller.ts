@@ -34,13 +34,13 @@ export class VersionsController {
   @Post()
   create(
     @Param('projectId') projectId: string,
-    @Body() body: { label?: string; expectedLockVersion: number },
+    @Body() body: { label?: string; expectedLockVersion?: number } | undefined,
     @Request() req: any,
   ) {
     return this.versionsService.create(
       projectId,
-      body.label,
-      body.expectedLockVersion,
+      body?.label,
+      body?.expectedLockVersion,
       req.user,
     );
   }
@@ -49,13 +49,13 @@ export class VersionsController {
   restore(
     @Param('projectId') projectId: string,
     @Param('versionId') versionId: string,
-    @Body() body: { expectedLockVersion: number },
+    @Body() body: { expectedLockVersion?: number } | undefined,
     @Request() req: any,
   ) {
     return this.versionsService.restore(
       projectId,
       versionId,
-      body.expectedLockVersion,
+      body?.expectedLockVersion,
       req.user,
     );
   }
@@ -64,13 +64,13 @@ export class VersionsController {
   remove(
     @Param('projectId') projectId: string,
     @Param('versionId') versionId: string,
-    @Body() body: { expectedLockVersion: number },
+    @Body() body: { expectedLockVersion?: number } | undefined,
     @Request() req: any,
   ) {
     return this.versionsService.remove(
       projectId,
       versionId,
-      body.expectedLockVersion,
+      body?.expectedLockVersion,
       req.user,
     );
   }
