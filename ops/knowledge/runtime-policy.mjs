@@ -8,16 +8,19 @@ const credentials = ['/etc/coro-ai', '/usr/local/bin/aws_signing_helper'];
 
 export function validatePolicy(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value) ||
-      Object.keys(value).some(k => !['schemaVersion', 'bedrockEnabled', 'localOcrEnabled'].includes(k)) ||
+      Object.keys(value).some(k => !['schemaVersion', 'bedrockEnabled', 'webPublicBedrockEnabled', 'localOcrEnabled'].includes(k)) ||
       value.schemaVersion !== 1 || typeof value.bedrockEnabled !== 'boolean' ||
+      (value.webPublicBedrockEnabled !== undefined && typeof value.webPublicBedrockEnabled !== 'boolean') ||
       typeof value.localOcrEnabled !== 'boolean') throw new Error('KNOWLEDGE_POLICY_INVALID');
-  return { schemaVersion: 1, bedrockEnabled: value.bedrockEnabled, localOcrEnabled: value.localOcrEnabled };
+  return { schemaVersion: 1, bedrockEnabled: value.bedrockEnabled,
+    webPublicBedrockEnabled: value.webPublicBedrockEnabled ?? false,
+    localOcrEnabled: value.localOcrEnabled };
 }
 
 export function loadPolicy(path = POLICY_PATH) {
   let stat;
   try { stat = lstatSync(path); } catch (error) {
-    if (error.code === 'ENOENT') return validatePolicy({ schemaVersion: 1, bedrockEnabled: false, localOcrEnabled: false });
+    if (error.code === 'ENOENT') return validatePolicy({ schemaVersion: 1, bedrockEnabled: false, webPublicBedrockEnabled: false, localOcrEnabled: false });
     throw error;
   }
   const parent = lstatSync(dirname(path));
@@ -33,12 +36,15 @@ export function overlay(policy, image) {
   const environment = {
     CORO_AI_PROVIDER: policy.bedrockEnabled ? 'bedrock' : 'deterministic-simulated',
     CORO_AI_BEDROCK_INVOCATION_ENABLED: String(policy.bedrockEnabled),
+    WEB_AI_PROVIDER: policy.webPublicBedrockEnabled ? 'bedrock' : 'documentary',
+    WEB_AI_BEDROCK_INVOCATION_ENABLED: String(policy.webPublicBedrockEnabled),
     KNOWLEDGE_LOCAL_OCR_ENABLED: String(policy.localOcrEnabled),
   };
   const backend = { image, environment };
-  if (policy.bedrockEnabled) {
+  if (policy.bedrockEnabled || policy.webPublicBedrockEnabled) {
     Object.assign(environment, {
       CORO_AI_BEDROCK_REGION: 'ca-central-1', CORO_AI_BEDROCK_MODEL_ID: 'ca.amazon.nova-lite-v1:0',
+      WEB_AI_BEDROCK_REGION: 'ca-central-1', WEB_AI_BEDROCK_MODEL_ID: 'ca.amazon.nova-lite-v1:0',
       CORO_AI_ROLES_ANYWHERE_SESSION_SECONDS: '900', AWS_PROFILE: 'coro-ai-production',
       AWS_CONFIG_FILE: '/etc/coro-ai/aws-config', AWS_EC2_METADATA_DISABLED: 'true', AWS_MAX_ATTEMPTS: '1',
     });
@@ -56,11 +62,13 @@ export function verifyRuntime(runtime, expected) {
     if (!runtime.Mounts.some(m => m.Destination === mount.target && m.Source === mount.source && m.RW === false))
       throw new Error('KNOWLEDGE_CREDENTIAL_MOUNT_INVALID');
   }
-  if (env.CORO_AI_PROVIDER !== 'bedrock' && runtime.Mounts.some(m => credentials.includes(m.Destination)))
+  if (env.CORO_AI_PROVIDER !== 'bedrock' && env.WEB_AI_PROVIDER !== 'bedrock' &&
+      runtime.Mounts.some(m => credentials.includes(m.Destination)))
     throw new Error('KNOWLEDGE_DISABLED_CREDENTIAL_MOUNT');
   return { bedrock: env.CORO_AI_PROVIDER === 'bedrock' ? 'PASS' : 'DISABLED',
+    webPublicBedrock: env.WEB_AI_PROVIDER === 'bedrock' ? 'PASS' : 'DISABLED',
     localOcr: env.KNOWLEDGE_LOCAL_OCR_ENABLED === 'true' ? 'ENABLED' : 'DISABLED',
-    sessionSeconds: env.CORO_AI_PROVIDER === 'bedrock' ? 900 : null };
+    sessionSeconds: env.CORO_AI_PROVIDER === 'bedrock' || env.WEB_AI_PROVIDER === 'bedrock' ? 900 : null };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

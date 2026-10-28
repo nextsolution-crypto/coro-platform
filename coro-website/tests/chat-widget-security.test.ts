@@ -72,4 +72,12 @@ test("grounding claim is shown only when the intelligent assistant is active", (
   assert.match(source, /citations\.map/);
   assert.match(source, /suggestedLinks/);
   assert.match(source, /message\.links\?\.length/);
+  assert.match(source, /citation\.excerpt/);
+});
+
+test("documentary failure remains useful without inventing an answer", () => {
+  assert.match(source, /content:\s*copy\.unavailable/);
+  assert.match(source, /url:\s*language === "fr-CA" \? "\/contact"/);
+  assert.match(source, /url:\s*language === "fr-CA" \? "\/"/);
+  assert.match(source, /questions:\s*\[\.\.\.copy\.suggestions\]/);
 });

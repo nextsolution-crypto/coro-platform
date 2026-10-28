@@ -59,6 +59,7 @@ export class PublicAssistantValidator {
         title: source.title,
         url: this.security.assertCanonicalPublicUrl(source.canonicalUrl),
         version: source.version,
+        excerpt: source.excerpt,
       })),
       suggestedLinks: this.navigation.links(routeKeys, language),
       suggestedQuestions: output.suggestedQuestions

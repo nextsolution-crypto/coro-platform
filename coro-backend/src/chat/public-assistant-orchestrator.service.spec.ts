@@ -2,8 +2,11 @@ import { PublicKnowledgeSearchService } from '../public-knowledge/public-knowled
 import { PublicKnowledgeSecurity } from '../public-knowledge/public-knowledge-security';
 import type { PublicKnowledgeAnswerContext } from '../public-knowledge/public-knowledge.types';
 import { PublicAssistantConfig } from './public-assistant.config';
+import { BedrockWebPublicProvider } from './bedrock-web-public.provider';
+import { DocumentaryPublicAssistantProvider } from './documentary-public-assistant.provider';
 import { PublicAssistantNavigationRegistry } from './public-assistant-navigation';
 import { PublicAssistantOrchestratorService } from './public-assistant-orchestrator.service';
+import { PublicAssistantProviderGateway } from './public-assistant-provider.gateway';
 import { PublicAssistantSessionService } from './public-assistant-session.service';
 import { PublicAssistantValidator } from './public-assistant-validator';
 import { SimulatedPublicAssistantProvider } from './simulated-public-assistant.provider';
@@ -32,14 +35,24 @@ const source = (language: 'fr-CA' | 'en-CA' = 'fr-CA') => ({
   },
 });
 
-function harness(context: PublicKnowledgeAnswerContext, scenario = 'NORMAL') {
-  process.env.WEB_AI_PROVIDER = 'simulated';
+function harness(
+  context: PublicKnowledgeAnswerContext,
+  scenario = 'NORMAL',
+  providerName: 'documentary' | 'simulated' = 'simulated',
+) {
+  process.env.WEB_AI_PROVIDER = providerName;
   process.env.WEB_AI_SIMULATED_SCENARIO = scenario;
   const config = new PublicAssistantConfig();
   const navigation = new PublicAssistantNavigationRegistry();
   const sessions = new PublicAssistantSessionService(config);
   const security = new PublicKnowledgeSecurity();
   const provider = new SimulatedPublicAssistantProvider();
+  const gateway = new PublicAssistantProviderGateway(
+    config,
+    new DocumentaryPublicAssistantProvider(),
+    provider,
+    new BedrockWebPublicProvider(config),
+  );
   const answerContext = jest.fn().mockResolvedValue(context);
   const search = {
     answerContext,
@@ -48,7 +61,7 @@ function harness(context: PublicKnowledgeAnswerContext, scenario = 'NORMAL') {
     config,
     search,
     sessions,
-    provider,
+    gateway,
     new PublicAssistantValidator(security, navigation),
     navigation,
   );
@@ -86,6 +99,50 @@ describe('PublicAssistantOrchestratorService', () => {
     });
     expect(result.suggestedLinks[0]).toMatchObject({
       url: '/coro-knowledge',
+    });
+  });
+
+  it('returns documentary results and labels an evidence abstention without a generative provider', async () => {
+    const supported = harness(
+      {
+        question: 'Knowledge',
+        language: 'en-CA',
+        sources: [source('en-CA')],
+        status: 'SUPPORTED',
+      },
+      'NORMAL',
+      'documentary',
+    );
+    await expect(
+      supported.service.answer({
+        message: 'How does Knowledge work?',
+        language: 'en-CA',
+      }),
+    ).resolves.toMatchObject({
+      status: 'SUPPORTED',
+      mode: 'DOCUMENTARY',
+      citations: [{ sourceId: 'source-public-1' }],
+    });
+
+    const insufficient = harness(
+      {
+        question: 'unknown',
+        language: 'en-CA',
+        sources: [],
+        status: 'INSUFFICIENT_INFORMATION',
+      },
+      'NORMAL',
+      'documentary',
+    );
+    await expect(
+      insufficient.service.answer({
+        message: 'Unknown capability?',
+        language: 'en-CA',
+      }),
+    ).resolves.toMatchObject({
+      status: 'INSUFFICIENT_INFORMATION',
+      mode: 'DOCUMENTARY',
+      citations: [],
     });
   });
 
@@ -182,7 +239,12 @@ describe('PublicAssistantOrchestratorService', () => {
       config,
       { answerContext: jest.fn() } as unknown as PublicKnowledgeSearchService,
       new PublicAssistantSessionService(config),
-      new SimulatedPublicAssistantProvider(),
+      new PublicAssistantProviderGateway(
+        config,
+        new DocumentaryPublicAssistantProvider(),
+        new SimulatedPublicAssistantProvider(),
+        new BedrockWebPublicProvider(config),
+      ),
       new PublicAssistantValidator(new PublicKnowledgeSecurity(), navigation),
       navigation,
     );

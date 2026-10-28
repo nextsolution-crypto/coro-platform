@@ -17,6 +17,7 @@ export interface PublicAssistantCitation {
   title: string;
   url: string;
   version: number;
+  excerpt: string;
 }
 
 export interface PublicAssistantSuggestedLink {
@@ -33,7 +34,7 @@ export interface PublicAssistantResponse {
   citations: PublicAssistantCitation[];
   suggestedLinks: PublicAssistantSuggestedLink[];
   suggestedQuestions: string[];
-  mode: 'SIMULATED' | 'DEGRADED';
+  mode: 'DOCUMENTARY' | 'SIMULATED' | 'BEDROCK' | 'DEGRADED';
 }
 
 export interface PublicAssistantTurn {
@@ -70,6 +71,11 @@ export interface PublicAssistantProvider {
   generate(
     input: PublicAssistantProviderInput,
   ): Promise<PublicAssistantProviderOutput>;
+}
+
+export interface PublicAssistantProviderResult {
+  output: PublicAssistantProviderOutput;
+  mode: 'DOCUMENTARY' | 'SIMULATED' | 'BEDROCK';
 }
 
 export function toAssistantContextSource(

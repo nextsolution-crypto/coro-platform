@@ -4,6 +4,7 @@ import { PublicKnowledgeSearchService } from '../public-knowledge/public-knowled
 import type { PublicKnowledgeAnswerContext } from '../public-knowledge/public-knowledge.types';
 import { PublicAssistantConfig } from './public-assistant.config';
 import { PublicAssistantNavigationRegistry } from './public-assistant-navigation';
+import { PublicAssistantProviderGateway } from './public-assistant-provider.gateway';
 import { PublicAssistantSessionService } from './public-assistant-session.service';
 import {
   PublicAssistantLanguage,
@@ -12,7 +13,6 @@ import {
   toAssistantContextSource,
 } from './public-assistant.types';
 import { PublicAssistantValidator } from './public-assistant-validator';
-import { SimulatedPublicAssistantProvider } from './simulated-public-assistant.provider';
 
 @Injectable()
 export class PublicAssistantOrchestratorService {
@@ -22,7 +22,7 @@ export class PublicAssistantOrchestratorService {
     private readonly config: PublicAssistantConfig,
     private readonly search: PublicKnowledgeSearchService,
     private readonly sessions: PublicAssistantSessionService,
-    private readonly provider: SimulatedPublicAssistantProvider,
+    private readonly provider: PublicAssistantProviderGateway,
     private readonly validator: PublicAssistantValidator,
     private readonly navigation: PublicAssistantNavigationRegistry,
   ) {}
@@ -33,7 +33,7 @@ export class PublicAssistantOrchestratorService {
     sessionId?: string;
     pagePath?: string;
   }): Promise<PublicAssistantResponse> {
-    this.config.assertSafeProvider();
+    this.config.assertProviderConfiguration();
     const requestId = randomUUID();
     const session = this.sessions.open(input.sessionId);
     const pagePath = this.navigation.normalizePagePath(input.pagePath);
@@ -68,16 +68,19 @@ export class PublicAssistantOrchestratorService {
         excerpt: source.excerpt.slice(0, this.config.maxContextCharacters),
       }));
     let raw: PublicAssistantProviderOutput;
+    let providerMode: 'DOCUMENTARY' | 'SIMULATED' | 'BEDROCK';
     try {
-      raw = await this.provider.generate({
+      const generated = await this.provider.generate({
         question: input.message,
         language: input.language,
         history: session.history,
         pagePath,
         sources,
       });
+      raw = generated.output;
+      providerMode = generated.mode;
     } catch {
-      this.logger.warn(`Simulated provider unavailable requestId=${requestId}`);
+      this.logger.warn(`Public provider unavailable requestId=${requestId}`);
       return this.degraded(requestId, session.id, input.language);
     }
     const validated = this.validator.validate(raw, sources, input.language);
@@ -97,7 +100,7 @@ export class PublicAssistantOrchestratorService {
       citations: validated.citations,
       suggestedLinks: validated.suggestedLinks,
       suggestedQuestions: validated.suggestedQuestions,
-      mode: 'SIMULATED',
+      mode: providerMode,
     };
     this.sessions.append(
       session.id,
@@ -134,7 +137,7 @@ export class PublicAssistantOrchestratorService {
       citations: [],
       suggestedLinks: this.navigation.links(['contact'], language),
       suggestedQuestions: [],
-      mode: 'SIMULATED',
+      mode: this.selectedMode(),
     };
   }
 
@@ -157,5 +160,11 @@ export class PublicAssistantOrchestratorService {
       suggestedQuestions: [],
       mode: 'DEGRADED',
     };
+  }
+
+  private selectedMode(): 'DOCUMENTARY' | 'SIMULATED' | 'BEDROCK' {
+    if (this.config.provider === 'documentary') return 'DOCUMENTARY';
+    if (this.config.provider === 'bedrock') return 'BEDROCK';
+    return 'SIMULATED';
   }
 }
