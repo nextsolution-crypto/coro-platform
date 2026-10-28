@@ -53,7 +53,9 @@ métier. PDF final et signature restent séparés et non validés.
 La première CI du candidat a expiré après 15 minutes pendant la suite
 PostgreSQL globale, sans assertion en échec. Le plafond du job a été porté à
 25 minutes sans supprimer, ignorer ni modifier les tests et sans changer les
-conditions des jobs d'image ou de production.
+conditions des jobs d'image ou de production. Le harnais `plan-security` a
+également été aligné sur le contrat final : document canonique requis, PDF
+simulé terminé, attente de l'outbox et nettoyage des nouvelles relations.
 
 ## Contrôles de mandat
 
