@@ -93,7 +93,7 @@ async function main() {
 
 module.exports = { collectDuplicateInventory, runReadOnlyInventory, sanitizedReport, summarize };
 
-if (require.main === module) main().catch(() => {
+if (require.main === module || process.env.CORO_DOCUMENT_DUPLICATE_INVENTORY_RUN === 'true') main().catch(() => {
   process.stdout.write(`${JSON.stringify({ schemaVersion: 1, execution: 'FAILED', readOnly: true })}\n`);
   process.exitCode = 1;
 });

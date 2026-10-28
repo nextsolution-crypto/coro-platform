@@ -16,6 +16,11 @@ const group = (overrides = {}) => ({
   ...overrides,
 });
 
+test('starts from stdin only when the explicit runtime switch is present', () => {
+  const source = readFileSync(require.resolve('./document-duplicate-inventory.cjs'), 'utf8');
+  assert.match(source, /require\.main === module \|\| process\.env\.CORO_DOCUMENT_DUPLICATE_INVENTORY_RUN === 'true'/);
+});
+
 test('reports a genuinely blocking duplicate and emits a sanitized public summary', async () => {
   let called = false;
   const report = await collectDuplicateInventory(async () => {
