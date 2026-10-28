@@ -6,18 +6,27 @@ import { AdviserActor, mutableProjectAccessWhere, projectAccessWhere } from '../
 import { generateModule1, DocumentContext } from './module1/module1.index';
 import { generateModule2 } from './module2.templates';
 import { generateModule3 } from './module3.templates';
-import { generateModule4, getActiveProcedures, getAllProcedures } from './module4.templates';
+import {
+  generateModule4,
+  getActiveProcedures,
+  getAllProcedures,
+} from './module4.templates';
 import { generateModule8 } from './module8.templates';
 import { generatePcaModules } from './pca.templates';
-
 export interface DocumentGenerationCommand {
   idempotencyKey?: string;
   expectedDocumentVersion?: string | number;
 }
+import { DocumentEditorIntegrityService } from './document-editor-integrity.service';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class GeneratorService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly editorIntegrity: DocumentEditorIntegrityService,
+    private readonly auditService: AuditService,
+  ) {}
 
   /**
    * Normalise les valeurs booléennes provenant du configurateur.
@@ -25,7 +34,13 @@ export class GeneratorService {
    */
   private asBool(value: any): boolean {
     if (value === true) return true;
-    if (value === false || value === null || value === undefined || value === '') return false;
+    if (
+      value === false ||
+      value === null ||
+      value === undefined ||
+      value === ''
+    )
+      return false;
 
     if (typeof value === 'number') return value !== 0;
 
@@ -37,7 +52,7 @@ export class GeneratorService {
     return Boolean(value);
   }
 
-private async loadProceduresFromDB(
+  private async loadProceduresFromDB(
     organizationId: string,
     config: any,
     documentType: string,
@@ -88,7 +103,7 @@ private async loadProceduresFromDB(
       // ─────────────────────────────────────────────────────────────
       // 3) Construire la version effective de chaque procédure
       // ─────────────────────────────────────────────────────────────
-      const allProcs = defaults.map(d => {
+      const allProcs = defaults.map((d) => {
         const organizationOverride = organizationOverrideMap.get(d.id);
         const projectOverride = projectOverrideMap.get(d.id);
 
@@ -121,24 +136,21 @@ private async loadProceduresFromDB(
         activeRoleCodes,
       );
 
-      const autoCodes = new Set(
-        autoFromTS
-          .map(p => p?.code)
-          .filter(Boolean),
-      );
+      const autoCodes = new Set(autoFromTS.map((p) => p?.code).filter(Boolean));
 
       const allTSCodes = new Set(
         getAllProcedures()
-          .map(p => p?.code)
+          .map((p) => p?.code)
           .filter(Boolean),
       );
 
       const filterRoleSections = (procedure: any) => ({
         ...procedure,
-        roleSections: (procedure.roleSections || []).filter((rs: any) =>
-          rs.roleCode === 'TOUS' ||
-          rs.roleCode === 'ROLE-OCC' ||
-          activeRoleCodes.includes(rs.roleCode),
+        roleSections: (procedure.roleSections || []).filter(
+          (rs: any) =>
+            rs.roleCode === 'TOUS' ||
+            rs.roleCode === 'ROLE-OCC' ||
+            activeRoleCodes.includes(rs.roleCode),
         ),
       });
 
@@ -163,7 +175,7 @@ private async loadProceduresFromDB(
       // 5) Procédures automatiques
       // ─────────────────────────────────────────────────────────────
       const autoProcedures = allProcs
-        .filter(p => autoCodes.has(p.code))
+        .filter((p) => autoCodes.has(p.code))
         .filter(isUsable)
         .map(filterRoleSections);
 
@@ -173,7 +185,7 @@ private async loadProceduresFromDB(
       //    activationRule = 'always'
       // ─────────────────────────────────────────────────────────────
       const newDefaultProcedures = allProcs
-        .filter(p => {
+        .filter((p) => {
           if (p._projectIsActive === false) return false;
           if (allTSCodes.has(p.code)) return false;
           if (customProcedureIds.includes(p.id)) return false;
@@ -193,10 +205,11 @@ private async loadProceduresFromDB(
       // 7) Procédures standards ajoutées manuellement
       // ─────────────────────────────────────────────────────────────
       const manualProcedures = allProcs
-        .filter(p =>
-          customProcedureIds.includes(p.id) &&
-          !autoCodes.has(p.code) &&
-          p._projectIsActive !== false,
+        .filter(
+          (p) =>
+            customProcedureIds.includes(p.id) &&
+            !autoCodes.has(p.code) &&
+            p._projectIsActive !== false,
         )
         .filter(isUsable)
         .map(filterRoleSections);
@@ -204,9 +217,7 @@ private async loadProceduresFromDB(
       // ─────────────────────────────────────────────────────────────
       // 8) Procédures IA / CustomProcedure ajoutées au projet
       // ─────────────────────────────────────────────────────────────
-      const standardProcedureIds = new Set(
-        allProcs.map(p => p.id),
-      );
+      const standardProcedureIds = new Set(allProcs.map((p) => p.id));
 
       const customIAIds = customProcedureIds.filter(
         (id: string) => !standardProcedureIds.has(id),
@@ -226,13 +237,11 @@ private async loadProceduresFromDB(
             })
           : [];
 
-      const customIAMap = new Map(
-        customIAProcedures.map(p => [p.id, p]),
-      );
+      const customIAMap = new Map(customIAProcedures.map((p) => [p.id, p]));
 
       // Respecter l'ordre de customProcedureIds.
       const iaProcedures = customIAIds
-        .map(id => customIAMap.get(id))
+        .map((id) => customIAMap.get(id))
         .filter(Boolean)
         .filter((p: any) => {
           // Le toggle de l'éditeur utilise ACTIVE / DRAFT.
@@ -250,52 +259,36 @@ private async loadProceduresFromDB(
             titleEN: content.titleEN || p.titleEN,
             icon: content.icon,
             headerColor:
-              content.headerColor ||
-              content.color ||
-              p.color ||
-              '#2C3E50',
-            color:
-              content.color ||
-              p.color ||
-              '#2C3E50',
+              content.headerColor || content.color || p.color || '#2C3E50',
+            color: content.color || p.color || '#2C3E50',
             activationRule: content.activationRule || 'manual',
             documentTypes: content.documentTypes || [],
             phase: content.phase,
             directivesGenerales: content.directivesGenerales || [],
             roleSections: (content.roleSections || [])
-              .filter((rs: any) =>
-                rs.roleCode === 'TOUS' ||
-                rs.roleCode === 'ROLE-OCC' ||
-                activeRoleCodes.includes(rs.roleCode),
+              .filter(
+                (rs: any) =>
+                  rs.roleCode === 'TOUS' ||
+                  rs.roleCode === 'ROLE-OCC' ||
+                  activeRoleCodes.includes(rs.roleCode),
               )
               .map((rs: any) => ({
                 roleCode: rs.roleCode,
-                roleLabelFR:
-                  rs.roleLabelFR ||
-                  rs.roleName ||
-                  rs.roleCode,
+                roleLabelFR: rs.roleLabelFR || rs.roleName || rs.roleCode,
                 roleLabelEN:
-                  rs.roleLabelEN ||
-                  rs.roleNameEN ||
-                  rs.roleName ||
-                  rs.roleCode,
+                  rs.roleLabelEN || rs.roleNameEN || rs.roleName || rs.roleCode,
                 headerColor:
-                  rs.headerColor ||
-                  content.headerColor ||
-                  p.color ||
-                  '#2C3E50',
+                  rs.headerColor || content.headerColor || p.color || '#2C3E50',
                 steps: Array.isArray(rs.steps)
                   ? rs.steps
-                  : (rs.actions || []).map(
-                      (action: string, idx: number) => ({
-                        id: `${p.code}_${idx}`,
-                        textFR: action,
-                        textEN:
-                          rs.actionsEN && rs.actionsEN[idx]
-                            ? rs.actionsEN[idx]
-                            : action,
-                      }),
-                    ),
+                  : (rs.actions || []).map((action: string, idx: number) => ({
+                      id: `${p.code}_${idx}`,
+                      textFR: action,
+                      textEN:
+                        rs.actionsEN && rs.actionsEN[idx]
+                          ? rs.actionsEN[idx]
+                          : action,
+                    })),
               })),
             importantBoxes: content.importantBoxes || [],
             objective: content.objective || p.objective,
@@ -317,7 +310,7 @@ private async loadProceduresFromDB(
 
       const seen = new Set<string>();
 
-      return combined.filter(proc => {
+      return combined.filter((proc) => {
         const key = proc.id || proc.code;
         if (!key || seen.has(key)) return false;
         seen.add(key);
@@ -333,7 +326,9 @@ private async loadProceduresFromDB(
   }
 
   private async assertProjectOwnership(projectId: string, actor: AdviserActor) {
-    const project = await this.prisma.project.findFirst({ where: { id: projectId, ...projectAccessWhere(actor) } });
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, isActive: true, ...projectAccessWhere(actor) },
+    });
     if (!project) {
       throw new NotFoundException('Projet introuvable');
     }
@@ -561,7 +556,10 @@ private async loadProceduresFromDB(
     return JSON.parse(JSON.stringify(source));
   }
 
-  private async buildContext(projectId: string, config: any): Promise<DocumentContext> {
+  private async buildContext(
+    projectId: string,
+    config: any,
+  ): Promise<DocumentContext> {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       include: {
@@ -577,8 +575,7 @@ private async loadProceduresFromDB(
 
     const isPca = project.documentType === 'PCA';
 
-    const defaultResponsableNom =
-      `${project.user.firstName} ${project.user.lastName} — ${project.user.companyName || 'CORO'}`;
+    const defaultResponsableNom = `${project.user.firstName} ${project.user.lastName} — ${project.user.companyName || 'CORO'}`;
 
     return {
       clientName: project.client.name,
@@ -586,12 +583,8 @@ private async loadProceduresFromDB(
       buildingAddress: `${project.building.address}, ${project.building.city}, ${project.building.province}`,
       city: project.building.city,
       province: isPca
-  ? (project.building.province || '')
-  : (
-      config.province ||
-      project.building.province ||
-      'Quebec'
-    ),
+        ? project.building.province || ''
+        : config.province || project.building.province || 'Quebec',
       year: project.year,
       documentType: project.documentType,
 
@@ -602,75 +595,50 @@ private async loadProceduresFromDB(
       // On évite donc de fabriquer des valeurs propres au PMU / PSI.
       responsableNom: isPca
         ? defaultResponsableNom
-        : (config.responsableNom || defaultResponsableNom),
+        : config.responsableNom || defaultResponsableNom,
 
       responsableTitre: isPca
         ? ''
-        : (
-            config.responsableTitre ||
-            project.building.responsableTitre ||
-            'Directeur de la sécurité'
-          ),
+        : config.responsableTitre ||
+          project.building.responsableTitre ||
+          'Directeur de la sécurité',
 
       dateReleve: isPca
-        ? (
-            config.effectiveDate
-              ? new Date(config.effectiveDate).toISOString().split('T')[0]
-              : ''
-          )
-        : (
-            config.dateReleve ||
-            new Date().toISOString().split('T')[0]
-          ),
+        ? config.effectiveDate
+          ? new Date(config.effectiveDate).toISOString().split('T')[0]
+          : ''
+        : config.dateReleve || new Date().toISOString().split('T')[0],
 
       versionDocument: isPca
         ? ''
-        : (config.versionDocument || 'Création initiale'),
+        : config.versionDocument || 'Création initiale',
 
       historiqueList: isPca
         ? []
-        : (
-            Array.isArray(config.historiqueList)
-              ? config.historiqueList
-              : []
-          ),
+        : Array.isArray(config.historiqueList)
+          ? config.historiqueList
+          : [],
 
       // Ces données sont utilisées par les générateurs PMU / PSI.
       // PcaConfig ne les recueille pas : pour un PCA on ne déduit pas
       // artificiellement leur présence ou leur absence.
-      floors: isPca
-        ? 0
-        : (config.floors ?? 0),
+      floors: isPca ? 0 : (config.floors ?? 0),
 
-      hauteurBatiment: isPca
-        ? false
-        : (config.hauteurBatiment ?? false),
+      hauteurBatiment: isPca ? false : (config.hauteurBatiment ?? false),
 
-      multiLocataires: isPca
-        ? false
-        : this.asBool(config.multiLocataires),
+      multiLocataires: isPca ? false : this.asBool(config.multiLocataires),
 
       companyName: project.user.companyName || 'CORO',
 
       buildingType: isPca
-        ? (project.building.buildingType || '')
-        : (
-            config.buildingType ||
-            project.building.buildingType ||
-            'office'
-          ),
+        ? project.building.buildingType || ''
+        : config.buildingType || project.building.buildingType || 'office',
 
-      has_sprinklers: isPca
-        ? undefined
-        : this.asBool(config.gicleurs),
+      has_sprinklers: isPca ? undefined : this.asBool(config.gicleurs),
 
-      has_generator: isPca
-        ? undefined
-        : this.asBool(config.generatrice),
+      has_generator: isPca ? undefined : this.asBool(config.generatrice),
 
-      has_elevators: isPca
-        ? undefined
-        : this.asBool(config.ascenseurs),
+      has_elevators: isPca ? undefined : this.asBool(config.ascenseurs),
 
       has_hazardous_materials: isPca
         ? undefined
@@ -692,82 +660,99 @@ private async loadProceduresFromDB(
     // Une seule configuration résolue alimente toute la génération.
     // Project.configData est canonique; le body n'est qu'un fallback legacy.
     const resolvedConfig = await this.resolveGenerationConfig(
-  projectId,
-  organizationId,
-  config,
-);
-
-const project = await this.prisma.project.findFirst({
-  where: {
-    id: projectId,
-    organizationId,
-  },
-  select: {
-    documentType: true,
-  },
-});
-
-if (!project) {
-  throw new NotFoundException('Projet introuvable');
-}
-
-let generationConfig = resolvedConfig;
-
-if (project.documentType === 'PCA') {
-  const pcaConfig = await this.prisma.pcaConfig.findUnique({
-    where: {
       projectId,
-    },
-  });
-
-  if (!pcaConfig) {
-    throw new NotFoundException(
-      'Configuration PCA introuvable. Sauvegardez le configurateur avant de générer le document.',
+      organizationId,
+      config,
     );
-  }
 
-  generationConfig = JSON.parse(JSON.stringify(pcaConfig));
-}
+    const project = await this.prisma.project.findFirst({
+      where: {
+        id: projectId,
+        organizationId,
+      },
+      select: {
+        documentType: true,
+      },
+    });
 
-const ctx = await this.buildContext(projectId, generationConfig);
-const isPca = ctx.documentType === 'PCA';
-const isPsi = ctx.documentType === 'PSI';
-const payloadHash = this.generationPayloadHash(ctx.documentType, generationConfig);
+    if (!project) {
+      throw new NotFoundException('Projet introuvable');
+    }
+
+    let generationConfig = resolvedConfig;
+
+    if (project.documentType === 'PCA') {
+      const pcaConfig = await this.prisma.pcaConfig.findUnique({
+        where: {
+          projectId,
+        },
+      });
+
+      if (!pcaConfig) {
+        throw new NotFoundException(
+          'Configuration PCA introuvable. Sauvegardez le configurateur avant de générer le document.',
+        );
+      }
+
+      generationConfig = JSON.parse(JSON.stringify(pcaConfig));
+    }
+
+    const ctx = await this.buildContext(projectId, generationConfig);
+    const isPca = ctx.documentType === 'PCA';
+    const isPsi = ctx.documentType === 'PSI';
+    const payloadHash = this.generationPayloadHash(
+      ctx.documentType,
+      generationConfig,
+    );
 
     // ── Branche PCA ──
     if (isPca) {
-  const existingPcaDoc = await this.prisma.document.findFirst({
-    where: { projectId },
-    select: { content: true },
-  });
-  const existingPcaContent = (existingPcaDoc?.content as any) || {};
-
-  const pcaModules = generatePcaModules(ctx, generationConfig);
-
-  const mergePcaModules = (newModules: any[], existingModules: any[]): any[] => {
-    if (!existingModules?.length) return newModules;
-    return newModules.map((newMod: any) => {
-      const existingMod = existingModules.find(
-        (m: any) => m.moduleNumber === newMod.moduleNumber
-      );
-      if (!existingMod) return newMod;
-      const mergedSections = newMod.sections.map((newSec: any) => {
-        const existingSec = existingMod.sections?.find(
-          (s: any) => s.id === newSec.id
-        );
-        if (existingSec?.content && existingSec.content !== newSec.content) {
-          return { ...newSec, content: existingSec.content };
-        }
-        return newSec;
+      const existingPcaDoc = await this.prisma.document.findFirst({
+        where: { projectId },
+        select: { content: true },
       });
-      return { ...newMod, sections: mergedSections };
-    });
-  };
+      const existingPcaContent = (existingPcaDoc?.content as any) || {};
 
-  const mergedFr = mergePcaModules(pcaModules.fr, existingPcaContent.modules_fr || []);
-  const mergedEn = mergePcaModules(pcaModules.en, existingPcaContent.modules_en || []);
+      const pcaModules = generatePcaModules(ctx, generationConfig);
 
-      const existing = await this.prisma.document.findFirst({ where: { projectId } });
+      const mergePcaModules = (
+        newModules: any[],
+        existingModules: any[],
+      ): any[] => {
+        if (!existingModules?.length) return newModules;
+        return newModules.map((newMod: any) => {
+          const existingMod = existingModules.find(
+            (m: any) => m.moduleNumber === newMod.moduleNumber,
+          );
+          if (!existingMod) return newMod;
+          const mergedSections = newMod.sections.map((newSec: any) => {
+            const existingSec = existingMod.sections?.find(
+              (s: any) => s.id === newSec.id,
+            );
+            if (
+              existingSec?.content &&
+              existingSec.content !== newSec.content
+            ) {
+              return { ...newSec, content: existingSec.content };
+            }
+            return newSec;
+          });
+          return { ...newMod, sections: mergedSections };
+        });
+      };
+
+      const mergedFr = mergePcaModules(
+        pcaModules.fr,
+        existingPcaContent.modules_fr || [],
+      );
+      const mergedEn = mergePcaModules(
+        pcaModules.en,
+        existingPcaContent.modules_en || [],
+      );
+
+      const existing = await this.prisma.document.findFirst({
+        where: { projectId },
+      });
       const documentData = {
         title: `PCA - ${ctx.clientName} ${ctx.year}`,
         content: {
@@ -790,14 +775,15 @@ const payloadHash = this.generationPayloadHash(ctx.documentType, generationConfi
     }
 
     // Vérifier si l'organisation a un template Module 1 personnalisé
-    const orgTemplate = await this.prisma.organizationModule1Template.findUnique({
-      where: { organizationId },
-    });
+    const orgTemplate =
+      await this.prisma.organizationModule1Template.findUnique({
+        where: { organizationId },
+      });
 
     let module1Result = generateModule1(ctx);
 
     if (orgTemplate && (orgTemplate.sections as any[]).length > 0) {
-      const customSections = (orgTemplate.sections as any[]).map(s => ({
+      const customSections = (orgTemplate.sections as any[]).map((s) => ({
         id: s.id,
         title: s.title,
         content: s.content
@@ -832,34 +818,48 @@ const payloadHash = this.generationPayloadHash(ctx.documentType, generationConfi
     // Chercher les données M2 dans les deux structures possibles
     const section2_2 =
       existingContent?.module2?.section2_2 ||
-      existingContent?.modules_fr?.find((m: any) => m.moduleNumber === 2)
-        ?.sections?.find((s: any) => s.id === '2.2' || s.id === 'm2_contacts')?.contacts ||
+      existingContent?.modules_fr
+        ?.find((m: any) => m.moduleNumber === 2)
+        ?.sections?.find((s: any) => s.id === '2.2' || s.id === 'm2_contacts')
+        ?.contacts ||
       [];
     const existingCustomRoles = existingContent?.module3?.customRoles || [];
 
-    const module3Result = isPsi ? null : generateModule3(ctx, resolvedConfig, section2_2, existingCustomRoles);
+    const module3Result = isPsi
+      ? null
+      : generateModule3(ctx, resolvedConfig, section2_2, existingCustomRoles);
 
     // Récupère les rôles actifs depuis Module 3.
     // Chercher les rôles actifs dans les deux structures possibles.
     const savedOrgRoles =
       existingContent?.module3?.orgRoles ||
-      existingContent?.modules_fr?.find((m: any) => m.moduleNumber === 3)
+      existingContent?.modules_fr
+        ?.find((m: any) => m.moduleNumber === 3)
         ?.sections?.find((s: any) => s.id === '3.1')?.orgRoles ||
       [];
 
-    const activeRoleCodes = savedOrgRoles.length > 0
-      ? savedOrgRoles
-          .filter((r: any) => r.isActive)
-          .map((r: any) => r.roleCode)
-          .filter(Boolean)
-      : [
-          'ROLE-AS', 'ROLE-CU', 'ROLE-EPI', 'ROLE-RM',
-          'ROLE-RPR', 'ROLE-SS', 'ROLE-BRI', 'ROLE-RS',
-          'ROLE-CHE', 'ROLE-ACC',
-        ];
+    const activeRoleCodes =
+      savedOrgRoles.length > 0
+        ? savedOrgRoles
+            .filter((r: any) => r.isActive)
+            .map((r: any) => r.roleCode)
+            .filter(Boolean)
+        : [
+            'ROLE-AS',
+            'ROLE-CU',
+            'ROLE-EPI',
+            'ROLE-RM',
+            'ROLE-RPR',
+            'ROLE-SS',
+            'ROLE-BRI',
+            'ROLE-RS',
+            'ROLE-CHE',
+            'ROLE-ACC',
+          ];
 
     // Récupère les procédures manuelles ajoutées
-    const customProcedureIds = existingContent?.module4?.customProcedureIds || [];
+    const customProcedureIds =
+      existingContent?.module4?.customProcedureIds || [];
 
     // Charger les procédures depuis la DB (avec overrides par organisation)
     const proceduresFromDB = await this.loadProceduresFromDB(
@@ -969,10 +969,15 @@ const payloadHash = this.generationPayloadHash(ctx.documentType, generationConfi
 
   async getDocument(projectId: string, actor: AdviserActor) {
     await this.assertProjectOwnership(projectId, actor);
-    return this.prisma.document.findFirst({
+    const document = await this.prisma.document.findFirst({
       where: { projectId },
       include: { project: { include: { client: true, building: true } } },
     });
+    if (!document) return null;
+    return {
+      ...document,
+      content: this.editorIntegrity.sanitize(document.content),
+    };
   }
 
   async updateModuleContent(
@@ -981,30 +986,47 @@ const payloadHash = this.generationPayloadHash(ctx.documentType, generationConfi
     sectionId: string,
     content: string,
     language: string = 'fr',
+    expectedLockVersion: number,
     actor: AdviserActor,
   ) {
-    const doc = await this.prisma.document.findFirst({
-      where: { id: documentId, project: { is: projectAccessWhere(actor) } },
+    const result = await this.editorIntegrity.mutateContent(
+      documentId,
+      actor,
+      expectedLockVersion,
+      (docContent) => {
+        const modulesKey = language === 'en' ? 'modules_en' : 'modules_fr';
+        const modules = docContent[modulesKey] || [];
+        const moduleIdx = modules.findIndex(
+          (m: any) => m.moduleNumber === parseInt(moduleId),
+        );
+        if (moduleIdx === -1) throw new NotFoundException('Module introuvable');
+        const sectionIdx = modules[moduleIdx].sections.findIndex(
+          (s: any) => s.id === sectionId,
+        );
+        if (sectionIdx === -1)
+          throw new NotFoundException('Section introuvable');
+        modules[moduleIdx].sections[sectionIdx].content = content;
+        return {
+          content: { ...docContent, [modulesKey]: modules },
+          value: { moduleId, sectionId, language },
+        };
+      },
+    );
+    await this.auditService.log({
+      action: 'EDIT_SECTION',
+      entityType: 'DOCUMENT',
+      entityId: result.documentId,
+      projectId: result.projectId,
+      description: `Section ${moduleId}/${sectionId} modifiée`,
+      metadata: {
+        moduleId,
+        sectionId,
+        language,
+        lockVersion: result.lockVersion,
+      },
+      userId: actor.userId,
+      organizationId: actor.organizationId,
     });
-    if (!doc) throw new Error('Document introuvable');
-
-    const docContent = doc.content as any;
-    const modulesKey = language === 'en' ? 'modules_en' : 'modules_fr';
-    const modules = docContent[modulesKey] || [];
-
-    const moduleIdx = modules.findIndex((m: any) => m.moduleNumber === parseInt(moduleId));
-    if (moduleIdx === -1) throw new Error('Module introuvable');
-
-    const sectionIdx = modules[moduleIdx].sections.findIndex((s: any) => s.id === sectionId);
-    if (sectionIdx === -1) throw new Error('Section introuvable');
-
-    modules[moduleIdx].sections[sectionIdx].content = content;
-
-    await this.prisma.document.update({
-      where: { id: documentId },
-      data: { content: { ...docContent, [modulesKey]: modules } },
-    });
-
-    return { success: true, moduleId, sectionId, language };
+    return { success: true, ...result.value, lockVersion: result.lockVersion };
   }
 }

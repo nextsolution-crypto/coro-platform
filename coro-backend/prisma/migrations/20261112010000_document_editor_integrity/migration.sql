@@ -1,0 +1,2 @@
+ALTER TABLE "Document"
+ADD COLUMN "lockVersion" INTEGER NOT NULL DEFAULT 0;

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export type AuditAction =
@@ -8,6 +9,7 @@ export type AuditAction =
   | 'STATUS_CHANGE'
   | 'VERSION_SAVE'
   | 'VERSION_RESTORE'
+  | 'VERSION_DELETE'
   | 'PROCEDURE_TOGGLE'
   | 'PROCEDURE_EDIT'
   | 'TEMPLATE_CREATE'
@@ -23,7 +25,7 @@ export class AuditService {
     entityId: string;
     projectId?: string;
     description: string;
-    metadata?: any;
+    metadata?: Prisma.InputJsonValue;
     userId: string;
     organizationId: string;
   }) {

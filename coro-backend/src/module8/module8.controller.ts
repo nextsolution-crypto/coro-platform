@@ -1,4 +1,14 @@
-import { Controller, Get, Put, Post, Param, Body, UseGuards, Request, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Put,
+  Post,
+  Param,
+  Body,
+  UseGuards,
+  Request,
+  Res,
+} from '@nestjs/common';
 import { Module8Service } from './module8.service';
 import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
@@ -11,7 +21,7 @@ export class Module8Controller {
 
   @Get()
   getData(@Param('projectId') projectId: string, @Request() req: any) {
-    return this.service.getData(projectId, req.user.organizationId);
+    return this.service.getData(projectId, req.user);
   }
 
   @Put()
@@ -20,7 +30,7 @@ export class Module8Controller {
     @Body() dto: any,
     @Request() req: any,
   ) {
-    return this.service.saveData(projectId, dto, req.user.organizationId);
+    return this.service.saveData(projectId, dto, req.user);
   }
 
   @Post('print-attendance')
@@ -30,7 +40,11 @@ export class Module8Controller {
     @Request() req: any,
     @Res() res: Response,
   ) {
-    const pdf = await this.service.generateAttendancePdf(projectId, req.user.organizationId, body.language || 'fr');
+    const pdf = await this.service.generateAttendancePdf(
+      projectId,
+      req.user,
+      body.language || 'fr',
+    );
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': 'attachment; filename="feuille-presence.pdf"',

@@ -1,28 +1,31 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { useAuthStore } from '@/stores/auth.store';
-import api from '@/lib/api';
+import { useState, useEffect, useRef } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { useAuthStore } from "@/stores/auth.store";
+import api from "@/lib/api";
 
 // ── Composants éditeur ──────────────────────────────────────
-import Module2Section from '@/components/editor/Module2Section';
-import Module3Section from '@/components/editor/Module3Section';
-import Module4Section from '@/components/editor/Module4Section';
-import Module4PcaSection from '@/components/editor/Module4PcaSection';
-import Module6PcaContacts from '@/components/editor/Module6PcaContacts';
-import Module6Section from '@/components/editor/Module6Section';
-import Module7Section from '@/components/editor/Module7Section';
-import Module8Section from '@/components/editor/Module8Section';
-import SpellCheckedTextarea from '@/components/editor/SpellCheckedTextarea';
-import VersionHistory from '@/components/editor/VersionHistory';
+import Module2Section from "@/components/editor/Module2Section";
+import Module3Section from "@/components/editor/Module3Section";
+import Module4Section from "@/components/editor/Module4Section";
+import Module4PcaSection from "@/components/editor/Module4PcaSection";
+import Module6PcaContacts from "@/components/editor/Module6PcaContacts";
+import Module6Section from "@/components/editor/Module6Section";
+import Module7Section from "@/components/editor/Module7Section";
+import Module8Section from "@/components/editor/Module8Section";
+import SpellCheckedTextarea from "@/components/editor/SpellCheckedTextarea";
+import VersionHistory from "@/components/editor/VersionHistory";
 
 // ── Types & constantes ──────────────────────────────────────
 import {
-  ROLES_INTERNES_BUREAU_FR, ROLES_INTERNES_BUREAU_EN,
-  ROLES_INTERNES_INDUSTRIEL_FR, ROLES_INTERNES_INDUSTRIEL_EN,
-  ALL_EQUIPEMENTS_FR, ALL_EQUIPEMENTS_EN,
-} from '@/lib/module2.roles';
+  ROLES_INTERNES_BUREAU_FR,
+  ROLES_INTERNES_BUREAU_EN,
+  ROLES_INTERNES_INDUSTRIEL_FR,
+  ROLES_INTERNES_INDUSTRIEL_EN,
+  ALL_EQUIPEMENTS_FR,
+  ALL_EQUIPEMENTS_EN,
+} from "@/lib/module2.roles";
 
 // ============================================================
 // TYPES
@@ -60,6 +63,8 @@ interface DocumentContent {
 
 interface Document {
   id: string;
+  lockVersion: number;
+  status: string;
   title: string;
   content: DocumentContent;
   project: {
@@ -78,24 +83,28 @@ interface Document {
 
 const SPECIAL_MODULES = [4, 6, 7, 8];
 
-function getSpecialModuleLabel(moduleNumber: number, lang: 'fr' | 'en', docType?: string): string {
-  if (docType === 'PCA') {
+function getSpecialModuleLabel(
+  moduleNumber: number,
+  lang: "fr" | "en",
+  docType?: string,
+): string {
+  if (docType === "PCA") {
     const pcaLabels: Record<number, [string, string]> = {
-      4: ['Procédures PCA',           'BCP Procedures'],
-      5: ['Stratégies de continuité', 'Continuity strategies'],
-      6: ['Communication de crise',   'Crisis communication'],
-      7: ['Activation et reprise',    'Activation and recovery'],
-      8: ['Exercices et maintien',    'Drills and maintenance'],
+      4: ["Procédures PCA", "BCP Procedures"],
+      5: ["Stratégies de continuité", "Continuity strategies"],
+      6: ["Communication de crise", "Crisis communication"],
+      7: ["Activation et reprise", "Activation and recovery"],
+      8: ["Exercices et maintien", "Drills and maintenance"],
     };
-    return pcaLabels[moduleNumber]?.[lang === 'fr' ? 0 : 1] ?? '';
+    return pcaLabels[moduleNumber]?.[lang === "fr" ? 0 : 1] ?? "";
   }
   const labels: Record<number, [string, string]> = {
-    4: ['Voir les procédures',   'View procedures'],
-    6: ['Plans techniques',      'Technical plans'],
-    7: ['Description du site',   'Site description'],
-    8: ['Registres et annexes',  'Records and appendices'],
+    4: ["Voir les procédures", "View procedures"],
+    6: ["Plans techniques", "Technical plans"],
+    7: ["Description du site", "Site description"],
+    8: ["Registres et annexes", "Records and appendices"],
   };
-  return labels[moduleNumber]?.[lang === 'fr' ? 0 : 1] ?? '';
+  return labels[moduleNumber]?.[lang === "fr" ? 0 : 1] ?? "";
 }
 
 // ============================================================
@@ -103,122 +112,287 @@ function getSpecialModuleLabel(moduleNumber: number, lang: 'fr' | 'en', docType?
 // ============================================================
 
 export default function EditorPage() {
-  const router    = useRouter();
-  const params    = useParams();
+  const router = useRouter();
+  const params = useParams();
   const projectId = params.projectId as string;
   const { isAuthenticated, initAuth } = useAuthStore();
 
-  const [document,       setDocument]       = useState<Document | null>(null);
-  const [loading,        setLoading]        = useState(true);
-  const [language,       setLanguage]       = useState<'fr' | 'en'>('fr');
-  const [activeModule,   setActiveModule]   = useState(0);
-  const [activeSection,  setActiveSection]  = useState(0);
-  const [editingContent, setEditingContent] = useState('');
-  const [saving,         setSaving]         = useState(false);
-  const [saved,          setSaved]          = useState(false);
-  const [lastSavedAt,    setLastSavedAt]    = useState<Date | null>(null);
-  const [isEditing,      setIsEditing]      = useState(false);
-  const [validations,    setValidations]    = useState<any[]>([]);
+  const [document, setDocument] = useState<Document | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [language, setLanguage] = useState<"fr" | "en">("fr");
+  const [activeModule, setActiveModule] = useState(0);
+  const [activeSection, setActiveSection] = useState(0);
+  const [editingContent, setEditingContent] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [validations, setValidations] = useState<any[]>([]);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [hasPlans, setHasPlans] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const documentRequestRef = useRef(0);
+  const saveRequestRef = useRef(0);
 
   // ── Init ────────────────────────────────────────────────
 
-  useEffect(() => { initAuth(); }, []);
+  useEffect(() => {
+    initAuth();
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated) fetchDocument();
     else {
-      const token = localStorage.getItem('coro_token');
-      if (!token) router.push('/login');
+      const token = localStorage.getItem("coro_token");
+      if (!token) router.push("/login");
     }
   }, [isAuthenticated]);
 
   const fetchDocument = async () => {
+    const requestId = ++documentRequestRef.current;
     try {
       const [docRes, plansRes] = await Promise.all([
         api.get(`/generator/document/${projectId}`),
-        api.get(`/projects/${projectId}/building-plans`).catch(() => ({ data: [] })),
+        api
+          .get(`/projects/${projectId}/building-plans`)
+          .catch(() => ({ data: [] })),
       ]);
+      if (requestId !== documentRequestRef.current) return;
       setDocument(docRes.data);
       setHasPlans((plansRes.data || []).length > 0);
       try {
         const valRes = await api.get(`/generator/validate/${projectId}`);
-        setValidations(valRes.data || []);
-      } catch { setValidations([]); }
+        if (requestId === documentRequestRef.current)
+          setValidations(valRes.data || []);
+      } catch {
+        if (requestId === documentRequestRef.current) setValidations([]);
+      }
     } catch (err) {
+      if (requestId !== documentRequestRef.current) return;
       console.error(err);
       router.push(`/projects/${projectId}`);
     } finally {
-      setLoading(false);
+      if (requestId === documentRequestRef.current) setLoading(false);
     }
+  };
+
+  const fetchCurrentDocument = async (): Promise<Document> => {
+    const response = await api.get(`/generator/document/${projectId}`);
+    return response.data;
+  };
+
+  const getSectionContent = (
+    current: Document,
+    moduleNumber: number,
+    sectionId: string,
+    lang: "fr" | "en",
+  ) => {
+    const modules =
+      lang === "fr"
+        ? current.content.modules_fr || []
+        : current.content.modules_en || [];
+    return modules
+      .find((module) => module.moduleNumber === moduleNumber)
+      ?.sections?.find((section) => section.id === sectionId)?.content;
   };
 
   // ── Helpers ─────────────────────────────────────────────
 
   const getModules = (): Module[] => {
     if (!document?.content) return [];
-    return language === 'fr'
+    return language === "fr"
       ? document.content.modules_fr || []
       : document.content.modules_en || [];
   };
 
+  const hasUnsavedChanges = Boolean(
+    document &&
+    isEditing &&
+    editingContent !==
+      (getModules()[activeModule]?.sections?.[activeSection]?.content || ""),
+  );
+
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedChanges) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [hasUnsavedChanges]);
+
+  const navigateFromEditor = (destination: string) => {
+    if (
+      hasUnsavedChanges &&
+      !window.confirm(
+        "Des modifications ne sont pas enregistrées. Quitter l’éditeur?",
+      )
+    )
+      return;
+    router.push(destination);
+  };
+
   const handleSectionClick = (moduleIdx: number, sectionIdx: number) => {
+    if (
+      hasUnsavedChanges &&
+      !window.confirm(
+        "Des modifications ne sont pas enregistrées. Continuer sans les sauvegarder?",
+      )
+    )
+      return;
     const modules = getModules();
     setActiveModule(moduleIdx);
     setActiveSection(sectionIdx);
-    setEditingContent(modules[moduleIdx]?.sections?.[sectionIdx]?.content || '');
+    setEditingContent(
+      modules[moduleIdx]?.sections?.[sectionIdx]?.content || "",
+    );
     setIsEditing(false);
   };
 
-  const handleLanguageChange = (lang: 'fr' | 'en') => {
+  const handleLanguageChange = (lang: "fr" | "en") => {
+    if (
+      hasUnsavedChanges &&
+      !window.confirm(
+        "Des modifications ne sont pas enregistrées. Changer de langue sans les sauvegarder?",
+      )
+    )
+      return;
     setLanguage(lang);
     setActiveModule(0);
     setActiveSection(0);
     setIsEditing(false);
-    const modules = lang === 'fr'
-      ? document?.content.modules_fr || []
-      : document?.content.modules_en || [];
-    setEditingContent(modules[0]?.sections[0]?.content || '');
+    const modules =
+      lang === "fr"
+        ? document?.content.modules_fr || []
+        : document?.content.modules_en || [];
+    setEditingContent(modules[0]?.sections[0]?.content || "");
   };
 
   const handleSaveSection = async () => {
     if (!document) return;
+    const requestId = ++saveRequestRef.current;
+    const attemptedContent = editingContent;
+    const modules = getModules();
+    const currentModule = modules[activeModule];
+    const currentSection = currentModule.sections[activeSection];
     setSaving(true);
+    setSaved(false);
+    setSaveError("");
     try {
-      const modules = getModules();
-      const currentModule  = modules[activeModule];
-      const currentSection = currentModule.sections[activeSection];
-      await api.put(
+      const response = await api.put(
         `/generator/document/${document.id}/module/${currentModule.moduleNumber}/section/${currentSection.id}`,
-        { content: editingContent, language }
+        {
+          content: attemptedContent,
+          language,
+          expectedLockVersion: document.lockVersion,
+        },
       );
-      const updatedDoc  = { ...document };
-      const modulesKey  = language === 'fr' ? 'modules_fr' : 'modules_en';
-      updatedDoc.content[modulesKey][activeModule].sections[activeSection].content = editingContent;
+      if (requestId !== saveRequestRef.current) return;
+      const updatedDoc = { ...document };
+      const modulesKey = language === "fr" ? "modules_fr" : "modules_en";
+      updatedDoc.content[modulesKey][activeModule].sections[
+        activeSection
+      ].content = attemptedContent;
+      updatedDoc.lockVersion = response.data.lockVersion;
       setDocument(updatedDoc);
       setSaved(true);
       setLastSavedAt(new Date());
       setIsEditing(false);
       setTimeout(() => setSaved(false), 4000);
-    } catch (err) { console.error(err); }
-    finally { setSaving(false); }
+    } catch (err: any) {
+      if (requestId !== saveRequestRef.current) return;
+      console.error(err);
+      const mayHaveReachedServer = !err?.response || err.response.status === 409;
+      if (mayHaveReachedServer) {
+        try {
+          const current = await fetchCurrentDocument();
+          if (requestId !== saveRequestRef.current) return;
+          const persistedContent = getSectionContent(
+            current,
+            currentModule.moduleNumber,
+            currentSection.id,
+            language,
+          );
+          setDocument(current);
+          if (persistedContent === attemptedContent) {
+            setSaved(true);
+            setLastSavedAt(new Date());
+            setIsEditing(false);
+            setTimeout(() => setSaved(false), 4000);
+            return;
+          }
+          setSaveError(
+            "Le document a changé dans une autre session. Votre brouillon est conservé; vérifiez-le avant de sauvegarder à nouveau.",
+          );
+          return;
+        } catch (reconciliationError) {
+          console.error(reconciliationError);
+        }
+      }
+      setSaveError(
+        err?.response?.status === 409
+          ? "Le document a été modifié dans une autre session. Rechargez la page avant de reprendre."
+          : err?.response?.data?.message ||
+              "La sauvegarde a échoué. Aucune modification n’a été enregistrée.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleSaveSectionDirect = async (moduleNumber: number, sectionId: string, content: string) => {
+  const handleSaveSectionDirect = async (
+    moduleNumber: number,
+    sectionId: string,
+    content: string,
+  ) => {
     if (!document) return;
+    const requestId = ++saveRequestRef.current;
     setSaving(true);
+    setSaved(false);
+    setSaveError("");
     try {
-      await api.put(
+      const response = await api.put(
         `/generator/document/${document.id}/module/${moduleNumber}/section/${sectionId}`,
-        { content, language }
+        { content, language, expectedLockVersion: document.lockVersion },
+      );
+      if (requestId !== saveRequestRef.current) return;
+      setDocument((current) =>
+        current
+          ? { ...current, lockVersion: response.data.lockVersion }
+          : current,
       );
       setSaved(true);
       setTimeout(() => setSaved(false), 4000);
-    } catch (err) {
+    } catch (err: any) {
+      if (requestId !== saveRequestRef.current) return;
       console.error(err);
+      const mayHaveReachedServer = !err?.response || err.response.status === 409;
+      if (mayHaveReachedServer) {
+        try {
+          const current = await fetchCurrentDocument();
+          if (requestId !== saveRequestRef.current) return;
+          setDocument(current);
+          if (
+            getSectionContent(current, moduleNumber, sectionId, language) ===
+            content
+          ) {
+            setSaved(true);
+            setLastSavedAt(new Date());
+            setTimeout(() => setSaved(false), 4000);
+            return;
+          }
+        } catch (reconciliationError) {
+          console.error(reconciliationError);
+        }
+      }
+      setSaveError(
+        err?.response?.status === 409
+          ? "Conflit de modification détecté. Rechargez le document."
+          : err?.response?.data?.message || "La sauvegarde a échoué.",
+      );
     } finally {
       setSaving(false);
     }
@@ -227,127 +401,170 @@ export default function EditorPage() {
   // ── Formatage texte (Module 1) ───────────────────────────
 
   const formatContent = (content: string) => {
-    if (!content) return '';
-    const lines = content.split('\n');
-    let html = '';
+    if (!content) return "";
+    const lines = content.split("\n");
+    let html = "";
     let inList = false;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      if (line.startsWith('**') && line.endsWith('**') && line.length > 4) {
-        if (inList) { html += '</ul>'; inList = false; }
-        html += `<h3 style="color:#2C3E50;font-weight:700;margin:20px 0 8px;font-size:14px">${line.replace(/\*\*/g, '')}</h3>`;
+      if (line.startsWith("**") && line.endsWith("**") && line.length > 4) {
+        if (inList) {
+          html += "</ul>";
+          inList = false;
+        }
+        html += `<h3 style="color:#2C3E50;font-weight:700;margin:20px 0 8px;font-size:14px">${line.replace(/\*\*/g, "")}</h3>`;
       } else if (line.match(/^\*\*.*\*\*\s*:/)) {
-        if (inList) { html += '</ul>'; inList = false; }
+        if (inList) {
+          html += "</ul>";
+          inList = false;
+        }
         const parts = line.split(/\*\*(.*?)\*\*/);
-        html += `<p style="color:#495057;margin:4px 0"><strong style="color:#2C3E50">${parts[1]}</strong>${parts[2] || ''}</p>`;
-      } else if (line.startsWith('- ')) {
-        if (!inList) { html += '<ul style="list-style:disc;margin-left:24px;margin:8px 0">'; inList = true; }
+        html += `<p style="color:#495057;margin:4px 0"><strong style="color:#2C3E50">${parts[1]}</strong>${parts[2] || ""}</p>`;
+      } else if (line.startsWith("- ")) {
+        if (!inList) {
+          html += '<ul style="list-style:disc;margin-left:24px;margin:8px 0">';
+          inList = true;
+        }
         html += `<li style="color:#495057;margin:2px 0">${line.substring(2)}</li>`;
-      } else if (line.startsWith('  - ')) {
+      } else if (line.startsWith("  - ")) {
         html += `<li style="color:#6C757D;margin-left:16px;font-size:13px">${line.substring(4)}</li>`;
-      } else if (line.includes('|') && line.includes('---')) {
+      } else if (line.includes("|") && line.includes("---")) {
         // skip
-      } else if (line.startsWith('|') && line.endsWith('|')) {
-        if (inList) { html += '</ul>'; inList = false; }
-        const cells    = line.split('|').filter(c => c.trim());
-        const isHeader = lines[i + 1]?.includes('---');
+      } else if (line.startsWith("|") && line.endsWith("|")) {
+        if (inList) {
+          html += "</ul>";
+          inList = false;
+        }
+        const cells = line.split("|").filter((c) => c.trim());
+        const isHeader = lines[i + 1]?.includes("---");
         if (isHeader) {
-          html += `<table style="width:100%;border-collapse:collapse;margin:16px 0"><thead><tr>${
-            cells.map(c => `<th style="text-align:left;color:#2C3E50;font-size:13px;font-weight:600;border-bottom:2px solid #DEE2E6;padding:8px 12px;background:#F8F9FA">${c.trim()}</th>`).join('')
-          }</tr></thead><tbody>`;
+          html += `<table style="width:100%;border-collapse:collapse;margin:16px 0"><thead><tr>${cells
+            .map(
+              (c) =>
+                `<th style="text-align:left;color:#2C3E50;font-size:13px;font-weight:600;border-bottom:2px solid #DEE2E6;padding:8px 12px;background:#F8F9FA">${c.trim()}</th>`,
+            )
+            .join("")}</tr></thead><tbody>`;
         } else {
           const prevLine = lines[i - 1];
-          if (!prevLine?.includes('---')) {
-            html += `<tr style="border-bottom:1px solid #E9ECEF">${
-              cells.map(c => `<td style="color:#495057;font-size:13px;padding:8px 12px">${c.trim()}</td>`).join('')
-            }</tr>`;
+          if (!prevLine?.includes("---")) {
+            html += `<tr style="border-bottom:1px solid #E9ECEF">${cells
+              .map(
+                (c) =>
+                  `<td style="color:#495057;font-size:13px;padding:8px 12px">${c.trim()}</td>`,
+              )
+              .join("")}</tr>`;
           }
         }
-        const nextNonEmpty = lines.slice(i + 1).find(l => l.trim() !== '');
-        if (nextNonEmpty && !nextNonEmpty.startsWith('|')) html += '</tbody></table>';
-      } else if (line.trim() === '') {
-        if (inList) { html += '</ul>'; inList = false; }
-        html += '<br/>';
+        const nextNonEmpty = lines.slice(i + 1).find((l) => l.trim() !== "");
+        if (nextNonEmpty && !nextNonEmpty.startsWith("|"))
+          html += "</tbody></table>";
+      } else if (line.trim() === "") {
+        if (inList) {
+          html += "</ul>";
+          inList = false;
+        }
+        html += "<br/>";
       } else {
-        if (inList) { html += '</ul>'; inList = false; }
+        if (inList) {
+          html += "</ul>";
+          inList = false;
+        }
         html += `<p style="color:#495057;line-height:1.6;margin:4px 0">${line}</p>`;
       }
     }
-    if (inList) html += '</ul>';
+    if (inList) html += "</ul>";
     return html;
   };
 
   // ── États de chargement ─────────────────────────────────
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F8F9FA' }}>
-      <p className="text-sm animate-pulse" style={{ color: '#ADB5BD' }}>Chargement de l'éditeur...</p>
-    </div>
-  );
+  if (loading)
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: "#F8F9FA" }}
+      >
+        <p className="text-sm animate-pulse" style={{ color: "#ADB5BD" }}>
+          Chargement de l'éditeur...
+        </p>
+      </div>
+    );
 
-  if (!document) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F8F9FA' }}>
-      <p className="text-sm" style={{ color: '#ADB5BD' }}>Document introuvable</p>
-    </div>
-  );
+  if (!document)
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: "#F8F9FA" }}
+      >
+        <p className="text-sm" style={{ color: "#ADB5BD" }}>
+          Document introuvable
+        </p>
+      </div>
+    );
 
-  const modules        = getModules();
-  const currentModule  = modules[activeModule];
+  const modules = getModules();
+  const currentModule = modules[activeModule];
   const currentSection = currentModule?.sections?.[activeSection];
   const isSpecialModule = SPECIAL_MODULES.includes(currentModule?.moduleNumber);
-  const isBureau = document.project.building.buildingType?.toLowerCase() !== 'industriel';
-  const isReadOnly = ['REVIEW', 'VALIDATED'].includes(document.project.status || '');
+  const isBureau =
+    document.project.building.buildingType?.toLowerCase() !== "industriel";
+  const isReadOnly =
+    ["REVIEW", "VALIDATED", "ARCHIVED"].includes(
+      document.project.status || "",
+    ) || ["VALIDATED", "ARCHIVED"].includes(document.status || "");
 
-  const getModuleCompletion = (mod: Module): 'complete' | 'partial' | 'empty' => {
-    if (document?.project?.documentType === 'PCA') {
+  const getModuleCompletion = (
+    mod: Module,
+  ): "complete" | "partial" | "empty" => {
+    if (document?.project?.documentType === "PCA") {
       // Pour PCA, complétion basée sur la présence de contenu texte dans les sections
       const sections = mod.sections || [];
       const filled = sections.filter((s: any) => {
-        const text = s.content || s.text || '';
-        return typeof text === 'string' && text.trim().length > 10;
+        const text = s.content || s.text || "";
+        return typeof text === "string" && text.trim().length > 10;
       });
-      if (filled.length === 0) return 'empty';
-      if (filled.length < sections.length) return 'partial';
-      return 'complete';
+      if (filled.length === 0) return "empty";
+      if (filled.length < sections.length) return "partial";
+      return "complete";
     }
     const n = mod.moduleNumber;
-    if (n === 1) return 'complete';
+    if (n === 1) return "complete";
     if (n === 2) {
-      const entries = mod.sections.find(s => s.id === '2.1')?.entries || [];
-      const corps   = mod.sections.find(s => s.id === '2.2')?.entries || [];
-      if (entries.length >= 3 && corps.length >= 1) return 'complete';
-      if (entries.length > 0) return 'partial';
-      return 'empty';
+      const entries = mod.sections.find((s) => s.id === "2.1")?.entries || [];
+      const corps = mod.sections.find((s) => s.id === "2.2")?.entries || [];
+      if (entries.length >= 3 && corps.length >= 1) return "complete";
+      if (entries.length > 0) return "partial";
+      return "empty";
     }
     if (n === 3) {
-      const orgRoles = mod.sections.find(s => s.id === '3.1')?.orgRoles || [];
-      const active   = orgRoles.filter((r: any) => r.isActive).length;
-      if (active >= 3) return 'complete';
-      if (active > 0)  return 'partial';
-      return 'empty';
+      const orgRoles = mod.sections.find((s) => s.id === "3.1")?.orgRoles || [];
+      const active = orgRoles.filter((r: any) => r.isActive).length;
+      if (active >= 3) return "complete";
+      if (active > 0) return "partial";
+      return "empty";
     }
     if (n === 4) {
       const procs = mod.procedures || [];
-      if (procs.length >= 5) return 'complete';
-      if (procs.length > 0)  return 'partial';
-      return 'empty';
+      if (procs.length >= 5) return "complete";
+      if (procs.length > 0) return "partial";
+      return "empty";
     }
-    if (n === 6) return hasPlans ? 'complete' : 'empty';
-    if (n === 7) return 'partial'; // géré par Module7Section
-    if (n === 8) return 'partial'; // registres manuels
-    return 'partial';
+    if (n === 6) return hasPlans ? "complete" : "empty";
+    if (n === 7) return "partial"; // géré par Module7Section
+    if (n === 8) return "partial"; // registres manuels
+    return "partial";
   };
 
   const completionIcon: Record<string, string> = {
-    complete: '✓',
-    partial:  '◐',
-    empty:    '○',
+    complete: "✓",
+    partial: "◐",
+    empty: "○",
   };
   const completionColor: Record<string, string> = {
-    complete: '#27AE60',
-    partial:  '#F39C12',
-    empty:    '#ADB5BD',
+    complete: "#27AE60",
+    partial: "#F39C12",
+    empty: "#ADB5BD",
   };
 
   // ============================================================
@@ -357,60 +574,144 @@ export default function EditorPage() {
   const renderModuleContent = () => {
     const n = currentModule.moduleNumber;
 
+    if (isReadOnly && n !== 1) {
+      return (
+        <div className="space-y-4">
+          <div
+            role="status"
+            className="rounded-md px-4 py-3 text-sm"
+            style={{
+              backgroundColor: "#FEF9E7",
+              border: "1px solid #FAD7A0",
+              color: "#7D6608",
+            }}
+          >
+            Document en lecture seule. Les données spécialisées restent
+            consultables, mais aucune modification n’est permise.
+          </div>
+          {(currentModule.sections || []).map((section: any) => (
+            <section
+              key={section.id}
+              className="rounded-md p-5"
+              style={{
+                backgroundColor: "#FFFFFF",
+                border: "1px solid #E9ECEF",
+              }}
+            >
+              <h3 className="mb-3 font-semibold" style={{ color: "#2C3E50" }}>
+                {section.title}
+              </h3>
+              <div
+                className="text-sm leading-7"
+                style={{ color: "#495057" }}
+                dangerouslySetInnerHTML={{
+                  __html: formatContent(section.content || ""),
+                }}
+              />
+            </section>
+          ))}
+        </div>
+      );
+    }
+
     if (n === 8) {
-      if (document.project.documentType === 'PCA') {
+      if (document.project.documentType === "PCA") {
         return (
           <div className="space-y-6">
             {currentModule.sections.map((section: any) => (
-              <div key={section.id} className="rounded-md p-6"
-                style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-                <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>{section.title}</h3>
+              <div
+                key={section.id}
+                className="rounded-md p-6"
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #E9ECEF",
+                }}
+              >
+                <h3 className="font-semibold mb-4" style={{ color: "#2C3E50" }}>
+                  {section.title}
+                </h3>
                 <textarea
                   defaultValue={section.content}
                   rows={8}
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-y"
-                  style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
+                  style={{
+                    border: "1px solid #CED4DA",
+                    color: "#2C3E50",
+                    lineHeight: 1.7,
+                  }}
                   onChange={(e) => {
                     section.content = e.target.value;
                   }}
-                  onBlur={(e) => handleSaveSectionDirect(currentModule.moduleNumber, section.id, e.target.value)}
+                  onBlur={(e) =>
+                    handleSaveSectionDirect(
+                      currentModule.moduleNumber,
+                      section.id,
+                      e.target.value,
+                    )
+                  }
                 />
               </div>
             ))}
           </div>
         );
       }
-            return (
+      return (
         <Module8Section
           projectId={projectId}
+          onLockVersionChange={(lockVersion) =>
+            setDocument((current) =>
+              current ? { ...current, lockVersion } : current,
+            )
+          }
           language={language}
           certBOMA={document?.content?.config?.certBOMA === true}
           activeSectionFromParent={
             currentModule?.sections?.[activeSection]?.id || null
           }
           initialData={{
-            sections: document?.content?.modules_fr?.find((m: any) => m.moduleNumber === 8)?.sections || [],
+            sections:
+              document?.content?.modules_fr?.find(
+                (m: any) => m.moduleNumber === 8,
+              )?.sections || [],
           }}
         />
       );
     }
     if (n === 7) {
-      if (document.project.documentType === 'PCA') {
+      if (document.project.documentType === "PCA") {
         return (
           <div className="space-y-6">
             {currentModule.sections.map((section: any) => (
-              <div key={section.id} className="rounded-md p-6"
-                style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-                <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>{section.title}</h3>
+              <div
+                key={section.id}
+                className="rounded-md p-6"
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #E9ECEF",
+                }}
+              >
+                <h3 className="font-semibold mb-4" style={{ color: "#2C3E50" }}>
+                  {section.title}
+                </h3>
                 <textarea
                   defaultValue={section.content}
                   rows={8}
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-y"
-                  style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
+                  style={{
+                    border: "1px solid #CED4DA",
+                    color: "#2C3E50",
+                    lineHeight: 1.7,
+                  }}
                   onChange={(e) => {
                     section.content = e.target.value;
                   }}
-                  onBlur={(e) => handleSaveSectionDirect(currentModule.moduleNumber, section.id, e.target.value)}
+                  onBlur={(e) =>
+                    handleSaveSectionDirect(
+                      currentModule.moduleNumber,
+                      section.id,
+                      e.target.value,
+                    )
+                  }
                 />
               </div>
             ))}
@@ -420,43 +721,66 @@ export default function EditorPage() {
       return <Module7Section projectId={projectId} language={language} />;
     }
     if (n === 6) {
-      if (document.project.documentType === 'PCA') {
+      if (document.project.documentType === "PCA") {
         return (
           <div className="space-y-6">
-            {currentModule.sections.filter((s: any) => s.id !== 'm6_s5').map((section: any) => (
-              <div key={section.id} className="rounded-md p-6"
-                style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-                <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>{section.title}</h3>
-                <textarea
-                  defaultValue={section.content}
-                  rows={8}
-                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-y"
-                  style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
-                  onChange={(e) => {
-                    section.content = e.target.value;
+            {currentModule.sections
+              .filter((s: any) => s.id !== "m6_s5")
+              .map((section: any) => (
+                <div
+                  key={section.id}
+                  className="rounded-md p-6"
+                  style={{
+                    backgroundColor: "#FFFFFF",
+                    border: "1px solid #E9ECEF",
                   }}
-                  onBlur={(e) => handleSaveSectionDirect(currentModule.moduleNumber, section.id, e.target.value)}
-                />
-              </div>
-            ))}
+                >
+                  <h3
+                    className="font-semibold mb-4"
+                    style={{ color: "#2C3E50" }}
+                  >
+                    {section.title}
+                  </h3>
+                  <textarea
+                    defaultValue={section.content}
+                    rows={8}
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-y"
+                    style={{
+                      border: "1px solid #CED4DA",
+                      color: "#2C3E50",
+                      lineHeight: 1.7,
+                    }}
+                    onChange={(e) => {
+                      section.content = e.target.value;
+                    }}
+                    onBlur={(e) =>
+                      handleSaveSectionDirect(
+                        currentModule.moduleNumber,
+                        section.id,
+                        e.target.value,
+                      )
+                    }
+                  />
+                </div>
+              ))}
             <Module6PcaContacts projectId={projectId} language={language} />
           </div>
         );
       }
       return <Module6Section projectId={projectId} language={language} />;
     }
-        if (n === 4) {
-      if (document.project.documentType === 'PCA') {
-        return (
-          <Module4PcaSection
-            projectId={projectId}
-            language={language}
-          />
-        );
+    if (n === 4) {
+      if (document.project.documentType === "PCA") {
+        return <Module4PcaSection projectId={projectId} language={language} />;
       }
       return (
         <Module4Section
           projectId={projectId}
+          onLockVersionChange={(lockVersion) =>
+            setDocument((current) =>
+              current ? { ...current, lockVersion } : current,
+            )
+          }
           language={language}
           initialData={{
             directivesGenerales: null,
@@ -467,61 +791,108 @@ export default function EditorPage() {
       );
     }
     if (n === 3) {
-      if (document.project.documentType === 'PCA') {
+      if (document.project.documentType === "PCA") {
         return (
           <div className="space-y-6">
             {currentModule.sections.map((section: any) => (
-              <div key={section.id} className="rounded-md p-6"
-                style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-                <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>{section.title}</h3>
+              <div
+                key={section.id}
+                className="rounded-md p-6"
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #E9ECEF",
+                }}
+              >
+                <h3 className="font-semibold mb-4" style={{ color: "#2C3E50" }}>
+                  {section.title}
+                </h3>
                 <textarea
                   defaultValue={section.content}
                   rows={8}
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-y"
-                  style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
+                  style={{
+                    border: "1px solid #CED4DA",
+                    color: "#2C3E50",
+                    lineHeight: 1.7,
+                  }}
                   onChange={(e) => {
                     section.content = e.target.value;
                   }}
-                  onBlur={(e) => handleSaveSectionDirect(currentModule.moduleNumber, section.id, e.target.value)}
+                  onBlur={(e) =>
+                    handleSaveSectionDirect(
+                      currentModule.moduleNumber,
+                      section.id,
+                      e.target.value,
+                    )
+                  }
                 />
               </div>
             ))}
           </div>
         );
       }
-            return (
+      return (
         <Module3Section
           key={activeSection}
           projectId={projectId}
+          onLockVersionChange={(lockVersion) =>
+            setDocument((current) =>
+              current ? { ...current, lockVersion } : current,
+            )
+          }
           language={language}
           isIndustriel={!isBureau}
-          initialActiveTab={activeSection === 1 ? '3.2' : '3.1'}
+          initialActiveTab={activeSection === 1 ? "3.2" : "3.1"}
           quartsOccupation={document?.content?.config?.quartsOccupation || []}
           initialData={{
-            orgRoles:     currentModule.sections.find((s: any) => s.id === '3.1')?.orgRoles || [],
-            members:      currentModule.sections.find((s: any) => s.id === '3.2')?.members  || [],
-            activeShifts: currentModule.sections.find((s: any) => s.id === '3.2')?.activeShifts || ['jour'],
+            orgRoles:
+              currentModule.sections.find((s: any) => s.id === "3.1")
+                ?.orgRoles || [],
+            members:
+              currentModule.sections.find((s: any) => s.id === "3.2")
+                ?.members || [],
+            activeShifts: currentModule.sections.find(
+              (s: any) => s.id === "3.2",
+            )?.activeShifts || ["jour"],
           }}
         />
       );
     }
     if (n === 2) {
-      if (document.project.documentType === 'PCA') {
+      if (document.project.documentType === "PCA") {
         return (
           <div className="space-y-6">
             {currentModule.sections.map((section: any) => (
-              <div key={section.id} className="rounded-md p-6"
-                style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-                <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>{section.title}</h3>
+              <div
+                key={section.id}
+                className="rounded-md p-6"
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #E9ECEF",
+                }}
+              >
+                <h3 className="font-semibold mb-4" style={{ color: "#2C3E50" }}>
+                  {section.title}
+                </h3>
                 <textarea
                   defaultValue={section.content}
                   rows={8}
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-y font-mono"
-                  style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
+                  style={{
+                    border: "1px solid #CED4DA",
+                    color: "#2C3E50",
+                    lineHeight: 1.7,
+                  }}
                   onChange={(e) => {
                     section.content = e.target.value;
                   }}
-                  onBlur={(e) => handleSaveSectionDirect(currentModule.moduleNumber, section.id, e.target.value)}
+                  onBlur={(e) =>
+                    handleSaveSectionDirect(
+                      currentModule.moduleNumber,
+                      section.id,
+                      e.target.value,
+                    )
+                  }
                 />
               </div>
             ))}
@@ -531,22 +902,45 @@ export default function EditorPage() {
       return (
         <Module2Section
           projectId={projectId}
+          onLockVersionChange={(lockVersion) =>
+            setDocument((current) =>
+              current ? { ...current, lockVersion } : current,
+            )
+          }
           language={language}
           initialData={{
-            section2_1: currentModule.sections.find((s: any) => s.id === '2.1')?.entries || [],
-            section2_2: currentModule.sections.find((s: any) => s.id === '2.2')?.entries || [],
-            section2_3: currentModule.sections.find((s: any) => s.id === '2.3')?.entries || [],
-            section2_4: currentModule.sections.find((s: any) => s.id === '2.4')?.entries || [],
-            section2_5: currentModule.sections.find((s: any) => s.id === '2.5')?.entries || [],
+            section2_1:
+              currentModule.sections.find((s: any) => s.id === "2.1")
+                ?.entries || [],
+            section2_2:
+              currentModule.sections.find((s: any) => s.id === "2.2")
+                ?.entries || [],
+            section2_3:
+              currentModule.sections.find((s: any) => s.id === "2.3")
+                ?.entries || [],
+            section2_4:
+              currentModule.sections.find((s: any) => s.id === "2.4")
+                ?.entries || [],
+            section2_5:
+              currentModule.sections.find((s: any) => s.id === "2.5")
+                ?.entries || [],
             section2_5Enabled: false,
-            internalEmergencyNumber: currentModule.sections.find((s: any) => s.id === '2.1')?.internalEmergencyNumber || '',
+            internalEmergencyNumber:
+              currentModule.sections.find((s: any) => s.id === "2.1")
+                ?.internalEmergencyNumber || "",
           }}
           availableRoles2_2={
-            language === 'fr'
-              ? (isBureau ? ROLES_INTERNES_BUREAU_FR : ROLES_INTERNES_INDUSTRIEL_FR)
-              : (isBureau ? ROLES_INTERNES_BUREAU_EN : ROLES_INTERNES_INDUSTRIEL_EN)
+            language === "fr"
+              ? isBureau
+                ? ROLES_INTERNES_BUREAU_FR
+                : ROLES_INTERNES_INDUSTRIEL_FR
+              : isBureau
+                ? ROLES_INTERNES_BUREAU_EN
+                : ROLES_INTERNES_INDUSTRIEL_EN
           }
-          availableRoles2_3={language === 'fr' ? ALL_EQUIPEMENTS_FR : ALL_EQUIPEMENTS_EN}
+          availableRoles2_3={
+            language === "fr" ? ALL_EQUIPEMENTS_FR : ALL_EQUIPEMENTS_EN
+          }
         />
       );
     }
@@ -556,70 +950,120 @@ export default function EditorPage() {
       <>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
-            <p className="text-xs mb-1" style={{ color: '#ADB5BD' }}>
+            <p className="text-xs mb-1" style={{ color: "#ADB5BD" }}>
               Module {currentModule.moduleNumber} — {currentModule.title}
             </p>
-            <h2 className="text-xl font-bold" style={{ color: '#2C3E50' }}>
+            <h2 className="text-xl font-bold" style={{ color: "#2C3E50" }}>
               {currentSection?.id} — {currentSection?.title}
             </h2>
           </div>
           {!isEditing && !isReadOnly && (
             <button
-              onClick={() => { setEditingContent(currentSection?.content || ''); setIsEditing(true); }}
+              onClick={() => {
+                setEditingContent(currentSection?.content || "");
+                setIsEditing(true);
+              }}
               className="w-full sm:w-auto justify-center text-sm px-4 py-2 rounded transition-colors flex items-center gap-2 font-medium"
-              style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+              style={{ border: "1px solid #DEE2E6", color: "#6C757D" }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor = "#F8F9FA")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor = "transparent")
+              }
             >
-              ✏️ {language === 'fr' ? 'Modifier' : 'Edit'}
+              ✏️ {language === "fr" ? "Modifier" : "Edit"}
             </button>
           )}
           {!isEditing && isReadOnly && (
-            <span className="text-xs px-3 py-1.5 rounded"
-              style={{ backgroundColor: '#FEF9E7', color: '#F39C12', border: '1px solid #FAD7A0' }}>
-              🔒 {document.project.status === 'VALIDATED' ? 'Document approuvé' : 'En attente d\'approbation'}
+            <span
+              className="text-xs px-3 py-1.5 rounded"
+              style={{
+                backgroundColor: "#FEF9E7",
+                color: "#F39C12",
+                border: "1px solid #FAD7A0",
+              }}
+            >
+              🔒{" "}
+              {document.project.status === "VALIDATED"
+                ? "Document approuvé"
+                : "En attente d'approbation"}
             </span>
           )}
         </div>
 
         {isEditing ? (
           <div className="space-y-3">
-            <p className="text-xs" style={{ color: '#ADB5BD' }}>
-              {language === 'fr' ? 'Mode édition — Modifiez le texte directement' : 'Edit mode — Modify the text directly'}
+            <p className="text-xs" style={{ color: "#ADB5BD" }}>
+              {language === "fr"
+                ? "Mode édition — Modifiez le texte directement"
+                : "Edit mode — Modify the text directly"}
             </p>
             <SpellCheckedTextarea
               value={editingContent}
-              onChange={val => setEditingContent(val)}
+              onChange={(val) => setEditingContent(val)}
               language={language}
               className="w-full rounded-md p-3 sm:p-4 lg:p-6 text-sm leading-relaxed focus:outline-none font-mono resize-none"
-              style={{ minHeight: '420px', height: 'clamp(420px, 62vh, 760px)', backgroundColor: '#FFFFFF', border: '1px solid #C0392B', color: '#2C3E50' }}
+              style={{
+                minHeight: "420px",
+                height: "clamp(420px, 62vh, 760px)",
+                backgroundColor: "#FFFFFF",
+                border: "1px solid #C0392B",
+                color: "#2C3E50",
+              }}
             />
             <div className="flex flex-col sm:flex-row gap-3">
               <button
-                onClick={() => { setEditingContent(currentSection?.content || ''); setIsEditing(false); }}
+                onClick={() => {
+                  setEditingContent(currentSection?.content || "");
+                  setIsEditing(false);
+                }}
                 className="px-4 py-2 rounded text-sm font-medium"
-                style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                style={{ border: "1px solid #DEE2E6", color: "#6C757D" }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.backgroundColor = "#F8F9FA")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.backgroundColor = "transparent")
+                }
               >
-                {language === 'fr' ? 'Annuler' : 'Cancel'}
+                {language === "fr" ? "Annuler" : "Cancel"}
               </button>
               <button
                 onClick={handleSaveSection}
                 disabled={saving}
                 className="text-white font-medium px-6 py-2 rounded text-sm transition-colors disabled:opacity-50"
-                style={{ backgroundColor: '#C0392B' }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}
+                style={{ backgroundColor: "#C0392B" }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.backgroundColor = "#A93226")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.backgroundColor = "#C0392B")
+                }
               >
-                {saving ? '...' : language === 'fr' ? 'Sauvegarder les modifications' : 'Save changes'}
+                {saving
+                  ? "..."
+                  : language === "fr"
+                    ? "Sauvegarder les modifications"
+                    : "Save changes"}
               </button>
             </div>
           </div>
         ) : (
-          <div className="rounded-md p-4 sm:p-6 lg:p-8 overflow-x-auto" data-cg-paper=""
-            style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-            <div dangerouslySetInnerHTML={{ __html: formatContent(currentSection?.content || '') }} />
+          <div
+            className="rounded-md p-4 sm:p-6 lg:p-8 overflow-x-auto"
+            data-cg-paper=""
+            style={{
+              backgroundColor: "#FFFFFF",
+              border: "1px solid #E9ECEF",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+            }}
+          >
+            <div
+              dangerouslySetInnerHTML={{
+                __html: formatContent(currentSection?.content || ""),
+              }}
+            />
           </div>
         )}
       </>
@@ -631,34 +1075,64 @@ export default function EditorPage() {
   // ============================================================
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F8F9FA' }}>
-
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ backgroundColor: "#F8F9FA" }}
+    >
       {/* ── Topbar ── */}
-      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 px-3 sm:px-4 lg:px-6 py-3 flex-shrink-0 sticky top-0 z-40"
-        style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #DEE2E6', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-
+      <div
+        className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 px-3 sm:px-4 lg:px-6 py-3 flex-shrink-0 sticky top-0 z-40"
+        style={{
+          backgroundColor: "#FFFFFF",
+          borderBottom: "1px solid #DEE2E6",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+        }}
+      >
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-full xl:w-auto">
-          <h1 className="text-xl font-bold cursor-pointer flex-shrink-0" style={{ color: '#2C3E50' }}
-            onClick={() => router.push('/dashboard')}>
-            CO<span style={{ color: '#C0392B' }}>RO</span>
+          <h1
+            className="text-xl font-bold cursor-pointer flex-shrink-0"
+            style={{ color: "#2C3E50" }}
+            onClick={() => navigateFromEditor("/dashboard")}
+          >
+            CO<span style={{ color: "#C0392B" }}>RO</span>
           </h1>
-          <span className="hidden sm:inline" style={{ color: '#DEE2E6' }}>|</span>
-          <span className="hidden sm:inline text-sm flex-shrink-0" style={{ color: '#6C757D' }}>Éditeur</span>
-          <span className="hidden sm:inline" style={{ color: '#DEE2E6' }}>|</span>
-          <span className="text-sm font-medium truncate min-w-0" style={{ color: '#C0392B' }}>{document.title}</span>
+          <span className="hidden sm:inline" style={{ color: "#DEE2E6" }}>
+            |
+          </span>
+          <span
+            className="hidden sm:inline text-sm flex-shrink-0"
+            style={{ color: "#6C757D" }}
+          >
+            Éditeur
+          </span>
+          <span className="hidden sm:inline" style={{ color: "#DEE2E6" }}>
+            |
+          </span>
+          <span
+            className="text-sm font-medium truncate min-w-0"
+            style={{ color: "#C0392B" }}
+          >
+            {document.title}
+          </span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full xl:w-auto">
           {/* Toggle FR / EN */}
-          <div className="flex items-center rounded p-1 gap-1"
-            style={{ backgroundColor: '#F8F9FA', border: '1px solid #DEE2E6' }}>
-            {(['fr', 'en'] as const).map(lang => (
-              <button key={lang} onClick={() => handleLanguageChange(lang)}
+          <div
+            className="flex items-center rounded p-1 gap-1"
+            style={{ backgroundColor: "#F8F9FA", border: "1px solid #DEE2E6" }}
+          >
+            {(["fr", "en"] as const).map((lang) => (
+              <button
+                key={lang}
+                onClick={() => handleLanguageChange(lang)}
                 className="px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
                 style={{
-                  backgroundColor: language === lang ? '#C0392B' : 'transparent',
-                  color: language === lang ? '#FFFFFF' : '#6C757D',
-                }}>
+                  backgroundColor:
+                    language === lang ? "#C0392B" : "transparent",
+                  color: language === lang ? "#FFFFFF" : "#6C757D",
+                }}
+              >
                 {lang.toUpperCase()}
               </button>
             ))}
@@ -666,21 +1140,39 @@ export default function EditorPage() {
 
           {/* Indicateur sauvegarde */}
           {saving && (
-            <span className="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded animate-pulse"
-              style={{ backgroundColor: '#EBF5FB', color: '#2980B9', border: '1px solid #AED6F1' }}>
+            <span
+              className="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded animate-pulse"
+              style={{
+                backgroundColor: "#EBF5FB",
+                color: "#2980B9",
+                border: "1px solid #AED6F1",
+              }}
+            >
               ⏳ Sauvegarde...
             </span>
           )}
           {!saving && saved && (
-            <span className="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded"
-              style={{ backgroundColor: '#EAFAF1', color: '#27AE60', border: '1px solid #A9DFBF' }}>
+            <span
+              className="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded"
+              style={{
+                backgroundColor: "#EAFAF1",
+                color: "#27AE60",
+                border: "1px solid #A9DFBF",
+              }}
+            >
               ✓ Sauvegardé
             </span>
           )}
           {!saving && !saved && lastSavedAt && (
-            <span className="hidden lg:flex text-xs items-center gap-1.5"
-              style={{ color: '#ADB5BD' }}>
-              ✓ Sauvegardé à {lastSavedAt.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}
+            <span
+              className="hidden lg:flex text-xs items-center gap-1.5"
+              style={{ color: "#ADB5BD" }}
+            >
+              ✓ Sauvegardé à{" "}
+              {lastSavedAt.toLocaleTimeString("fr-CA", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </span>
           )}
 
@@ -688,7 +1180,7 @@ export default function EditorPage() {
             type="button"
             onClick={() => setNavOpen(true)}
             className="lg:hidden flex-1 sm:flex-none text-xs sm:text-sm px-3 py-1.5 rounded transition-colors"
-            style={{ border: '1px solid #DEE2E6', color: '#495057' }}
+            style={{ border: "1px solid #DEE2E6", color: "#495057" }}
           >
             ☰ Navigation
           </button>
@@ -697,7 +1189,7 @@ export default function EditorPage() {
             type="button"
             onClick={() => setInfoOpen(true)}
             className="xl:hidden flex-1 sm:flex-none text-xs sm:text-sm px-3 py-1.5 rounded transition-colors"
-            style={{ border: '1px solid #AED6F1', color: '#2980B9' }}
+            style={{ border: "1px solid #AED6F1", color: "#2980B9" }}
           >
             ⓘ Infos
           </button>
@@ -705,36 +1197,67 @@ export default function EditorPage() {
           <button
             onClick={() => setShowVersionHistory(true)}
             className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 text-xs sm:text-sm px-3 py-1.5 rounded transition-colors"
-            style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
-            onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#F8F9FA'; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+            style={{ border: "1px solid #DEE2E6", color: "#6C757D" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#F8F9FA";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
           >
             🕐 Historique
           </button>
 
-          <button onClick={() => router.push(`/projects/${projectId}`)}
-            className="flex-1 sm:flex-none text-xs sm:text-sm transition-colors whitespace-nowrap" style={{ color: '#6C757D' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#2C3E50')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#6C757D')}>
+          <button
+            onClick={() => navigateFromEditor(`/projects/${projectId}`)}
+            className="flex-1 sm:flex-none text-xs sm:text-sm transition-colors whitespace-nowrap"
+            style={{ color: "#6C757D" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#2C3E50")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#6C757D")}
+          >
             ← Retour au projet
           </button>
 
           {isEditing && (
             <>
               <button
-                onClick={() => { setEditingContent(currentSection?.content || ''); setIsEditing(false); }}
+                onClick={() => {
+                  setEditingContent(currentSection?.content || "");
+                  setIsEditing(false);
+                }}
                 className="text-sm px-3 py-1.5 rounded transition-colors"
-                style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                style={{ border: "1px solid #DEE2E6", color: "#6C757D" }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.backgroundColor = "#F8F9FA")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.backgroundColor = "transparent")
+                }
+              >
                 Annuler
               </button>
-              <button onClick={handleSaveSection} disabled={saving}
+              <button
+                onClick={handleSaveSection}
+                disabled={saving}
                 className="text-white text-sm font-medium px-4 py-1.5 rounded transition-colors disabled:opacity-50"
-                style={{ backgroundColor: saved ? '#27AE60' : '#C0392B' }}
-                onMouseEnter={e => { if (!saving) e.currentTarget.style.backgroundColor = saved ? '#1E8449' : '#A93226'; }}
-                onMouseLeave={e => { e.currentTarget.style.backgroundColor = saved ? '#27AE60' : '#C0392B'; }}>
-                {saving ? 'Sauvegarde...' : saved ? '✓ Sauvegardé' : 'Sauvegarder'}
+                style={{ backgroundColor: saved ? "#27AE60" : "#C0392B" }}
+                onMouseEnter={(e) => {
+                  if (!saving)
+                    e.currentTarget.style.backgroundColor = saved
+                      ? "#1E8449"
+                      : "#A93226";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = saved
+                    ? "#27AE60"
+                    : "#C0392B";
+                }}
+              >
+                {saving
+                  ? "Sauvegarde..."
+                  : saved
+                    ? "✓ Sauvegardé"
+                    : "Sauvegarder"}
               </button>
             </>
           )}
@@ -742,145 +1265,282 @@ export default function EditorPage() {
       </div>
 
       <div className="flex flex-1 min-w-0 xl:overflow-hidden">
-
         {/* ── Navigation gauche ── */}
-        <div className="hidden lg:block w-60 overflow-y-auto flex-shrink-0"
-          style={{ backgroundColor: '#FFFFFF', borderRight: '1px solid #DEE2E6' }}>
+        <div
+          className="hidden lg:block w-60 overflow-y-auto flex-shrink-0"
+          style={{
+            backgroundColor: "#FFFFFF",
+            borderRight: "1px solid #DEE2E6",
+          }}
+        >
           <div className="p-3">
             <div className="mb-3 px-2">
-              <span className="text-xs font-bold px-2 py-0.5 rounded"
+              <span
+                className="text-xs font-bold px-2 py-0.5 rounded"
                 style={{
-                  backgroundColor: language === 'fr' ? '#FDEDEC' : '#EBF5FB',
-                  color: language === 'fr' ? '#C0392B' : '#2980B9',
-                }}>
-                {language === 'fr' ? 'Version française' : 'English version'}
+                  backgroundColor: language === "fr" ? "#FDEDEC" : "#EBF5FB",
+                  color: language === "fr" ? "#C0392B" : "#2980B9",
+                }}
+              >
+                {language === "fr" ? "Version française" : "English version"}
               </span>
             </div>
 
             {modules.map((mod, modIdx) => {
-              const modValidations = validations.filter(v => v.moduleNumber === mod.moduleNumber);
-              const hasCritique = modValidations.some(v => v.level === 'CRITIQUE');
-              const hasErreur = modValidations.some(v => v.level === 'ERREUR');
-              const hasAvert = modValidations.some(v => v.level === 'AVERTISSEMENT');
-              const badgeColor = hasCritique ? '#C0392B' : hasErreur ? '#E74C3C' : hasAvert ? '#F39C12' : undefined;
-              const badgeLabel = hasCritique ? '●' : hasErreur ? '●' : hasAvert ? '●' : undefined;
+              const modValidations = validations.filter(
+                (v) => v.moduleNumber === mod.moduleNumber,
+              );
+              const hasCritique = modValidations.some(
+                (v) => v.level === "CRITIQUE",
+              );
+              const hasErreur = modValidations.some(
+                (v) => v.level === "ERREUR",
+              );
+              const hasAvert = modValidations.some(
+                (v) => v.level === "AVERTISSEMENT",
+              );
+              const badgeColor = hasCritique
+                ? "#C0392B"
+                : hasErreur
+                  ? "#E74C3C"
+                  : hasAvert
+                    ? "#F39C12"
+                    : undefined;
+              const badgeLabel = hasCritique
+                ? "●"
+                : hasErreur
+                  ? "●"
+                  : hasAvert
+                    ? "●"
+                    : undefined;
 
               return (
-              <div key={mod.moduleNumber} className="mb-2">
-                {(() => {
-                  const completion = getModuleCompletion(mod);
-                  return (
-                    <div className="px-3 py-2 text-xs font-bold uppercase tracking-wider mb-1 flex items-center justify-between"
-                      style={{ color: activeModule === modIdx ? '#C0392B' : '#ADB5BD' }}>
-                      <span>M{mod.moduleNumber} — {mod.title}</span>
-                      <div className="flex items-center gap-1.5">
-                        {badgeLabel && (
-                          <span className="text-xs" style={{ color: badgeColor }} title={`${modValidations.length} validation(s)`}>
-                            {badgeLabel}
-                          </span>
-                        )}
-                        <span className="text-xs font-bold"
-                          style={{ color: completionColor[completion] }}
-                          title={completion === 'complete' ? 'Complet' : completion === 'partial' ? 'Partiel' : 'Vide'}>
-                          {completionIcon[completion]}
+                <div key={mod.moduleNumber} className="mb-2">
+                  {(() => {
+                    const completion = getModuleCompletion(mod);
+                    return (
+                      <div
+                        className="px-3 py-2 text-xs font-bold uppercase tracking-wider mb-1 flex items-center justify-between"
+                        style={{
+                          color:
+                            activeModule === modIdx ? "#C0392B" : "#ADB5BD",
+                        }}
+                      >
+                        <span>
+                          M{mod.moduleNumber} — {mod.title}
                         </span>
+                        <div className="flex items-center gap-1.5">
+                          {badgeLabel && (
+                            <span
+                              className="text-xs"
+                              style={{ color: badgeColor }}
+                              title={`${modValidations.length} validation(s)`}
+                            >
+                              {badgeLabel}
+                            </span>
+                          )}
+                          <span
+                            className="text-xs font-bold"
+                            style={{ color: completionColor[completion] }}
+                            title={
+                              completion === "complete"
+                                ? "Complet"
+                                : completion === "partial"
+                                  ? "Partiel"
+                                  : "Vide"
+                            }
+                          >
+                            {completionIcon[completion]}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })()}
+                    );
+                  })()}
 
-                {/* Modules spéciaux — bouton unique */}
-                {((mod.sections || []).length === 0 || (mod.moduleNumber === 4 && document.project.documentType === 'PCA')) && (
-                  <button
-                    onClick={() => handleSectionClick(modIdx, 0)}
-                    className="w-full text-left px-3 py-2 rounded text-xs mb-0.5 transition-colors font-medium"
-                    style={{
-                      backgroundColor: activeModule === modIdx ? '#FDEDEC' : 'transparent',
-                      color: activeModule === modIdx ? '#C0392B' : '#495057',
-                      border: activeModule === modIdx ? '1px solid #F1948A' : '1px solid transparent',
-                    }}
-                    onMouseEnter={e => { if (activeModule !== modIdx) e.currentTarget.style.backgroundColor = '#F8F9FA'; }}
-                    onMouseLeave={e => { if (activeModule !== modIdx) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                  >
-                    {getSpecialModuleLabel(mod.moduleNumber, language, document.project.documentType)}
-                  </button>
-                )}
-
-                {/* Sections normales */}
-                {(mod.sections || []).map((section, secIdx) => {
-                  // Cache 3.2 (Liste des membres) pour les bâtiments non industriels
-                  if (mod.moduleNumber === 3 && section.id === '3.2' && isBureau) return null;
-                  if (mod.moduleNumber === 4 && document.project.documentType === 'PCA') return null;
-                  const isActive = activeModule === modIdx && activeSection === secIdx;
-                  return (
-                    <button key={section.id}
-                      onClick={() => handleSectionClick(modIdx, secIdx)}
-                      className="w-full text-left px-3 py-2 rounded text-xs mb-0.5 transition-colors"
+                  {/* Modules spéciaux — bouton unique */}
+                  {((mod.sections || []).length === 0 ||
+                    (mod.moduleNumber === 4 &&
+                      document.project.documentType === "PCA")) && (
+                    <button
+                      onClick={() => handleSectionClick(modIdx, 0)}
+                      className="w-full text-left px-3 py-2 rounded text-xs mb-0.5 transition-colors font-medium"
                       style={{
-                        backgroundColor: isActive ? '#FDEDEC' : 'transparent',
-                        color: isActive ? '#C0392B' : '#495057',
-                        border: isActive ? '1px solid #F1948A' : '1px solid transparent',
-                        fontWeight: isActive ? '600' : '400',
+                        backgroundColor:
+                          activeModule === modIdx ? "#FDEDEC" : "transparent",
+                        color: activeModule === modIdx ? "#C0392B" : "#495057",
+                        border:
+                          activeModule === modIdx
+                            ? "1px solid #F1948A"
+                            : "1px solid transparent",
                       }}
-                      onMouseEnter={e => { if (!isActive) e.currentTarget.style.backgroundColor = '#F8F9FA'; }}
-                      onMouseLeave={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                      onMouseEnter={(e) => {
+                        if (activeModule !== modIdx)
+                          e.currentTarget.style.backgroundColor = "#F8F9FA";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (activeModule !== modIdx)
+                          e.currentTarget.style.backgroundColor = "transparent";
+                      }}
                     >
-                      {section.id} — {section.title}
+                      {getSpecialModuleLabel(
+                        mod.moduleNumber,
+                        language,
+                        document.project.documentType,
+                      )}
                     </button>
-                  );
-                })}
-              </div>
+                  )}
+
+                  {/* Sections normales */}
+                  {(mod.sections || []).map((section, secIdx) => {
+                    // Cache 3.2 (Liste des membres) pour les bâtiments non industriels
+                    if (
+                      mod.moduleNumber === 3 &&
+                      section.id === "3.2" &&
+                      isBureau
+                    )
+                      return null;
+                    if (
+                      mod.moduleNumber === 4 &&
+                      document.project.documentType === "PCA"
+                    )
+                      return null;
+                    const isActive =
+                      activeModule === modIdx && activeSection === secIdx;
+                    return (
+                      <button
+                        key={section.id}
+                        onClick={() => handleSectionClick(modIdx, secIdx)}
+                        className="w-full text-left px-3 py-2 rounded text-xs mb-0.5 transition-colors"
+                        style={{
+                          backgroundColor: isActive ? "#FDEDEC" : "transparent",
+                          color: isActive ? "#C0392B" : "#495057",
+                          border: isActive
+                            ? "1px solid #F1948A"
+                            : "1px solid transparent",
+                          fontWeight: isActive ? "600" : "400",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isActive)
+                            e.currentTarget.style.backgroundColor = "#F8F9FA";
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isActive)
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
+                        }}
+                      >
+                        {section.id} — {section.title}
+                      </button>
+                    );
+                  })}
+                </div>
               );
             })}
           </div>
         </div>
 
         {/* ── Contenu central ── */}
-        <div className="flex-1 min-w-0 xl:overflow-y-auto" style={{ backgroundColor: '#F8F9FA' }}>
+        <div
+          className="flex-1 min-w-0 xl:overflow-y-auto"
+          style={{ backgroundColor: "#F8F9FA" }}
+        >
           {(currentSection || isSpecialModule) && (
             <div className="max-w-5xl mx-auto p-3 sm:p-5 lg:p-8">
-
-{/* Bannière lecture seule */}
+              {/* Bannière lecture seule */}
               {isReadOnly && (
-                <div className="rounded-md p-3 mb-4 flex items-start gap-2"
+                <div
+                  className="rounded-md p-3 mb-4 flex items-start gap-2"
                   style={{
-                    backgroundColor: document.project.status === 'VALIDATED' ? '#EAFAF1' : '#FEF9E7',
-                    border: `1px solid ${document.project.status === 'VALIDATED' ? '#A9DFBF' : '#FAD7A0'}`,
-                  }}>
-                  <span>{document.project.status === 'VALIDATED' ? '✓' : '🔒'}</span>
-                  <p className="text-sm font-medium"
-                    style={{ color: document.project.status === 'VALIDATED' ? '#27AE60' : '#F39C12' }}>
-                    {document.project.status === 'VALIDATED'
-                      ? 'Document approuvé et verrouillé — lecture seule'
-                      : 'Document en attente d\'approbation — lecture seule'}
+                    backgroundColor:
+                      document.project.status === "VALIDATED"
+                        ? "#EAFAF1"
+                        : "#FEF9E7",
+                    border: `1px solid ${document.project.status === "VALIDATED" ? "#A9DFBF" : "#FAD7A0"}`,
+                  }}
+                >
+                  <span>
+                    {document.project.status === "VALIDATED" ? "✓" : "🔒"}
+                  </span>
+                  <p
+                    className="text-sm font-medium"
+                    style={{
+                      color:
+                        document.project.status === "VALIDATED"
+                          ? "#27AE60"
+                          : "#F39C12",
+                    }}
+                  >
+                    {document.project.status === "VALIDATED"
+                      ? "Document approuvé et verrouillé — lecture seule"
+                      : "Document en attente d'approbation — lecture seule"}
                   </p>
                 </div>
               )}
 
               {/* Résumé validations */}
               {validations.length > 0 && (
-                <div className="rounded-md p-4 mb-6"
+                <div
+                  className="rounded-md p-4 mb-6"
                   style={{
-                    backgroundColor: validations.some(v => v.level === 'CRITIQUE') ? '#FDEDEC' : '#FEF9E7',
-                    border: `1px solid ${validations.some(v => v.level === 'CRITIQUE') ? '#F1948A' : '#FAD7A0'}`,
-                  }}>
+                    backgroundColor: validations.some(
+                      (v) => v.level === "CRITIQUE",
+                    )
+                      ? "#FDEDEC"
+                      : "#FEF9E7",
+                    border: `1px solid ${validations.some((v) => v.level === "CRITIQUE") ? "#F1948A" : "#FAD7A0"}`,
+                  }}
+                >
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-semibold"
-                      style={{ color: validations.some(v => v.level === 'CRITIQUE') ? '#C0392B' : '#F39C12' }}>
-                      {validations.filter(v => v.level === 'CRITIQUE').length > 0 && `${validations.filter(v => v.level === 'CRITIQUE').length} critique(s) `}
-                      {validations.filter(v => v.level === 'ERREUR').length > 0 && `${validations.filter(v => v.level === 'ERREUR').length} erreur(s) `}
-                      {validations.filter(v => v.level === 'AVERTISSEMENT').length > 0 && `${validations.filter(v => v.level === 'AVERTISSEMENT').length} avertissement(s)`}
+                    <p
+                      className="text-sm font-semibold"
+                      style={{
+                        color: validations.some((v) => v.level === "CRITIQUE")
+                          ? "#C0392B"
+                          : "#F39C12",
+                      }}
+                    >
+                      {validations.filter((v) => v.level === "CRITIQUE")
+                        .length > 0 &&
+                        `${validations.filter((v) => v.level === "CRITIQUE").length} critique(s) `}
+                      {validations.filter((v) => v.level === "ERREUR").length >
+                        0 &&
+                        `${validations.filter((v) => v.level === "ERREUR").length} erreur(s) `}
+                      {validations.filter((v) => v.level === "AVERTISSEMENT")
+                        .length > 0 &&
+                        `${validations.filter((v) => v.level === "AVERTISSEMENT").length} avertissement(s)`}
                     </p>
                   </div>
                   <div className="space-y-1.5">
-                    {validations.map(v => (
-                      <div key={v.id} className="flex items-start gap-2 text-xs">
-                        <span style={{ color: v.level === 'CRITIQUE' ? '#C0392B' : v.level === 'ERREUR' ? '#E74C3C' : '#F39C12', flexShrink: 0 }}>
-                          {v.level === 'CRITIQUE' ? '🔴' : v.level === 'ERREUR' ? '🟠' : '🟡'}
+                    {validations.map((v) => (
+                      <div
+                        key={v.id}
+                        className="flex items-start gap-2 text-xs"
+                      >
+                        <span
+                          style={{
+                            color:
+                              v.level === "CRITIQUE"
+                                ? "#C0392B"
+                                : v.level === "ERREUR"
+                                  ? "#E74C3C"
+                                  : "#F39C12",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {v.level === "CRITIQUE"
+                            ? "🔴"
+                            : v.level === "ERREUR"
+                              ? "🟠"
+                              : "🟡"}
                         </span>
-                        <span style={{ color: '#495057' }}>
+                        <span style={{ color: "#495057" }}>
                           <strong>{v.level}</strong> — {v.message}
-                          {v.action && <span style={{ color: '#6C757D' }}> → {v.action}</span>}
+                          {v.action && (
+                            <span style={{ color: "#6C757D" }}>
+                              {" "}
+                              → {v.action}
+                            </span>
+                          )}
                         </span>
                       </div>
                     ))}
@@ -893,61 +1553,126 @@ export default function EditorPage() {
         </div>
 
         {/* ── Panneau droite — Infos ── */}
-        <div className="hidden xl:block w-64 overflow-y-auto flex-shrink-0"
-          style={{ backgroundColor: '#FFFFFF', borderLeft: '1px solid #DEE2E6' }}>
+        <div
+          className="hidden xl:block w-64 overflow-y-auto flex-shrink-0"
+          style={{
+            backgroundColor: "#FFFFFF",
+            borderLeft: "1px solid #DEE2E6",
+          }}
+        >
           <div className="p-4">
-            <h3 className="font-semibold text-sm mb-4" style={{ color: '#2C3E50' }}>
-              {language === 'fr' ? 'Informations' : 'Information'}
+            <h3
+              className="font-semibold text-sm mb-4"
+              style={{ color: "#2C3E50" }}
+            >
+              {language === "fr" ? "Informations" : "Information"}
             </h3>
 
-            <div className="rounded-md p-4 mb-4" style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
-              <p className="text-xs font-medium mb-3" style={{ color: '#ADB5BD' }}>Document</p>
+            <div
+              className="rounded-md p-4 mb-4"
+              style={{
+                backgroundColor: "#F8F9FA",
+                border: "1px solid #E9ECEF",
+              }}
+            >
+              <p
+                className="text-xs font-medium mb-3"
+                style={{ color: "#ADB5BD" }}
+              >
+                Document
+              </p>
               <div className="space-y-2">
                 {[
-                  { label: language === 'fr' ? 'Type'      : 'Type',     value: document.project?.documentType },
-                  { label: language === 'fr' ? 'Client'    : 'Client',   value: document.project?.client?.name },
-                  { label: language === 'fr' ? 'Bâtiment'  : 'Building', value: document.project?.building?.name },
-                  { label: language === 'fr' ? 'Année'     : 'Year',     value: document.project?.year?.toString() },
-                ].map(info => (
+                  {
+                    label: language === "fr" ? "Type" : "Type",
+                    value: document.project?.documentType,
+                  },
+                  {
+                    label: language === "fr" ? "Client" : "Client",
+                    value: document.project?.client?.name,
+                  },
+                  {
+                    label: language === "fr" ? "Bâtiment" : "Building",
+                    value: document.project?.building?.name,
+                  },
+                  {
+                    label: language === "fr" ? "Année" : "Year",
+                    value: document.project?.year?.toString(),
+                  },
+                ].map((info) => (
                   <div key={info.label}>
-                    <p className="text-xs" style={{ color: '#ADB5BD' }}>{info.label}</p>
-                    <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>{info.value}</p>
+                    <p className="text-xs" style={{ color: "#ADB5BD" }}>
+                      {info.label}
+                    </p>
+                    <p
+                      className="text-sm font-medium"
+                      style={{ color: "#2C3E50" }}
+                    >
+                      {info.value}
+                    </p>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="rounded-md p-4 mb-4"
+            <div
+              className="rounded-md p-4 mb-4"
               style={{
-                backgroundColor: language === 'fr' ? '#FDEDEC' : '#EBF5FB',
-                border: `1px solid ${language === 'fr' ? '#F1948A' : '#AED6F1'}`,
-              }}>
-              <p className="text-xs font-medium mb-1"
-                style={{ color: language === 'fr' ? '#C0392B' : '#2980B9' }}>
-                {language === 'fr' ? '🇫🇷 Version française active' : '🇺🇸 English version active'}
+                backgroundColor: language === "fr" ? "#FDEDEC" : "#EBF5FB",
+                border: `1px solid ${language === "fr" ? "#F1948A" : "#AED6F1"}`,
+              }}
+            >
+              <p
+                className="text-xs font-medium mb-1"
+                style={{ color: language === "fr" ? "#C0392B" : "#2980B9" }}
+              >
+                {language === "fr"
+                  ? "🇫🇷 Version française active"
+                  : "🇺🇸 English version active"}
               </p>
-              <p className="text-xs" style={{ color: '#6C757D' }}>
-                {language === 'fr' ? 'Modifications en français uniquement.' : 'Edits apply to English version only.'}
+              <p className="text-xs" style={{ color: "#6C757D" }}>
+                {language === "fr"
+                  ? "Modifications en français uniquement."
+                  : "Edits apply to English version only."}
               </p>
             </div>
 
-            <div className="rounded-md p-4" style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
-              <p className="text-xs font-medium mb-3" style={{ color: '#ADB5BD' }}>
-                {language === 'fr' ? 'Navigation rapide' : 'Quick navigation'}
+            <div
+              className="rounded-md p-4"
+              style={{
+                backgroundColor: "#F8F9FA",
+                border: "1px solid #E9ECEF",
+              }}
+            >
+              <p
+                className="text-xs font-medium mb-3"
+                style={{ color: "#ADB5BD" }}
+              >
+                {language === "fr" ? "Navigation rapide" : "Quick navigation"}
               </p>
               <div className="space-y-1">
-                {modules.map(mod => (
-                  <div key={mod.moduleNumber} className="text-xs py-1"
-                    style={{ borderBottom: '1px solid #E9ECEF', color: '#495057' }}>
-                    <span className="font-mono font-bold" style={{ color: '#C0392B' }}>M{mod.moduleNumber}</span>
-                    {' '}{mod.title}
+                {modules.map((mod) => (
+                  <div
+                    key={mod.moduleNumber}
+                    className="text-xs py-1"
+                    style={{
+                      borderBottom: "1px solid #E9ECEF",
+                      color: "#495057",
+                    }}
+                  >
+                    <span
+                      className="font-mono font-bold"
+                      style={{ color: "#C0392B" }}
+                    >
+                      M{mod.moduleNumber}
+                    </span>{" "}
+                    {mod.title}
                   </div>
                 ))}
               </div>
             </div>
           </div>
         </div>
-
       </div>
 
       {/* Navigation modules — mobile/tablette */}
@@ -961,17 +1686,29 @@ export default function EditorPage() {
           />
           <div
             className="absolute left-0 top-0 bottom-0 w-[min(88vw,340px)] overflow-y-auto"
-            style={{ backgroundColor: '#FFFFFF', boxShadow: '4px 0 18px rgba(0,0,0,0.15)' }}
+            style={{
+              backgroundColor: "#FFFFFF",
+              boxShadow: "4px 0 18px rgba(0,0,0,0.15)",
+            }}
           >
             <div
               className="sticky top-0 z-10 flex items-center justify-between px-4 py-3"
-              style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E9ECEF' }}
+              style={{
+                backgroundColor: "#FFFFFF",
+                borderBottom: "1px solid #E9ECEF",
+              }}
             >
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#ADB5BD' }}>
+                <p
+                  className="text-xs font-bold uppercase tracking-wide"
+                  style={{ color: "#ADB5BD" }}
+                >
                   Éditeur
                 </p>
-                <p className="text-sm font-semibold" style={{ color: '#2C3E50' }}>
+                <p
+                  className="text-sm font-semibold"
+                  style={{ color: "#2C3E50" }}
+                >
                   Navigation du document
                 </p>
               </div>
@@ -979,7 +1716,7 @@ export default function EditorPage() {
                 type="button"
                 onClick={() => setNavOpen(false)}
                 className="w-9 h-9 rounded flex items-center justify-center"
-                style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+                style={{ border: "1px solid #DEE2E6", color: "#6C757D" }}
               >
                 ✕
               </button>
@@ -990,38 +1727,60 @@ export default function EditorPage() {
                 <span
                   className="text-xs font-bold px-2 py-0.5 rounded"
                   style={{
-                    backgroundColor: language === 'fr' ? '#FDEDEC' : '#EBF5FB',
-                    color: language === 'fr' ? '#C0392B' : '#2980B9',
+                    backgroundColor: language === "fr" ? "#FDEDEC" : "#EBF5FB",
+                    color: language === "fr" ? "#C0392B" : "#2980B9",
                   }}
                 >
-                  {language === 'fr' ? 'Version française' : 'English version'}
+                  {language === "fr" ? "Version française" : "English version"}
                 </span>
               </div>
 
               {modules.map((mod, modIdx) => {
-                const modValidations = validations.filter(v => v.moduleNumber === mod.moduleNumber);
-                const hasCritique = modValidations.some(v => v.level === 'CRITIQUE');
-                const hasErreur = modValidations.some(v => v.level === 'ERREUR');
-                const hasAvert = modValidations.some(v => v.level === 'AVERTISSEMENT');
-                const badgeColor = hasCritique ? '#C0392B' : hasErreur ? '#E74C3C' : hasAvert ? '#F39C12' : undefined;
+                const modValidations = validations.filter(
+                  (v) => v.moduleNumber === mod.moduleNumber,
+                );
+                const hasCritique = modValidations.some(
+                  (v) => v.level === "CRITIQUE",
+                );
+                const hasErreur = modValidations.some(
+                  (v) => v.level === "ERREUR",
+                );
+                const hasAvert = modValidations.some(
+                  (v) => v.level === "AVERTISSEMENT",
+                );
+                const badgeColor = hasCritique
+                  ? "#C0392B"
+                  : hasErreur
+                    ? "#E74C3C"
+                    : hasAvert
+                      ? "#F39C12"
+                      : undefined;
                 const completion = getModuleCompletion(mod);
 
                 return (
                   <div key={mod.moduleNumber} className="mb-2">
                     <div
                       className="px-3 py-2 text-xs font-bold uppercase tracking-wider mb-1 flex items-center justify-between gap-2"
-                      style={{ color: activeModule === modIdx ? '#C0392B' : '#ADB5BD' }}
+                      style={{
+                        color: activeModule === modIdx ? "#C0392B" : "#ADB5BD",
+                      }}
                     >
-                      <span className="break-words">M{mod.moduleNumber} — {mod.title}</span>
+                      <span className="break-words">
+                        M{mod.moduleNumber} — {mod.title}
+                      </span>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {badgeColor && <span style={{ color: badgeColor }}>●</span>}
+                        {badgeColor && (
+                          <span style={{ color: badgeColor }}>●</span>
+                        )}
                         <span style={{ color: completionColor[completion] }}>
                           {completionIcon[completion]}
                         </span>
                       </div>
                     </div>
 
-                    {((mod.sections || []).length === 0 || (mod.moduleNumber === 4 && document.project.documentType === 'PCA')) && (
+                    {((mod.sections || []).length === 0 ||
+                      (mod.moduleNumber === 4 &&
+                        document.project.documentType === "PCA")) && (
                       <button
                         type="button"
                         onClick={() => {
@@ -1030,19 +1789,38 @@ export default function EditorPage() {
                         }}
                         className="w-full text-left px-3 py-2.5 rounded text-xs mb-1 font-medium"
                         style={{
-                          backgroundColor: activeModule === modIdx ? '#FDEDEC' : 'transparent',
-                          color: activeModule === modIdx ? '#C0392B' : '#495057',
-                          border: activeModule === modIdx ? '1px solid #F1948A' : '1px solid transparent',
+                          backgroundColor:
+                            activeModule === modIdx ? "#FDEDEC" : "transparent",
+                          color:
+                            activeModule === modIdx ? "#C0392B" : "#495057",
+                          border:
+                            activeModule === modIdx
+                              ? "1px solid #F1948A"
+                              : "1px solid transparent",
                         }}
                       >
-                        {getSpecialModuleLabel(mod.moduleNumber, language, document.project.documentType)}
+                        {getSpecialModuleLabel(
+                          mod.moduleNumber,
+                          language,
+                          document.project.documentType,
+                        )}
                       </button>
                     )}
 
                     {(mod.sections || []).map((section, secIdx) => {
-                      if (mod.moduleNumber === 3 && section.id === '3.2' && isBureau) return null;
-                  if (mod.moduleNumber === 4 && document.project.documentType === 'PCA') return null;
-                      const isActive = activeModule === modIdx && activeSection === secIdx;
+                      if (
+                        mod.moduleNumber === 3 &&
+                        section.id === "3.2" &&
+                        isBureau
+                      )
+                        return null;
+                      if (
+                        mod.moduleNumber === 4 &&
+                        document.project.documentType === "PCA"
+                      )
+                        return null;
+                      const isActive =
+                        activeModule === modIdx && activeSection === secIdx;
 
                       return (
                         <button
@@ -1054,10 +1832,14 @@ export default function EditorPage() {
                           }}
                           className="w-full text-left px-3 py-2.5 rounded text-xs mb-1"
                           style={{
-                            backgroundColor: isActive ? '#FDEDEC' : 'transparent',
-                            color: isActive ? '#C0392B' : '#495057',
-                            border: isActive ? '1px solid #F1948A' : '1px solid transparent',
-                            fontWeight: isActive ? '600' : '400',
+                            backgroundColor: isActive
+                              ? "#FDEDEC"
+                              : "transparent",
+                            color: isActive ? "#C0392B" : "#495057",
+                            border: isActive
+                              ? "1px solid #F1948A"
+                              : "1px solid transparent",
+                            fontWeight: isActive ? "600" : "400",
                           }}
                         >
                           {section.id} — {section.title}
@@ -1083,38 +1865,74 @@ export default function EditorPage() {
           />
           <div
             className="absolute right-0 top-0 bottom-0 w-[min(92vw,380px)] overflow-y-auto"
-            style={{ backgroundColor: '#FFFFFF', boxShadow: '-4px 0 18px rgba(0,0,0,0.15)' }}
+            style={{
+              backgroundColor: "#FFFFFF",
+              boxShadow: "-4px 0 18px rgba(0,0,0,0.15)",
+            }}
           >
             <div
               className="sticky top-0 z-10 flex items-center justify-between px-4 py-3"
-              style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E9ECEF' }}
+              style={{
+                backgroundColor: "#FFFFFF",
+                borderBottom: "1px solid #E9ECEF",
+              }}
             >
-              <p className="text-sm font-semibold" style={{ color: '#2C3E50' }}>
-                {language === 'fr' ? 'Informations' : 'Information'}
+              <p className="text-sm font-semibold" style={{ color: "#2C3E50" }}>
+                {language === "fr" ? "Informations" : "Information"}
               </p>
               <button
                 type="button"
                 onClick={() => setInfoOpen(false)}
                 className="w-9 h-9 rounded flex items-center justify-center"
-                style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+                style={{ border: "1px solid #DEE2E6", color: "#6C757D" }}
               >
                 ✕
               </button>
             </div>
 
             <div className="p-4">
-              <div className="rounded-md p-4 mb-4" style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
-                <p className="text-xs font-medium mb-3" style={{ color: '#ADB5BD' }}>Document</p>
+              <div
+                className="rounded-md p-4 mb-4"
+                style={{
+                  backgroundColor: "#F8F9FA",
+                  border: "1px solid #E9ECEF",
+                }}
+              >
+                <p
+                  className="text-xs font-medium mb-3"
+                  style={{ color: "#ADB5BD" }}
+                >
+                  Document
+                </p>
                 <div className="space-y-2">
                   {[
-                    { label: language === 'fr' ? 'Type' : 'Type', value: document.project?.documentType },
-                    { label: language === 'fr' ? 'Client' : 'Client', value: document.project?.client?.name },
-                    { label: language === 'fr' ? 'Bâtiment' : 'Building', value: document.project?.building?.name },
-                    { label: language === 'fr' ? 'Année' : 'Year', value: document.project?.year?.toString() },
-                  ].map(info => (
+                    {
+                      label: language === "fr" ? "Type" : "Type",
+                      value: document.project?.documentType,
+                    },
+                    {
+                      label: language === "fr" ? "Client" : "Client",
+                      value: document.project?.client?.name,
+                    },
+                    {
+                      label: language === "fr" ? "Bâtiment" : "Building",
+                      value: document.project?.building?.name,
+                    },
+                    {
+                      label: language === "fr" ? "Année" : "Year",
+                      value: document.project?.year?.toString(),
+                    },
+                  ].map((info) => (
                     <div key={info.label}>
-                      <p className="text-xs" style={{ color: '#ADB5BD' }}>{info.label}</p>
-                      <p className="text-sm font-medium break-words" style={{ color: '#2C3E50' }}>{info.value}</p>
+                      <p className="text-xs" style={{ color: "#ADB5BD" }}>
+                        {info.label}
+                      </p>
+                      <p
+                        className="text-sm font-medium break-words"
+                        style={{ color: "#2C3E50" }}
+                      >
+                        {info.value}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -1123,37 +1941,54 @@ export default function EditorPage() {
               <div
                 className="rounded-md p-4 mb-4"
                 style={{
-                  backgroundColor: language === 'fr' ? '#FDEDEC' : '#EBF5FB',
-                  border: `1px solid ${language === 'fr' ? '#F1948A' : '#AED6F1'}`,
+                  backgroundColor: language === "fr" ? "#FDEDEC" : "#EBF5FB",
+                  border: `1px solid ${language === "fr" ? "#F1948A" : "#AED6F1"}`,
                 }}
               >
                 <p
                   className="text-xs font-medium mb-1"
-                  style={{ color: language === 'fr' ? '#C0392B' : '#2980B9' }}
+                  style={{ color: language === "fr" ? "#C0392B" : "#2980B9" }}
                 >
-                  {language === 'fr' ? '🇫🇷 Version française active' : '🇺🇸 English version active'}
+                  {language === "fr"
+                    ? "🇫🇷 Version française active"
+                    : "🇺🇸 English version active"}
                 </p>
-                <p className="text-xs" style={{ color: '#6C757D' }}>
-                  {language === 'fr'
-                    ? 'Modifications en français uniquement.'
-                    : 'Edits apply to English version only.'}
+                <p className="text-xs" style={{ color: "#6C757D" }}>
+                  {language === "fr"
+                    ? "Modifications en français uniquement."
+                    : "Edits apply to English version only."}
                 </p>
               </div>
 
-              <div className="rounded-md p-4" style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
-                <p className="text-xs font-medium mb-3" style={{ color: '#ADB5BD' }}>
-                  {language === 'fr' ? 'Navigation rapide' : 'Quick navigation'}
+              <div
+                className="rounded-md p-4"
+                style={{
+                  backgroundColor: "#F8F9FA",
+                  border: "1px solid #E9ECEF",
+                }}
+              >
+                <p
+                  className="text-xs font-medium mb-3"
+                  style={{ color: "#ADB5BD" }}
+                >
+                  {language === "fr" ? "Navigation rapide" : "Quick navigation"}
                 </p>
                 <div className="space-y-1">
-                  {modules.map(mod => (
+                  {modules.map((mod) => (
                     <div
                       key={mod.moduleNumber}
                       className="text-xs py-1 break-words"
-                      style={{ borderBottom: '1px solid #E9ECEF', color: '#495057' }}
+                      style={{
+                        borderBottom: "1px solid #E9ECEF",
+                        color: "#495057",
+                      }}
                     >
-                      <span className="font-mono font-bold" style={{ color: '#C0392B' }}>
+                      <span
+                        className="font-mono font-bold"
+                        style={{ color: "#C0392B" }}
+                      >
                         M{mod.moduleNumber}
-                      </span>{' '}
+                      </span>{" "}
                       {mod.title}
                     </div>
                   ))}
@@ -1164,10 +1999,29 @@ export default function EditorPage() {
         </div>
       )}
 
-    {showVersionHistory && (
+      {saveError && (
+        <div
+          role="alert"
+          className="fixed bottom-4 left-1/2 z-50 max-w-xl -translate-x-1/2 rounded-md px-4 py-3 text-sm text-white"
+          style={{ backgroundColor: "#C0392B" }}
+        >
+          {saveError}
+        </div>
+      )}
+
+      {showVersionHistory && (
         <VersionHistory
           projectId={projectId}
-          onRestore={() => { fetchDocument(); setShowVersionHistory(false); }}
+          lockVersion={document.lockVersion}
+          onLockVersionChange={(lockVersion) =>
+            setDocument((current) =>
+              current ? { ...current, lockVersion } : current,
+            )
+          }
+          onRestore={() => {
+            fetchDocument();
+            setShowVersionHistory(false);
+          }}
           onClose={() => setShowVersionHistory(false)}
         />
       )}

@@ -1,14 +1,23 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { getAllProcedures, getProcedureById } from '../generator/module4.templates';
+import {
+  getAllProcedures,
+  getProcedureById,
+} from '../generator/module4.templates';
+import { AdviserActor, projectAccessWhere } from '../auth/project-access';
+import { DocumentEditorIntegrityService } from '../generator/document-editor-integrity.service';
 
 @Injectable()
 export class Module4Service {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly integrity: DocumentEditorIntegrityService,
+  ) {}
 
-  constructor(private readonly prisma: PrismaService) {}
-
-  private async assertProjectOwnership(projectId: string, organizationId: string) {
-    const project = await this.prisma.project.findFirst({ where: { id: projectId, organizationId } });
+  private async assertProjectOwnership(projectId: string, actor: AdviserActor) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, ...projectAccessWhere(actor), isActive: true },
+    });
     if (!project) {
       throw new NotFoundException('Projet introuvable');
     }
@@ -16,20 +25,23 @@ export class Module4Service {
 
   // ── GET module4 sauvegardé ─────────────────────────────
 
-  async getModule4(projectId: string, organizationId: string) {
-    await this.assertProjectOwnership(projectId, organizationId);
+  async getModule4(projectId: string, actor: AdviserActor) {
+    await this.assertProjectOwnership(projectId, actor);
 
     const document = await this.prisma.document.findFirst({
       where: { projectId },
-      select: { id: true, content: true },
+      select: { id: true, content: true, lockVersion: true },
     });
     if (!document) {
-      throw new NotFoundException(`Document introuvable pour le projet ${projectId}`);
+      throw new NotFoundException(
+        `Document introuvable pour le projet ${projectId}`,
+      );
     }
-    const content = (document.content as any) || {};
+    const content = this.integrity.sanitize((document.content as any) || {});
     return {
       documentId: document.id,
       module4: content.module4 || null,
+      lockVersion: document.lockVersion,
     };
   }
 
@@ -37,7 +49,7 @@ export class Module4Service {
 
   async getLibrary() {
     return {
-      procedures: getAllProcedures().map(p => ({
+      procedures: getAllProcedures().map((p) => ({
         id: p.id,
         code: p.code,
         titleFR: p.titleFR,
@@ -64,15 +76,17 @@ export class Module4Service {
 
   // ── PUT sauvegarde module4 ─────────────────────────────
 
-  async saveModule4(projectId: string, dto: any, organizationId: string) {
-    await this.assertProjectOwnership(projectId, organizationId);
+  async saveModule4(projectId: string, dto: any, actor: AdviserActor) {
+    await this.assertProjectOwnership(projectId, actor);
 
     const document = await this.prisma.document.findFirst({
       where: { projectId },
       select: { id: true, content: true },
     });
     if (!document) {
-      throw new NotFoundException(`Document introuvable pour le projet ${projectId}`);
+      throw new NotFoundException(
+        `Document introuvable pour le projet ${projectId}`,
+      );
     }
 
     const existingContent = (document.content as any) || {};
@@ -94,15 +108,34 @@ export class Module4Service {
       module4: updatedModule4,
     };
 
-    await this.prisma.document.update({
-      where: { id: document.id },
-      data:  { content: updatedContent },
-    });
+    const result = await this.integrity.mutateProjectContent(
+      projectId,
+      actor,
+      dto.expectedLockVersion,
+      (current) => ({
+        content: {
+          ...current,
+          module4: {
+            ...current.module4,
+            ...(dto.customProcedureIds !== undefined && {
+              customProcedureIds: dto.customProcedureIds,
+              procedureOverrides: dto.procedureOverrides || {},
+            }),
+            ...(dto.module4?.pcaContacts !== undefined && {
+              pcaContacts: dto.module4.pcaContacts,
+            }),
+            updatedAt: updatedContent.module4.updatedAt,
+          },
+        },
+        value: null,
+      }),
+    );
 
     return {
-      success:   true,
-      message:   'Module 4 sauvegardé',
+      success: true,
+      message: 'Module 4 sauvegardé',
       updatedAt: updatedContent.module4.updatedAt,
+      lockVersion: result.lockVersion,
     };
   }
 }

@@ -1,10 +1,27 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 
 @Injectable()
 export class ProceduresService {
   constructor(private prisma: PrismaService) {}
+
+  private async assertMutableProject(projectId: string, actor: AdviserActor) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, ...projectAccessWhere(actor), isActive: true },
+      select: { status: true },
+    });
+    if (!project) throw new NotFoundException('Projet introuvable');
+    if (!['DRAFT', 'IN_PROGRESS'].includes(project.status))
+      throw new ForbiddenException(
+        `Le projet ${project.status} est en lecture seule.`,
+      );
+  }
 
   // ── Helper JSON Prisma ─────────────────────────────────────
   //
@@ -34,11 +51,7 @@ export class ProceduresService {
   //
   // Priorité :
   // override projet > override organisation > défaut
-  async findOne(
-    id: string,
-    organizationId: string,
-    projectId?: string,
-  ) {
+  async findOne(id: string, organizationId: string, projectId?: string) {
     const proc = await this.prisma.procedureDefault.findUnique({
       where: { id },
     });
@@ -49,16 +62,15 @@ export class ProceduresService {
 
     // Override projet — priorité maximale
     if (projectId) {
-      const projectOverride =
-        await this.prisma.procedureOverride.findUnique({
-          where: {
-            procedureId_organizationId_projectId: {
-              procedureId: id,
-              organizationId,
-              projectId,
-            },
+      const projectOverride = await this.prisma.procedureOverride.findUnique({
+        where: {
+          procedureId_organizationId_projectId: {
+            procedureId: id,
+            organizationId,
+            projectId,
           },
-        });
+        },
+      });
 
       if (projectOverride) {
         return {
@@ -72,14 +84,13 @@ export class ProceduresService {
     }
 
     // Override organisation
-    const orgOverride =
-      await this.prisma.procedureOverride.findFirst({
-        where: {
-          procedureId: id,
-          organizationId,
-          projectId: null,
-        },
-      });
+    const orgOverride = await this.prisma.procedureOverride.findFirst({
+      where: {
+        procedureId: id,
+        organizationId,
+        projectId: null,
+      },
+    });
 
     if (orgOverride) {
       return {
@@ -103,10 +114,7 @@ export class ProceduresService {
   // Applique :
   // projet > organisation > défaut
   // + état isActive propre au projet
-  async findAllForProject(
-    organizationId: string,
-    projectId: string,
-  ) {
+  async findAllForProject(organizationId: string, projectId: string) {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       select: { documentType: true },
@@ -118,52 +126,41 @@ export class ProceduresService {
 
     const documentType = project.documentType || 'PMU';
 
-    const [
-      defaults,
-      organizationOverrides,
-      projectOverrides,
-    ] = await Promise.all([
-      this.prisma.procedureDefault.findMany({
-        where: { isActive: true },
-        orderBy: { code: 'asc' },
-      }),
+    const [defaults, organizationOverrides, projectOverrides] =
+      await Promise.all([
+        this.prisma.procedureDefault.findMany({
+          where: { isActive: true },
+          orderBy: { code: 'asc' },
+        }),
 
-      this.prisma.procedureOverride.findMany({
-        where: {
-          organizationId,
-          projectId: null,
-        },
-      }),
+        this.prisma.procedureOverride.findMany({
+          where: {
+            organizationId,
+            projectId: null,
+          },
+        }),
 
-      this.prisma.procedureOverride.findMany({
-        where: {
-          organizationId,
-          projectId,
-        },
-      }),
-    ]);
+        this.prisma.procedureOverride.findMany({
+          where: {
+            organizationId,
+            projectId,
+          },
+        }),
+      ]);
 
     const organizationOverrideMap = new Map<string, any>(
-      organizationOverrides.map((o: any) => [
-        o.procedureId,
-        o,
-      ]),
+      organizationOverrides.map((o: any) => [o.procedureId, o]),
     );
 
     const projectOverrideMap = new Map<string, any>(
-      projectOverrides.map((o: any) => [
-        o.procedureId,
-        o,
-      ]),
+      projectOverrides.map((o: any) => [o.procedureId, o]),
     );
 
     return defaults
-      .map(defaultProc => {
-        const orgOverride =
-          organizationOverrideMap.get(defaultProc.id);
+      .map((defaultProc) => {
+        const orgOverride = organizationOverrideMap.get(defaultProc.id);
 
-        const projectOverride =
-          projectOverrideMap.get(defaultProc.id);
+        const projectOverride = projectOverrideMap.get(defaultProc.id);
 
         const effectiveContent =
           projectOverride?.content ??
@@ -173,25 +170,20 @@ export class ProceduresService {
         return {
           ...defaultProc,
           content: effectiveContent,
-          isOverridden:
-            Boolean(projectOverride) ||
-            Boolean(orgOverride),
+          isOverridden: Boolean(projectOverride) || Boolean(orgOverride),
           overrideLevel: projectOverride
             ? 'project'
             : orgOverride
               ? 'organization'
               : null,
-          isActive: projectOverride
-            ? projectOverride.isActive !== false
-            : true,
+          isActive: projectOverride ? projectOverride.isActive !== false : true,
         };
       })
-      .filter(proc => {
+      .filter((proc) => {
         const content = proc.content as any;
-        const docTypes: string[] =
-          Array.isArray(content?.documentTypes)
-            ? content.documentTypes
-            : [];
+        const docTypes: string[] = Array.isArray(content?.documentTypes)
+          ? content.documentTypes
+          : [];
 
         if (docTypes.length === 0) {
           return true;
@@ -204,10 +196,12 @@ export class ProceduresService {
   // ── Sauvegarder un override par projet ─────────────────────
   async updateForProject(
     id: string,
-    organizationId: string,
     projectId: string,
     content: any,
+    actor: AdviserActor,
   ) {
+    await this.assertMutableProject(projectId, actor);
+    const organizationId = actor.organizationId;
     const proc = await this.prisma.procedureDefault.findUnique({
       where: { id },
     });
@@ -252,14 +246,13 @@ export class ProceduresService {
       throw new NotFoundException('Procédure introuvable');
     }
 
-    const existing =
-      await this.prisma.procedureOverride.findFirst({
-        where: {
-          procedureId: id,
-          organizationId,
-          projectId: null,
-        },
-      });
+    const existing = await this.prisma.procedureOverride.findFirst({
+      where: {
+        procedureId: id,
+        organizationId,
+        projectId: null,
+      },
+    });
 
     if (existing) {
       await this.prisma.procedureOverride.update({
@@ -285,10 +278,12 @@ export class ProceduresService {
   // ── Activer/désactiver une procédure pour un projet ────────
   async toggleActiveForProject(
     id: string,
-    organizationId: string,
     projectId: string,
     isActive: boolean,
+    actor: AdviserActor,
   ) {
+    await this.assertMutableProject(projectId, actor);
+    const organizationId = actor.organizationId;
     const proc = await this.prisma.procedureDefault.findUnique({
       where: { id },
     });
@@ -297,16 +292,15 @@ export class ProceduresService {
       throw new NotFoundException('Procédure introuvable');
     }
 
-    const existing =
-      await this.prisma.procedureOverride.findUnique({
-        where: {
-          procedureId_organizationId_projectId: {
-            procedureId: id,
-            organizationId,
-            projectId,
-          },
+    const existing = await this.prisma.procedureOverride.findUnique({
+      where: {
+        procedureId_organizationId_projectId: {
+          procedureId: id,
+          organizationId,
+          projectId,
         },
-      });
+      },
+    });
 
     if (existing) {
       await this.prisma.procedureOverride.update({
@@ -316,18 +310,15 @@ export class ProceduresService {
     } else {
       // Le toggle seul ne doit pas figer une ancienne version projet
       // si un override organisation existe.
-      const orgOverride =
-        await this.prisma.procedureOverride.findFirst({
-          where: {
-            procedureId: id,
-            organizationId,
-            projectId: null,
-          },
-        });
+      const orgOverride = await this.prisma.procedureOverride.findFirst({
+        where: {
+          procedureId: id,
+          organizationId,
+          projectId: null,
+        },
+      });
 
-      const effectiveContent =
-        orgOverride?.content ??
-        proc.content;
+      const effectiveContent = orgOverride?.content ?? proc.content;
 
       await this.prisma.procedureOverride.create({
         data: {
@@ -347,11 +338,9 @@ export class ProceduresService {
   }
 
   // ── Restaurer la version par défaut pour un projet ─────────
-  async restoreForProject(
-    id: string,
-    organizationId: string,
-    projectId: string,
-  ) {
+  async restoreForProject(id: string, projectId: string, actor: AdviserActor) {
+    await this.assertMutableProject(projectId, actor);
+    const organizationId = actor.organizationId;
     await this.prisma.procedureOverride.deleteMany({
       where: {
         procedureId: id,
@@ -364,10 +353,7 @@ export class ProceduresService {
   }
 
   // ── Restaurer la version organisation ──────────────────────
-  async restoreForOrganization(
-    id: string,
-    organizationId: string,
-  ) {
+  async restoreForOrganization(id: string, organizationId: string) {
     await this.prisma.procedureOverride.deleteMany({
       where: {
         procedureId: id,
@@ -380,10 +366,7 @@ export class ProceduresService {
   }
 
   // ── Modifier la procédure par défaut (SUPER_ADMIN) ─────────
-  async updateDefault(
-    id: string,
-    content: any,
-  ) {
+  async updateDefault(id: string, content: any) {
     const proc = await this.prisma.procedureDefault.findUnique({
       where: { id },
     });
@@ -402,10 +385,9 @@ export class ProceduresService {
 
   // ── Créer une nouvelle procédure par défaut (SUPER_ADMIN) ──
   async createDefault(content: any) {
-    const existing =
-      await this.prisma.procedureDefault.findUnique({
-        where: { code: content.code },
-      });
+    const existing = await this.prisma.procedureDefault.findUnique({
+      where: { code: content.code },
+    });
 
     if (existing) {
       throw new Error(
@@ -426,33 +408,16 @@ export class ProceduresService {
   // Elles pointent maintenant vers un véritable override
   // organisation (projectId = null), au lieu du pseudo-projet
   // historique "org-level".
-  async findOne_legacy(
-    id: string,
-    organizationId: string,
-  ) {
+  async findOne_legacy(id: string, organizationId: string) {
     return this.findOne(id, organizationId);
   }
 
-  async update(
-    id: string,
-    organizationId: string,
-    content: any,
-  ) {
-    return this.updateForOrganization(
-      id,
-      organizationId,
-      content,
-    );
+  async update(id: string, organizationId: string, content: any) {
+    return this.updateForOrganization(id, organizationId, content);
   }
 
-  async restore(
-    id: string,
-    organizationId: string,
-  ) {
-    return this.restoreForOrganization(
-      id,
-      organizationId,
-    );
+  async restore(id: string, organizationId: string) {
+    return this.restoreForOrganization(id, organizationId);
   }
 
   // ── Supprimer une procédure par défaut (SUPER_ADMIN) ───────

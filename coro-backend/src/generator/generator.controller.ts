@@ -36,11 +36,18 @@ export class GeneratorController {
     @Param('documentId') documentId: string,
     @Param('moduleId') moduleId: string,
     @Param('sectionId') sectionId: string,
-    @Body() body: { content: string; language?: string },
+    @Body()
+    body: { content: string; language?: string; expectedLockVersion: number },
     @Request() req: any,
   ) {
     return this.generatorService.updateModuleContent(
-      documentId, moduleId, sectionId, body.content, body.language || 'fr', req.user
+      documentId,
+      moduleId,
+      sectionId,
+      body.content,
+      body.language || 'fr',
+      body.expectedLockVersion,
+      req.user,
     );
   }
 

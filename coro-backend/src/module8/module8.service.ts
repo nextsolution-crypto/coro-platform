@@ -1,54 +1,69 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import puppeteer from 'puppeteer';
+import { AdviserActor, projectAccessWhere } from '../auth/project-access';
+import { DocumentEditorIntegrityService } from '../generator/document-editor-integrity.service';
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
 
 @Injectable()
 export class Module8Service {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly integrity: DocumentEditorIntegrityService,
+  ) {}
 
-  private async assertProjectOwnership(projectId: string, organizationId: string) {
-    const project = await this.prisma.project.findFirst({ where: { id: projectId, organizationId } });
+  private async assertProjectOwnership(projectId: string, actor: AdviserActor) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, ...projectAccessWhere(actor), isActive: true },
+    });
     if (!project) {
       throw new NotFoundException('Projet introuvable');
     }
   }
 
-  async getData(projectId: string, organizationId: string) {
-    await this.assertProjectOwnership(projectId, organizationId);
+  async getData(projectId: string, actor: AdviserActor) {
+    await this.assertProjectOwnership(projectId, actor);
 
     const doc = await this.prisma.document.findFirst({
       where: { projectId },
-      select: { content: true },
+      select: { content: true, lockVersion: true },
     });
 
-    const content = (doc?.content as any) || {};
-    return { module8: content.module8 || null };
+    const content = this.integrity.sanitize((doc?.content as any) || {});
+    return { module8: content.module8 || null, lockVersion: doc?.lockVersion };
   }
 
-  async saveData(projectId: string, dto: any, organizationId: string) {
-    await this.assertProjectOwnership(projectId, organizationId);
-
-    const doc = await this.prisma.document.findFirst({
-      where: { projectId },
-    });
-    if (!doc) throw new NotFoundException('Document introuvable');
-
-    const content = (doc.content as any) || {};
-
-    await this.prisma.document.update({
-      where: { id: doc.id },
-      data: {
-        content: {
-          ...content,
-          module8: dto,
-        },
-      },
-    });
-
-    return { success: true, updatedAt: new Date().toISOString() };
+  async saveData(projectId: string, dto: any, actor: AdviserActor) {
+    const { expectedLockVersion, ...module8 } = dto;
+    const result = await this.integrity.mutateProjectContent(
+      projectId,
+      actor,
+      expectedLockVersion,
+      (content) => ({
+        content: { ...content, module8 },
+        value: null,
+      }),
+    );
+    return {
+      success: true,
+      updatedAt: new Date().toISOString(),
+      lockVersion: result.lockVersion,
+    };
   }
-  async generateAttendancePdf(projectId: string, organizationId: string, language: string): Promise<Buffer> {
-    await this.assertProjectOwnership(projectId, organizationId);
+  async generateAttendancePdf(
+    projectId: string,
+    actor: AdviserActor,
+    language: string,
+  ): Promise<Buffer> {
+    await this.assertProjectOwnership(projectId, actor);
 
     const doc = await this.prisma.document.findFirst({ where: { projectId } });
     const content = (doc?.content as any) || {};
@@ -56,18 +71,27 @@ export class Module8Service {
     const isFr = language !== 'en';
 
     const entries = module8.section8_1 || [];
-    const defaultRows = Array.from({ length: 20 }, () => ({ nom: '', titre: '', date: '', formateur: '' }));
+    const defaultRows = Array.from({ length: 20 }, () => ({
+      nom: '',
+      titre: '',
+      date: '',
+      formateur: '',
+    }));
     const rows = entries.length > 0 ? entries : defaultRows;
 
-    const rowsHtml = rows.map((e: any, idx: number) => `
+    const rowsHtml = rows
+      .map(
+        (e: any, idx: number) => `
       <tr style="height:36px;background-color:${idx % 2 === 0 ? '#FFFFFF' : '#F8F9FA'};">
         <td style="border:1px solid #DEE2E6;padding:4px 8px;"></td>
-        <td style="border:1px solid #DEE2E6;padding:4px 8px;">${e.nom || ''}</td>
-        <td style="border:1px solid #DEE2E6;padding:4px 8px;">${e.titre || ''}</td>
-        <td style="border:1px solid #DEE2E6;padding:4px 8px;text-align:center;">${e.date || ''}</td>
-        <td style="border:1px solid #DEE2E6;padding:4px 8px;">${e.formateur || ''}</td>
+        <td style="border:1px solid #DEE2E6;padding:4px 8px;">${escapeHtml(e.nom)}</td>
+        <td style="border:1px solid #DEE2E6;padding:4px 8px;">${escapeHtml(e.titre)}</td>
+        <td style="border:1px solid #DEE2E6;padding:4px 8px;text-align:center;">${escapeHtml(e.date)}</td>
+        <td style="border:1px solid #DEE2E6;padding:4px 8px;">${escapeHtml(e.formateur)}</td>
       </tr>
-    `).join('');
+    `,
+      )
+      .join('');
 
     const html = `
       <!DOCTYPE html>
@@ -99,7 +123,7 @@ export class Module8Service {
           </thead>
           <tbody>${rowsHtml}</tbody>
         </table>
-        <div class="footer">CORO — ${isFr ? 'Feuille de présence — Formation mesures d\'urgence' : 'Attendance Sheet — Emergency Measures Training'}</div>
+        <div class="footer">CORO — ${isFr ? "Feuille de présence — Formation mesures d'urgence" : 'Attendance Sheet — Emergency Measures Training'}</div>
       </body>
       </html>
     `;

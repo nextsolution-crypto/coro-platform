@@ -21,7 +21,13 @@ describe('Non-regression de la generation documentaire gouvernee', () => {
   const actorA = { userId: ids.operatorA, organizationId: ids.orgA, role: 'OPERATOR' };
   const actorC = { userId: ids.operatorC, organizationId: ids.orgA, role: 'OPERATOR' };
   const actorB = { userId: ids.operatorB, organizationId: ids.orgB, role: 'OPERATOR' };
-  const service = new GeneratorService(prisma as any);
+  // Generation-only scenarios do not exercise the editor collaborators, but
+  // the final integration constructor contract must remain explicit.
+  const service = new GeneratorService(
+    prisma as any,
+    undefined as any,
+    undefined as any,
+  );
   const validation = new ValidationService(prisma as any);
   const command = (key: string, expectedDocumentVersion = 0) => ({
     idempotencyKey: `docgen-${key}-${prefix}`,
