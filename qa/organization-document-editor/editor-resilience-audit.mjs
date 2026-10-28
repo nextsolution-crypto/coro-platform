@@ -29,10 +29,10 @@ const projectId = "50000000-0000-4000-8000-000000000001";
 const checks = [];
 const record = (id, pass, observed) => checks.push({ id, status: pass ? "PASS" : "FAIL", observed });
 
-async function call(route, { token, method = "GET", body } = {}) {
+async function call(route, { token, method = "GET", body, headers = {} } = {}) {
   const response = await fetch(`${apiOrigin}${route}`, {
     method,
-    headers: { ...(body === undefined ? {} : { "content-type": "application/json" }), ...(token ? { authorization: `Bearer ${token}` } : {}) },
+    headers: { ...(body === undefined ? {} : { "content-type": "application/json" }), ...(token ? { authorization: `Bearer ${token}` } : {}), ...headers },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await response.text();
@@ -98,7 +98,7 @@ const actor = await login("advisor-a@global-e2e.test");
 await prisma.project.update({ where: { id: projectId }, data: { status: "IN_PROGRESS" } });
 let doc = await call(`/generator/document/${projectId}`, { token: actor.token });
 if (doc.status === 404 || !doc.data?.id) {
-  await call(`/generator/generate/${projectId}`, { token: actor.token, method: "POST", body: {} });
+  await call(`/generator/generate/${projectId}`, { token: actor.token, method: "POST", body: {}, headers: { "idempotency-key": `editor-resilience-${testedCommit}-${projectId}`, "x-expected-document-version": "0" } });
   doc = await call(`/generator/document/${projectId}`, { token: actor.token });
 }
 const documentId = doc.data.id;
