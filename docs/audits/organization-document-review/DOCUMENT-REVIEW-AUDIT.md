@@ -50,6 +50,11 @@ L'autorité reste `ADMIN/SUPER_ADMIN` avec séparation auteur/approbateur. Une
 affectation nominative, un quorum ou un rejet distinct exigent une décision
 métier. PDF final et signature restent séparés et non validés.
 
+La première CI du candidat a expiré après 15 minutes pendant la suite
+PostgreSQL globale, sans assertion en échec. Le plafond du job a été porté à
+25 minutes sans supprimer, ignorer ni modifier les tests et sans changer les
+conditions des jobs d'image ou de production.
+
 ## Contrôles de mandat
 
 - `PRODUCTION_MUTATION: NO`
