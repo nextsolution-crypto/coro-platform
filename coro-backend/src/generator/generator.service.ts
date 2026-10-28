@@ -1,6 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { createHash } from 'crypto';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { AdviserActor, projectAccessWhere } from '../auth/project-access';
+import { AdviserActor, mutableProjectAccessWhere, projectAccessWhere } from '../auth/project-access';
 import { generateModule1, DocumentContext } from './module1/module1.index';
 import { generateModule2 } from './module2.templates';
 import { generateModule3 } from './module3.templates';
@@ -8,6 +10,10 @@ import { generateModule4, getActiveProcedures, getAllProcedures } from './module
 import { generateModule8 } from './module8.templates';
 import { generatePcaModules } from './pca.templates';
 
+export interface DocumentGenerationCommand {
+  idempotencyKey?: string;
+  expectedDocumentVersion?: string | number;
+}
 
 @Injectable()
 export class GeneratorService {
@@ -333,6 +339,186 @@ private async loadProceduresFromDB(
     }
   }
 
+  private async assertMutableProjectAccess(projectId: string, actor: AdviserActor) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, ...projectAccessWhere(actor) },
+      select: { id: true, isActive: true, status: true },
+    });
+    if (!project) {
+      throw new NotFoundException('Projet introuvable');
+    }
+    if (!project.isActive || project.status === 'ARCHIVED') {
+      throw new ConflictException(
+        'Le projet archivé ou désactivé ne peut pas être généré.',
+      );
+    }
+  }
+
+  private normalizeGenerationCommand(command: DocumentGenerationCommand) {
+    const idempotencyKey = command.idempotencyKey?.trim() || '';
+    if (!/^[A-Za-z0-9_-]{16,100}$/.test(idempotencyKey)) {
+      throw new BadRequestException(
+        'Une clé d’idempotence valide est requise pour générer le document.',
+      );
+    }
+    const expectedDocumentVersion = Number(command.expectedDocumentVersion);
+    if (
+      !Number.isSafeInteger(expectedDocumentVersion) ||
+      expectedDocumentVersion < 0
+    ) {
+      throw new BadRequestException(
+        'La version documentaire attendue est requise et doit être positive ou nulle.',
+      );
+    }
+    return { idempotencyKey, expectedDocumentVersion };
+  }
+
+  private stableValue(value: any): any {
+    if (Array.isArray(value)) return value.map((item) => this.stableValue(item));
+    if (value && typeof value === 'object') {
+      return Object.keys(value)
+        .sort()
+        .reduce((result, key) => {
+          result[key] = this.stableValue(value[key]);
+          return result;
+        }, {} as Record<string, any>);
+    }
+    return value;
+  }
+
+  private generationPayloadHash(documentType: string, config: any): string {
+    return createHash('sha256')
+      .update(JSON.stringify(this.stableValue({ documentType, config })))
+      .digest('hex');
+  }
+
+  private responseFromDocument(document: any, replayed: boolean) {
+    return {
+      documentId: document.id,
+      title: document.title,
+      content: document.content,
+      status: document.status,
+      version: document.version,
+      projectId: document.projectId,
+      replayed,
+    };
+  }
+
+  private async persistGeneratedDocument(
+    projectId: string,
+    actor: AdviserActor,
+    command: ReturnType<GeneratorService['normalizeGenerationCommand']>,
+    payloadHash: string,
+    documentData: any,
+  ) {
+    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`document-generation:${projectId}`}, 0))`;
+      await tx.$queryRaw`SELECT "id" FROM "Project" WHERE "id" = ${projectId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${actor.userId} FOR UPDATE`;
+
+      const currentActor = await tx.user.findFirst({
+        where: {
+          id: actor.userId,
+          organizationId: actor.organizationId,
+          role: actor.role as any,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      if (!currentActor) {
+        throw new ForbiddenException('L’accès de l’utilisateur a été retiré.');
+      }
+
+      const project = await tx.project.findFirst({
+        where: { id: projectId, ...mutableProjectAccessWhere(actor) },
+        select: { id: true },
+      });
+      if (!project) {
+        throw new ConflictException(
+          'Le projet a changé d’état ou d’affectation pendant la génération.',
+        );
+      }
+
+      const prior = await tx.documentGenerationRequest.findUnique({
+        where: {
+          projectId_idempotencyKey: {
+            projectId,
+            idempotencyKey: command.idempotencyKey,
+          },
+        },
+        include: { document: true },
+      });
+      if (prior) {
+        if (
+          prior.actorUserId !== actor.userId ||
+          prior.organizationId !== actor.organizationId ||
+          prior.payloadHash !== payloadHash ||
+          prior.expectedDocumentVersion !== command.expectedDocumentVersion
+        ) {
+          throw new ConflictException(
+            'Cette clé d’idempotence appartient à une demande incompatible.',
+          );
+        }
+        return this.responseFromDocument(prior.document, true);
+      }
+
+      const existingDocuments = await tx.document.findMany({
+        where: { projectId },
+        orderBy: { createdAt: 'asc' },
+        take: 2,
+      });
+      if (existingDocuments.length > 1) {
+        throw new ConflictException(
+          'Plusieurs documents courants existent pour ce projet; une réconciliation est requise.',
+        );
+      }
+      const existing = existingDocuments[0] ?? null;
+      const currentVersion = existing?.version ?? 0;
+      if (currentVersion !== command.expectedDocumentVersion) {
+        throw new ConflictException(
+          `Conflit de version documentaire: version ${currentVersion} active.`,
+        );
+      }
+
+      const nextVersion = currentVersion + 1;
+      const data = { ...documentData, version: nextVersion, projectId };
+      const document = existing
+        ? await tx.document.update({ where: { id: existing.id }, data })
+        : await tx.document.create({ data });
+
+      const updated = await tx.project.updateMany({
+        where: { id: projectId, ...mutableProjectAccessWhere(actor) },
+        data: {
+          status: 'IN_PROGRESS',
+          progress: 50,
+          ...(actor.userId ? { lastEditedById: actor.userId } : {}),
+        },
+      });
+      if (updated.count !== 1) {
+        throw new ConflictException(
+          'Le projet a changé d’état ou d’affectation pendant la génération.',
+        );
+      }
+
+      await tx.documentGenerationRequest.create({
+        data: {
+          projectId,
+          organizationId: actor.organizationId,
+          actorUserId: actor.userId,
+          idempotencyKey: command.idempotencyKey,
+          payloadHash,
+          expectedDocumentVersion: command.expectedDocumentVersion,
+          documentId: document.id,
+          documentVersion: nextVersion,
+        },
+      });
+      return this.responseFromDocument(document, false);
+    }, {
+      maxWait: 5_000,
+      timeout: 15_000,
+    });
+  }
+
   /**
    * Résout la configuration utilisée pour une génération.
    *
@@ -492,8 +678,14 @@ private async loadProceduresFromDB(
     };
   }
 
-  async generateAndSave(projectId: string, config: any, actor: AdviserActor) {
-    await this.assertProjectOwnership(projectId, actor);
+  async generateAndSave(
+    projectId: string,
+    config: any,
+    actor: AdviserActor,
+    rawCommand: DocumentGenerationCommand = {},
+  ) {
+    await this.assertMutableProjectAccess(projectId, actor);
+    const command = this.normalizeGenerationCommand(rawCommand);
     const organizationId = actor.organizationId;
     const userId = actor.userId;
 
@@ -540,6 +732,7 @@ if (project.documentType === 'PCA') {
 const ctx = await this.buildContext(projectId, generationConfig);
 const isPca = ctx.documentType === 'PCA';
 const isPsi = ctx.documentType === 'PSI';
+const payloadHash = this.generationPayloadHash(ctx.documentType, generationConfig);
 
     // ── Branche PCA ──
     if (isPca) {
@@ -587,17 +780,13 @@ const isPsi = ctx.documentType === 'PSI';
         version: existing ? existing.version + 1 : 1,
         projectId,
       };
-      let document;
-      if (existing) {
-        document = await this.prisma.document.update({ where: { id: existing.id }, data: documentData });
-      } else {
-        document = await this.prisma.document.create({ data: documentData });
-      }
-      await this.prisma.project.update({
-        where: { id: projectId },
-        data: { status: 'IN_PROGRESS', progress: 50, ...(userId ? { lastEditedById: userId } : {}) },
-      });
-      return { documentId: document.id, ...documentData };
+      return this.persistGeneratedDocument(
+        projectId,
+        actor,
+        command,
+        payloadHash,
+        documentData,
+      );
     }
 
     // Vérifier si l'organisation a un template Module 1 personnalisé
@@ -769,28 +958,13 @@ const isPsi = ctx.documentType === 'PSI';
       projectId,
     };
 
-    let document;
-    if (existing) {
-      document = await this.prisma.document.update({
-        where: { id: existing.id },
-        data: documentData,
-      });
-    } else {
-      document = await this.prisma.document.create({
-        data: documentData,
-      });
-    }
-
-    await this.prisma.project.update({
-      where: { id: projectId },
-      data: {
-        status: 'IN_PROGRESS',
-        progress: 50,
-        ...(userId ? { lastEditedById: userId } : {}),
-      },
-    });
-
-    return { documentId: document.id, ...documentData };
+    return this.persistGeneratedDocument(
+      projectId,
+      actor,
+      command,
+      payloadHash,
+      documentData,
+    );
   }
 
   async getDocument(projectId: string, actor: AdviserActor) {

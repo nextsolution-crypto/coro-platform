@@ -28,7 +28,18 @@ try {
   const tenantB = await lab.loginAs("clientOrganizationB");
   let source = await lab.call(`/generator/document/${projectId}`, { token: advisor.token });
   if (source.status === 404 || !source.data?.id) {
-    source = await lab.call(`/generator/generate/${projectId}`, { method: "POST", token: advisor.token, body: {} });
+    const generated = await lab.call(`/generator/generate/${projectId}`, {
+      method: "POST",
+      token: advisor.token,
+      body: {},
+      headers: {
+        "Idempotency-Key": crypto.randomUUID(),
+        "X-Expected-Document-Version": "0",
+      },
+    });
+    source = generated.status === 201
+      ? await lab.call(`/generator/document/${projectId}`, { token: advisor.token })
+      : generated;
   }
   check("canonical-source-document", [200, 201].includes(source.status) && Boolean(source.data?.id), { httpStatus: source.status, id: source.data?.id, version: source.data?.version });
   const before = await lab.call(`/client-portal/projects/${projectId}/sign-status`, { token: corporate.token });

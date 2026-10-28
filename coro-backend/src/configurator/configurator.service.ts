@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RulesEngineService, BuildingConfig } from './rules-engine.service';
-import { AdviserActor, projectAccessWhere } from '../auth/project-access';
+import { AdviserActor, mutableProjectAccessWhere, projectAccessWhere } from '../auth/project-access';
 
 @Injectable()
 export class ConfiguratorService {
@@ -21,7 +21,7 @@ export class ConfiguratorService {
   ) {
     const analysis = this.rulesEngine.analyzeConfiguration(config);
     const updated = await this.prisma.project.updateMany({
-      where: { id: projectId, ...projectAccessWhere(actor) },
+      where: { id: projectId, ...mutableProjectAccessWhere(actor) },
       data: { status: 'IN_PROGRESS', progress: 25, configData: config as any },
     });
     if (updated.count !== 1)

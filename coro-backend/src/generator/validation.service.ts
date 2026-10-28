@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 
 export type ValidationLevel = 'CRITIQUE' | 'ERREUR' | 'AVERTISSEMENT' | 'INFO';
 
@@ -16,12 +17,12 @@ export interface ValidationResult {
 export class ValidationService {
   constructor(private prisma: PrismaService) {}
 
-  async validate(projectId: string, organizationId: string): Promise<ValidationResult[]> {
+  async validate(projectId: string, actor: AdviserActor): Promise<ValidationResult[]> {
     const project = await this.prisma.project.findFirst({
-      where: { id: projectId, organizationId },
+      where: { id: projectId, ...projectAccessWhere(actor) },
       include: { building: true },
     });
-    if (!project) return [];
+    if (!project) throw new NotFoundException('Projet introuvable');
 
     const doc = await this.prisma.document.findFirst({ where: { projectId } });
     if (!doc) return [{ id: 'NO_DOC', level: 'CRITIQUE', message: 'Document non généré. Veuillez d\'abord générer le document.', moduleNumber: 0 }];

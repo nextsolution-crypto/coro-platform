@@ -3023,15 +3023,37 @@ const removeRegReq = (req: string) => {
                   // Générer le document.
                   // Axios rejettera automatiquement la promesse si le backend
                   // répond avec un statut HTTP d'erreur.
-                  await api.post(`/generator/generate/${projectId}`);
+                   const documentResponse = await api
+                     .get(`/generator/document/${projectId}`)
+                     .catch(() => ({ data: null }));
+                   const expectedVersion = Number(documentResponse.data?.version ?? 0);
+                   const intentStorageKey = `coro_generation_intent_${projectId}`;
+                   let idempotencyKey = sessionStorage.getItem(intentStorageKey);
+                   if (!idempotencyKey) {
+                     idempotencyKey = crypto.randomUUID();
+                     sessionStorage.setItem(intentStorageKey, idempotencyKey);
+                   }
+                   await api.post(`/generator/generate/${projectId}`, {}, {
+                     headers: {
+                       'Idempotency-Key': idempotencyKey,
+                       'X-Expected-Document-Version': String(expectedVersion),
+                     },
+                   });
+                   sessionStorage.removeItem(intentStorageKey);
 
                   // Ne revenir au projet qu'après confirmation du backend.
                   router.push(`/projects/${projectId}`);
-                } catch (err) {
+                } catch (err: any) {
                   console.error('Erreur finalisation PCA:', err);
 
+                  if (err?.response?.status === 409) {
+                    sessionStorage.removeItem(`coro_generation_intent_${projectId}`);
+                  }
+
                   setFinalizationError(
-                    'La configuration a été conservée, mais le PCA n’a pas pu être généré. Veuillez réessayer.'
+                    err?.response?.status === 409
+                      ? 'Le projet ou le document a changé. Rechargez la page avant de réessayer.'
+                      : 'La configuration a été conservée, mais le PCA n’a pas pu être généré. Veuillez réessayer.'
                   );
 
                   setFinalizing(false);
