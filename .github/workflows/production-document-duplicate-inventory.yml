@@ -59,7 +59,7 @@ jobs:
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
-          source: coro-document-duplicate-inventory-${{ github.run_id }}.json
+          source: root/coro-document-duplicate-inventory-${{ github.run_id }}.json
           target: protected-evidence
           strip_components: 1
       - name: Upload protected evidence
