@@ -71,6 +71,7 @@ export default function ProjectDetailPage() {
   const requestSequence = useRef(0);
   const [generating,  setGenerating]  = useState(false);
   const [hasDocument, setHasDocument] = useState(false);
+  const [documentVersion, setDocumentVersion] = useState(0);
   const [justGenerated, setJustGenerated] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
@@ -175,6 +176,7 @@ export default function ProjectDetailPage() {
       if (sequence !== requestSequence.current) return;
       setProject(projectRes.data);
       setHasDocument(!!docRes.data);
+      setDocumentVersion(Number(docRes.data?.version ?? 0));
       setHasPlans((plansRes.data || []).length > 0);
 
       if (docRes.data) {
@@ -252,16 +254,40 @@ export default function ProjectDetailPage() {
 
   const handleGenerate = async () => {
     setGenerating(true);
+    const intentStorageKey = `coro_generation_intent_${projectId}`;
     try {
       const configStr = localStorage.getItem(`coro_config_${projectId}`);
       const config = configStr ? JSON.parse(configStr) : {};
-      await api.post(`/generator/generate/${projectId}`, config);
+      const signature = JSON.stringify({ documentVersion, config });
+      let intent: { key: string; signature: string } | null = null;
+      try {
+        intent = JSON.parse(sessionStorage.getItem(intentStorageKey) || 'null');
+      } catch {
+        sessionStorage.removeItem(intentStorageKey);
+      }
+      if (!intent || intent.signature !== signature) {
+        intent = { key: crypto.randomUUID(), signature };
+        sessionStorage.setItem(intentStorageKey, JSON.stringify(intent));
+      }
+      await api.post(`/generator/generate/${projectId}`, config, {
+        headers: {
+          'Idempotency-Key': intent.key,
+          'X-Expected-Document-Version': String(documentVersion),
+        },
+      });
+      sessionStorage.removeItem(intentStorageKey);
       setHasDocument(true);
       await fetchData();
       setJustGenerated(true);
       setTimeout(() => setJustGenerated(false), 5000);
-    } catch (err) {
-      toast('Erreur lors de la génération du document.', 'error');
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        sessionStorage.removeItem(intentStorageKey);
+        await fetchData();
+        toast('Le projet ou le document a changé. Les données actuelles ont été rechargées.', 'error');
+      } else {
+        toast('La génération a échoué. Vous pouvez réessayer sans créer de doublon.', 'error');
+      }
     } finally {
       setGenerating(false);
     }

@@ -22,6 +22,21 @@ export function projectAccessWhere(
   throw new ForbiddenException('Acces refuse a ce projet');
 }
 
+/**
+ * Canonical project predicate for business mutations that are forbidden once
+ * the project is archived or administratively disabled. Read paths deliberately
+ * keep using projectAccessWhere so historical documents remain consultable.
+ */
+export function mutableProjectAccessWhere(
+  actor: AdviserActor,
+): Prisma.ProjectWhereInput {
+  return {
+    ...projectAccessWhere(actor),
+    isActive: true,
+    status: { not: 'ARCHIVED' },
+  };
+}
+
 export function requireProjectApprover(actor: AdviserActor): void {
   if (actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN') {
     throw new ForbiddenException('Role approbateur requis');

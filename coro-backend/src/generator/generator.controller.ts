@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Get, Put, Body, Param, UseGuards, Request, Headers } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { GeneratorService } from './generator.service';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
@@ -13,8 +13,17 @@ export class GeneratorController {
   ) {}
 
   @Post('generate/:projectId')
-  generate(@Param('projectId') projectId: string, @Body() config: any, @Request() req: any) {
-    return this.generatorService.generateAndSave(projectId, config, req.user);
+  generate(
+    @Param('projectId') projectId: string,
+    @Body() config: any,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Headers('x-expected-document-version') expectedVersion: string | undefined,
+    @Request() req: any,
+  ) {
+    return this.generatorService.generateAndSave(projectId, config, req.user, {
+      idempotencyKey,
+      expectedDocumentVersion: expectedVersion,
+    });
   }
 
   @Get('document/:projectId')
@@ -37,6 +46,6 @@ export class GeneratorController {
 
   @Get('validate/:projectId')
   validate(@Param('projectId') projectId: string, @Request() req: any) {
-    return this.validationService.validate(projectId, req.user.organizationId);
+    return this.validationService.validate(projectId, req.user);
   }
 }
