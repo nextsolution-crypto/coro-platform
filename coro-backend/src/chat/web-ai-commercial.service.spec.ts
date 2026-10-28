@@ -1,8 +1,9 @@
 import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { createHash } from 'node:crypto';
+import { WebAICommercialRequestDto } from './web-ai-commercial.dto';
 import { WebAICommercialService } from './web-ai-commercial.service';
 
-const dto = { idempotencyKey: '11111111-1111-4111-8111-111111111111', requestType: 'DEMO' as const, contactName: 'Alice Test', organizationName: 'Synthetic Inc.', email: 'ALICE@EXAMPLE.TEST', interestedModules: ['CORO Knowledge', 'CORO Knowledge'], preferredLanguage: 'fr-CA' as const, consentToProcess: true, consentTextVersion: 'web-ai-commercial-v1', consentAction: 'CHECKBOX_AND_SUBMIT', marketingConsent: false };
+const dto: WebAICommercialRequestDto = { idempotencyKey: '11111111-1111-4111-8111-111111111111', requestType: 'DEMO', contactName: 'Alice Test', organizationName: 'Synthetic Inc.', email: 'ALICE@EXAMPLE.TEST', interestedModules: ['CORO Knowledge', 'CORO Knowledge'], preferredLanguage: 'fr-CA', consentToProcess: true, consentTextVersion: 'web-ai-commercial-v1', consentAction: 'CHECKBOX_AND_SUBMIT', marketingConsent: false };
 const payloadFingerprint = createHash('sha256').update(JSON.stringify({ ...dto, email: dto.email.toLowerCase(), interestedModules: ['CORO Knowledge', 'CORO Knowledge'] })).digest('hex');
 
 describe('WebAICommercialService', () => {
