@@ -1,39 +1,34 @@
-# Lot de correction proposé — sans implémentation
+# Lot de correction — sécurité et intégrité
 
-## Lot A — frontière de sécurité (bloquant)
+## Candidat
 
-1. Assainir le contenu avec une politique commune, stricte et testée avant persistance et/ou rendu; supprimer toute interpolation HTML non échappée.
-2. Introduire une autorité serveur explicite de modification documentaire, distincte de la lecture du projet.
-3. Refuser toutes les mutations de contenu, modules, procédures et versions selon l’état métier (`REVIEW`, `VALIDATED`, `EXPORTED`, `ARCHIVED`) conformément à la politique approuvée.
-4. Propager la même décision aux endpoints spécialisés des modules 2–8 et procédures.
-5. Aligner `validate/:projectId` sur `projectAccessWhere(actor)`.
+- Assainissement serveur commun des contenus JSON/HTML, historique compris à la lecture.
+- Autorité projet et contrôles d’état communs aux mutations, modules spécialisés, procédures et versions.
+- Concurrence atomique par `Document.lockVersion` et `FOR UPDATE`.
+- Liste des versions minimisée et snapshot lu par endpoint explicite.
+- Audit des réussites sans contenu complet.
+- Protection frontend des saisies non sauvegardées et affichage des conflits.
 
-Critère : refus avant toute écriture, tâche, notification ou audit métier; tests inter-tenant, hors affectation, état final et XSS.
+## Migration
 
-## Lot B — concurrence, historique et audit (bloquant)
+`20261112010000_document_editor_integrity` ajoute `Document.lockVersion INTEGER NOT NULL DEFAULT 0`. La chaîne de 158 migrations passe depuis zéro sur PostgreSQL 16 jetable. Aucune migration de production.
 
-1. Ajouter une version de concurrence au document ou un ETag vérifiable; exiger la version attendue et retourner HTTP 409 en conflit.
-2. Enregistrer l’acteur, l’opération, le projet, le document, la version avant/après et une corrélation d’audit.
-3. Rendre création, restauration et suppression de versions transactionnelles et autorisées séparément.
-4. Ne pas retourner `snapshot` dans la liste; créer un endpoint de lecture d’une version avec autorisation dédiée si nécessaire.
-5. Encadrer la suppression par une règle de rétention approuvée; préférer l’archivage si l’historique doit être conservé.
+## Contrat de concurrence
 
-Critère : deux éditeurs ne peuvent pas s’écraser silencieusement; historique et audit cohérents après échec.
+Toute mutation exige `expectedLockVersion`. Le serveur verrouille, recharge autorité/états/version et écrit dans une transaction. Une version obsolète retourne HTTP 409 `DOCUMENT_VERSION_CONFLICT`. Aucun retry ou fusion implicite; un refus ne produit ni écriture partielle ni audit métier de réussite.
 
-## Lot C — UX de sauvegarde et reprise
+## Politique de contenu
 
-1. Centraliser l’état sale de tous les modules.
-2. Bloquer/faire confirmer section, langue, retour, fermeture et F5 lorsqu’une saisie non sauvegardée existe.
-3. Afficher les erreurs de lecture/sauvegarde et offrir une nouvelle tentative idempotente.
-4. Ne jamais afficher « sauvegardé » avant confirmation serveur; conserver le brouillon local après erreur.
-5. Ajouter des tests panne réseau, timeout et réponse invalide.
+Paragraphes, titres, listes, tableaux, citations, code, liens et images limités sont permis. Protocoles : `http`, `https`, `mailto`, `tel`. Scripts, `on*`, style arbitraire, SVG/MathML et protocoles exécutables sont interdits. L’historique n’est pas réécrit.
 
-## Lot D — accessibilité et design
+## QA
 
-1. Focus piégé/restauré dans l’historique, annonces `aria-live`, actions visibles au clavier et tactile.
-2. Mesurer zoom 200 %, textes longs, navigation clavier et lecteurs d’écran.
-3. Décider explicitement si la route reste legacy ou migre au Design System; ne pas compter les préférences Glass comme rendu Glass natif.
+- Jest ciblé : 4 suites, 27 tests, PASS.
+- Builds backend et frontend/TypeScript : PASS (72 routes).
+- E2E API/PostgreSQL/Chrome : 14/14; navigateur 12/12.
+- Lint des services centraux : PASS; aucun assouplissement ESLint.
+- `git diff --check` : PASS.
 
-## Séquencement
+La suite backend globale conserve des échecs hors périmètre dans les tests d’extraction Office dépendant de délais et du binaire local `pdftoppm`. Les tests de sécurité affectés et les builds passent.
 
-Corriger A puis B avant toute nouvelle acceptation fonctionnelle. C et D suivent sur le même contrat serveur. Ne pas intégrer ce lot aux PR #115/#116; ouvrir des commits revus séparément. Une décision métier est requise uniquement si les états modifiables ou la suppression d’historique doivent différer de la politique proposée.
+Restent : automatiser 503, réponse perdue, annulation de navigation, zoom 200 % et lecteur d’écran; décider ultérieurement d’une permission documentaire interne plus fine; ne pas annoncer PGC/PRA/PUE comme validés.

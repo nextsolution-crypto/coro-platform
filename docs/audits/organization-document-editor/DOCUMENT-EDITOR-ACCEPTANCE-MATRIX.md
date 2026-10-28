@@ -1,34 +1,27 @@
 # Matrice d’acceptation — éditeur documentaire
 
+Stack isolé : PostgreSQL 16, backend/frontend réels, stockage et fournisseurs QA, réseau deny-by-default.
+
 | Domaine | Scénario | Statut | Preuve / limite |
 |---|---|---|---|
-| Baseline | SHA production et origin/main identiques | PASS | `12766061...` |
-| Ouverture | PMU correct par ID autorisé | PASS | API et Chrome synthétiques |
-| Ouverture | ID inter-tenant connu | PASS | 404, aucun document |
-| Ouverture | PSI/PCA | NOT_VERIFIED | chemins présents, non exercés |
-| Ouverture | PGC/PRA/PUE | NOT_VERIFIED | aucune preuve de support réel |
-| Édition | Texte module 1 | PASS | PUT + relecture persistée |
-| Édition | Modules 2–8 | PARTIAL | capacités présentes; lecture seule et autorité communes absentes |
-| Sauvegarde | Persistance après relecture | PASS | contenu synthétique retrouvé |
-| Sauvegarde | Erreur visible et reprise | FAIL | `console.error` seulement |
-| Navigation | Changement section/langue avec saisie | FAIL | état local réinitialisé sans garde |
-| Navigation | F5/retour avec saisie | FAIL | aucun `beforeunload` |
-| Concurrence | Conflit entre deux écritures | FAIL | 200/200, dernière écriture gagnante |
-| Autorisation | Projet d’une autre organisation | PASS | 404 |
-| Autorisation | Permission d’édition distincte | FAIL | contrôle de lecture réutilisé |
-| État | Projet `VALIDATED` immuable | FAIL | PUT 200 |
-| État | Projet `ARCHIVED` immuable | FAIL | PUT 200 |
-| Versions | Création/restauration/suppression gouvernées | FAIL | état et permission non contrôlés |
-| Versions | Réponse minimisée | FAIL | snapshot complet retourné |
-| Sécurité | XSS stockée | FAIL | élément rendu et handler exécuté |
-| Sécurité | Validation dans le périmètre projet | FAIL | organisation seulement |
-| Audit | Provenance de chaque mutation | FAIL | aucun événement canonique dans ces services |
-| Responsive | 390/768/1440/2560 sans overflow | PASS | 12 captures réelles |
-| Thèmes | Classic | PASS | `legacy/light` vérifié |
-| Thèmes | Glass Light/Dark natifs | NOT_APPLICABLE | route `legacy-only`; dark influence le thème racine mais UI reste legacy |
-| Accessibilité | Clavier/focus/annonces d’erreur | PARTIAL | contrôles natifs présents; focus modal et erreurs non gouvernés |
-| Nettoyage | Données synthétiques restaurées | PASS | JSON de campagne |
+| Types | PMU | PASS | États, concurrence, versions et Chrome. |
+| Types | PSI/PCA | PASS | Génération canonique, sauvegarde et relecture de contenu riche. |
+| Types | PGC/PRA/PUE | NOT_VERIFIED | Parcours complets non exécutés. |
+| XSS | Événements, protocoles, HTML collé | PASS | Jest et Chrome réel; SVG/MathML interdits. |
+| XSS | Historique/snapshot | PASS_SERVER | Assainissement à la lecture, restauration et export. |
+| Autorisation | Autre organisation | PASS | GET/PUT 404. |
+| Autorisation | Session révoquée | PASS | Refus serveur après désactivation de l’acteur synthétique. |
+| Autorisation | Permission fine lecture seule | PARTIAL | Portée et action distinctes; permission fine absente du modèle canonique. |
+| États | Projet VALIDATED / document VALIDATED / projet ARCHIVED | PASS | PUT 403 dans les trois cas. |
+| Concurrence | Deux écritures | PASS | 200/409, une seule persiste. |
+| Versions | Création, liste, lecture, refus | PASS | Liste sans snapshot; lecture explicite 200/404; validé 403. |
+| Audit | Mutations réussies | PASS_CODE_UNIT | Métadonnées minimales, aucun audit de succès au refus. |
+| Saisie | État sale/navigation/F5 | PASS_CODE_BUILD | Confirmation commune et `beforeunload`. |
+| Saisie | 503/réponse perdue | NOT_VERIFIED | Aucun retry automatique; campagne réseau à compléter. |
+| Responsive | 4 largeurs × 3 préférences | PASS | 12/12, sans overflow ni erreur console critique. |
+| Accessibilité | Zoom 200 %, lecteur d’écran, focus | NOT_VERIFIED | Suivi UX distinct. |
+| Nettoyage | Fixtures | PASS | PMU restauré, PSI/PCA supprimés, aucune production. |
 
-## Verdict
+`DOCUMENT_EDITOR_ACCEPTANCE: PASS_SECURITY_AND_INTEGRITY_WITH_DOCUMENTED_UX_LIMITS`
 
-`DOCUMENT_EDITOR_ACCEPTANCE: FAIL_SECURITY_AND_INTEGRITY_BLOCKERS`
+Ce verdict autorise une PR et une revue, pas une fusion ni un déploiement.

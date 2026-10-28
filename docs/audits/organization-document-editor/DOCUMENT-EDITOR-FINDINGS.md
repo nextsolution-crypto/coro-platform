@@ -1,26 +1,22 @@
 # Constats — éditeur documentaire
 
-| ID | Sévérité | Statut | Constat et preuve | Impact |
-|---|---:|---|---|---|
-| DE-001 | Critique | REPRODUCED | Contenu `<img onerror=...>` accepté (HTTP 200), rendu et gestionnaire exécuté dans les 12 sessions Chrome. | XSS stockée sous l’identité d’un utilisateur autorisé. |
-| DE-002 | Critique | REPRODUCED | Modification d’une section d’un projet `VALIDATED`: HTTP 200. | Altération d’un document approuvé malgré l’indication « lecture seule ». |
-| DE-003 | Élevée | REPRODUCED | Modification d’un document lié à un projet `ARCHIVED`: HTTP 200. | Contournement de l’immuabilité attendue des archives. |
-| DE-004 | Élevée | REPRODUCED | Deux PUT concurrents: HTTP 200/200, une valeur perdue. | Écrasement silencieux entre éditeurs. |
-| DE-005 | Élevée | CONFIRMED_CODE | Tous les acteurs qui peuvent lire un projet peuvent modifier le document et gérer ses versions; aucune permission fonctionnelle distincte. | Confusion lecture/édition/restauration/suppression. |
-| DE-006 | Élevée | CONFIRMED_CODE | Le mode lecture seule n’est utilisé que pour le rendu texte du module 1; modules 2–8 et procédures restent raccordés à des API mutables. | Verrou visuel incomplet et trompeur. |
-| DE-007 | Moyenne | REPRODUCED | Création de version sur projet `VALIDATED`: HTTP 201. | Historique mutable après finalisation. |
-| DE-008 | Moyenne | REPRODUCED | `GET /versions` renvoie `snapshot` complet alors que l’UI n’en a pas besoin. | Exposition excessive de contenu et poids inutile. |
-| DE-009 | Élevée | CONFIRMED_CODE | Aucun état sale commun, `beforeunload` ou garde de navigation. | Perte de saisie lors d’un changement de section/langue/route/F5. |
-| DE-010 | Moyenne | CONFIRMED_CODE | Échecs de lecture/sauvegarde/version consignés seulement dans la console; lecture échouée redirige vers le projet. | Faux sentiment de succès, diagnostic et reprise insuffisants. |
-| DE-011 | Moyenne | CONFIRMED_CODE | Validation filtre par organisation seulement, contrairement à `projectAccessWhere`. | Un opérateur de la même organisation peut inférer des constats hors de son périmètre projet. |
-| DE-012 | Moyenne | CONFIRMED_CODE | Sauvegarde et versions sans journal d’audit canonique ni provenance explicite de l’éditeur. | Traçabilité insuffisante. |
-| DE-013 | Faible | OBSERVED | 12/12 sans overflow, mais la route reste `legacy-only` sous les préférences Glass. | La matrice ne démontre pas une expérience Glass native. |
-| DE-014 | Faible | CONFIRMED_CODE | Actions restaurer/supprimer visibles surtout au survol; erreurs non annoncées; modale sans gestion de focus démontrée. | Accessibilité clavier/mobile incomplète. |
+Réconciliation du 2026-10-28. Ces statuts décrivent le candidat local, sans fusion ni déploiement.
 
-## Points positifs préservés
+| ID | Statut candidat | Correction et preuve |
+|---|---|---|
+| DE-001 XSS stockée | CORRECTED_QA | Assainissement serveur avec `sanitize-html`, politique explicite. Historique filtré à la lecture/export sans réécriture. Chrome 12/12 : aucun élément ni gestionnaire injecté. |
+| DE-002 projet VALIDATED | CORRECTED_QA | Contrôle des états persistés; PUT 403, aucune écriture. |
+| DE-003 projet ARCHIVED | CORRECTED_QA | PUT 403; lecture autorisée conservée. |
+| DE-004 concurrence | CORRECTED_QA | `lockVersion`, verrou PostgreSQL et précondition atomique; résultat 200/409. |
+| DE-005 lecture/modification | CORRECTED_WITH_MODEL_LIMIT | Autorité canonique `projectAccessWhere` et endpoints d’action distincts. Le modèle ne possède pas de permission documentaire plus fine qu’ADMIN ou OPERATOR affecté; aucun RBAC parallèle ajouté. |
+| DE-006 endpoints secondaires | CORRECTED_QA | Modules 2/3/4/8 et procédures réutilisent l’autorité et les états communs. Aucun textarea en lecture seule, 12/12. |
+| DE-007 versions sur validé | CORRECTED_QA | Création/restauration/suppression refusées sur état immuable; HTTP 403. |
+| DE-008 snapshots de liste | CORRECTED_QA | Liste limitée aux métadonnées; lecture explicite autorisée, inter-tenant 404. |
+| DE-009 saisie non sauvegardée | CORRECTED_PARTIAL_QA | État sale, `beforeunload`, confirmations section/langue/navigation. Panne 503 et réponse perdue restent NOT_VERIFIED. |
+| DE-010 erreurs visibles | CORRECTED_PARTIAL_QA | Erreurs et conflits affichés sans effacer la saisie; reprise 503 non automatisée. |
+| DE-011 validation hors portée | CORRECTED_QA | Portée projet canonique; lecture et mutation inter-tenant 404. |
+| DE-012 audit | CORRECTED_QA | Audit existant avec acteur serveur, projet, document, opération et verrou; aucun contenu complet. |
+| DE-013 route legacy | ACCEPTED_LIMIT | Les préférences Classic/Glass sont exercées sans prétendre à une interface Glass native. |
+| DE-014 accessibilité | PARTIAL | Erreurs visibles; lecteur d’écran, zoom 200 % et focus modal restent NOT_VERIFIED. |
 
-- Le périmètre inter-tenant de lecture et de téléchargement synthétique est refusé (404).
-- Une identité révoquée est refusée (401).
-- La persistance normale d’une section est effective après relecture.
-- La page ne déborde pas horizontalement aux quatre largeurs mesurées.
-- La campagne a restauré les données synthétiques après les essais adversariaux.
+Seuls PMU, PSI et PCA ont été exécutés. PGC/PRA/PUE bénéficient des protections partagées, sans validation fonctionnelle complète. Aucun document réel n’a été réécrit ou purgé.
