@@ -233,14 +233,14 @@ describe('Plan security PostgreSQL authorization', () => {
       approval.submit(ids.projectA, operatorA),
     ).resolves.toMatchObject({ status: 'REVIEW' });
     await expect(
-      approval.approve(ids.projectA, ids.operatorA, ids.orgA, 'OPERATOR'),
+      approval.approve(ids.projectA, operatorA),
     ).rejects.toBeInstanceOf(ForbiddenException);
     await expect(
       approval.requestRevision(ids.projectA, adminA, 'Review required'),
     ).resolves.toMatchObject({ status: 'IN_PROGRESS' });
     await approval.submit(ids.projectA, operatorA);
     await expect(
-      approval.approve(ids.projectA, ids.adminA, ids.orgA, 'ADMIN'),
+      approval.approve(ids.projectA, adminA),
     ).resolves.toMatchObject({ status: 'VALIDATED', version: 1 });
     expect(
       await prisma.projectVersion.count({ where: { projectId: ids.projectA } }),

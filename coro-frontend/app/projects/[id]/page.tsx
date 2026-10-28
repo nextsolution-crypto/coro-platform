@@ -142,6 +142,7 @@ export default function ProjectDetailPage() {
   const [newObsModule, setNewObsModule] = useState('');
   const [addingObs, setAddingObs] = useState(false);
   const [canApprove, setCanApprove] = useState(false);
+  const [reviewRequest, setReviewRequest] = useState<any>(null);
   const [previewing, setPreviewing] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -204,6 +205,7 @@ export default function ProjectDetailPage() {
         ]);
         setObservations(obsRes.data || []);
         setCanApprove(canRes.data?.canApprove || false);
+        setReviewRequest(canRes.data?.reviewRequest || null);
         setProjectComments(commentsRes.data || []);
       } catch { if (sequence === requestSequence.current) setSecondaryWarning(true); }
 
@@ -324,15 +326,13 @@ export default function ProjectDetailPage() {
     finally { setLoadingAudit(false); }
   };
 
-  const handleApproval = async (action: 'submit' | 'approve' | 'reject' | 'request-revision') => {
+  const handleApproval = async (action: 'submit' | 'approve' | 'request-revision') => {
     setProcessingApproval(true);
     try {
       if (action === 'submit') {
         await api.post(`/approval/${projectId}/submit`);
       } else if (action === 'approve') {
         await api.post(`/approval/${projectId}/approve`);
-      } else if (action === 'reject') {
-        await api.post(`/approval/${projectId}/request-revision`, { commentaire: approvalComment });
       } else {
         await api.post(`/approval/${projectId}/request-revision`, { commentaire: approvalComment });
       }
@@ -362,7 +362,7 @@ export default function ProjectDetailPage() {
           toast('Document approuvé.');
           return;
         }
-        if ((action === 'reject' || action === 'request-revision') && actualStatus === 'IN_PROGRESS') {
+        if (action === 'request-revision' && actualStatus === 'IN_PROGRESS') {
           await fetchData();
           toast('Document retourné pour révision.');
           return;
@@ -782,6 +782,15 @@ export default function ProjectDetailPage() {
           {showObservations && (
             <div className="p-4" style={{ backgroundColor: '#FFFFFF', borderTop: '1px solid #FAD7A0' }}>
 
+              {reviewRequest && (
+                <div className="mb-4 rounded p-3 text-xs" style={{ backgroundColor: '#EBF5FB', border: '1px solid #AED6F1', color: '#2C3E50' }}>
+                  <strong>Version soumise :</strong> document v{reviewRequest.documentVersion}
+                  <span className="ml-2" title={reviewRequest.contentHash}>
+                    Empreinte {String(reviewRequest.contentHash).slice(0, 12)}…
+                  </span>
+                </div>
+              )}
+
               {/* Ajouter observation — visible pour le réviseur */}
               {canApprove && (
                 <div className="mb-4 p-3 rounded"
@@ -906,12 +915,12 @@ export default function ProjectDetailPage() {
                     ✅ Approuver le document
                   </button>
                   <button
-                    onClick={() => setShowApprovalModal('reject')}
+                    onClick={() => setShowApprovalModal('request-revision')}
                     className="flex-1 font-medium py-2.5 rounded text-sm transition-colors"
                     style={{ border: '1px solid #F1948A', color: '#C0392B' }}
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                    🔄 Retourner pour révision
+                    🔄 Retourner pour correction
                   </button>
                 </div>
               )}
@@ -1563,8 +1572,8 @@ export default function ProjectDetailPage() {
                   Annuler
                 </button>
                 <button
-                  onClick={() => handleApproval(showApprovalModal)}
-                  disabled={processingApproval || (showApprovalModal === 'reject' && !approvalComment.trim())}
+                  onClick={() => handleApproval(showApprovalModal === 'reject' ? 'request-revision' : showApprovalModal)}
+                  disabled={processingApproval || (showApprovalModal !== 'approve' && !approvalComment.trim())}
                   className="flex-1 text-white font-medium py-2.5 rounded text-sm disabled:opacity-50"
                   style={{
                     backgroundColor: showApprovalModal === 'approve' ? '#27AE60' :

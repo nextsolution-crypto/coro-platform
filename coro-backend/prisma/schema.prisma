@@ -26,48 +26,50 @@ model Organization {
   employeeCount          Int? // Nombre d'employés
   operatingHours         String? // Heures d'opération
 
-  users                          User[]
-  clients                        Client[]
-  buildings                      Building[]
-  projects                       Project[]
-  procedureOverrides             ProcedureOverride[]
-  feedbacks                      Feedback[]
-  projectTemplates               ProjectTemplate[]
-  auditLogs                      AuditLog[]
-  customProcedures               CustomProcedure[]
-  clientUsers                    ClientUser[]
-  module1Template                OrganizationModule1Template?
-  bookings                       Booking[]
-  files                          ProjectFile[]
-  exerciseReports                ExerciseReport[]
-  exerciseReportTemplateVersions ExerciseReportTemplateVersion[]
-  complianceRequirements         ComplianceRequirement[]
-  complianceEvidence             ComplianceEvidence[]
-  populationOperationalEvents    PopulationOperationalEvent[]
-  populationEvidenceRecords      PopulationEvidenceRecord[]
-  populationEvidenceManifests    PopulationEvidenceManifest[]
-  populationEvidenceReports      PopulationEvidenceReport[]
-  operationalReviewReports       OperationalReviewReport[]
-  activityTypes                  ActivityType[]
-  activityTypeTaskListPolicies   ActivityTypeTaskListPolicy[]
-  mandateServices                ProjectMandateService[]
-  mandateServiceOperations       MandateServiceOperation[]
+  users                            User[]
+  clients                          Client[]
+  buildings                        Building[]
+  projects                         Project[]
+  documentReviewRequests           DocumentReviewRequest[]
+  documentReviewNotificationEvents DocumentReviewNotificationEvent[]
+  procedureOverrides               ProcedureOverride[]
+  feedbacks                        Feedback[]
+  projectTemplates                 ProjectTemplate[]
+  auditLogs                        AuditLog[]
+  customProcedures                 CustomProcedure[]
+  clientUsers                      ClientUser[]
+  module1Template                  OrganizationModule1Template?
+  bookings                         Booking[]
+  files                            ProjectFile[]
+  exerciseReports                  ExerciseReport[]
+  exerciseReportTemplateVersions   ExerciseReportTemplateVersion[]
+  complianceRequirements           ComplianceRequirement[]
+  complianceEvidence               ComplianceEvidence[]
+  populationOperationalEvents      PopulationOperationalEvent[]
+  populationEvidenceRecords        PopulationEvidenceRecord[]
+  populationEvidenceManifests      PopulationEvidenceManifest[]
+  populationEvidenceReports        PopulationEvidenceReport[]
+  operationalReviewReports         OperationalReviewReport[]
+  activityTypes                    ActivityType[]
+  activityTypeTaskListPolicies     ActivityTypeTaskListPolicy[]
+  mandateServices                  ProjectMandateService[]
+  mandateServiceOperations         MandateServiceOperation[]
   // Programme de recommandation
-  referralsSent                  Referral[]                      @relation("ReferralReferrer")
-  referralReceived               Referral?                       @relation("ReferralReferred")
-  referralCredits                ReferralCredit[]                @relation("ReferralCreditOrganization")
-  contracts                      OrganizationContract[]
-  capabilityEntitlements         CapabilityEntitlement[]
-  commercialSubscriptions        CommercialSubscription[]
-  commercialInvoices             CommercialInvoice[]
-  commercialTaxConfigurations    CommercialTaxConfiguration[]
-  commercialProposals            CommercialProposal[]
-  convertedCommercialProspects   CommercialProspect[]            @relation("CommercialProspectConversion")
-  meteringResults                MeteringResult[]
-  commercialSimulationWorkspaces CommercialSimulationWorkspace[]
-  advisorInternalCostRates       AdvisorInternalCostRate[]
-  platformAuthority              PlatformAuthorityConfiguration? @relation("PlatformOperatorOrganization")
-  platformPermissionScopes       PlatformPermissionGrant[]       @relation("PlatformPermissionTargetOrganization")
+  referralsSent                    Referral[]                        @relation("ReferralReferrer")
+  referralReceived                 Referral?                         @relation("ReferralReferred")
+  referralCredits                  ReferralCredit[]                  @relation("ReferralCreditOrganization")
+  contracts                        OrganizationContract[]
+  capabilityEntitlements           CapabilityEntitlement[]
+  commercialSubscriptions          CommercialSubscription[]
+  commercialInvoices               CommercialInvoice[]
+  commercialTaxConfigurations      CommercialTaxConfiguration[]
+  commercialProposals              CommercialProposal[]
+  convertedCommercialProspects     CommercialProspect[]              @relation("CommercialProspectConversion")
+  meteringResults                  MeteringResult[]
+  commercialSimulationWorkspaces   CommercialSimulationWorkspace[]
+  advisorInternalCostRates         AdvisorInternalCostRate[]
+  platformAuthority                PlatformAuthorityConfiguration?   @relation("PlatformOperatorOrganization")
+  platformPermissionScopes         PlatformPermissionGrant[]         @relation("PlatformPermissionTargetOrganization")
 }
 
 model User {
@@ -99,6 +101,8 @@ model User {
   updatedAt                                    DateTime                                 @updatedAt
   observationsCreated                          ReviewObservation[]                      @relation("observationCreator")
   observationsTreated                          ReviewObservation[]                      @relation("observationTreater")
+  documentReviewsSubmitted                     DocumentReviewRequest[]                  @relation("DocumentReviewSubmitter")
+  documentReviewsDecided                       DocumentReviewRequest[]                  @relation("DocumentReviewDecider")
   capabilityEntitlementsCreated                CapabilityEntitlement[]                  @relation("CapabilityEntitlementCreator")
   capabilityEntitlementRevisionsCreated        CapabilityEntitlementRevision[]          @relation("CapabilityEntitlementRevisionActor")
   commercialProspectsCreated                   CommercialProspect[]                     @relation("CommercialProspectCreator")
@@ -2589,17 +2593,19 @@ model Building {
 }
 
 model Project {
-  id           String              @id @default(uuid())
-  name         String
-  documentType DocumentType
-  status       ProjectStatus       @default(DRAFT)
-  year         Int
-  progress     Int                 @default(0)
-  configData   Json?
-  isActive     Boolean             @default(true)
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  observations ReviewObservation[]
+  id                               String                            @id @default(uuid())
+  name                             String
+  documentType                     DocumentType
+  status                           ProjectStatus                     @default(DRAFT)
+  year                             Int
+  progress                         Int                               @default(0)
+  configData                       Json?
+  isActive                         Boolean                           @default(true)
+  createdAt                        DateTime                          @default(now())
+  updatedAt                        DateTime                          @updatedAt
+  observations                     ReviewObservation[]
+  documentReviewRequests           DocumentReviewRequest[]
+  documentReviewNotificationEvents DocumentReviewNotificationEvent[]
 
   lastEditedById String?
   lastEditedBy   User?     @relation("lastEditedProjects", fields: [lastEditedById], references: [id])
@@ -2625,17 +2631,17 @@ model Project {
   userId     String
   user       User     @relation(fields: [userId], references: [id])
 
-  documents          Document[]
+  documents                  Document[]
   documentGenerationRequests DocumentGenerationRequest[]
-  buildingPlans      BuildingPlan[]
-  module7            Module7Data?
-  revisionHistory    RevisionHistory[]
-  procedureOverrides ProcedureOverride[]
-  projectVersions    ProjectVersion[]
-  activities         ProjectActivity[]
-  projectTasks       ProjectTask[]
-  mandate            ProjectMandate?
-  comments           ProjectComment[]
+  buildingPlans              BuildingPlan[]
+  module7                    Module7Data?
+  revisionHistory            RevisionHistory[]
+  procedureOverrides         ProcedureOverride[]
+  projectVersions            ProjectVersion[]
+  activities                 ProjectActivity[]
+  projectTasks               ProjectTask[]
+  mandate                    ProjectMandate?
+  comments                   ProjectComment[]
 
   projectTaskLists     ProjectTaskList[]
   customProcedures     CustomProcedure[]
@@ -2677,18 +2683,83 @@ enum ProjectStatus {
 }
 
 model Document {
-  id        String         @id @default(uuid())
-  title     String
-  content   Json?
-  status    DocumentStatus @default(DRAFT)
-  version   Int            @default(1)
-  lockVersion Int          @default(0)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  id          String         @id @default(uuid())
+  title       String
+  content     Json?
+  status      DocumentStatus @default(DRAFT)
+  version     Int            @default(1)
+  lockVersion Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id])
+  projectId          String
+  project            Project                     @relation(fields: [projectId], references: [id])
   generationRequests DocumentGenerationRequest[]
+  reviewRequests     DocumentReviewRequest[]
+}
+
+enum DocumentReviewStatus {
+  PENDING
+  APPROVED
+  RETURNED
+  SUPERSEDED
+}
+
+enum DocumentReviewNotificationStatus {
+  PENDING
+  DELIVERED
+  FAILED
+}
+
+model DocumentReviewRequest {
+  id                  String                            @id @default(uuid())
+  projectId           String
+  project             Project                           @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  documentId          String
+  document            Document                          @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  organizationId      String
+  organization        Organization                      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  status              DocumentReviewStatus              @default(PENDING)
+  documentVersion     Int
+  documentLockVersion Int
+  contentHash         String
+  snapshot            Json
+  submittedById       String
+  submittedBy         User                              @relation("DocumentReviewSubmitter", fields: [submittedById], references: [id], onDelete: Restrict)
+  submittedAt         DateTime                          @default(now())
+  decidedById         String?
+  decidedBy           User?                             @relation("DocumentReviewDecider", fields: [decidedById], references: [id], onDelete: Restrict)
+  decidedAt           DateTime?
+  decisionReason      String?
+  decisionVersion     Int?
+  createdAt           DateTime                          @default(now())
+  updatedAt           DateTime                          @updatedAt
+  notificationEvents  DocumentReviewNotificationEvent[]
+
+  @@index([projectId, status])
+  @@index([organizationId, submittedAt])
+  @@index([documentId, documentVersion])
+}
+
+model DocumentReviewNotificationEvent {
+  id              String                           @id @default(uuid())
+  reviewRequestId String
+  reviewRequest   DocumentReviewRequest            @relation(fields: [reviewRequestId], references: [id], onDelete: Cascade)
+  projectId       String
+  project         Project                          @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  organizationId  String
+  organization    Organization                     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  eventType       String
+  idempotencyKey  String                           @unique
+  status          DocumentReviewNotificationStatus @default(PENDING)
+  attempts        Int                              @default(0)
+  lastErrorCode   String?
+  processedAt     DateTime?
+  createdAt       DateTime                         @default(now())
+  updatedAt       DateTime                         @updatedAt
+
+  @@index([status, createdAt])
+  @@index([projectId, eventType])
 }
 
 model DocumentGenerationRequest {

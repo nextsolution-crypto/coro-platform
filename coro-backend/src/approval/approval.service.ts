@@ -1,8 +1,11 @@
 import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
-  ForbiddenException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../client-portal/email.service';
@@ -10,165 +13,634 @@ import { ExportService } from '../export/export.service';
 import { StorageService } from '../storage/storage.service';
 import {
   AdviserActor,
+  mutableProjectAccessWhere,
   projectAccessWhere,
   requireProjectApprover,
 } from '../auth/project-access';
+import {
+  createReviewSnapshot,
+  hashReviewSnapshot,
+} from './document-review-integrity';
+
+type ReviewAuditInput = {
+  action: string;
+  projectId: string;
+  documentId: string;
+  requestId: string;
+  actor: AdviserActor;
+  previousStatus: string;
+  newStatus: string;
+  contentHash: string;
+  reason?: string;
+  version?: number;
+};
 
 @Injectable()
 export class ApprovalService {
+  private readonly transactionOptions = { maxWait: 10_000, timeout: 15_000 };
+
   constructor(
-    private prisma: PrismaService,
-    private notifications: NotificationsService,
-    private emailService: EmailService,
-    private exportService: ExportService,
-    private storageService: StorageService,
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+    private readonly emailService: EmailService,
+    private readonly exportService: ExportService,
+    private readonly storageService: StorageService,
   ) {}
 
-  // ── Soumettre pour approbation ───────────────────────────
   async submit(projectId: string, actor: AdviserActor) {
-    const { userId, organizationId } = actor;
-    const project = await this.prisma.project.findFirst({
-      where: { id: projectId, ...projectAccessWhere(actor) },
-      include: { client: true, building: true, user: true },
-    });
-
-    if (!project) {
-      throw new NotFoundException('Projet introuvable');
-    }
-
-    // Idempotence légère :
-    // si la soumission a déjà été enregistrée par ce même utilisateur,
-    // on retourne un succès plutôt qu'une erreur.
-    if (project.status === 'REVIEW') {
-      if (project.submittedById === userId) {
-        return { success: true, status: 'REVIEW', alreadySubmitted: true };
+    const result = await this.prisma.$transaction(async (tx) => {
+      await this.lockProject(tx, projectId);
+      const project = await tx.project.findFirst({
+        where: { id: projectId, ...projectAccessWhere(actor) },
+        include: {
+          client: true,
+          building: true,
+          user: true,
+          documents: { orderBy: { updatedAt: 'desc' }, take: 1 },
+        },
+      });
+      if (!project) throw new NotFoundException('Projet introuvable');
+      if (project.status === 'REVIEW') {
+        const pending = await tx.documentReviewRequest.findFirst({
+          where: { projectId, status: 'PENDING' },
+          orderBy: { submittedAt: 'desc' },
+        });
+        if (pending && project.submittedById === actor.userId)
+          return {
+            project,
+            request: pending,
+            alreadySubmitted: true,
+            eventId: null,
+          };
+        throw new ConflictException('Ce projet est déjà en révision');
       }
-
-      throw new ForbiddenException('Ce projet est déjà en révision');
-    }
-
-    // 1. Mutation métier principale.
-    // Une fois cette mise à jour réussie, la soumission est considérée comme réussie.
-    const submittedAt = new Date();
-
-    await this.prisma.project.update({
-      where: { id: projectId },
-      data: {
-        status: 'REVIEW',
-        submittedById: userId,
-        submittedAt,
-        progress: 50,
-      },
-    });
-
-    // 2. Opérations secondaires.
-    // Elles ne doivent jamais faire échouer la soumission après que la mutation métier
-    // a déjà été persistée.
-    void this.notifySubmission(project, userId, organizationId).catch(
-      (error) => {
-        console.error(
-          `[ApprovalService] Erreur notification après soumission du projet ${projectId}:`,
-          error,
-        );
-      },
-    );
-
-    return { success: true, status: 'REVIEW' };
+      if (
+        !project.isActive ||
+        project.status === 'ARCHIVED' ||
+        !['DRAFT', 'IN_PROGRESS'].includes(project.status)
+      )
+        throw new ForbiddenException('Ce projet ne peut pas être soumis');
+      const document = project.documents[0];
+      if (!document || !['DRAFT', 'IN_PROGRESS'].includes(document.status))
+        throw new ForbiddenException('Le document ne peut pas être soumis');
+      const snapshot = this.snapshot(project, document);
+      const contentHash = hashReviewSnapshot(snapshot);
+      const submittedAt = new Date();
+      const request = await tx.documentReviewRequest.create({
+        data: {
+          projectId,
+          documentId: document.id,
+          organizationId: actor.organizationId,
+          documentVersion: document.version,
+          documentLockVersion: document.lockVersion,
+          contentHash,
+          snapshot: snapshot as Prisma.InputJsonValue,
+          submittedById: actor.userId,
+          submittedAt,
+        },
+      });
+      await tx.project.update({
+        where: { id: projectId },
+        data: {
+          status: 'REVIEW',
+          submittedById: actor.userId,
+          submittedAt,
+          progress: 50,
+        },
+      });
+      await this.createAudit(tx, {
+        action: 'REVIEW_SUBMITTED',
+        projectId,
+        documentId: document.id,
+        requestId: request.id,
+        actor,
+        previousStatus: project.status,
+        newStatus: 'REVIEW',
+        contentHash,
+      });
+      const event = await this.enqueueNotification(
+        tx,
+        request.id,
+        projectId,
+        actor.organizationId,
+        'SUBMITTED',
+      );
+      return { project, request, alreadySubmitted: false, eventId: event.id };
+    }, this.transactionOptions);
+    if (result.eventId)
+      void this.dispatchNotification(result.eventId, () =>
+        this.notifySubmission(
+          result.project,
+          actor.userId,
+          actor.organizationId,
+        ),
+      );
+    return {
+      success: true,
+      status: 'REVIEW',
+      reviewRequestId: result.request.id,
+      contentHash: result.request.contentHash,
+      documentVersion: result.request.documentVersion,
+      alreadySubmitted: result.alreadySubmitted,
+    };
   }
 
-  // ── Approuver ────────────────────────────────────────────
-  async approve(
-    projectId: string,
-    userId: string,
-    organizationId: string,
-    role: string,
-  ) {
-    requireProjectApprover({ userId, organizationId, role });
-    const project = await this.prisma.project.findFirst({
-      where: { id: projectId, organizationId },
-      include: { client: true, building: true },
-    });
-
-    if (!project) {
-      throw new NotFoundException('Projet introuvable');
-    }
-
-    if (project.status !== 'REVIEW') {
-      throw new ForbiddenException("Ce projet n'est pas en révision");
-    }
-
-    if (project.submittedById === userId) {
-      throw new ForbiddenException(
-        'Vous ne pouvez pas approuver votre propre soumission',
+  async approve(projectId: string, actor: AdviserActor) {
+    requireProjectApprover(actor);
+    const result = await this.prisma.$transaction(async (tx) => {
+      await this.lockProject(tx, projectId);
+      const project = await tx.project.findFirst({
+        where: { id: projectId, ...projectAccessWhere(actor) },
+        include: { client: true, building: true },
+      });
+      if (!project || !project.isActive || project.status === 'ARCHIVED')
+        throw new NotFoundException('Projet introuvable');
+      if (['VALIDATED', 'EXPORTED'].includes(project.status)) {
+        const decided = await tx.documentReviewRequest.findFirst({
+          where: { projectId, status: 'APPROVED', decidedById: actor.userId },
+          orderBy: { decidedAt: 'desc' },
+        });
+        if (decided?.decisionVersion)
+          return {
+            project,
+            request: decided,
+            version: decided.decisionVersion,
+            approverName: '',
+            eventId: null,
+            replayed: true,
+          };
+      }
+      if (project.status !== 'REVIEW')
+        throw new ConflictException("Ce projet n'est plus en révision");
+      if (project.submittedById === actor.userId)
+        throw new ForbiddenException(
+          'Vous ne pouvez pas approuver votre propre soumission',
+        );
+      const request = await tx.documentReviewRequest.findFirst({
+        where: { projectId, status: 'PENDING' },
+        orderBy: { submittedAt: 'desc' },
+      });
+      if (!request)
+        throw new ConflictException('Demande de révision introuvable');
+      await tx.$queryRaw(
+        Prisma.sql`SELECT id FROM "Document" WHERE id = ${request.documentId} FOR UPDATE`,
+      );
+      const document = await tx.document.findFirst({
+        where: { id: request.documentId, projectId },
+      });
+      if (!document) throw new ConflictException('Document soumis introuvable');
+      const currentHash = hashReviewSnapshot(this.snapshot(project, document));
+      if (
+        document.version !== request.documentVersion ||
+        document.lockVersion !== request.documentLockVersion ||
+        currentHash !== request.contentHash
+      )
+        throw new ConflictException({
+          code: 'REVIEW_CONTENT_CHANGED',
+          message:
+            'Le contenu a changé depuis sa soumission. Une nouvelle révision est requise.',
+          reviewRequestId: request.id,
+        });
+      const approver = await tx.user.findUnique({
+        where: { id: actor.userId },
+        select: { firstName: true, lastName: true },
+      });
+      const approverName =
+        `${approver?.firstName ?? ''} ${approver?.lastName ?? ''}`.trim();
+      const lastVersion = await tx.projectVersion.findFirst({
+        where: { projectId },
+        orderBy: { versionNumber: 'desc' },
+        select: { versionNumber: true },
+      });
+      const version = (lastVersion?.versionNumber ?? 0) + 1;
+      const now = new Date();
+      await tx.projectVersion.create({
+        data: {
+          projectId,
+          versionNumber: version,
+          label: `v${version} — approuvé`,
+          snapshot: {
+            type: 'APPROVAL',
+            reviewRequestId: request.id,
+            documentId: request.documentId,
+            documentVersion: request.documentVersion,
+            documentLockVersion: request.documentLockVersion,
+            contentHash: request.contentHash,
+            submittedSnapshot: request.snapshot,
+            approvedBy: approverName,
+            approvedById: actor.userId,
+            approvedAt: now.toISOString(),
+          } as Prisma.InputJsonValue,
+        },
+      });
+      await tx.documentReviewRequest.update({
+        where: { id: request.id },
+        data: {
+          status: 'APPROVED',
+          decidedById: actor.userId,
+          decidedAt: now,
+          decisionVersion: version,
+        },
+      });
+      const transition = await tx.project.updateMany({
+        where: { id: projectId, status: 'REVIEW', isActive: true },
+        data: {
+          status: 'VALIDATED',
+          approvedById: actor.userId,
+          approvedAt: now,
+          progress: 75,
+          officialPdfFr: null,
+          officialPdfEn: null,
+        },
+      });
+      if (transition.count !== 1)
+        throw new ConflictException('La décision est devenue obsolète');
+      await this.createAudit(tx, {
+        action: 'REVIEW_APPROVED',
+        projectId,
+        documentId: request.documentId,
+        requestId: request.id,
+        actor,
+        previousStatus: 'REVIEW',
+        newStatus: 'VALIDATED',
+        contentHash: request.contentHash,
+        version,
+      });
+      const event = await this.enqueueNotification(
+        tx,
+        request.id,
+        projectId,
+        actor.organizationId,
+        'APPROVED',
+      );
+      return {
+        project,
+        request,
+        version,
+        approverName,
+        eventId: event.id,
+        replayed: false,
+      };
+    }, this.transactionOptions);
+    if (!result.replayed) {
+      this.generatePreview(result.project, actor.organizationId);
+      void this.dispatchNotification(result.eventId!, () =>
+        this.notifyApproval(
+          result.project,
+          result.approverName,
+          result.version,
+          actor.organizationId,
+        ),
       );
     }
+    return {
+      success: true,
+      status: 'VALIDATED',
+      version: result.version,
+      reviewRequestId: result.request.id,
+      contentHash: result.request.contentHash,
+      replayed: result.replayed,
+    };
+  }
 
-    const approver = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { firstName: true, lastName: true },
+  async requestRevision(
+    projectId: string,
+    actor: AdviserActor,
+    commentaire?: string,
+  ) {
+    requireProjectApprover(actor);
+    const reason = commentaire?.trim();
+    if (!reason) throw new BadRequestException('Le motif est requis');
+    const result = await this.prisma.$transaction(async (tx) => {
+      await this.lockProject(tx, projectId);
+      const project = await tx.project.findFirst({
+        where: { id: projectId, ...projectAccessWhere(actor) },
+        include: { client: true, building: true },
+      });
+      if (!project || !project.isActive || project.status === 'ARCHIVED')
+        throw new NotFoundException('Projet introuvable');
+      if (!['REVIEW', 'VALIDATED', 'EXPORTED'].includes(project.status))
+        throw new ConflictException(
+          'Ce projet ne peut pas être retourné en révision',
+        );
+      if (project.status === 'REVIEW' && project.submittedById === actor.userId)
+        throw new ForbiddenException(
+          'Vous ne pouvez pas retourner votre propre soumission',
+        );
+      const request = await tx.documentReviewRequest.findFirst({
+        where: {
+          projectId,
+          status: project.status === 'REVIEW' ? 'PENDING' : 'APPROVED',
+        },
+        orderBy: { submittedAt: 'desc' },
+      });
+      if (!request)
+        throw new ConflictException(
+          'Cette approbation historique ne possède pas de demande de révision liée',
+        );
+      const now = new Date();
+      if (request.status === 'PENDING')
+        await tx.documentReviewRequest.update({
+          where: { id: request.id },
+          data: {
+            status: 'RETURNED',
+            decidedById: actor.userId,
+            decidedAt: now,
+            decisionReason: reason,
+          },
+        });
+      await tx.project.update({
+        where: { id: projectId },
+        data: { status: 'IN_PROGRESS' },
+      });
+      await this.createAudit(tx, {
+        action: 'REVIEW_RETURNED',
+        projectId,
+        documentId: request.documentId,
+        requestId: request.id,
+        actor,
+        previousStatus: project.status,
+        newStatus: 'IN_PROGRESS',
+        contentHash: request.contentHash,
+        reason,
+      });
+      const event = await this.enqueueNotification(
+        tx,
+        request.id,
+        projectId,
+        actor.organizationId,
+        'RETURNED',
+      );
+      return { project, request, eventId: event.id };
+    }, this.transactionOptions);
+    void this.dispatchNotification(result.eventId, () =>
+      this.notifyRevision(
+        result.project,
+        actor.userId,
+        actor.organizationId,
+        reason,
+      ),
+    );
+    return {
+      success: true,
+      status: 'IN_PROGRESS',
+      reviewRequestId: result.request.id,
+    };
+  }
+
+  async getObservations(projectId: string, actor: AdviserActor) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, ...projectAccessWhere(actor) },
+      select: { id: true },
     });
-
-    const approverName =
-      `${approver?.firstName ?? ''} ${approver?.lastName ?? ''}`.trim();
-    const now = new Date();
-
-    // 1. Calculer le prochain numéro de version.
-    //
-    // Important :
-    // les signatures des anciennes versions sont volontairement conservées.
-    // Une nouvelle approbation crée une nouvelle version documentaire non signée,
-    // sans supprimer la piste d'audit des versions précédentes.
-    const lastVersion = await this.prisma.projectVersion.findFirst({
-      where: { projectId },
-      orderBy: { versionNumber: 'desc' },
-      select: { versionNumber: true },
+    if (!project) throw new NotFoundException('Projet introuvable');
+    return this.prisma.reviewObservation.findMany({
+      where: { projectId, organizationId: actor.organizationId },
+      include: {
+        createdBy: { select: { firstName: true, lastName: true } },
+        treatedBy: { select: { firstName: true, lastName: true } },
+      },
+      orderBy: { createdAt: 'desc' },
     });
+  }
 
-    const nextVersionNumber = (lastVersion?.versionNumber ?? 0) + 1;
-
-    // 2. Créer la nouvelle version approuvée.
-    //
-    // La signature client sera rattachée explicitement à cette ProjectVersion
-    // lorsqu'elle sera créée depuis le portail client.
-    await this.prisma.projectVersion.create({
+  async addObservation(
+    projectId: string,
+    actor: AdviserActor,
+    data: { texte: string; module?: string },
+  ) {
+    requireProjectApprover(actor);
+    const text = data.texte?.trim();
+    if (!text)
+      throw new BadRequestException("Le texte de l'observation est requis");
+    const project = await this.prisma.project.findFirst({
+      where: {
+        id: projectId,
+        ...mutableProjectAccessWhere(actor),
+        status: 'REVIEW',
+      },
+      select: { id: true },
+    });
+    if (!project) throw new NotFoundException('Projet introuvable');
+    return this.prisma.reviewObservation.create({
       data: {
         projectId,
-        versionNumber: nextVersionNumber,
-        label: `v${nextVersionNumber} — approuvé`,
-        snapshot: {
-          type: 'APPROVAL',
-          versionNumber: nextVersionNumber,
-          approvedBy: approverName,
-          approvedById: userId,
-          approvedAt: now.toISOString(),
-          signedBy: null,
-          signedAt: null,
-          signedEmail: null,
+        createdById: actor.userId,
+        organizationId: actor.organizationId,
+        texte: text,
+        module: data.module,
+        statut: 'OUVERTE',
+      },
+      include: { createdBy: { select: { firstName: true, lastName: true } } },
+    });
+  }
+
+  async updateObservation(
+    id: string,
+    actor: AdviserActor,
+    data: { texte?: string; module?: string; statut?: string },
+  ) {
+    requireProjectApprover(actor);
+    const observation = await this.prisma.reviewObservation.findFirst({
+      where: { id, organizationId: actor.organizationId },
+    });
+    if (!observation) throw new NotFoundException('Observation introuvable');
+    const project = await this.prisma.project.findFirst({
+      where: {
+        id: observation.projectId,
+        ...mutableProjectAccessWhere(actor),
+        status: 'REVIEW',
+      },
+      select: { id: true },
+    });
+    if (!project) throw new NotFoundException('Observation introuvable');
+    if (data.statut && !['OUVERTE', 'TRAITEE'].includes(data.statut))
+      throw new BadRequestException("Statut d'observation invalide");
+    const updateData: Prisma.ReviewObservationUpdateInput = {};
+    if (data.texte !== undefined) {
+      const text = data.texte.trim();
+      if (!text)
+        throw new BadRequestException("Le texte de l'observation est requis");
+      updateData.texte = text;
+    }
+    if (data.module !== undefined) updateData.module = data.module;
+    if (data.statut !== undefined) {
+      updateData.statut = data.statut;
+      updateData.treatedBy =
+        data.statut === 'TRAITEE'
+          ? { connect: { id: actor.userId } }
+          : { disconnect: true };
+    }
+    return this.prisma.reviewObservation.update({
+      where: { id },
+      data: updateData,
+      include: {
+        createdBy: { select: { firstName: true, lastName: true } },
+        treatedBy: { select: { firstName: true, lastName: true } },
+      },
+    });
+  }
+
+  async deleteObservation(id: string, actor: AdviserActor) {
+    requireProjectApprover(actor);
+    const observation = await this.prisma.reviewObservation.findFirst({
+      where: { id, organizationId: actor.organizationId },
+    });
+    if (!observation) throw new NotFoundException('Observation introuvable');
+    const project = await this.prisma.project.findFirst({
+      where: {
+        id: observation.projectId,
+        ...mutableProjectAccessWhere(actor),
+        status: 'REVIEW',
+      },
+      select: { id: true },
+    });
+    if (!project) throw new NotFoundException('Observation introuvable');
+    return this.prisma.reviewObservation.delete({ where: { id } });
+  }
+
+  async canEdit(projectId: string, actor: AdviserActor): Promise<boolean> {
+    try {
+      return Boolean(
+        await this.prisma.project.findFirst({
+          where: {
+            id: projectId,
+            ...mutableProjectAccessWhere(actor),
+            status: { in: ['DRAFT', 'IN_PROGRESS'] },
+          },
+          select: { id: true },
+        }),
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  async canApprove(projectId: string, actor: AdviserActor) {
+    try {
+      requireProjectApprover(actor);
+      const project = await this.prisma.project.findFirst({
+        where: {
+          id: projectId,
+          ...projectAccessWhere(actor),
+          isActive: true,
+          status: 'REVIEW',
         },
+        select: { submittedById: true },
+      });
+      if (!project || project.submittedById === actor.userId) return null;
+      return this.prisma.documentReviewRequest.findFirst({
+        where: { projectId, status: 'PENDING' },
+        orderBy: { submittedAt: 'desc' },
+        select: {
+          id: true,
+          documentId: true,
+          documentVersion: true,
+          contentHash: true,
+          submittedAt: true,
+        },
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  private snapshot(project: any, document: any) {
+    return createReviewSnapshot({
+      project: {
+        id: project.id,
+        documentType: project.documentType,
+        year: project.year,
+        configData: project.configData,
+      },
+      document: {
+        id: document.id,
+        title: document.title,
+        status: document.status,
+        version: document.version,
+        lockVersion: document.lockVersion,
+        content: document.content,
       },
     });
-
-    // 3. Mutation métier principale.
-    // Cette mise à jour termine l'approbation métier.
-    //
-    // Les PDF officiels de la version précédente ne sont plus les artefacts officiels
-    // de la nouvelle version approuvée. Ils restent dans le stockage / historique,
-    // mais les pointeurs actifs du projet sont remis à null afin d'exiger une nouvelle
-    // signature et une nouvelle génération officielle pour cette version.
-    await this.prisma.project.update({
-      where: { id: projectId },
+  }
+  private lockProject(tx: Prisma.TransactionClient, projectId: string) {
+    return tx.$queryRaw(
+      Prisma.sql`SELECT id FROM "Project" WHERE id = ${projectId} FOR UPDATE`,
+    );
+  }
+  private createAudit(tx: Prisma.TransactionClient, input: ReviewAuditInput) {
+    return tx.auditLog.create({
       data: {
-        status: 'VALIDATED',
-        approvedById: userId,
-        approvedAt: now,
-        progress: 75,
-        officialPdfFr: null,
-        officialPdfEn: null,
+        action: input.action,
+        entityType: 'DOCUMENT_REVIEW',
+        entityId: input.requestId,
+        projectId: input.projectId,
+        description: input.action,
+        metadata: {
+          documentId: input.documentId,
+          reviewRequestId: input.requestId,
+          previousStatus: input.previousStatus,
+          newStatus: input.newStatus,
+          contentHash: input.contentHash,
+          reason: input.reason,
+          version: input.version,
+        },
+        userId: input.actor.userId,
+        organizationId: input.actor.organizationId,
       },
     });
+  }
+  private enqueueNotification(
+    tx: Prisma.TransactionClient,
+    reviewRequestId: string,
+    projectId: string,
+    organizationId: string,
+    eventType: string,
+  ) {
+    return tx.documentReviewNotificationEvent.upsert({
+      where: { idempotencyKey: `${reviewRequestId}:${eventType}` },
+      update: {},
+      create: {
+        reviewRequestId,
+        projectId,
+        organizationId,
+        eventType,
+        idempotencyKey: `${reviewRequestId}:${eventType}`,
+      },
+    });
+  }
+  private async dispatchNotification(
+    eventId: string,
+    deliver: () => Promise<void>,
+  ) {
+    const event = await this.prisma.documentReviewNotificationEvent.findUnique({
+      where: { id: eventId },
+    });
+    if (!event || event.status === 'DELIVERED') return;
+    try {
+      await deliver();
+      await this.prisma.documentReviewNotificationEvent.update({
+        where: { id: eventId },
+        data: {
+          status: 'DELIVERED',
+          attempts: { increment: 1 },
+          processedAt: new Date(),
+          lastErrorCode: null,
+        },
+      });
+    } catch (error) {
+      await this.prisma.documentReviewNotificationEvent.update({
+        where: { id: eventId },
+        data: {
+          status: 'FAILED',
+          attempts: { increment: 1 },
+          lastErrorCode: error instanceof Error ? error.name : 'UNKNOWN',
+        },
+      });
+    }
+  }
 
-    // 3bis. Génération automatique du PDF d'aperçu (exportedPdf*) en fire-and-forget.
-    // N'invalide jamais l'approbation déjà enregistrée en base si elle échoue.
+  private generatePreview(project: any, organizationId: string) {
     void this.exportService
       .generatePdf(
         project.id,
@@ -211,223 +683,10 @@ export class ApprovalService {
           data: { exportedPdfFr, exportedPdfEn },
         });
       })
-      .catch((err) => {
-        console.error('Erreur génération PDF après approbation:', err);
-      });
-
-    // 4. Notifications / emails secondaires.
-    // Une panne de notification ou d'email ne doit pas invalider une approbation déjà
-    // enregistrée en base.
-    void this.notifyApproval(
-      project,
-      approverName,
-      nextVersionNumber,
-      organizationId,
-    ).catch((error) => {
-      console.error(
-        `[ApprovalService] Erreur notification après approbation du projet ${projectId}:`,
-        error,
+      .catch((error) =>
+        console.error('Erreur génération PDF après approbation:', error),
       );
-    });
-
-    return {
-      success: true,
-      status: 'VALIDATED',
-      version: nextVersionNumber,
-    };
   }
-
-  // ── Retourner pour révision ──────────────────────────────
-  async requestRevision(
-    projectId: string,
-    actor: AdviserActor,
-    commentaire?: string,
-  ) {
-    requireProjectApprover(actor);
-    const { userId, organizationId } = actor;
-    const project = await this.prisma.project.findFirst({
-      where: { id: projectId, organizationId },
-      include: { client: true, building: true },
-    });
-
-    if (!project) {
-      throw new NotFoundException('Projet introuvable');
-    }
-
-    if (!['REVIEW', 'VALIDATED', 'EXPORTED'].includes(project.status)) {
-      throw new ForbiddenException(
-        'Ce projet ne peut pas être retourné en révision',
-      );
-    }
-
-    // Bloquer seulement si REVIEW et que c'est le soumetteur.
-    if (project.status === 'REVIEW' && project.submittedById === userId) {
-      throw new ForbiddenException(
-        'Vous ne pouvez pas retourner votre propre soumission',
-      );
-    }
-
-    // 1. Mutation métier principale.
-    await this.prisma.project.update({
-      where: { id: projectId },
-      data: { status: 'IN_PROGRESS' },
-    });
-
-    // 2. Notification secondaire.
-    void this.notifyRevision(
-      project,
-      userId,
-      organizationId,
-      commentaire,
-    ).catch((error) => {
-      console.error(
-        `[ApprovalService] Erreur notification après retour en révision du projet ${projectId}:`,
-        error,
-      );
-    });
-
-    return { success: true, status: 'IN_PROGRESS' };
-  }
-
-  // ── Observations CRUD ────────────────────────────────────
-  async getObservations(projectId: string, organizationId: string) {
-    return this.prisma.reviewObservation.findMany({
-      where: { projectId, organizationId },
-      include: {
-        createdBy: { select: { firstName: true, lastName: true } },
-        treatedBy: { select: { firstName: true, lastName: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  async addObservation(
-    projectId: string,
-    userId: string,
-    organizationId: string,
-    data: { texte: string; module?: string },
-  ) {
-    return this.prisma.reviewObservation.create({
-      data: {
-        projectId,
-        createdById: userId,
-        organizationId,
-        texte: data.texte,
-        module: data.module,
-        statut: 'OUVERTE',
-      },
-      include: {
-        createdBy: { select: { firstName: true, lastName: true } },
-      },
-    });
-  }
-
-  async updateObservation(
-    id: string,
-    userId: string,
-    organizationId: string,
-    data: { texte?: string; module?: string; statut?: string },
-  ) {
-    const obs = await this.prisma.reviewObservation.findFirst({
-      where: { id, organizationId },
-    });
-
-    if (!obs) {
-      throw new NotFoundException('Observation introuvable');
-    }
-
-    const updateData: any = {};
-
-    if (data.texte !== undefined) {
-      updateData.texte = data.texte;
-    }
-
-    if (data.module !== undefined) {
-      updateData.module = data.module;
-    }
-
-    if (data.statut !== undefined) {
-      updateData.statut = data.statut;
-
-      if (data.statut === 'TRAITEE') {
-        updateData.treatedById = userId;
-      } else if (data.statut === 'OUVERTE') {
-        updateData.treatedById = null;
-      }
-    }
-
-    return this.prisma.reviewObservation.update({
-      where: { id },
-      data: updateData,
-      include: {
-        createdBy: { select: { firstName: true, lastName: true } },
-        treatedBy: { select: { firstName: true, lastName: true } },
-      },
-    });
-  }
-
-  async deleteObservation(id: string, organizationId: string) {
-    const obs = await this.prisma.reviewObservation.findFirst({
-      where: { id, organizationId },
-    });
-
-    if (!obs) {
-      throw new NotFoundException('Observation introuvable');
-    }
-
-    return this.prisma.reviewObservation.delete({
-      where: { id },
-    });
-  }
-
-  // ── Vérifier si l'utilisateur peut modifier le projet ────
-  async canEdit(
-    projectId: string,
-    userId: string,
-    organizationId: string,
-  ): Promise<boolean> {
-    const project = await this.prisma.project.findFirst({
-      where: { id: projectId, organizationId },
-    });
-
-    if (!project) {
-      return false;
-    }
-
-    if (project.status === 'REVIEW' && project.submittedById === userId) {
-      return false;
-    }
-
-    return true;
-  }
-
-  // ── Vérifier si l'utilisateur peut approuver ─────────────
-  async canApprove(
-    projectId: string,
-    userId: string,
-    organizationId: string,
-  ): Promise<boolean> {
-    const project = await this.prisma.project.findFirst({
-      where: { id: projectId, organizationId },
-    });
-
-    if (!project) {
-      return false;
-    }
-
-    if (project.status !== 'REVIEW') {
-      return false;
-    }
-
-    if (project.submittedById === userId) {
-      return false;
-    }
-
-    return true;
-  }
-
-  // ── Helpers secondaires ──────────────────────────────────
-
   private async notifySubmission(
     project: any,
     userId: string,
@@ -437,111 +696,81 @@ export class ApprovalService {
       where: { id: userId },
       select: { firstName: true, lastName: true },
     });
-
-    const submitterName =
+    const name =
       `${submitter?.firstName ?? ''} ${submitter?.lastName ?? ''}`.trim() ||
       'Un utilisateur';
-
     await this.notifications.createForOrganization({
       organizationId,
       type: 'APPROBATION_REQUISE',
-      title: '📋 Document soumis pour approbation',
-      message: `${submitterName} a soumis le projet "${project.name}" (${project.client.name} — ${project.building.name}) pour révision.`,
+      title: 'Document soumis pour approbation',
+      message: `${name} a soumis le projet "${project.name}" (${project.client.name} — ${project.building.name}) pour révision.`,
       projectId: project.id,
       excludeUserIds: [userId],
     });
   }
-
   private async notifyApproval(
     project: any,
     approverName: string,
-    nextVersionNumber: number,
+    version: number,
     organizationId: string,
   ) {
     const tasks: Promise<unknown>[] = [];
-
-    if (project.submittedById) {
+    if (project.submittedById)
       tasks.push(
         this.notifications.create({
           userId: project.submittedById,
           organizationId,
           type: 'APPROUVE',
-          title: '✅ Document approuvé',
-          message: `${approverName} a approuvé le projet "${project.name}" (v${nextVersionNumber}). L'export PDF est maintenant disponible.`,
+          title: 'Document approuvé',
+          message: `${approverName} a approuvé le projet "${project.name}" (v${version}).`,
           projectId: project.id,
         }),
       );
-    }
-
     tasks.push(this.notifyClientUsers(project));
-
-    const results = await Promise.allSettled(tasks);
-
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        console.error(
-          `[ApprovalService] Une opération secondaire d'approbation a échoué pour ${project.id}:`,
-          result.reason,
-        );
-      }
-    }
-  }
-
-  private async notifyClientUsers(project: any) {
-    const clientUsers = await this.prisma.clientUser.findMany({
-      where: {
-        clientId: project.clientId,
-        isActive: true,
-      },
-    });
-
-    const emailResults = await Promise.allSettled(
-      clientUsers.map((clientUser) =>
-        this.emailService.sendDocumentAvailable({
-          toEmail: clientUser.email,
-          toName: `${clientUser.firstName} ${clientUser.lastName}`,
-          projectName: project.name,
-          documentType: project.documentType,
-          clientName: project.client.name,
-        }),
-      ),
+    const failed = (await Promise.allSettled(tasks)).find(
+      (item) => item.status === 'rejected',
     );
-
-    for (const result of emailResults) {
-      if (result.status === 'rejected') {
-        console.error(
-          `[ApprovalService] Erreur envoi email client pour le projet ${project.id}:`,
-          result.reason,
-        );
-      }
-    }
+    if (failed?.status === 'rejected') throw failed.reason;
   }
-
+  private async notifyClientUsers(project: any) {
+    const users = await this.prisma.clientUser.findMany({
+      where: { clientId: project.clientId, isActive: true },
+    });
+    const failed = (
+      await Promise.allSettled(
+        users.map((user) =>
+          this.emailService.sendDocumentAvailable({
+            toEmail: user.email,
+            toName: `${user.firstName} ${user.lastName}`,
+            projectName: project.name,
+            documentType: project.documentType,
+            clientName: project.client.name,
+          }),
+        ),
+      )
+    ).find((item) => item.status === 'rejected');
+    if (failed?.status === 'rejected') throw failed.reason;
+  }
   private async notifyRevision(
     project: any,
     userId: string,
     organizationId: string,
-    commentaire?: string,
+    reason: string,
   ) {
-    if (!project.submittedById) {
-      return;
-    }
-
+    if (!project.submittedById) return;
     const reviewer = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { firstName: true, lastName: true },
     });
-
-    const reviewerName =
+    const name =
       `${reviewer?.firstName ?? ''} ${reviewer?.lastName ?? ''}`.trim() ||
       'Un utilisateur';
-
     await this.notifications.create({
       userId: project.submittedById,
       organizationId,
       type: 'RETOUR_REVISION',
-      title: '🔄 Document retourné pour révision',
-      message: `${reviewerName} a retourné le projet "${project.name}" pour corrections.${commentaire ? ` Commentaire : ${commentaire}` : ''}`,
+      title: 'Document retourné pour révision',
+      message: `${name} a retourné le projet "${project.name}" pour corrections. Commentaire : ${reason}`,
       projectId: project.id,
     });
   }

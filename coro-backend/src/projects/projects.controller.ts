@@ -133,18 +133,7 @@ export class ProjectsController {
 
   @Post(':id/submit')
   async submit(@Param('id') id: string, @Request() req: any) {
-    const result = await this.approvalService.submit(id, req.user);
-    await this.auditService.log({
-      action: 'STATUS_CHANGE',
-      entityType: 'PROJECT',
-      entityId: id,
-      projectId: id,
-      description: 'Document soumis pour approbation',
-      metadata: { newStatus: 'REVIEW' },
-      userId: req.user.userId,
-      organizationId: req.user.organizationId,
-    });
-    return result;
+    return this.approvalService.submit(id, req.user);
   }
 
   @Post(':id/approve')
@@ -153,28 +142,7 @@ export class ProjectsController {
     @Body() body: { comment?: string },
     @Request() req: any,
   ) {
-    const result = await this.approvalService.approve(
-      id,
-      req.user.userId,
-      req.user.organizationId,
-      req.user.role,
-    );
-    await this.auditService.log({
-      action: 'STATUS_CHANGE',
-      entityType: 'PROJECT',
-      entityId: id,
-      projectId: id,
-      description: `Document approuvé${body.comment ? ` — "${body.comment}"` : ''}`,
-      metadata: {
-        previousStatus: 'REVIEW',
-        newStatus: 'VALIDATED',
-        comment: body.comment,
-        version: result.version,
-      },
-      userId: req.user.userId,
-      organizationId: req.user.organizationId,
-    });
-    return result;
+    return this.approvalService.approve(id, req.user);
   }
 
   @Post(':id/reject')
@@ -183,22 +151,11 @@ export class ProjectsController {
     @Body() body: { comment: string },
     @Request() req: any,
   ) {
-    const result = await this.approvalService.requestRevision(
+    return this.approvalService.requestRevision(
       id,
       req.user,
       body.comment,
     );
-    await this.auditService.log({
-      action: 'STATUS_CHANGE',
-      entityType: 'PROJECT',
-      entityId: id,
-      projectId: id,
-      description: `Document rejeté — "${body.comment}"`,
-      metadata: { newStatus: 'IN_PROGRESS', comment: body.comment },
-      userId: req.user.userId,
-      organizationId: req.user.organizationId,
-    });
-    return result;
   }
 
   @Post(':id/request-revision')
@@ -207,22 +164,11 @@ export class ProjectsController {
     @Body() body: { comment?: string },
     @Request() req: any,
   ) {
-    const result = await this.approvalService.requestRevision(
+    return this.approvalService.requestRevision(
       id,
       req.user,
       body.comment,
     );
-    await this.auditService.log({
-      action: 'STATUS_CHANGE',
-      entityType: 'PROJECT',
-      entityId: id,
-      projectId: id,
-      description: `Mise à jour demandée${body.comment ? ` — "${body.comment}"` : ''}`,
-      metadata: { newStatus: 'IN_PROGRESS', comment: body.comment },
-      userId: req.user.userId,
-      organizationId: req.user.organizationId,
-    });
-    return result;
   }
 
   @Get(':id/comments')

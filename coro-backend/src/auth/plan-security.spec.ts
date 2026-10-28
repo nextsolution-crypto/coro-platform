@@ -21,6 +21,8 @@ const operator = {
 describe('plan document security boundaries', () => {
   it('applies canonical assignment scope to project listing and detail reads', async () => {
     const prisma: any = {
+      $transaction: jest.fn((callback) => callback(prisma)),
+      $queryRaw: jest.fn().mockResolvedValue([]),
       project: {
         findMany: jest.fn().mockResolvedValue([]),
         findFirst: jest.fn().mockResolvedValue({ id: 'project-a' }),
@@ -139,6 +141,8 @@ describe('plan document security boundaries', () => {
 
   it('denies unauthorized submission and revision requests before mutation', async () => {
     const prisma: any = {
+      $transaction: jest.fn((callback) => callback(prisma)),
+      $queryRaw: jest.fn().mockResolvedValue([]),
       project: {
         findFirst: jest.fn().mockResolvedValue(null),
         update: jest.fn(),
@@ -162,14 +166,33 @@ describe('plan document security boundaries', () => {
 
   it('allows an ADMIN to request revision for a valid project lifecycle', async () => {
     const prisma: any = {
+      $transaction: jest.fn((callback) => callback(prisma)),
+      $queryRaw: jest.fn().mockResolvedValue([]),
       project: {
         findFirst: jest.fn().mockResolvedValue({
           id: 'project-a',
           status: 'REVIEW',
           submittedById: 'operator-a',
+          isActive: true,
+          client: {},
+          building: {},
         }),
         update: jest.fn().mockResolvedValue({}),
       },
+      documentReviewRequest: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'review-a',
+          documentId: 'document-a',
+          contentHash: 'hash-a',
+          status: 'PENDING',
+        }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      documentReviewNotificationEvent: {
+        upsert: jest.fn().mockResolvedValue({ id: 'event-a' }),
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
+      auditLog: { create: jest.fn().mockResolvedValue({}) },
       user: { findUnique: jest.fn().mockResolvedValue({ firstName: 'Admin' }) },
     };
     const notifications: any = { create: jest.fn().mockResolvedValue({}) };
@@ -309,25 +332,23 @@ describe('plan document security boundaries', () => {
       {} as any,
       {} as any,
     );
-    await expect(
-      service.approve(
-        'project-a',
-        operator.userId,
-        operator.organizationId,
-        operator.role,
-      ),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.approve('project-a', operator)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
     expect(prisma.project.findFirst).not.toHaveBeenCalled();
     expect(prisma.projectVersion.create).not.toHaveBeenCalled();
   });
 
   it('preserves separation of duties for an authorized approver', async () => {
     const prisma: any = {
+      $transaction: jest.fn((callback) => callback(prisma)),
+      $queryRaw: jest.fn().mockResolvedValue([]),
       project: {
         findFirst: jest.fn().mockResolvedValue({
           id: 'project-a',
           status: 'REVIEW',
           submittedById: 'admin-a',
+          isActive: true,
         }),
       },
       projectVersion: { findFirst: jest.fn(), create: jest.fn() },
@@ -339,14 +360,9 @@ describe('plan document security boundaries', () => {
       {} as any,
       {} as any,
     );
-    await expect(
-      service.approve(
-        'project-a',
-        admin.userId,
-        admin.organizationId,
-        admin.role,
-      ),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.approve('project-a', admin)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
     expect(prisma.projectVersion.create).not.toHaveBeenCalled();
   });
 
@@ -356,14 +372,47 @@ describe('plan document security boundaries', () => {
       status: 'REVIEW',
       submittedById: 'submitter-a',
       documentType: 'PMU',
+      year: 2026,
+      configData: {},
+      isActive: true,
       client: { name: 'Client test' },
       building: { name: 'Building test' },
     };
+    const request = {
+      id: 'review-a',
+      documentId: 'document-a',
+      documentVersion: 1,
+      documentLockVersion: 0,
+      contentHash: 'pending',
+      snapshot: {},
+    };
+    const document = {
+      id: 'document-a',
+      projectId: 'project-a',
+      title: 'Document',
+      status: 'DRAFT',
+      version: 1,
+      lockVersion: 0,
+      content: {},
+    };
     const prisma: any = {
+      $transaction: jest.fn((callback) => callback(prisma)),
+      $queryRaw: jest.fn().mockResolvedValue([]),
       project: {
         findFirst: jest.fn().mockResolvedValue(project),
         update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
+      document: { findFirst: jest.fn().mockResolvedValue(document) },
+      documentReviewRequest: {
+        findFirst: jest.fn().mockResolvedValue(request),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      documentReviewNotificationEvent: {
+        upsert: jest.fn().mockResolvedValue({ id: 'event-a' }),
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
+      auditLog: { create: jest.fn().mockResolvedValue({}) },
       projectVersion: {
         findFirst: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue({}),
@@ -387,14 +436,40 @@ describe('plan document security boundaries', () => {
       storage,
     );
 
+    const { createReviewSnapshot, hashReviewSnapshot } = jest.requireActual(
+      '../approval/document-review-integrity',
+    );
+    request.contentHash = hashReviewSnapshot(
+      createReviewSnapshot({
+        project: {
+          id: project.id,
+          documentType: project.documentType,
+          year: project.year,
+          configData: project.configData,
+        },
+        document: {
+          id: document.id,
+          title: document.title,
+          status: document.status,
+          version: document.version,
+          lockVersion: document.lockVersion,
+          content: document.content,
+        },
+      }),
+    );
+
     await expect(
-      service.approve('project-a', 'approver-a', 'org-a', 'ADMIN'),
+      service.approve('project-a', {
+        userId: 'approver-a',
+        organizationId: 'org-a',
+        role: 'ADMIN',
+      }),
     ).resolves.toMatchObject({
       status: 'VALIDATED',
       version: 1,
     });
     expect(prisma.projectVersion.create).toHaveBeenCalledTimes(1);
-    expect(prisma.project.update).toHaveBeenCalledWith(
+    expect(prisma.project.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: 'VALIDATED' }),
       }),

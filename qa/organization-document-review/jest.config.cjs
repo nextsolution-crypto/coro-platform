@@ -20,6 +20,7 @@ module.exports = {
     ],
   },
   moduleFileExtensions: ['ts', 'js', 'json'],
+  moduleDirectories: ['node_modules', '<rootDir>/coro-backend/node_modules'],
   testRegex:
     'qa[\\\\/]organization-document-review[\\\\/].*(?:audit-spec|postgres-audit-spec)\\.ts$',
 };
