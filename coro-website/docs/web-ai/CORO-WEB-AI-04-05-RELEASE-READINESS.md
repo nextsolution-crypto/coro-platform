@@ -1,8 +1,10 @@
 # CORO WEB-AI-04/05 — Release readiness
 
-Date de revue : 2026-10-28  
-Base vérifiée : `origin/main` à `056ae9cbdd201409aefc57d2c8836f822a273077`  
-Branche : `feature/web-ai-04-05-commercial-observability`  
+Date de revue : 2026-10-28
+
+Base vérifiée : `origin/main` à `056ae9cbdd201409aefc57d2c8836f822a273077`
+
+Branche : `feature/web-ai-04-05-commercial-observability`
 HEAD fonctionnel initial : `44c914de6b74bb87d518e9400b447ca3a7d97c54`
 
 ## Identification et commits
@@ -68,10 +70,10 @@ La CI de la PR constitue la gate définitive, notamment pour l'extracteur Office
 
 ## Recommandations
 
-Fusion : possible uniquement après CI obligatoire réussie et décision humaine.  
+Fusion : possible uniquement après CI obligatoire réussie et décision humaine.
+
 Déploiement : non autorisé dans ce mandat; à planifier séparément après résolution du gate de capacité, sauvegarde, restauration et rollback.
 
 ## Verdict
 
 `READY_WITH_CONDITIONS` tant que la CI de PR et sa suite Linux ne sont pas terminales. Si elles réussissent, la PR devient `READY_TO_MERGE`, avec les réserves non bloquantes d'accessibilité et de navigateur Super Admin ci-dessus.
-
