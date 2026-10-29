@@ -511,7 +511,11 @@ describe('Plan authenticated HTTP security boundaries', () => {
     await http
       .post(`/api/projects/${ids.pmu}/export`)
       .set(auth(tokens.operatorA))
-      .send({ language: 'fr', selectedModules: [] })
+      .send({
+        language: 'fr',
+        selectedModules: [],
+        idempotencyKey: 'http-security-approved-pmu-fr',
+      })
       .expect(201);
   });
 
