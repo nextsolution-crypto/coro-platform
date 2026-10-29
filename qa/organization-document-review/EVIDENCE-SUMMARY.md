@@ -2,6 +2,7 @@
 
 - PR: `#124`
 - Base candidate: `4f4fd3e517014e14bb01af49887c8d9a61d6e12b`
+- Browser-tested product HEAD: `0fdf007087ad3a7567d9afbecd5f36b51427ed9e`
 - PostgreSQL: 16, disposable localhost-only containers
 - Migration head: `20261113010000_document_review_integrity` (migration 160)
 - Browser runtime: real backend and frontend, local provider fake, deny-by-default network
@@ -29,7 +30,7 @@ It also demonstrated:
 
 Sanitized machine-readable evidence and the 12 screenshots are preserved at:
 
-`D:\CORO-QA\runs\pr124-cors\document-review-final\`
+`D:\CORO-QA\runs\pr124-cors\document-review-final-head\`
 
 ## Outbox evidence
 
