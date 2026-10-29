@@ -261,7 +261,7 @@ export class DocumentPdfExportService {
             status: 'PROCESSING',
             requestHash: row.requestHash,
           },
-          data: { artifacts: artifacts as unknown as Prisma.InputJsonValue },
+          data: { artifacts },
         });
         if (staged.count !== 1) throw new Error('EXPORT_STAGING_CONFLICT');
       }
@@ -285,7 +285,7 @@ export class DocumentPdfExportService {
           },
           data: {
             status: 'AVAILABLE',
-            artifacts: artifacts as unknown as Prisma.InputJsonValue,
+            artifacts,
             generatedAt: new Date(),
             generationLeaseUntil: null,
             failureCode: null,
@@ -305,8 +305,8 @@ export class DocumentPdfExportService {
               reviewRequestId: row.reviewRequestId,
               projectVersionId: row.projectVersionId,
               sourceHash: row.sourceHash,
-              artifacts: artifacts.map(
-                ({ storageKey: _storageKey, ...artifact }) => artifact,
+              artifacts: artifacts.map((artifact) =>
+                this.publicArtifact(artifact),
               ),
             },
           },
@@ -366,14 +366,14 @@ export class DocumentPdfExportService {
         },
       },
     });
-    const versionSnapshot = version?.snapshot as any;
+    const versionSnapshot = this.jsonObject(version?.snapshot);
     if (
       !version ||
       versionSnapshot?.reviewRequestId !== review.id ||
       versionSnapshot?.contentHash !== review.contentHash
     )
       throw new ConflictException('APPROVED_VERSION_PROVENANCE_INVALID');
-    if ((review.snapshot as any)?.schemaVersion !== 2)
+    if (this.jsonObject(review.snapshot)?.schemaVersion !== 2)
       throw new ConflictException('APPROVED_SNAPSHOT_UNSUPPORTED');
     return { project, review, version };
   }
@@ -429,12 +429,10 @@ export class DocumentPdfExportService {
       generatorVersion: row.generatorVersion,
       generatedAt: row.generatedAt,
       failureCode: row.failureCode,
-      artifacts: this.artifacts(row).map(
-        ({ storageKey: _storageKey, ...artifact }) => ({
-          ...artifact,
-          downloadUrl: `/projects/${row.projectId}/export/requests/${row.id}/download/${artifact.language}`,
-        }),
-      ),
+      artifacts: this.artifacts(row).map((artifact) => ({
+        ...this.publicArtifact(artifact),
+        downloadUrl: `/projects/${row.projectId}/export/requests/${row.id}/download/${artifact.language}`,
+      })),
     };
   }
 
@@ -465,7 +463,28 @@ export class DocumentPdfExportService {
       ? error.message.slice(0, 100)
       : 'UNKNOWN_EXPORT_FAILURE';
   }
-  private fileName(project: any, language: 'fr' | 'en') {
+  private publicArtifact(artifact: Artifact) {
+    return {
+      language: artifact.language,
+      fileName: artifact.fileName,
+      sizeBytes: artifact.sizeBytes,
+      sha256: artifact.sha256,
+    };
+  }
+  private jsonObject(value: Prisma.JsonValue | undefined) {
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? value
+      : null;
+  }
+  private fileName(
+    project: {
+      documentType: string;
+      building?: { name: string } | null;
+      name: string;
+      year: number;
+    },
+    language: 'fr' | 'en',
+  ) {
     const clean = (value: string) =>
       value
         .normalize('NFD')
