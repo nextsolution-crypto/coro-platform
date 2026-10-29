@@ -128,7 +128,8 @@ export class ApprovalService {
       );
       return { project, request, alreadySubmitted: false, eventId: event.id };
     }, this.transactionOptions);
-    if (result.eventId) void this.processNotificationEvent(result.eventId);
+    if (result.eventId)
+      void this.processNotificationEvent(result.eventId).catch(() => undefined);
     return {
       success: true,
       status: 'REVIEW',
@@ -278,7 +279,7 @@ export class ApprovalService {
     }, this.transactionOptions);
     if (!result.replayed) {
       this.generatePreview(result.project, actor.organizationId);
-      void this.processNotificationEvent(result.eventId!);
+      void this.processNotificationEvent(result.eventId!).catch(() => undefined);
     }
     return {
       success: true,
@@ -360,7 +361,7 @@ export class ApprovalService {
       );
       return { project, request, eventId: event.id };
     }, this.transactionOptions);
-    void this.processNotificationEvent(result.eventId);
+    void this.processNotificationEvent(result.eventId).catch(() => undefined);
     return {
       success: true,
       status: 'IN_PROGRESS',
