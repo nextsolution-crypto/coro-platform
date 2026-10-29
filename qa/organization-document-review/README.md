@@ -1,8 +1,9 @@
 # Organization document review audit runner
 
-This runner characterizes the review and approval workflow at the explicit
-candidate SHA. Its assertions intentionally prove current behaviour, including
-security and integrity gaps. It does not modify product code or production.
+This dossier validates the review and approval workflow on an explicit
+candidate SHA. It covers the server contracts, PostgreSQL integrity, an actual
+159-to-160 upgrade, the durable outbox worker and the authenticated browser
+workflow. It does not access or modify production.
 
 Run from the repository root:
 
@@ -10,6 +11,10 @@ Run from the repository root:
 & .\coro-backend\node_modules\.bin\jest.cmd --config .\qa\organization-document-review\jest.config.cjs --runInBand
 ```
 
-The PostgreSQL and browser portions of the audit are recorded separately in
-the audit dossier. A passing characterization test is evidence that the
-observed behaviour is reproducible; it is not acceptance of that behaviour.
+Run the browser campaign only against the isolated Identity Lab runtime. Its
+output directory must be outside the repository and must not contain tokens,
+MFA codes or provider credentials.
+
+The migration upgrade runner expects a disposable database at the actual
+parent migration head and synthetic pre-existing records. A from-scratch
+migration is complementary and is not a substitute for this upgrade proof.

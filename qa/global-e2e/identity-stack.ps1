@@ -120,6 +120,8 @@ Invoke-Docker @('run', '-d', '--name', "$prefix-backend", '--network', $internal
   '-e', "FRONTEND_URL=http://127.0.0.1:$PortalPort", '-e', 'MFA_QA_CAPTURE_ENABLED=true',
   '-e', 'MFA_QA_CAPTURE_DIR=/tmp/coro-mfa', '-e', 'MFA_QA_ALLOWED_RECIPIENT_SUFFIXES=global-e2e.test',
   '-e', 'MFA_QA_NETWORK_ISOLATED=true',
+  '-e', 'CLIENT_EMAIL_RECIPIENT_ALLOWLIST=portal-manager-a@global-e2e.test,portal-user-a@global-e2e.test,portal-corporate-a@global-e2e.test,portal-regional-a@global-e2e.test,portal-local-a@global-e2e.test,portal-zero-a@global-e2e.test',
+  '-e', 'CLIENT_EMAIL_QA_PROVIDER_URL=http://provider-fake:34641/v3/smtp/email',
   '-e', "CLIENT_PORTAL_RESTRICTED_PILOT_ORGANIZATION_IDS=$RestrictedPilotOrganizationId",
   '-e', 'PRIVATE_STORAGE_QA_MODE=true', '-e', 'PRIVATE_STORAGE_QA_ENDPOINT=http://private-storage-qa:34642',
   '-e', 'PRIVATE_STORAGE_QA_ACCESS_KEY=qa-storage-access', '-e', 'PRIVATE_STORAGE_QA_SECRET_KEY=qa-storage-secret',

@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -127,14 +128,7 @@ export class ApprovalService {
       );
       return { project, request, alreadySubmitted: false, eventId: event.id };
     }, this.transactionOptions);
-    if (result.eventId)
-      void this.dispatchNotification(result.eventId, () =>
-        this.notifySubmission(
-          result.project,
-          actor.userId,
-          actor.organizationId,
-        ),
-      );
+    if (result.eventId) void this.processNotificationEvent(result.eventId);
     return {
       success: true,
       status: 'REVIEW',
@@ -284,14 +278,7 @@ export class ApprovalService {
     }, this.transactionOptions);
     if (!result.replayed) {
       this.generatePreview(result.project, actor.organizationId);
-      void this.dispatchNotification(result.eventId!, () =>
-        this.notifyApproval(
-          result.project,
-          result.approverName,
-          result.version,
-          actor.organizationId,
-        ),
-      );
+      void this.processNotificationEvent(result.eventId!);
     }
     return {
       success: true,
@@ -373,14 +360,7 @@ export class ApprovalService {
       );
       return { project, request, eventId: event.id };
     }, this.transactionOptions);
-    void this.dispatchNotification(result.eventId, () =>
-      this.notifyRevision(
-        result.project,
-        actor.userId,
-        actor.organizationId,
-        reason,
-      ),
-    );
+    void this.processNotificationEvent(result.eventId);
     return {
       success: true,
       status: 'IN_PROGRESS',
@@ -609,35 +589,93 @@ export class ApprovalService {
       },
     });
   }
-  private async dispatchNotification(
-    eventId: string,
-    deliver: () => Promise<void>,
-  ) {
-    const event = await this.prisma.documentReviewNotificationEvent.findUnique({
-      where: { id: eventId },
+  async processNotificationEvent(eventId: string) {
+    const claim = await this.prisma.documentReviewNotificationEvent.updateMany({
+      where: {
+        id: eventId,
+        status: { in: ['PENDING', 'FAILED'] },
+        attempts: { lt: 3 },
+      },
+      data: { status: 'PROCESSING', attempts: { increment: 1 } },
     });
-    if (!event || event.status === 'DELIVERED') return;
+    if (claim.count !== 1) return false;
     try {
-      await deliver();
+      const event =
+        await this.prisma.documentReviewNotificationEvent.findUniqueOrThrow({
+          where: { id: eventId },
+          include: {
+            project: { include: { client: true, building: true } },
+            reviewRequest: {
+              include: {
+                decidedBy: { select: { firstName: true, lastName: true } },
+              },
+            },
+          },
+        });
+      if (event.eventType === 'SUBMITTED') {
+        await this.notifySubmission(
+          event.project,
+          event.reviewRequest.submittedById,
+          event.organizationId,
+        );
+      } else if (event.eventType === 'APPROVED') {
+        const approverName =
+          `${event.reviewRequest.decidedBy?.firstName ?? ''} ${event.reviewRequest.decidedBy?.lastName ?? ''}`.trim() ||
+          'Un utilisateur';
+        await this.notifyApproval(
+          event.project,
+          approverName,
+          event.reviewRequest.decisionVersion ??
+            event.reviewRequest.documentVersion,
+          event.organizationId,
+        );
+      } else if (event.eventType === 'RETURNED') {
+        if (!event.reviewRequest.decidedById)
+          throw new Error('MISSING_REVIEW_DECIDER');
+        await this.notifyRevision(
+          event.project,
+          event.reviewRequest.decidedById,
+          event.organizationId,
+          event.reviewRequest.decisionReason ?? 'Mise à jour demandée',
+        );
+      } else {
+        throw new Error('UNSUPPORTED_REVIEW_NOTIFICATION');
+      }
       await this.prisma.documentReviewNotificationEvent.update({
         where: { id: eventId },
         data: {
           status: 'DELIVERED',
-          attempts: { increment: 1 },
           processedAt: new Date(),
           lastErrorCode: null,
         },
       });
+      return true;
     } catch (error) {
       await this.prisma.documentReviewNotificationEvent.update({
         where: { id: eventId },
         data: {
           status: 'FAILED',
-          attempts: { increment: 1 },
           lastErrorCode: error instanceof Error ? error.name : 'UNKNOWN',
         },
       });
+      return false;
     }
+  }
+
+  @Cron('*/30 * * * * *')
+  async retryFailedNotifications() {
+    const staleBefore = new Date(Date.now() - 5 * 60_000);
+    await this.prisma.documentReviewNotificationEvent.updateMany({
+      where: { status: 'PROCESSING', updatedAt: { lt: staleBefore } },
+      data: { status: 'FAILED', lastErrorCode: 'INTERRUPTED' },
+    });
+    const due = await this.prisma.documentReviewNotificationEvent.findMany({
+      where: { status: { in: ['PENDING', 'FAILED'] }, attempts: { lt: 3 } },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+      take: 20,
+    });
+    for (const event of due) await this.processNotificationEvent(event.id);
   }
 
   private generatePreview(project: any, organizationId: string) {
@@ -736,20 +774,22 @@ export class ApprovalService {
     const users = await this.prisma.clientUser.findMany({
       where: { clientId: project.clientId, isActive: true },
     });
-    const failed = (
-      await Promise.allSettled(
-        users.map((user) =>
-          this.emailService.sendDocumentAvailable({
-            toEmail: user.email,
-            toName: `${user.firstName} ${user.lastName}`,
-            projectName: project.name,
-            documentType: project.documentType,
-            clientName: project.client.name,
-          }),
-        ),
-      )
-    ).find((item) => item.status === 'rejected');
+    const results = await Promise.allSettled(
+      users.map((user) =>
+        this.emailService.sendDocumentAvailable({
+          toEmail: user.email,
+          toName: `${user.firstName} ${user.lastName}`,
+          projectName: project.name,
+          documentType: project.documentType,
+          clientName: project.client.name,
+        }),
+      ),
+    );
+    const failed = results.find(
+      (item) => item.status === 'rejected' || item.value?.success !== true,
+    );
     if (failed?.status === 'rejected') throw failed.reason;
+    if (failed) throw new Error('EMAIL_PROVIDER_REJECTED');
   }
   private async notifyRevision(
     project: any,

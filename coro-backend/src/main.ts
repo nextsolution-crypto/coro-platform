@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import { RequestIdMiddleware } from './common/request-id.middleware';
 import { SafeExceptionFilter } from './common/safe-exception.filter';
 import { runtimeConfig } from './runtime.config';
+import { CORS_ALLOWED_HEADERS } from './cors.config';
 
 export async function bootstrap() {
   const runtime = runtimeConfig();
@@ -68,7 +69,7 @@ export async function bootstrap() {
   app.enableCors({
     origin: runtime.corsOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: [...CORS_ALLOWED_HEADERS],
     exposedHeaders: ['X-Request-ID'],
     credentials: true,
   });

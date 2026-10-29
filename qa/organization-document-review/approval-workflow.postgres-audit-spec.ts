@@ -22,10 +22,17 @@ describe('Governed document review PostgreSQL acceptance', () => {
   const author = { userId: authorId, organizationId: org, role: 'OPERATOR' };
   const reviewer = { userId: reviewerId, organizationId: org, role: 'ADMIN' };
   const unassigned = { userId: unassignedId, organizationId: org, role: 'OPERATOR' };
+  const notifications = {
+    create: jest.fn().mockResolvedValue({}),
+    createForOrganization: jest.fn().mockResolvedValue({}),
+  };
+  const emailService = {
+    sendDocumentAvailable: jest.fn().mockResolvedValue({ success: true }),
+  };
   const service = new ApprovalService(
     prisma as any,
-    { create: jest.fn().mockResolvedValue({}), createForOrganization: jest.fn().mockResolvedValue({}) } as any,
-    { sendDocumentAvailable: jest.fn().mockResolvedValue({}) } as any,
+    notifications as any,
+    emailService as any,
     { generatePdf: jest.fn(() => new Promise(() => undefined)) } as any,
     { uploadFile: jest.fn() } as any,
   );
@@ -100,5 +107,50 @@ describe('Governed document review PostgreSQL acceptance', () => {
     await expect(service.approve(item.projectId, reviewer)).rejects.toBeInstanceOf(ConflictException);
     expect(await prisma.projectVersion.count({ where: { projectId: item.projectId } })).toBe(1);
     expect(await prisma.documentReviewRequest.findUniqueOrThrow({ where: { id: resubmitted.reviewRequestId } })).toMatchObject({ status: 'PENDING' });
+  });
+
+  it('claims an outbox event once and retries a failed delivery without a duplicate successful effect', async () => {
+    const request = await prisma.documentReviewRequest.findFirstOrThrow({
+      where: { projectId: projects[1].projectId, status: 'APPROVED' },
+    });
+    const pending = await prisma.documentReviewNotificationEvent.create({
+      data: {
+        reviewRequestId: request.id,
+        projectId: projects[1].projectId,
+        organizationId: org,
+        eventType: 'SUBMITTED',
+        idempotencyKey: `${request.id}:QA_PENDING_RECOVERY`,
+      },
+    });
+    await service.retryFailedNotifications();
+    expect(await prisma.documentReviewNotificationEvent.findUniqueOrThrow({ where: { id: pending.id } }))
+      .toMatchObject({ status: 'DELIVERED', attempts: 1 });
+
+    const event = await prisma.documentReviewNotificationEvent.create({
+      data: {
+        reviewRequestId: request.id,
+        projectId: projects[1].projectId,
+        organizationId: org,
+        eventType: 'SUBMITTED',
+        idempotencyKey: `${request.id}:QA_RETRY`,
+      },
+    });
+    notifications.createForOrganization.mockRejectedValueOnce(new Error('QA_PROVIDER_UNAVAILABLE'));
+    expect(await service.processNotificationEvent(event.id)).toBe(false);
+    expect(await prisma.documentReviewNotificationEvent.findUniqueOrThrow({ where: { id: event.id } }))
+      .toMatchObject({ status: 'FAILED', attempts: 1 });
+
+    notifications.createForOrganization.mockResolvedValueOnce({});
+    await service.retryFailedNotifications();
+    expect(await prisma.documentReviewNotificationEvent.findUniqueOrThrow({ where: { id: event.id } }))
+      .toMatchObject({ status: 'DELIVERED', attempts: 2 });
+
+    const callsBeforeReplay = notifications.createForOrganization.mock.calls.length;
+    const replay = await Promise.all([
+      service.processNotificationEvent(event.id),
+      service.processNotificationEvent(event.id),
+    ]);
+    expect(replay).toEqual([false, false]);
+    expect(notifications.createForOrganization.mock.calls).toHaveLength(callsBeforeReplay);
   });
 });

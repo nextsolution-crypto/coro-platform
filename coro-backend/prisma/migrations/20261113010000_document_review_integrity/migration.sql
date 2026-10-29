@@ -1,5 +1,5 @@
 CREATE TYPE "DocumentReviewStatus" AS ENUM ('PENDING', 'APPROVED', 'RETURNED', 'SUPERSEDED');
-CREATE TYPE "DocumentReviewNotificationStatus" AS ENUM ('PENDING', 'DELIVERED', 'FAILED');
+CREATE TYPE "DocumentReviewNotificationStatus" AS ENUM ('PENDING', 'PROCESSING', 'DELIVERED', 'FAILED');
 
 CREATE TABLE "DocumentReviewRequest" (
     "id" TEXT NOT NULL,

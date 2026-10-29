@@ -626,7 +626,7 @@ export default function ProjectDetailPage() {
             )}
 
             {/* Approuver / Rejeter */}
-            {project.status === 'REVIEW' && project.submittedById !== authUser?.id && (
+            {project.status === 'REVIEW' && canApprove && (
               <>
                 <button
                   onClick={() => setShowApprovalModal('approve')}
@@ -744,7 +744,7 @@ export default function ProjectDetailPage() {
         <div className="rounded-md mb-6 overflow-hidden"
           style={{ border: '1px solid #FAD7A0' }}>
           {/* En-tête */}
-          <div className="p-4 flex items-center justify-between"
+          <div className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
             style={{ backgroundColor: '#FEF9E7' }}>
             <div className="flex items-center gap-3">
               <span style={{ fontSize: '20px' }}>⏳</span>
@@ -757,7 +757,7 @@ export default function ProjectDetailPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full sm:w-auto flex-wrap items-center gap-2">
               <button
                 onClick={handlePreview}
                 disabled={previewing || !hasDocument}

@@ -2707,6 +2707,7 @@ enum DocumentReviewStatus {
 
 enum DocumentReviewNotificationStatus {
   PENDING
+  PROCESSING
   DELIVERED
   FAILED
 }
