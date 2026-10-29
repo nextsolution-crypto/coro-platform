@@ -316,6 +316,9 @@ describe('Plan authenticated HTTP security boundaries', () => {
     await prisma.documentReviewNotificationEvent.deleteMany({
       where: { organizationId: { in: [ids.orgA, ids.orgB] } },
     });
+    await prisma.documentPdfExport.deleteMany({
+      where: { organizationId: { in: [ids.orgA, ids.orgB] } },
+    });
     await prisma.documentReviewRequest.deleteMany({
       where: { organizationId: { in: [ids.orgA, ids.orgB] } },
     });
