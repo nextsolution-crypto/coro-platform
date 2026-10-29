@@ -1,5 +1,27 @@
 # Matrice d’acceptation — export PDF documentaire
 
+## Matrice finale après correction
+
+| Domaine | Statut final |
+|---|---|
+| Autorité serveur nouvel export final | PASS |
+| Aperçu de brouillon distinct | PASS |
+| Snapshot et version approuvés immuables | PASS |
+| Provenance et SHA-256 | PASS |
+| Idempotence compatible / conflit incompatible | PASS |
+| Pannes moteur, stockage, publication et reprise | PASS ciblé |
+| Stockage privé et contrôle d’intégrité au téléchargement | PASS |
+| Refus sans octet, référence ou export induit | PASS |
+| PMU FR/EN, PSI FR, PCA FR | PASS |
+| Parcours documentaire intégré | PASS |
+| Chrome 4 viewports × 3 thèmes | 12/12 PASS |
+| Clavier, F5, zoom 200 %, bon téléchargement | PASS |
+| Upgrade migration 160→161 avec données préexistantes | PASS |
+| PDF balisé / PDF-UA / lecteur d’écran réel | NOT_VERIFIED (`Tagged: no`) |
+| PGC / PRA / PUE | NOT_VERIFIED |
+
+Verdict courant : **ACCEPTATION INTÉGRÉE PASS AVEC LIMITES D’ACCESSIBILITÉ PDF**. La matrice historique ci-dessous décrit le candidat avant correction.
+
 | Domaine | Statut | Preuve / observation |
 |---|---|---|
 | SHA immuable PR #124 | PASS | `a99af3ed...`; différence avec `0fdf007...` limitée à la synthèse QA |

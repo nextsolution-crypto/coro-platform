@@ -1,5 +1,7 @@
 # Audit ciblé de l’export PDF documentaire CORO
 
+> **Addendum 2026-10-29 :** l’audit ci-dessous décrit le défaut avant correction. Le lot empilé `fix/organization-document-pdf-integrity` corrige l’autorité serveur, le snapshot approuvé, le traitement durable, le stockage privé et la modale. Le verdict courant et les preuves exactes sont consignés dans `INTEGRATED-CORRECTION-AND-ACCEPTANCE.md`; PDF/UA, lecteur d’écran et PGC/PRA/PUE demeurent ouverts.
+
 ## Périmètre et version
 
 - Branche : `audit/organization-document-pdf`

@@ -1,5 +1,20 @@
 # Constats — export PDF documentaire CORO
 
+## Réconciliation finale — 2026-10-29
+
+| Constat | Statut final | Preuve |
+|---|---|---|
+| PDF-001 | CORRIGÉ / PASS | refus DRAFT, ARCHIVED et désactivé, zéro ligne d’export |
+| PDF-002 | CORRIGÉ / PASS | export depuis snapshot approuvé; mutation courante absente du PDF |
+| PDF-003 | CORRIGÉ / PASS | focus initial, confinement, Escape et restauration |
+| PDF-004 | CORRIGÉ / PASS | états durables, idempotence PostgreSQL, bail et retry |
+| PDF-005 | PARTIAL | métadonnées et langue ajoutées; `Tagged: no`, PDF/UA et lecteur d’écran NOT_VERIFIED |
+| PDF-006 | NOT_VERIFIED | PGC/PRA/PUE sans support canonique démontré |
+| PDF-007 | PASS pour la frontière testée / couverture générale PARTIAL | sonde HTTP contrôlée non chargée; aucun egress ouvert |
+| PDF-008 | NOT_APPLICABLE | signature réelle et valeur juridique hors mandat |
+
+La preuve consolidée est dans `INTEGRATED-CORRECTION-AND-ACCEPTANCE.md`. Les sections suivantes conservent le constat initial avant correction.
+
 Audit exécuté le 2026-10-28/29 sur `a99af3ed6e9deef8b96b247c8b4329b002528714` (PR #124, produit identique à `0fdf007087...`; dernier commit uniquement documentaire).
 
 ## PDF-001 — L’API d’export final ne fait pas respecter l’état du projet

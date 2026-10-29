@@ -1,4 +1,13 @@
-# Lot de correction proposé — non implémenté
+# Lot de correction proposé — exécuté le 2026-10-29
+
+## État d’exécution
+
+- Lot 1 : **TERMINÉ** — autorité finale et snapshot approuvé.
+- Lot 2 : **TERMINÉ** — demande durable, verrou PostgreSQL, idempotence, bail et reprise.
+- Lot 3 : **PARTIAL** — UX clavier corrigée; métadonnées/langue PDF ajoutées; PDF/UA demeure hors de ce lot.
+- Lot 4 : **PASS pour la fixture contrôlée / couverture générale PARTIAL** — aucune ressource HTTP arbitraire chargée, mais tous les formats historiques ne sont pas certifiés.
+
+Les critères de clôture PMU/PSI/PCA sont démontrés dans `INTEGRATED-CORRECTION-AND-ACCEPTANCE.md`.
 
 ## Lot 1 — Autorité d’export et intégrité de version (bloquant)
 
