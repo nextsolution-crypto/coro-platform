@@ -2,7 +2,7 @@
 import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import { QaIdentityLab } from '../global-e2e/src/browser-orchestration.mjs';
 import { loadSecretStore } from '../global-e2e/src/secret-store.mjs';
 import { startMfaCaptureAdapter } from '../global-e2e/src/mfa-capture-adapter.mjs';
@@ -19,7 +19,7 @@ if (!apiUrl || !frontendUrl || !testedCommit) throw new Error('Browser runtime c
 const secrets = await loadSecretStore();
 const adapter = await startMfaCaptureAdapter({ captureDirectory: process.env.CORO_QA_MFA_DIR, channelToken: secrets.mfaChannelToken, port: Number(process.env.CORO_QA_MFA_ADAPTER_PORT || 34684) });
 const lab = new QaIdentityLab({ apiUrl, frontendUrl, portalUrl: frontendUrl, password: secrets.syntheticPassword, mfaAdapterUrl: adapter.url, mfaChannelToken: secrets.mfaChannelToken });
-const report = { testedCommit, executedAt: new Date().toISOString(), matrix: [], consoleErrors: [], keyboardZoom: null };
+const report = { testedCommit, executedAt: new Date().toISOString(), matrix: [], consoleErrors: [], keyboardZoom: null, functional: null };
 const viewports = [{width:390,height:844},{width:768,height:1024},{width:1440,height:900},{width:2560,height:1440}];
 const themes = [{name:'classic',ui:'legacy',preference:'LIGHT'},{name:'glass-light',ui:'glass',preference:'LIGHT'},{name:'glass-dark',ui:'glass',preference:'DARK'}];
 async function login() {
@@ -56,12 +56,35 @@ try {
     await page.screenshot({path:join(evidenceRoot,`${viewport.width}x${viewport.height}-${theme.name}.png`),fullPage:true});
   }
   await page.setViewport({width:1440,height:900});
-  await page.goto(`${frontendUrl}/projects/pr124-browser-pmu`,{waitUntil:'networkidle0'}); await clickVisible(page,/Exporter le document/); await page.keyboard.press('Tab');
-  const focus=await page.evaluate(()=>({tag:document.activeElement?.tagName,text:document.activeElement?.textContent?.trim().slice(0,60),insideModal:Boolean(document.activeElement?.closest('.fixed.inset-0'))}));
+  await page.goto(`${frontendUrl}/projects/pr124-browser-pmu`,{waitUntil:'networkidle0'});
+  const exportTrigger = (await page.evaluateHandle(() => [...document.querySelectorAll('button')].find((node) => /Exporter le document/.test(node.textContent || '')))).asElement();
+  if (!exportTrigger) throw new Error('Export trigger not found');
+  await exportTrigger.click();
+  const initialFocus=await page.evaluate(()=>({tag:document.activeElement?.tagName,label:document.activeElement?.getAttribute('aria-label'),insideModal:Boolean(document.activeElement?.closest('[role="dialog"]'))}));
+  await page.keyboard.press('Tab');
+  const focus=await page.evaluate(()=>({tag:document.activeElement?.tagName,text:document.activeElement?.textContent?.trim().slice(0,60),insideModal:Boolean(document.activeElement?.closest('[role="dialog"]'))}));
   const cdp=await page.createCDPSession(); await cdp.send('Emulation.setPageScaleFactor',{pageScaleFactor:2});
   const zoom=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+1,width:document.documentElement.clientWidth})); await cdp.send('Emulation.setPageScaleFactor',{pageScaleFactor:1});
-  await page.reload({waitUntil:'networkidle0'}); const persisted=(await page.evaluate(()=>document.body.innerText)).includes('PR124 Integrated PMU');
-  report.keyboardZoom={focus,zoom,persisted,status:focus.tag!=='BODY'&&focus.insideModal&&!zoom.overflow&&persisted?'PASS':'FAIL'};
-  report.pass=report.matrix.every((entry)=>entry.status==='PASS')&&report.keyboardZoom.status==='PASS'&&report.consoleErrors.filter((value)=>!/favicon|404/.test(value)).length===0;
-  await writeFile(join(evidenceRoot,'browser-audit.json'),JSON.stringify(report,null,2)); console.log(JSON.stringify({pass:report.pass,matrix:`${report.matrix.filter((x)=>x.status==='PASS').length}/12`,keyboardZoom:report.keyboardZoom,consoleErrors:report.consoleErrors.length},null,2));
+  const exportButton = (await page.evaluateHandle(() => [...document.querySelectorAll('[role="dialog"] button')].find((node) => (node.textContent || '').trim() === 'Exporter'))).asElement();
+  if (!exportButton) throw new Error('Final export control not found');
+  await cdp.send('Page.setDownloadBehavior',{behavior:'allow',downloadPath:evidenceRoot});
+  await exportButton.click();
+  await page.waitForFunction(()=>document.body.innerText.includes('Votre export est disponible.'),{timeout:120000});
+  const firstState=await page.evaluate(()=>({exportId:sessionStorage.getItem('coro-document-pdf-export:pr124-browser-pmu'),available:document.body.innerText.includes('Votre export est disponible.'),downloadButtons:[...document.querySelectorAll('[role="dialog"] button')].filter((node)=>/\.pdf/i.test(node.textContent||'')).length}));
+  await page.reload({waitUntil:'networkidle0'});
+  const persistedPage=(await page.evaluate(()=>document.body.innerText)).includes('PR124 Integrated PMU');
+  await clickVisible(page,/Exporter le document/);
+  await page.waitForFunction(()=>document.body.innerText.includes('Votre export est disponible.'),{timeout:30000});
+  const recovered=await page.evaluate(()=>({exportId:sessionStorage.getItem('coro-document-pdf-export:pr124-browser-pmu'),available:document.body.innerText.includes('Votre export est disponible.'),downloadButtons:[...document.querySelectorAll('[role="dialog"] button')].filter((node)=>/\.pdf/i.test(node.textContent||'')).length}));
+  const downloadButton=(await page.evaluateHandle(()=>[...document.querySelectorAll('[role="dialog"] button')].find((node)=>/\.pdf/i.test(node.textContent||'')))).asElement();
+  if(!downloadButton) throw new Error('Recovered PDF download control not found');
+  await downloadButton.click();
+  await new Promise((done)=>setTimeout(done,1000));
+  const downloaded=(await readdir(evidenceRoot)).filter((name)=>name.toLowerCase().endsWith('.pdf'));
+  await page.keyboard.press('Escape');
+  const restoredFocus=await page.evaluate(()=>({dialogOpen:Boolean(document.querySelector('[role="dialog"]')),triggerFocused:/Exporter le document/.test(document.activeElement?.textContent||'')}));
+  report.functional={initialFocus,firstState,recovered,downloaded,restoredFocus,status:initialFocus.insideModal&&/Fermer/.test(initialFocus.label||'')&&firstState.available&&firstState.downloadButtons>0&&firstState.exportId===recovered.exportId&&recovered.available&&downloaded.length>0&&!restoredFocus.dialogOpen&&restoredFocus.triggerFocused?'PASS':'FAIL'};
+  report.keyboardZoom={focus,zoom,persisted:persistedPage,status:focus.tag!=='BODY'&&focus.insideModal&&!zoom.overflow&&persistedPage?'PASS':'FAIL'};
+  report.pass=report.matrix.every((entry)=>entry.status==='PASS')&&report.keyboardZoom.status==='PASS'&&report.functional.status==='PASS'&&report.consoleErrors.filter((value)=>!/favicon|404/.test(value)).length===0;
+  await writeFile(join(evidenceRoot,'browser-audit.json'),JSON.stringify(report,null,2)); console.log(JSON.stringify({pass:report.pass,matrix:`${report.matrix.filter((x)=>x.status==='PASS').length}/12`,keyboardZoom:report.keyboardZoom,functional:report.functional,consoleErrors:report.consoleErrors.length},null,2));
 } finally { if(browser)await browser.close(); await adapter.close(); }
