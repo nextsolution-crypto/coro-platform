@@ -6,9 +6,11 @@ param(
   [ValidateRange(1024, 65535)][int]$DatabasePort = 55461,
   [ValidateRange(1024, 65535)][int]$BackendPort = 3166,
   [ValidateRange(1024, 65535)][int]$PortalPort = 3167,
+  [ValidateRange(1024, 65535)][int]$FrontendPort = 3168,
   [ValidateRange(1024, 65535)][int]$ProviderPort = 34641,
   [string]$BackendImage = 'coro-p61-backend:local',
   [string]$PortalImage = 'coro-p61-portal:local',
+  [string]$FrontendImage = 'coro-p61-frontend:local',
   [string]$RestrictedPilotOrganizationId = '',
   [switch]$NetworkFixtures
 )
@@ -24,7 +26,8 @@ $internalNetwork = "${project}_isolated"
 $hostNetwork = "${project}_host-loopback"
 $names = @(
   "$prefix-backend", "$prefix-api-proxy", "$prefix-api-publish",
-  "$prefix-portal", "$prefix-portal-proxy", "$prefix-portal-publish"
+  "$prefix-portal", "$prefix-portal-proxy", "$prefix-portal-publish",
+  "$prefix-frontend", "$prefix-frontend-proxy", "$prefix-frontend-publish"
 )
 
 function Invoke-Docker([string[]]$Arguments, [switch]$IgnoreFailure) {
@@ -72,7 +75,7 @@ if ($Action -eq 'Stop') {
   exit 0
 }
 
-foreach ($port in @($DatabasePort, $BackendPort, $PortalPort, $ProviderPort)) { Assert-LoopbackPortFree $port }
+foreach ($port in @($DatabasePort, $BackendPort, $PortalPort, $FrontendPort, $ProviderPort)) { Assert-LoopbackPortFree $port }
 if (-not (Test-Path -LiteralPath $secretFile)) { throw 'QA Identity Lab secret store is missing.' }
 $secrets = Get-Content -LiteralPath $secretFile -Raw | ConvertFrom-Json
 if (-not $secrets.databasePassword -or -not $secrets.syntheticPassword) {
@@ -117,7 +120,9 @@ $mfa = [guid]::NewGuid().ToString('N') + [guid]::NewGuid().ToString('N')
 Invoke-Docker @('run', '-d', '--name', "$prefix-backend", '--network', $internalNetwork,
   '--network-alias', 'backend', '-e', 'NODE_ENV=test', '-e', "DATABASE_URL=$internalDatabaseUrl",
   '-e', "JWT_SECRET=$jwt", '-e', "PLATFORM_MFA_SECRET=$mfa",
-  '-e', "FRONTEND_URL=http://127.0.0.1:$PortalPort", '-e', 'MFA_QA_CAPTURE_ENABLED=true',
+  '-e', "FRONTEND_URL=http://127.0.0.1:$PortalPort",
+  '-e', "CORS_ALLOWED_ORIGINS=http://127.0.0.1:$PortalPort,http://127.0.0.1:$FrontendPort",
+  '-e', 'MFA_QA_CAPTURE_ENABLED=true',
   '-e', 'MFA_QA_CAPTURE_DIR=/tmp/coro-mfa', '-e', 'MFA_QA_ALLOWED_RECIPIENT_SUFFIXES=global-e2e.test',
   '-e', 'MFA_QA_NETWORK_ISOLATED=true',
   '-e', 'CLIENT_EMAIL_RECIPIENT_ALLOWLIST=portal-manager-a@global-e2e.test,portal-user-a@global-e2e.test,portal-corporate-a@global-e2e.test,portal-regional-a@global-e2e.test,portal-local-a@global-e2e.test,portal-zero-a@global-e2e.test',
@@ -152,15 +157,23 @@ Invoke-Docker @('run', '-d', '--name', "$prefix-portal-proxy", '--network', $int
 Invoke-Docker @('network', 'connect', $hostNetwork, "$prefix-portal-proxy")
 Invoke-Docker @('run', '-d', '--name', "$prefix-portal-publish", '--network', $hostNetwork,
   '-p', "127.0.0.1:$PortalPort`:3003", 'alpine/socat', 'TCP-LISTEN:3003,fork,reuseaddr', "TCP:$prefix-portal-proxy`:3003")
+Invoke-Docker @('run', '-d', '--name', "$prefix-frontend", '--network', $internalNetwork,
+  '--network-alias', 'frontend', '-e', 'PORT=3000', '-e', "NEXT_PUBLIC_API_URL=http://127.0.0.1:$BackendPort/api", $FrontendImage)
+Invoke-Docker @('run', '-d', '--name', "$prefix-frontend-proxy", '--network', $internalNetwork,
+  'alpine/socat', 'TCP-LISTEN:3000,fork,reuseaddr', 'TCP:frontend:3000')
+Invoke-Docker @('network', 'connect', $hostNetwork, "$prefix-frontend-proxy")
+Invoke-Docker @('run', '-d', '--name', "$prefix-frontend-publish", '--network', $hostNetwork,
+  '-p', "127.0.0.1:$FrontendPort`:3000", 'alpine/socat', 'TCP-LISTEN:3000,fork,reuseaddr', "TCP:$prefix-frontend-proxy`:3000")
 
 $backendStatus = Wait-Http "http://127.0.0.1:$BackendPort/api/health"
 $portalStatus = Wait-Http "http://127.0.0.1:$PortalPort"
+$frontendStatus = Wait-Http "http://127.0.0.1:$FrontendPort"
 $manifest = [ordered]@{
   stackId = $StackId; startedAt = (Get-Date).ToUniversalTime().ToString('o')
-  databasePort = $DatabasePort; backendPort = $BackendPort; portalPort = $PortalPort
+  databasePort = $DatabasePort; backendPort = $BackendPort; portalPort = $PortalPort; frontendPort = $FrontendPort
   providerPort = $ProviderPort
-  backendStatus = $backendStatus; portalStatus = $portalStatus
+  backendStatus = $backendStatus; portalStatus = $portalStatus; frontendStatus = $frontendStatus
   privateStorageStatus = 'PASS'; network = 'internal-deny-by-default'; secretsPersisted = $false
 }
 $manifest | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $qaRoot 'stack-manifest.json') -Encoding UTF8
-Write-Output "QA stack $StackId ready on loopback ports $DatabasePort/$BackendPort/$PortalPort."
+Write-Output "QA stack $StackId ready on loopback ports $DatabasePort/$BackendPort/$PortalPort/$FrontendPort."

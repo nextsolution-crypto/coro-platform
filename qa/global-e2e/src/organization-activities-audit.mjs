@@ -23,16 +23,16 @@ const text = Object.fromEntries(
 );
 
 const checks = [
-  ['ACT-001', 'portfolio fan-out is capped at 200 projects', text.portfolio.includes('/projects?limit=200')],
-  ['ACT-002', 'per-project activity failures are swallowed', /catch\s*\{\s*\}/.test(text.portfolio)],
-  ['ACT-003', 'activity update lacks canonical actor scope', /updateActivity\(\s*activityId,\s*req\.user\.organizationId/.test(text.activityController)],
-  ['ACT-004', 'activity delete lacks canonical actor scope', /deleteActivity\(activityId, req\.user\.organizationId\)/.test(text.activityController)],
-  ['ACT-005', 'activity duplicate lacks canonical actor scope', /duplicateActivities\(projectId, req\.user\.organizationId\)/.test(text.activityController)],
-  ['ACT-006', 'ICS lookup is organization-only', /where: \{ id: activityId, organizationId: req\.user\.organizationId \}/.test(text.activityController)],
-  ['ACT-007', 'portfolio endpoint is organization/client-only', /getClientPortfolio\(clientId, req\.user\.organizationId\)/.test(text.activityController)],
+  ['ACT-001', 'portfolio uses one canonical aggregate endpoint without a 200-project cap', text.portfolio.includes("api.get('/activities/portfolio')") && !text.portfolio.includes('/projects?limit=200')],
+  ['ACT-002', 'portfolio failures produce an explicit retry state', text.portfolio.includes('setLoadError') && text.portfolio.includes('Réessayer') && !/catch\s*\{\s*\}/.test(text.portfolio)],
+  ['ACT-003', 'activity update receives the canonical actor', /updateActivity\(activityId, req\.user, dto\)/.test(text.activityController)],
+  ['ACT-004', 'activity delete receives the canonical actor', /deleteActivity\(activityId, req\.user\)/.test(text.activityController)],
+  ['ACT-005', 'activity duplicate receives the canonical actor', /duplicateActivities\(projectId, req\.user\)/.test(text.activityController)],
+  ['ACT-006', 'ICS lookup applies the canonical project scope', /project: \{ is: projectAccessWhere\(req\.user\) \}/.test(text.activityController)],
+  ['ACT-007', 'client portfolio receives the canonical actor', /getClientPortfolio\(clientId, req\.user\)/.test(text.activityController)],
   ['ACT-008', 'client activity listing applies client and manager-building scope', text.portalService.includes("role === 'CLIENT_MANAGER'") && text.portalService.includes('clientId,') && text.portalService.includes('clientVisible: true')],
   ['ACT-009', 'client UI exposes explicit load error and retry', text.portal.includes('Réessayer') && text.portal.includes('setLoadError')],
-  ['ACT-010', 'permanent stack omits organization frontend', !/FrontendPort|coro-frontend|frontend-publish/.test(text.stack)],
+  ['ACT-010', 'permanent stack includes a loopback-only organization frontend', /FrontendPort/.test(text.stack) && /frontend-publish/.test(text.stack)],
 ];
 
 const failed = checks.filter(([, , result]) => !result);
@@ -40,7 +40,7 @@ const report = {
   generatedAt: new Date().toISOString(),
   sourceHead: process.env.CORO_AUDIT_HEAD ?? '93fedd799f76f8aab963df89017c62508f95a7a4',
   productionMutation: false,
-  productCodeChange: false,
+  productCodeChange: true,
   externalProviders: 'SIMULATED_ONLY',
   checks: checks.map(([id, statement, observed]) => ({ id, statement, observed })),
   runnerStatus: failed.length ? 'FAIL' : 'PASS',

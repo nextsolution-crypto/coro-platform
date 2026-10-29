@@ -1,70 +1,40 @@
-# Audit ciblé — Activités organisation et parcours conseiller ↔ client
+# Audit et acceptation intégrée — Planning Activités CORO
 
-## Périmètre et baseline
+## Nature et baseline
 
-- Branche : `audit/organization-activities`
-- SHA audité : `93fedd799f76f8aab963df89017c62508f95a7a4`
-- `origin/main` au démarrage : même SHA
-- Production rapportée et réconciliée avant ce lot : même SHA, migration 161
-- Audit en lecture seule du produit; seuls ce dossier documentaire et un runner QA ont été ajoutés.
+`/activities/portfolio` est le planning de `ProjectActivity`, pas un journal général, une messagerie, Timelog ou Planification d'équipe.
 
-## Cartographie
+- Baseline auditée : `93fedd799f76f8aab963df89017c62508f95a7a4`.
+- Audit repris par `7b76bcc5cb802fe4485a3a6f9ee95b62b6321ac9`.
+- Branche : `fix/organization-activities-governance`.
+- Aucune migration; tête QA 161.
 
-| Surface | Route/API | Autorité |
-|---|---|---|
-| Organisation | `/activities/portfolio` | Page frontend; `/clients`, `/projects?limit=200`, puis `/projects/:id/activities` |
-| Projet organisation | `/projects/:id/activities` | `ActivitiesService.getActivities` + `projectAccessWhere` |
-| Mutations organisation | `PUT/DELETE /activities/:id`, duplication | Organisation seulement dans le candidat audité (défaut) |
-| Calendrier | `GET /activities/:id/ics` | Organisation seulement dans le candidat audité (défaut) |
-| Portefeuille client interne | `GET /clients/:id/activities/portfolio` | Organisation + client, sans affectation OPERATOR (défaut) |
-| Client Portal | `/activities`, `GET /client-portal/activities` | Organisation + client + bâtiments manager + `clientVisible` |
-| Réservation client | `POST /client-portal/activities/:id/bookings` | Projet/client/bâtiment + visibilité/réservabilité + disponibilité conseiller |
-| Annulation client | `PUT /client-portal/bookings/:id/cancel` | ClientUser propriétaire + organisation + projet accessible + transaction/audit |
+## Contrats finaux
 
-## Modèles et provenance
+| Surface | Contrat |
+|---|---|
+| Portefeuille organisation | `GET /activities/portfolio` + `projectAccessWhere(actor)` en une requête. |
+| Update/delete/duplicate | Résolution serveur + `mutableProjectAccessWhere(actor)`; archive/inactif refusés. |
+| ICS | Résolution canonique puis vérification frontend HTTP/MIME/structure. |
+| Portefeuille client interne | Client et projets filtrés par l'acteur complet. |
+| Bookings projet | Lecture soumise à `projectAccessWhere(actor)`. |
+| Réservation Client Portal | Portée client/bâtiment conservée; fournisseur simulé seulement en QA isolé. |
 
-`ProjectActivity` est l'autorité de planification. `Booking`, `BookingCommitmentVersion` et `BookingAssignment` portent la demande et l'affectation. `AuditLog` accepte `User` ou `ClientUser` selon l'acteur. Les notifications de réservation existent, mais la preuve complète d'outbox traitée/reprise/déduplication n'a pas été obtenue dans ce lot.
+## Preuves
 
-## QA exécutée
+- Unitaires : 3 suites, 69 tests ciblés PASS.
+- PostgreSQL : 4 scénarios PASS, dont 201 projets et refus sans effet secondaire.
+- TypeScript backend/frontend, builds et Design System 10/10 : PASS.
+- E2E : création conseiller, visibilité client, réservation, doublon 409, visibilité conseiller, report, conflit 409, annulation et refus inter-tenant/hors affectation.
+- ICS réel et panne 503 sans fichier.
+- Chrome : 12/12, F5, focus, zoom 200 %, aucune erreur console critique.
+- Images QA : backend `sha256:a4a13b9b07f595f141c6af331e92933f263819783a6743bab03bd5608d874ffa`; frontend `sha256:ec5fb448b3843a4d1497464840fd384df9cbc072de2df9f4ee5d45dbdbc3fa05`.
+- Preuves : `D:\CORO-QA\runs\organization-activities\2026-10-29`.
 
-- Runner reproductible : `qa/global-e2e/src/organization-activities-audit.mjs`.
-- Inspection statique ciblée des contrats frontend/backend.
-- Relecture des tests unitaires Activités, Bookings et autorisations annexes.
-- Tentative d'utilisation du bootstrap permanent : Docker inaccessible sans élévation dans la session et, surtout, le script ne démarre pas le frontend organisation. Aucun résultat navigateur n'est donc revendiqué.
-- Les dépendances locales du worktree n'étaient pas installées; aucune suite Jest n'est déclarée exécutée dans ce worktree.
+## Limites et verdict
 
-## Résultat
+Lecteur d'écran réel `NOT_VERIFIED`. Le fournisseur de courriel est simulé; aucune garantie d'outbox durable n'est revendiquée.
 
-Le parcours Client Portal est mieux gouverné que l'écran organisation. Les lectures projet organisation utilisent la politique canonique, mais les mutations, l'ICS et l'endpoint portefeuille présentent une rupture de symétrie d'autorisation. Les agrégats peuvent être incomplets et les erreurs partielles sont silencieuses.
+`ACCEPTATION_INTÉGRÉE_PASS`, sous réserve de la dernière campagne du HEAD publié et de la CI de PR.
 
-Verdict : **CORRECTION_REQUISE_AVANT_USAGE**.
-
-## Limites actionnables
-
-### LIMITATION — navigateur organisation
-**Impact :** responsive, thèmes, clavier, focus et erreurs réelles non prouvés.
-**Condition de levée :** publier le frontend organisation dans le harnais global isolé et exécuter la matrice.
-**Responsable :** QA/plateforme.
-**Statut :** bloquant pour acceptation UX.
-
-### LIMITATION — chaîne notifications
-**Impact :** l'événement persisté ne prouve pas le traitement, la reprise ou la déduplication.
-**Condition de levée :** scénario QA avec worker et fournisseur simulé.
-**Responsable :** backend/QA.
-**Statut :** bloquant pour promesse de notification.
-
-### LIMITATION — promesse « Activités »
-**Impact :** la page planifie des prestations mais ne retrace pas les interactions conseiller↔client.
-**Condition de levée :** décision produit explicite et libellé/UX alignés.
-**Responsable :** produit.
-**Statut :** décision requise.
-
-## Garanties de mandat
-
-- `PRODUCTION_MUTATION: NO`
-- `PRODUCT_CODE_CHANGE: NO`
-- `PUSH_PR_MERGE: NO`
-- `APPLICATION_DEPLOYMENT: NO`
-- `PRODUCTION_WORKFLOW_EXECUTED: NO`
-- `REAL_NOTIFICATION: NO`
-- `WEB_AI_ACTIVATION: NO`
+`PRODUCTION_MUTATION: NO` · `MERGE: NO` · `APPLICATION_DEPLOYMENT: NO` · `REAL_NOTIFICATION: NO` · `WEB_AI_ACTIVATION: NO`

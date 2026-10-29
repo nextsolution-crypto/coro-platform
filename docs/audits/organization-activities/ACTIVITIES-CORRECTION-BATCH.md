@@ -1,30 +1,32 @@
-# Lot de correction proposé — Activités
+# Lot de correction livré — Planning Activités
 
-Ce document est une proposition; aucune correction produit n'est incluse dans l'audit.
+## Autorité serveur
 
-## Lot A — Autorité canonique (bloquant)
+- L'acteur authentifié et le projet résolu côté serveur gouvernent toutes les opérations.
+- `projectAccessWhere` protège les lectures; `mutableProjectAccessWhere` protège create/update/delete/duplicate.
+- Les champs modifiables sont sélectionnés explicitement; `expectedUpdatedAt` produit un conflit 409.
+- La route Bookings par projet applique aussi la portée projet canonique.
 
-1. Faire accepter `AdviserActor` à `updateActivity`, `deleteActivity`, `duplicateActivities`, `downloadIcs` et `getClientPortfolio`.
-2. Résoudre l'activité par relation projet et `projectAccessWhere(actor)`; appliquer séparément identité, portée, permission et état métier.
-3. Utiliser `mutableProjectAccessWhere` pour les mutations lorsque la politique documentaire/projet l'exige.
-4. Ajouter des tests PostgreSQL à deux organisations et deux opérateurs d'une même organisation, avec refus sans effet secondaire.
+## Agrégation, erreurs et ICS
 
-Critère de sortie : un ID connu ne permet ni lecture, ni ICS, ni écriture hors affectation; les accès admin légitimes restent fonctionnels.
+- `GET /activities/portfolio` remplace la limite de 200 et le fan-out navigateur.
+- L'écran distingue chargement, vide et panne, efface les résultats non fiables et offre une reprise.
+- L'utilitaire ICS partagé par trois consommateurs valide statut, MIME et structure.
 
-## Lot B — Agrégation fiable
+## QA intégrée
 
-Créer un endpoint portefeuille serveur paginé, filtré et trié de façon déterministe. Retourner `total`, `page`, `pageSize`, fraîcheur et état d'exhaustivité. Éliminer le fan-out de 200 projets et les erreurs silencieuses.
+- Application organisation ajoutée au bootstrap (3168), readiness et CORS local explicite.
+- PostgreSQL 16, 161 migrations, neuf identités, MFA locale, fournisseur simulé, stockage privé, réseau deny-by-default.
+- Runner : `qa/global-e2e/src/organization-activities-acceptance.mjs`.
 
-Critère de sortie : les compteurs correspondent à PostgreSQL sur plus de 200 projets et une panne partielle ne produit jamais un faux résultat complet.
+## Validation
 
-## Lot C — UX, erreurs et ICS
+- Unitaires ciblés : 69 PASS.
+- PostgreSQL : 4/4 PASS.
+- TypeScript backend/frontend et builds : PASS.
+- Design System portefeuille : 10/10 PASS.
+- Chrome authentifié : 12/12, F5, clavier/focus, zoom 200 %, aucune erreur console critique.
 
-Valider `response.ok`/MIME avant téléchargement ICS; afficher les erreurs et un retry. Distinguer vide réel, absence d'autorisation et indisponibilité.
+## Exclusions
 
-## Lot D — QA intégrée
-
-Étendre le harnais global existant avec le frontend organisation, ports dynamiques et readiness. Exécuter la matrice 12/12, clavier/focus/zoom et la chaîne réservation→outbox→fournisseur simulé→reprise/déduplication.
-
-## Hors lot / décision
-
-Décider si « Activités » signifie planning de prestations ou fil d'interactions conseiller↔client. Un éventuel fil doit réutiliser les audits/outbox canoniques et ne pas créer une autorité parallèle.
+Pas de journal général, messagerie, refonte Planification d'équipe, extension Timelog, lecteur d'écran réel, fusion, déploiement, notification réelle ou mutation production.

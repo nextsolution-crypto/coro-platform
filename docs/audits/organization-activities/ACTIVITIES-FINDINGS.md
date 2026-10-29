@@ -1,23 +1,31 @@
-# Constats — Activités organisation
+# Constats — Planning Activités organisation
 
-Référence auditée : `93fedd799f76f8aab963df89017c62508f95a7a4` (identique à `origin/main` au démarrage).
+Référence initiale : `93fedd799f76f8aab963df89017c62508f95a7a4`. Candidat : `fix/organization-activities-governance`.
 
-| ID | Statut | Sévérité | Constat | Preuve | Correction attendue |
-|---|---|---:|---|---|---|
-| ACT-001 | FAIL | Haute | La vue portefeuille charge au plus 200 projets puis agrège côté navigateur. Les totaux peuvent être incomplets sans indication. | `GET /projects?limit=200`, puis un appel par projet dans `coro-frontend/app/activities/portfolio/page.tsx`. | Endpoint paginé/agrégé serveur ou pagination exhaustive, avec fraîcheur et exhaustivité explicites. |
-| ACT-002 | FAIL | Haute | Une erreur d'une requête d'activités projet est avalée. L'écran présente alors des résultats partiels, voire un faux état vide, sans erreur ni nouvelle tentative. | `catch { /* Skip projects... */ }` dans la boucle de chargement. | État partiel explicite, corrélation, retry et interdiction d'afficher les compteurs comme complets. |
-| ACT-003 | FAIL | Critique | `PUT /activities/:activityId` ne réapplique pas `projectAccessWhere(actor)`; seul `organizationId` est vérifié. Un OPERATOR connaissant l'identifiant peut muter une activité d'un projet de la même organisation hors affectation. | Le contrôleur transmet seulement `req.user.organizationId`; le service cherche `{ id, organizationId }`. | Passer l'acteur canonique, joindre le projet dans le prédicat et appliquer la permission de mutation. Refus sans écriture/audit/notification. |
-| ACT-004 | FAIL | Critique | `DELETE /activities/:activityId` présente le même contournement de portée projet. | Contrôleur/service limités à l'organisation. | Même politique canonique que la lecture, plus règle de mutation/état. |
-| ACT-005 | FAIL | Critique | `POST /projects/:projectId/activities/duplicate` vérifie seulement l'appartenance organisationnelle, pas l'affectation OPERATOR. | `assertOwnership(projectId, organizationId)`. | Utiliser l'acteur et le prédicat projet canonique dans une transaction idempotente. |
-| ACT-006 | FAIL | Haute | Le téléchargement ICS vérifie seulement l'organisation, pas l'autorité projet. | Recherche directe `ProjectActivity { id, organizationId }` dans le contrôleur. | Résoudre l'activité avec son projet et `projectAccessWhere(actor)` avant de produire le contenu. |
-| ACT-007 | FAIL | Haute | `GET /clients/:clientId/activities/portfolio` retourne tous les projets actifs du client dans l'organisation; l'affectation projet d'un OPERATOR n'est pas appliquée. | Endpoint/service sans acteur complet. | Agrégation autorisée serveur avec portée acteur et pagination. |
-| ACT-008 | PASS | — | La liste Client Portal applique organisation, client, visibilité et bâtiments affectés au CLIENT_MANAGER. | `ClientPortalService.getActivities`. | Conserver et compléter par tests PostgreSQL multi-organisations. |
-| ACT-009 | PASS | — | Le Client Portal affiche une erreur de chargement et propose une nouvelle tentative. | `coro-client-portal/app/activities/page.tsx`. | Conserver. |
-| ACT-010 | NOT_VERIFIED | Bloquant QA | Le bootstrap permanent démarre backend et Client Portal, mais pas le frontend organisation. La matrice réelle de `/activities/portfolio` ne peut pas être exécutée avec ce runtime. | `qa/global-e2e/identity-stack.ps1`. | Étendre le harnais existant (pas un second harnais) avec l'image/port du frontend organisation et des contrôles de readiness. |
-| ACT-011 | DÉCISION_PRODUIT_REQUISE | Moyenne | L'écran nommé « Activités » est un portefeuille de `ProjectActivity`, pas un journal d'événements conseiller↔client. Il n'affiche ni auteur d'événement ni chronologie d'échanges. | Modèle et colonnes de la page. | Confirmer la promesse produit : planning d'activités ou fil d'interactions. Ne pas mélanger les deux autorités. |
-| ACT-012 | FAIL | Moyenne | Le téléchargement ICS côté organisation ne vérifie pas `response.ok` ni le type MIME; une réponse d'erreur peut être enregistrée comme `.ics`. | `downloadICS` dans la page portefeuille. | Refus visible, validation HTTP/MIME, aucune fausse réussite. |
-| ACT-013 | NOT_VERIFIED | Haute | Les preuves PostgreSQL multi-organisations, concurrence, outbox traitée et reprise fournisseur simulé ne sont pas couvertes par une campagne Activités dédiée. | Tests existants partiels et unitaires; aucune campagne intégrée Activités identifiée. | Runner PostgreSQL synthétique couvrant deux organisations, OPERATOR affecté/non affecté, corporate/manager et déduplication. |
+| ID | Statut final | Constat et résolution | Preuve |
+|---|---|---|---|
+| ACT-001 | PASS | Le fan-out limité à 200 projets est remplacé par `GET /activities/portfolio`, une requête serveur sur le périmètre canonique. | PostgreSQL avec 201 projets et `Scale activity 200`. |
+| ACT-002 | PASS | La panne n'est plus convertie en liste vide : erreur explicite, données effacées et reprise. | Scénario navigateur 503. |
+| ACT-003 | PASS | Update via `mutableProjectAccessWhere(actor)`, champs en liste blanche et concurrence optimiste. | Unitaires, PostgreSQL, refus hors portée et 409 obsolète. |
+| ACT-004 | PASS | Delete soumis à la même autorité projet mutable. | Refus sans suppression ni modification. |
+| ACT-005 | PASS | Duplication soumise à l'autorité projet mutable; archive/inactif refusés. | Tests unitaires et PostgreSQL. |
+| ACT-006 | PASS | ICS produit après résolution canonique de l'activité et du projet. | 200 autorisé; 404 hors portée sans MIME calendrier. |
+| ACT-007 | PASS | Le portefeuille client interne applique la portée projet de l'acteur. | OPERATOR limité, ADMIN légitime préservé. |
+| ACT-008 | PASS | La portée Client Portal organisation/client/bâtiments demeure intacte. | Client A autorisé; organisation B isolée et réservation 403. |
+| ACT-009 | PASS | Erreur et nouvelle tentative Client Portal conservées. | Régression du consommateur et campagne authentifiée. |
+| ACT-010 | PASS | Le bootstrap démarre PostgreSQL 16, backend, application organisation, portail, stockage et fournisseur simulé sur réseau isolé. | Readiness 55473/3166/3167/3168, migration 161. |
+| ACT-011 | PASS — PÉRIMÈTRE CLARIFIÉ | « Activités » est le planning `ProjectActivity`; aucun journal général n'est inclus. | Mandat produit. |
+| ACT-012 | PASS | Le téléchargement vérifie HTTP, MIME et VCALENDAR/VEVENT avant de créer le fichier. | ICS réel; 404 hors portée; 503 sans `createObjectURL`. |
+| ACT-013 | PASS (contrat applicable) | Campagne PostgreSQL/API/navigateur, fournisseur simulé et aucune notification sur le doublon refusé. Le flux n'offre pas d'outbox durable. | 4 tests PostgreSQL et E2E final. |
 
-## Conclusion sécurité
+## Limites restantes
 
-L'isolation inter-organisation est présente sur les chemins inspectés, mais elle ne remplace pas la portée projet. Les ACT-003 à ACT-007 interdisent de conclure que les accès directs et les mutations appliquent la même autorité que les listes.
+- Lecteur d'écran réel : `NOT_VERIFIED`; structure, clavier/focus et zoom 200 % sont vérifiés.
+- Les notifications ne promettent pas une outbox durable ni une reprise après panne fournisseur.
+- Journal général, messagerie, Timelog et refonte Planification d'équipe : hors périmètre.
+
+## Verdict
+
+`ACCEPTATION_INTÉGRÉE_PASS`
+
+`PRODUCTION_MUTATION: NO` · `MERGE: NO` · `APPLICATION_DEPLOYMENT: NO` · `REAL_NOTIFICATION: NO` · `WEB_AI_ACTIVATION: NO`

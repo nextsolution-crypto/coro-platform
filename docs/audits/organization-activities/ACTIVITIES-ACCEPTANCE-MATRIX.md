@@ -1,26 +1,24 @@
-# Matrice d'acceptation — Activités
+# Matrice d'acceptation — Planning Activités
 
-| Domaine | Scénario | Statut | Preuve/limite |
+| Domaine | Scénario | Statut | Preuve |
 |---|---|---|---|
-| Organisation | Navigation vers `/activities/portfolio` | PASS (contrat source) | Entrée présente dans `AppLayout`; pas de preuve navigateur réelle sur ce lot. |
-| Organisation | Manager de portefeuille/admin voit les activités autorisées | PARTIAL | Politique de lecture projet appliquée par `/projects/:id/activities`; agrégation frontend limitée à 200. |
-| Organisation | OPERATOR hors affectation — lecture directe projet | PASS (serveur) | `projectAccessWhere(actor)` sur `getActivities`. |
-| Organisation | OPERATOR hors affectation — mise à jour/suppression/duplication/ICS | FAIL | ACT-003 à ACT-006. |
-| Organisation | Erreur partielle et retry | FAIL | Erreurs par projet silencieuses. |
-| Client | CLIENT_MANAGER — bâtiments affectés | PASS (contrat source) | `organizationId + clientId + buildingIds + clientVisible`. |
-| Client | CLIENT_CORPORATE — portée client/organisation | PASS (contrat source) | Organisation et client imposés. |
-| Client | Réservation d'une activité visible/réservable | PASS (tests existants ciblés) | Contrôles d'accès, état, disponibilité et transaction dans les services. |
-| Client | Double réservation ouverte | PASS (test existant) | Conflit avant seconde création. |
-| Client | Annulation et audit typé | PASS (contrat source) | Transaction, verrou et `clientUserId` dans AuditLog. |
-| Confidentialité | Accès inter-organisation | PASS (contrat source), E2E NOT_VERIFIED | Tous les prédicats inspectés incluent l'organisation; campagne PostgreSQL dédiée absente. |
-| Confidentialité | Accès intra-organisation hors projet | FAIL | Mutations/téléchargement/portfolio contournent l'affectation OPERATOR. |
-| Notifications | Événement persisté, worker simulé, reprise, déduplication | NOT_VERIFIED | Aucun runner Activités intégré ne démontre toute la chaîne. |
-| Responsive | 390/768/1440/2560 × 3 thèmes | NOT_VERIFIED | Frontend organisation absent du bootstrap QA permanent. |
-| Accessibilité | Clavier, focus, zoom 200 % | NOT_VERIFIED | Même blocage runtime. |
-| Accessibilité | Lecteur d'écran réel | NOT_VERIFIED | Aucun lecteur réel disponible pendant cet audit. |
+| Organisation | Agrégat au-delà de 200 projets | PASS | 201/201 activités, une requête serveur. |
+| Autorisation | OPERATOR hors affectation : update/delete/duplicate/ICS/portfolio | PASS | 403/404 et zéro effet secondaire. |
+| Autorisation | ADMIN légitime | PASS | Accès aux projets autorisés de l'organisation. |
+| États projet | Archivé et inactif | PASS | Mutations refusées. |
+| Concurrence | Écriture sur version obsolète | PASS | Première écriture 200, seconde 409. |
+| Client | Activité conseiller visible au bon client | PASS | Deux sessions authentifiées. |
+| Client | Réservation puis visibilité conseiller | PASS | Création 201 et lecture projet 200. |
+| Client | Tentative répétée | PASS | 409, ni doublon ni notification supplémentaire. |
+| Client | Annulation propriétaire | PASS | Transition 200 en QA. |
+| Isolation | Autre organisation | PASS | Liste sans donnée étrangère et réservation 403. |
+| Erreurs | Panne agrégat 503 | PASS | Erreur explicite, aucune donnée résiduelle, bouton Réessayer. |
+| ICS | Calendrier réel | PASS | MIME, VCALENDAR/VEVENT, UID, dates UTC et CRLF. |
+| ICS | Hors portée et 503 | PASS | Aucun contenu/fichier; erreur visible. |
+| Notification | Fournisseur simulé | PASS | Une acceptation locale; zéro envoi sur doublon refusé. |
+| Responsive | 390×844, 768×1024, 1440×900, 2560×1440 × 3 thèmes | PASS 12/12 | Aucun débordement ni contrôle partiellement coupé. |
+| Session | F5 application et portail | PASS | Jetons et activité présents après rechargement. |
+| Accessibilité | Clavier/focus et zoom 200 % | PASS | Focus visible; aucun débordement à 200 %. |
+| Accessibilité | Lecteur d'écran réel | NOT_VERIFIED | Lecteur indisponible. |
 
-## Verdict
-
-`CORRECTION_REQUISE_AVANT_USAGE`
-
-La fonction Client Portal dispose d'une base cohérente, mais l'écran organisation ne peut pas être accepté tant que la symétrie des autorisations directes/mutations, l'exhaustivité des agrégats et l'erreur partielle ne sont pas corrigées puis démontrées dans le runtime réel.
+Preuves : `D:\CORO-QA\runs\organization-activities\2026-10-29`.
