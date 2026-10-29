@@ -57,6 +57,7 @@ export class ApprovalService {
           client: true,
           building: true,
           user: true,
+          buildingPlans: { orderBy: { order: 'asc' } },
           documents: { orderBy: { updatedAt: 'desc' }, take: 1 },
         },
       });
@@ -146,7 +147,12 @@ export class ApprovalService {
       await this.lockProject(tx, projectId);
       const project = await tx.project.findFirst({
         where: { id: projectId, ...projectAccessWhere(actor) },
-        include: { client: true, building: true },
+        include: {
+          client: true,
+          building: true,
+          user: true,
+          buildingPlans: { orderBy: { order: 'asc' } },
+        },
       });
       if (!project || !project.isActive || project.status === 'ARCHIVED')
         throw new NotFoundException('Projet introuvable');
@@ -530,9 +536,47 @@ export class ApprovalService {
     return createReviewSnapshot({
       project: {
         id: project.id,
+        name: project.name,
         documentType: project.documentType,
         year: project.year,
         configData: project.configData,
+        client: {
+          id: project.client.id,
+          name: project.client.name,
+          phone: project.client.phone,
+          logoBase64: project.client.logoBase64,
+        },
+        building: {
+          id: project.building.id,
+          name: project.building.name,
+          address: project.building.address,
+          city: project.building.city,
+          province: project.building.province,
+          buildingType: project.building.buildingType,
+          photoBase64: project.building.photoBase64,
+        },
+        adviser: {
+          id: project.user.id,
+          companyName: project.user.companyName,
+          companyLogoB64: project.user.companyLogoB64,
+          companyLogoFullB64: project.user.companyLogoFullB64,
+          companyPhone: project.user.companyPhone,
+          companyEmail: project.user.companyEmail,
+          companyAddress: project.user.companyAddress,
+          companyWebsite: project.user.companyWebsite,
+          companyTagline: project.user.companyTagline,
+        },
+        plans: (project.buildingPlans ?? []).map((plan: any) => ({
+          id: plan.id,
+          section: plan.section,
+          name: plan.name,
+          fileName: plan.fileName,
+          fileSize: plan.fileSize,
+          emissionDate: plan.emissionDate,
+          revision: plan.revision,
+          order: plan.order,
+          fileBase64: plan.fileBase64,
+        })),
       },
       document: {
         id: document.id,

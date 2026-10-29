@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import puppeteer from 'puppeteer';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFString } from 'pdf-lib';
 import { PrismaService } from '../prisma/prisma.service';
 import { BASE_STYLES } from './templates/base.styles';
 import { COVER_STYLES } from './templates/cover.styles';
@@ -114,11 +114,6 @@ export class ExportService {
     });
     if (!doc) throw new NotFoundException('Document introuvable');
 
-    // Historical snapshots are sanitized at the last trusted boundary before
-    // HTML/PDF rendering; this does not rewrite or destroy their audit history.
-    const content = sanitizeDocumentContent(doc.content as any);
-    const result: { fr?: Buffer; en?: Buffer } = {};
-
     // La certification est une couche documentaire CORO, distincte des modules.
     // Elle n'est chargée que pour un rendu non-aperçu et uniquement si la
     // version documentaire courante possède une signature client rattachée.
@@ -126,6 +121,51 @@ export class ExportService {
       ? null
       : await this.getCurrentVersionCertification(projectId);
 
+    return this.generateFromDocument(doc, options, certification);
+  }
+
+  async generateApprovedSnapshotPdf(
+    snapshot: any,
+    options: ExportOptions,
+  ): Promise<{ fr?: Buffer; en?: Buffer }> {
+    if (
+      snapshot?.schemaVersion !== 2 ||
+      !snapshot?.document?.content ||
+      !snapshot?.project?.client ||
+      !snapshot?.project?.building ||
+      !snapshot?.project?.adviser ||
+      !Array.isArray(snapshot?.project?.plans)
+    ) {
+      throw new Error('APPROVED_SNAPSHOT_UNSUPPORTED');
+    }
+    const doc = {
+      id: snapshot.document.id,
+      title: snapshot.document.title,
+      content: snapshot.document.content,
+      project: {
+        id: snapshot.project.id,
+        name: snapshot.project.name,
+        documentType: snapshot.project.documentType,
+        year: snapshot.project.year,
+        configData: snapshot.project.configData,
+        client: snapshot.project.client,
+        building: snapshot.project.building,
+        user: snapshot.project.adviser,
+      },
+      approvedPlans: snapshot.project.plans,
+    };
+    return this.generateFromDocument(doc, options, null);
+  }
+
+  private async generateFromDocument(
+    doc: any,
+    options: ExportOptions,
+    certification: CertificationData | null,
+  ): Promise<{ fr?: Buffer; en?: Buffer }> {
+    // Historical snapshots are sanitized at the last trusted boundary before
+    // HTML/PDF rendering; this does not rewrite or destroy their audit history.
+    const content = sanitizeDocumentContent(doc.content as any);
+    const result: { fr?: Buffer; en?: Buffer } = {};
     if (options.language === 'fr' || options.language === 'both') {
       result.fr = await this.generateSingleLanguagePdf(
         doc,
@@ -625,6 +665,21 @@ export class ExportService {
         mergedPdf.pdfDoc,
         mergedPdf.pageRanges,
         bodyBuffersWithMeta,
+      );
+
+      // The current Chromium/pdf-lib pipeline cannot produce a structurally
+      // tagged PDF/UA document.  It can nevertheless expose stable document
+      // metadata and the natural language to assist readers and catalogues.
+      const accessibleTitle = `${docTypeLabel} - ${project.building?.name || project.name}`;
+      mergedPdf.pdfDoc.setTitle(accessibleTitle);
+      mergedPdf.pdfDoc.setAuthor(project.user?.companyName || 'CORO');
+      mergedPdf.pdfDoc.setSubject(
+        isFr ? 'Document organisationnel approuvé' : 'Approved organizational document',
+      );
+      mergedPdf.pdfDoc.setCreator('CORO Document Export');
+      mergedPdf.pdfDoc.catalog.set(
+        PDFName.of('Lang'),
+        PDFString.of(isFr ? 'fr-CA' : 'en-CA'),
       );
 
       const finalBytes = await mergedPdf.pdfDoc.save();

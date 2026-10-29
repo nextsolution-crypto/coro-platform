@@ -359,6 +359,9 @@ try {
   await prisma.documentReviewNotificationEvent.deleteMany({
     where: { projectId: { in: projectIds } },
   });
+  await prisma.documentPdfExport.deleteMany({
+    where: { projectId: { in: projectIds } },
+  });
   await prisma.documentReviewRequest.deleteMany({
     where: { projectId: { in: projectIds } },
   });

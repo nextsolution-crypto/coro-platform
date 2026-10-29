@@ -115,9 +115,19 @@ describe('Plan authenticated HTTP security boundaries', () => {
       .overrideProvider(ExportService)
       .useValue({
         generatePdf: jest.fn().mockResolvedValue({ fr: null, en: null }),
+        generateApprovedSnapshotPdf: jest
+          .fn()
+          .mockResolvedValue({ fr: Buffer.from('%PDF-1.4 synthetic QA') }),
       })
       .overrideProvider(StorageService)
-      .useValue({ uploadFile: jest.fn(), getFile: jest.fn() })
+      .useValue({
+        uploadFile: jest.fn(),
+        getFile: jest.fn(),
+        uploadPrivateImmutable: jest.fn().mockResolvedValue(undefined),
+        downloadPrivate: jest
+          .fn()
+          .mockResolvedValue(Buffer.from('%PDF-1.4 synthetic QA')),
+      })
       .compile();
     app = moduleRef.createNestApplication();
     app.setGlobalPrefix('api');
@@ -304,6 +314,9 @@ describe('Plan authenticated HTTP security boundaries', () => {
 
   afterAll(async () => {
     await prisma.documentReviewNotificationEvent.deleteMany({
+      where: { organizationId: { in: [ids.orgA, ids.orgB] } },
+    });
+    await prisma.documentPdfExport.deleteMany({
       where: { organizationId: { in: [ids.orgA, ids.orgB] } },
     });
     await prisma.documentReviewRequest.deleteMany({
@@ -511,7 +524,12 @@ describe('Plan authenticated HTTP security boundaries', () => {
     await http
       .post(`/api/projects/${ids.pmu}/export`)
       .set(auth(tokens.operatorA))
-      .send({ language: 'fr', selectedModules: [] })
+      .send({
+        language: 'fr',
+        selectedModules: [1],
+        moduleOrder: [1],
+        idempotencyKey: 'http-security-approved-pmu-fr',
+      })
       .expect(201);
   });
 
