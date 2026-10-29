@@ -28,6 +28,7 @@ describe('Plan security PostgreSQL authorization', () => {
     clientA: `plan-s02-client-a-${suffix}`,
     buildingA: `plan-s02-building-a-${suffix}`,
     projectA: `plan-s02-project-a-${suffix}`,
+    documentA: `plan-s02-document-a-${suffix}`,
   };
   const operatorA = {
     userId: ids.operatorA,
@@ -131,6 +132,14 @@ describe('Plan security PostgreSQL authorization', () => {
         userId: ids.operatorA,
       },
     });
+    await prisma.document.create({
+      data: {
+        id: ids.documentA,
+        projectId: ids.projectA,
+        title: 'Plan S02 PMU',
+        content: { sections: [] },
+      },
+    });
     projects = new ProjectsService(prisma as any);
     approval = new ApprovalService(
       prisma as any,
@@ -139,15 +148,25 @@ describe('Plan security PostgreSQL authorization', () => {
         createForOrganization: jest.fn().mockResolvedValue({}),
       } as any,
       { send: jest.fn().mockResolvedValue({}) } as any,
-      { generatePdf: jest.fn(() => new Promise(() => undefined)) } as any,
+      {
+        generatePdf: jest.fn().mockResolvedValue({ fr: null, en: null }),
+      } as any,
       { uploadFile: jest.fn() } as any,
     );
   });
 
   afterAll(async () => {
+    await prisma.documentReviewNotificationEvent.deleteMany({
+      where: { projectId: ids.projectA },
+    });
+    await prisma.documentReviewRequest.deleteMany({
+      where: { projectId: ids.projectA },
+    });
+    await prisma.auditLog.deleteMany({ where: { projectId: ids.projectA } });
     await prisma.projectVersion.deleteMany({
       where: { projectId: ids.projectA },
     });
+    await prisma.document.deleteMany({ where: { id: ids.documentA } });
     await prisma.project.deleteMany({ where: { id: ids.projectA } });
     await prisma.building.deleteMany({ where: { id: ids.buildingA } });
     await prisma.client.deleteMany({ where: { id: ids.clientA } });
@@ -233,15 +252,22 @@ describe('Plan security PostgreSQL authorization', () => {
       approval.submit(ids.projectA, operatorA),
     ).resolves.toMatchObject({ status: 'REVIEW' });
     await expect(
-      approval.approve(ids.projectA, ids.operatorA, ids.orgA, 'OPERATOR'),
+      approval.approve(ids.projectA, operatorA),
     ).rejects.toBeInstanceOf(ForbiddenException);
     await expect(
       approval.requestRevision(ids.projectA, adminA, 'Review required'),
     ).resolves.toMatchObject({ status: 'IN_PROGRESS' });
     await approval.submit(ids.projectA, operatorA);
     await expect(
-      approval.approve(ids.projectA, ids.adminA, ids.orgA, 'ADMIN'),
+      approval.approve(ids.projectA, adminA),
     ).resolves.toMatchObject({ status: 'VALIDATED', version: 1 });
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const pending = await prisma.documentReviewNotificationEvent.count({
+        where: { projectId: ids.projectA, status: 'PENDING' },
+      });
+      if (pending === 0) break;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
     expect(
       await prisma.projectVersion.count({ where: { projectId: ids.projectA } }),
     ).toBe(1);

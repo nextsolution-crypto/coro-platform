@@ -30,14 +30,27 @@ export class EmailService {
   ): Promise<EmailSendResult> {
     try {
       const apiKey = process.env.BREVO_API_KEY || '';
-      if (!apiKey.trim() || !this.recipientAllowed(to.email)) {
+      const configuredQaEndpoint =
+        process.env.CLIENT_EMAIL_QA_PROVIDER_URL?.trim();
+      const qaProviderUrl =
+        process.env.NODE_ENV === 'test' &&
+        process.env.MFA_QA_NETWORK_ISOLATED === 'true' &&
+        configuredQaEndpoint &&
+        /^http:\/\/(provider-fake|127\.0\.0\.1|localhost)(:\d+)?\//.test(
+          configuredQaEndpoint,
+        )
+          ? configuredQaEndpoint
+          : null;
+      if ((!apiKey.trim() && !qaProviderUrl) || !this.recipientAllowed(to.email)) {
         return { success: false };
       }
-      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      const providerUrl =
+        qaProviderUrl ?? 'https://api.brevo.com/v3/smtp/email';
+      const res = await fetch(providerUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'api-key': apiKey,
+          'api-key': qaProviderUrl ? 'qa-provider-fake' : apiKey,
         },
         body: JSON.stringify({
           sender: {
