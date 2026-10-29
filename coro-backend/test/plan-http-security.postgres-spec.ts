@@ -115,9 +115,19 @@ describe('Plan authenticated HTTP security boundaries', () => {
       .overrideProvider(ExportService)
       .useValue({
         generatePdf: jest.fn().mockResolvedValue({ fr: null, en: null }),
+        generateApprovedSnapshotPdf: jest
+          .fn()
+          .mockResolvedValue({ fr: Buffer.from('%PDF-1.4 synthetic QA') }),
       })
       .overrideProvider(StorageService)
-      .useValue({ uploadFile: jest.fn(), getFile: jest.fn() })
+      .useValue({
+        uploadFile: jest.fn(),
+        getFile: jest.fn(),
+        uploadPrivateImmutable: jest.fn().mockResolvedValue(undefined),
+        downloadPrivate: jest
+          .fn()
+          .mockResolvedValue(Buffer.from('%PDF-1.4 synthetic QA')),
+      })
       .compile();
     app = moduleRef.createNestApplication();
     app.setGlobalPrefix('api');
@@ -513,7 +523,8 @@ describe('Plan authenticated HTTP security boundaries', () => {
       .set(auth(tokens.operatorA))
       .send({
         language: 'fr',
-        selectedModules: [],
+        selectedModules: [1],
+        moduleOrder: [1],
         idempotencyKey: 'http-security-approved-pmu-fr',
       })
       .expect(201);
