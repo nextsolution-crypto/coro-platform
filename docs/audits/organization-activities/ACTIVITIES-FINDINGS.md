@@ -1,0 +1,23 @@
+# Constats — Activités organisation
+
+Référence auditée : `93fedd799f76f8aab963df89017c62508f95a7a4` (identique à `origin/main` au démarrage).
+
+| ID | Statut | Sévérité | Constat | Preuve | Correction attendue |
+|---|---|---:|---|---|---|
+| ACT-001 | FAIL | Haute | La vue portefeuille charge au plus 200 projets puis agrège côté navigateur. Les totaux peuvent être incomplets sans indication. | `GET /projects?limit=200`, puis un appel par projet dans `coro-frontend/app/activities/portfolio/page.tsx`. | Endpoint paginé/agrégé serveur ou pagination exhaustive, avec fraîcheur et exhaustivité explicites. |
+| ACT-002 | FAIL | Haute | Une erreur d'une requête d'activités projet est avalée. L'écran présente alors des résultats partiels, voire un faux état vide, sans erreur ni nouvelle tentative. | `catch { /* Skip projects... */ }` dans la boucle de chargement. | État partiel explicite, corrélation, retry et interdiction d'afficher les compteurs comme complets. |
+| ACT-003 | FAIL | Critique | `PUT /activities/:activityId` ne réapplique pas `projectAccessWhere(actor)`; seul `organizationId` est vérifié. Un OPERATOR connaissant l'identifiant peut muter une activité d'un projet de la même organisation hors affectation. | Le contrôleur transmet seulement `req.user.organizationId`; le service cherche `{ id, organizationId }`. | Passer l'acteur canonique, joindre le projet dans le prédicat et appliquer la permission de mutation. Refus sans écriture/audit/notification. |
+| ACT-004 | FAIL | Critique | `DELETE /activities/:activityId` présente le même contournement de portée projet. | Contrôleur/service limités à l'organisation. | Même politique canonique que la lecture, plus règle de mutation/état. |
+| ACT-005 | FAIL | Critique | `POST /projects/:projectId/activities/duplicate` vérifie seulement l'appartenance organisationnelle, pas l'affectation OPERATOR. | `assertOwnership(projectId, organizationId)`. | Utiliser l'acteur et le prédicat projet canonique dans une transaction idempotente. |
+| ACT-006 | FAIL | Haute | Le téléchargement ICS vérifie seulement l'organisation, pas l'autorité projet. | Recherche directe `ProjectActivity { id, organizationId }` dans le contrôleur. | Résoudre l'activité avec son projet et `projectAccessWhere(actor)` avant de produire le contenu. |
+| ACT-007 | FAIL | Haute | `GET /clients/:clientId/activities/portfolio` retourne tous les projets actifs du client dans l'organisation; l'affectation projet d'un OPERATOR n'est pas appliquée. | Endpoint/service sans acteur complet. | Agrégation autorisée serveur avec portée acteur et pagination. |
+| ACT-008 | PASS | — | La liste Client Portal applique organisation, client, visibilité et bâtiments affectés au CLIENT_MANAGER. | `ClientPortalService.getActivities`. | Conserver et compléter par tests PostgreSQL multi-organisations. |
+| ACT-009 | PASS | — | Le Client Portal affiche une erreur de chargement et propose une nouvelle tentative. | `coro-client-portal/app/activities/page.tsx`. | Conserver. |
+| ACT-010 | NOT_VERIFIED | Bloquant QA | Le bootstrap permanent démarre backend et Client Portal, mais pas le frontend organisation. La matrice réelle de `/activities/portfolio` ne peut pas être exécutée avec ce runtime. | `qa/global-e2e/identity-stack.ps1`. | Étendre le harnais existant (pas un second harnais) avec l'image/port du frontend organisation et des contrôles de readiness. |
+| ACT-011 | DÉCISION_PRODUIT_REQUISE | Moyenne | L'écran nommé « Activités » est un portefeuille de `ProjectActivity`, pas un journal d'événements conseiller↔client. Il n'affiche ni auteur d'événement ni chronologie d'échanges. | Modèle et colonnes de la page. | Confirmer la promesse produit : planning d'activités ou fil d'interactions. Ne pas mélanger les deux autorités. |
+| ACT-012 | FAIL | Moyenne | Le téléchargement ICS côté organisation ne vérifie pas `response.ok` ni le type MIME; une réponse d'erreur peut être enregistrée comme `.ics`. | `downloadICS` dans la page portefeuille. | Refus visible, validation HTTP/MIME, aucune fausse réussite. |
+| ACT-013 | NOT_VERIFIED | Haute | Les preuves PostgreSQL multi-organisations, concurrence, outbox traitée et reprise fournisseur simulé ne sont pas couvertes par une campagne Activités dédiée. | Tests existants partiels et unitaires; aucune campagne intégrée Activités identifiée. | Runner PostgreSQL synthétique couvrant deux organisations, OPERATOR affecté/non affecté, corporate/manager et déduplication. |
+
+## Conclusion sécurité
+
+L'isolation inter-organisation est présente sur les chemins inspectés, mais elle ne remplace pas la portée projet. Les ACT-003 à ACT-007 interdisent de conclure que les accès directs et les mutations appliquent la même autorité que les listes.
