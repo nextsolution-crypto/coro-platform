@@ -6,6 +6,7 @@ import { Download } from 'lucide-react';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { formatCivilDate } from '@/app/planning/time';
+import { downloadActivityIcs } from '@/lib/download-ics';
 // GLASS:begin — vue Liquid Glass (route bêta du registre). Hors des blocs GLASS, ce fichier est le code Legacy d'origine, inchangé.
 import { useTheme } from '@/design-system/theme/ThemeProvider';
 import PortfolioGlassView from './PortfolioGlassView';
@@ -28,6 +29,8 @@ export default function ActivitiesPortfolioPage() {
   const [data, setData] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [downloadError, setDownloadError] = useState('');
 
   const [filterClient, setFilterClient] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -37,58 +40,33 @@ export default function ActivitiesPortfolioPage() {
   useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
+    setLoading(true);
+    setLoadError('');
     try {
-      const [clientsRes, projectsRes] = await Promise.all([
+      const [clientsRes, activitiesRes] = await Promise.all([
         api.get('/clients'),
-        api.get('/projects?limit=200'),
+        api.get('/activities/portfolio'),
       ]);
       const clientsList = clientsRes.data?.clients || clientsRes.data || [];
       setClients(clientsList);
-
-      const projects = projectsRes.data?.projects || projectsRes.data || [];
-      const rows: any[] = [];
-
-      await Promise.all(projects.map(async (project: any) => {
-        try {
-          const actRes = await api.get(`/projects/${project.id}/activities`);
-          const activities = actRes.data || [];
-          activities.forEach((activity: any) => {
-            rows.push({
-              ...activity,
-              projectId: project.id,
-              projectName: project.name,
-              documentType: project.documentType,
-              clientId: project.client?.id || project.clientId,
-              clientName: project.client?.name || '—',
-              buildingName: project.building?.name || '—',
-            });
-          });
-        } catch { }
-      }));
-
-      rows.sort((a, b) => {
-        if (!a.scheduledDate) return 1;
-        if (!b.scheduledDate) return -1;
-        return new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime();
-      });
-
-      setData(rows);
-    } catch (err) { console.error(err); }
+      setData(Array.isArray(activitiesRes.data) ? activitiesRes.data : []);
+    } catch (err) {
+      console.error(err);
+      setData([]);
+      setLoadError('Impossible de charger le planning. Vérifiez votre session et réessayez.');
+    }
     finally { setLoading(false); }
   };
 
-  const handleDownloadIcs = (activityId: string, label: string) => {
+  const handleDownloadIcs = async (activityId: string, label: string) => {
+    setDownloadError('');
     const token = localStorage.getItem('coro_token');
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/activities/${activityId}/ics`, {
-      headers: { Authorization: `Bearer ${token}` },
-    }).then(r => r.blob()).then(blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${label}.ics`;
-      a.click();
-      URL.revokeObjectURL(url);
-    });
+    try {
+      await downloadActivityIcs(activityId, label);
+    } catch (error) {
+      console.error(error);
+      setDownloadError('Le calendrier n’a pas pu être téléchargé. Réessayez.');
+    }
   };
 
   const filtered = data.filter(row => {
@@ -112,6 +90,17 @@ export default function ActivitiesPortfolioPage() {
 
   const uniqueTypes = Array.from(new Set(data.map(r => r.type))).filter(Boolean);
 
+  if (loadError) return (
+    <AppLayout>
+      <div role="alert" className="rounded-md p-5" style={{ backgroundColor: '#FDEDEC', border: '1px solid #F5B7B1' }}>
+        <p className="text-sm mb-3" style={{ color: '#922B21' }}>{loadError}</p>
+        <button type="button" onClick={() => void fetchData()} className="px-4 py-2 rounded text-sm font-semibold" style={{ backgroundColor: '#C0392B', color: '#FFFFFF' }}>
+          Réessayer
+        </button>
+      </div>
+    </AppLayout>
+  );
+
   // GLASS:begin
   // Vue Liquid Glass : uniquement si Glass est actif ET que la route est rendue en Glass (bêta activée, ou ga au registre).
   // Sinon (Legacy, ou île Legacy tant que la bêta n'est pas activée), le rendu d'origine ci-dessous est utilisé tel quel.
@@ -119,6 +108,7 @@ export default function ActivitiesPortfolioPage() {
   if (ui === 'glass' && routeMode === 'glass') {
     return (
       <AppLayout>
+        {downloadError && <p role="alert" className="mb-4 text-sm" style={{ color: '#C0392B' }}>{downloadError}</p>}
         <PortfolioGlassView
           loading={loading}
           stats={{ total, done, aFaire, reporte, pct }}
@@ -168,6 +158,8 @@ export default function ActivitiesPortfolioPage() {
         <h1 className="text-2xl font-black uppercase" style={{ color: '#2C3E50' }}>Portefeuille des activités</h1>
         <div className="h-1 w-16 mt-2" style={{ backgroundColor: '#C0392B' }} />
       </div>
+
+      {downloadError && <p role="alert" className="mb-4 text-sm" style={{ color: '#C0392B' }}>{downloadError}</p>}
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">

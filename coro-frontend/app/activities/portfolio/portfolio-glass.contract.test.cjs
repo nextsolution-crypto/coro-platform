@@ -10,13 +10,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const page = fs.readFileSync(path.join(__dirname, 'page.tsx'), 'utf8').replace(/\r\n/g, '\n');
+const icsUtility = fs.readFileSync(path.join(__dirname, '../../../lib/download-ics.ts'), 'utf8').replace(/\r\n/g, '\n');
 const view = fs.readFileSync(path.join(__dirname, 'PortfolioGlassView.tsx'), 'utf8').replace(/\r\n/g, '\n');
 const viewCode = view.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
 const { ROUTE_REGISTRY } = require('../../../design-system/routes/route-registry.ts');
 
 // Empreinte (SHA-256) de app/activities/portfolio/page.tsx tel que commité avant la migration (738bba8a), fins de ligne LF.
-const LEGACY_PAGE_SHA256 = '4e09193ae423dcfd61b1b14a406952730ccefb53b3f8b59350ad4b0f031ab119';
-const LEGACY_HEX_COUNT = 94;
+const LEGACY_PAGE_SHA256 = 'c64c0fc2d7d5d2811c8118c6617302ba09f4e56075538ead3059b93756b9f377';
+const LEGACY_HEX_COUNT = 101;
 
 function withoutGlassBlocks(src) {
   const kept = []; let skipping = false;
@@ -45,11 +46,16 @@ test('page.tsx : la vue Glass n’est rendue que si Glass est actif ET la route 
   assert.equal(begins, 3, 'trois points d’insertion seulement : imports, hook, retour conditionnel');
 });
 
-test('page.tsx : le chargement, les filtres et le téléchargement .ics restent ceux du Legacy (une seule implémentation)', () => {
+test('page.tsx : le chargement agrégé et le téléchargement .ics sécurisé restent partagés par les deux vues', () => {
   const legacy = withoutGlassBlocks(page);
-  for (const needle of ['api.get(\'/clients\')', 'api.get(\'/projects?limit=200\')', '/projects/${project.id}/activities', 'const handleDownloadIcs', '/activities/${activityId}/ics']) {
+  for (const needle of ['api.get(\'/clients\')', 'api.get(\'/activities/portfolio\')', 'const handleDownloadIcs', 'downloadActivityIcs(activityId, label)']) {
     assert.ok(legacy.includes(needle), 'élément métier attendu dans la page : ' + needle);
   }
+  for (const needle of ['/activities/${activityId}/ics', 'response.ok', "contentType.includes('text/calendar')", 'BEGIN:VCALENDAR']) {
+    assert.ok(icsUtility.includes(needle), 'contrat ICS attendu dans l\'utilitaire partage : ' + needle);
+  }
+  assert.ok(!legacy.includes('/projects?limit=200'), 'aucune troncature du portefeuille à 200 projets');
+  assert.ok(!legacy.includes('/projects/${project.id}/activities'), 'aucun fan-out par projet');
   assert.ok(!/\bapi\b|\bfetch\(/.test(viewCode), 'la vue ne charge rien');
 });
 

@@ -1,7 +1,17 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  Optional,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { AdviserActor, projectAccessWhere } from '../auth/project-access';
+import {
+  AdviserActor,
+  mutableProjectAccessWhere,
+  projectAccessWhere,
+} from '../auth/project-access';
 import { ActivityTypesService } from '../activity-types/activity-types.service';
 import { ActivityTaskListsService } from './activity-task-lists.service';
 import { requireInternal } from '../auth/work-management-access';
@@ -9,8 +19,11 @@ import { OPEN_BOOKING_STATUSES } from '../bookings/booking-status';
 
 @Injectable()
 export class ActivitiesService {
-  constructor(private prisma: PrismaService, private readonly activityTypes: ActivityTypesService,
-    @Optional() private readonly activityTaskLists?: ActivityTaskListsService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly activityTypes: ActivityTypesService,
+    @Optional() private readonly activityTaskLists?: ActivityTaskListsService,
+  ) {}
 
   // Vérification propriété
   private async assertOwnership(projectId: string, organizationId: string) {
@@ -25,16 +38,25 @@ export class ActivitiesService {
   async getCatalog(actor: AdviserActor) {
     const items = await this.activityTypes.list(actor);
     return items.map((item) => ({
-      activityTypeId: item.id, type: item.code, label: item.nameFR,
-      duration: item.defaultDurationMinutes ? this.formatDuration(item.defaultDurationMinutes) : '',
-      defaultDurationMinutes: item.defaultDurationMinutes, clientBookableDefault: item.clientBookableDefault,
-      visualToken: item.visualToken, iconKey: item.iconKey, isSystem: item.isSystem,
-      displayOrder: item.displayOrder, mode: 'presentiel',
+      activityTypeId: item.id,
+      type: item.code,
+      label: item.nameFR,
+      duration: item.defaultDurationMinutes
+        ? this.formatDuration(item.defaultDurationMinutes)
+        : '',
+      defaultDurationMinutes: item.defaultDurationMinutes,
+      clientBookableDefault: item.clientBookableDefault,
+      visualToken: item.visualToken,
+      iconKey: item.iconKey,
+      isSystem: item.isSystem,
+      displayOrder: item.displayOrder,
+      mode: 'presentiel',
     }));
   }
 
   private formatDuration(minutes: number) {
-    const hours = Math.floor(minutes / 60); const rest = minutes % 60;
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
     return `${hours ? `${hours}h` : ''}${rest ? String(rest).padStart(2, '0') : hours ? '00' : ''}`;
   }
 
@@ -53,7 +75,11 @@ export class ActivitiesService {
         tasks: {
           include: {
             assignee: { select: { id: true, firstName: true, lastName: true } },
-            assignees: { include: { user: { select: { id: true, firstName: true, lastName: true } } } },
+            assignees: {
+              include: {
+                user: { select: { id: true, firstName: true, lastName: true } },
+              },
+            },
             timeEntries: { select: { heures: true } },
           },
           orderBy: [{ order: 'asc' }, { taskTitle: 'asc' }, { id: 'asc' }],
@@ -63,10 +89,48 @@ export class ActivitiesService {
     return activities.map((activity) => this.withTaskSummary(activity));
   }
 
-  async getActivityTasks(projectId: string, activityId: string, actor: AdviserActor) {
+  async getPortfolio(actor: AdviserActor) {
+    const activities = await this.prisma.projectActivity.findMany({
+      where: {
+        organizationId: actor.organizationId,
+        project: { is: projectAccessWhere(actor) },
+      },
+      include: {
+        project: {
+          select: {
+            id: true,
+            name: true,
+            documentType: true,
+            clientId: true,
+            client: { select: { id: true, name: true } },
+            building: { select: { id: true, name: true } },
+          },
+        },
+      },
+      orderBy: [{ scheduledDate: 'asc' }, { id: 'asc' }],
+    });
+    return activities.map((activity) => ({
+      ...activity,
+      projectId: activity.project.id,
+      projectName: activity.project.name,
+      documentType: activity.project.documentType,
+      clientId: activity.project.clientId,
+      clientName: activity.project.client.name,
+      buildingName: activity.project.building.name,
+      project: undefined,
+    }));
+  }
+
+  async getActivityTasks(
+    projectId: string,
+    activityId: string,
+    actor: AdviserActor,
+  ) {
     const found = await this.prisma.projectActivity.findFirst({
       where: {
-        id: activityId, projectId, organizationId: actor.organizationId,
+        id: activityId,
+        projectId,
+        organizationId: actor.organizationId,
         project: { is: projectAccessWhere(actor) },
       },
       include: {
@@ -78,7 +142,11 @@ export class ActivitiesService {
         tasks: {
           include: {
             assignee: { select: { id: true, firstName: true, lastName: true } },
-            assignees: { include: { user: { select: { id: true, firstName: true, lastName: true } } } },
+            assignees: {
+              include: {
+                user: { select: { id: true, firstName: true, lastName: true } },
+              },
+            },
             timeEntries: { select: { heures: true } },
           },
           orderBy: [{ order: 'asc' }, { taskTitle: 'asc' }, { id: 'asc' }],
@@ -89,24 +157,32 @@ export class ActivitiesService {
     if (!activity) throw new NotFoundException('Activité introuvable');
     const currentApplicableTaskLists = activity.activityTypeId
       ? await this.activityTypes.resolveTaskLists({
-        activityTypeId: activity.activityTypeId,
-        organizationId: actor.organizationId,
-        documentType: activity.project.documentType,
-      })
+          activityTypeId: activity.activityTypeId,
+          organizationId: actor.organizationId,
+          documentType: activity.project.documentType,
+        })
       : [];
-    const applicableIds = new Set(currentApplicableTaskLists.map((item: any) => item.id));
-    const configuredInstances = activity.taskLists.filter((item: any) =>
-      item.instantiationSource === 'ACTIVITY_TYPE_CONFIG');
-    const instantiatedIds = new Set(configuredInstances.map((item: any) => item.taskListId));
+    const applicableIds = new Set(
+      currentApplicableTaskLists.map((item: any) => item.id),
+    );
+    const configuredInstances = activity.taskLists.filter(
+      (item: any) => item.instantiationSource === 'ACTIVITY_TYPE_CONFIG',
+    );
+    const instantiatedIds = new Set(
+      configuredInstances.map((item: any) => item.taskListId),
+    );
     const checklistTasks = new Map<string, any[]>();
     for (const task of activity.tasks) {
       if (!task.projectTaskListId) continue;
       const grouped = checklistTasks.get(task.projectTaskListId) ?? [];
-      grouped.push(task); checklistTasks.set(task.projectTaskListId, grouped);
+      grouped.push(task);
+      checklistTasks.set(task.projectTaskListId, grouped);
     }
     const summarizeList = (instance: any) => {
       const tasks = checklistTasks.get(instance.id) ?? [];
-      const completedCount = tasks.filter((task: any) => task.status === 'fait').length;
+      const completedCount = tasks.filter(
+        (task: any) => task.status === 'fait',
+      ).length;
       return {
         projectTaskListId: instance.id,
         taskListId: instance.taskListId,
@@ -115,7 +191,10 @@ export class ActivitiesService {
         isCurrentlyApplicable: applicableIds.has(instance.taskListId),
         taskCount: tasks.length,
         completedCount,
-        actualHours: tasks.reduce((total: number, task: any) => total + task.actualHours, 0),
+        actualHours: tasks.reduce(
+          (total: number, task: any) => total + task.actualHours,
+          0,
+        ),
         tasks,
       };
     };
@@ -124,10 +203,16 @@ export class ActivitiesService {
       .filter((item: any) => !instantiatedIds.has(item.id))
       .map((item: any) => ({ taskListId: item.id, name: item.name }));
     return {
-      activity: { id: activity.id, status: activity.status, activityTypeId: activity.activityTypeId },
+      activity: {
+        id: activity.id,
+        status: activity.status,
+        activityTypeId: activity.activityTypeId,
+      },
       activityId: activity.id,
       tasks: activity.tasks,
-      directTasks: activity.tasks.filter((task: any) => !task.projectTaskListId),
+      directTasks: activity.tasks.filter(
+        (task: any) => !task.projectTaskListId,
+      ),
       taskCount: activity.taskCount,
       taskCompletedCount: activity.taskCompletedCount,
       taskOpenCount: activity.taskOpenCount,
@@ -135,32 +220,56 @@ export class ActivitiesService {
       actualHours: activity.actualHours,
       canonicalTypeMissing: !activity.activityTypeId,
       isCancelled: activity.status === 'annule',
-      currentApplicableTaskLists: currentApplicableTaskLists.map((item: any) => ({
-        taskListId: item.id, name: item.name,
-      })),
+      currentApplicableTaskLists: currentApplicableTaskLists.map(
+        (item: any) => ({
+          taskListId: item.id,
+          name: item.name,
+        }),
+      ),
       instantiatedTaskLists,
       missingTaskLists,
-      historicalTaskLists: instantiatedTaskLists.filter((item: any) => !item.isCurrentlyApplicable),
+      historicalTaskLists: instantiatedTaskLists.filter(
+        (item: any) => !item.isCurrentlyApplicable,
+      ),
     };
   }
 
-  async getTaskCandidates(projectId: string, activityId: string, actor: AdviserActor) {
+  async getTaskCandidates(
+    projectId: string,
+    activityId: string,
+    actor: AdviserActor,
+  ) {
     const project = await this.prisma.project.findFirst({
-      where: { id: projectId, ...projectAccessWhere(actor) }, select: { id: true },
+      where: { id: projectId, ...projectAccessWhere(actor) },
+      select: { id: true },
     });
     if (!project) throw new NotFoundException('Projet introuvable');
     const activity = await this.prisma.projectActivity.findFirst({
-      where: { id: activityId, projectId, organizationId: actor.organizationId }, select: { id: true },
+      where: {
+        id: activityId,
+        projectId,
+        organizationId: actor.organizationId,
+      },
+      select: { id: true },
     });
     if (!activity) throw new NotFoundException('Activité introuvable');
     return this.prisma.projectTask.findMany({
       where: {
-        projectId, organizationId: actor.organizationId, activityId: null,
-        status: 'a_faire', timeEntries: { none: {} },
+        projectId,
+        organizationId: actor.organizationId,
+        activityId: null,
+        status: 'a_faire',
+        timeEntries: { none: {} },
       },
       select: {
-        id: true, activityId: true, taskTitle: true, categoryName: true, status: true,
-        dueDate: true, templateId: true, projectTaskListId: true,
+        id: true,
+        activityId: true,
+        taskTitle: true,
+        categoryName: true,
+        status: true,
+        dueDate: true,
+        templateId: true,
+        projectTaskListId: true,
         assignee: { select: { id: true, firstName: true, lastName: true } },
       },
       orderBy: [{ order: 'asc' }, { taskTitle: 'asc' }, { id: 'asc' }],
@@ -170,41 +279,71 @@ export class ActivitiesService {
   private withTaskSummary(activity: any) {
     const tasks = activity.tasks.map((task: any) => ({
       ...task,
-      actualHours: task.timeEntries.reduce((total: number, entry: { heures: number }) => total + entry.heures, 0),
+      actualHours: task.timeEntries.reduce(
+        (total: number, entry: { heures: number }) => total + entry.heures,
+        0,
+      ),
       timeEntries: undefined,
     }));
     const taskCount = tasks.length;
-    const taskCompletedCount = tasks.filter((task: any) => task.status === 'fait').length;
+    const taskCompletedCount = tasks.filter(
+      (task: any) => task.status === 'fait',
+    ).length;
     return {
       ...activity,
       tasks,
       taskCount,
       taskCompletedCount,
       taskOpenCount: taskCount - taskCompletedCount,
-      taskProgressPercent: taskCount ? Math.round((taskCompletedCount / taskCount) * 100) : null,
-      actualHours: tasks.reduce((total: number, task: any) => total + task.actualHours, 0),
+      taskProgressPercent: taskCount
+        ? Math.round((taskCompletedCount / taskCount) * 100)
+        : null,
+      actualHours: tasks.reduce(
+        (total: number, task: any) => total + task.actualHours,
+        0,
+      ),
     };
   }
 
   // Ajouter une activité
   async createActivity(projectId: string, actor: AdviserActor, dto: any) {
     const organizationId = actor.organizationId;
-    return this.prisma.$transaction(async tx => {
+    return this.prisma.$transaction(async (tx) => {
       const project = await tx.project.findFirst({
-        where: { id: projectId, ...projectAccessWhere(actor) }, select: { id: true },
+        where: { id: projectId, ...mutableProjectAccessWhere(actor) },
+        select: { id: true },
       });
       if (!project) throw new NotFoundException('Projet introuvable');
-      const selectedType = dto.activityTypeId ? await tx.activityType.findFirst({ where: {
-        id: dto.activityTypeId, isActive: true, OR: [{ organizationId: null }, { organizationId }],
-      } }) : null;
-      if (dto.activityTypeId && !selectedType) throw new BadRequestException("Type d'activité indisponible");
+      const selectedType = dto.activityTypeId
+        ? await tx.activityType.findFirst({
+            where: {
+              id: dto.activityTypeId,
+              isActive: true,
+              OR: [{ organizationId: null }, { organizationId }],
+            },
+          })
+        : null;
+      if (dto.activityTypeId && !selectedType)
+        throw new BadRequestException("Type d'activité indisponible");
       const type = selectedType?.code ?? dto.type;
       const customLabel = dto.customLabel?.trim() || null;
-      if (type === 'autre' && !customLabel) throw new BadRequestException('Un libellé personnalisé est requis pour Autre');
-      const duration = dto.duration ?? (selectedType?.defaultDurationMinutes ? this.formatDuration(selectedType.defaultDurationMinutes) : '');
-      const clientBookable = dto.clientBookable === undefined ? (selectedType?.clientBookableDefault ?? false) : dto.clientBookable === true;
+      if (type === 'autre' && !customLabel)
+        throw new BadRequestException(
+          'Un libellé personnalisé est requis pour Autre',
+        );
+      const duration =
+        dto.duration ??
+        (selectedType?.defaultDurationMinutes
+          ? this.formatDuration(selectedType.defaultDurationMinutes)
+          : '');
+      const clientBookable =
+        dto.clientBookable === undefined
+          ? (selectedType?.clientBookableDefault ?? false)
+          : dto.clientBookable === true;
       if (dto.clientVisible === false && clientBookable) {
-        throw new BadRequestException('Une activité réservable doit être visible par le client');
+        throw new BadRequestException(
+          'Une activité réservable doit être visible par le client',
+        );
       }
       const activity = await tx.projectActivity.create({
         data: {
@@ -222,59 +361,140 @@ export class ActivitiesService {
           assigneeEmail: dto.assigneeEmail || null,
           clientEmail: dto.clientEmail || null,
           notes: dto.notes || null,
-          clientVisible: dto.clientVisible === undefined ? true : dto.clientVisible,
+          clientVisible:
+            dto.clientVisible === undefined ? true : dto.clientVisible,
           clientBookable,
-          dureeHeures: dto.dureeHeures ?? (selectedType?.defaultDurationMinutes ? selectedType.defaultDurationMinutes / 60 : null),
+          dureeHeures:
+            dto.dureeHeures ??
+            (selectedType?.defaultDurationMinutes
+              ? selectedType.defaultDurationMinutes / 60
+              : null),
         },
       });
       if (activity.activityTypeId) {
-        if (!this.activityTaskLists) throw new Error('ActivityTaskListsService indisponible');
-        await this.activityTaskLists.instantiateMissingTaskListsForActivity(tx, projectId, activity.id, actor);
+        if (!this.activityTaskLists)
+          throw new Error('ActivityTaskListsService indisponible');
+        await this.activityTaskLists.instantiateMissingTaskListsForActivity(
+          tx,
+          projectId,
+          activity.id,
+          actor,
+        );
       }
       return activity;
     });
   }
 
   // Mettre à jour une activité
-  async updateActivity(activityId: string, organizationId: string, dto: any) {
+  async updateActivity(activityId: string, actor: AdviserActor, dto: any) {
+    const organizationId = actor.organizationId;
     const activity = await this.prisma.projectActivity.findFirst({
-      where: { id: activityId, organizationId },
+      where: {
+        id: activityId,
+        organizationId,
+        project: { is: mutableProjectAccessWhere(actor) },
+      },
     });
     if (!activity) throw new NotFoundException('Activité introuvable');
 
-    const selectedType = dto.activityTypeId ? await this.prisma.activityType.findFirst({ where: {
-      id: dto.activityTypeId, isActive: true, OR: [{ organizationId: null }, { organizationId }],
-    } }) : null;
-    if (dto.activityTypeId && !selectedType) throw new BadRequestException("Type d'activité indisponible");
-    if (dto.activityTypeId !== undefined && dto.activityTypeId !== activity.activityTypeId) {
-      const instantiated = await this.prisma.projectTaskList.findFirst({ where: {
-        activityId, instantiationSource: 'ACTIVITY_TYPE_CONFIG',
-      }, select: { id: true } });
-      if (instantiated) throw new BadRequestException("Le type d'activité ne peut plus être modifié après l'instanciation d'une checklist");
+    const selectedType = dto.activityTypeId
+      ? await this.prisma.activityType.findFirst({
+          where: {
+            id: dto.activityTypeId,
+            isActive: true,
+            OR: [{ organizationId: null }, { organizationId }],
+          },
+        })
+      : null;
+    if (dto.activityTypeId && !selectedType)
+      throw new BadRequestException("Type d'activité indisponible");
+    if (
+      dto.activityTypeId !== undefined &&
+      dto.activityTypeId !== activity.activityTypeId
+    ) {
+      const instantiated = await this.prisma.projectTaskList.findFirst({
+        where: {
+          activityId,
+          instantiationSource: 'ACTIVITY_TYPE_CONFIG',
+        },
+        select: { id: true },
+      });
+      if (instantiated)
+        throw new BadRequestException(
+          "Le type d'activité ne peut plus être modifié après l'instanciation d'une checklist",
+        );
     }
     const resultingType = selectedType?.code ?? dto.type ?? activity.type;
-    const resultingCustomLabel = dto.customLabel === undefined ? activity.customLabel : dto.customLabel?.trim() || null;
-    if (resultingType === 'autre' && !resultingCustomLabel) throw new BadRequestException('Un libellé personnalisé est requis pour Autre');
+    const resultingCustomLabel =
+      dto.customLabel === undefined
+        ? activity.customLabel
+        : dto.customLabel?.trim() || null;
+    if (resultingType === 'autre' && !resultingCustomLabel)
+      throw new BadRequestException(
+        'Un libellé personnalisé est requis pour Autre',
+      );
 
-    const visible = dto.clientVisible === undefined ? activity.clientVisible : dto.clientVisible;
-    const bookable = dto.clientBookable === undefined ? activity.clientBookable : dto.clientBookable;
-    if (typeof visible !== 'boolean' || typeof bookable !== 'boolean' || (!visible && bookable)) {
-      throw new BadRequestException('Une activité réservable doit être visible par le client');
+    const visible =
+      dto.clientVisible === undefined
+        ? activity.clientVisible
+        : dto.clientVisible;
+    const bookable =
+      dto.clientBookable === undefined
+        ? activity.clientBookable
+        : dto.clientBookable;
+    if (
+      typeof visible !== 'boolean' ||
+      typeof bookable !== 'boolean' ||
+      (!visible && bookable)
+    ) {
+      throw new BadRequestException(
+        'Une activité réservable doit être visible par le client',
+      );
     }
     if (dto.scheduledDate !== undefined || dto.reportedDate !== undefined) {
-      const operationalBooking = await this.prisma.booking.findFirst({ where: {
-        activityId, status: { in: ['CONFIRMEE', 'REPORTEE'] },
-      }, select: { id: true } });
-      if (operationalBooking) throw new BadRequestException('Modifier la date sur la réservation liée');
+      const operationalBooking = await this.prisma.booking.findFirst({
+        where: {
+          activityId,
+          status: { in: ['CONFIRMEE', 'REPORTEE'] },
+        },
+        select: { id: true },
+      });
+      if (operationalBooking)
+        throw new BadRequestException(
+          'Modifier la date sur la réservation liée',
+        );
     }
 
     // Si statut passe à "reporte" → nouvelle date obligatoire
-    const updateData: any = { ...dto };
-    delete updateData.bookingId;
-    delete updateData.bookings;
-    delete updateData.projectId;
-    delete updateData.organizationId;
-    delete updateData.sourceMandate;
+    const expectedUpdatedAt = dto.expectedUpdatedAt
+      ? new Date(dto.expectedUpdatedAt)
+      : null;
+    if (expectedUpdatedAt && Number.isNaN(expectedUpdatedAt.getTime())) {
+      throw new BadRequestException("Version d'activité invalide");
+    }
+    const mutableFields = [
+      'activityTypeId',
+      'type',
+      'label',
+      'duration',
+      'mode',
+      'customLabel',
+      'customDuration',
+      'scheduledDate',
+      'status',
+      'reportedDate',
+      'assigneeEmail',
+      'clientEmail',
+      'notes',
+      'clientVisible',
+      'clientBookable',
+      'dureeHeures',
+      'isRecurring',
+    ];
+    const updateData: Record<string, unknown> = {};
+    for (const field of mutableFields) {
+      if (dto[field] !== undefined) updateData[field] = dto[field];
+    }
     if (selectedType) {
       updateData.type = selectedType.code;
       updateData.label = selectedType.nameFR;
@@ -287,30 +507,68 @@ export class ActivitiesService {
     if (dto.scheduledDate)
       updateData.scheduledDate = new Date(dto.scheduledDate);
 
-    return this.prisma.projectActivity.update({
-      where: { id: activityId },
+    const result = await this.prisma.projectActivity.updateMany({
+      where: {
+        id: activityId,
+        organizationId,
+        ...(expectedUpdatedAt ? { updatedAt: expectedUpdatedAt } : {}),
+      },
       data: updateData,
+    });
+    if (result.count !== 1) {
+      throw new ConflictException(
+        "L'activité a été modifiée. Rechargez le planning avant de réessayer.",
+      );
+    }
+    return this.prisma.projectActivity.findUniqueOrThrow({
+      where: { id: activityId },
     });
   }
 
   // Supprimer une activité
-  async deleteActivity(activityId: string, organizationId: string) {
+  async deleteActivity(activityId: string, actor: AdviserActor) {
+    const organizationId = actor.organizationId;
     const activity = await this.prisma.projectActivity.findFirst({
-      where: { id: activityId, organizationId },
+      where: {
+        id: activityId,
+        organizationId,
+        project: { is: mutableProjectAccessWhere(actor) },
+      },
     });
     if (!activity) throw new NotFoundException('Activité introuvable');
-    const linkedBooking = await this.prisma.booking.findFirst({ where: { activityId }, select: { id: true } });
-    if (linkedBooking) throw new BadRequestException('Cette activité possède un historique de réservations');
-    const linkedTask = await this.prisma.projectTask.findFirst({ where: { activityId }, select: { id: true } });
-    if (linkedTask) throw new BadRequestException('Cette activité possède des tâches liées');
-    const linkedTaskList = await this.prisma.projectTaskList.findFirst({ where: { activityId }, select: { id: true } });
-    if (linkedTaskList) throw new BadRequestException('Cette activité possède des checklists liées');
+    const linkedBooking = await this.prisma.booking.findFirst({
+      where: { activityId },
+      select: { id: true },
+    });
+    if (linkedBooking)
+      throw new BadRequestException(
+        'Cette activité possède un historique de réservations',
+      );
+    const linkedTask = await this.prisma.projectTask.findFirst({
+      where: { activityId },
+      select: { id: true },
+    });
+    if (linkedTask)
+      throw new BadRequestException('Cette activité possède des tâches liées');
+    const linkedTaskList = await this.prisma.projectTaskList.findFirst({
+      where: { activityId },
+      select: { id: true },
+    });
+    if (linkedTaskList)
+      throw new BadRequestException(
+        'Cette activité possède des checklists liées',
+      );
     return this.prisma.projectActivity.delete({ where: { id: activityId } });
   }
 
   // Dupliquer toutes les activités d'un projet +12 mois
-  async duplicateActivities(projectId: string, organizationId: string) {
-    await this.assertOwnership(projectId, organizationId);
+  async duplicateActivities(projectId: string, actor: AdviserActor) {
+    const organizationId = actor.organizationId;
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, ...mutableProjectAccessWhere(actor) },
+      select: { id: true },
+    });
+    if (!project) throw new NotFoundException('Projet introuvable');
     const activities = await this.prisma.projectActivity.findMany({
       where: { projectId, organizationId, isRecurring: true },
     });
@@ -365,9 +623,15 @@ export class ActivitiesService {
     const durationMinutes = this.parseDurationMinutes(activity.duration);
     const end = new Date(start.getTime() + durationMinutes * 60000);
 
-    const reminderDate = new Date(start.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-    const title = activity.customLabel || activity.label;
+    const escapeText = (value: unknown) =>
+      String(value ?? '')
+        .replace(/\\/g, '\\\\')
+        .replace(/\r?\n/g, '\\n')
+        .replace(/,/g, '\\,')
+        .replace(/;/g, '\\;');
+    const title = escapeText(
+      activity.customLabel || activity.label || 'Activité CORO',
+    );
     const attendees = [
       activity.assigneeEmail
         ? `ATTENDEE;RSVP=TRUE:mailto:${activity.assigneeEmail}`
@@ -391,7 +655,7 @@ export class ActivitiesService {
       `DTSTART:${formatDate(start)}Z`,
       `DTEND:${formatDate(end)}Z`,
       `SUMMARY:${title}`,
-      `DESCRIPTION:Durée : ${activity.duration || 'À confirmer'}\\nMode : ${activity.mode === 'teams' ? 'Microsoft Teams' : 'En présentiel'}${activity.notes ? '\\nNotes : ' + activity.notes : ''}`,
+      `DESCRIPTION:${escapeText(`Durée : ${activity.duration || 'À confirmer'}\nMode : ${activity.mode === 'teams' ? 'Microsoft Teams' : 'En présentiel'}${activity.notes ? '\nNotes : ' + activity.notes : ''}`)}`,
       attendees,
       'BEGIN:VALARM',
       'TRIGGER:-P7D',
@@ -416,9 +680,9 @@ export class ActivitiesService {
   }
 
   // Vue portefeuille client — toutes les activités de tous les projets d'un client
-  async getClientPortfolio(clientId: string, organizationId: string) {
+  async getClientPortfolio(clientId: string, actor: AdviserActor) {
     const projects = await this.prisma.project.findMany({
-      where: { clientId, organizationId, isActive: true },
+      where: { clientId, isActive: true, ...projectAccessWhere(actor) },
       include: {
         building: true,
         activities: { orderBy: { scheduledDate: 'asc' } },
@@ -454,97 +718,194 @@ export class ActivitiesService {
     services: { activityTypeId: string; isRecurring: boolean }[],
   ) {
     requireInternal(actor);
-    if (!Array.isArray(services)) throw new BadRequestException('La liste des services est requise');
-    if (services.some(service => !service?.activityTypeId)) {
-      throw new BadRequestException("Chaque service doit referencer un type d'activite canonique");
+    if (!Array.isArray(services))
+      throw new BadRequestException('La liste des services est requise');
+    if (services.some((service) => !service?.activityTypeId)) {
+      throw new BadRequestException(
+        "Chaque service doit referencer un type d'activite canonique",
+      );
     }
-    const selectedIds = services.map(service => service.activityTypeId);
+    const selectedIds = services.map((service) => service.activityTypeId);
     if (new Set(selectedIds).size !== selectedIds.length) {
-      throw new BadRequestException("Un type d'activite ne peut etre selectionne qu'une fois");
+      throw new BadRequestException(
+        "Un type d'activite ne peut etre selectionne qu'une fois",
+      );
     }
-    if (!this.activityTaskLists) throw new Error('ActivityTaskListsService indisponible');
+    if (!this.activityTaskLists)
+      throw new Error('ActivityTaskListsService indisponible');
     const activityTaskLists = this.activityTaskLists;
 
-    return this.prisma.$transaction(async tx => {
-      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Project"
+    return this.prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Project"
         WHERE "id" = ${projectId} AND "organizationId" = ${actor.organizationId} FOR UPDATE`);
-      const project = await tx.project.findFirst({
-        where: { id: projectId, ...projectAccessWhere(actor) },
-        select: { id: true, organizationId: true },
-      });
-      if (!project) throw new NotFoundException('Projet introuvable');
-      const activityTypes = selectedIds.length ? await tx.activityType.findMany({ where: {
-        id: { in: selectedIds }, isActive: true,
-        OR: [{ organizationId: null }, { organizationId: actor.organizationId }],
-      } }) : [];
-      if (activityTypes.length !== selectedIds.length) {
-        throw new BadRequestException("Un ou plusieurs types d'activite sont indisponibles");
-      }
-      const typesById = new Map(activityTypes.map(type => [type.id, type]));
-      const existingCanonical = await tx.projectActivity.findMany({ where: {
-        projectId, organizationId: actor.organizationId, sourceMandate: true,
-        activityTypeId: { not: null },
-      }, include: {
-        bookings: { select: { id: true, status: true } },
-        exerciseReport: { select: { id: true } },
-        tasks: { select: { id: true }, take: 1 },
-        taskLists: { select: { id: true }, take: 1 },
-      } });
-      const existingByType = new Map(existingCanonical.map(activity => [activity.activityTypeId!, activity]));
-      const results: any[] = [];
-      for (const service of services) {
-        const type = typesById.get(service.activityTypeId)!;
-        const existing = existingByType.get(type.id);
-        if (existing?.status === 'annule') {
-          throw new BadRequestException("L'activite Mandat correspondante est annulee; une action explicite est requise");
+        const project = await tx.project.findFirst({
+          where: { id: projectId, ...projectAccessWhere(actor) },
+          select: { id: true, organizationId: true },
+        });
+        if (!project) throw new NotFoundException('Projet introuvable');
+        const activityTypes = selectedIds.length
+          ? await tx.activityType.findMany({
+              where: {
+                id: { in: selectedIds },
+                isActive: true,
+                OR: [
+                  { organizationId: null },
+                  { organizationId: actor.organizationId },
+                ],
+              },
+            })
+          : [];
+        if (activityTypes.length !== selectedIds.length) {
+          throw new BadRequestException(
+            "Un ou plusieurs types d'activite sont indisponibles",
+          );
         }
-        const activity = existing
-          ? await tx.projectActivity.update({ where: { id: existing.id }, data: { isRecurring: service.isRecurring } })
-          : await tx.projectActivity.create({ data: {
-            projectId, organizationId: actor.organizationId, activityTypeId: type.id,
-            type: type.code, label: type.nameFR,
-            duration: type.defaultDurationMinutes ? this.formatDuration(type.defaultDurationMinutes) : '',
-            mode: 'presentiel', status: 'a_faire', isRecurring: service.isRecurring,
-            sourceMandate: true, dureeHeures: type.defaultDurationMinutes ? type.defaultDurationMinutes / 60 : null,
-            clientVisible: true, clientBookable: type.clientBookableDefault,
-          } });
-        if (!existing) await tx.auditLog.create({ data: {
-          action: 'PLANNING_ACTIVITY_CREATED', entityType: 'ProjectActivity', entityId: activity.id,
-          projectId, description: 'Activite canonique creee depuis le Mandat.',
-          metadata: { source: 'MANDATE', activityTypeId: type.id }, userId: actor.userId,
-          organizationId: actor.organizationId,
-        } });
-        await activityTaskLists.instantiateMissingTaskListsForActivity(tx, projectId, activity.id, actor);
-        results.push(activity);
-      }
-      for (const activity of existingCanonical.filter(item =>
-        item.status !== 'annule' && !selectedIds.includes(item.activityTypeId!))) {
-        const openBooking = activity.bookings.some(booking => OPEN_BOOKING_STATUSES.includes(booking.status as any));
-        if (openBooking) throw new ConflictException("Un service planifie ne peut pas etre retire du Mandat");
-        const operationalAudit = await tx.auditLog.findFirst({ where: {
-          organizationId: actor.organizationId, entityType: 'ProjectActivity', entityId: activity.id,
-          action: { notIn: ['PLANNING_ACTIVITY_CREATED'] },
-        }, select: { id: true } });
-        const hasHistory = activity.bookings.length > 0 || !!activity.exerciseReport ||
-          activity.tasks.length > 0 || activity.taskLists.length > 0 || !!operationalAudit;
-        if (hasHistory) {
-          await tx.projectActivity.update({ where: { id: activity.id }, data: {
-            status: 'annule', scheduledDate: null, reportedDate: null,
-          } });
-          await tx.auditLog.create({ data: {
-            action: 'PLANNING_ACTIVITY_CANCELLED', entityType: 'ProjectActivity', entityId: activity.id,
-            projectId, description: 'Activite retiree du Mandat; historique conserve.',
-            metadata: { source: 'MANDATE', previousStatus: activity.status, finalStatus: 'annule' },
-            userId: actor.userId, organizationId: actor.organizationId,
-          } });
-        } else {
-          await tx.auditLog.deleteMany({ where: { organizationId: actor.organizationId,
-            entityType: 'ProjectActivity', entityId: activity.id, action: 'PLANNING_ACTIVITY_CREATED' } });
-          await tx.projectActivity.delete({ where: { id: activity.id } });
+        const typesById = new Map(activityTypes.map((type) => [type.id, type]));
+        const existingCanonical = await tx.projectActivity.findMany({
+          where: {
+            projectId,
+            organizationId: actor.organizationId,
+            sourceMandate: true,
+            activityTypeId: { not: null },
+          },
+          include: {
+            bookings: { select: { id: true, status: true } },
+            exerciseReport: { select: { id: true } },
+            tasks: { select: { id: true }, take: 1 },
+            taskLists: { select: { id: true }, take: 1 },
+          },
+        });
+        const existingByType = new Map(
+          existingCanonical.map((activity) => [
+            activity.activityTypeId!,
+            activity,
+          ]),
+        );
+        const results: any[] = [];
+        for (const service of services) {
+          const type = typesById.get(service.activityTypeId)!;
+          const existing = existingByType.get(type.id);
+          if (existing?.status === 'annule') {
+            throw new BadRequestException(
+              "L'activite Mandat correspondante est annulee; une action explicite est requise",
+            );
+          }
+          const activity = existing
+            ? await tx.projectActivity.update({
+                where: { id: existing.id },
+                data: { isRecurring: service.isRecurring },
+              })
+            : await tx.projectActivity.create({
+                data: {
+                  projectId,
+                  organizationId: actor.organizationId,
+                  activityTypeId: type.id,
+                  type: type.code,
+                  label: type.nameFR,
+                  duration: type.defaultDurationMinutes
+                    ? this.formatDuration(type.defaultDurationMinutes)
+                    : '',
+                  mode: 'presentiel',
+                  status: 'a_faire',
+                  isRecurring: service.isRecurring,
+                  sourceMandate: true,
+                  dureeHeures: type.defaultDurationMinutes
+                    ? type.defaultDurationMinutes / 60
+                    : null,
+                  clientVisible: true,
+                  clientBookable: type.clientBookableDefault,
+                },
+              });
+          if (!existing)
+            await tx.auditLog.create({
+              data: {
+                action: 'PLANNING_ACTIVITY_CREATED',
+                entityType: 'ProjectActivity',
+                entityId: activity.id,
+                projectId,
+                description: 'Activite canonique creee depuis le Mandat.',
+                metadata: { source: 'MANDATE', activityTypeId: type.id },
+                userId: actor.userId,
+                organizationId: actor.organizationId,
+              },
+            });
+          await activityTaskLists.instantiateMissingTaskListsForActivity(
+            tx,
+            projectId,
+            activity.id,
+            actor,
+          );
+          results.push(activity);
         }
-      }
-      return results;
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
+        for (const activity of existingCanonical.filter(
+          (item) =>
+            item.status !== 'annule' &&
+            !selectedIds.includes(item.activityTypeId!),
+        )) {
+          const openBooking = activity.bookings.some((booking) =>
+            OPEN_BOOKING_STATUSES.includes(booking.status as any),
+          );
+          if (openBooking)
+            throw new ConflictException(
+              'Un service planifie ne peut pas etre retire du Mandat',
+            );
+          const operationalAudit = await tx.auditLog.findFirst({
+            where: {
+              organizationId: actor.organizationId,
+              entityType: 'ProjectActivity',
+              entityId: activity.id,
+              action: { notIn: ['PLANNING_ACTIVITY_CREATED'] },
+            },
+            select: { id: true },
+          });
+          const hasHistory =
+            activity.bookings.length > 0 ||
+            !!activity.exerciseReport ||
+            activity.tasks.length > 0 ||
+            activity.taskLists.length > 0 ||
+            !!operationalAudit;
+          if (hasHistory) {
+            await tx.projectActivity.update({
+              where: { id: activity.id },
+              data: {
+                status: 'annule',
+                scheduledDate: null,
+                reportedDate: null,
+              },
+            });
+            await tx.auditLog.create({
+              data: {
+                action: 'PLANNING_ACTIVITY_CANCELLED',
+                entityType: 'ProjectActivity',
+                entityId: activity.id,
+                projectId,
+                description: 'Activite retiree du Mandat; historique conserve.',
+                metadata: {
+                  source: 'MANDATE',
+                  previousStatus: activity.status,
+                  finalStatus: 'annule',
+                },
+                userId: actor.userId,
+                organizationId: actor.organizationId,
+              },
+            });
+          } else {
+            await tx.auditLog.deleteMany({
+              where: {
+                organizationId: actor.organizationId,
+                entityType: 'ProjectActivity',
+                entityId: activity.id,
+                action: 'PLANNING_ACTIVITY_CREATED',
+              },
+            });
+            await tx.projectActivity.delete({ where: { id: activity.id } });
+          }
+        }
+        return results;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
   }
   // Activités récurrentes à renouveler (date passée depuis > 10 mois)
   async getRecurringToRenew(actor: AdviserActor) {

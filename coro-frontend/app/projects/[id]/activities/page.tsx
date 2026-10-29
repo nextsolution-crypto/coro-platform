@@ -8,6 +8,7 @@ import { toast } from '@/lib/toast';
 import { useAuthStore } from '@/stores/auth.store';
 import ActivityTasksSection from '@/app/planning/ActivityTasksSection';
 import { formatCivilDate } from '@/app/planning/time';
+import { downloadActivityIcs } from '@/lib/download-ics';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   a_faire:  { label: 'À faire',  color: '#2980B9', bg: '#EBF5FB' },
@@ -91,7 +92,7 @@ export default function ActivitiesPage() {
   const handleStatusChange = async (activity: any, newStatus: string) => {
     if (newStatus === 'reporte') { setReportModal(activity); return; }
     try {
-      await api.put(`/activities/${activity.id}`, { status: newStatus });
+      await api.put(`/activities/${activity.id}`, { status: newStatus, expectedUpdatedAt: activity.updatedAt });
       fetchData();
     } catch (err) { console.error(err); }
   };
@@ -100,6 +101,7 @@ export default function ActivitiesPage() {
     try {
       await api.put(`/activities/${activity.id}`, {
         [field]: value,
+        expectedUpdatedAt: activity.updatedAt,
         ...(field === 'clientVisible' && !value ? { clientBookable: false } : {}),
       });
       fetchData();
@@ -109,7 +111,7 @@ export default function ActivitiesPage() {
   const handleReportSubmit = async (newDate: string) => {
     if (!reportModal || !newDate) return;
     try {
-      await api.put(`/activities/${reportModal.id}`, { status: 'reporte', reportedDate: newDate });
+      await api.put(`/activities/${reportModal.id}`, { status: 'reporte', reportedDate: newDate, expectedUpdatedAt: reportModal.updatedAt });
       setReportModal(null);
       fetchData();
     } catch (err) { console.error(err); }
@@ -123,18 +125,12 @@ export default function ActivitiesPage() {
     } catch (err) { console.error(err); }
   };
 
-  const handleDownloadIcs = (activityId: string, label: string) => {
-    const token = localStorage.getItem('coro_token');
-    fetch(`http://localhost:3002/api/activities/${activityId}/ics`, {
-      headers: { Authorization: `Bearer ${token}` },
-    }).then(r => r.blob()).then(blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${label}.ics`;
-      a.click();
-      URL.revokeObjectURL(url);
-    });
+  const handleDownloadIcs = async (activityId: string, label: string) => {
+    try {
+      await downloadActivityIcs(activityId, label);
+    } catch {
+      toast('Le calendrier n\'a pas pu être téléchargé. Réessayez.', 'error');
+    }
   };
 
   const openExerciseReport = async (activity: any) => {
