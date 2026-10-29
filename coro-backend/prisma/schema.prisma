@@ -32,6 +32,7 @@ model Organization {
   projects                         Project[]
   documentReviewRequests           DocumentReviewRequest[]
   documentReviewNotificationEvents DocumentReviewNotificationEvent[]
+  documentPdfExports               DocumentPdfExport[]
   procedureOverrides               ProcedureOverride[]
   feedbacks                        Feedback[]
   projectTemplates                 ProjectTemplate[]
@@ -103,6 +104,7 @@ model User {
   observationsTreated                          ReviewObservation[]                      @relation("observationTreater")
   documentReviewsSubmitted                     DocumentReviewRequest[]                  @relation("DocumentReviewSubmitter")
   documentReviewsDecided                       DocumentReviewRequest[]                  @relation("DocumentReviewDecider")
+  documentPdfExportsRequested                  DocumentPdfExport[]                      @relation("DocumentPdfExportRequester")
   capabilityEntitlementsCreated                CapabilityEntitlement[]                  @relation("CapabilityEntitlementCreator")
   capabilityEntitlementRevisionsCreated        CapabilityEntitlementRevision[]          @relation("CapabilityEntitlementRevisionActor")
   commercialProspectsCreated                   CommercialProspect[]                     @relation("CommercialProspectCreator")
@@ -2633,6 +2635,7 @@ model Project {
 
   documents                  Document[]
   documentGenerationRequests DocumentGenerationRequest[]
+  documentPdfExports         DocumentPdfExport[]
   buildingPlans              BuildingPlan[]
   module7                    Module7Data?
   revisionHistory            RevisionHistory[]
@@ -2696,6 +2699,7 @@ model Document {
   project            Project                     @relation(fields: [projectId], references: [id])
   generationRequests DocumentGenerationRequest[]
   reviewRequests     DocumentReviewRequest[]
+  pdfExports         DocumentPdfExport[]
 }
 
 enum DocumentReviewStatus {
@@ -2736,10 +2740,56 @@ model DocumentReviewRequest {
   createdAt           DateTime                          @default(now())
   updatedAt           DateTime                          @updatedAt
   notificationEvents  DocumentReviewNotificationEvent[]
+  pdfExports           DocumentPdfExport[]
 
   @@index([projectId, status])
   @@index([organizationId, submittedAt])
   @@index([documentId, documentVersion])
+}
+
+enum DocumentPdfExportStatus {
+  PROCESSING
+  AVAILABLE
+  FAILED
+}
+
+model DocumentPdfExport {
+  id                   String                  @id @default(uuid())
+  projectId            String
+  project              Project                 @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  organizationId       String
+  organization         Organization            @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  documentId           String
+  document             Document                @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  reviewRequestId      String
+  reviewRequest        DocumentReviewRequest   @relation(fields: [reviewRequestId], references: [id], onDelete: Restrict)
+  projectVersionId     String
+  projectVersion       ProjectVersion          @relation(fields: [projectVersionId], references: [id], onDelete: Restrict)
+  requestedById        String
+  requestedBy          User                    @relation("DocumentPdfExportRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+  idempotencyKey       String
+  requestHash          String                  @db.Char(64)
+  sourceHash           String                  @db.Char(64)
+  language             String
+  options              Json
+  status               DocumentPdfExportStatus @default(PROCESSING)
+  artifacts            Json?
+  templateVersion      String                  @default("organization-document/v1")
+  generatorVersion     String                  @default("puppeteer-pdf-lib/v1")
+  generationStartedAt  DateTime                @default(now())
+  generationLeaseUntil DateTime?
+  generatedAt          DateTime?
+  failedAt             DateTime?
+  failureCode          String?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+
+  @@unique([projectId, idempotencyKey])
+  @@index([projectId, status, createdAt])
+  @@index([organizationId, requestedById, createdAt])
+  @@index([status, generationLeaseUntil])
+  @@index([reviewRequestId])
+  @@index([projectVersionId])
 }
 
 model DocumentReviewNotificationEvent {
@@ -2950,6 +3000,7 @@ model ProjectVersion {
 
   project    Project             @relation(fields: [projectId], references: [id])
   signatures DocumentSignature[]
+  pdfExports DocumentPdfExport[]
 
   @@unique([projectId, versionNumber])
 }

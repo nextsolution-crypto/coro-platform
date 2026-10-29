@@ -164,6 +164,12 @@ export abstract class BaseDocumentBuilder {
   }
 
   async getBuildingPlansSorted(): Promise<{ buffer: Buffer; section: string }[]> {
+    if (Array.isArray(this.doc.approvedPlans)) {
+      return this.doc.approvedPlans.map((plan: any) => ({
+        buffer: Buffer.from(plan.fileBase64, 'base64'),
+        section: plan.section,
+      }));
+    }
     const plans = await this.prisma.buildingPlan.findMany({
       where: { projectId: this.project.id },
       orderBy: { order: 'asc' },

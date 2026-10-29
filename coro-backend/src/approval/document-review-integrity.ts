@@ -15,9 +15,14 @@ function canonicalize(value: unknown): unknown {
 export interface ReviewSnapshotInput {
   project: {
     id: string;
+    name?: string;
     documentType: string;
     year: number;
     configData: unknown;
+    client?: unknown;
+    building?: unknown;
+    adviser?: unknown;
+    plans?: unknown[];
   };
   document: {
     id: string;
@@ -31,7 +36,7 @@ export interface ReviewSnapshotInput {
 
 export function createReviewSnapshot(input: ReviewSnapshotInput) {
   return canonicalize({
-    schemaVersion: 1,
+    schemaVersion: 2,
     project: input.project,
     document: input.document,
   }) as Record<string, unknown>;
