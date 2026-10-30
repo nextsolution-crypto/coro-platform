@@ -44,3 +44,9 @@ L’appel `/planning/context` utilise `.then(...)` sans `.catch(...)`. Une panne
 | PLAN-004 | CLOSED_IN_QA | Injection 503 sur le contexte : erreur visible, référentiels obsolètes neutralisés, reprise réussie. |
 
 Les refus et les reprises n'ont produit aucun Booking supplémentaire, aucune notification externe et aucune donnée inter-tenant. Production : **NON MODIFIÉE**.
+
+## Revue de release — fermeture de la portée `requestId`
+
+La revue finale a détecté puis corrigé un risque de replay incompatible. Les verrous et l'audit portent désormais l'opération et l'empreinte canonique du payload, en plus de l'organisation, de l'acteur et du `requestId`. Les essais E2E démontrent qu'un même identifiant avec un libellé ou une durée différente échoue sans effet secondaire.
+
+Statut : **CLOSED_IN_QA** sur `a7de8fb72912f7f93559177a472f5f08a54ae7d3`; preuve sous `D:\CORO-QA\runs\organization-team-planning-release\2026-10-30`.

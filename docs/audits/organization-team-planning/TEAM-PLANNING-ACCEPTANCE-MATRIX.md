@@ -42,3 +42,18 @@ Verdict initial : **FAIL — correction requise avant acceptation fonctionnelle 
 | Lecteur d'écran réel | NOT_VERIFIED | Runtime non disponible |
 
 Verdict final : **PASS — ACCEPTED_IN_QA — PR_READY — NOT_DEPLOYED**.
+
+## Matrice de release du HEAD final — 2026-10-30
+
+| Contrôle additionnel | Statut | Preuve |
+|---|---|---|
+| Portée du `requestId` | PASS | Organisation + acteur + opération + empreinte canonique du payload |
+| Replay de création incompatible | PASS | HTTP 400; une seule activité physique |
+| Replay de planification incompatible | PASS | HTTP 409; un seul Booking physique |
+| Backend Planner | PASS 59/59 | Suites ciblées du HEAD `a7de8fb7` |
+| Frontend Planner | PASS 76/76 | Suite ciblée du HEAD `a7de8fb7` |
+| Design System | PASS | Suite complète applicable |
+| Chrome responsive/thèmes | PASS 12/12 | 4 viewports × 3 présentations, F5, clavier, zoom 200 % |
+| Lecteur d'écran réel | NOT_VERIFIED | Runtime non disponible |
+
+Verdict du candidat : **PASS — RELEASE_CANDIDATE_ACCEPTED_IN_QA — PRODUCTION_PENDING**.

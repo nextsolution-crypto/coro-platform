@@ -36,3 +36,9 @@ Export, synchronisation Outlook, programme annuel, affectations nominatives avan
 - Preuves : `D:\CORO-QA\runs\organization-team-planning\2026-10-30`.
 
 Décision : **LOT TERMINÉ ET PRÊT POUR PR**. Fusion, déploiement, migration de production, communication externe et activation WEB-AI restent explicitement exclus.
+
+## Durcissement de la revue de release — 2026-10-30
+
+Le replay idempotent est maintenant refusé si l'opération ou le payload ne correspond pas à la première intention. Le verrou reste borné par organisation et acteur. Cette correction n'ajoute aucune migration et conserve les contrats canoniques Activité/Booking.
+
+Le HEAD `a7de8fb72912f7f93559177a472f5f08a54ae7d3` a passé la campagne QA exacte, incluant les deux cas de mismatch et la matrice Chrome 12/12. Preuves : `D:\CORO-QA\runs\organization-team-planning-release\2026-10-30`.
