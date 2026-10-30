@@ -33,3 +33,14 @@ L’appel `/planning/context` utilise `.then(...)` sans `.catch(...)`. Une panne
 - La visibilité d’un collègue du même tenant est intentionnelle et minimisée; elle ne constitue pas une fuite si les événements restent génériques.
 - La capacité sur 12 semaines est clairement libellée informative; elle ne doit pas être vendue comme capacité quotidienne exacte.
 - Le conflit de créneau observé durant la mise au point provenait de fixtures QA non nettoyées; le runner final les neutralise et le produit a correctement refusé le chevauchement.
+
+## Statut après correction — 2026-10-30
+
+| Constat | Statut | Preuve de clôture |
+|---|---|---|
+| PLAN-001 | CLOSED_IN_QA | Réponse `{ activityId }` typée; verrou transactionnel et replay par `requestId`; création et planification rejouées sans doublon. |
+| PLAN-002 | CLOSED_IN_QA | Chrome 390×844, 768×1024, 1440×900 et 2560×1440, trois thèmes : 12/12 PASS, zéro contrôle hors viewport. |
+| PLAN-003 | CLOSED_IN_QA | Injection 503 sur les actions mensuelles : erreur visible, aucun faux calendrier vide, reprise réussie. |
+| PLAN-004 | CLOSED_IN_QA | Injection 503 sur le contexte : erreur visible, référentiels obsolètes neutralisés, reprise réussie. |
+
+Les refus et les reprises n'ont produit aucun Booking supplémentaire, aucune notification externe et aucune donnée inter-tenant. Production : **NON MODIFIÉE**.

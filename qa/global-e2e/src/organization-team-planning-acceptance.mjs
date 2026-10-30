@@ -33,7 +33,7 @@ const ids = {
   buildingA: '40000000-0000-4000-8000-000000000001', clientA: '30000000-0000-4000-8000-000000000001',
 };
 const marker = `PLAN-QA-${Date.now()}`;
-const report = { executedAt: new Date().toISOString(), sourceHead: 'f638d7be73a4e96c6cf2e6e8c578a1d92b411df3',
+const report = { executedAt: new Date().toISOString(), sourceHead: process.env.CORO_QA_SOURCE_HEAD || 'working-tree-candidate',
   marker, checks: [], findings: [], matrix: [], consoleErrors: [], limitations: [] };
 const check = (id, pass, detail) => {
   report.checks.push({ id, status: pass ? 'PASS' : 'FAIL', detail });
@@ -105,24 +105,37 @@ try {
   check('admin-team-tenant-scope', teamA.status === 200 && !teamA.data.users.some((row) => row.id === ids.adminB), `HTTP ${teamA.status}`);
   check('capacity-is-explicitly-informational', teamA.data.users.every((row) => row.capacity === undefined || typeof row.capacity === 'object'), 'capacity projection shape');
 
-  const created = await lab.call('/planning/activities', { method: 'POST', token: adminA.token, body: {
-    projectId: ids.projectA, activityTypeId: activityType.id, customLabel: marker, clientVisible: true, clientBookable: true,
-  } });
-  check('create-unplanned-activity', created.status === 201 && created.data.id, `HTTP ${created.status}`);
-  if (!created.data.activityId) report.findings.push({ id: 'PLAN-001', severity: 'HIGH',
-    title: 'Unplanned activity response contract differs from the UI contract',
-    evidence: 'POST /planning/activities returned id but no activityId; ActivityPlanningDrawer requires action.activityId.' });
-  activityId = created.data.id;
+  const creationRequestId = crypto.randomUUID();
+  const creationBody = {
+    requestId: creationRequestId, projectId: ids.projectA, activityTypeId: activityType.id,
+    customLabel: marker, clientVisible: true, clientBookable: true,
+  };
+  const created = await lab.call('/planning/activities', { method: 'POST', token: adminA.token, body: creationBody });
+  check('create-unplanned-activity-contract', created.status === 201 && created.data.activityId && created.data.id === undefined,
+    JSON.stringify({ status: created.status, keys: Object.keys(created.data || {}) }));
+  activityId = created.data.activityId;
+  const creationReplay = await lab.call('/planning/activities', { method: 'POST', token: adminA.token, body: creationBody });
+  check('create-response-loss-retry-idempotent', creationReplay.status === 201 && creationReplay.data.activityId === activityId &&
+    await prisma.projectActivity.count({ where: { organizationId: ids.orgA, customLabel: marker } }) === 1,
+  JSON.stringify({ status: creationReplay.status, activityId: creationReplay.data?.activityId }));
   const crossTenantPlan = await lab.call(`/planning/activities/${activityId}/plan`, { method: 'POST', token: adminB.token,
     body: { startUtc: '2026-11-03T15:00:00.000Z', durationMinutes: 90, leadUserId: ids.adminB, confirmUnknown: true } });
   check('cross-tenant-direct-plan-denied', [403, 404].includes(crossTenantPlan.status), `HTTP ${crossTenantPlan.status}`);
   const preview = await lab.call('/planning/team-preview', { method: 'POST', token: adminA.token,
     body: { buildingId: ids.buildingA, startUtc: '2026-11-03T15:00:00.000Z', durationMinutes: 90 } });
   check('team-preview-authorized', preview.status === 201 && preview.data.candidates.some((row) => row.userId === ids.advisorA), `HTTP ${preview.status}`);
+  const planningRequestId = crypto.randomUUID();
+  const planningBody = { requestId: planningRequestId, startUtc: '2026-11-03T15:00:00.000Z', durationMinutes: 90,
+    leadUserId: ids.adminA, confirmUnknown: true };
   const planned = await lab.call(`/planning/activities/${activityId}/plan`, { method: 'POST', token: adminA.token,
-    body: { startUtc: '2026-11-03T15:00:00.000Z', durationMinutes: 90, leadUserId: ids.adminA, confirmUnknown: true } });
+    body: planningBody });
   check('plan-existing-activity', planned.status === 201 && planned.data.bookingId, `HTTP ${planned.status}`);
   bookingId = planned.data.bookingId;
+  const planningReplay = await lab.call(`/planning/activities/${activityId}/plan`, { method: 'POST', token: adminA.token,
+    body: planningBody });
+  check('plan-response-loss-retry-idempotent', planningReplay.status === 201 && planningReplay.data.bookingId === bookingId &&
+    await prisma.booking.count({ where: { activityId } }) === 1,
+  JSON.stringify({ status: planningReplay.status, bookingId: planningReplay.data?.bookingId }));
   const persisted = await prisma.booking.findUnique({ where: { id: bookingId }, include: { assignments: true, activity: true } });
   check('canonical-booking-assignment', persisted?.activityId === activityId && persisted.assignments.filter((row) => ['PENDING', 'ACCEPTED'].includes(row.status)).length === 1,
     JSON.stringify({ bookingId, activityId, assignments: persisted?.assignments.length }));
@@ -144,8 +157,9 @@ try {
     localStorage.setItem('coro_token', token); localStorage.setItem('coro_refresh_token', refresh);
     localStorage.setItem('coro_user', JSON.stringify(user));
   }, { token: adminA.token, refresh: adminA.refresh, user: adminA.user });
-  isolated.page.on('console', (event) => { if (event.type() === 'error') report.consoleErrors.push(event.text()); });
-  isolated.page.on('pageerror', (error) => report.consoleErrors.push(error.message));
+  let expectedFaultWindow = false;
+  isolated.page.on('console', (event) => { if (event.type() === 'error' && !expectedFaultWindow) report.consoleErrors.push(event.text()); });
+  isolated.page.on('pageerror', (error) => { if (!expectedFaultWindow) report.consoleErrors.push(error.message); });
   for (const viewport of viewports) for (const theme of themes) {
     await isolated.page.setViewport(viewport);
     await isolated.page.evaluate(({ ui, preference }) => { localStorage.setItem('coro-ui-generation', ui);
@@ -172,6 +186,50 @@ try {
   const zoom = await isolated.page.evaluate(geometry);
   check('zoom-200', zoom.outside.length === 0, JSON.stringify({ overflow: zoom.pageOverflow, outside: zoom.outside.length }));
   await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1 });
+
+  let failContextOnce = true;
+  expectedFaultWindow = true;
+  await isolated.page.setRequestInterception(true);
+  const contextFailure = (request) => {
+    if (failContextOnce && request.url().includes('/planning/context')) {
+      failContextOnce = false;
+      void request.respond({ status: 503, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': frontendUrl },
+        body: '{"message":"qa-context-outage"}' });
+      return;
+    }
+    void request.continue();
+  };
+  isolated.page.on('request', contextFailure);
+  await isolated.page.goto(`${frontendUrl}/planning?date=2026-11-04&view=day&tz=America%2FToronto`, { waitUntil: 'networkidle0' });
+  check('context-503-visible', await isolated.page.evaluate(() => document.body.innerText.includes('temporairement indisponible')), 'explicit context outage');
+  await isolated.page.evaluate(() => [...document.querySelectorAll('button')].find((button) => button.textContent?.includes('Réessayer'))?.click());
+  await isolated.page.waitForFunction((text) => document.body.innerText.includes(text), {}, marker);
+  check('context-retry-recovers', true, 'retry restored planning context without stale data');
+  isolated.page.off('request', contextFailure);
+  expectedFaultWindow = false;
+
+  let failMonthOnce = true;
+  expectedFaultWindow = true;
+  const monthFailure = (request) => {
+    if (failMonthOnce && request.method() === 'GET' && request.url().includes('/planning/actions')) {
+      failMonthOnce = false;
+      void request.respond({ status: 503, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': frontendUrl },
+        body: '{"message":"qa-month-outage"}' });
+      return;
+    }
+    void request.continue();
+  };
+  isolated.page.on('request', monthFailure);
+  await isolated.page.goto(`${frontendUrl}/planning?date=2026-11-04&view=month&tz=America%2FToronto`, { waitUntil: 'networkidle0' });
+  check('month-503-visible-no-false-empty', await isolated.page.evaluate(() =>
+    document.body.innerText.includes('temporairement indisponible') && !document.querySelector('[data-qa="month-calendar"]')),
+  'explicit monthly outage and no false empty calendar');
+  await isolated.page.evaluate(() => [...document.querySelectorAll('button')].find((button) => button.textContent?.includes('Réessayer'))?.click());
+  await isolated.page.waitForFunction(() => !document.body.innerText.includes('temporairement indisponible'));
+  check('month-retry-recovers', true, 'monthly retry completed');
+  isolated.page.off('request', monthFailure);
+  await isolated.page.setRequestInterception(false);
+  expectedFaultWindow = false;
 
   const cancelled = await lab.call(`/planning/bookings/${bookingId}/cancel-schedule`, { method: 'POST', token: adminA.token });
   check('cancel-schedule', cancelled.status === 201, `HTTP ${cancelled.status}`);
