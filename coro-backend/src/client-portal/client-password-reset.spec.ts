@@ -25,7 +25,7 @@ const user = {
   populationPermissions: [],
   operationalReviewPermissions: [],
   correctiveActionPermissions: [],
-  client: { name: 'Client' },
+  client: { name: 'Client', isActive: true },
   organization: { name: 'Org' },
 };
 
@@ -36,6 +36,7 @@ function harness(found: any = user) {
       findUnique: jest.fn().mockResolvedValue({
         organizationId: user.organizationId,
         isActive: true,
+        client: { isActive: true },
       }),
       update: jest.fn(),
     },
@@ -73,6 +74,19 @@ function harness(found: any = user) {
 }
 
 describe('Client password reset', () => {
+  it('refuse login et MFA lorsque le Client parent est suspendu', async () => {
+    const suspended = harness({
+      ...user,
+      password: await bcrypt.hash('OldPassword1!', 10),
+      mfaCode: '123456',
+      mfaCodeExpiry: new Date(Date.now() + 600000),
+      client: { name: 'Client', isActive: false },
+    });
+    await expect(suspended.service.login(user.email, 'OldPassword1!')).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(suspended.service.verifyMfa(user.email, '123456')).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(suspended.prisma.clientUser.update).toBeUndefined();
+  });
+
   it('retourne le meme contrat pour connu, inconnu et inactif', async () => {
     const known = harness();
     const unknown = harness(null);
@@ -290,6 +304,7 @@ describe('Client password reset', () => {
       password: currentHash,
       organizationId: user.organizationId,
       isActive: true,
+      client: { isActive: true },
     });
 
     await expect(
@@ -394,6 +409,7 @@ describe('Client password reset', () => {
         id: 'synthetic-reset-user',
         organizationId: 'synthetic-reset-org',
         isActive: true,
+        client: { isActive: true },
       },
       select: { sessionVersion: true },
     });

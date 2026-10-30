@@ -36,6 +36,8 @@ migration_head="$(docker compose -f "$REPO/docker-compose.yml" exec -T postgres 
 expected_head="$(node -e 'const m=require(process.argv[1]);process.stdout.write(m.expectedMigrationHead||"")' "$manifest")"
 [[ "$migration_head" == "$expected_head" ]] || { echo 'RECONCILIATION_UNKNOWN code=MIGRATION_HEAD_MISMATCH' >&2; exit 1; }
 [[ "$(git -C "$REPO" rev-parse HEAD)" == "$RELEASE_COMMIT" ]] || { echo 'RECONCILIATION_UNKNOWN code=CHECKOUT_COMMIT_MISMATCH' >&2; exit 1; }
+expected_outbox_key_id="$(node -e 'const m=require(process.argv[1]);if(m.outboxConfiguration?.status!=="PASS")process.exit(1);process.stdout.write(m.outboxConfiguration.keyId||"")' "$manifest")" || { echo 'RECONCILIATION_UNKNOWN code=OUTBOX_CONFIGURATION_EVIDENCE_MISSING' >&2; exit 1; }
+docker exec -e EXPECTED_OUTBOX_KEY_ID="$expected_outbox_key_id" coro_backend node -e 'const v=process.env.CLIENT_INVITATION_OUTBOX_KEY_BASE64||"";const b=Buffer.from(v,"base64");if(!/^[A-Za-z0-9+/]+={0,2}$/.test(v)||b.length!==32||b.toString("base64")!==v||process.env.CLIENT_INVITATION_OUTBOX_KEY_ID!==process.env.EXPECTED_OUTBOX_KEY_ID)process.exit(1)' || { echo 'RECONCILIATION_UNKNOWN code=OUTBOX_CONFIGURATION_MISMATCH' >&2; exit 1; }
 
 if node -e 'process.exit(require(process.argv[1]).knowledgeRuntime ? 0 : 1)' "$manifest"; then
   backend_ref="$(node -e 'process.stdout.write(require(process.argv[1]).images.backend)' "$manifest")"

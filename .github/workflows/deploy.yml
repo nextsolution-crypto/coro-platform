@@ -301,12 +301,15 @@ jobs:
           FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-frontend@${{ needs.build-images.outputs.frontend_digest }}
           CLIENT_PORTAL_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-client-portal@${{ needs.build-images.outputs.client_portal_digest }}
           WEBSITE_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-website@${{ needs.build-images.outputs.website_digest }}
+          CLIENT_INVITATION_OUTBOX_KEY_BASE64: ${{ secrets.CLIENT_INVITATION_OUTBOX_KEY_BASE64 }}
+          CLIENT_INVITATION_OUTBOX_KEY_ID: ${{ vars.CLIENT_INVITATION_OUTBOX_KEY_ID }}
+          CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64: ${{ secrets.CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64 }}
         with:
           host: ${{ secrets.SERVER_IP }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 60m
-          envs: RELEASE_COMMIT,PRODUCTION_APPROVAL,MIGRATION_COMPATIBILITY_APPROVAL,RELEASE_OPERATOR,BACKEND_IMAGE,FRONTEND_IMAGE,CLIENT_PORTAL_IMAGE,WEBSITE_IMAGE
+          envs: RELEASE_COMMIT,PRODUCTION_APPROVAL,MIGRATION_COMPATIBILITY_APPROVAL,RELEASE_OPERATOR,BACKEND_IMAGE,FRONTEND_IMAGE,CLIENT_PORTAL_IMAGE,WEBSITE_IMAGE,CLIENT_INVITATION_OUTBOX_KEY_BASE64,CLIENT_INVITATION_OUTBOX_KEY_ID,CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64
           script: |
             set -euo pipefail
             trap 'rm -f /tmp/coro-production-release.sh /tmp/coro-release-control.sh /tmp/coro-release-reconcile.sh /tmp/release-state.mjs' EXIT

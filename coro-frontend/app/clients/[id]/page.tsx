@@ -36,9 +36,11 @@ export default function ClientDetailPage() {
   const [loading,     setLoading]     = useState(true);
   const [saving,      setSaving]      = useState(false);
   const [saved,       setSaved]       = useState(false);
+  const [loadError,   setLoadError]   = useState('');
   const [form,        setForm]        = useState<any>({});
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const canManage = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
 
   useEffect(() => { initAuth(); }, []);
 
@@ -51,6 +53,7 @@ export default function ClientDetailPage() {
   }, [isAuthenticated]);
 
   const fetchClient = async () => {
+    setLoadError('');
     try {
       const res = await api.get(`/clients/${clientId}`);
       setClient(res.data);
@@ -67,7 +70,10 @@ export default function ClientDetailPage() {
         contactPhone:       res.data.contactPhone       || '',
       });
       if (res.data.logoBase64) setLogoPreview(res.data.logoBase64);
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      const status = err?.response?.status;
+      setLoadError(status === 404 ? 'Client introuvable.' : status === 403 ? 'Vous n’avez pas accès à ce client.' : status === 401 ? 'Votre session a expiré. Reconnectez-vous.' : 'Impossible de charger le client. Réessayez.');
+    }
     finally { setLoading(false); }
   };
 
@@ -136,7 +142,10 @@ export default function ClientDetailPage() {
   if (!client) return (
     <div className="min-h-screen flex items-center justify-center"
       style={{ backgroundColor: '#F8F9FA' }}>
-      <p className="text-sm" style={{ color: '#ADB5BD' }}>Client introuvable</p>
+      <div role="alert" className="text-center">
+        <p className="text-sm mb-4" style={{ color: '#C0392B' }}>{loadError || 'Client introuvable.'}</p>
+        {loadError && <button onClick={() => { setLoading(true); fetchClient(); }} className="px-4 py-2 rounded" style={{ border: '1px solid #CED4DA' }}>Réessayer</button>}
+      </div>
     </div>
   );
 
@@ -170,7 +179,7 @@ export default function ClientDetailPage() {
             📅 Portefeuille
           </button>
 
-          <button
+          {canManage && <button
             onClick={handleSave}
             disabled={saving}
             className="w-full sm:w-auto text-white font-medium px-6 py-2.5 rounded transition-colors disabled:opacity-50"
@@ -183,7 +192,7 @@ export default function ClientDetailPage() {
             }}
           >
             {saving ? 'Sauvegarde...' : saved ? '✓ Sauvegardé !' : 'Sauvegarder'}
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -211,16 +220,16 @@ export default function ClientDetailPage() {
                     <img src={logoPreview} alt="Logo"
                       className="w-full h-full object-contain p-2" />
                   </div>
-                  <button
+                  {canManage && <button
                     onClick={handleRemoveLogo}
                     className="absolute -top-2 -right-2 text-white rounded-full w-6 h-6
                       flex items-center justify-center text-xs"
                     style={{ backgroundColor: '#C0392B' }}
-                  >✕</button>
+                  >✕</button>}
                 </div>
               ) : (
                 <div
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => canManage && fileInputRef.current?.click()}
                   className="w-32 h-32 rounded-md flex flex-col items-center
                     justify-center cursor-pointer transition-colors"
                   style={{ border: '2px dashed #CED4DA', backgroundColor: '#F8F9FA' }}
@@ -233,7 +242,7 @@ export default function ClientDetailPage() {
                   </span>
                 </div>
               )}
-              <button
+              {canManage && <button
                 onClick={() => fileInputRef.current?.click()}
                 className="w-full text-sm py-2 rounded font-medium transition-colors"
                 style={{
@@ -245,11 +254,11 @@ export default function ClientDetailPage() {
                 onMouseLeave={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
               >
                 {logoPreview ? 'Changer le logo' : 'Ajouter un logo'}
-              </button>
+              </button>}
               <p className="text-xs text-center" style={{ color: '#CED4DA' }}>
                 PNG, JPG, SVG — Max 2MB
               </p>
-              <input ref={fileInputRef} type="file" accept="image/*"
+              <input ref={fileInputRef} type="file" accept="image/*" disabled={!canManage}
                 onChange={handleLogoUpload} className="hidden" />
             </div>
           </div>
@@ -302,6 +311,7 @@ export default function ClientDetailPage() {
                     {field.label}
                   </label>
                   <input
+                    disabled={!canManage}
                     type="text"
                     value={form[field.key] || ''}
                     onChange={e => setForm({ ...form, [field.key]: e.target.value })}
@@ -341,6 +351,7 @@ export default function ClientDetailPage() {
                     {field.label}
                   </label>
                   <input
+                    disabled={!canManage}
                     type={field.key === 'contactEmail' ? 'email' : 'text'}
                     value={form[field.key] || ''}
                     onChange={e => setForm({ ...form, [field.key]: e.target.value })}

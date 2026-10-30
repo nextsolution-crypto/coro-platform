@@ -21,6 +21,17 @@ for variable in BACKEND_IMAGE FRONTEND_IMAGE CLIENT_PORTAL_IMAGE WEBSITE_IMAGE; 
   value="${!variable:-}"
   [[ "$value" =~ ^ghcr\.io/[a-z0-9_.-]+/[a-z0-9_.-]+@sha256:[0-9a-f]{64}$ ]] || { echo "RELEASE_CONTROL_FAILED code=${variable}_INVALID" >&2; exit 1; }
 done
+[[ "${CLIENT_INVITATION_OUTBOX_KEY_ID:-}" =~ ^[A-Za-z0-9_.-]{1,64}$ ]] || { echo 'RELEASE_CONTROL_FAILED code=CLIENT_INVITATION_OUTBOX_KEY_ID_INVALID' >&2; exit 1; }
+CLIENT_INVITATION_OUTBOX_KEY_BASE64="${CLIENT_INVITATION_OUTBOX_KEY_BASE64:-}" node -e '
+const value=process.env.CLIENT_INVITATION_OUTBOX_KEY_BASE64||"";
+let decoded; try { decoded=Buffer.from(value,"base64"); } catch { process.exit(1); }
+if (!/^[A-Za-z0-9+/]+={0,2}$/.test(value) || decoded.length!==32 || decoded.toString("base64")!==value) process.exit(1);
+' || { echo 'RELEASE_CONTROL_FAILED code=CLIENT_INVITATION_OUTBOX_KEY_INVALID' >&2; exit 1; }
+CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64="${CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64:-{}}" node -e '
+let parsed; try { parsed=JSON.parse(process.env.CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64); } catch { process.exit(1); }
+if (!parsed || Array.isArray(parsed) || typeof parsed!=="object") process.exit(1);
+for (const [id,value] of Object.entries(parsed)) { if (!/^[A-Za-z0-9_.-]{1,64}$/.test(id) || typeof value!=="string" || Buffer.from(value,"base64").length!==32 || Buffer.from(value,"base64").toString("base64")!==value) process.exit(1); }
+' || { echo 'RELEASE_CONTROL_FAILED code=CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_INVALID' >&2; exit 1; }
 
 release_id="production-${RELEASE_COMMIT}"
 unit="coro-release-${RELEASE_COMMIT:0:16}"
@@ -71,7 +82,10 @@ if [[ "$current" == PREPARED ]]; then
       "BACKEND_IMAGE=$BACKEND_IMAGE" \
       "FRONTEND_IMAGE=$FRONTEND_IMAGE" \
       "CLIENT_PORTAL_IMAGE=$CLIENT_PORTAL_IMAGE" \
-      "WEBSITE_IMAGE=$WEBSITE_IMAGE" >"$env_file"
+      "WEBSITE_IMAGE=$WEBSITE_IMAGE" \
+      "CLIENT_INVITATION_OUTBOX_KEY_BASE64=$CLIENT_INVITATION_OUTBOX_KEY_BASE64" \
+      "CLIENT_INVITATION_OUTBOX_KEY_ID=$CLIENT_INVITATION_OUTBOX_KEY_ID" \
+      "CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64=${CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64:-{}}" >"$env_file"
     chmod 0600 "$env_file"
     cat >"$worker" <<'WORKER'
 #!/usr/bin/env bash

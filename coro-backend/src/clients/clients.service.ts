@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -13,6 +14,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../client-portal/email.service';
 import * as bcrypt from 'bcryptjs';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
+import { CreateClientDto, UpdateClientDto } from './dto/client.dto';
+import { ClientInvitationOutboxService } from './client-invitation-outbox.service';
+import { createHash, randomBytes } from 'crypto';
 
 @Injectable()
 export class ClientsService {
@@ -20,6 +24,7 @@ export class ClientsService {
     private prisma: PrismaService,
     private emailService: EmailService,
     private adminAudit: AdminAuditService,
+    private invitationOutbox: ClientInvitationOutboxService,
   ) {}
 
   async findAll(organizationId: string) {
@@ -300,35 +305,65 @@ export class ClientsService {
     return this.toOperationalPermissionResponse(updated);
   }
 
-  async create(data: {
-    name: string;
-    email?: string;
-    phone?: string;
-    address?: string;
-    city?: string;
-    province?: string;
-    logoBase64?: string;
-    organizationId: string;
-    contactFirstName?: string;
-    contactLastName?: string;
-    contactEmail?: string;
-    contactPhone?: string;
-  }) {
-    const client = await this.prisma.client.create({ data });
-
-    // Créer automatiquement le compte CLIENT_CORPORATE si email fourni
-    if (data.contactEmail) {
-      await this.createCorpoAccess(
-        client.id,
-        data.organizationId,
-        data.contactEmail,
-        data.contactFirstName || '',
-        data.contactLastName || '',
-        client.name,
-      );
-    }
-
-    return client;
+  async create(
+    data: CreateClientDto & { organizationId: string },
+    actor: { userId: string; role: string; organizationId: string },
+    rawIdempotencyKey?: string,
+  ) {
+    this.assertOrganizationAdmin(actor);
+    if (actor.organizationId !== data.organizationId) throw new ForbiddenException('Accès refusé.');
+    const idempotencyKey = rawIdempotencyKey?.trim() || '';
+    if (!/^[A-Za-z0-9_-]{16,100}$/.test(idempotencyKey)) throw new BadRequestException('Une clé d’idempotence valide est requise.');
+    const normalized = {
+      name: data.name.trim(), email: data.email?.trim() || null, phone: data.phone?.trim() || null,
+      address: data.address?.trim() || null, city: data.city?.trim() || null,
+      province: data.province?.trim() || null, logoBase64: data.logoBase64 || null,
+      contactFirstName: data.contactFirstName?.trim() || null,
+      contactLastName: data.contactLastName?.trim() || null,
+      contactEmail: data.contactEmail?.trim().toLowerCase() || null,
+      contactPhone: data.contactPhone?.trim() || null,
+    };
+    const payloadHash = createHash('sha256').update(JSON.stringify(normalized)).digest('hex');
+    const temporaryPassword = normalized.contactEmail ? `${randomBytes(12).toString('base64url')}A1!` : null;
+    const hashedPassword = temporaryPassword ? await bcrypt.hash(temporaryPassword, 10) : null;
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`${data.organizationId}:${actor.userId}:${idempotencyKey}`}, 0))`;
+      const replay = await tx.clientProvisioningRequest.findUnique({
+        where: { organizationId_actorUserId_idempotencyKey: { organizationId: data.organizationId, actorUserId: actor.userId, idempotencyKey } },
+        include: { client: true },
+      });
+      if (replay) {
+        if (replay.payloadHash !== payloadHash) throw new ConflictException('Cette clé d’idempotence appartient à une demande incompatible.');
+        return replay.client;
+      }
+      if (normalized.contactEmail && await tx.clientUser.findUnique({ where: { email: normalized.contactEmail } })) {
+        throw new BadRequestException('Cette adresse est déjà associée à un accès portail. Utilisez la gestion des accès existants.');
+      }
+      const organization = await tx.organization.findUnique({ where: { id: data.organizationId }, select: { name: true } });
+      if (!organization) throw new BadRequestException('Organisation introuvable.');
+      const client = await tx.client.create({ data: { ...normalized, organizationId: data.organizationId } });
+      if (normalized.contactEmail && temporaryPassword && hashedPassword) {
+        const clientUser = await tx.clientUser.create({ data: {
+          email: normalized.contactEmail, password: hashedPassword,
+          firstName: normalized.contactFirstName || '', lastName: normalized.contactLastName || '',
+          role: 'CLIENT_CORPORATE', clientId: client.id, organizationId: data.organizationId,
+        } });
+        const eventKey = `client-invitation-${client.id}`;
+        const protectedPayload = this.invitationOutbox.protect({
+          toEmail: normalized.contactEmail,
+          toName: `${normalized.contactFirstName || ''} ${normalized.contactLastName || ''}`.trim() || normalized.contactEmail,
+          clientName: client.name, temporaryPassword, organizationName: organization.name,
+        }, eventKey);
+        await tx.clientInvitationEvent.create({ data: {
+          organizationId: data.organizationId, clientId: client.id, clientUserId: clientUser.id,
+          idempotencyKey: eventKey, ...protectedPayload,
+        } });
+      }
+      await tx.clientProvisioningRequest.create({ data: {
+        organizationId: data.organizationId, actorUserId: actor.userId, idempotencyKey, payloadHash, clientId: client.id,
+      } });
+      return client;
+    });
   }
 
   async createCorpoAccess(
@@ -374,7 +409,7 @@ export class ClientsService {
     return clientUser;
   }
 
-  async update(id: string, data: any, organizationId: string) {
+  async update(id: string, data: UpdateClientDto, organizationId: string) {
     await this.assertOwnership(id, organizationId);
 
     // Récupérer l'ancien contact avant la mise à jour
@@ -382,7 +417,13 @@ export class ClientsService {
     const oldEmail = oldClient?.contactEmail;
     const newEmail = data.contactEmail;
 
-    const updated = await this.prisma.client.update({ where: { id }, data });
+    const updateData = {
+      name: data.name, email: data.email, phone: data.phone, address: data.address,
+      city: data.city, province: data.province,
+      contactFirstName: data.contactFirstName, contactLastName: data.contactLastName,
+      contactEmail: data.contactEmail, contactPhone: data.contactPhone,
+    };
+    const updated = await this.prisma.client.update({ where: { id }, data: updateData });
 
     // Si le contact corporatif a changé
     if (newEmail && newEmail !== oldEmail) {
@@ -414,7 +455,7 @@ export class ClientsService {
     return updated;
   }
 
-  async uploadLogo(id: string, logoBase64: string, organizationId: string) {
+  async uploadLogo(id: string, logoBase64: string | null | undefined, organizationId: string) {
     await this.assertOwnership(id, organizationId);
     return this.prisma.client.update({
       where: { id },
@@ -422,11 +463,75 @@ export class ClientsService {
     });
   }
 
-  async remove(id: string, organizationId: string) {
-    await this.assertOwnership(id, organizationId);
-    return this.prisma.client.update({
-      where: { id },
-      data: { isActive: false },
+  async remove(
+    id: string,
+    organizationId: string,
+    actor: { userId: string; role: string; organizationId: string },
+  ) {
+    this.assertOrganizationAdmin(actor);
+    if (actor.organizationId !== organizationId) throw new ForbiddenException('Accès refusé.');
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Client" WHERE id = ${id} AND "organizationId" = ${organizationId} FOR UPDATE`;
+      const client = await tx.client.findFirst({
+        where: { id, organizationId },
+        include: { clientUsers: { select: { id: true } } },
+      });
+      if (!client) throw new ForbiddenException('Accès refusé à cette ressource.');
+      if (!client.isActive) return client;
+      const userIds = client.clientUsers.map((user) => user.id);
+      const now = new Date();
+      const updated = await tx.client.update({ where: { id }, data: { isActive: false } });
+      if (userIds.length > 0) {
+        await tx.clientUser.updateMany({
+          where: { id: { in: userIds } },
+          data: { sessionVersion: { increment: 1 }, mfaCode: null, mfaCodeExpiry: null },
+        });
+        await tx.clientTrustedDevice.deleteMany({ where: { userId: { in: userIds } } });
+        await tx.magicLink.updateMany({ where: { userId: { in: userIds }, usedAt: null }, data: { usedAt: now } });
+        await tx.clientPasswordResetToken.updateMany({ where: { clientUserId: { in: userIds }, usedAt: null }, data: { usedAt: now } });
+      }
+      await tx.clientInvitationEvent.updateMany({
+        where: { clientId: id, status: { in: ['PENDING', 'PROCESSING', 'FAILED'] } },
+        data: { status: 'CANCELLED', nextAttemptAt: null, leaseExpiresAt: null, lastErrorCode: 'CLIENT_INACTIVE' },
+      });
+      await this.adminAudit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'CLIENT_DEACTIVATED',
+        targetType: 'Client',
+        targetId: id,
+        targetLabel: client.name,
+        organizationId,
+        beforeData: { isActive: true },
+        afterData: { isActive: false, portalAccessSuspended: true },
+      });
+      return updated;
+    });
+  }
+
+  async reactivate(
+    id: string,
+    organizationId: string,
+    actor: { userId: string; role: string; organizationId: string },
+  ) {
+    this.assertOrganizationAdmin(actor);
+    if (actor.organizationId !== organizationId) throw new ForbiddenException('Accès refusé.');
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Client" WHERE id = ${id} AND "organizationId" = ${organizationId} FOR UPDATE`;
+      const client = await tx.client.findFirst({ where: { id, organizationId } });
+      if (!client) throw new ForbiddenException('Accès refusé à cette ressource.');
+      if (client.isActive) return client;
+      const updated = await tx.client.update({ where: { id }, data: { isActive: true } });
+      await this.adminAudit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'CLIENT_REACTIVATED',
+        targetType: 'Client',
+        targetId: id,
+        targetLabel: client.name,
+        organizationId,
+        beforeData: { isActive: false },
+        afterData: { isActive: true, priorSessionsRestored: false, priorLinksRestored: false },
+      });
+      return updated;
     });
   }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
@@ -20,10 +20,16 @@ interface Client {
 
 export default function ClientsPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const [clients, setClients]     = useState<Client[]>([]);
   const [loading, setLoading]     = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [creating, setCreating] = useState(false);
+  const createButtonRef = useRef<HTMLButtonElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const createIdempotencyKeyRef = useRef<string | null>(null);
+  const canManage = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
   const [addressPaste, setAddressPaste] = useState('');
   const [form, setForm] = useState({
     name: '', email: '', phone: '', address: '', city: '', province: '',
@@ -91,36 +97,56 @@ export default function ClientsPage() {
   }, [isAuthenticated]);
 
   const fetchClients = async () => {
+    setLoadError('');
     try {
       const res = await api.get('/clients');
       setClients(res.data);
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      const status = err?.response?.status;
+      setLoadError(status === 403 ? 'Vous n’avez pas accès à cette liste.' : status === 401 ? 'Votre session a expiré. Reconnectez-vous.' : 'Impossible de charger les clients. Réessayez.');
+    }
     finally { setLoading(false); }
   };
+
+  const closeModal = () => { setShowModal(false); requestAnimationFrame(() => createButtonRef.current?.focus()); };
+
+  useEffect(() => {
+    if (!showModal) return;
+    nameInputRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !creating) closeModal();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [showModal, creating]);
 
   const handleDelete = async (id: string) => {
     try {
       await api.delete(`/clients/${id}`);
       fetchClients();
-      toast('Client supprimé.');
+      toast('Client désactivé. Les accès portail sont suspendus; les données et l’historique sont conservés.');
     } catch (err) {
-      toast('Erreur lors de la suppression du client.', 'error');
+      toast('Erreur lors de la désactivation du client.', 'error');
     }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (creating) return;
+    setCreating(true);
     try {
-      await api.post('/clients', form);
-      setShowModal(false);
+      createIdempotencyKeyRef.current ||= crypto.randomUUID();
+      await api.post('/clients', form, { headers: { 'Idempotency-Key': createIdempotencyKeyRef.current } });
+      closeModal();
       setForm({ name: '', email: '', phone: '', address: '', city: '', province: '', contactFirstName: '', contactLastName: '', contactEmail: '', contactPhone: '' });
       setAddressPaste('');
+      createIdempotencyKeyRef.current = null;
       fetchClients();
       toast('Client créé avec succès.');
     } catch (err: any) {
       const message = err?.response?.data?.message || 'Erreur lors de la création du client.';
       toast(Array.isArray(message) ? message[0] : message, 'error');
-    }
+    } finally { setCreating(false); }
   };
 
   return (
@@ -132,7 +158,8 @@ export default function ClientsPage() {
             Clients
           </PageTitle>
         </div>
-        <button
+        {canManage && <button
+          ref={createButtonRef}
           onClick={() => setShowModal(true)}
           className="w-full sm:w-auto text-white text-sm font-medium px-4 py-2 rounded"
           style={{ backgroundColor: '#C0392B' }}
@@ -140,13 +167,18 @@ export default function ClientsPage() {
           onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
         >
           + Nouveau client
-        </button>
+        </button>}
       </div>
 
       {/* Liste */}
       {loading ? (
         <div className="text-center py-12">
           <p className="text-sm animate-pulse" style={{ color: '#ADB5BD' }}>Chargement...</p>
+        </div>
+      ) : loadError ? (
+        <div role="alert" className="rounded-md p-8 text-center" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+          <p className="mb-4" style={{ color: '#C0392B' }}>{loadError}</p>
+          <button onClick={() => { setLoading(true); fetchClients(); }} className="px-4 py-2 rounded" style={{ border: '1px solid #CED4DA' }}>Réessayer</button>
         </div>
       ) : clients.length === 0 ? (
         <div className="rounded-md p-12 text-center"
@@ -158,7 +190,7 @@ export default function ClientsPage() {
           <p className="text-sm mb-6" style={{ color: '#ADB5BD' }}>
             Commencez par ajouter votre premier client — il sera associé à vos bâtiments et projets.
           </p>
-          <button
+          {canManage && <button
             onClick={() => setShowModal(true)}
             className="text-white text-sm font-medium px-6 py-2.5 rounded"
             style={{ backgroundColor: '#C0392B' }}
@@ -166,7 +198,7 @@ export default function ClientsPage() {
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
           >
             + Créer le premier client
-          </button>
+          </button>}
         </div>
       ) : (
         <div className="grid gap-3">
@@ -219,16 +251,16 @@ export default function ClientsPage() {
                   </p>
                   <p className="text-xs" style={{ color: '#ADB5BD' }}>Projets</p>
                 </div>
-                <button
-                  onClick={e => { e.stopPropagation(); if (confirm(`Supprimer le client "${client.name}" ?`)) handleDelete(client.id); }}
+                {canManage && <button
+                  onClick={e => { e.stopPropagation(); if (confirm(`Désactiver le client « ${client.name} » ?\n\nTous ses accès portail et sessions seront suspendus immédiatement. Les données et l’historique seront conservés. Une réactivation exigera une nouvelle authentification et ne restaurera aucun ancien lien ni aucune ancienne session.`)) handleDelete(client.id); }}
                   className="p-2 rounded transition-colors"
                   style={{ color: '#ADB5BD' }}
                   onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#FDEDEC'; e.currentTarget.style.color = '#C0392B'; }}
                   onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#ADB5BD'; }}
-                  title="Supprimer le client"
+                  title="Désactiver le client"
                 >
                   🗑
-                </button>
+                </button>}
               </div>
             </div>
           ))}
@@ -237,22 +269,23 @@ export default function ClientsPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="create-client-title"
           style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
           <div className="w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-md p-5 sm:p-8"
             style={{
               backgroundColor: '#FFFFFF',
               boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
             }}>
-            <h3 className="font-semibold text-lg mb-6" style={{ color: '#2C3E50' }}>
+            <h3 id="create-client-title" className="font-semibold text-lg mb-2" style={{ color: '#2C3E50' }}>
               Nouveau client
             </h3>
+            <p className="text-sm mb-6" style={{ color: '#6C757D' }}>Si un courriel de contact est fourni, un accès corporatif sera préparé et une invitation sera envoyée par le mécanisme configuré.</p>
             <form onSubmit={handleCreate} className="space-y-4">
 
               {/* Nom */}
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Nom *</label>
-                <input type="text" required value={form.name}
+                <input ref={nameInputRef} type="text" required value={form.name}
                   onChange={e => setForm({ ...form, name: e.target.value })}
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
@@ -401,7 +434,7 @@ export default function ClientsPage() {
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={closeModal}
                   className="flex-1 font-medium py-2.5 rounded text-sm"
                   style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
                   onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
@@ -411,12 +444,13 @@ export default function ClientsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 text-white font-medium py-2.5 rounded text-sm"
+                  disabled={creating}
+                  className="flex-1 text-white font-medium py-2.5 rounded text-sm disabled:opacity-50"
                   style={{ backgroundColor: '#C0392B' }}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
                 >
-                  Créer
+                  {creating ? 'Création…' : 'Créer'}
                 </button>
               </div>
             </form>

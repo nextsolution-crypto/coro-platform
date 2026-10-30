@@ -11,14 +11,14 @@ describe('ClientAuthService current user contract', () => {
       role: 'CLIENT_MANAGER', clientId: 'client-1', organizationId: 'org-1', isActive: true,
       buildingIds: ['building-1'], populationPermissions: ['POPULATION_PREPARE'],
       operationalReviewPermissions: ['REX_CREATE'], correctiveActionPermissions: ['CORRECTIVE_ACTION_VERIFY'],
-      client: { name: 'Client' },
+      client: { name: 'Client', isActive: true },
     });
     const result = await service.getCurrentUser('cu-1', 'org-1');
     expect(result.operationalReviewPermissions).toEqual(['REX_CREATE']);
     expect(result.correctiveActionPermissions).toEqual(['CORRECTIVE_ACTION_VERIFY']);
     expect(result).not.toHaveProperty('password');
     expect(result).not.toHaveProperty('buildingIds');
-    expect(prisma.clientUser.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'cu-1', organizationId: 'org-1', isActive: true } }));
+    expect(prisma.clientUser.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'cu-1', organizationId: 'org-1', isActive: true, client: { isActive: true } } }));
   });
 
   it('rejects an inactive or out-of-tenant client user', async () => {

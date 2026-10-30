@@ -16,14 +16,14 @@ const activeUser = {
   populationPermissions: [],
   operationalReviewPermissions: [],
   correctiveActionPermissions: [],
-  client: { name: 'Client A' },
+  client: { name: 'Client A', isActive: true },
 };
 
 function harness() {
   const tx: any = {
     $queryRaw: jest.fn().mockResolvedValue([{ id: activeUser.id }]),
     clientUser: {
-      findUnique: jest.fn().mockResolvedValue({ isActive: true }),
+      findUnique: jest.fn().mockResolvedValue({ isActive: true, client: { isActive: true } }),
     },
     magicLink: {
       findFirst: jest
@@ -36,6 +36,7 @@ function harness() {
   const prisma: any = {
     clientUser: {
       findMany: jest.fn().mockResolvedValue([activeUser]),
+      findFirst: jest.fn().mockResolvedValue({ id: activeUser.id }),
       update: jest.fn(),
     },
     magicLink: { create: jest.fn(), updateMany: jest.fn() },

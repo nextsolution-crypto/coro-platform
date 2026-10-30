@@ -117,15 +117,21 @@ try {
 $internalDatabaseUrl = "postgresql://coro_qa:$encodedPassword@$project-postgres-1`:5432/coro_qa_global_e2e"
 $jwt = [guid]::NewGuid().ToString('N') + [guid]::NewGuid().ToString('N')
 $mfa = [guid]::NewGuid().ToString('N') + [guid]::NewGuid().ToString('N')
+$invitationOutboxBytes = New-Object byte[] 32
+$invitationOutboxRng = [Security.Cryptography.RandomNumberGenerator]::Create()
+$invitationOutboxRng.GetBytes($invitationOutboxBytes)
+$invitationOutboxRng.Dispose()
+$invitationOutbox = [Convert]::ToBase64String($invitationOutboxBytes)
 Invoke-Docker @('run', '-d', '--name', "$prefix-backend", '--network', $internalNetwork,
   '--network-alias', 'backend', '-e', 'NODE_ENV=test', '-e', "DATABASE_URL=$internalDatabaseUrl",
   '-e', "JWT_SECRET=$jwt", '-e', "PLATFORM_MFA_SECRET=$mfa",
+  '-e', "CLIENT_INVITATION_OUTBOX_KEY_BASE64=$invitationOutbox", '-e', 'CLIENT_INVITATION_OUTBOX_KEY_ID=qa-ephemeral-v1',
   '-e', "FRONTEND_URL=http://127.0.0.1:$PortalPort",
   '-e', "CORS_ALLOWED_ORIGINS=http://127.0.0.1:$PortalPort,http://127.0.0.1:$FrontendPort",
   '-e', 'MFA_QA_CAPTURE_ENABLED=true',
   '-e', 'MFA_QA_CAPTURE_DIR=/tmp/coro-mfa', '-e', 'MFA_QA_ALLOWED_RECIPIENT_SUFFIXES=global-e2e.test',
   '-e', 'MFA_QA_NETWORK_ISOLATED=true',
-  '-e', 'CLIENT_EMAIL_RECIPIENT_ALLOWLIST=portal-manager-a@global-e2e.test,portal-user-a@global-e2e.test,portal-corporate-a@global-e2e.test,portal-regional-a@global-e2e.test,portal-local-a@global-e2e.test,portal-zero-a@global-e2e.test',
+  '-e', 'CLIENT_EMAIL_RECIPIENT_ALLOWLIST=portal-manager-a@global-e2e.test,portal-user-a@global-e2e.test,portal-corporate-a@global-e2e.test,portal-regional-a@global-e2e.test,portal-local-a@global-e2e.test,portal-zero-a@global-e2e.test,clients-qa-a@global-e2e.test,clients-qa-b@global-e2e.test',
   '-e', 'CLIENT_EMAIL_QA_PROVIDER_URL=http://provider-fake:34641/v3/smtp/email',
   '-e', "CLIENT_PORTAL_RESTRICTED_PILOT_ORGANIZATION_IDS=$RestrictedPilotOrganizationId",
   '-e', 'PRIVATE_STORAGE_QA_MODE=true', '-e', 'PRIVATE_STORAGE_QA_ENDPOINT=http://private-storage-qa:34642',
