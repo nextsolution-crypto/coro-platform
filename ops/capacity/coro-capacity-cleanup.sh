@@ -19,29 +19,30 @@ temp_root="${CORO_CAPACITY_TEMP_ROOT:-/opt/coro-ops/tmp/release-cache}"
 exec 9>/run/lock/coro-production-deployment.lock
 flock --nonblock 9 || { echo 'CAPACITY_CLEANUP_FAILED code=DEPLOYMENT_LOCK_BUSY'; exit 1; }
 
-minimum_age_hours="$(node -e 'const p=require(process.argv[1]);const v=p.minimumImageAgeHours;if(!Number.isInteger(v)||v<12||v>168)process.exit(1);process.stdout.write(String(v))' "$policy_file")" || { echo 'CAPACITY_CLEANUP_FAILED code=MINIMUM_AGE_INVALID'; exit 1; }
-cache_age_hours="$(node -e 'const p=require(process.argv[1]);const v=p.minimumBuildCacheAgeHours;if(!Number.isInteger(v)||v<12||v>168)process.exit(1);process.stdout.write(String(v))' "$policy_file")" || { echo 'CAPACITY_CLEANUP_FAILED code=CACHE_AGE_INVALID'; exit 1; }
+minimum_age_hours="$(node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));const v=p.minimumImageAgeHours;if(!Number.isInteger(v)||v<12||v>168)process.exit(1);process.stdout.write(String(v))' "$policy_file")" || { echo 'CAPACITY_CLEANUP_FAILED code=MINIMUM_AGE_INVALID'; exit 1; }
+cache_age_hours="$(node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));const v=p.minimumBuildCacheAgeHours;if(!Number.isInteger(v)||v<12||v>168)process.exit(1);process.stdout.write(String(v))' "$policy_file")" || { echo 'CAPACITY_CLEANUP_FAILED code=CACHE_AGE_INVALID'; exit 1; }
 
 bootstrap_marker=""
 marker="$(find "$state_root" -maxdepth 1 -type f -name 'production-*.reconciled.json' -printf '%T@ %p\n' | sort -rn | head -n1 | cut -d' ' -f2-)"
 if [[ -z "$marker" && "$mode" == DRY_RUN ]]; then
-  manifest_preview="$(find "$release_dir" -maxdepth 1 -type f -name 'production-*.json' -printf '%T@ %p\n' | sort -rn | cut -d' ' -f2- | while read -r candidate; do node -e 'process.exit(require(process.argv[1]).status==="SUCCESS"?0:1)' "$candidate" 2>/dev/null && { echo "$candidate"; break; } || true; done)"
+  manifest_preview="$(find "$release_dir" -maxdepth 1 -type f -name 'production-*.json' -printf '%T@ %p\n' | sort -rn | cut -d' ' -f2- | while read -r candidate; do node -e 'const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.exit(m.status==="SUCCESS"?0:1)' "$candidate" 2>/dev/null && { echo "$candidate"; break; } || true; done)"
   [[ -n "$manifest_preview" ]] || { echo 'CAPACITY_CLEANUP_FAILED code=RECONCILED_RELEASE_MISSING'; exit 1; }
   bootstrap_marker="$(mktemp)"
-  node -e 'const fs=require("fs"),m=require(process.argv[1]);fs.writeFileSync(process.argv[2],JSON.stringify({releaseId:m.releaseId,manifestPath:process.argv[1],manifestSha256:process.argv[3],reconciledAt:m.timestampUtc}));' "$manifest_preview" "$bootstrap_marker" "$(sha256sum "$manifest_preview" | cut -d' ' -f1)"
+  node -e 'const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));fs.writeFileSync(process.argv[2],JSON.stringify({releaseId:m.releaseId,manifestPath:process.argv[1],manifestSha256:process.argv[3],reconciledAt:m.timestampUtc}));' "$manifest_preview" "$bootstrap_marker" "$(sha256sum "$manifest_preview" | cut -d' ' -f1)"
   marker="$bootstrap_marker"
   echo 'CAPACITY_CLEANUP_NOTICE code=BOOTSTRAP_RECONCILIATION_REQUIRED previewOnly=true'
 fi
 [[ -n "$marker" && -f "$marker" && ! -L "$marker" ]] || { echo 'CAPACITY_CLEANUP_FAILED code=RECONCILED_RELEASE_MISSING'; exit 1; }
-manifest="$(node -e 'const m=require(process.argv[1]);process.stdout.write(m.manifestPath||"")' "$marker")"
-expected_sha="$(node -e 'const m=require(process.argv[1]);process.stdout.write(m.manifestSha256||"")' "$marker")"
+manifest="$(node -e 'const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(m.manifestPath||"")' "$marker")"
+expected_sha="$(node -e 'const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(m.manifestSha256||"")' "$marker")"
 [[ -f "$manifest" && ! -L "$manifest" && "$(sha256sum "$manifest" | cut -d' ' -f1)" == "$expected_sha" ]] || { echo 'CAPACITY_CLEANUP_FAILED code=RECONCILED_EVIDENCE_INVALID'; exit 1; }
 
 input="$(mktemp)"; plan="$(mktemp)"
 trap 'rm -f -- "$input" "$plan" "${bootstrap_marker:-}"' EXIT
 node - "$manifest" "$marker" "$policy_file" "$input" <<'NODE'
 const fs=require('fs');
-const manifest=require(process.argv[2]), marker=require(process.argv[3]), policy=require(process.argv[4]);
+const read=(file)=>JSON.parse(fs.readFileSync(file,'utf8'));
+const manifest=read(process.argv[2]), marker=read(process.argv[3]), policy=read(process.argv[4]);
 const release={releaseId:marker.releaseId,status:manifest.status,reconciled:true,timestampUtc:marker.reconciledAt,images:manifest.images,previousImages:manifest.previousImages};
 fs.writeFileSync(process.argv[5],JSON.stringify({releases:[release],explicitCandidates:policy.explicitCandidates||[],blockedRollbackImages:policy.blockedRollbackImages||[]},null,2));
 NODE
@@ -52,7 +53,7 @@ while read -r id; do [[ -n "$id" ]] && protected["$id"]=CONTAINER_REFERENCE; don
 while read -r ref; do
   id="$(docker image inspect --format '{{.Id}}' "$ref" 2>/dev/null || true)"
   [[ -n "$id" ]] && protected["$id"]=RELEASE_POLICY
-done < <(node -e 'for(const r of require(process.argv[1]).protectedImages)console.log(r)' "$plan")
+done < <(node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));for(const r of p.protectedImages)console.log(r)' "$plan")
 
 free_bytes() { echo $(( $(df -Pk -- "$release_dir" | awk 'NR==2 {print $4}') * 1024 )); }
 before="$(free_bytes)"; previous="$before"; now="$(date +%s)"; candidates=0; removed=0
@@ -99,4 +100,4 @@ if [[ -d "$temp_root" && ! -L "$temp_root" ]]; then
 fi
 after="$(free_bytes)"
 echo "CAPACITY_CLEANUP_CATEGORY category=temporaries physicallyRecoveredBytes=$((after-previous))"
-echo "CAPACITY_CLEANUP_RESULT mode=$mode minimumAgeHours=$minimum_age_hours candidates=$candidates removed=$removed physicallyRecoveredBytes=$((after-before)) beforeFreeBytes=$before afterFreeBytes=$after activeReleaseId=$(node -e 'process.stdout.write(require(process.argv[1]).activeReleaseId)' "$plan")"
+echo "CAPACITY_CLEANUP_RESULT mode=$mode minimumAgeHours=$minimum_age_hours candidates=$candidates removed=$removed physicallyRecoveredBytes=$((after-before)) beforeFreeBytes=$before afterFreeBytes=$after activeReleaseId=$(node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(p.activeReleaseId)' "$plan")"

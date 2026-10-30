@@ -39,3 +39,9 @@ test("cleanup is resumable, lock-aware and rechecks references before mutation",
   assert.match(source, /physicallyRecoveredBytes/);
   assert.match(source, /status=exited/);
 });
+
+test("temporary JSON evidence is parsed independently of file extension", () => {
+  assert.doesNotMatch(source, /require\(process\.argv\[1\]\)/);
+  assert.doesNotMatch(source, /marker=require\(process\.argv\[3\]\)/);
+  assert.match(source, /JSON\.parse\(fs\.readFileSync/);
+});
