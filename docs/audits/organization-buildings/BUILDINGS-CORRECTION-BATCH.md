@@ -45,3 +45,18 @@ Critère : tout document listé et admissible est téléchargeable par l'acteur 
 - Audit général Carte ou Conformité.
 - Activation d'un fournisseur, envoi réel, mutation de production.
 - Changement implicite de la politique corporate.
+
+## Lot effectivement réalisé
+
+1. Autorité canonique alignée pour liste, lecture et projets liés.
+2. Mutations réservées à l'administration tenant existante.
+3. DTO validés et champs système interdits explicitement malgré le pipe global permissif.
+4. Affectation responsable transactionnelle, idempotente et réutilisant l'outbox Clients.
+5. Audit métier transactionnel.
+6. Lecture Corporate organisationnelle sans extension implicite des droits de dépôt/gestion.
+7. Documents directs et hérités téléchargeables via le stockage privé canonique.
+8. Guard d'upload exécuté avant multipart.
+9. États d'erreur/reprise visibles sur les deux interfaces.
+10. Runner QA permanent API + navigateur ajouté au harnais global.
+
+Migration additive : `20261117010000_building_governance`; rollback documenté comme suppression de la FK/index/colonne facultative uniquement après absence d'événement Bâtiment dépendant.

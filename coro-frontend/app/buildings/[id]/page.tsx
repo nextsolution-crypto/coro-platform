@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
@@ -47,11 +47,12 @@ export default function BuildingDetailPage() {
   const router = useRouter();
   const params = useParams();
   const buildingId = params.id as string;
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
 
   const [building, setBuilding]   = useState<Building | null>(null);
   const [projects, setProjects]   = useState<Project[]>([]);
   const [loading, setLoading]     = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [form, setForm] = useState({
@@ -78,12 +79,9 @@ export default function BuildingDetailPage() {
     { value: 'PUE', label: "PUE — Plan d'urgence environnementale", available: false },
   ];
 
-  useEffect(() => {
-    if (!isAuthenticated) { router.push('/login'); return; }
-    fetchData();
-  }, [isAuthenticated, buildingId]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
     try {
       const [br, pr] = await Promise.all([
         api.get(`/buildings/${buildingId}`),
@@ -107,12 +105,20 @@ export default function BuildingDetailPage() {
         responsableEmail:     br.data.responsableEmail || '',
         responsablePhone:     br.data.responsablePhone || '',
       });
-    } catch (err) {
-      console.error(err);
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setLoadError(message || 'Impossible de charger le bâtiment.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [buildingId]);
+
+  useEffect(() => {
+    if (!isAuthenticated) { router.push('/login'); return; }
+    // The initial authenticated load is intentionally driven by this effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchData();
+  }, [fetchData, isAuthenticated, router]);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,11 +184,12 @@ export default function BuildingDetailPage() {
     );
   }
 
-  if (!building) {
+  if (loadError || !building) {
     return (
       <AppLayout>
         <div className="text-center py-24">
-          <p style={{ color: '#6C757D' }}>Bâtiment introuvable.</p>
+          <p role="alert" style={{ color: loadError ? '#C0392B' : '#6C757D' }}>{loadError || 'Bâtiment introuvable.'}</p>
+          {loadError && <button type="button" onClick={fetchData} className="mt-4 mr-4 text-sm underline" style={{ color: '#C0392B' }}>Réessayer</button>}
           <button onClick={() => router.push('/buildings')}
             className="mt-4 text-sm underline" style={{ color: '#C0392B' }}>
             Retour aux bâtiments
@@ -257,7 +264,7 @@ export default function BuildingDetailPage() {
           </div>
 
           {/* Bouton modifier */}
-          <button
+          {['ADMIN', 'SUPER_ADMIN'].includes(user?.role || '') && <button
             onClick={() => setShowEditModal(true)}
             className="w-full lg:w-auto justify-center flex items-center gap-2 text-sm font-medium px-3 py-2 rounded transition-colors"
             style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
@@ -272,7 +279,7 @@ export default function BuildingDetailPage() {
           >
             <Edit2 size={14} />
             Modifier
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -376,7 +383,7 @@ export default function BuildingDetailPage() {
       )}
 
       {/* Modal modification bâtiment */}
-      {showEditModal && (
+      {showEditModal && ['ADMIN', 'SUPER_ADMIN'].includes(user?.role || '') && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
           <div className="w-full max-w-lg rounded-md p-5 sm:p-8 overflow-y-auto max-h-[calc(100vh-2rem)]"

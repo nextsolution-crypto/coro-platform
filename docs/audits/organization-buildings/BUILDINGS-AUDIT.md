@@ -72,3 +72,16 @@ Le sous-parcours de consultation responsive peut être démontré avec données 
 - `APPLICATION_DEPLOYMENT: NO`
 - `REAL_NOTIFICATION: NO`
 - `WEB_AI_ACTIVATION: NO`
+
+## Acceptation corrective intégrée
+
+- API réelle QA : 17/17 contrôles PASS, incluant IDOR, DTO hostile, idempotence concurrente, portée Corporate/Manager, révocation et téléchargement privé exact.
+- PostgreSQL 16 : chaîne 164 depuis zéro PASS; upgrade 163→164 avec bâtiment et événement historiques conservés PASS.
+- Interfaces : builds production PASS; Design System PASS.
+- Chrome authentifié : 24/24 configurations PASS (12 organisation + 12 portail), F5 et zoom 200 % PASS, aucune erreur console critique.
+- Cartes portail : largeur mesurée entre 356,8125 et 445 px selon viewport; maximum 445 px préservé.
+- Stockage : objet QA privé, téléchargement authentifié octet pour octet; autre tenant HTTP 404.
+
+Verdict du candidat correctif : `ACCEPTATION_INTÉGRÉE_PASS`.
+
+Limites : lecteur d'écran réel `NOT_VERIFIED`; les capacités documentaires nouvelles au-delà des formats et de l'indexation existants restent des écarts produit, pas des promesses de ce lot.

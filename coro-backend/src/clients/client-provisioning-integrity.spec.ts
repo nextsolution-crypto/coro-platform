@@ -126,6 +126,18 @@ describe('Client invitation outbox worker', () => {
     expect(prisma.clientInvitationEvent.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'CANCELLED' }) }));
   });
 
+  it('cancels a building-manager invitation when the building is no longer active', async () => {
+    const event = {
+      id: 'event-building', status: 'PENDING', attempts: 0, buildingId: 'building-a',
+      client: { isActive: true }, clientUser: { isActive: true }, building: { isActive: false },
+    };
+    const prisma: any = { clientInvitationEvent: { findUnique: jest.fn().mockResolvedValue(event), updateMany: jest.fn().mockResolvedValue({ count: 1 }) } };
+    const email = { sendClientInvitation: jest.fn() };
+    const worker = new ClientInvitationOutboxService(prisma, email as any);
+    await expect(worker.dispatchOne(event.id)).resolves.toMatchObject({ cancelled: true });
+    expect(email.sendClientInvitation).not.toHaveBeenCalled();
+  });
+
   it('fails closed for a malformed key and supports explicit previous-key rotation', async () => {
     process.env.CLIENT_INVITATION_OUTBOX_KEY_ID = 'v1';
     process.env.CLIENT_INVITATION_OUTBOX_KEY_BASE64 = Buffer.alloc(32, 7).toString('base64');

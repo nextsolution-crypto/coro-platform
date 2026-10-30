@@ -1,33 +1,39 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiGet, getUser } from '../store/auth';
+import { apiGet, getUser, type ClientUser } from '../store/auth';
 import PortalLayout from '../components/PortalLayout';
 import { Building2, FileText, MapPin, Users } from 'lucide-react';
 
 export default function BuildingsPage() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [buildings, setBuildings] = useState<any[]>([]);
+  const [user] = useState<ClientUser | null>(() => getUser());
+  const [buildings, setBuildings] = useState<BuildingSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    const currentUser = getUser();
-    if (!currentUser) { router.replace('/login'); return; }
-    setUser(currentUser);
-    fetchBuildings();
-  }, [router]);
-
-  const fetchBuildings = async () => {
+  const fetchBuildings = useCallback(async () => {
+    setLoading(true);
+    setError('');
     try {
-      const res = await apiGet('/client-portal/buildings');
-      setBuildings(res || []);
+      const res = await apiGet('/client-portal/buildings') as BuildingSummary[];
+      setBuildings(Array.isArray(res) ? res : []);
     } catch (err) {
-      console.error(err);
+      setError(err instanceof Error ? err.message : 'Impossible de charger les bâtiments.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      router.replace('/login');
+      return;
+    }
+    // The initial authenticated load is intentionally driven by this effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchBuildings();
+  }, [fetchBuildings, router, user]);
 
   if (loading || !user) {
     return (
@@ -52,14 +58,19 @@ export default function BuildingsPage() {
       </header>
 
       {/* Liste */}
-      {buildings.length === 0 ? (
+      {error ? (
+        <div role="alert" style={{ backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #F1948A', padding: 32, textAlign: 'center' }}>
+          <p style={{ color: '#C0392B', margin: '0 0 16px' }}>{error}</p>
+          <button type="button" onClick={fetchBuildings}>Réessayer</button>
+        </div>
+      ) : buildings.length === 0 ? (
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF', padding: 48, textAlign: 'center' }}>
           <Building2 size={40} color="#DEE2E6" style={{ margin: '0 auto 16px' }} />
           <p style={{ margin: 0, color: '#ADB5BD', fontSize: 15 }}>Aucun bâtiment associé à votre compte.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-          {buildings.map((b: any) => (
+          {buildings.map((b) => (
             <div key={b.id} style={{
               backgroundColor: '#FFFFFF', borderRadius: 12,
               border: '1px solid #E9ECEF', overflow: 'hidden',
@@ -158,4 +169,19 @@ export default function BuildingsPage() {
       )}
     </PortalLayout>
   );
+}
+
+interface BuildingSummary {
+  id: string;
+  name: string;
+  address?: string | null;
+  city?: string | null;
+  province?: string | null;
+  photoBase64?: string | null;
+  projectCount?: number;
+  validatedCount?: number;
+  activeCount?: number;
+  responsableFirstName?: string | null;
+  responsableLastName?: string | null;
+  responsableTitre?: string | null;
 }

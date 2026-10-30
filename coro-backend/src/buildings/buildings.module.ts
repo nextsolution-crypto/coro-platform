@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { BuildingsController } from './buildings.controller';
 import { BuildingsService } from './buildings.service';
-import { ClientPortalModule } from '../client-portal/client-portal.module';
+import { ClientsModule } from '../clients/clients.module';
 
 @Module({
-  imports: [ClientPortalModule],
+  imports: [ClientsModule],
   controllers: [BuildingsController],
   providers: [BuildingsService],
   exports: [BuildingsService],

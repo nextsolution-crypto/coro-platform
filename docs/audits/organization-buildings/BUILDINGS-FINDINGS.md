@@ -39,6 +39,25 @@ Production observée en lecture seule : `08d4a0e01cb0c2197cde21106ecd76d0b5d55d6
 
 ## Verdict
 
-`FAIL_BLOCKING_SECURITY_AND_INTEGRITY`
+`FAIL_BLOCKING_SECURITY_AND_INTEGRITY` (audit initial)
+
+## Réconciliation corrective — 2026-10-30
+
+| ID | Statut corrigé | Preuve du candidat |
+|---|---|---|
+| BLD-001 | CORRIGÉ | Autorité bâtiment puis `projectAccessWhere`; refus autre tenant et opérateur affecté démontrés. |
+| BLD-002 | CORRIGÉ | Responsable validé sur organisation, client, rôle et statut; affectation et invitation transactionnelles. |
+| BLD-003 | CORRIGÉ | Les mutations exigent l'administration tenant canonique; opérateur HTTP 403. |
+| BLD-004 | CORRIGÉ | DTO allow-listés, champs système interdits et client actif du tenant vérifié; payload hostile HTTP 400. |
+| BLD-005 | CORRIGÉ | Verrou transactionnel et idempotence; concurrence, rejeu et conflit démontrés. |
+| BLD-006 | CORRIGÉ | Audit typé transactionnel sur les transitions sensibles. |
+| BLD-007 | CORRIGÉ | Téléchargement privé des fichiers directs et hérités du projet parent. |
+| BLD-008 | CORRIGÉ | Liste/lecture excluent l'inactif; `isActive` n'est plus modifiable par DTO. |
+| BLD-009 | CORRIGÉ | Erreur explicite et action Réessayer dans les deux interfaces. |
+| BLD-010 | CORRIGÉ | Géocodage désactivé en QA et borné à trois secondes hors QA. |
+| BLD-011 | RÉCONCILIÉ | Lecture organisationnelle Corporate, contribution et administration séparées. |
+| BLD-012 | RÉCONCILIÉ | Contribution interne légitime préservée; contrôle avant multipart/stockage. |
+
+Verdict correctif : `ACCEPTATION_INTÉGRÉE_PASS`, lecteur d'écran réel `NOT_VERIFIED`.
 
 L'écran Bâtiments ne peut pas être déclaré accepté tant que BLD-001 à BLD-006 ne sont pas corrigés et que la politique BLD-011 n'est pas décidée.

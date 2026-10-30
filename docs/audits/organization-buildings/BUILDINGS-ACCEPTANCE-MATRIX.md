@@ -64,3 +64,21 @@ Statuts : `PASS`, `FAIL`, `PARTIAL`, `NOT_VERIFIED`, `NOT_APPLICABLE`.
 | Inspection production existante 41099241216 | SUCCESS, lecture seule |
 
 Les PASS existants ne neutralisent pas les FAIL reproduits.
+
+## Matrice du candidat correctif
+
+| Domaine | Résultat | Preuve |
+|---|---|---|
+| Autorité liste/directe/projets | PASS | API réelle QA, autre tenant 404, opérateur affecté limité. |
+| Mutation et DTO | PASS | opérateur 403; payload système 400. |
+| Idempotence et audit | PASS | double requête 201/201 même ID; rejeu identique; conflit 409; 1 bâtiment/1 audit. |
+| Portail Manager/Corporate | PASS | Manager affecté seulement; Manager sans bâtiment vide; Corporate tenant; autre tenant 404. |
+| Documents privés | PASS | upload 201, download 200, 30 octets identiques; autre tenant 404. |
+| Migration | PASS | 164 depuis zéro; 163→164 avec relations historiques conservées. |
+| Build et Design System | PASS | backend, frontend, portail et suite Design System. |
+| Chrome organisation | 12/12 PASS | 4 viewports × 3 thèmes. |
+| Chrome portail | 12/12 PASS | 4 viewports × 3 thèmes, cartes ≤445 px. |
+| F5 / zoom 200 % / console | PASS | deux interfaces; aucune erreur critique. |
+| Lecteur d'écran réel | NOT_VERIFIED | Runtime fiable indisponible dans le harnais isolé. |
+
+Evidence sanitée : `D:\CORO-QA\tracking\organization-buildings\api-acceptance.json` et dossier `browser` (24 captures + rapport JSON).

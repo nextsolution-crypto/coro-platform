@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
@@ -63,11 +63,14 @@ function parsePastedAddress(raw: string): { address: string; city: string; provi
 
 export default function BuildingsPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const [buildings, setBuildings]   = useState<Building[]>([]);
   const [clients, setClients]       = useState<Client[]>([]);
   const [loading, setLoading]       = useState(true);
   const [showModal, setShowModal]   = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [createKey, setCreateKey] = useState(() => crypto.randomUUID());
   const [form, setForm] = useState({
     name: '', address: '', city: '', province: '',
     postalCode: '', floors: '', buildingType: '', timeZone: 'America/Toronto', clientId: '',
@@ -77,12 +80,9 @@ export default function BuildingsPage() {
   });
   const [addressPaste, setAddressPaste] = useState('');
 
-  useEffect(() => {
-    if (!isAuthenticated) { router.push('/login'); return; }
-    fetchData();
-  }, [isAuthenticated]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
     try {
       const [br, cr] = await Promise.all([
         api.get('/buildings'),
@@ -90,9 +90,19 @@ export default function BuildingsPage() {
       ]);
       setBuildings(br.data);
       setClients(cr.data);
-    } catch (err) { console.error(err); }
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setLoadError(message || 'Impossible de charger les bâtiments.');
+    }
     finally { setLoading(false); }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) { router.push('/login'); return; }
+    // The initial authenticated load is intentionally driven by this effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchData();
+  }, [fetchData, isAuthenticated, router]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -134,19 +144,24 @@ export default function BuildingsPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
     try {
       await api.post('/buildings', {
         ...form,
         floors: form.floors ? parseInt(form.floors) : undefined,
-      });
+      }, { headers: { 'Idempotency-Key': createKey } });
       setShowModal(false);
       setForm({ name: '', address: '', city: '', province: '', postalCode: '', floors: '', buildingType: '', timeZone: 'America/Toronto', clientId: '', responsableFirstName: '', responsableLastName: '', responsableTitre: '', responsableEmail: '', responsablePhone: '', photoBase64: '' });
       setAddressPaste('');
+      setCreateKey(crypto.randomUUID());
       fetchData();
       toast('Bâtiment créé avec succès.');
         } catch (err: any) {
       const message = err?.response?.data?.message || 'Erreur lors de la création du bâtiment.';
       toast(Array.isArray(message) ? message[0] : message, 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
   const inputStyle = {
@@ -164,7 +179,7 @@ export default function BuildingsPage() {
             Bâtiments
           </PageTitle>
         </div>
-        <button
+        {['ADMIN', 'SUPER_ADMIN'].includes(user?.role || '') && <button
           onClick={() => setShowModal(true)}
           className="w-full sm:w-auto text-white text-sm font-medium px-4 py-2 rounded"
           style={{ backgroundColor: '#C0392B' }}
@@ -172,7 +187,7 @@ export default function BuildingsPage() {
           onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
         >
           + Nouveau bâtiment
-        </button>
+        </button>}
       </div>
 
       {/* Liste */}
@@ -181,6 +196,11 @@ export default function BuildingsPage() {
           <p className="text-sm animate-pulse" style={{ color: '#ADB5BD' }}>
             Chargement...
           </p>
+        </div>
+      ) : loadError ? (
+        <div role="alert" className="text-center py-12">
+          <p className="text-sm mb-4" style={{ color: '#C0392B' }}>{loadError}</p>
+          <button type="button" onClick={fetchData} className="px-4 py-2 rounded text-white" style={{ backgroundColor: '#C0392B' }}>Réessayer</button>
         </div>
       ) : buildings.length === 0 ? (
         <div className="rounded-md p-12 text-center"
@@ -204,7 +224,7 @@ export default function BuildingsPage() {
             >
               → Créer un client d'abord
             </button>
-          ) : (
+          ) : ['ADMIN', 'SUPER_ADMIN'].includes(user?.role || '') ? (
             <button
               onClick={() => setShowModal(true)}
               className="text-white text-sm font-medium px-6 py-2.5 rounded"
@@ -214,7 +234,7 @@ export default function BuildingsPage() {
             >
               + Créer le premier bâtiment
             </button>
-          )}
+          ) : null}
         </div>
       ) : (
         <div className="grid gap-3">
@@ -283,7 +303,7 @@ export default function BuildingsPage() {
                   </p>
                   <p className="text-xs" style={{ color: '#ADB5BD' }}>Projets</p>
                 </div>
-                <button
+                {['ADMIN', 'SUPER_ADMIN'].includes(user?.role || '') && <button
                   onClick={e => { e.stopPropagation(); if (confirm(`Supprimer le bâtiment "${building.name}" ?`)) handleDelete(building.id); }}
                   className="p-2 rounded transition-colors"
                   style={{ color: '#ADB5BD' }}
@@ -292,7 +312,7 @@ export default function BuildingsPage() {
                   title="Supprimer le bâtiment"
                 >
                   🗑
-                </button>
+                </button>}
               </div>
             </div>
           ))}

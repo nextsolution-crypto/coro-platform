@@ -19,6 +19,7 @@ import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 import { EvidenceReadAccess } from '../auth/organization-access.decorator';
 import { BuildingDocumentsService } from './building-documents.service';
 import { KnowledgeActor } from '../knowledge/knowledge.types';
+import { BuildingDocumentUploadGuard } from './building-document-upload.guard';
 const internal = (req: any): KnowledgeActor => ({
   type: 'INTERNAL_USER',
   id: req.user.userId,
@@ -50,7 +51,10 @@ export class BuildingDocumentsController {
   ) {
     return this.service.list(internal(req), id, query);
   }
-  @Post() @UseInterceptors(FileInterceptor('file')) upload(
+  @Post()
+  @UseGuards(BuildingDocumentUploadGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  upload(
     @Req() req: any,
     @Param('buildingId') id: string,
     @UploadedFile() file: Express.Multer.File,
@@ -89,7 +93,10 @@ export class BuildingDocumentsClientController {
   ) {
     return this.service.list(client(req), id, query);
   }
-  @Post() @UseInterceptors(FileInterceptor('file')) upload(
+  @Post()
+  @UseGuards(BuildingDocumentUploadGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  upload(
     @Req() req: any,
     @Param('buildingId') id: string,
     @UploadedFile() file: Express.Multer.File,

@@ -17,10 +17,10 @@ export class BuildingDocumentsService {
 
   async access(actor: KnowledgeActor, buildingId: string) {
     const building = await this.prisma.building.findFirst({
-      where: { id: buildingId, organizationId: actor.organizationId },
-      select: { id: true, name: true, clientId: true, responsableEmail: true },
+      where: { id: buildingId, organizationId: actor.organizationId, isActive: true },
+      select: { id: true, name: true, clientId: true, responsableEmail: true, client: { select: { isActive: true } } },
     });
-    if (!building) throw new NotFoundException('Bâtiment introuvable');
+    if (!building || !building.client.isActive) throw new NotFoundException('Bâtiment introuvable');
     if (actor.type === 'INTERNAL_USER') {
       const user = await this.prisma.user.findFirst({
         where: {
@@ -45,18 +45,21 @@ export class BuildingDocumentsService {
       },
       select: { clientId: true, role: true, buildingIds: true, email: true },
     });
-    if (!user || user.clientId !== building.clientId)
+    if (!user)
+      throw new NotFoundException('Bâtiment introuvable');
+    const sameClient = user.clientId === building.clientId;
+    if (user.role === 'CLIENT_MANAGER' && !sameClient)
       throw new NotFoundException('Bâtiment introuvable');
     const grant = await this.prisma.buildingDocumentGrant.findUnique({
       where: {
         buildingId_clientUserId: { buildingId, clientUserId: actor.id },
       },
     });
-    const defaultManager =
+    const defaultManager = sameClient && (
       user.role === 'CLIENT_CORPORATE' ||
       user.buildingIds.includes(buildingId) ||
       (!!building.responsableEmail &&
-        building.responsableEmail.toLowerCase() === user.email.toLowerCase());
+        building.responsableEmail.toLowerCase() === user.email.toLowerCase()));
     // Regional/portfolio supervisors retain their live assignment perimeter.
     const now = new Date();
     const assignments = await this.prisma.customerPortfolioAssignment.findMany({
@@ -100,12 +103,13 @@ export class BuildingDocumentsService {
           },
           select: { id: true },
         }));
-    if (!defaultManager && !supervisor && !grant?.canUpload)
+    const corporateRead = user.role === 'CLIENT_CORPORATE';
+    if (!corporateRead && !defaultManager && !supervisor && !grant?.canUpload)
       throw new ForbiddenException('Accès documentaire non accordé');
     return {
       building,
       canUpload: grant ? grant.canUpload : defaultManager || supervisor,
-      canManage: defaultManager || supervisor,
+      canManage: (sameClient && defaultManager) || supervisor,
     };
   }
 
@@ -236,7 +240,10 @@ export class BuildingDocumentsService {
       where: {
         id,
         organizationId: actor.organizationId,
-        buildingId,
+        OR: [
+          { buildingId },
+          { buildingId: null, project: { buildingId, organizationId: actor.organizationId } },
+        ],
         ...(actor.type === 'CLIENT_USER' ? { visibility: 'shared' } : {}),
       },
       select: { id: true },
