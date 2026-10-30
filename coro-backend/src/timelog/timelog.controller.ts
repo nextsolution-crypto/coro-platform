@@ -1,11 +1,13 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, UsePipes, ValidationPipe, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { TimelogService } from './timelog.service';
 import { requireInternal, requireTenantAdmin } from '../auth/work-management-access';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
+import { CreateTimelogCategoryDto, CreateTimelogEntryDto, DeleteTimelogEntryDto, TimelogRangeDto, UpdateTimelogCategoryDto, UpdateTimelogEntryDto } from './timelog.dto';
 
 @Controller('timelog')
 @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
+@UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
 export class TimelogController {
   constructor(private readonly service: TimelogService) {}
 
@@ -16,13 +18,13 @@ export class TimelogController {
   }
 
   @Post('catalog')
-  addCategory(@Body() dto: any, @Request() req: any) {
+  addCategory(@Body() dto: CreateTimelogCategoryDto, @Request() req: any) {
     requireTenantAdmin(req.user);
     return this.service.addCategory(dto, req.user.organizationId);
   }
 
   @Put('catalog/:key')
-  updateCategory(@Param('key') key: string, @Body() dto: any, @Request() req: any) {
+  updateCategory(@Param('key') key: string, @Body() dto: UpdateTimelogCategoryDto, @Request() req: any) {
     requireTenantAdmin(req.user);
     return this.service.updateCategory(key, dto, req.user.organizationId);
   }
@@ -34,32 +36,32 @@ export class TimelogController {
   }
 
   @Get('me')
-  getMyTimelog(@Query('from') from: string, @Query('to') to: string, @Request() req: any) {
+  getMyTimelog(@Query() query: TimelogRangeDto, @Request() req: any) {
     requireInternal(req.user);
-    return this.service.getMyTimelog(req.user.userId, req.user.organizationId, from, to);
+    return this.service.getMyTimelog(req.user.userId, req.user.organizationId, query.from, query.to);
   }
 
   @Post('me')
-  addEntry(@Body() dto: any, @Request() req: any) {
+  addEntry(@Body() dto: CreateTimelogEntryDto, @Request() req: any) {
     requireInternal(req.user);
     return this.service.addEntry(req.user.userId, req.user.organizationId, dto);
   }
 
   @Put('me/:entryId')
-  updateEntry(@Param('entryId') entryId: string, @Body() dto: any, @Request() req: any) {
+  updateEntry(@Param('entryId') entryId: string, @Body() dto: UpdateTimelogEntryDto, @Request() req: any) {
     requireInternal(req.user);
     return this.service.updateEntry(entryId, req.user.userId, req.user.organizationId, dto);
   }
 
   @Delete('me/:entryId')
-  deleteEntry(@Param('entryId') entryId: string, @Request() req: any) {
+  deleteEntry(@Param('entryId') entryId: string, @Query() query: DeleteTimelogEntryDto, @Request() req: any) {
     requireInternal(req.user);
-    return this.service.deleteEntry(entryId, req.user.userId, req.user.organizationId);
+    return this.service.deleteEntry(entryId, req.user.userId, req.user.organizationId, query.lockVersion);
   }
 
   @Get('team')
-  getTeamTimelog(@Query('from') from: string, @Query('to') to: string, @Request() req: any) {
+  getTeamTimelog(@Query() query: TimelogRangeDto, @Request() req: any) {
     requireTenantAdmin(req.user);
-    return this.service.getTeamTimelog(req.user.organizationId, from, to);
+    return this.service.getTeamTimelog(req.user.organizationId, query.from, query.to);
   }
 }
