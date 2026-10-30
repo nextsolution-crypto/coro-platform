@@ -16,7 +16,7 @@ import { ActivitiesService } from './activities.service';
 import { ActivityTaskListsService } from './activity-task-lists.service';
 import type { Response } from 'express';
 import type { ProjectActivity } from '@prisma/client';
-import { AdviserActor } from '../auth/project-access';
+import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 import { requireTenantAdmin } from '../auth/work-management-access';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 
@@ -60,6 +60,11 @@ export class ActivitiesController {
     return this.service.getActivities(projectId, req.user);
   }
 
+  @Get('activities/portfolio')
+  getPortfolio(@Request() req: AuthenticatedRequest) {
+    return this.service.getPortfolio(req.user);
+  }
+
   @Get('projects/:projectId/activities/:activityId/tasks')
   getActivityTasks(
     @Param('projectId') projectId: string,
@@ -93,11 +98,7 @@ export class ActivitiesController {
     @Body() dto: any,
     @Request() req: AuthenticatedRequest,
   ) {
-    return this.service.updateActivity(
-      activityId,
-      req.user.organizationId,
-      dto,
-    );
+    return this.service.updateActivity(activityId, req.user, dto);
   }
 
   @Delete('activities/:activityId')
@@ -105,7 +106,7 @@ export class ActivitiesController {
     @Param('activityId') activityId: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    return this.service.deleteActivity(activityId, req.user.organizationId);
+    return this.service.deleteActivity(activityId, req.user);
   }
 
   /**
@@ -151,7 +152,7 @@ export class ActivitiesController {
     @Param('projectId') projectId: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    return this.service.duplicateActivities(projectId, req.user.organizationId);
+    return this.service.duplicateActivities(projectId, req.user);
   }
 
   @Get('activities/:activityId/ics')
@@ -163,7 +164,11 @@ export class ActivitiesController {
     const activity: ProjectActivity | null = await this.service[
       'prisma'
     ].projectActivity.findFirst({
-      where: { id: activityId, organizationId: req.user.organizationId },
+      where: {
+        id: activityId,
+        organizationId: req.user.organizationId,
+        project: { is: projectAccessWhere(req.user) },
+      },
     });
     if (!activity)
       return res.status(404).json({ message: 'Activité introuvable' });
@@ -180,7 +185,7 @@ export class ActivitiesController {
     @Param('clientId') clientId: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    return this.service.getClientPortfolio(clientId, req.user.organizationId);
+    return this.service.getClientPortfolio(clientId, req.user);
   }
 
   @Get('activities/recurring-to-renew')

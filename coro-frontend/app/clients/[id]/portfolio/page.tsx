@@ -6,6 +6,8 @@ import { Download } from 'lucide-react';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { formatCivilDate } from '@/app/planning/time';
+import { toast } from '@/lib/toast';
+import { downloadActivityIcs } from '@/lib/download-ics';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
   a_faire:  { label: 'À faire',  color: '#2980B9', bg: '#EBF5FB', border: '#AED6F1' },
@@ -40,18 +42,12 @@ export default function ClientPortfolioPage() {
     finally { setLoading(false); }
   };
 
-  const handleDownloadIcs = (activityId: string, label: string) => {
-    const token = localStorage.getItem('coro_token');
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/activities/${activityId}/ics`, {
-      headers: { Authorization: `Bearer ${token}` },
-    }).then(r => r.blob()).then(blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${label}.ics`;
-      a.click();
-      URL.revokeObjectURL(url);
-    });
+  const handleDownloadIcs = async (activityId: string, label: string) => {
+    try {
+      await downloadActivityIcs(activityId, label);
+    } catch {
+      toast('Le calendrier n\'a pas pu être téléchargé. Réessayez.', 'error');
+    }
   };
 
   // Filtres

@@ -58,6 +58,7 @@ export class BookingsController {
     return this.bookingsService.getBookingsForProject(
       projectId,
       req.user.organizationId,
+      req.user,
     );
   }
 

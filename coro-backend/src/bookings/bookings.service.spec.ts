@@ -130,7 +130,11 @@ describe('BookingsService security and transitions', () => {
 
   it('rejects reading a project outside the adviser organization', async () => {
     await expect(
-      service.getBookingsForProject('project', 'org-b'),
+      service.getBookingsForProject('project', 'org-b', {
+        userId: 'admin',
+        organizationId: 'org-b',
+        role: 'ADMIN',
+      }),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.project.findFirst).toHaveBeenCalledWith({
       where: { id: 'project', organizationId: 'org-b' },
@@ -665,5 +669,45 @@ describe('BookingsService security and transitions', () => {
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.booking.update).not.toHaveBeenCalled();
+  });
+
+  it('routes booking email to the local provider only in an isolated QA runtime', async () => {
+    (service as any).sendBookingEmail.mockRestore();
+    const previous = {
+      nodeEnv: process.env.NODE_ENV,
+      isolated: process.env.MFA_QA_NETWORK_ISOLATED,
+      provider: process.env.CLIENT_EMAIL_QA_PROVIDER_URL,
+    };
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValue({ ok: true, status: 202 } as Response);
+    process.env.NODE_ENV = 'test';
+    process.env.MFA_QA_NETWORK_ISOLATED = 'true';
+    process.env.CLIENT_EMAIL_QA_PROVIDER_URL =
+      'http://provider-fake:34641/v3/smtp/email';
+    try {
+      await (service as any).sendBookingEmail({
+        to: 'portal-corporate-a@global-e2e.test',
+        toName: 'Synthetic client',
+        subject: 'Synthetic booking',
+        content: '<p>QA</p>',
+      });
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://provider-fake:34641/v3/smtp/email',
+        expect.objectContaining({
+          headers: expect.objectContaining({ 'api-key': 'qa-provider-fake' }),
+        }),
+      );
+    } finally {
+      fetchMock.mockRestore();
+      if (previous.nodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = previous.nodeEnv;
+      if (previous.isolated === undefined)
+        delete process.env.MFA_QA_NETWORK_ISOLATED;
+      else process.env.MFA_QA_NETWORK_ISOLATED = previous.isolated;
+      if (previous.provider === undefined)
+        delete process.env.CLIENT_EMAIL_QA_PROVIDER_URL;
+      else process.env.CLIENT_EMAIL_QA_PROVIDER_URL = previous.provider;
+    }
   });
 });

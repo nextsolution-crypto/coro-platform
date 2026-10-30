@@ -22,6 +22,7 @@ import {
 import { createCommitmentVersion } from './booking-commitment';
 import { BookingEligibilityService } from './booking-eligibility.service';
 import { toInternalBookingProjection } from './internal-booking-projection';
+import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 
 type BookingCancellationActor = {
   type: 'USER' | 'CLIENT';
@@ -245,9 +246,13 @@ export class BookingsService {
     return booking;
   }
 
-  async getBookingsForProject(projectId: string, organizationId: string) {
+  async getBookingsForProject(
+    projectId: string,
+    organizationId: string,
+    actor: AdviserActor,
+  ) {
     const project = await this.prisma.project.findFirst({
-      where: { id: projectId, organizationId },
+      where: { id: projectId, organizationId, ...projectAccessWhere(actor) },
     });
     if (!project) throw new NotFoundException('Projet introuvable');
     return this.prisma.booking.findMany({
@@ -1245,6 +1250,19 @@ export class BookingsService {
     ics?: { content: string; filename: string };
   }) {
     try {
+      const configuredQaEndpoint =
+        process.env.CLIENT_EMAIL_QA_PROVIDER_URL?.trim();
+      const qaProviderUrl =
+        process.env.NODE_ENV === 'test' &&
+        process.env.MFA_QA_NETWORK_ISOLATED === 'true' &&
+        configuredQaEndpoint &&
+        /^http:\/\/(provider-fake|127\.0\.0\.1|localhost)(:\d+)?\//.test(
+          configuredQaEndpoint,
+        )
+          ? configuredQaEndpoint
+          : null;
+      const providerUrl =
+        qaProviderUrl ?? 'https://api.brevo.com/v3/smtp/email';
       const body: any = {
         sender: { name: 'CORO', email: 'info@getcoro.io' },
         to: [{ email: data.to, name: data.toName }],
@@ -1284,11 +1302,13 @@ export class BookingsService {
         ];
       }
 
-      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      const response = await fetch(providerUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'api-key': process.env.BREVO_API_KEY || '',
+          'api-key': qaProviderUrl
+            ? 'qa-provider-fake'
+            : process.env.BREVO_API_KEY || '',
         },
         body: JSON.stringify(body),
       });
