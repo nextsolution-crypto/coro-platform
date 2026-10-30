@@ -1,8 +1,15 @@
+x-coro-logging: &coro-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
 services:
   postgres:
     image: postgres:16-alpine
     container_name: coro_postgres
     restart: unless-stopped
+    logging: *coro-logging
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -21,6 +28,7 @@ services:
     image: ghcr.io/nextsolution-crypto/coro-backend:latest
     container_name: coro_backend
     restart: unless-stopped
+    logging: *coro-logging
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       WEB_AI_PUBLIC_KNOWLEDGE_ENABLED: ${WEB_AI_PUBLIC_KNOWLEDGE_ENABLED:-false}
@@ -80,6 +88,7 @@ services:
     image: ghcr.io/nextsolution-crypto/coro-frontend:latest
     container_name: coro_frontend
     restart: unless-stopped
+    logging: *coro-logging
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
       NODE_ENV: production
@@ -94,6 +103,7 @@ services:
     image: ghcr.io/nextsolution-crypto/coro-website:latest
     container_name: coro_website
     restart: unless-stopped
+    logging: *coro-logging
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_API_URL: https://api.getcoro.io/api
@@ -107,6 +117,7 @@ services:
     image: ghcr.io/nextsolution-crypto/coro-client-portal:latest
     container_name: coro_client_portal
     restart: unless-stopped
+    logging: *coro-logging
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_API_URL: https://api.getcoro.io/api
@@ -119,6 +130,7 @@ services:
   private-storage-qa:
     image: dxflrs/garage@sha256:9c96caa2612d3411acc5b0e6701fb238dbfba33e533a6d7d3d811a4b12d0d020
     container_name: coro_private_storage_qa
+    logging: *coro-logging
     profiles: ["qa-storage"]
     command: ["/garage", "-c", "/etc/garage.toml", "server"]
     environment:

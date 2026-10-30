@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "minimumImageAgeHours": 24,
+  "minimumBuildCacheAgeHours": 24,
+  "warningFreeBytes": 25769803776,
+  "criticalFreeBytes": 21474836480,
+  "operationalReserveBytes": 5368709120,
+  "explicitCandidates": [],
+  "blockedRollbackImages": []
+}

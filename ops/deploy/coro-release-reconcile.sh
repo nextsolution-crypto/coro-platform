@@ -45,4 +45,20 @@ fi
 exec 8>"$LOCK_FILE"
 flock --nonblock 8 || { echo 'RECONCILIATION_UNKNOWN code=DEPLOYMENT_LOCK_BUSY' >&2; exit 1; }
 
+reconciled_marker="$STATE_ROOT/${release_id}.reconciled.json"
+marker_tmp="$(mktemp "$STATE_ROOT/.${release_id}.reconciled.XXXXXX")"
+trap 'rm -f -- "${marker_tmp:-}"' EXIT
+node -e '
+const fs=require("fs");
+fs.writeFileSync(process.argv[1],JSON.stringify({
+  schemaVersion:1,
+  releaseId:process.argv[2],
+  releaseCommit:process.argv[3],
+  manifestPath:process.argv[4],
+  manifestSha256:process.argv[5],
+  reconciledAt:new Date().toISOString()
+},null,2)+"\n",{mode:0o600});
+' "$marker_tmp" "$release_id" "$RELEASE_COMMIT" "$manifest" "$expected_manifest_sha"
+mv -T -- "$marker_tmp" "$reconciled_marker"
+
 echo "RECONCILIATION_SUCCEEDED release_id=$release_id commit=$RELEASE_COMMIT"

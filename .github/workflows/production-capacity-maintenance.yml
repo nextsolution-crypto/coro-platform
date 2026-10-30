@@ -1,6 +1,8 @@
 name: Governed Production Capacity Maintenance
 
 on:
+  schedule:
+    - cron: "17 6 * * *"
   workflow_dispatch:
     inputs:
       mode:
@@ -8,14 +10,8 @@ on:
         required: true
         type: choice
         options: [DRY_RUN, EXECUTE]
-      minimum_age_hours:
-        description: Minimum age of unreferenced image cache (72 normally, 24 or 12 for release recovery)
-        required: true
-        type: choice
-        default: "72"
-        options: ["72", "24", "12"]
       cleanup_approval:
-        description: For EXECUTE type REMOVE_LISTED_UNREFERENCED_IMAGE_CACHE
+        description: For a reviewed manual EXECUTE type EXECUTE_REVIEWED_RETENTION_POLICY
         required: false
         type: string
 
@@ -23,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: coro-production-maintenance
+  group: coro-production-deployment
   cancel-in-progress: false
 
 jobs:
@@ -38,18 +34,21 @@ jobs:
           node --test ops/capacity/*.test.mjs
   maintain:
     needs: validate
+    if: ${{ github.event_name != 'schedule' || vars.CORO_RELEASE_RETENTION_AUTOMATION_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     environment: production
     steps:
       - name: Validate request
         env:
-          MODE: ${{ inputs.mode }}
+          MODE: ${{ inputs.mode || 'EXECUTE' }}
           APPROVAL: ${{ inputs.cleanup_approval }}
-          MINIMUM_AGE_HOURS: ${{ inputs.minimum_age_hours }}
+          AUTOMATION_ENABLED: ${{ vars.CORO_RELEASE_RETENTION_AUTOMATION_ENABLED }}
         run: |
           [[ "$MODE" == DRY_RUN || "$MODE" == EXECUTE ]]
-          [[ "$MODE" == DRY_RUN || "$APPROVAL" == REMOVE_LISTED_UNREFERENCED_IMAGE_CACHE ]]
-          [[ "$MINIMUM_AGE_HOURS" == 72 || "$MINIMUM_AGE_HOURS" == 24 || "$MINIMUM_AGE_HOURS" == 12 ]]
+          if [[ "$MODE" == EXECUTE ]]; then
+            [[ "$AUTOMATION_ENABLED" == true ]]
+            [[ "${{ github.event_name }}" == schedule || "$APPROVAL" == EXECUTE_REVIEWED_RETENTION_POLICY ]]
+          fi
       - name: Validate pinned host identity
         env:
           HOST_FINGERPRINT: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
@@ -58,23 +57,27 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           SOURCE_SHA: ${{ github.sha }}
-          CAPACITY_CLEANUP_MODE: ${{ inputs.mode }}
-          CAPACITY_CLEANUP_APPROVAL: ${{ inputs.cleanup_approval }}
-          CAPACITY_CLEANUP_MINIMUM_AGE_HOURS: ${{ inputs.minimum_age_hours }}
+          CAPACITY_CLEANUP_MODE: ${{ inputs.mode || 'EXECUTE' }}
+          CAPACITY_CLEANUP_APPROVAL: ${{ github.event_name == 'schedule' && 'EXECUTE_REVIEWED_RETENTION_POLICY' || inputs.cleanup_approval }}
         with:
           host: ${{ secrets.SERVER_IP }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
-          envs: SOURCE_SHA,CAPACITY_CLEANUP_MODE,CAPACITY_CLEANUP_APPROVAL,CAPACITY_CLEANUP_MINIMUM_AGE_HOURS
+          envs: SOURCE_SHA,CAPACITY_CLEANUP_MODE,CAPACITY_CLEANUP_APPROVAL
           script: |
             set -Eeuo pipefail
             repo=/opt/coro-platform
             script="$(mktemp /tmp/coro-capacity-cleanup.XXXXXX.sh)"
-            trap 'rm -f -- "$script"' EXIT
+            plan="$(mktemp /tmp/coro-release-retention-plan.XXXXXX.mjs)"
+            policy="$(mktemp /tmp/coro-release-retention-policy.XXXXXX.json)"
+            trap 'rm -f -- "$script" "$plan" "$policy"' EXIT
             git -C "$repo" fetch --quiet origin main
-            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
+            git -C "$repo" fetch --quiet origin "$SOURCE_SHA"
+            [[ "$CAPACITY_CLEANUP_MODE" == DRY_RUN ]] || test "$(git -C "$repo" rev-parse origin/main)" = "$SOURCE_SHA"
             git -C "$repo" show "$SOURCE_SHA:ops/capacity/coro-capacity-cleanup.sh" >"$script"
+            git -C "$repo" show "$SOURCE_SHA:ops/capacity/release-retention-plan.mjs" >"$plan"
+            git -C "$repo" show "$SOURCE_SHA:ops/capacity/release-retention-policy.json" >"$policy"
             bash -n "$script"
             chmod 0700 "$script"
-            "$script"
+            CORO_RETENTION_PLAN_TOOL="$plan" CORO_RETENTION_POLICY_FILE="$policy" "$script"
