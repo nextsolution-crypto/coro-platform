@@ -2,21 +2,24 @@
 
 | Domaine | Statut | Preuve |
 |---|---|---|
-| Route, modèles et endpoints | PASS | cartographie du SHA audité |
-| Propriétaire et tenant dérivés du JWT | PASS statique | filtres `userId, organizationId` |
-| Refus des rôles clients | PASS test existant | `work-management-security.spec.ts` |
-| Saisie manuelle valide | NOT_VERIFIED | stack PostgreSQL/API non exécuté |
-| Valeurs invalides | FAIL | validation serveur absente |
-| Modification/suppression | PARTIAL | contrats présents; QA et erreurs non vérifiées |
-| Concurrence | FAIL | aucune précondition/version |
-| Dates/fuseau/DST | FAIL | `new Date(YYYY-MM-DD)` sans politique |
-| Totaux connus | NOT_VERIFIED | calcul inspecté, jeu PostgreSQL non exécuté |
-| Vue équipe multi-tenant | NOT_VERIFIED | portée statique correcte, E2E absent |
-| Effet sur capacité | PASS statique | `capacity.service.ts` consomme `TimelogEntry` |
-| Effet sur Rendement financier | NON_APPLICABLE | seul `TaskTimeEntry` est consommé |
-| Chronomètre | NON_APPLICABLE | absent |
-| Validation/verrouillage/export/pagination | NON_APPLICABLE | absents |
-| Erreurs/reprise | FAIL | console uniquement |
-| Chrome 390/768/1440/2560 × 3 thèmes | NOT_VERIFIED | aucune preuve navigateur produite |
-| Clavier/focus/zoom 200 % | NOT_VERIFIED | recette réelle requise |
-| Lecteur d'écran réel | NOT_VERIFIED | indisponible |
+| Route, modèles, endpoints | PASS | code/build candidat |
+| Propriétaire et tenant JWT | PASS | champs forgés sans usurpation |
+| Refus rôles clients | PASS | régression sécurité |
+| Saisie valide | PASS | PostgreSQL/API |
+| Valeurs invalides | PASS | zéro, négatif, date, catégorie, période |
+| Update/delete | PASS | autorisé + propriété |
+| Concurrence | PASS | `409`, aucun effet secondaire |
+| Réponse perdue/idempotence | PASS | même ID, une ligne |
+| Dates/DST | PASS | date civile UTC |
+| Totaux | PASS | avant/création/update/delete |
+| Vue équipe tenant | PASS | admin A limité à A |
+| Capacité | PASS | total cohérent |
+| Rendement financier | NON_APPLICABLE | `TaskTimeEntry` inchangée |
+| Migration 161→162 | PASS | ligne historique préservée |
+| Erreurs/reprise UI | PASS | message, saisie, retry, F5 |
+| Chrome 4 viewports × 3 thèmes | PASS 12/12 | captures/géométrie |
+| Clavier/focus/zoom 200 % | PASS | Chrome réel |
+| Lecteur d'écran réel | NOT_VERIFIED | runtime absent |
+| Timer/export/pagination/approbation | NON_APPLICABLE | hors mandat |
+
+Verdict : **ACCEPTATION_INTÉGRÉE_PASS**.

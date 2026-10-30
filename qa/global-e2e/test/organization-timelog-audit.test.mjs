@@ -17,7 +17,8 @@ test('Timelog general time and project task time remain distinct authorities', a
   assert.doesNotMatch(rendement, /timelogEntry|TimelogEntry/);
 });
 
-test('characterizes missing typed validation without accepting it', async () => {
+test('requires strict typed validation for Timelog writes', async () => {
   const controller = await readFile(resolve(root, 'coro-backend/src/timelog/timelog.controller.ts'), 'utf8');
-  assert.match(controller, /@Body\(\) dto: any/);
+  assert.doesNotMatch(controller, /@Body\(\) dto: any/);
+  assert.match(controller, /forbidNonWhitelisted: true/);
 });

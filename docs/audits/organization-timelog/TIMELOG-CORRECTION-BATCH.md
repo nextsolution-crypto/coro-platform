@@ -1,19 +1,27 @@
 # Lot de correction consolidé Timelog
 
-## Ordre recommandé
+## Contenu
 
-1. **Intégrité serveur** : DTO, bornes, date civile, catégorie tenant, notes, retours 404/409; tests PostgreSQL à deux organisations.
-2. **Concurrence et idempotence** : version optimiste, création idempotente, suppression/mise à jour concurrentes, réponse perdue.
-3. **UX d'erreur et reprise** : messages accessibles, formulaire préservé, retry contrôlé, annulation de requêtes obsolètes.
-4. **Clarté** : expliquer heures générales non facturables versus heures de tâche/projet; afficher période et unité; liens projet/activité.
-5. **Acceptation** : jeu synthétique multi-périodes, totaux exacts/DST, permissions multi-tenant, capacité, puis matrice Chrome 12/12 et zoom 200 %.
+1. Validation serveur typée et dates civiles.
+2. Catégories globales/tenant actives.
+3. Verrouillage optimiste update/delete.
+4. Idempotence et reprise après réponse perdue.
+5. UX d'erreur, saisie conservée et retry.
+6. Migration additive `20261115010000_timelog_integrity`.
+7. Tests backend/frontend et runner permanent.
 
-## Décisions nécessaires
+## Acceptation
 
-- bornes/incrément/précision de durée;
-- politique des dates futures et correction historique;
-- chevauchements autorisés ou signalés;
-- sémantique commerciale du libellé « facturable »;
-- conservation/audit des suppressions (suppression physique actuelle).
+- DTO/service/sécurité : 59/59 PASS.
+- Capacité/Rendement : PASS; aucune liaison financière ajoutée.
+- PostgreSQL/API multi-acteur : PASS.
+- Chrome 12/12, F5, clavier, zoom 200 % : PASS.
+- Mise à niveau 161→162 avec donnée historique : PASS.
 
-Ce lot ne crée ni chronomètre, ni export, ni validation de feuille de temps : ces fonctions sont absentes et hors audit.
+## Limites
+
+- Lecteur d'écran réel : `NOT_VERIFIED`.
+- Maximum quotidien, incrément, dates futures, chevauchements : décisions produit.
+- Timer, export, pagination, approbation et facturation : hors mandat.
+
+Le mandat autorise commits, push et PR, mais exclut fusion et déploiement. Aucune notification externe, mutation de production ou activation WEB-AI n'a été exécutée.

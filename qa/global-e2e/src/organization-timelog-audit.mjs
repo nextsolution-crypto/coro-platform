@@ -28,17 +28,19 @@ check('AUTH-02', 'Team view is restricted to tenant administrators', () => {
 });
 check('VALID-01', 'Server validates Timelog request DTOs and numeric bounds', () => {
   assert.doesNotMatch(controller, /@Body\(\) dto: any/);
-  assert.match(service, /BadRequestException|class-validator|IsNumber/);
+  assert.match(controller, /CreateTimelogEntryDto/);
 });
 check('VALID-02', 'Server verifies a submitted category belongs to the effective catalog', () => {
   const addEntry = service.slice(service.indexOf('async addEntry'), service.indexOf('async updateEntry'));
   assert.match(addEntry, /timelogCategory\.findFirst|timelogCategory\.findUnique/);
 });
 check('DATE-01', 'Date-only work dates have an explicit timezone-safe parsing policy', () => {
+  assert.match(service, /parseCivilDate\(dto\.date\)/);
   assert.doesNotMatch(service, /new Date\(dto\.date\)/);
 });
 check('CONC-01', 'Entry updates use an explicit optimistic-concurrency token', () => {
-  assert.match(service, /lockVersion|updatedAt: dto\.|If-Match/);
+  assert.match(service, /lockVersion: dto\.lockVersion/);
+  assert.match(service, /lockVersion: \{ increment: 1 \}/);
 });
 check('ERROR-01', 'The page exposes load and mutation failures to the user', () => {
   assert.match(page, /setError|role=["']alert["']|aria-live/);

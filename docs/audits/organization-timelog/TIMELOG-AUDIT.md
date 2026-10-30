@@ -2,38 +2,36 @@
 
 ## Baseline et portée
 
-- SHA audité : `201243ec2eff3bab25e76b9f460f87412538d00f` (`origin/main`).
-- Produit observé : `76e7a3c60b38d005e81be72c631f2b91a33668bf`.
-- Relation : `201243ec` ajoute la réconciliation documentaire de la release Activities; le code produit Timelog est identique au SHA actif.
-- PostgreSQL rapporté : 161 migrations. Aucune migration ni lecture de données de production n'a été exécutée.
-- Verdict limité : **FAIL — correction requise avant acceptation métier de Timelog**.
+- Baseline : `201243ec2eff3bab25e76b9f460f87412538d00f`.
+- Produit observé avant correction : `76e7a3c60b38d005e81be72c631f2b91a33668bf`.
+- Branche isolée : `audit/organization-timelog`.
+- Périmètre : Timelog et effet direct sur la capacité seulement.
+- Hors périmètre : facturation/Rendement, chronomètre, export, pagination, approbation hiérarchique.
 
-## Fonction réelle
+## Fonction et autorités
 
-| Élément | Autorité | Statut |
-|---|---|---|
-| Route UI | `/timelog`, `coro-frontend/app/timelog/page.tsx` | Présent |
-| Heures générales | `TimelogEntry`, toujours `isBillable=false` | Présent |
-| Heures projet | `TaskTimeEntry`, créées dans le parcours tâche/projet | Présent en lecture agrégée |
-| Catégories | globales et propres à l'organisation | Présent |
-| Vue équipe | ADMIN/SUPER_ADMIN de l'organisation | Présent |
-| Périodes | semaine, mois, année, personnalisée | Présent |
-| Chronomètre | aucune autorité ni endpoint | NON_APPLICABLE |
-| Validation/verrouillage/export/pagination | absents | NON_APPLICABLE |
+`TimelogEntry` conserve les heures générales non facturables. `TaskTimeEntry` demeure l'autorité distincte des heures liées aux tâches projet et la seule source consommée par le calcul financier Rendement. Les routes `/timelog/me` dérivent propriétaire et organisation du JWT; `/timelog/team` exige un administrateur du tenant.
 
-## Contrats et consommateurs
+## Correction
 
-Les endpoints `/timelog/catalog`, `/timelog/me` et `/timelog/team` sont protégés par JWT et `OrganizationStatusGuard`. Les mutations personnelles dérivent `userId` et `organizationId` de l'acteur et filtrent mise à jour/suppression par propriétaire et tenant.
+- DTO validés, catégorie active du tenant, date civile UTC et période ordonnée.
+- Durée strictement positive et finie; note limitée à 2 000 caractères.
+- `lockVersion` optimiste sur update/delete; conflit `409` sans effet secondaire.
+- `clientRequestId` unique par organisation/utilisateur; reprise sans doublon.
+- Erreurs UI accessibles, formulaire conservé, retry et réponses GET obsolètes ignorées.
+- Aucune nouvelle relation vers Rendement ou `TaskTimeEntry`.
 
-`TimelogEntry` alimente les heures saisies du planning de capacité et les observations Organization 360. Il **n'alimente pas** le calcul financier Rendement, lequel consomme les `TaskTimeEntry` reliées aux tâches projet. L'étiquette UI « facturable » des heures de tâche n'est donc pas une facture ni une preuve de facturation.
+## Preuves
 
-## Limite de preuve
+- Jest ciblé : 59/59 PASS.
+- Builds backend/frontend et images QA : PASS.
+- PostgreSQL 16/API, deux organisations, deux admins, conseiller, identité révoquée : PASS.
+- Chrome 390×844, 768×1024, 1440×900, 2560×1440; trois thèmes : 12/12 PASS.
+- F5, clavier/focus, zoom 200 %, console : PASS.
+- Migration 161→162 avec entrée historique : ligne préservée, `lockVersion=0`, `clientRequestId=NULL`.
+- Preuves : `D:\CORO-QA\runs\organization-timelog\2026-10-29`.
+- Lecteur d'écran réel : `NOT_VERIFIED` (runtime indisponible).
 
-Le runner de caractérisation et les tests serveur existants ont été exécutés. La campagne PostgreSQL/API multi-tenant et la matrice Chrome 12 configurations n'ont pas été exécutées dans cette passe : elles restent `NOT_VERIFIED`, sans être transformées en PASS par l'analyse statique.
+## Verdict
 
-## Contrôles exécutés
-
-- `node --test qa/global-e2e/test/organization-timelog-audit.test.mjs` : **3/3 PASS**.
-- runner `organization-timelog-audit.mjs` : **7 contrôles conformes, 5 constats FAIL attendus**.
-- `git diff --check` : PASS.
-- régressions Jest ciblées : **NOT_VERIFIED**; l'installation verrouillée locale s'est arrêtée sur `npm ENOTEMPTY` avant création de `node_modules/.bin/jest`. Aucun résultat n'est revendiqué pour ces suites.
+**ACCEPTATION_INTÉGRÉE_PASS** pour Timelog/capacité. Aucune production, notification externe ou activation WEB-AI n'a été touchée.
