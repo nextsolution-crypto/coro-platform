@@ -266,6 +266,30 @@ jobs:
           WEBSITE_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-website@${{ needs.build-images.outputs.website_digest }}
         run: node ops/deploy/release-policy.mjs all
 
+      - name: Run eligible pre-release capacity maintenance
+        if: ${{ vars.CORO_RELEASE_RETENTION_AUTOMATION_ENABLED == 'true' }}
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ inputs.release_commit }}
+          CAPACITY_CLEANUP_MODE: EXECUTE
+          CAPACITY_CLEANUP_APPROVAL: EXECUTE_REVIEWED_RETENTION_POLICY
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,CAPACITY_CLEANUP_MODE,CAPACITY_CLEANUP_APPROVAL
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            tmp="$(mktemp -d /tmp/coro-capacity-pre.XXXXXX)"
+            trap 'rm -f -- "$tmp"/*; rmdir -- "$tmp"' EXIT
+            for file in coro-capacity-cleanup.sh release-retention-plan.mjs release-retention-policy.json; do
+              git -C "$repo" show "$SOURCE_SHA:ops/capacity/$file" >"$tmp/$file"
+            done
+            chmod 0700 "$tmp/coro-capacity-cleanup.sh"
+            CORO_RETENTION_PLAN_TOOL="$tmp/release-retention-plan.mjs" CORO_RETENTION_POLICY_FILE="$tmp/release-retention-policy.json" "$tmp/coro-capacity-cleanup.sh"
+
       - name: Run fail-closed production release
         uses: appleboy/ssh-action@v1.0.3
         env:
@@ -298,3 +322,27 @@ jobs:
             CORO_RELEASE_STATE_SOURCE=/tmp/release-state.mjs \
             CORO_RELEASE_RECONCILE_SOURCE=/tmp/coro-release-reconcile.sh \
             /tmp/coro-release-control.sh
+
+      - name: Rotate and clean after reconciled release
+        if: ${{ vars.CORO_RELEASE_RETENTION_AUTOMATION_ENABLED == 'true' }}
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ inputs.release_commit }}
+          CAPACITY_CLEANUP_MODE: EXECUTE
+          CAPACITY_CLEANUP_APPROVAL: EXECUTE_REVIEWED_RETENTION_POLICY
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,CAPACITY_CLEANUP_MODE,CAPACITY_CLEANUP_APPROVAL
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            tmp="$(mktemp -d /tmp/coro-capacity-post.XXXXXX)"
+            trap 'rm -f -- "$tmp"/*; rmdir -- "$tmp"' EXIT
+            for file in coro-capacity-cleanup.sh release-retention-plan.mjs release-retention-policy.json; do
+              git -C "$repo" show "$SOURCE_SHA:ops/capacity/$file" >"$tmp/$file"
+            done
+            chmod 0700 "$tmp/coro-capacity-cleanup.sh"
+            CORO_RETENTION_PLAN_TOOL="$tmp/release-retention-plan.mjs" CORO_RETENTION_POLICY_FILE="$tmp/release-retention-policy.json" "$tmp/coro-capacity-cleanup.sh"

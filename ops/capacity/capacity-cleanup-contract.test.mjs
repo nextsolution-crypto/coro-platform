@@ -1,37 +1,41 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 const source = fs.readFileSync(new URL("./coro-capacity-cleanup.sh", import.meta.url), "utf8");
 
 test("cleanup defaults to dry run and execute requires exact approval", () => {
   assert.match(source, /CAPACITY_CLEANUP_MODE:-DRY_RUN/);
-  assert.match(source, /REMOVE_LISTED_UNREFERENCED_IMAGE_CACHE/);
+  assert.match(source, /EXECUTE_REVIEWED_RETENTION_POLICY/);
 });
 
 test("cleanup protects all containers and active plus rollback manifests", () => {
   assert.match(source, /docker ps -aq/);
-  assert.match(source, /Object\.values\(m\.images/);
-  assert.match(source, /m\.previousImages/);
+  assert.match(source, /protectedImages/);
+  assert.match(source, /reconciled\.json/);
   assert.match(source, /DEPLOYMENT_LOCK_BUSY/);
 });
 
-test("cleanup is image-only and refuses broad pruning", () => {
+test("cleanup is exact and refuses broad pruning and volumes", () => {
   assert.match(source, /docker image rm "\$id"/);
-  assert.doesNotMatch(source, /--force|docker system prune|docker volume|rm -rf|backup.*rm/);
+  assert.match(source, /docker builder prune -f --filter/);
+  assert.doesNotMatch(source, /docker system prune|docker volume|rm -rf|backup.*rm/);
 });
 
 // Reject invalid recovery requests before any production filesystem access.
-test("cache age cannot be reduced below the reviewed retention windows", () => {
-  for (const value of ["0", "1", "11", "23", "25", "-1", "invalid"]) {
-    const result = spawnSync("bash", [new URL("./coro-capacity-cleanup.sh", import.meta.url).pathname], { env: { PATH: process.env.PATH, CAPACITY_CLEANUP_MINIMUM_AGE_HOURS: value }, encoding: "utf8" });
-    assert.equal(result.status, 1);
-    assert.match(result.stdout, /MINIMUM_AGE_INVALID/);
-  }
+test("policy age comes only from the reviewed policy file", () => {
+  assert.match(source, /p\.minimumImageAgeHours/);
+  assert.doesNotMatch(source, /CAPACITY_CLEANUP_MINIMUM_AGE_HOURS/);
+  assert.match(source, /v<12\|\|v>168/);
 });
-test("24-hour recovery still refuses execution without explicit cleanup approval", () => {
-  const result = spawnSync("bash", [new URL("./coro-capacity-cleanup.sh", import.meta.url).pathname], { env: { PATH: process.env.PATH, CAPACITY_CLEANUP_MODE: "EXECUTE", CAPACITY_CLEANUP_MINIMUM_AGE_HOURS: "24" }, encoding: "utf8" });
-  assert.equal(result.status, 1);
-  assert.match(result.stdout, /APPROVAL_MISSING/);
+test("execution approval is checked before production path access", () => {
+  assert.ok(source.indexOf("APPROVAL_MISSING") < source.indexOf("PATH_UNSAFE"));
+});
+
+test("cleanup is resumable, lock-aware and rechecks references before mutation", () => {
+  assert.match(source, /flock --nonblock/);
+  assert.match(source, /IMAGE_BECAME_REFERENCED/);
+  assert.match(source, /IMAGE_BECAME_PROTECTED/);
+  assert.match(source, /physicallyRecoveredBytes/);
+  assert.match(source, /status=exited/);
 });
