@@ -48,6 +48,8 @@ The branch workflow must be run in `DRY_RUN` after publication of the PR so the 
 - first eligibility list under the 24-hour policy: `NOT_VERIFIED`;
 - no deletion has occurred.
 
+Attempted workflow `41061870359` on commit `2c8d21069f41ee1ae9862644b3d5c9d4a77dc4aa` validated the scripts, then GitHub rejected the `maintain` job before any step because branch `ops/release-rotation-governance` is not allowed to use the protected `production` environment. This control was not bypassed. Consequently, the initial production dry-run must be dispatched from `main` after review and merge, while the automation variable is still false and before any execute-mode approval.
+
 ## Activation decision
 
 The GitHub variable `CORO_RELEASE_RETENTION_AUTOMATION_ENABLED` remains unset/false. Merge does not by itself authorize activation. Follow `RELEASE-RETENTION-OPERATIONS.md`, reconcile the pre-existing active release to bootstrap its marker, review a dry-run, then explicitly enable the variable. Disable by returning it to `false`.
