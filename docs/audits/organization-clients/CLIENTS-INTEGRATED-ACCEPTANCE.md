@@ -6,7 +6,7 @@
 - PR : #135.
 - Candidat teste : `b83e5933f9e0688dd0d16e5e68f3327618512277`.
 - Environnement : stack QA isole, PostgreSQL 16, backend et interfaces reels, fournisseur de courriel simule, reseau deny-by-default.
-- Production : aucune mutation, aucune notification reelle, aucune fusion et aucun deploiement.
+- Production : release gouvernee terminee; aucune notification reelle ni mutation metier de recette.
 
 ## Garanties livrees
 
@@ -48,6 +48,27 @@ Une communication deja acceptee par un fournisseur ne peut pas etre rappelee. So
 
 ## Verdict
 
-`ACCEPTATION_INTEGREE_PASS`
+`VALIDATED_E2E_DEPLOYED_PRIVATE`
 
-La creation, l'administration et la suspension heritee couvertes par le lot sont acceptables sous reserve de la configuration de cle obligatoire avant release. Aucun resultat de ce dossier n'autorise une fusion ou un deploiement.
+La creation, l'administration et la suspension heritee couvertes par le lot sont acceptees et deployees. Le lecteur d'ecran reel demeure `NOT_VERIFIED`; cette limite n'affecte pas les garanties serveur demontrees.
+
+## Livraison gouvernee du 30 octobre 2026
+
+- PR : [#135](https://github.com/nextsolution-crypto/coro-platform/pull/135), fusionnee.
+- Commit produit teste : `b83e5933f9e0688dd0d16e5e68f3327618512277`.
+- Commit de raccordement secret/release : `5321d16a1b8ea1041bbbfa142d5be0dd1c81ea49`.
+- SHA fusionne et actif : `08d4a0e01cb0c2197cde21106ecd76d0b5d55d66`.
+- CI du SHA fusionne : run `41096327743`, `SUCCESS`.
+- Gate de capacite : run `41096959636`, `SUCCESS`; etat `HEALTHY`, release prete, marge mesuree de 22 041 403 019 octets au-dessus du besoin calcule.
+- Inspection pre-release : run `41096963114`, `PASS/GO`; production initiale `cefdf1e6db37ad79fd511156cca574d083ce7cb4`, migration 162, verrou libre, sauvegarde distante et restauration verifiees, quatre images de rollback disponibles.
+- Release : run `41097439169`, `SUCCESS`; reconciliation integree `RECONCILIATION_SUCCEEDED`.
+- Inspection post-release : run `41099241216`, `PASS/GO`; migration 163 `20261116010000_client_provisioning_integrity`, aucune migration echouee, cinq services actifs sans redemarrage, PostgreSQL 16 sain et quatre images de rollback disponibles.
+- Cle outbox : secret GitHub de l'environnement `production`, cle active de 32 octets en base64 validee sans exposition, identifiant `2026-10-clients-v1`; aucune cle precedente requise lors de la premiere activation.
+- Fournisseur : aucun courriel reel emis dans la recette; les preuves fonctionnelles utilisent le fournisseur simule.
+
+### Digests actifs
+
+- Backend : `sha256:28cf9b249dbeb894f8fb1f85304603c2bb5f333c5bf818e473463a175af5a78f`.
+- Frontend : `sha256:d7ba82ff5bff6b291094d0db47bcb3ce7102eb2193f53aa54a4a21bf5b36c7e4`.
+- Portail client : `sha256:9a3071868114810d72c4a056ddb01e51491455cb169edfa387ff41ea7e01641a`.
+- Site public : `sha256:7fe1a77c98c925349b5c540c6f1794c795718c50679814157a8adddd3163a16b`.
