@@ -28,6 +28,9 @@
     "organization-activities:acceptance": "node src/organization-activities-acceptance.mjs",
     "organization-timelog:acceptance": "node src/organization-timelog-acceptance.mjs",
     "organization-team-planning:acceptance": "node src/organization-team-planning-acceptance.mjs",
+    "organization-clients:acceptance": "node src/organization-clients-acceptance.mjs",
+    "organization-clients:browser": "node src/organization-clients-browser.mjs",
+    "organization-clients:migration-upgrade": "node src/organization-clients-migration-upgrade.mjs",
     "identity:cleanup": "node src/identity-cleanup.mjs"
   }
 }

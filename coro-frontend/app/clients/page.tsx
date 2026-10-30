@@ -28,6 +28,7 @@ export default function ClientsPage() {
   const [creating, setCreating] = useState(false);
   const createButtonRef = useRef<HTMLButtonElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const createIdempotencyKeyRef = useRef<string | null>(null);
   const canManage = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
   const [addressPaste, setAddressPaste] = useState('');
   const [form, setForm] = useState({
@@ -134,10 +135,12 @@ export default function ClientsPage() {
     if (creating) return;
     setCreating(true);
     try {
-      await api.post('/clients', form);
+      createIdempotencyKeyRef.current ||= crypto.randomUUID();
+      await api.post('/clients', form, { headers: { 'Idempotency-Key': createIdempotencyKeyRef.current } });
       closeModal();
       setForm({ name: '', email: '', phone: '', address: '', city: '', province: '', contactFirstName: '', contactLastName: '', contactEmail: '', contactPhone: '' });
       setAddressPaste('');
+      createIdempotencyKeyRef.current = null;
       fetchClients();
       toast('Client créé avec succès.');
     } catch (err: any) {

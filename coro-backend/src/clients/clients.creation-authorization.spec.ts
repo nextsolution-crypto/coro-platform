@@ -11,14 +11,20 @@ describe('ClientsController creation authorization', () => {
     create.mockResolvedValue({ id: 'client-new' });
     await expect(controller.create(
       { name: 'QA', organizationId: 'forged-org', contactEmail: 'qa@example.test' } as any,
+      'client-create-key-0001',
       { user: { userId: 'actor', role, organizationId: 'org-a' } },
     )).resolves.toEqual({ id: 'client-new' });
-    expect(create).toHaveBeenCalledWith(expect.objectContaining({ organizationId: 'org-a' }));
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ organizationId: 'org-a' }),
+      expect.objectContaining({ userId: 'actor', role, organizationId: 'org-a' }),
+      'client-create-key-0001',
+    );
   });
 
   it('refuses OPERATOR before any client, account, invitation or notification side effect', () => {
     expect(() => controller.create(
       { name: 'Forbidden', contactEmail: 'qa@example.test' },
+      'client-create-key-0002',
       { user: { userId: 'operator', role: 'OPERATOR', organizationId: 'org-a' } },
     )).toThrow(ForbiddenException);
     expect(create).not.toHaveBeenCalled();

@@ -2470,6 +2470,8 @@ model Client {
   exerciseReports        ExerciseReport[]
   capabilityEntitlements CapabilityEntitlement[]
   meteringResults        MeteringResult[]
+  provisioningRequest    ClientProvisioningRequest?
+  invitationEvents       ClientInvitationEvent[]
 
   @@unique([id, organizationId])
 }
@@ -3625,8 +3627,56 @@ model ClientUser {
   networkAssignmentsGranted    CustomerPortfolioAssignment[] @relation("NetworkAssignmentGrantedByClientUser")
   networkAssignmentsRevoked    CustomerPortfolioAssignment[] @relation("NetworkAssignmentRevokedByClientUser")
   projectComments              ProjectComment[]
+  invitationEvents             ClientInvitationEvent[]
 
   @@unique([id, organizationId])
+}
+
+enum ClientInvitationEventStatus {
+  PENDING
+  PROCESSING
+  DELIVERED
+  FAILED
+  EXHAUSTED
+}
+
+model ClientProvisioningRequest {
+  id             String   @id @default(uuid())
+  organizationId String
+  actorUserId    String
+  idempotencyKey String
+  payloadHash    String   @db.Char(64)
+  clientId       String   @unique
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, actorUserId, idempotencyKey])
+  @@index([organizationId, actorUserId, createdAt])
+}
+
+model ClientInvitationEvent {
+  id                  String                      @id @default(uuid())
+  organizationId      String
+  clientId            String
+  client              Client                      @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  clientUserId        String
+  clientUser          ClientUser                  @relation(fields: [clientUserId], references: [id], onDelete: Restrict)
+  idempotencyKey      String                      @unique
+  recipientHash       String                      @db.Char(64)
+  encryptedEnvelope   String
+  encryptionKeyId     String
+  status              ClientInvitationEventStatus @default(PENDING)
+  attempts            Int                         @default(0)
+  nextAttemptAt       DateTime?                    @default(now())
+  leaseExpiresAt      DateTime?
+  providerMessageId   String?
+  deliveredAt         DateTime?
+  lastErrorCode       String?
+  createdAt           DateTime                     @default(now())
+  updatedAt           DateTime                     @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([organizationId, clientId, createdAt])
 }
 
 model AdminAuditEvent {

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, UsePipes, ValidationPipe, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Headers, UseGuards, UsePipes, ValidationPipe, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ClientsService } from './clients.service';
 import { UpdateClientUserOperationalPermissionsDto } from './dto/update-client-user-operational-permissions.dto';
@@ -56,9 +56,13 @@ export class ClientsController {
   }
 
   @Post()
-  create(@Body() body: CreateClientDto, @Request() req: any) {
+  create(@Body() body: CreateClientDto, @Headers('idempotency-key') idempotencyKey: string | undefined, @Request() req: any) {
     requireTenantAdmin(req.user);
-    return this.clientsService.create({ ...body, organizationId: req.user.organizationId });
+    return this.clientsService.create(
+      { ...body, organizationId: req.user.organizationId },
+      { userId: req.user.userId, role: req.user.role, organizationId: req.user.organizationId },
+      idempotencyKey,
+    );
   }
 
   @Put(':id')

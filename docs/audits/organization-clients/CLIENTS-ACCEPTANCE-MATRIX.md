@@ -39,3 +39,22 @@ Le verdict de l’écran est **FAIL — correction de sécurité requise avant a
 | Transaction + outbox + idempotence | FAIL/non implémenté |
 | Cascade de désactivation | DÉCISION MÉTIER EN ATTENTE |
 | PostgreSQL et Chrome 12/12 | NOT_VERIFIED |
+
+## Matrice finale PR #135
+
+| Controle | Statut final |
+|---|---|
+| Mutations ADMIN/SUPER_ADMIN et refus operateur sans effet | PASS |
+| Organisation imposee serveur et refus inter-organisation | PASS |
+| DTO fermes, aucune affectation massive | PASS |
+| Transaction Client + ClientUser + requete + invitation | PASS |
+| Panne SQL sans etat partiel | PASS PostgreSQL reel |
+| Idempotence, concurrence et perte de reponse | PASS |
+| Collision d'identite sans reaffectation | PASS |
+| Invitation durable, reprise fournisseur et bail expire | PASS fournisseur simule |
+| Migration depuis zero et mise a niveau historique | PASS |
+| Chrome 12/12, F5, focus, Escape, zoom 200 % | PASS |
+| Lecteur d'ecran reel | NOT_VERIFIED |
+| Cascade de desactivation | DECISION_ATTENDUE |
+
+Verdict : `ACCEPTATION_INTEGREE_PASS_WITH_DEACTIVATION_POLICY_PENDING`.
