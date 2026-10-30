@@ -1,0 +1,172 @@
+[
+  {
+    "id": "dashboard-320",
+    "status": "PASS",
+    "viewportWidth": 320,
+    "cardCount": 7,
+    "cardWidths": [
+      288,
+      288,
+      288,
+      288,
+      288,
+      288,
+      288
+    ],
+    "maxWidth": 288,
+    "globalOverflow": false
+  },
+  {
+    "id": "buildings-320",
+    "status": "PASS",
+    "viewportWidth": 320,
+    "cardCount": 7,
+    "cardWidths": [
+      288,
+      288,
+      288,
+      288,
+      288,
+      288,
+      288
+    ],
+    "maxWidth": 288,
+    "globalOverflow": false
+  },
+  {
+    "id": "dashboard-390",
+    "status": "PASS",
+    "viewportWidth": 390,
+    "cardCount": 7,
+    "cardWidths": [
+      358,
+      358,
+      358,
+      358,
+      358,
+      358,
+      358
+    ],
+    "maxWidth": 358,
+    "globalOverflow": false
+  },
+  {
+    "id": "buildings-390",
+    "status": "PASS",
+    "viewportWidth": 390,
+    "cardCount": 7,
+    "cardWidths": [
+      358,
+      358,
+      358,
+      358,
+      358,
+      358,
+      358
+    ],
+    "maxWidth": 358,
+    "globalOverflow": false
+  },
+  {
+    "id": "dashboard-768",
+    "status": "PASS",
+    "viewportWidth": 768,
+    "cardCount": 7,
+    "cardWidths": [
+      356.8125,
+      356.8125,
+      356.8125,
+      356.8125,
+      356.8125,
+      356.8125,
+      445
+    ],
+    "maxWidth": 445,
+    "globalOverflow": false
+  },
+  {
+    "id": "buildings-768",
+    "status": "PASS",
+    "viewportWidth": 768,
+    "cardCount": 7,
+    "cardWidths": [
+      356.8125,
+      356.8125,
+      356.8125,
+      356.8125,
+      356.8125,
+      356.8125,
+      445
+    ],
+    "maxWidth": 445,
+    "globalOverflow": false
+  },
+  {
+    "id": "dashboard-1440",
+    "status": "PASS",
+    "viewportWidth": 1440,
+    "cardCount": 7,
+    "cardWidths": [
+      445,
+      445,
+      445,
+      445,
+      445,
+      445,
+      445
+    ],
+    "maxWidth": 445,
+    "globalOverflow": false
+  },
+  {
+    "id": "buildings-1440",
+    "status": "PASS",
+    "viewportWidth": 1440,
+    "cardCount": 7,
+    "cardWidths": [
+      445,
+      445,
+      445,
+      445,
+      445,
+      445,
+      445
+    ],
+    "maxWidth": 445,
+    "globalOverflow": false
+  },
+  {
+    "id": "dashboard-2560",
+    "status": "PASS",
+    "viewportWidth": 2560,
+    "cardCount": 7,
+    "cardWidths": [
+      392,
+      392,
+      392,
+      392,
+      392,
+      392,
+      445
+    ],
+    "maxWidth": 445,
+    "globalOverflow": false
+  },
+  {
+    "id": "buildings-2560",
+    "status": "PASS",
+    "viewportWidth": 2560,
+    "cardCount": 7,
+    "cardWidths": [
+      392,
+      392,
+      392,
+      392,
+      392,
+      392,
+      445
+    ],
+    "maxWidth": 445,
+    "globalOverflow": false
+  }
+]
