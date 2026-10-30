@@ -1,0 +1,64 @@
+name: Reconcile Active Production Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_commit:
+        description: Exact active production SHA to reconcile
+        required: true
+        type: string
+      reconciliation_approval:
+        description: Type RECONCILE_ACTIVE_RELEASE
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-deployment
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate exact request
+        env:
+          RELEASE_COMMIT: ${{ inputs.release_commit }}
+          APPROVAL: ${{ inputs.reconciliation_approval }}
+        run: |
+          [[ "$RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$APPROVAL" == RECONCILE_ACTIVE_RELEASE ]]
+      - name: Validate pinned host identity
+        env:
+          HOST_FINGERPRINT: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+        run: '[[ "$HOST_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]'
+      - name: Reconcile active immutable release evidence
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          RELEASE_COMMIT: ${{ inputs.release_commit }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,RELEASE_COMMIT
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            reconcile="$(mktemp /tmp/coro-release-reconcile.XXXXXX.sh)"
+            state_tool="$(mktemp /tmp/coro-release-state.XXXXXX.mjs)"
+            trap 'rm -f -- "$reconcile" "$state_tool"' EXIT
+            git -C "$repo" fetch --quiet origin main
+            test "$(git -C "$repo" rev-parse origin/main)" = "$SOURCE_SHA"
+            git -C "$repo" show "$SOURCE_SHA:ops/deploy/coro-release-reconcile.sh" >"$reconcile"
+            git -C "$repo" show "$SOURCE_SHA:ops/deploy/release-state.mjs" >"$state_tool"
+            bash -n "$reconcile"
+            chmod 0700 "$reconcile"
+            CORO_RELEASE_STATE_TOOL="$state_tool" "$reconcile"

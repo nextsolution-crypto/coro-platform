@@ -5,6 +5,7 @@ import test from "node:test";
 const deploy = fs.readFileSync(new URL("../../.github/workflows/deploy.yml", import.meta.url), "utf8");
 const maintenance = fs.readFileSync(new URL("../../.github/workflows/production-capacity-maintenance.yml", import.meta.url), "utf8");
 const reconcile = fs.readFileSync(new URL("../deploy/coro-release-reconcile.sh", import.meta.url), "utf8");
+const bootstrap = fs.readFileSync(new URL("../../.github/workflows/production-release-reconciliation.yml", import.meta.url), "utf8");
 
 test("pre, post and periodic maintenance share the deployment lock", () => {
   assert.match(deploy, /Run eligible pre-release capacity maintenance/);
@@ -27,7 +28,15 @@ test("only successful reconciliation emits atomic rotation authority", () => {
 });
 
 test("workflows never use broad Docker or volume pruning", () => {
-  for (const source of [deploy, maintenance]) {
+  for (const source of [deploy, maintenance, bootstrap]) {
     assert.doesNotMatch(source, /docker system prune|docker volume prune|docker image prune/);
   }
+});
+
+test("historical reconciliation is manual, exact, locked and cannot deploy", () => {
+  assert.match(bootstrap, /workflow_dispatch:/);
+  assert.match(bootstrap, /RECONCILE_ACTIVE_RELEASE/);
+  assert.match(bootstrap, /group: coro-production-deployment/);
+  assert.match(bootstrap, /coro-release-reconcile\.sh/);
+  assert.doesNotMatch(bootstrap, /coro-production-release|docker compose .*up|migrate deploy|CAPACITY_CLEANUP_MODE/);
 });
