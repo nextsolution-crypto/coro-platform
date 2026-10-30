@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import { Plus, Trash2 } from 'lucide-react';
@@ -8,6 +8,20 @@ import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 
 type ViewMode = 'week' | 'month' | 'year' | 'custom';
+
+const newRequestId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+const localCivilDate = (date = new Date()) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+const formatCivilDate = (value: string) => new Intl.DateTimeFormat('fr-CA', {
+  weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC',
+}).format(new Date(value));
+const apiErrorMessage = (error: any, fallback: string) => {
+  const status = error?.response?.status;
+  if (status === 401) return 'Votre session a expiré. Reconnectez-vous avant de poursuivre.';
+  if (status === 403) return 'Vous n’avez pas l’autorisation d’effectuer cette action.';
+  if (status === 409) return error?.response?.data?.message || 'Cette entrée a changé dans une autre session. Rechargez les données.';
+  return error?.response?.data?.message || fallback;
+};
 
 export default function TimelogPage() {
   const { user } = useAuthStore();
@@ -27,20 +41,24 @@ export default function TimelogPage() {
   const [editingEntry, setEditingEntry] = useState<any>(null);
   const [editForm, setEditForm] = useState({ heures: '', note: '' });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [error, setError] = useState('');
+  const [dataMayBeStale, setDataMayBeStale] = useState(false);
+  const requestSequence = useRef(0);
 
   const now = new Date();
   const [customFrom, setCustomFrom] = useState(
-    new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+    localCivilDate(new Date(now.getFullYear(), now.getMonth(), 1))
   );
   const [customTo, setCustomTo] = useState(
-    new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+    localCivilDate(new Date(now.getFullYear(), now.getMonth() + 1, 0))
   );
 
   const [form, setForm] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: localCivilDate(),
     heures: '',
     category: '',
     note: '',
+    clientRequestId: newRequestId(),
   });
 
   const getDateRange = (mode: ViewMode) => {
@@ -74,56 +92,69 @@ export default function TimelogPage() {
   }, [activeTab, viewMode, customFrom, customTo]);
 
   const fetchData = async () => {
+    const sequence = ++requestSequence.current;
     setLoading(true);
+    setError('');
     try {
       const { from, to } = getDateRange(viewMode);
       const res = await api.get('/timelog/me', { params: { from, to } });
+      if (sequence !== requestSequence.current) return;
       setData(res.data);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+      setDataMayBeStale(false);
+    } catch (err) {
+      if (sequence !== requestSequence.current) return;
+      setError(apiErrorMessage(err, 'Impossible de charger les heures. Réessayez.'));
+      setDataMayBeStale(Boolean(data));
+    }
+    finally { if (sequence === requestSequence.current) setLoading(false); }
   };
 
   const fetchTeamData = async () => {
     setLoadingTeam(true);
+    setError('');
     try {
       const { from, to } = getDateRange(viewMode);
       const res = await api.get('/timelog/team', { params: { from, to } });
       setTeamData(res.data || []);
-    } catch (err) { console.error(err); }
+    } catch (err) { setError(apiErrorMessage(err, 'Impossible de charger la vue équipe. Réessayez.')); }
     finally { setLoadingTeam(false); }
   };
 
   const handleAdd = async () => {
     if (!form.category || !form.heures) return;
     setSaving(true);
+    setError('');
     try {
       await api.post('/timelog/me', form);
       setShowAddModal(false);
-      setForm({ date: new Date().toISOString().split('T')[0], heures: '', category: '', note: '' });
-      fetchData();
-    } catch (err) { console.error(err); }
+      setForm({ date: localCivilDate(), heures: '', category: '', note: '', clientRequestId: newRequestId() });
+      await fetchData();
+    } catch (err) { setError(apiErrorMessage(err, 'La saisie n’a pas pu être enregistrée. Vos valeurs sont conservées.')); }
     finally { setSaving(false); }
   };
 
-  const handleDelete = async (entryId: string) => {
+  const handleDelete = async (entry: any) => {
     if (!confirm('Supprimer cette entrée ?')) return;
     try {
-      await api.delete(`/timelog/me/${entryId}`);
-      fetchData();
-    } catch (err) { console.error(err); }
+      setError('');
+      await api.delete(`/timelog/me/${entry.id}`, { params: { lockVersion: entry.lockVersion } });
+      await fetchData();
+    } catch (err) { setError(apiErrorMessage(err, 'La suppression n’a pas été confirmée. Rechargez avant de réessayer.')); }
   };
 
   const handleEdit = async () => {
     if (!editingEntry || !editForm.heures) return;
     setSavingEdit(true);
+    setError('');
     try {
       await api.put(`/timelog/me/${editingEntry.id}`, {
         heures: parseFloat(editForm.heures),
         note: editForm.note,
+        lockVersion: editingEntry.lockVersion,
       });
       setEditingEntry(null);
-      fetchData();
-    } catch (err) { console.error(err); }
+      await fetchData();
+    } catch (err) { setError(apiErrorMessage(err, 'La modification n’a pas pu être enregistrée. Vos valeurs sont conservées.')); }
     finally { setSavingEdit(false); }
   };
 
@@ -210,6 +241,18 @@ export default function TimelogPage() {
           </button>
         ))}
       </div>
+
+      {error && (
+        <div role="alert" aria-live="assertive" className="mb-6 rounded-md p-4 flex flex-col sm:flex-row sm:items-center gap-3"
+          style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A', color: '#922B21' }}>
+          <span className="flex-1 text-sm">{error}{dataMayBeStale ? ' Les données affichées peuvent être périmées.' : ''}</span>
+          <button type="button" onClick={() => activeTab === 'equipe' ? fetchTeamData() : fetchData()}
+            className="px-3 py-2 rounded text-sm font-semibold"
+            style={{ backgroundColor: '#FFFFFF', border: '1px solid #C0392B', color: '#C0392B' }}>
+            Réessayer
+          </button>
+        </div>
+      )}
 
       {/* Dates personnalisées */}
       {viewMode === 'custom' && (
@@ -312,7 +355,7 @@ export default function TimelogPage() {
 
                         <div className="flex flex-wrap items-center gap-2 mb-3">
                           <span className="text-xs" style={{ color: '#6C757D' }}>
-                            📅 {new Date(entry.date).toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' })}
+                            📅 {formatCivilDate(entry.date)}
                           </span>
 
                           <span
@@ -348,7 +391,7 @@ export default function TimelogPage() {
                             </button>
 
                             <button
-                              onClick={() => handleDelete(entry.id)}
+                              onClick={() => handleDelete(entry)}
                               className="px-3 py-1.5 rounded text-xs font-medium transition-colors flex items-center gap-1.5"
                               style={{ color: '#C0392B', border: '1px solid #F1948A' }}
                               onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
@@ -401,7 +444,7 @@ export default function TimelogPage() {
                             style={{ borderBottom: idx < allEntries.length - 1 ? '1px solid #F8F9FA' : 'none' }}
                           >
                             <td className="px-4 py-3 text-xs" style={{ color: '#6C757D', whiteSpace: 'nowrap' }}>
-                              {new Date(entry.date).toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' })}
+                              {formatCivilDate(entry.date)}
                             </td>
 
                             <td className="px-4 py-3" style={{ color: '#2C3E50' }}>
@@ -451,7 +494,7 @@ export default function TimelogPage() {
                                   </button>
 
                                   <button
-                                    onClick={() => handleDelete(entry.id)}
+                                    onClick={() => handleDelete(entry)}
                                     className="p-1.5 rounded transition-colors"
                                     style={{ color: '#C0392B', border: '1px solid #F1948A' }}
                                     onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
@@ -604,7 +647,7 @@ export default function TimelogPage() {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 mt-6">
-              <button onClick={() => { setShowAddModal(false); setForm({ date: new Date().toISOString().split('T')[0], heures: '', category: '', note: '' }); }}
+              <button onClick={() => { setShowAddModal(false); setForm({ date: localCivilDate(), heures: '', category: '', note: '', clientRequestId: newRequestId() }); }}
                 className="flex-1 py-2.5 rounded text-sm"
                 style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}>
                 Annuler

@@ -3487,8 +3487,12 @@ model TimelogEntry {
   category       String
   note           String?
   isBillable     Boolean  @default(false)
+  lockVersion    Int      @default(0)
+  clientRequestId String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, userId, clientRequestId])
 }
 
 model TimelogCategory {

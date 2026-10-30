@@ -1,5 +1,19 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateTimelogEntryDto, UpdateTimelogEntryDto } from './timelog.dto';
+
+export function parseCivilDate(value: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) throw new RangeError('Date civile invalide');
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+    throw new RangeError('Date civile invalide');
+  }
+  return date;
+}
 
 export const DEFAULT_CATEGORIES = [
   { key: 'lecture_email', label: 'Lecture de email', order: 1 },
@@ -85,8 +99,7 @@ export class TimelogService {
   }
 
   async getMyTimelog(userId: string, organizationId: string, dateFrom: string, dateTo: string) {
-    const from = new Date(dateFrom);
-    const to = new Date(dateTo);
+    const { from, to } = this.parseRange(dateFrom, dateTo);
 
     const [timelogEntries, taskEntries, user, categories] = await Promise.all([
       this.prisma.timelogEntry.findMany({
@@ -151,39 +164,69 @@ export class TimelogService {
     };
   }
 
-  async addEntry(userId: string, organizationId: string, dto: any) {
-    return this.prisma.timelogEntry.create({
-      data: {
-        userId,
-        organizationId,
-        date: new Date(dto.date),
-        heures: parseFloat(dto.heures),
-        category: dto.category,
-        note: dto.note || null,
-        isBillable: false,
+  async addEntry(userId: string, organizationId: string, dto: CreateTimelogEntryDto) {
+    const category = await this.prisma.timelogCategory.findFirst({
+      where: {
+        key: dto.category,
+        isActive: true,
+        OR: [{ organizationId: null }, { organizationId }],
       },
+      select: { id: true },
     });
+    if (!category) throw new NotFoundException('Catégorie introuvable');
+    const data = {
+      userId,
+      organizationId,
+      date: parseCivilDate(dto.date),
+      heures: dto.heures,
+      category: dto.category,
+      note: dto.note?.trim() || null,
+      isBillable: false,
+      clientRequestId: dto.clientRequestId,
+    };
+    const existing = await this.prisma.timelogEntry.findFirst({
+      where: { organizationId, userId, clientRequestId: dto.clientRequestId },
+    });
+    if (existing) {
+      if (this.sameCreateRequest(existing, data)) return existing;
+      throw new ConflictException('La clé de reprise correspond à une autre saisie.');
+    }
+    try {
+      return await this.prisma.timelogEntry.create({ data });
+    } catch (error: any) {
+      if (error?.code !== 'P2002') throw error;
+      const raced = await this.prisma.timelogEntry.findFirst({
+        where: { organizationId, userId, clientRequestId: dto.clientRequestId },
+      });
+      if (raced && this.sameCreateRequest(raced, data)) return raced;
+      throw new ConflictException('La saisie a déjà été traitée avec un autre contenu.');
+    }
   }
 
-  async updateEntry(entryId: string, userId: string, organizationId: string, dto: any) {
-    return this.prisma.timelogEntry.updateMany({
-      where: { id: entryId, userId, organizationId },
-      data: {
-        heures: parseFloat(dto.heures),
-        note: dto.note || null,
-      },
+  async updateEntry(entryId: string, userId: string, organizationId: string, dto: UpdateTimelogEntryDto) {
+    const data: any = {
+      heures: dto.heures,
+      lockVersion: { increment: 1 },
+    };
+    if (dto.note !== undefined) data.note = dto.note.trim() || null;
+    const result = await this.prisma.timelogEntry.updateMany({
+      where: { id: entryId, userId, organizationId, lockVersion: dto.lockVersion },
+      data,
     });
+    if (result.count === 1) return { updated: true, lockVersion: dto.lockVersion + 1 };
+    await this.throwMissingOrConflict(entryId, userId, organizationId);
   }
 
-  async deleteEntry(entryId: string, userId: string, organizationId: string) {
-    return this.prisma.timelogEntry.deleteMany({
-      where: { id: entryId, userId, organizationId },
+  async deleteEntry(entryId: string, userId: string, organizationId: string, lockVersion: number) {
+    const result = await this.prisma.timelogEntry.deleteMany({
+      where: { id: entryId, userId, organizationId, lockVersion },
     });
+    if (result.count === 1) return { deleted: true };
+    await this.throwMissingOrConflict(entryId, userId, organizationId);
   }
 
   async getTeamTimelog(organizationId: string, dateFrom: string, dateTo: string) {
-    const from = new Date(dateFrom);
-    const to = new Date(dateTo);
+    const { from, to } = this.parseRange(dateFrom, dateTo);
 
     const users = await this.prisma.user.findMany({
       where: { organizationId, isActive: true },
@@ -220,5 +263,29 @@ export class TimelogService {
         aRempliSesHeures: heuresTotal >= objectifPeriode * 0.9,
       };
     }));
+  }
+
+  private sameCreateRequest(existing: any, data: any) {
+    return existing.date.getTime() === data.date.getTime() &&
+      existing.heures === data.heures && existing.category === data.category &&
+      (existing.note ?? null) === data.note;
+  }
+
+  private parseRange(dateFrom: string, dateTo: string) {
+    const from = parseCivilDate(dateFrom);
+    const to = parseCivilDate(dateTo);
+    if (from.getTime() > to.getTime()) {
+      throw new BadRequestException('La date de début doit précéder ou égaler la date de fin.');
+    }
+    return { from, to };
+  }
+
+  private async throwMissingOrConflict(entryId: string, userId: string, organizationId: string): Promise<never> {
+    const existing = await this.prisma.timelogEntry.findFirst({
+      where: { id: entryId, userId, organizationId },
+      select: { id: true },
+    });
+    if (!existing) throw new NotFoundException('Entrée introuvable');
+    throw new ConflictException('Cette entrée a été modifiée dans une autre session. Rechargez les données.');
   }
 }

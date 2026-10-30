@@ -123,8 +123,8 @@ describe('Work Management security hardening', () => {
   it('scopes TimelogEntry update by owner and tenant', async () => {
     const prisma: any = { timelogEntry: model() };
     prisma.timelogEntry.updateMany.mockResolvedValue({ count: 1 });
-    await new TimelogService(prisma).updateEntry('entry', 'user-a', 'org-a', { heures: 1, note: '' });
-    expect(prisma.timelogEntry.updateMany.mock.calls[0][0].where).toEqual({ id: 'entry', userId: 'user-a', organizationId: 'org-a' });
+    await new TimelogService(prisma).updateEntry('entry', 'user-a', 'org-a', { heures: 1, note: '', lockVersion: 3 });
+    expect(prisma.timelogEntry.updateMany.mock.calls[0][0].where).toEqual({ id: 'entry', userId: 'user-a', organizationId: 'org-a', lockVersion: 3 });
   });
 
   it('denies cross-tenant ProjectTask update', async () => {
