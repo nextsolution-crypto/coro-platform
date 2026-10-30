@@ -29,4 +29,16 @@
 
 ## Exclusions
 
-Pas de journal général, messagerie, refonte Planification d'équipe, extension Timelog, lecteur d'écran réel, fusion, déploiement, notification réelle ou mutation production.
+Pas de journal général, messagerie, refonte Planification d'équipe, extension Timelog ni lecteur d'écran réel. La recette n'a produit aucune notification réelle ni mutation métier de production.
+
+## Livraison gouvernée
+
+- Merge : `76e7a3c60b38d005e81be72c631f2b91a33668bf` via PR #126.
+- CI main : `40977118674` PASS.
+- Release : `40977838218` SUCCESS.
+- Production : SHA exact actif, migration 161, PostgreSQL sain, quatre services applicatifs actifs.
+- Inspection : `40979105630` PASS/GO.
+- Capacité : `40979108332` PASS; 20 073 549 824 octets libres et 367 880 603 octets de marge.
+- Rollback : quatre images disponibles; sauvegarde distante et restauration vérifiées.
+
+Les exclusions fonctionnelles et les limites QA précédentes restent applicables.

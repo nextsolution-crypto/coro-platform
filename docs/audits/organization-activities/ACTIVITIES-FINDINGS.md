@@ -28,4 +28,13 @@ Référence initiale : `93fedd799f76f8aab963df89017c62508f95a7a4`. Candidat : `f
 
 `ACCEPTATION_INTÉGRÉE_PASS`
 
-`PRODUCTION_MUTATION: NO` · `MERGE: NO` · `APPLICATION_DEPLOYMENT: NO` · `REAL_NOTIFICATION: NO` · `WEB_AI_ACTIVATION: NO`
+Campagne QA : `PRODUCTION_MUTATION: NO` · `REAL_NOTIFICATION: NO` · `WEB_AI_ACTIVATION: NO`.
+La fusion et le déploiement ultérieurs sont réconciliés ci-dessous.
+
+## État livré
+
+Les constats ACT-001 à ACT-013 ci-dessus sont actifs dans la release privée
+`76e7a3c60b38d005e81be72c631f2b91a33668bf`. La release gouvernée
+`40977838218` et l'inspection post-release `40979105630` sont réussies.
+Aucune migration n'a été ajoutée. Les limites lecteur d'écran, fournisseur réel
+et outbox durable demeurent inchangées.
