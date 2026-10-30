@@ -47,7 +47,7 @@ test("journal policy activation is exact, reversible and shares the deployment l
   assert.match(journal, /DISABLE_REVIEWED_JOURNAL_POLICY/);
   assert.match(journal, /group: coro-production-deployment/);
   assert.match(journal, /coro-production-deployment\.lock/);
-  assert.match(journal, /systemctl reload systemd-journald/);
+  assert.match(journal, /systemctl restart systemd-journald/);
   assert.match(journal, /previous\.conf/);
   assert.doesNotMatch(journal, /docker .*prune|docker compose|migrate deploy/);
 });

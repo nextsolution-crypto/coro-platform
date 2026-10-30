@@ -105,7 +105,7 @@ jobs:
                 fi
                 install -m 0644 "$candidate" "$target.next"
                 mv -T -- "$target.next" "$target"
-                systemctl reload systemd-journald
+                systemctl restart systemd-journald
                 ;;
               DISABLE)
                 test "$JOURNAL_POLICY_APPROVAL" = DISABLE_REVIEWED_JOURNAL_POLICY
@@ -117,7 +117,7 @@ jobs:
                   test -f "$state_dir/previous.absent"
                   rm -f -- "$target"
                 fi
-                systemctl reload systemd-journald
+                systemctl restart systemd-journald
                 ;;
             esac
 
