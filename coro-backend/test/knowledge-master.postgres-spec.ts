@@ -177,14 +177,17 @@ describePg('Knowledge master canonical lifecycle and tenant isolation PostgreSQL
     }
   });
 
-  it('isolates corporate clients within the same provider and honours live documentary grants', async () => {
+  it('allows organization-wide corporate reads without implicit mutation rights and honours live documentary grants', async () => {
     const documentSpace = new BuildingDocumentsService(prisma as any, files);
     const corporate = `same-org-corporate-${suffix}`;
     const separateClient = `same-org-client-${suffix}`;
     await prisma.client.create({ data: { id: separateClient, organizationId: org, name: 'Other synthetic customer', regulatoryRequirements: [] } });
     await prisma.clientUser.create({ data: { id: corporate, email: `${corporate}@example.invalid`, password: 'unused', firstName: 'Synthetic', lastName: 'Corporate', organizationId: org, clientId: separateClient, role: 'CLIENT_CORPORATE' } });
     const actor: KnowledgeActor = { type: 'CLIENT_USER', id: corporate, organizationId: org, role: 'CLIENT_CORPORATE', buildingIds: [] };
-    await expect(documentSpace.list(actor, building)).rejects.toThrow('introuvable');
+    const corporateListing = await documentSpace.list(actor, building);
+    expect(corporateListing.building.id).toBe(building);
+    expect(corporateListing.canUpload).toBe(false);
+    expect(corporateListing.canManage).toBe(false);
     expect(await retrieval.search(actor, 'Orme', building)).toEqual([]);
     const delegated: KnowledgeActor = { ...portal, id: otherManager, buildingIds: [] };
     await expect(documentSpace.access(delegated, building)).rejects.toThrow('non accordé');
