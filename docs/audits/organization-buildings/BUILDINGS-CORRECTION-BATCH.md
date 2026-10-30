@@ -60,3 +60,14 @@ Critère : tout document listé et admissible est téléchargeable par l'acteur 
 10. Runner QA permanent API + navigateur ajouté au harnais global.
 
 Migration additive : `20261117010000_building_governance`; rollback documenté comme suppression de la FK/index/colonne facultative uniquement après absence d'événement Bâtiment dépendant.
+
+## État livré
+
+- Candidat testé : `01cf448ab1c2742430ef2258a0edf5ea738d523f`.
+- Merge/release : `2e6c06ef2ca2a2606e779c0480f64e6cea3d6a0c`.
+- PR #137 : fusionnée.
+- Release 41134179928 : `SUCCESS` et réconciliée.
+- Inspection post-release 41135782370 : `GO`.
+- Migration 163→164 : appliquée, tête attendue confirmée.
+
+Le rollback technique complet conserve les quatre images de la release saine précédente. Cette release antérieure ne contient toutefois pas les corrections de sécurité Bâtiments : si un rollback applicatif devient indispensable, les routes Bâtiments/Documents affectées doivent être suspendues au niveau d'accès jusqu'au rétablissement du backend corrigé. Aucun retour destructif de base n'est autorisé.

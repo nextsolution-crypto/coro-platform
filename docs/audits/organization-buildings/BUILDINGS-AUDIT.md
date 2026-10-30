@@ -85,3 +85,13 @@ Le sous-parcours de consultation responsive peut être démontré avec données 
 Verdict du candidat correctif : `ACCEPTATION_INTÉGRÉE_PASS`.
 
 Limites : lecteur d'écran réel `NOT_VERIFIED`; les capacités documentaires nouvelles au-delà des formats et de l'indexation existants restent des écarts produit, pas des promesses de ce lot.
+
+## Livraison gouvernée et inspection finale
+
+La PR #137 a été fusionnée et livrée sous le SHA immuable `2e6c06ef2ca2a2606e779c0480f64e6cea3d6a0c`. Le workflow de release 41134179928 est terminal `SUCCESS`, y compris construction des quatre images, release fail-closed, réconciliation et rotation de rétention.
+
+L'inspection post-release 41135782370 conclut `GO` : quatre services applicatifs actifs, aucun redémarrage, PostgreSQL 16.15 sain, 164 migrations et tête `20261117010000_building_governance`. La sauvegarde `production-20261030T220150Z-ed8d04f8afae` est `REMOTE_VERIFIED`; le restore drill `20261030T220219Z-caa5b8422bd7` est `RESTORE_VERIFIED`.
+
+Le contrôle de capacité 41135785608 est `SUCCESS` avec 36 529 483 776 octets libres, 16 823 746 510 octets de marge de release et les quatre images de rollback disponibles. Aucun nettoyage supplémentaire n'a été nécessaire après réconciliation.
+
+Verdict final du périmètre : `VALIDATED_INTEGRATED_MERGED_DEPLOYED_RECONCILED`.
