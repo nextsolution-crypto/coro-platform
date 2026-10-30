@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 're
 import axios from 'axios';
 import api from '@/lib/api';
 import { toast } from '@/lib/toast';
-import type { PlanningAction, PlanningContext, TeamCandidate, TeamPreview } from './types';
+import type { CreatePlanningActivityResponse, PlanningAction, PlanningContext, TeamCandidate, TeamPreview } from './types';
 import { completeSlot, selectLead, teamDirty, type TeamDraft } from './teamPickerState';
 import { dateKey, localBoundary, timeValue } from './time';
 import TeamPicker from './TeamPicker';
@@ -20,6 +20,9 @@ export default function ActivityPlanningDrawer({ mode, action, context, initialS
   onClose: () => void; onCreated: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const mutationInFlight = useRef(false);
+  const createRequestId = useRef(crypto.randomUUID());
+  const planningRequestId = useRef(crypto.randomUUID());
   const [clientId, setClientId] = useState(action?.clientId ?? '');
   const [buildingId, setBuildingId] = useState(action?.buildingId ?? '');
   const [projectId, setProjectId] = useState(action?.projectId ?? '');
@@ -86,20 +89,25 @@ export default function ActivityPlanningDrawer({ mode, action, context, initialS
 
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setError('');
+    if (mutationInFlight.current) return;
     if (!projectId || !activityTypeId) { setError('Choisissez un mandat et un type d’activité.'); return; }
+    mutationInFlight.current = true;
     setSaving(true);
     try {
-      await api.post('/planning/activities', { projectId, activityTypeId, customLabel: customLabel || undefined, notes: notes || undefined, mode: modeValue, clientVisible, clientBookable });
+      const response = await api.post<CreatePlanningActivityResponse>('/planning/activities', { requestId: createRequestId.current,
+        projectId, activityTypeId, customLabel: customLabel || undefined, notes: notes || undefined, mode: modeValue, clientVisible, clientBookable });
+      if (!response.data.activityId) throw new Error('La création n’a retourné aucun identifiant d’activité.');
       toast('Activité créée.');
       onCreated(); onClose();
     } catch (cause) {
       const message = axios.isAxiosError(cause) ? cause.response?.data?.message : null;
       setError(Array.isArray(message) ? message.join(' ') : message || 'Impossible de créer l’activité.');
-    } finally { setSaving(false); }
+    } finally { mutationInFlight.current = false; setSaving(false); }
   };
 
   const plan = async (create: boolean) => {
     setError('');
+    if (mutationInFlight.current) return;
     if (!building || !slotComplete || !durationMinutes || !team.leadId) {
       setError('Définissez un créneau et choisissez un LEAD.'); return;
     }
@@ -107,10 +115,12 @@ export default function ActivityPlanningDrawer({ mode, action, context, initialS
     if (selected.some(candidate => candidate.availabilityStatus === 'UNKNOWN') && !confirmUnknown) {
       setError('Confirmez explicitement les disponibilités à vérifier.'); return;
     }
+    mutationInFlight.current = true;
     setPlanningSaving(true);
     try {
       const minute = Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
-      const common = { startUtc: localBoundary(date, minute, building.timeZone).toISOString(), durationMinutes,
+      const common = { requestId: planningRequestId.current,
+        startUtc: localBoundary(date, minute, building.timeZone).toISOString(), durationMinutes,
         leadUserId: team.leadId, supportUserIds: team.supportIds, confirmUnknown };
       if (create) {
         if (!projectId || !activityTypeId) throw new Error('Choisissez un mandat et un type d’activité.');
@@ -125,7 +135,7 @@ export default function ActivityPlanningDrawer({ mode, action, context, initialS
     } catch (cause) {
       const message = axios.isAxiosError(cause) ? cause.response?.data?.message : cause instanceof Error ? cause.message : null;
       setError(Array.isArray(message) ? message.join(' ') : message || 'La planification a changé. Actualisez les disponibilités.');
-    } finally { setPlanningSaving(false); }
+    } finally { mutationInFlight.current = false; setPlanningSaving(false); }
   };
 
   const slotFields = <section className={styles.slotSection}><div className={styles.sectionHeading}><h3>Créneau</h3>

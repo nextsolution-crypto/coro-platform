@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PlanningActionsService } from './planning-actions.service';
+import { planningRequestFingerprint } from './planning-idempotency';
 
 const actor = { userId: 'admin', organizationId: 'org-a', role: 'ADMIN' };
 const dto = {
@@ -26,6 +27,7 @@ const activity = {
 function setup(status: 'AVAILABLE' | 'BLOCKED' | 'UNKNOWN' = 'AVAILABLE') {
   const tx: any = {
     $queryRaw: jest.fn().mockResolvedValue([{ id: 'activity' }]),
+    $executeRaw: jest.fn().mockResolvedValue(1),
     projectActivity: {
       findFirst: jest.fn().mockResolvedValue(activity),
       create: jest.fn(),
@@ -109,6 +111,76 @@ function setup(status: 'AVAILABLE' | 'BLOCKED' | 'UNKNOWN' = 'AVAILABLE') {
 }
 
 describe('PlanningActionsService', () => {
+  it('replays a completed planning request without creating a second activity or booking', async () => {
+    const { service, tx } = setup();
+    tx.auditLog.findFirst.mockResolvedValue({
+      entityId: 'activity',
+      metadata: {
+        requestId: '7e8d1f81-7687-4d12-9f94-1182c20f88f5',
+        requestOperation: 'CREATE_AND_PLAN_ACTIVITY',
+        requestFingerprint: planningRequestFingerprint(
+          'CREATE_AND_PLAN_ACTIVITY',
+          {
+            projectId: 'project',
+            activityTypeId: 'type',
+            customLabel: null,
+            notes: null,
+            mode: 'presentiel',
+            clientVisible: undefined,
+            clientBookable: undefined,
+            startUtc: dto.startUtc,
+            durationMinutes: dto.durationMinutes,
+            leadUserId: dto.leadUserId,
+            supportUserIds: ['support'],
+            confirmUnknown: false,
+          },
+        ),
+        bookingId: 'booking',
+      },
+    });
+
+    await expect(
+      service.createAndPlan(
+        {
+          projectId: 'project',
+          activityTypeId: 'type',
+          requestId: '7e8d1f81-7687-4d12-9f94-1182c20f88f5',
+          ...dto,
+        },
+        actor,
+      ),
+    ).resolves.toEqual({ activityId: 'activity', bookingId: 'booking' });
+
+    expect(tx.projectActivity.create).not.toHaveBeenCalled();
+    expect(tx.booking.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects reuse of a planning requestId with an incompatible payload', async () => {
+    const { service, tx } = setup();
+    tx.auditLog.findFirst.mockResolvedValue({
+      entityId: 'activity',
+      metadata: {
+        requestOperation: 'CREATE_AND_PLAN_ACTIVITY',
+        requestFingerprint: 'different-payload',
+        bookingId: 'booking',
+      },
+    });
+
+    await expect(
+      service.createAndPlan(
+        {
+          projectId: 'project',
+          activityTypeId: 'type',
+          requestId: '7e8d1f81-7687-4d12-9f94-1182c20f88f5',
+          ...dto,
+        },
+        actor,
+      ),
+    ).rejects.toThrow('operation ou des donnees differentes');
+    expect(tx.projectActivity.create).not.toHaveBeenCalled();
+    expect(tx.booking.create).not.toHaveBeenCalled();
+  });
+
   it('instantiates canonical checklists before creating the Booking', async () => {
     const { service, tx, activityTaskLists } = setup();
     tx.project.findFirst.mockResolvedValue(activity.project);

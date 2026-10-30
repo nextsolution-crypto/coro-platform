@@ -27,6 +27,7 @@
     "client-pilot-access:browser": "node src/client-pilot-access-browser.mjs",
     "organization-activities:acceptance": "node src/organization-activities-acceptance.mjs",
     "organization-timelog:acceptance": "node src/organization-timelog-acceptance.mjs",
+    "organization-team-planning:acceptance": "node src/organization-team-planning-acceptance.mjs",
     "identity:cleanup": "node src/identity-cleanup.mjs"
   }
 }

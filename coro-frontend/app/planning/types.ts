@@ -101,6 +101,10 @@ export type PlanningContext = {
   }>;
 };
 
+export type CreatePlanningActivityResponse = {
+  activityId: string;
+};
+
 export type PlanningAction = {
   id: string;
   type: string;

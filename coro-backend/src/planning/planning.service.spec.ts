@@ -1046,10 +1046,14 @@ describe('PlanningService', () => {
   });
   it('creates an unplanned mandate Activity and its audit atomically without a Booking', async () => {
     const tx = {
+      $executeRaw: jest.fn().mockResolvedValue(1),
       projectActivity: {
         create: jest.fn().mockResolvedValue({ id: 'activity-1' }),
       },
-      auditLog: { create: jest.fn().mockResolvedValue({ id: 'audit-1' }) },
+      auditLog: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'audit-1' }),
+      },
     };
     const prisma = {
       project: { findFirst: jest.fn().mockResolvedValue({ id: 'project-1' }) },
@@ -1075,10 +1079,15 @@ describe('PlanningService', () => {
       {} as any,
       activityTaskLists as any,
     );
-    await service.createUnplannedActivity(
-      { projectId: 'project-1', activityTypeId: 'type-1' },
+    const result = await service.createUnplannedActivity(
+      {
+        requestId: '8db2895e-8930-4d8f-bcb8-333c2c18ecb5',
+        projectId: 'project-1',
+        activityTypeId: 'type-1',
+      },
       actor,
     );
+    expect(result).toEqual({ activityId: 'activity-1' });
     expect(prisma.project.findFirst.mock.calls[0][0].where).toMatchObject({
       id: 'project-1',
       organizationId: 'org-a',
@@ -1094,6 +1103,11 @@ describe('PlanningService', () => {
     expect(tx.auditLog.create.mock.calls[0][0].data).toMatchObject({
       action: 'PLANNING_ACTIVITY_CREATED',
       entityId: 'activity-1',
+      metadata: {
+        requestId: '8db2895e-8930-4d8f-bcb8-333c2c18ecb5',
+        requestOperation: 'CREATE_UNPLANNED_ACTIVITY',
+        requestFingerprint: expect.any(String),
+      },
     });
     expect(
       activityTaskLists.instantiateMissingTaskListsForActivity,

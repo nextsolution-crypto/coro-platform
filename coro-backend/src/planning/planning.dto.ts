@@ -1,4 +1,4 @@
-import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsIn, IsInt, IsISO8601, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsIn, IsInt, IsISO8601, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class PlanningWindowDto {
@@ -21,6 +21,7 @@ export class PlanningContextDto {
 }
 
 export class CreatePlanningActivityDto {
+  @IsOptional() @IsUUID('4') requestId?: string;
   @IsString() @MaxLength(100) projectId!: string;
   @IsString() @MaxLength(100) activityTypeId!: string;
   @IsOptional() @IsString() @MaxLength(160) customLabel?: string;
@@ -43,6 +44,7 @@ export class PlanningTeamDto {
 }
 
 export class PlanExistingActivityDto extends PlanningTeamDto {
+  @IsOptional() @IsUUID('4') requestId?: string;
   @IsISO8601({ strict: true }) startUtc!: string;
   @Type(() => Number) @IsInt() @Min(15) @Max(1440) durationMinutes!: number;
 }

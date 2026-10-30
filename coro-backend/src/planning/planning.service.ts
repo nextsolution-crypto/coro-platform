@@ -28,6 +28,11 @@ import {
 import { projectAccessWhere } from '../auth/project-access';
 import { isOperationalActivityAudit } from './planning-activity-history';
 import { ActivityTaskListsService } from '../activities/activity-task-lists.service';
+import { Prisma } from '@prisma/client';
+import {
+  planningRequestFingerprint,
+  planningRequestLockKey,
+} from './planning-idempotency';
 
 type Actor = { userId: string; organizationId: string; role: string };
 const DAY = 86_400_000;
@@ -271,6 +276,51 @@ export class PlanningService {
       );
     }
     return this.prisma.$transaction(async (tx) => {
+      if (dto.requestId) {
+        const requestOperation = 'CREATE_UNPLANNED_ACTIVITY' as const;
+        const requestFingerprint = planningRequestFingerprint(
+          requestOperation,
+          {
+            projectId: dto.projectId,
+            activityTypeId: dto.activityTypeId,
+            customLabel,
+            notes: dto.notes?.trim() || null,
+            mode: dto.mode ?? 'presentiel',
+            clientVisible,
+            clientBookable,
+          },
+        );
+        const lockKey = planningRequestLockKey({
+          organizationId: actor.organizationId,
+          userId: actor.userId,
+          operation: requestOperation,
+          requestId: dto.requestId,
+        });
+        await tx.$executeRaw(
+          Prisma.sql`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`,
+        );
+        const replay = await tx.auditLog.findFirst({
+          where: {
+            organizationId: actor.organizationId,
+            userId: actor.userId,
+            action: 'PLANNING_ACTIVITY_CREATED',
+            metadata: { path: ['requestId'], equals: dto.requestId },
+          },
+          select: { entityId: true, metadata: true },
+        });
+        if (replay) {
+          const metadata = replay.metadata as Record<string, unknown> | null;
+          if (
+            metadata?.requestOperation !== requestOperation ||
+            metadata?.requestFingerprint !== requestFingerprint
+          ) {
+            throw new BadRequestException(
+              'Ce requestId a deja ete utilise avec une operation ou des donnees differentes.',
+            );
+          }
+          return { activityId: replay.entityId };
+        }
+      }
       const minutes = activityType.defaultDurationMinutes;
       const activity = await tx.projectActivity.create({
         data: {
@@ -309,12 +359,30 @@ export class PlanningService {
           projectId: project.id,
           description:
             'Activite creee depuis le Planner et ajoutee au backlog.',
-          metadata: { activityTypeId: activityType.id, scheduled: false },
+          metadata: {
+            activityTypeId: activityType.id,
+            scheduled: false,
+            requestId: dto.requestId ?? null,
+            requestOperation: dto.requestId
+              ? 'CREATE_UNPLANNED_ACTIVITY'
+              : null,
+            requestFingerprint: dto.requestId
+              ? planningRequestFingerprint('CREATE_UNPLANNED_ACTIVITY', {
+                  projectId: dto.projectId,
+                  activityTypeId: dto.activityTypeId,
+                  customLabel,
+                  notes: dto.notes?.trim() || null,
+                  mode: dto.mode ?? 'presentiel',
+                  clientVisible,
+                  clientBookable,
+                })
+              : null,
+          },
           userId: actor.userId,
           organizationId: actor.organizationId,
         },
       });
-      return activity;
+      return { activityId: activity.id };
     });
   }
 

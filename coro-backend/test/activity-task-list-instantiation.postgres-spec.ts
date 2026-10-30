@@ -589,7 +589,7 @@ describePostgres('Activity checklist instantiation 2D-A on PostgreSQL', () => {
       admin(),
     );
     const listsCreated = await prisma.projectTaskList.findMany({
-      where: { activityId: created.id },
+      where: { activityId: created.activityId },
       select: { taskListId: true },
     });
     expect(new Set(listsCreated.map((item) => item.taskListId))).toEqual(
@@ -597,7 +597,7 @@ describePostgres('Activity checklist instantiation 2D-A on PostgreSQL', () => {
     );
     expect(
       await prisma.auditLog.count({
-        where: { entityId: created.id, action: 'PLANNING_ACTIVITY_CREATED' },
+        where: { entityId: created.activityId, action: 'PLANNING_ACTIVITY_CREATED' },
       }),
     ).toBe(1);
   });

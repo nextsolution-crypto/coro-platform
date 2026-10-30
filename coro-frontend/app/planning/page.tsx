@@ -1,8 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import axios from 'axios';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
@@ -16,6 +15,7 @@ import ActivityPlanningDrawer from './ActivityPlanningDrawer';
 import MyAssignmentsPanel from './MyAssignmentsPanel';
 import type { PlannerEvent, PlannerResponse, PlanningAction, PlanningContext } from './types';
 import { dateKey, formatClock, formatDay, moveDate, periodLabel, requestWindow, segmentForDay, validTimeZone, viewDays, type PlannerView } from './time';
+import { planningLoadError } from './loadState';
 import styles from './planning.module.css';
 
 type Option = { id: string; name: string; clientId?: string };
@@ -51,7 +51,15 @@ export default function TeamPlannerPage() {
   const [actionError, setActionError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [periodActions, setPeriodActions] = useState<PlanningAction[]>([]);
+  const [periodActionsLoading, setPeriodActionsLoading] = useState(false);
+  const [periodActionsError, setPeriodActionsError] = useState('');
+  const [periodActionsRetry, setPeriodActionsRetry] = useState(0);
   const [context, setContext] = useState<PlanningContext | null>(null);
+  const [contextLoading, setContextLoading] = useState(false);
+  const [contextError, setContextError] = useState('');
+  const [contextRetry, setContextRetry] = useState(0);
+  const contextRequest = useRef(0);
+  const monthRequest = useRef(0);
   const [activityDrawer, setActivityDrawer] = useState<{ mode: 'CREATE' | 'PLAN_EXISTING'; action?: PlanningAction;
     initialSlot?: { date: string; time: string; leadId?: string } } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -112,12 +120,22 @@ export default function TeamPlannerPage() {
   useEffect(() => {
     const authenticated = isAuthenticated || Boolean(sessionStorage.getItem('coro_token') || localStorage.getItem('coro_token'));
     if (!ready || !authenticated) return;
+    const requestId = ++contextRequest.current;
     let cancelled = false;
-    api.get<PlanningContext>('/planning/context').then(response => { if (!cancelled) {
+    queueMicrotask(() => {
+      if (cancelled || requestId !== contextRequest.current) return;
+      setContextLoading(true); setContextError(''); setContext(null); setClients([]); setBuildings([]);
+    });
+    api.get<PlanningContext>('/planning/context').then(response => { if (!cancelled && requestId === contextRequest.current) {
       setContext(response.data); setClients(response.data.clients); setBuildings(response.data.buildings);
-    } });
+    } }).catch(cause => {
+      if (cancelled || requestId !== contextRequest.current) return;
+      setContextError(planningLoadError('context', axios.isAxiosError(cause) ? cause.response?.status : undefined));
+    }).finally(() => {
+      if (!cancelled && requestId === contextRequest.current) setContextLoading(false);
+    });
     return () => { cancelled = true; };
-  }, [ready, isAuthenticated, refreshKey]);
+  }, [ready, isAuthenticated, refreshKey, contextRetry]);
 
   const days = useMemo(() => date ? viewDays(date, view) : [], [date, view]);
   const requestRange = useMemo(() => days.length && validTimeZone(zone) ? requestWindow(days, zone) : null, [days, zone]);
@@ -164,8 +182,19 @@ export default function TeamPlannerPage() {
 
   useEffect(() => {
     const authenticated = isAuthenticated || Boolean(sessionStorage.getItem('coro_token') || localStorage.getItem('coro_token'));
-    if (view !== 'month' || !requestRange || !authenticated) { setPeriodActions([]); return; }
+    const requestId = ++monthRequest.current;
+    if (view !== 'month' || !requestRange || !authenticated) {
+      queueMicrotask(() => {
+        if (requestId !== monthRequest.current) return;
+        setPeriodActions([]); setPeriodActionsError(''); setPeriodActionsLoading(false);
+      });
+      return;
+    }
     let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled || requestId !== monthRequest.current) return;
+      setPeriodActions([]); setPeriodActionsError(''); setPeriodActionsLoading(true);
+    });
     const load = async () => {
       const collected: PlanningAction[] = [];
       for (let page = 1; ; page++) {
@@ -179,11 +208,17 @@ export default function TeamPlannerPage() {
         collected.push(...items);
         if (collected.length >= (response.data.total ?? 0) || items.length === 0) break;
       }
-      if (!cancelled) setPeriodActions(collected);
+      if (!cancelled && requestId === monthRequest.current) setPeriodActions(collected);
     };
-    load().catch(() => { if (!cancelled) setPeriodActions([]); });
+    load().catch(cause => {
+      if (cancelled || requestId !== monthRequest.current) return;
+      setPeriodActions([]);
+      setPeriodActionsError(planningLoadError('month', axios.isAxiosError(cause) ? cause.response?.status : undefined));
+    }).finally(() => {
+      if (!cancelled && requestId === monthRequest.current) setPeriodActionsLoading(false);
+    });
     return () => { cancelled = true; };
-  }, [view, requestRange, zone, debouncedSearch, clientId, buildingId, projectId, activityTypeId, bookingStatus, isAuthenticated, refreshKey]);
+  }, [view, requestRange, zone, debouncedSearch, clientId, buildingId, projectId, activityTypeId, bookingStatus, isAuthenticated, refreshKey, periodActionsRetry]);
 
   const move = (direction: -1 | 1) => setDate(previous => moveDate(previous, view, direction));
   const closeDrawer = useCallback(() => { setSelected(null); setSelectedMode('VIEW'); }, []);
@@ -196,7 +231,6 @@ export default function TeamPlannerPage() {
   const mobileEvents = useMemo(() => data?.events.flatMap(event => event.userIds.length
     ? event.userIds.map(userId => ({ ...eventForUser(event, userId), userIds: [userId] }))
     : [event]) ?? [], [data]);
-  const totalActions = data ? Object.values(data.actionSummary).reduce((sum, count) => sum + count, 0) : 0;
   const period = periodLabel(days, view);
   const today = dateKey(new Date(), displayedZone);
 
@@ -209,6 +243,10 @@ export default function TeamPlannerPage() {
           <span>Fuseau d’affichage : <strong>{displayedZone}</strong></span>
           {data && <span>Mis à jour à {formatClock(data.asOf, displayedZone)}</span>}</div>
       </header>
+
+      {contextLoading && <p className={styles.notice} role="status">Chargement des référentiels de planification…</p>}
+      {contextError && <div className={styles.error} role="alert"><span>{contextError}</span>
+        <button type="button" className={styles.inlineButton} onClick={() => setContextRetry(value => value + 1)}>Réessayer</button></div>}
 
       {data && <PlanningActionCenter summary={data.actionSummary} activeType={actionType} items={actionItems}
         total={actionTotal} page={actionPage} loading={actionLoading} error={actionError} timeZone={displayedZone}
@@ -264,8 +302,11 @@ export default function TeamPlannerPage() {
       {error && <div className={styles.error} role="alert">{error}</div>}
       {data && !error && <section className={styles.gridSection} aria-label="Calendrier d'équipe" aria-busy={loading}>
         {data.warnings.length > 0 && <div className={styles.notice} role="status">{data.warnings.join(' · ')}</div>}
-        {view === 'month' ? <MonthCalendar monthDays={days} events={data.events} actions={periodActions}
-          timeZone={displayedZone} today={today} onDay={day => { setDate(day); setView('day'); }} onSelect={event => openEvent(event)} /> : <>
+        {view === 'month' ? <>{periodActionsLoading && <p className={styles.notice} role="status">Chargement des actions du mois…</p>}
+          {periodActionsError && <div className={styles.error} role="alert"><span>{periodActionsError}</span>
+            <button type="button" className={styles.inlineButton} onClick={() => setPeriodActionsRetry(value => value + 1)}>Réessayer</button></div>}
+          {!periodActionsError && <MonthCalendar monthDays={days} events={data.events} actions={periodActions}
+            timeZone={displayedZone} today={today} onDay={day => { setDate(day); setView('day'); }} onSelect={event => openEvent(event)} />}</> : <>
         <div className={styles.desktopTimeline}><ResourceTimeline data={data} days={days} onSelect={event => openEvent(event)}
           onCreate={slot => setActivityDrawer({ mode: 'CREATE', initialSlot: slot,
             action: { id: 'draft', type: 'UNPLANNED_ACTIVITY', label: '', startUtc: null, clientId, buildingId, projectId } })} /></div>
