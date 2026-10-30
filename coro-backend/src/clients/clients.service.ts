@@ -13,6 +13,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../client-portal/email.service';
 import * as bcrypt from 'bcryptjs';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
+import { CreateClientDto, UpdateClientDto } from './dto/client.dto';
 
 @Injectable()
 export class ClientsService {
@@ -300,21 +301,21 @@ export class ClientsService {
     return this.toOperationalPermissionResponse(updated);
   }
 
-  async create(data: {
-    name: string;
-    email?: string;
-    phone?: string;
-    address?: string;
-    city?: string;
-    province?: string;
-    logoBase64?: string;
-    organizationId: string;
-    contactFirstName?: string;
-    contactLastName?: string;
-    contactEmail?: string;
-    contactPhone?: string;
-  }) {
-    const client = await this.prisma.client.create({ data });
+  async create(data: CreateClientDto & { organizationId: string }) {
+    if (data.contactEmail) {
+      const existing = await this.prisma.clientUser.findUnique({ where: { email: data.contactEmail } });
+      if (existing) {
+        throw new BadRequestException('Cette adresse est déjà associée à un accès portail. Utilisez la gestion des accès existants.');
+      }
+    }
+
+    const client = await this.prisma.client.create({ data: {
+      name: data.name, email: data.email, phone: data.phone, address: data.address,
+      city: data.city, province: data.province, logoBase64: data.logoBase64,
+      contactFirstName: data.contactFirstName, contactLastName: data.contactLastName,
+      contactEmail: data.contactEmail, contactPhone: data.contactPhone,
+      organizationId: data.organizationId,
+    } });
 
     // Créer automatiquement le compte CLIENT_CORPORATE si email fourni
     if (data.contactEmail) {
@@ -374,7 +375,7 @@ export class ClientsService {
     return clientUser;
   }
 
-  async update(id: string, data: any, organizationId: string) {
+  async update(id: string, data: UpdateClientDto, organizationId: string) {
     await this.assertOwnership(id, organizationId);
 
     // Récupérer l'ancien contact avant la mise à jour
@@ -382,7 +383,13 @@ export class ClientsService {
     const oldEmail = oldClient?.contactEmail;
     const newEmail = data.contactEmail;
 
-    const updated = await this.prisma.client.update({ where: { id }, data });
+    const updateData = {
+      name: data.name, email: data.email, phone: data.phone, address: data.address,
+      city: data.city, province: data.province,
+      contactFirstName: data.contactFirstName, contactLastName: data.contactLastName,
+      contactEmail: data.contactEmail, contactPhone: data.contactPhone,
+    };
+    const updated = await this.prisma.client.update({ where: { id }, data: updateData });
 
     // Si le contact corporatif a changé
     if (newEmail && newEmail !== oldEmail) {
@@ -414,7 +421,7 @@ export class ClientsService {
     return updated;
   }
 
-  async uploadLogo(id: string, logoBase64: string, organizationId: string) {
+  async uploadLogo(id: string, logoBase64: string | null | undefined, organizationId: string) {
     await this.assertOwnership(id, organizationId);
     return this.prisma.client.update({
       where: { id },

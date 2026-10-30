@@ -43,3 +43,9 @@ APPLICATION_DEPLOYMENT: NO
 REAL_NOTIFICATION: NO
 
 WEB_AI_ACTIVATION: NO
+
+## Candidat correctif
+
+Le lot `fix/organization-clients-integrity` ajoute l’autorité ADMIN/SUPER_ADMIN aux trois mutations, des DTO fermés et un mapping explicite, des collisions d’identité refusées avant création, ainsi que des états d’erreur et une modale accessibles. Tests ciblés : 22/22; runner contractuel : 5/5; TypeScript backend/frontend : PASS.
+
+La création atomique avec outbox durable, l’idempotence de requête et la politique de cascade de désactivation ne sont pas closes. L’acceptation PostgreSQL/Chrome reste donc NOT_VERIFIED et le candidat ne doit pas être fusionné avant résolution de ces réserves.

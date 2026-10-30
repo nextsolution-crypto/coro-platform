@@ -26,3 +26,16 @@
 | Fournisseur simulé, aucune notification réelle | PASS pour l’audit statique |
 
 Le verdict de l’écran est **FAIL — correction de sécurité requise avant acceptation fonctionnelle**. Les preuves statiques ne remplacent pas la campagne PostgreSQL/navigateur demandée après correction.
+
+## État du candidat correctif
+
+| Contrôle | Statut candidat |
+|---|---|
+| Modification/logo/désactivation réservés ADMIN/SUPER_ADMIN | PASS ciblé |
+| DTO fermés et projection explicite | PASS ciblé |
+| Collision ClientUser refusée avant création | PASS ciblé |
+| États de chargement distincts et reprise | PASS TypeScript/contractuel |
+| Modale nommée, Escape, focus initial/restauré, double soumission | PARTIAL; confinement complet à confirmer dans Chrome |
+| Transaction + outbox + idempotence | FAIL/non implémenté |
+| Cascade de désactivation | DÉCISION MÉTIER EN ATTENTE |
+| PostgreSQL et Chrome 12/12 | NOT_VERIFIED |

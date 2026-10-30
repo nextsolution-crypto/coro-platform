@@ -1,12 +1,14 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, UsePipes, ValidationPipe, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ClientsService } from './clients.service';
 import { UpdateClientUserOperationalPermissionsDto } from './dto/update-client-user-operational-permissions.dto';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 import { requireTenantAdmin } from '../auth/work-management-access';
+import { CreateClientDto, UpdateClientDto, UpdateClientLogoDto } from './dto/client.dto';
 
 @Controller('clients')
 @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
+@UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
 export class ClientsController {
   constructor(private clientsService: ClientsService) {}
 
@@ -54,23 +56,26 @@ export class ClientsController {
   }
 
   @Post()
-  create(@Body() body: any, @Request() req: any) {
+  create(@Body() body: CreateClientDto, @Request() req: any) {
     requireTenantAdmin(req.user);
     return this.clientsService.create({ ...body, organizationId: req.user.organizationId });
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() body: any, @Request() req: any) {
+  update(@Param('id') id: string, @Body() body: UpdateClientDto, @Request() req: any) {
+    requireTenantAdmin(req.user);
     return this.clientsService.update(id, body, req.user.organizationId);
   }
 
   @Put(':id/logo')
-  uploadLogo(@Param('id') id: string, @Body() body: { logoBase64: string }, @Request() req: any) {
+  uploadLogo(@Param('id') id: string, @Body() body: UpdateClientLogoDto, @Request() req: any) {
+    requireTenantAdmin(req.user);
     return this.clientsService.uploadLogo(id, body.logoBase64, req.user.organizationId);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req: any) {
+    requireTenantAdmin(req.user);
     return this.clientsService.remove(id, req.user.organizationId);
   }
 }

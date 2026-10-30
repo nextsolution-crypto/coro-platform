@@ -21,7 +21,7 @@ test('POST /clients keeps PR #94 server-derived tenant and admin authorization',
   assert.match(body, /organizationId:\s*req\.user\.organizationId/);
 });
 
-test('characterizes missing tenant-admin authorization on client mutations', () => {
+test('requires tenant-admin authorization on every client mutation', () => {
   const mutationSection = controller.slice(
     controller.indexOf("  @Put(':id')"),
     controller.indexOf("@Controller('admin/organizations')"),
@@ -29,7 +29,7 @@ test('characterizes missing tenant-admin authorization on client mutations', () 
   assert.match(mutationSection, /update\(@Param\('id'\)/);
   assert.match(mutationSection, /uploadLogo\(@Param\('id'\)/);
   assert.match(mutationSection, /remove\(@Param\('id'\)/);
-  assert.doesNotMatch(mutationSection, /requireTenantAdmin\(req\.user\)/);
+  assert.equal((mutationSection.match(/requireTenantAdmin\(req\.user\)/g) ?? []).length, 3);
 });
 
 test('list and direct read are both tenant-scoped by server organization', () => {
@@ -39,23 +39,25 @@ test('list and direct read are both tenant-scoped by server organization', () =>
   assert.match(service, /where:\s*\{\s*id,\s*organizationId\s*\}/);
 });
 
-test('characterizes unrestricted mutation payload and non-transactional provisioning', () => {
-  assert.match(service, /async update\(id: string, data: any, organizationId: string\)/);
-  assert.match(service, /client\.update\(\{ where: \{ id \}, data \}\)/);
+test('uses an explicit mutation projection and rejects existing portal identities', () => {
+  assert.match(service, /async update\(id: string, data: UpdateClientDto, organizationId: string\)/);
+  assert.match(service, /const updateData = \{/);
+  assert.doesNotMatch(service, /client\.update\(\{ where: \{ id \}, data \}\)/);
   const create = methodBody(service, '  async create(data:', '  async createCorpoAccess(');
-  assert.match(create, /client\.create\(\{ data \}\)/);
+  assert.match(create, /Cette adresse est déjà associée/);
+  assert.match(create, /client\.create\(\{ data:/);
   assert.match(create, /createCorpoAccess/);
   assert.doesNotMatch(create, /\$transaction/);
   assert.match(service, /role:\s*'CLIENT_CORPORATE'/);
   assert.match(service, /sendClientInvitation/);
 });
 
-test('characterizes UI resilience and accessibility gaps', () => {
-  assert.match(listPage, /catch \(err\) \{ console\.error\(err\); \}/);
-  assert.match(detailPage, /catch \(err\) \{ console\.error\(err\); \}/);
+test('provides explicit load errors and an accessible creation dialog', () => {
+  assert.match(listPage, /Impossible de charger les clients/);
+  assert.match(detailPage, /Impossible de charger le client/);
   assert.match(detailPage, /Client introuvable/);
-  assert.doesNotMatch(listPage, /role=["']dialog["']/);
-  assert.doesNotMatch(listPage, /aria-modal/);
-  assert.doesNotMatch(listPage, /onKeyDown/);
+  assert.match(listPage, /role=["']dialog["']/);
+  assert.match(listPage, /aria-modal/);
+  assert.match(listPage, /onKeyDown/);
   assert.doesNotMatch(listPage, /type=["']search["']/);
 });
