@@ -22,3 +22,15 @@
 | Accessibilité | Lecteur d'écran réel | NOT_VERIFIED | Lecteur indisponible. |
 
 Preuves : `D:\CORO-QA\runs\organization-activities\2026-10-29`.
+
+## Livraison
+
+| Gate | Statut | Preuve |
+|---|---|---|
+| Fusion | PASS | PR #126, merge `76e7a3c60b38d005e81be72c631f2b91a33668bf`. |
+| CI main | PASS | Workflow `40977118674`. |
+| Release | PASS | Workflow gouverné `40977838218`. |
+| Migration | PASS | Aucune nouvelle migration; tête production 161 inchangée. |
+| Inspection | PASS/GO | Workflow `40979105630`, SHA actif et quatre digests applicatifs vérifiés. |
+| Capacité | PASS, marge faible | Workflow `40979108332`; 20 073 549 824 octets libres, marge 367 880 603 octets. |
+| Récupération | PASS | Sauvegarde distante et restauration vérifiées; quatre rollbacks présents. |

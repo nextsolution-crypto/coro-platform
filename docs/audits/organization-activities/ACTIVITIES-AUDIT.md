@@ -37,4 +37,17 @@ Lecteur d'écran réel `NOT_VERIFIED`. Le fournisseur de courriel est simulé; a
 
 `ACCEPTATION_INTÉGRÉE_PASS`, sous réserve de la dernière campagne du HEAD publié et de la CI de PR.
 
-`PRODUCTION_MUTATION: NO` · `MERGE: NO` · `APPLICATION_DEPLOYMENT: NO` · `REAL_NOTIFICATION: NO` · `WEB_AI_ACTIVATION: NO`
+Campagne QA : `PRODUCTION_MUTATION: NO` · `REAL_NOTIFICATION: NO` · `WEB_AI_ACTIVATION: NO`.
+La fusion et le déploiement ultérieurs sont réconciliés ci-dessous.
+
+## Réconciliation de livraison — 2026-10-29
+
+- PR `#126` fusionnée dans `76e7a3c60b38d005e81be72c631f2b91a33668bf`.
+- CI main `40977118674` : PASS.
+- Release gouvernée `40977838218` : SUCCESS; aucune migration nouvelle, tête maintenue à 161.
+- Inspection post-release `40979105630` : PASS/GO, SHA actif exact, cinq conteneurs sains, verrou libre.
+- Capacité post-release `40979108332` : 20 073 549 824 octets libres; gate PASS avec 367 880 603 octets de marge.
+- Sauvegarde distante et restauration : vérifiées; quatre images de rollback disponibles.
+- Preuves assainies : `D:\CORO-QA\runs\organization-activities-release\2026-10-29`.
+
+`VALIDÉ_QA — FUSIONNÉ — DÉPLOYÉ — RÉCONCILIÉ`
