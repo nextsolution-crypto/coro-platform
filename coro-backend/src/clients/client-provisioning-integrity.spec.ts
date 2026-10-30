@@ -94,7 +94,11 @@ describe('Client invitation outbox worker', () => {
     const prisma: any = {
       clientInvitationEvent: {
         findUnique: jest.fn(async () => rows.event),
-        updateMany: jest.fn(async () => ({ count: 1 })),
+        updateMany: jest.fn(async ({ data }: any) => {
+          const normalized = Object.fromEntries(Object.entries(data).map(([key, value]: any) => [key, value?.increment ? (rows.event[key] || 0) + value.increment : value]));
+          rows.event = { ...rows.event, ...normalized };
+          return { count: 1 };
+        }),
         update: jest.fn(async ({ data }: any) => { rows.event = { ...rows.event, ...data }; return rows.event; }),
       },
     };
@@ -104,11 +108,37 @@ describe('Client invitation outbox worker', () => {
       toEmail: 'qa@example.test', toName: 'QA', clientName: 'Client',
       temporaryPassword: 'Synthetic-A1!', organizationName: 'Org',
     }, 'event-1');
-    rows.event = { id: 'event-1', idempotencyKey: 'event-1', status: 'PENDING', attempts: 0, ...protectedPayload };
+    rows.event = { id: 'event-1', idempotencyKey: 'event-1', status: 'PENDING', attempts: 0, client: { isActive: true }, clientUser: { isActive: true }, ...protectedPayload };
     await expect(worker.dispatchOne('event-1')).resolves.toMatchObject({ delivered: false });
     rows.event.status = 'FAILED';
     await expect(worker.dispatchOne('event-1')).resolves.toMatchObject({ delivered: true });
     expect(email.sendClientInvitation).toHaveBeenCalledTimes(2);
     expect(rows.event.status).toBe('DELIVERED');
+  });
+
+  it('cancels an invitation whose client became inactive without calling the provider', async () => {
+    const event = { id: 'event-2', status: 'PENDING', attempts: 0, client: { isActive: false }, clientUser: { isActive: true } };
+    const prisma: any = { clientInvitationEvent: { findUnique: jest.fn().mockResolvedValue(event), updateMany: jest.fn().mockResolvedValue({ count: 1 }) } };
+    const email = { sendClientInvitation: jest.fn() };
+    const worker = new ClientInvitationOutboxService(prisma, email as any);
+    await expect(worker.dispatchOne(event.id)).resolves.toMatchObject({ cancelled: true });
+    expect(email.sendClientInvitation).not.toHaveBeenCalled();
+    expect(prisma.clientInvitationEvent.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'CANCELLED' }) }));
+  });
+
+  it('fails closed for a malformed key and supports explicit previous-key rotation', async () => {
+    process.env.CLIENT_INVITATION_OUTBOX_KEY_ID = 'v1';
+    process.env.CLIENT_INVITATION_OUTBOX_KEY_BASE64 = Buffer.alloc(32, 7).toString('base64');
+    const worker = new ClientInvitationOutboxService({} as any, {} as any);
+    const envelope = { toEmail: 'qa@example.test', toName: 'QA', clientName: 'Client', temporaryPassword: 'Synthetic-A1!', organizationName: 'Org' };
+    const protectedV1 = worker.protect(envelope, 'event-3');
+    process.env.CLIENT_INVITATION_OUTBOX_KEY_ID = 'v2';
+    process.env.CLIENT_INVITATION_OUTBOX_KEY_BASE64 = 'invalid';
+    expect(() => worker.protect(envelope, 'event-3')).toThrow('32 bytes');
+    process.env.CLIENT_INVITATION_OUTBOX_KEY_BASE64 = Buffer.alloc(32, 8).toString('base64');
+    process.env.CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64 = JSON.stringify({ v1: Buffer.alloc(32, 7).toString('base64') });
+    expect((worker as any).unprotect(protectedV1.encryptedEnvelope, 'event-3', 'v1')).toEqual(envelope);
+    delete process.env.CLIENT_INVITATION_OUTBOX_KEY_ID;
+    delete process.env.CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64;
   });
 });

@@ -22,7 +22,12 @@ export class ClientJwtGuard implements CanActivate {
         throw new UnauthorizedException('Token invalide.');
       }
       const user = await this.prisma.clientUser.findFirst({
-        where: { id: payload.sub, organizationId: payload.organizationId, isActive: true },
+        where: {
+          id: payload.sub,
+          organizationId: payload.organizationId,
+          isActive: true,
+          client: { isActive: true },
+        },
         select: { sessionVersion: true },
       });
       if (!user || user.sessionVersion !== payload.sessionVersion) throw new UnauthorizedException('Token invalide.');

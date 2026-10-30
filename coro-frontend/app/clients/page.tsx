@@ -124,9 +124,9 @@ export default function ClientsPage() {
     try {
       await api.delete(`/clients/${id}`);
       fetchClients();
-      toast('Client supprimé.');
+      toast('Client désactivé. Les accès portail sont suspendus; les données et l’historique sont conservés.');
     } catch (err) {
-      toast('Erreur lors de la suppression du client.', 'error');
+      toast('Erreur lors de la désactivation du client.', 'error');
     }
   };
 
@@ -252,12 +252,12 @@ export default function ClientsPage() {
                   <p className="text-xs" style={{ color: '#ADB5BD' }}>Projets</p>
                 </div>
                 {canManage && <button
-                  onClick={e => { e.stopPropagation(); if (confirm(`Supprimer le client "${client.name}" ?`)) handleDelete(client.id); }}
+                  onClick={e => { e.stopPropagation(); if (confirm(`Désactiver le client « ${client.name} » ?\n\nTous ses accès portail et sessions seront suspendus immédiatement. Les données et l’historique seront conservés. Une réactivation exigera une nouvelle authentification et ne restaurera aucun ancien lien ni aucune ancienne session.`)) handleDelete(client.id); }}
                   className="p-2 rounded transition-colors"
                   style={{ color: '#ADB5BD' }}
                   onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#FDEDEC'; e.currentTarget.style.color = '#C0392B'; }}
                   onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#ADB5BD'; }}
-                  title="Supprimer le client"
+                  title="Désactiver le client"
                 >
                   🗑
                 </button>}

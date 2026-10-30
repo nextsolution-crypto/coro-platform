@@ -61,6 +61,15 @@ try {
     await isolated.page.screenshot({ path: join(evidenceRoot, `clients-${id}.png`), fullPage: true });
     await isolated.page.keyboard.press('Escape');
     check(`escape-${id}`, !(await isolated.page.$('[role="dialog"]')), 'dialog closes with Escape');
+    let confirmation = '';
+    isolated.page.once('dialog', async (dialog) => { confirmation = dialog.message(); await dialog.dismiss(); });
+    await isolated.page.evaluate(() => {
+      const button = document.querySelector('button[title="Désactiver le client"]');
+      if (!(button instanceof HTMLButtonElement)) throw new Error('Deactivate client button unavailable');
+      button.click();
+    });
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 50));
+    check(`deactivation-confirmation-${id}`, /accès portail/i.test(confirmation) && /historique/i.test(confirmation) && /nouvelle authentification/i.test(confirmation), confirmation);
   }
   await isolated.page.reload({ waitUntil: 'networkidle0' });
   check('f5-session', await isolated.page.evaluate(() => Boolean(localStorage.getItem('coro_token')) && /Clients/i.test(document.body.innerText)), 'authenticated page survives reload');

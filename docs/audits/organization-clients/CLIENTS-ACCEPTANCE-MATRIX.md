@@ -55,6 +55,6 @@ Le verdict de l’écran est **FAIL — correction de sécurité requise avant a
 | Migration depuis zero et mise a niveau historique | PASS |
 | Chrome 12/12, F5, focus, Escape, zoom 200 % | PASS |
 | Lecteur d'ecran reel | NOT_VERIFIED |
-| Cascade de desactivation | DECISION_ATTENDUE |
+| Cascade de desactivation | PASS; politique approuvee, transition atomique et recette synthetique |
 
-Verdict : `ACCEPTATION_INTEGREE_PASS_WITH_DEACTIVATION_POLICY_PENDING`.
+Verdict : `ACCEPTATION_INTEGREE_PASS`.

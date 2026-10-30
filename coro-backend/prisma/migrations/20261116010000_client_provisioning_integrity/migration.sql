@@ -1,4 +1,4 @@
-CREATE TYPE "ClientInvitationEventStatus" AS ENUM ('PENDING', 'PROCESSING', 'DELIVERED', 'FAILED', 'EXHAUSTED');
+CREATE TYPE "ClientInvitationEventStatus" AS ENUM ('PENDING', 'PROCESSING', 'DELIVERED', 'FAILED', 'EXHAUSTED', 'CANCELLED');
 
 CREATE TABLE "ClientProvisioningRequest" (
   "id" TEXT NOT NULL,

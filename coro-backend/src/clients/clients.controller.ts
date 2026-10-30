@@ -80,7 +80,21 @@ export class ClientsController {
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req: any) {
     requireTenantAdmin(req.user);
-    return this.clientsService.remove(id, req.user.organizationId);
+    return this.clientsService.remove(id, req.user.organizationId, {
+      userId: req.user.userId,
+      role: req.user.role,
+      organizationId: req.user.organizationId,
+    });
+  }
+
+  @Put(':id/reactivate')
+  reactivate(@Param('id') id: string, @Request() req: any) {
+    requireTenantAdmin(req.user);
+    return this.clientsService.reactivate(id, req.user.organizationId, {
+      userId: req.user.userId,
+      role: req.user.role,
+      organizationId: req.user.organizationId,
+    });
   }
 }
 

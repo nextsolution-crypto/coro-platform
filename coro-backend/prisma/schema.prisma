@@ -3638,6 +3638,7 @@ enum ClientInvitationEventStatus {
   DELIVERED
   FAILED
   EXHAUSTED
+  CANCELLED
 }
 
 model ClientProvisioningRequest {

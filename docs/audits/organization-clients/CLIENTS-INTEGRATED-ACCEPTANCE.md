@@ -37,14 +37,14 @@
 - CLIENT-007 : libelle corrige; consequences d'acces encore soumises a la decision de desactivation.
 - CLIENT-009 : NON_BLOQUANT, hors promesse actuelle.
 
-## Limite metier restante
+## Politique de desactivation approuvee
 
-La desactivation d'une fiche Client ne change pas silencieusement les acces portail dans ce lot. La politique de cascade reste une decision metier distincte. La question exacte est :
+La desactivation d'un Client suspend tous ses acces portail a la requete suivante, revoque les sessions, MFA, appareils et liens, et annule les invitations non livrees. Les donnees et historiques sont conserves. La reactivation ne restaure aucune session, aucun lien ou compte individuellement desactive.
 
-> Lorsqu'un Client est desactive, faut-il suspendre immediatement tous ses ClientUser, sessions et liens actifs, tout en conservant les donnees et l'historique, sans toucher aux User internes homonymes ni aux autres Clients, et sans reactiver implicitement les comptes deja desactives lors d'une future reactivation ?
+Une communication deja acceptee par un fournisseur ne peut pas etre rappelee. Son contenu d'acces demeure toutefois inutilisable parce que l'admissibilite du Client est reverifiee par le serveur.
 
 ## Verdict
 
-`ACCEPTATION_INTEGREE_PASS_WITH_DEACTIVATION_POLICY_PENDING`
+`ACCEPTATION_INTEGREE_PASS`
 
-La creation et l'administration couvertes par le lot sont acceptables. La politique de desactivation globale reste explicitement hors de cette acceptation. Aucun resultat de ce dossier n'autorise une fusion ou un deploiement.
+La creation, l'administration et la suspension heritee couvertes par le lot sont acceptables sous reserve de la configuration de cle obligatoire avant release. Aucun resultat de ce dossier n'autorise une fusion ou un deploiement.

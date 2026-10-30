@@ -463,11 +463,75 @@ export class ClientsService {
     });
   }
 
-  async remove(id: string, organizationId: string) {
-    await this.assertOwnership(id, organizationId);
-    return this.prisma.client.update({
-      where: { id },
-      data: { isActive: false },
+  async remove(
+    id: string,
+    organizationId: string,
+    actor: { userId: string; role: string; organizationId: string },
+  ) {
+    this.assertOrganizationAdmin(actor);
+    if (actor.organizationId !== organizationId) throw new ForbiddenException('Accès refusé.');
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Client" WHERE id = ${id} AND "organizationId" = ${organizationId} FOR UPDATE`;
+      const client = await tx.client.findFirst({
+        where: { id, organizationId },
+        include: { clientUsers: { select: { id: true } } },
+      });
+      if (!client) throw new ForbiddenException('Accès refusé à cette ressource.');
+      if (!client.isActive) return client;
+      const userIds = client.clientUsers.map((user) => user.id);
+      const now = new Date();
+      const updated = await tx.client.update({ where: { id }, data: { isActive: false } });
+      if (userIds.length > 0) {
+        await tx.clientUser.updateMany({
+          where: { id: { in: userIds } },
+          data: { sessionVersion: { increment: 1 }, mfaCode: null, mfaCodeExpiry: null },
+        });
+        await tx.clientTrustedDevice.deleteMany({ where: { userId: { in: userIds } } });
+        await tx.magicLink.updateMany({ where: { userId: { in: userIds }, usedAt: null }, data: { usedAt: now } });
+        await tx.clientPasswordResetToken.updateMany({ where: { clientUserId: { in: userIds }, usedAt: null }, data: { usedAt: now } });
+      }
+      await tx.clientInvitationEvent.updateMany({
+        where: { clientId: id, status: { in: ['PENDING', 'PROCESSING', 'FAILED'] } },
+        data: { status: 'CANCELLED', nextAttemptAt: null, leaseExpiresAt: null, lastErrorCode: 'CLIENT_INACTIVE' },
+      });
+      await this.adminAudit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'CLIENT_DEACTIVATED',
+        targetType: 'Client',
+        targetId: id,
+        targetLabel: client.name,
+        organizationId,
+        beforeData: { isActive: true },
+        afterData: { isActive: false, portalAccessSuspended: true },
+      });
+      return updated;
+    });
+  }
+
+  async reactivate(
+    id: string,
+    organizationId: string,
+    actor: { userId: string; role: string; organizationId: string },
+  ) {
+    this.assertOrganizationAdmin(actor);
+    if (actor.organizationId !== organizationId) throw new ForbiddenException('Accès refusé.');
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Client" WHERE id = ${id} AND "organizationId" = ${organizationId} FOR UPDATE`;
+      const client = await tx.client.findFirst({ where: { id, organizationId } });
+      if (!client) throw new ForbiddenException('Accès refusé à cette ressource.');
+      if (client.isActive) return client;
+      const updated = await tx.client.update({ where: { id }, data: { isActive: true } });
+      await this.adminAudit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'CLIENT_REACTIVATED',
+        targetType: 'Client',
+        targetId: id,
+        targetLabel: client.name,
+        organizationId,
+        beforeData: { isActive: false },
+        afterData: { isActive: true, priorSessionsRestored: false, priorLinksRestored: false },
+      });
+      return updated;
     });
   }
 

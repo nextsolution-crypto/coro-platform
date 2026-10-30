@@ -52,6 +52,16 @@ export class ClientAuthService {
     return matches.length === 1 ? matches[0] : null;
   }
 
+  private isEligible<T>(
+    clientUser: T | null | undefined,
+  ): clientUser is T & { isActive: true; client: { isActive: true } } {
+    const candidate = clientUser as
+      | { isActive?: boolean; client?: { isActive?: boolean } }
+      | null
+      | undefined;
+    return Boolean(candidate?.isActive && candidate.client?.isActive);
+  }
+
   private clientToken(clientUser: any, mfaVerifiedAt?: Date) {
     return this.jwt.sign({
       sub: clientUser.id,
@@ -80,7 +90,7 @@ export class ClientAuthService {
 
   async getCurrentUser(clientUserId: string, organizationId: string) {
     const clientUser = await this.prisma.clientUser.findFirst({
-      where: { id: clientUserId, organizationId, isActive: true },
+      where: { id: clientUserId, organizationId, isActive: true, client: { isActive: true } },
       include: { client: { select: { name: true } } },
     });
     if (!clientUser)
@@ -102,7 +112,7 @@ export class ClientAuthService {
 
   async login(email: string, password: string, trustedToken?: string) {
     const clientUser = await this.findClientByEmail(email);
-    if (!clientUser || !clientUser.isActive) {
+    if (!this.isEligible(clientUser)) {
       this.logger.warn('[CLIENT-AUTH] Connexion refusee');
       throw new UnauthorizedException('Email ou mot de passe invalide.');
     }
@@ -181,7 +191,7 @@ export class ClientAuthService {
 
   async verifyMfa(email: string, code: string) {
     const clientUser = await this.findClientByEmail(email);
-    if (!clientUser || !clientUser.isActive)
+    if (!this.isEligible(clientUser))
       throw new UnauthorizedException('Identifiants invalides.');
 
     const userData = clientUser as any;
@@ -276,7 +286,7 @@ export class ClientAuthService {
     }
     validateClientPassword(newPassword);
     const current = await this.prisma.clientUser.findFirst({
-      where: { id: clientUserId, isActive: true },
+      where: { id: clientUserId, isActive: true, client: { isActive: true } },
       select: { password: true, organizationId: true },
     });
     if (
@@ -295,10 +305,10 @@ export class ClientAuthService {
       await tx.$queryRaw`SELECT id FROM "ClientUser" WHERE id = ${clientUserId} FOR UPDATE`;
       const locked = await tx.clientUser.findUnique({
         where: { id: clientUserId },
-        select: { password: true, organizationId: true, isActive: true },
+        select: { password: true, organizationId: true, isActive: true, client: { select: { isActive: true } } },
       });
       if (
-        !locked?.isActive ||
+        !this.isEligible(locked) ||
         !(await bcrypt.compare(currentPassword, locked.password))
       ) {
         throw new UnauthorizedException('Le mot de passe actuel est invalide.');
@@ -338,7 +348,7 @@ export class ClientAuthService {
     const startedAt = Date.now();
     try {
       const clientUser = await this.findClientByEmail(email);
-      if (!clientUser?.isActive) return RESET_RESPONSE;
+      if (!this.isEligible(clientUser)) return RESET_RESPONSE;
 
       const rawToken = crypto.randomBytes(32).toString('base64url');
       const tokenHash = crypto
@@ -350,9 +360,9 @@ export class ClientAuthService {
         await tx.$queryRaw`SELECT id FROM "ClientUser" WHERE id = ${clientUser.id} FOR UPDATE`;
         const current = await tx.clientUser.findUnique({
           where: { id: clientUser.id },
-          select: { isActive: true },
+          select: { isActive: true, client: { select: { isActive: true } } },
         });
-        if (!current?.isActive) return false;
+        if (!this.isEligible(current)) return false;
         const count = await tx.clientPasswordResetToken.count({
           where: {
             clientUserId: clientUser.id,
@@ -430,9 +440,9 @@ export class ClientAuthService {
       if (claim.count !== 1) throw new BadRequestException(INVALID_RESET);
       const user = await tx.clientUser.findUnique({
         where: { id: record.clientUserId },
-        select: { organizationId: true, isActive: true },
+        select: { organizationId: true, isActive: true, client: { select: { isActive: true } } },
       });
-      if (!user?.isActive) throw new BadRequestException(INVALID_RESET);
+      if (!this.isEligible(user)) throw new BadRequestException(INVALID_RESET);
       await tx.clientUser.update({
         where: { id: record.clientUserId },
         data: {
@@ -469,6 +479,11 @@ export class ClientAuthService {
   }
 
   async generateMagicLink(clientUserId: string): Promise<string> {
+    const eligible = await this.prisma.clientUser.findFirst({
+      where: { id: clientUserId, isActive: true, client: { isActive: true } },
+      select: { id: true },
+    });
+    if (!eligible) throw new UnauthorizedException('Compte client inactif.');
     const token = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const expiresAt = new Date(Date.now() + MAGIC_LINK_LIFETIME_MS);
@@ -484,7 +499,7 @@ export class ClientAuthService {
     const startedAt = Date.now();
     try {
       const clientUser = await this.findClientByEmail(email);
-      if (!clientUser?.isActive) return MAGIC_LINK_RESPONSE;
+      if (!this.isEligible(clientUser)) return MAGIC_LINK_RESPONSE;
 
       const rawToken = crypto.randomBytes(32).toString('hex');
       const tokenHash = crypto
@@ -496,9 +511,9 @@ export class ClientAuthService {
         await tx.$queryRaw`SELECT id FROM "ClientUser" WHERE id = ${clientUser.id} FOR UPDATE`;
         const current = await tx.clientUser.findUnique({
           where: { id: clientUser.id },
-          select: { isActive: true },
+          select: { isActive: true, client: { select: { isActive: true } } },
         });
-        if (!current?.isActive) return false;
+        if (!this.isEligible(current)) return false;
         await tx.magicLink.updateMany({
           where: { userId: clientUser.id, usedAt: null },
           data: { usedAt: now },
@@ -549,7 +564,7 @@ export class ClientAuthService {
         where: { token: { in: [tokenHash, token] } },
         include: { user: { include: { client: true } } },
       });
-      if (!magicLink || !magicLink.user.isActive)
+      if (!magicLink || !this.isEligible(magicLink.user))
         throw new UnauthorizedException('Lien invalide.');
       const claimed = await tx.magicLink.updateMany({
         where: { id: magicLink.id, usedAt: null, expiresAt: { gt: now } },
