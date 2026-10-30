@@ -34,6 +34,7 @@
     "organization-clients:migration-upgrade": "node src/organization-clients-migration-upgrade.mjs",
     "organization-buildings:acceptance": "node src/organization-buildings-acceptance.mjs",
     "organization-buildings:browser": "node src/organization-buildings-browser.mjs",
+    "organization-map:browser": "node src/organization-map-browser.mjs",
     "identity:cleanup": "node src/identity-cleanup.mjs"
   }
 }

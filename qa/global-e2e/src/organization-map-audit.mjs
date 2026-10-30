@@ -26,14 +26,46 @@ const buildingsServicePath = path.join(
   "buildings",
   "buildings.service.ts",
 );
+const organizationSafetyPath = path.join(
+  root,
+  "coro-frontend",
+  "app",
+  "buildings",
+  "map",
+  "map-safety.ts",
+);
+const portalSafetyPath = path.join(
+  root,
+  "coro-client-portal",
+  "app",
+  "map",
+  "map-safety.ts",
+);
+const buildingGeocodingPath = path.join(
+  root,
+  "coro-backend",
+  "src",
+  "buildings",
+  "building-geocoding.ts",
+);
 const output =
   process.env.CORO_QA_EVIDENCE_DIR ||
   path.join(root, "qa-evidence", "organization-map");
 
-const [organization, portal, buildingsService] = await Promise.all([
+const [
+  organization,
+  portal,
+  buildingsService,
+  organizationSafety,
+  portalSafety,
+  buildingGeocoding,
+] = await Promise.all([
   readFile(organizationPath, "utf8"),
   readFile(portalPath, "utf8"),
   readFile(buildingsServicePath, "utf8"),
+  readFile(organizationSafetyPath, "utf8"),
+  readFile(portalSafetyPath, "utf8"),
+  readFile(buildingGeocodingPath, "utf8"),
 ]);
 
 const checks = [];
@@ -94,14 +126,16 @@ check(
 );
 check(
   "MAP_ORG_COORDINATE_BOUNDS",
-  /Number\.isFinite/.test(organization) &&
-    /-90/.test(organization) &&
-    /180/.test(organization),
+  /Number\.isFinite/.test(organizationSafety) &&
+    /-90/.test(organizationSafety) &&
+    /180/.test(organizationSafety),
   "Map input must reject non-finite and out-of-range coordinates.",
 );
 check(
   "MAP_PORTAL_COORDINATE_BOUNDS",
-  /Number\.isFinite/.test(portal) && /-90/.test(portal) && /180/.test(portal),
+  /Number\.isFinite/.test(portalSafety) &&
+    /-90/.test(portalSafety) &&
+    /180/.test(portalSafety),
   "Map input must reject non-finite and out-of-range coordinates.",
 );
 check(
@@ -113,6 +147,30 @@ check(
   "MAP_PORTAL_TOOLTIP_ESCAPED",
   !/bindTooltip\(`[^`]*\$\{building\.name\}/s.test(portal),
   "Building labels must not be interpolated into Leaflet HTML.",
+);
+check(
+  "MAP_ORG_SAFE_TOOLTIP_DOM",
+  /createSafeTooltip\(document/.test(organization) &&
+    /textContent/.test(organizationSafety),
+  "Organization tooltip labels are inserted as text nodes.",
+);
+check(
+  "MAP_PORTAL_SAFE_TOOLTIP_DOM",
+  /createSafeTooltip\(document/.test(portal) &&
+    /textContent/.test(portalSafety),
+  "Portal tooltip labels are inserted as text nodes.",
+);
+check(
+  "MAP_GEOCODING_EXPLICIT_OPT_IN",
+  /BUILDING_PUBLIC_GEOCODING_ENABLED/.test(buildingGeocoding) &&
+    /=== 'true'/.test(buildingGeocoding),
+  "Public address geocoding remains disabled without explicit governance opt-in.",
+);
+check(
+  "MAP_GEOCODING_CACHE_AND_DEDUPLICATION",
+  /const cache = new Map/.test(buildingGeocoding) &&
+    /const inFlight = new Map/.test(buildingGeocoding),
+  "Identical public geocoding requests are cached and deduplicated.",
 );
 
 const samples = [
