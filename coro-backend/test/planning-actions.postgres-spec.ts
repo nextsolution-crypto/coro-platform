@@ -701,37 +701,37 @@ describePostgres('Planner mutations on PostgreSQL', () => {
     );
     const sibling = await activity();
     expect(
-      await prisma.booking.count({ where: { activityId: source.id } }),
+      await prisma.booking.count({ where: { activityId: source.activityId } }),
     ).toBe(0);
     expect(
-      await prisma.exerciseReport.count({ where: { activityId: source.id } }),
+      await prisma.exerciseReport.count({ where: { activityId: source.activityId } }),
     ).toBe(0);
     expect(
       await prisma.auditLog.count({
         where: {
           entityType: 'ProjectActivity',
-          entityId: source.id,
+          entityId: source.activityId,
           action: 'PLANNING_ACTIVITY_CREATED',
         },
       }),
     ).toBe(1);
     expect(
       (await backlog()).items.find(
-        (item: any) => item.activityId === source.id,
+        (item: any) => item.activityId === source.activityId,
       ),
     ).toMatchObject({
       removalAction: 'DELETE',
       hasBookingHistory: false,
     });
 
-    await service.deleteUnplannedActivity(source.id, actor());
+    await service.deleteUnplannedActivity(source.activityId, actor());
 
     expect(
-      await prisma.projectActivity.count({ where: { id: source.id } }),
+      await prisma.projectActivity.count({ where: { id: source.activityId } }),
     ).toBe(0);
     expect(
       await prisma.auditLog.count({
-        where: { entityType: 'ProjectActivity', entityId: source.id },
+        where: { entityType: 'ProjectActivity', entityId: source.activityId },
       }),
     ).toBe(0);
     expect(
@@ -741,7 +741,7 @@ describePostgres('Planner mutations on PostgreSQL', () => {
     ).toBe(1);
     expect(
       (await backlog()).items.some(
-        (item: any) => item.activityId === source.id,
+        (item: any) => item.activityId === source.activityId,
       ),
     ).toBe(false);
   });
