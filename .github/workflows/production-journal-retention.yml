@@ -1,0 +1,133 @@
+name: Governed Production Journal Retention
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "AUDIT, APPLY or DISABLE"
+        required: true
+        type: choice
+        options:
+          - AUDIT
+          - APPLY
+          - DISABLE
+      approval:
+        description: "Exact approval for mutation"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-deployment
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: node --test ops/capacity/*.test.mjs
+
+  maintain:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - name: Validate request
+        env:
+          MODE: ${{ inputs.mode }}
+          APPROVAL: ${{ inputs.approval }}
+        run: |
+          case "$MODE" in
+            AUDIT) test -z "$APPROVAL" ;;
+            APPLY) test "$APPROVAL" = APPLY_REVIEWED_JOURNAL_POLICY ;;
+            DISABLE) test "$APPROVAL" = DISABLE_REVIEWED_JOURNAL_POLICY ;;
+            *) exit 1 ;;
+          esac
+
+      - name: Validate pinned host identity
+        env:
+          HOST_FINGERPRINT: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+        run: '[[ "$HOST_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]'
+
+      - name: Audit or apply reviewed journal policy
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          JOURNAL_POLICY_MODE: ${{ inputs.mode }}
+          JOURNAL_POLICY_APPROVAL: ${{ inputs.approval }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,JOURNAL_POLICY_MODE,JOURNAL_POLICY_APPROVAL
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            target=/etc/systemd/journald.conf.d/50-coro-capacity-journal.conf
+            state_dir=/var/lib/coro-capacity/journal-policy
+            candidate="$(mktemp /tmp/coro-journal-policy.XXXXXX)"
+            trap 'rm -f -- "$candidate"' EXIT
+
+            git -C "$repo" fetch --quiet origin main
+            if [[ "$JOURNAL_POLICY_MODE" != AUDIT ]]; then
+              test "$(git -C "$repo" rev-parse origin/main)" = "$SOURCE_SHA"
+            fi
+            git -C "$repo" show "$SOURCE_SHA:ops/capacity/50-coro-capacity-journal.conf" >"$candidate"
+            grep -qx 'SystemMaxUse=512M' "$candidate"
+            grep -qx 'RuntimeMaxUse=128M' "$candidate"
+            grep -qx 'MaxRetentionSec=14day' "$candidate"
+            grep -qx 'Compress=yes' "$candidate"
+
+            exec 9>/run/lock/coro-production-deployment.lock
+            flock --nonblock 9 || { echo 'JOURNAL_POLICY_FAILED code=DEPLOYMENT_LOCK_BUSY'; exit 1; }
+
+            case "$JOURNAL_POLICY_MODE" in
+              APPLY)
+                test "$JOURNAL_POLICY_APPROVAL" = APPLY_REVIEWED_JOURNAL_POLICY
+                install -d -m 0755 /etc/systemd/journald.conf.d
+                install -d -m 0700 "$state_dir"
+                if [[ ! -e "$state_dir/captured" ]]; then
+                  if [[ -f "$target" ]]; then
+                    install -m 0600 "$target" "$state_dir/previous.conf"
+                  else
+                    : >"$state_dir/previous.absent"
+                    chmod 0600 "$state_dir/previous.absent"
+                  fi
+                  : >"$state_dir/captured"
+                  chmod 0600 "$state_dir/captured"
+                fi
+                install -m 0644 "$candidate" "$target.next"
+                mv -T -- "$target.next" "$target"
+                systemctl reload systemd-journald
+                ;;
+              DISABLE)
+                test "$JOURNAL_POLICY_APPROVAL" = DISABLE_REVIEWED_JOURNAL_POLICY
+                test -f "$state_dir/captured"
+                if [[ -f "$state_dir/previous.conf" ]]; then
+                  install -m 0644 "$state_dir/previous.conf" "$target.next"
+                  mv -T -- "$target.next" "$target"
+                else
+                  test -f "$state_dir/previous.absent"
+                  rm -f -- "$target"
+                fi
+                systemctl reload systemd-journald
+                ;;
+            esac
+
+            systemctl is-active --quiet systemd-journald
+            if [[ -f "$target" ]] && cmp -s "$candidate" "$target"; then
+              effective=reviewed-policy
+            elif [[ "$JOURNAL_POLICY_MODE" == DISABLE ]]; then
+              effective=restored-previous-policy
+            else
+              effective=not-installed
+            fi
+            usage="$(journalctl --disk-usage 2>/dev/null | tail -n 1)"
+            echo "JOURNAL_POLICY_RESULT mode=$JOURNAL_POLICY_MODE effective=$effective service=active usage=$usage"
