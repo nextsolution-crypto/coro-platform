@@ -9,7 +9,7 @@ Dispatch **Governed Production Capacity Maintenance** with `DRY_RUN`. It uses th
 - Confirm one reconciled release marker and a complete compatible rollback set.
 - For the pre-existing release only, rerun its read-only reconciliation tool against the exact active SHA to create the first marker; do not manufacture or edit the marker by hand.
 - Confirm backup health is `REMOTE_VERIFIED` and latest governed restore evidence is available.
-- Run `Governed Production Journal Retention` in `AUDIT` mode. After review, run it in `APPLY` mode with approval `APPLY_REVIEWED_JOURNAL_POLICY`. The workflow installs `50-coro-capacity-journal.conf` atomically, reloads journald under the common production lock and verifies the service. To restore the captured prior state, use `DISABLE` with `DISABLE_REVIEWED_JOURNAL_POLICY`.
+- Run `Governed Production Journal Retention` in `AUDIT` mode. After review, run it in `APPLY` mode with approval `APPLY_REVIEWED_JOURNAL_POLICY`. The workflow installs `50-coro-capacity-journal.conf` atomically, restarts only journald under the common production lock and verifies the service. It does not restart Docker or application containers. To restore the captured prior state, use `DISABLE` with `DISABLE_REVIEWED_JOURNAL_POLICY`.
 - Set `CORO_RELEASE_RETENTION_AUTOMATION_ENABLED=true` in GitHub repository variables.
 - Run one manual `EXECUTE` with approval `EXECUTE_REVIEWED_RETENTION_POLICY`; verify services, PostgreSQL, rollback images and free bytes.
 
