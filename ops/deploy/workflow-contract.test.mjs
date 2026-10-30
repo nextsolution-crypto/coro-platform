@@ -72,6 +72,16 @@ test('reconciliation is read-only and verifies runtime against immutable evidenc
   }
   assert.doesNotMatch(reconcile, /docker compose .*up|migrate deploy|pg_restore|ROLLBACK_APPLICATIONS/);
 });
+test('governed release injects and verifies the Client invitation outbox key without printing it', () => {
+  assert.match(workflow, /CLIENT_INVITATION_OUTBOX_KEY_BASE64: \$\{\{ secrets\.CLIENT_INVITATION_OUTBOX_KEY_BASE64 \}\}/);
+  assert.match(workflow, /CLIENT_INVITATION_OUTBOX_KEY_ID: \$\{\{ vars\.CLIENT_INVITATION_OUTBOX_KEY_ID \}\}/);
+  assert.match(control, /CLIENT_INVITATION_OUTBOX_KEY_INVALID/);
+  assert.match(control, /CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_INVALID/);
+  assert.match(control, /CLIENT_INVITATION_OUTBOX_KEY_BASE64=\$CLIENT_INVITATION_OUTBOX_KEY_BASE64/);
+  assert.match(release, /CLIENT_INVITATION_OUTBOX_CONFIGURATION_INVALID/);
+  assert.match(reconcile, /OUTBOX_CONFIGURATION_MISMATCH/);
+  assert.doesNotMatch(control, /echo .*CLIENT_INVITATION_OUTBOX_KEY_BASE64/);
+});
 test('durable Knowledge policy and real synthetic provider smoke gate release success', () => {
   assert.match(release, /runtime-policy\.mjs overlay/);
   assert.match(release, /knowledge-provider-smoke\.js/);

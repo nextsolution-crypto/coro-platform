@@ -146,6 +146,8 @@ for variable in BACKEND_IMAGE FRONTEND_IMAGE CLIENT_PORTAL_IMAGE WEBSITE_IMAGE; 
   value="${!variable:-}"
   [[ "$value" =~ ^ghcr\.io/[a-z0-9_.-]+/[a-z0-9_.-]+@sha256:[0-9a-f]{64}$ ]] || fail "${variable}_INVALID"
 done
+[[ "${CLIENT_INVITATION_OUTBOX_KEY_ID:-}" =~ ^[A-Za-z0-9_.-]{1,64}$ ]] || fail CLIENT_INVITATION_OUTBOX_KEY_ID_INVALID
+CLIENT_INVITATION_OUTBOX_KEY_BASE64="${CLIENT_INVITATION_OUTBOX_KEY_BASE64:-}" node -e 'const v=process.env.CLIENT_INVITATION_OUTBOX_KEY_BASE64||"";const b=Buffer.from(v,"base64");if(!/^[A-Za-z0-9+/]+={0,2}$/.test(v)||b.length!==32||b.toString("base64")!==v)process.exit(1)' || fail CLIENT_INVITATION_OUTBOX_KEY_INVALID
 
 exec 9>"$LOCK_FILE"
 flock --nonblock 9 || fail CONCURRENT_RELEASE
@@ -261,6 +263,7 @@ wait_for_application_ready coro_client_portal http://127.0.0.1:3003/ CLIENT_PORT
 wait_for_application_ready coro_website http://127.0.0.1:3001/ WEBSITE
 wait_for_backend_ready coro_backend http://127.0.0.1:3002/api/auth/login
 run_backend_auth_smoke http://127.0.0.1:3002/api/auth/login
+docker exec coro_backend node -e 'const v=process.env.CLIENT_INVITATION_OUTBOX_KEY_BASE64||"";const b=Buffer.from(v,"base64");if(!/^[A-Za-z0-9+/]+={0,2}$/.test(v)||b.length!==32||b.toString("base64")!==v||!process.env.CLIENT_INVITATION_OUTBOX_KEY_ID)process.exit(1)' || fail CLIENT_INVITATION_OUTBOX_CONFIGURATION_INVALID
 client_auth_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{}' http://127.0.0.1:3002/api/client-auth/login)" || fail CLIENT_AUTH_SMOKE_FAILED
 booking_guard_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 http://127.0.0.1:3002/api/planning/my-assignments)" || fail BOOKING_SMOKE_FAILED
 rendement_guard_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 http://127.0.0.1:3002/api/rendement/financial)" || fail RENDEMENT_SMOKE_FAILED
@@ -295,7 +298,7 @@ node <<'NODE'
 const fs=require('fs'); const p=process.env;
 const knowledgeRuntime=JSON.parse(fs.readFileSync(`/opt/coro-ops/releases/${p.RELEASE_ID}.knowledge-runtime.json`,'utf8'));
 const knowledgeSmoke=JSON.parse(fs.readFileSync(`/opt/coro-ops/releases/${p.RELEASE_ID}.knowledge-smoke.json`,'utf8'));
-const manifest={releaseId:p.RELEASE_ID,gitCommit:p.RELEASE_COMMIT,timestampUtc:p.RELEASE_TIMESTAMP,operator:p.RELEASE_OPERATOR,status:'SUCCESS',images:{backend:p.BACKEND_IMAGE,frontend:p.FRONTEND_IMAGE,clientPortal:p.CLIENT_PORTAL_IMAGE,website:p.WEBSITE_IMAGE},composeIdentity:p.COMPOSE_IDENTITY,expectedMigrationHead:p.EXPECTED_MIGRATION_HEAD,previousCommit:p.PREVIOUS_COMMIT,previousImages:p.PREVIOUS_IMAGES.split('\n'),previousCompose:p.PREVIOUS_COMPOSE,previousMigrationHead:p.PREVIOUS_MIGRATION_HEAD,backupCheckpointId:p.BACKUP_ID,backupSha256:p.BACKUP_SHA,backupRemoteObject:p.BACKUP_REMOTE_OBJECT,backupVersionId:p.BACKUP_VERSION_ID,restoreEvidence:{status:'RESTORE_VERIFIED',report:p.RESTORE_REPORT},healthChecks:{database:'PASS',backend:'PASS',frontend:'PASS',clientPortal:'PASS',website:'PASS',internalAuthReachable:'PASS',clientAuthReachable:'PASS',unauthenticatedBookingDenied:'PASS',authenticatedBooking:'NOT_VERIFIED_REQUIRES_APPROVED_SYNTHETIC_IDENTITY',containers:'PASS',restartCount:'PASS',criticalLogs:'PASS',mfaQaCaptureDisabled:'PASS'}};
+const manifest={releaseId:p.RELEASE_ID,gitCommit:p.RELEASE_COMMIT,timestampUtc:p.RELEASE_TIMESTAMP,operator:p.RELEASE_OPERATOR,status:'SUCCESS',images:{backend:p.BACKEND_IMAGE,frontend:p.FRONTEND_IMAGE,clientPortal:p.CLIENT_PORTAL_IMAGE,website:p.WEBSITE_IMAGE},composeIdentity:p.COMPOSE_IDENTITY,expectedMigrationHead:p.EXPECTED_MIGRATION_HEAD,previousCommit:p.PREVIOUS_COMMIT,previousImages:p.PREVIOUS_IMAGES.split('\n'),previousCompose:p.PREVIOUS_COMPOSE,previousMigrationHead:p.PREVIOUS_MIGRATION_HEAD,backupCheckpointId:p.BACKUP_ID,backupSha256:p.BACKUP_SHA,backupRemoteObject:p.BACKUP_REMOTE_OBJECT,backupVersionId:p.BACKUP_VERSION_ID,restoreEvidence:{status:'RESTORE_VERIFIED',report:p.RESTORE_REPORT},outboxConfiguration:{status:'PASS',keyId:p.CLIENT_INVITATION_OUTBOX_KEY_ID},healthChecks:{database:'PASS',backend:'PASS',frontend:'PASS',clientPortal:'PASS',website:'PASS',internalAuthReachable:'PASS',clientAuthReachable:'PASS',unauthenticatedBookingDenied:'PASS',authenticatedBooking:'NOT_VERIFIED_REQUIRES_APPROVED_SYNTHETIC_IDENTITY',containers:'PASS',restartCount:'PASS',criticalLogs:'PASS',mfaQaCaptureDisabled:'PASS'}};
 manifest.knowledgeRuntime={...knowledgeRuntime,smoke:knowledgeSmoke};
 const path=`/opt/coro-ops/releases/${p.RELEASE_ID}.json`; fs.writeFileSync(path,JSON.stringify(manifest,null,2)+'\n',{flag:'wx',mode:0o600});
 NODE
