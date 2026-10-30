@@ -15,7 +15,7 @@ export function buildRetentionPlan({ releases, explicitCandidates = [], blockedR
   if (!active) throw new Error("RECONCILED_RELEASE_MISSING");
 
   const activeImages = Object.values(active.images || {});
-  const rollbackImages = active.previousImages || [];
+  const rollbackImages = (active.previousImages || []).filter((ref) => typeof ref === "string" && ref.length > 0);
   if (activeImages.length !== 4 || !activeImages.every((ref) => IMAGE.test(ref))) throw new Error("ACTIVE_IMAGE_SET_INVALID");
   if (rollbackImages.length !== 4 || !rollbackImages.every((ref) => IMAGE.test(ref))) throw new Error("ROLLBACK_IMAGE_SET_INVALID");
   const blocked = new Set(blockedRollbackImages);
