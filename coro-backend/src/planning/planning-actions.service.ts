@@ -53,6 +53,22 @@ export class PlanningActionsService {
     }
   }
 
+  private async replayPlanning(tx: Prisma.TransactionClient, actor: Actor,
+    requestId: string | undefined, activityId?: string) {
+    if (!requestId) return null;
+    await tx.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${actor.organizationId}:${requestId}`}, 0))`);
+    const replay = await tx.auditLog.findFirst({
+      where: { organizationId: actor.organizationId, userId: actor.userId, action: 'PLANNED',
+        ...(activityId ? { entityId: activityId } : {}), metadata: { path: ['requestId'], equals: requestId } },
+      select: { entityId: true, metadata: true },
+    });
+    if (!replay) return null;
+    const metadata = replay.metadata as { bookingId?: unknown } | null;
+    return typeof metadata?.bookingId === 'string'
+      ? { activityId: replay.entityId, bookingId: metadata.bookingId }
+      : null;
+  }
+
   private async notifyUsers(
     tx: Prisma.TransactionClient,
     actor: Actor,
@@ -302,6 +318,7 @@ export class PlanningActionsService {
           durationMinutes: input.durationMinutes,
           leadUserId: team.leadUserId,
           supportUserIds: team.supportUserIds,
+          requestId: input.requestId ?? null,
         },
         userId: actor.userId,
         organizationId: actor.organizationId,
@@ -318,6 +335,8 @@ export class PlanningActionsService {
     this.manager(actor);
     return this.prisma.$transaction(
       async (tx) => {
+        const replay = await this.replayPlanning(tx, actor, dto.requestId, activityId);
+        if (replay) return replay;
         await this.lockActivity(tx, activityId, actor.organizationId);
         const activity = await this.activityContext(
           tx,
@@ -446,6 +465,8 @@ export class PlanningActionsService {
     this.manager(actor);
     return this.prisma.$transaction(
       async (tx) => {
+        const replay = await this.replayPlanning(tx, actor, dto.requestId);
+        if (replay) return replay;
         const project = await tx.project.findFirst({
           where: {
             id: dto.projectId,

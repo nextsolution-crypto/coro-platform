@@ -1,11 +1,11 @@
-.page { display:grid; gap:18px; color:var(--cg-skin-text-primary, #2c3e50) }
+.page { display:grid; gap:18px; min-width:0; color:var(--cg-skin-text-primary, #2c3e50) }
 .pageHeader { display:flex; justify-content:space-between; gap:18px; align-items:flex-start }
 .pageHeader h1 { margin:2px 0 5px; font-size:25px; font-weight:700 }
 .pageHeader p { margin:0; color:var(--cg-skin-text-muted, #6c757d); font-size:14px }
 .eyebrow { color:var(--cg-skin-text-accent, #c0392b)!important; font-size:11px!important; font-weight:700; letter-spacing:.12em; text-transform:uppercase }
 .headerMeta { display:grid; justify-items:end; gap:4px; color:var(--cg-skin-text-muted, #6c757d); font-size:12px }
 .summary { display:grid; grid-template-columns:repeat(6,minmax(120px,1fr)); gap:10px }
-.summaryCard { background:var(--cg-skin-bg-fill1, #fbfcfd); border:1px solid var(--cg-skin-border-subtle, #e9ecef); border-radius:9px; padding:9px 11px; text-align:left; display:grid; gap:3px; cursor:pointer }
+.summaryCard { min-width:0; background:var(--cg-skin-bg-fill1, #fbfcfd); border:1px solid var(--cg-skin-border-subtle, #e9ecef); border-radius:9px; padding:9px 11px; text-align:left; display:grid; gap:3px; cursor:pointer }
 .summaryCard:hover,.summaryCard:focus-visible { border-color:#c0392b }
 .summaryCard strong { color:var(--cg-skin-text-muted, #6c757d); font-size:19px; line-height:1 }.summaryCard span { font-size:11px; line-height:1.25 }
 .summaryCard span em { display:block; margin-top:2px; color:var(--cg-skin-text-accent, #922b21); font-size:9px; font-style:normal; font-weight:800; text-transform:uppercase; letter-spacing:.05em }
@@ -23,14 +23,14 @@
 .myAssignments { display:grid; gap:10px }.myAssignments > .summaryCard { width:min(260px,100%) }.assignmentCard { align-items:flex-start!important; justify-content:space-between; padding:14px!important }.success { margin:0; padding:10px 12px; border-radius:7px; background:var(--cg-skin-bg-fill1, #edf8f0); color:var(--cg-skin-text-success, #277245); font-size:13px }.confirmPanel label { display:grid; gap:5px; color:var(--cg-skin-text-info, #5d6d7e); font-size:12px; font-weight:700 }.confirmPanel textarea { width:100%; border:1px solid var(--cg-skin-border-default, #ced4da); border-radius:6px; padding:8px; resize:vertical }
 .actionPager { display:flex; align-items:center; gap:10px; margin-top:12px }.actionPager button { background:var(--cg-skin-bg-surface, white); border:1px solid var(--cg-skin-border-default, #ced4da); border-radius:6px; padding:5px 9px; cursor:pointer }.actionPager button:disabled { opacity:.5; cursor:default }
 .toolbar { background:var(--cg-skin-bg-surface, white); border:1px solid var(--cg-skin-border-subtle, #e9ecef); border-radius:10px; padding:14px; display:grid; gap:12px }
-.periodControls,.filters { display:flex; align-items:end; flex-wrap:wrap; gap:10px }
+.periodControls,.filters { display:flex; align-items:end; flex-wrap:wrap; gap:10px; min-width:0 }
 .periodLabel { align-self:center; min-width:190px; text-align:center; text-transform:capitalize; font-size:15px }
-.periodControls label,.filters label { display:grid; gap:4px; color:var(--cg-skin-text-muted, #6c757d); font-size:11px; font-weight:600 }
-.toolbar input,.toolbar select,.toolbar button { min-height:35px; border:1px solid var(--cg-skin-border-default, #ced4da); border-radius:6px; background:var(--cg-skin-bg-surface, white); padding:6px 9px; color:var(--cg-skin-text-primary, #2c3e50); font-size:13px }
+.periodControls label,.filters label { display:grid; gap:4px; min-width:0; max-width:100%; color:var(--cg-skin-text-muted, #6c757d); font-size:11px; font-weight:600 }
+.toolbar input,.toolbar select,.toolbar button { min-width:0; max-width:100%; min-height:35px; border:1px solid var(--cg-skin-border-default, #ced4da); border-radius:6px; background:var(--cg-skin-bg-surface, white); padding:6px 9px; color:var(--cg-skin-text-primary, #2c3e50); font-size:13px }
 .toolbar button { cursor:pointer }.toolbar button:hover { background:var(--cg-skin-bg-fill1, #f8f9fa) }
 .filters .checkbox { display:flex; align-items:center; gap:7px; min-height:35px; color:var(--cg-skin-text-primary, #2c3e50); font-size:12px }.checkbox input { min-height:0 }
 .notice,.empty { padding:14px; background:var(--cg-skin-bg-fill1, #f4f7fa); border-radius:8px; color:var(--cg-skin-text-info, #5d6d7e); font-size:13px }
-.error { padding:14px; background:var(--cg-skin-bg-fill1, #fceeed); border:1px solid var(--cg-skin-border-danger, #e5ada8); border-radius:8px; color:var(--cg-skin-text-accent, #922b21); font-size:13px }
+.error { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding:14px; background:var(--cg-skin-bg-fill1, #fceeed); border:1px solid var(--cg-skin-border-danger, #e5ada8); border-radius:8px; color:var(--cg-skin-text-accent, #922b21); font-size:13px }
 .gridSection { background:var(--cg-skin-bg-surface, white); border:1px solid var(--cg-skin-border-subtle, #e9ecef); border-radius:10px; overflow:hidden }
 .timelineScroll { overflow-x:auto; max-width:100% }.timeline { display:grid; grid-auto-flow:row; min-width:max-content }
 .corner,.dayHeader { min-height:82px; padding:12px 10px 6px; background:var(--cg-skin-bg-fill1, #f7f8fa); border-bottom:1px solid var(--cg-skin-border-default, #cfd6dc); border-right:1px solid var(--cg-skin-border-default, #e0e5e9) }
@@ -110,7 +110,9 @@
 .page button:focus-visible,.page a:focus-visible,.page input:focus-visible,.page select:focus-visible,.drawer button:focus-visible,.drawer a:focus-visible { outline:3px solid #2980b9; outline-offset:2px }
 @media (max-width:1180px) { .summary { grid-template-columns:repeat(3,minmax(120px,1fr)) } }
 @media (max-width:700px) {
-  .pageHeader { display:grid }.headerMeta { justify-items:start }.summary { grid-template-columns:repeat(2,minmax(120px,1fr)) }
+  .pageHeader { display:grid; min-width:0 }.headerMeta { justify-items:start; min-width:0 }.summary { grid-template-columns:repeat(2,minmax(0,1fr)) }
+  .periodControls > label,.filters > label:not(.checkbox) { flex:1 1 100%; width:100% }
+  .periodControls input,.periodControls select,.filters input,.filters select { width:100% }
   .desktopTimeline { display:none }.mobileAgenda { display:block; padding:15px }
   .mobileAgenda h2 { font-size:16px; font-weight:700; margin:0 0 15px }.mobileAgenda h3 { font-size:14px; font-weight:700; text-transform:capitalize; margin:18px 0 8px }
   .mobileAgenda p,.mobileAgenda li { font-size:12px; color:var(--cg-skin-text-muted, #6c757d) }

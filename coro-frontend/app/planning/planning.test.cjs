@@ -27,6 +27,7 @@ const projection = loadTypescript("projection.ts");
 const activityVisual = loadTypescript("activityTypeVisual.ts");
 const teamPicker = loadTypescript("teamPickerState.ts");
 const previewCycle = loadTypescript("previewCycle.ts");
+const loadState = loadTypescript("loadState.ts");
 const mandateFormState = loadTypescript(
   "../projects/[id]/mandate/mandateFormState.ts",
 );
@@ -39,6 +40,14 @@ const mandateOperational = loadTypescript(
 const mandateSave = loadTypescript(
   "../projects/[id]/mandate/mandateSavePlan.ts",
 );
+
+test("planning load errors distinguish session, permission, outage and source", () => {
+  assert.match(loadState.planningLoadError("context", 401), /session/);
+  assert.match(loadState.planningLoadError("context", 403), /accès/);
+  assert.match(loadState.planningLoadError("context", 503), /contexte/);
+  assert.match(loadState.planningLoadError("month", 503), /calendrier mensuel/);
+  assert.match(loadState.planningLoadError("month"), /actions du mois/);
+});
 
 test("Mandate save plan separates Fiche, Services and first-Mandate bootstrap", () => {
   assert.deepEqual(

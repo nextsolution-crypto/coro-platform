@@ -26,6 +26,7 @@ const activity = {
 function setup(status: 'AVAILABLE' | 'BLOCKED' | 'UNKNOWN' = 'AVAILABLE') {
   const tx: any = {
     $queryRaw: jest.fn().mockResolvedValue([{ id: 'activity' }]),
+    $executeRaw: jest.fn().mockResolvedValue(1),
     projectActivity: {
       findFirst: jest.fn().mockResolvedValue(activity),
       create: jest.fn(),
@@ -109,6 +110,29 @@ function setup(status: 'AVAILABLE' | 'BLOCKED' | 'UNKNOWN' = 'AVAILABLE') {
 }
 
 describe('PlanningActionsService', () => {
+  it('replays a completed planning request without creating a second activity or booking', async () => {
+    const { service, tx } = setup();
+    tx.auditLog.findFirst.mockResolvedValue({
+      entityId: 'activity',
+      metadata: { requestId: '7e8d1f81-7687-4d12-9f94-1182c20f88f5', bookingId: 'booking' },
+    });
+
+    await expect(
+      service.createAndPlan(
+        {
+          projectId: 'project',
+          activityTypeId: 'type',
+          requestId: '7e8d1f81-7687-4d12-9f94-1182c20f88f5',
+          ...dto,
+        },
+        actor,
+      ),
+    ).resolves.toEqual({ activityId: 'activity', bookingId: 'booking' });
+
+    expect(tx.projectActivity.create).not.toHaveBeenCalled();
+    expect(tx.booking.create).not.toHaveBeenCalled();
+  });
+
   it('instantiates canonical checklists before creating the Booking', async () => {
     const { service, tx, activityTaskLists } = setup();
     tx.project.findFirst.mockResolvedValue(activity.project);

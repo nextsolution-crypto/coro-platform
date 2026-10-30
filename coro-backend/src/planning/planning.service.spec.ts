@@ -1075,10 +1075,11 @@ describe('PlanningService', () => {
       {} as any,
       activityTaskLists as any,
     );
-    await service.createUnplannedActivity(
+    const result = await service.createUnplannedActivity(
       { projectId: 'project-1', activityTypeId: 'type-1' },
       actor,
     );
+    expect(result).toEqual({ activityId: 'activity-1' });
     expect(prisma.project.findFirst.mock.calls[0][0].where).toMatchObject({
       id: 'project-1',
       organizationId: 'org-a',

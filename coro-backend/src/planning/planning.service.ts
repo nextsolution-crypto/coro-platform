@@ -28,6 +28,7 @@ import {
 import { projectAccessWhere } from '../auth/project-access';
 import { isOperationalActivityAudit } from './planning-activity-history';
 import { ActivityTaskListsService } from '../activities/activity-task-lists.service';
+import { Prisma } from '@prisma/client';
 
 type Actor = { userId: string; organizationId: string; role: string };
 const DAY = 86_400_000;
@@ -271,6 +272,15 @@ export class PlanningService {
       );
     }
     return this.prisma.$transaction(async (tx) => {
+      if (dto.requestId) {
+        await tx.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${actor.organizationId}:${dto.requestId}`}, 0))`);
+        const replay = await tx.auditLog.findFirst({
+          where: { organizationId: actor.organizationId, userId: actor.userId,
+            action: 'PLANNING_ACTIVITY_CREATED', metadata: { path: ['requestId'], equals: dto.requestId } },
+          select: { entityId: true },
+        });
+        if (replay) return { activityId: replay.entityId };
+      }
       const minutes = activityType.defaultDurationMinutes;
       const activity = await tx.projectActivity.create({
         data: {
@@ -309,12 +319,12 @@ export class PlanningService {
           projectId: project.id,
           description:
             'Activite creee depuis le Planner et ajoutee au backlog.',
-          metadata: { activityTypeId: activityType.id, scheduled: false },
+          metadata: { activityTypeId: activityType.id, scheduled: false, requestId: dto.requestId ?? null },
           userId: actor.userId,
           organizationId: actor.organizationId,
         },
       });
-      return activity;
+      return { activityId: activity.id };
     });
   }
 
