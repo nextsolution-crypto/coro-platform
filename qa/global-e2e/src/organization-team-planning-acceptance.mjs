@@ -118,6 +118,11 @@ try {
   check('create-response-loss-retry-idempotent', creationReplay.status === 201 && creationReplay.data.activityId === activityId &&
     await prisma.projectActivity.count({ where: { organizationId: ids.orgA, customLabel: marker } }) === 1,
   JSON.stringify({ status: creationReplay.status, activityId: creationReplay.data?.activityId }));
+  const creationMismatch = await lab.call('/planning/activities', { method: 'POST', token: adminA.token,
+    body: { ...creationBody, customLabel: `${marker}-DIFFERENT` } });
+  check('create-requestId-payload-mismatch-denied', creationMismatch.status === 400 &&
+    await prisma.projectActivity.count({ where: { organizationId: ids.orgA, customLabel: { startsWith: marker } } }) === 1,
+  `HTTP ${creationMismatch.status}`);
   const crossTenantPlan = await lab.call(`/planning/activities/${activityId}/plan`, { method: 'POST', token: adminB.token,
     body: { startUtc: '2026-11-03T15:00:00.000Z', durationMinutes: 90, leadUserId: ids.adminB, confirmUnknown: true } });
   check('cross-tenant-direct-plan-denied', [403, 404].includes(crossTenantPlan.status), `HTTP ${crossTenantPlan.status}`);
@@ -136,6 +141,11 @@ try {
   check('plan-response-loss-retry-idempotent', planningReplay.status === 201 && planningReplay.data.bookingId === bookingId &&
     await prisma.booking.count({ where: { activityId } }) === 1,
   JSON.stringify({ status: planningReplay.status, bookingId: planningReplay.data?.bookingId }));
+  const planningMismatch = await lab.call(`/planning/activities/${activityId}/plan`, { method: 'POST', token: adminA.token,
+    body: { ...planningBody, durationMinutes: 120 } });
+  check('plan-requestId-payload-mismatch-denied', planningMismatch.status === 409 &&
+    await prisma.booking.count({ where: { activityId } }) === 1,
+  `HTTP ${planningMismatch.status}`);
   const persisted = await prisma.booking.findUnique({ where: { id: bookingId }, include: { assignments: true, activity: true } });
   check('canonical-booking-assignment', persisted?.activityId === activityId && persisted.assignments.filter((row) => ['PENDING', 'ACCEPTED'].includes(row.status)).length === 1,
     JSON.stringify({ bookingId, activityId, assignments: persisted?.assignments.length }));

@@ -23,6 +23,11 @@ import {
 } from '../bookings/booking-assignment-notifications';
 import { createCommitmentVersion } from '../bookings/booking-commitment';
 import { ActivityTaskListsService } from '../activities/activity-task-lists.service';
+import {
+  planningRequestFingerprint,
+  planningRequestLockKey,
+  type PlanningRequestOperation,
+} from './planning-idempotency';
 
 type Actor = { userId: string; organizationId: string; role: string };
 type PlanningActivityContext = Prisma.ProjectActivityGetPayload<{
@@ -53,17 +58,44 @@ export class PlanningActionsService {
     }
   }
 
-  private async replayPlanning(tx: Prisma.TransactionClient, actor: Actor,
-    requestId: string | undefined, activityId?: string) {
+  private async replayPlanning(
+    tx: Prisma.TransactionClient,
+    actor: Actor,
+    requestId: string | undefined,
+    operation: PlanningRequestOperation,
+    fingerprint: string,
+    activityId?: string,
+  ) {
     if (!requestId) return null;
-    await tx.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${actor.organizationId}:${requestId}`}, 0))`);
+    const lockKey = planningRequestLockKey({
+      organizationId: actor.organizationId,
+      userId: actor.userId,
+      operation,
+      requestId,
+    });
+    await tx.$executeRaw(
+      Prisma.sql`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`,
+    );
     const replay = await tx.auditLog.findFirst({
-      where: { organizationId: actor.organizationId, userId: actor.userId, action: 'PLANNED',
-        ...(activityId ? { entityId: activityId } : {}), metadata: { path: ['requestId'], equals: requestId } },
+      where: {
+        organizationId: actor.organizationId,
+        userId: actor.userId,
+        action: 'PLANNED',
+        metadata: { path: ['requestId'], equals: requestId },
+      },
       select: { entityId: true, metadata: true },
     });
     if (!replay) return null;
-    const metadata = replay.metadata as { bookingId?: unknown } | null;
+    const metadata = replay.metadata as Record<string, unknown> | null;
+    if (
+      metadata?.requestOperation !== operation ||
+      metadata?.requestFingerprint !== fingerprint ||
+      (activityId && replay.entityId !== activityId)
+    ) {
+      throw new ConflictException(
+        'Ce requestId a deja ete utilise avec une operation ou des donnees differentes.',
+      );
+    }
     return typeof metadata?.bookingId === 'string'
       ? { activityId: replay.entityId, bookingId: metadata.bookingId }
       : null;
@@ -224,6 +256,10 @@ export class PlanningActionsService {
     activity: PlanningActivityContext,
     actor: Actor,
     input: PlanExistingActivityDto,
+    requestContext?: {
+      operation: PlanningRequestOperation;
+      fingerprint: string;
+    },
   ) {
     await this.assertNoOpenBooking(tx, activity.id);
     const startUtc = new Date(input.startUtc);
@@ -319,6 +355,12 @@ export class PlanningActionsService {
           leadUserId: team.leadUserId,
           supportUserIds: team.supportUserIds,
           requestId: input.requestId ?? null,
+          requestOperation: input.requestId
+            ? (requestContext?.operation ?? null)
+            : null,
+          requestFingerprint: input.requestId
+            ? (requestContext?.fingerprint ?? null)
+            : null,
         },
         userId: actor.userId,
         organizationId: actor.organizationId,
@@ -335,7 +377,23 @@ export class PlanningActionsService {
     this.manager(actor);
     return this.prisma.$transaction(
       async (tx) => {
-        const replay = await this.replayPlanning(tx, actor, dto.requestId, activityId);
+        const operation = 'PLAN_EXISTING_ACTIVITY' as const;
+        const fingerprint = planningRequestFingerprint(operation, {
+          activityId,
+          startUtc: dto.startUtc,
+          durationMinutes: dto.durationMinutes,
+          leadUserId: dto.leadUserId,
+          supportUserIds: [...(dto.supportUserIds ?? [])].sort(),
+          confirmUnknown: dto.confirmUnknown ?? false,
+        });
+        const replay = await this.replayPlanning(
+          tx,
+          actor,
+          dto.requestId,
+          operation,
+          fingerprint,
+          activityId,
+        );
         if (replay) return replay;
         await this.lockActivity(tx, activityId, actor.organizationId);
         const activity = await this.activityContext(
@@ -343,7 +401,10 @@ export class PlanningActionsService {
           activityId,
           actor.organizationId,
         );
-        return this.createBooking(tx, activity, actor, dto);
+        return this.createBooking(tx, activity, actor, dto, {
+          operation,
+          fingerprint,
+        });
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
     );
@@ -465,7 +526,28 @@ export class PlanningActionsService {
     this.manager(actor);
     return this.prisma.$transaction(
       async (tx) => {
-        const replay = await this.replayPlanning(tx, actor, dto.requestId);
+        const operation = 'CREATE_AND_PLAN_ACTIVITY' as const;
+        const fingerprint = planningRequestFingerprint(operation, {
+          projectId: dto.projectId,
+          activityTypeId: dto.activityTypeId,
+          customLabel: dto.customLabel?.trim() || null,
+          notes: dto.notes?.trim() || null,
+          mode: dto.mode ?? 'presentiel',
+          clientVisible: dto.clientVisible,
+          clientBookable: dto.clientBookable,
+          startUtc: dto.startUtc,
+          durationMinutes: dto.durationMinutes,
+          leadUserId: dto.leadUserId,
+          supportUserIds: [...(dto.supportUserIds ?? [])].sort(),
+          confirmUnknown: dto.confirmUnknown ?? false,
+        });
+        const replay = await this.replayPlanning(
+          tx,
+          actor,
+          dto.requestId,
+          operation,
+          fingerprint,
+        );
         if (replay) return replay;
         const project = await tx.project.findFirst({
           where: {
@@ -526,7 +608,10 @@ export class PlanningActionsService {
           activity.id,
           actor,
         );
-        return this.createBooking(tx, { ...activity, project }, actor, dto);
+        return this.createBooking(tx, { ...activity, project }, actor, dto, {
+          operation,
+          fingerprint,
+        });
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
     );
