@@ -56,5 +56,11 @@ Le verdict de l’écran est **FAIL — correction de sécurité requise avant a
 | Chrome 12/12, F5, focus, Escape, zoom 200 % | PASS |
 | Lecteur d'ecran reel | NOT_VERIFIED |
 | Cascade de desactivation | PASS; politique approuvee, transition atomique et recette synthetique |
+| Session existante et telechargement protege apres suspension | PASS; HTTP 401 a la requete suivante |
+| MFA, appareils de confiance, magic links et recuperation | PASS; aucun contournement apres suspension |
+| Invitations en attente et worker | PASS; evenement `CANCELLED`, aucun appel fournisseur |
+| Reactivation | PASS; aucune ancienne session ou ancien lien restaure |
+| ClientUser individuellement desactive | PASS; reste refuse apres reactivation du Client |
+| User interne homonyme et autres Clients | PASS; inchanges |
 
 Verdict : `ACCEPTATION_INTEGREE_PASS`.
