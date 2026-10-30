@@ -82,3 +82,20 @@ Les PASS existants ne neutralisent pas les FAIL reproduits.
 | Lecteur d'écran réel | NOT_VERIFIED | Runtime fiable indisponible dans le harnais isolé. |
 
 Evidence sanitée : `D:\CORO-QA\tracking\organization-buildings\api-acceptance.json` et dossier `browser` (24 captures + rapport JSON).
+
+## Réconciliation de production
+
+| Contrôle | Résultat | Preuve |
+|---|---|---|
+| PR et candidat | PASS | PR #137 fusionnée; SHA `2e6c06ef2ca2a2606e779c0480f64e6cea3d6a0c`. |
+| CI du main exact | PASS | 41133503417 `SUCCESS`. |
+| Images immuables | PASS | backend `2c0c9e9f…130b`; frontend `aa33859a…04b4`; portail `04c8e950…3d1f`; website `d727ebc0…f632`. |
+| Release et réconciliation | PASS | 41134179928 `SUCCESS`; état `SUCCEEDED/COMPLETED`. |
+| PostgreSQL | PASS | 16.15; 164 migrations; tête Bâtiments; 0 migration échouée. |
+| Sauvegarde/restauration | PASS | backup distant vérifié et restore drill `RESTORE_VERIFIED`. |
+| Services | PASS | quatre services actifs, restart count 0; PostgreSQL `healthy`. |
+| Rollback | PASS avec limite documentée | 4/4 images disponibles; ancienne application vulnérable sur le périmètre Bâtiments, suspension des routes requise en cas de rollback. |
+| Capacité | PASS | 36 529 483 776 octets libres; marge release 16 823 746 510 octets. |
+| Lecteur d'écran réel | NOT_VERIFIED | Aucun runtime fiable disponible pendant la campagne. |
+
+Verdict : `VALIDATED_INTEGRATED_MERGED_DEPLOYED_RECONCILED`.

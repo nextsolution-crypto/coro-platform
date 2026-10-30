@@ -60,4 +60,15 @@ Production observée en lecture seule : `08d4a0e01cb0c2197cde21106ecd76d0b5d55d6
 
 Verdict correctif : `ACCEPTATION_INTÉGRÉE_PASS`, lecteur d'écran réel `NOT_VERIFIED`.
 
+## Clôture de livraison — 2026-10-30
+
+- Candidat QA : `01cf448ab1c2742430ef2258a0edf5ea738d523f`.
+- PR produit : #137, fusionnée dans `main` par `2e6c06ef2ca2a2606e779c0480f64e6cea3d6a0c`.
+- CI `main` : workflow 41133503417 `SUCCESS`.
+- Release gouvernée : workflow 41134179928 `SUCCESS`; réconciliation `RECONCILIATION_SUCCEEDED`.
+- Production inspectée : workflow 41135782370 `SUCCESS`, SHA actif `2e6c06ef2ca2a2606e779c0480f64e6cea3d6a0c`.
+- Migration : 164, tête `20261117010000_building_governance`, aucune migration échouée.
+
+Les constats BLD-001 à BLD-012 sont clos selon la réconciliation corrective ci-dessus. Aucun défaut bloquant Bâtiments ne demeure dans le périmètre livré. Le lecteur d'écran réel reste `NOT_VERIFIED` et ne doit pas être présenté comme testé.
+
 L'écran Bâtiments ne peut pas être déclaré accepté tant que BLD-001 à BLD-006 ne sont pas corrigés et que la politique BLD-011 n'est pas décidée.
