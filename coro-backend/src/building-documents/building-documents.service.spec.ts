@@ -25,6 +25,7 @@ function harness() {
         name: 'Bâtiment',
         clientId: 'client',
         responsableEmail: 'manager@example.invalid',
+        client: { isActive: true },
       })),
     },
     user: {
@@ -84,7 +85,7 @@ describe('Building document durable authority and live permissions', () => {
     });
     expect(result.projectId).toBeUndefined();
   });
-  it('limits corporate defaults to the same client', async () => {
+  it('gives corporate organization-wide read while keeping contribution scoped', async () => {
     const h = harness();
     expect((await h.service.access(client, 'building')).canUpload).toBe(true);
     h.prisma.clientUser.findFirst.mockResolvedValue({
@@ -93,9 +94,12 @@ describe('Building document durable authority and live permissions', () => {
       buildingIds: [],
       email: 'x',
     });
-    await expect(
-      h.service.access({ ...client, role: 'CLIENT_CORPORATE' }, 'building'),
-    ).rejects.toThrow('introuvable');
+    const crossClient = await h.service.access(
+      { ...client, role: 'CLIENT_CORPORATE' },
+      'building',
+    );
+    expect(crossClient.canUpload).toBe(false);
+    expect(crossClient.canManage).toBe(false);
   });
   it('ignores stale token scope and permits explicit delegation without management rights', async () => {
     const h = harness();
@@ -183,7 +187,10 @@ describe('Building document durable authority and live permissions', () => {
         where: {
           id: 'file',
           organizationId: 'org',
-          buildingId: 'building',
+          OR: [
+            { buildingId: 'building' },
+            { buildingId: null, project: { buildingId: 'building', organizationId: 'org' } },
+          ],
           visibility: 'shared',
         },
       }),

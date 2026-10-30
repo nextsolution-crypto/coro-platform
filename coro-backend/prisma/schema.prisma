@@ -2535,6 +2535,7 @@ model BookingAssignment {
 model Building {
   documentaryFiles     ProjectFile[]
   documentaryGrants    BuildingDocumentGrant[]
+  invitationEvents     ClientInvitationEvent[]
   id                   String                  @id @default(uuid())
   name                 String
   address              String
@@ -3662,6 +3663,8 @@ model ClientInvitationEvent {
   client              Client                      @relation(fields: [clientId], references: [id], onDelete: Restrict)
   clientUserId        String
   clientUser          ClientUser                  @relation(fields: [clientUserId], references: [id], onDelete: Restrict)
+  buildingId          String?
+  building            Building?                   @relation(fields: [buildingId], references: [id], onDelete: Restrict)
   idempotencyKey      String                      @unique
   recipientHash       String                      @db.Char(64)
   encryptedEnvelope   String
@@ -3678,6 +3681,7 @@ model ClientInvitationEvent {
 
   @@index([status, nextAttemptAt])
   @@index([organizationId, clientId, createdAt])
+  @@index([buildingId, createdAt])
 }
 
 model AdminAuditEvent {

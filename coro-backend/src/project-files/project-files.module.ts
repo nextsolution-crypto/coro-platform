@@ -16,6 +16,7 @@ import { requireJwtSecret } from '../auth/auth-security.config';
 import { OfflineDocumentsService } from './offline-documents.service';
 import { ProjectFileExpiryRemindersService } from './project-file-expiry-reminders.service';
 import { ProjectDocumentMutationGuard } from './project-document-mutation.guard';
+import { BuildingDocumentUploadGuard } from '../building-documents/building-document-upload.guard';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { ProjectDocumentMutationGuard } from './project-document-mutation.guard'
   providers: [
     ProjectFilesService,
     BuildingDocumentsService,
+    BuildingDocumentUploadGuard,
     OfflineDocumentsService,
     ProjectFileExpiryRemindersService,
     ProjectDocumentMutationGuard,

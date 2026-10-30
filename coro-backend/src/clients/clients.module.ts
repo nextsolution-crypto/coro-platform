@@ -8,6 +8,6 @@ import { ClientInvitationOutboxService } from './client-invitation-outbox.servic
   imports: [ClientPortalModule],
   controllers: [ClientsController, PlatformClientAdministrationController],
   providers: [ClientsService, ClientInvitationOutboxService],
-  exports: [ClientsService],
+  exports: [ClientsService, ClientInvitationOutboxService],
 })
 export class ClientsModule {}

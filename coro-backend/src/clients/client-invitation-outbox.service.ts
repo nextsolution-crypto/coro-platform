@@ -108,12 +108,13 @@ export class ClientInvitationOutboxService {
       include: {
         client: { select: { isActive: true } },
         clientUser: { select: { isActive: true } },
+        building: { select: { isActive: true } },
       },
     });
     if (!current || !['PENDING', 'FAILED'].includes(current.status) || current.attempts >= 5) {
       return { claimed: false };
     }
-    if (!current.client.isActive || !current.clientUser.isActive) {
+    if (!current.client.isActive || !current.clientUser.isActive || (current.buildingId && !current.building?.isActive)) {
       await this.prisma.clientInvitationEvent.updateMany({
         where: { id, status: { in: ['PENDING', 'FAILED'] } },
         data: { status: 'CANCELLED', nextAttemptAt: null, leaseExpiresAt: null, lastErrorCode: 'RECIPIENT_INELIGIBLE' },
@@ -133,9 +134,10 @@ export class ClientInvitationOutboxService {
         include: {
           client: { select: { isActive: true } },
           clientUser: { select: { isActive: true } },
+          building: { select: { isActive: true } },
         },
       });
-      if (!eligibility?.client.isActive || !eligibility.clientUser.isActive) {
+      if (!eligibility?.client.isActive || !eligibility.clientUser.isActive || (eligibility.buildingId && !eligibility.building?.isActive)) {
         await this.prisma.clientInvitationEvent.update({
           where: { id },
           data: { status: 'CANCELLED', leaseExpiresAt: null, lastErrorCode: 'RECIPIENT_INELIGIBLE' },

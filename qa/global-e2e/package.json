@@ -32,6 +32,8 @@
     "organization-clients:deactivation": "node src/organization-clients-deactivation-acceptance.mjs",
     "organization-clients:browser": "node src/organization-clients-browser.mjs",
     "organization-clients:migration-upgrade": "node src/organization-clients-migration-upgrade.mjs",
+    "organization-buildings:acceptance": "node src/organization-buildings-acceptance.mjs",
+    "organization-buildings:browser": "node src/organization-buildings-browser.mjs",
     "identity:cleanup": "node src/identity-cleanup.mjs"
   }
 }
