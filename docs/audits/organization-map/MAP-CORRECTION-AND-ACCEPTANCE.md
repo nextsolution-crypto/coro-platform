@@ -127,5 +127,49 @@ Ce lot ne cree aucun endpoint de mutation et ne remplace pas les gardes serveur.
 
 `ACCEPTATION_INTÉGRÉE_PASS`
 
-Aucune fusion, aucun deploiement, aucune mutation de production, aucune
+## Livraison gouvernee et verification de production
+
+- PR fonctionnelle : `#139`, fusionnee dans `903f910d4f5108a2ca476db31a7860aa45a879de`.
+- Stabilisation d'un test probabiliste sans changement produit : PR `#140`.
+- Candidat final et SHA actif :
+  `2be74443e9431220c735c9819bb76630d2dd50d2`.
+- CI finale : workflow `41201943189`, `SUCCESS`.
+- Inspection pre-release : workflow `41202318934`, `SUCCESS`, verdict `PASS/GO`.
+- Gate capacite pre-release : workflow `41202320674`, `SUCCESS`.
+- Release gouvernee : workflow `41202402275`, `SUCCESS`.
+- Inspection post-release : workflow `41203560612`, `SUCCESS`, verdict `PASS/GO`.
+- Gate capacite post-release : workflow `41203562757`, `SUCCESS`; marge mesuree
+  de `21 190 899 191` octets.
+- PostgreSQL : version `16.15`, `164` migrations, tete
+  `20261117010000_building_governance`; aucun delta de migration pour ce lot.
+- Sauvegarde distante `REMOTE_VERIFIED`, restauration `RESTORE_VERIFIED` et
+  rollback complet `4/4` verifies apres la release.
+
+Digests actifs verifies :
+
+- backend : `sha256:9a5fe3d8f4defaca7c5fa0bde8c84df5b780f7e48781352fea121c36103ebe25`;
+- application Organisation :
+  `sha256:fdf2935aa1179d5d70a2419d20c439d0b3112b9623d4cea74c786f24f158ab2b`;
+- portail Client :
+  `sha256:3b96c4aeb856b28323c9eb646da4e32b215aa4fed1ef1693ff92a0137dabc95c`;
+- site public :
+  `sha256:b78e5412835fea98f2ac1db921e354b11fcbc64428c9a7930995d9f7af98930c`.
+
+La verification visuelle authentifiee, strictement en lecture seule, a confirme
+sur les deux applications de production : chargement des tuiles, attribution
+OpenStreetMap, marqueurs, compteurs, liste des batiments autorises et absence
+d'erreur visible. L'application Organisation et le portail Client etaient tous
+deux servis par le SHA actif ci-dessus.
+
+Les roles, noms accessibles et annonces ont ete verifies dans l'arbre
+d'accessibilite du navigateur. Cette preuve confirme la semantique exposee par
+le DOM; elle ne constitue pas une restitution vocale. Aucun lecteur d'ecran
+reel n'etait disponible, donc ce controle reste `NOT_VERIFIED`.
+
+Le stack QA `map139` cree pour la recette a ete arrete et retire. Les preuves
+sanitisees ont ete conservees. Aucune mutation metier de production, aucune
 communication externe et aucun appel reel de geocodage n'ont ete effectues.
+
+## Verdict final
+
+`ACCEPTATION_INTEGREE_PASS_DEPLOYED_AND_RECONCILED`
