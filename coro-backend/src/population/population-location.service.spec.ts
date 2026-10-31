@@ -178,9 +178,17 @@ describe('PopulationService location resolution', () => {
       'H2X 1Y4',
     ])
       expect(result.resolutionToken).not.toContain(value);
-    expect(
-      JSON.stringify(result).replace(JSON.stringify(result.location), ''),
-    ).not.toMatch(/latitude|longitude|provider|raw|coordinates|geometry/);
+    for (const protectedField of [
+      'latitude',
+      'longitude',
+      'provider',
+      'raw',
+      'coordinates',
+      'geometry',
+    ]) {
+      expect(result).not.toHaveProperty(protectedField);
+      expect(result.location).not.toHaveProperty(protectedField);
+    }
   });
 
   it('decrypts the bound IDs and coordinates on the backend', async () => {
