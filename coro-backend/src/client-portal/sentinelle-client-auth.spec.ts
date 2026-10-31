@@ -68,7 +68,18 @@ describe('Sentinelle Client Portal authentication boundary', () => {
       UnauthorizedException,
     );
 
-    prisma.clientUser.findFirst.mockResolvedValue({ sessionVersion: 3 });
+    prisma.clientUser.findFirst.mockResolvedValue({
+      id: actor.sub,
+      email: 'client-user-1@example.test',
+      clientId: actor.clientId,
+      organizationId: actor.organizationId,
+      role: actor.role,
+      buildingIds: actor.buildingIds,
+      populationPermissions: [],
+      operationalReviewPermissions: [],
+      correctiveActionPermissions: [],
+      sessionVersion: 3,
+    });
     await expect(guard.canActivate(context)).resolves.toBe(true);
     expect(request.clientUser).toMatchObject({
       type: 'CLIENT',
