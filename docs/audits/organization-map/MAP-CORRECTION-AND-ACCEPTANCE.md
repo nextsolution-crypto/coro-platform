@@ -3,6 +3,8 @@
 ## Candidat
 
 - Branche : `fix/organization-map-security`
+- HEAD initial de reprise : `45abb0ac45733e31c4d33435bad0ed153f8d52b1`.
+- Candidat produit et QA integree teste : `ede05dc355eaa2bf28089b7a918a7910898ec348`.
 - Base d'audit : `05150c283b4453587e75f342cda65507a2e59ad2`
 - Portee : carte Organisation et carte Portail client.
 - Donnees : organisations, clients, batiments et noms XSS synthetiques uniquement.
@@ -22,7 +24,7 @@ le candidat corrige. Il ne remplace pas l'historique de l'audit.
 | MAP-006 | RESOLVED | La liste structuree et actionnable conserve l'acces a chaque batiment superpose; jeu navigateur avec deux marqueurs coincidents. |
 | MAP-007 | RESOLVED | La selection est reconciliee a chaque changement de filtre client. |
 | MAP-008 | RESOLVED_WITH_GOVERNANCE | Geocodage public desactive par defaut; activation explicite, cache 24 h, deduplication, limitation globale a 1 requete/s, timeout et echec ferme. Decision fournisseur/confidentialite toujours requise avant activation. |
-| MAP-009 | DECISION_PENDING | La regle metier historique basee sur `updatedAt` n'a pas ete changee sans autorisation produit. Elle n'affecte ni l'acces ni la securite de la carte. |
+| MAP-009 | RESOLVED_WITH_CLARIFICATION | Le calcul reste une heuristique factuelle (`updatedAt` d'un document valide vieux de plus d'un an), mais le libelle trompeur « A renouveler » devient « Mise a jour a verifier ». Il ne constitue pas une echeance reglementaire. |
 | MAP-010 | PARTIAL | Chrome 24/24, controles nommes, F5 et zoom 200 % reussis. Lecteur d'ecran reel : `NOT_VERIFIED`. |
 
 ## Politique fournisseur appliquee
@@ -32,6 +34,11 @@ le candidat corrige. Il ne remplace pas l'historique de l'audit.
   affichent l'attribution obligatoire.
 - Les erreurs de tuiles sont annoncees; la liste autorisee des batiments reste
   utilisable sans carte.
+- Un chargement public limite avec coordonnees synthetiques a obtenu des
+  reponses OSM `200`, affiche l'attribution et n'a emis aucun appel UNPKG.
+- La panne de tuiles simulee conserve la liste actionnable. L'annonce
+  `tileerror` n'a pas ete observable avec l'interception Chrome et n'est donc
+  pas utilisee comme preuve de disponibilite fournisseur.
 - Le geocodage Nominatim public exige
   `BUILDING_PUBLIC_GEOCODING_ENABLED=true`. Il est desactive par defaut, utilise
   un cache memoire de 24 heures, deduplique les appels concurrents, limite les
@@ -53,7 +60,16 @@ References officielles :
 - TypeScript : Organisation et Portail `PASS`.
 - Builds de production : Organisation et Portail `PASS`.
 - Chrome : 24/24 (`2 applications x 4 dimensions x 3 themes`).
+- Recette integree complementaire : 5/5 configurations representatives sur
+  PostgreSQL 16, backend reel et les deux applications reelles.
+- Portees reelles : administrateur, operateur, `CLIENT_CORPORATE`,
+  `CLIENT_MANAGER`, autre tenant, identite inactive et Client desactive `PASS`.
+- Selection : compteurs, marqueurs, liste et ouverture du bon batiment
+  coherents dans les cinq scenarios.
 - F5 : session synthetique conservee dans les deux applications.
+- Retrait d'affectation : le prochain F5 passe de un marqueur a zero. Le garde
+  client relit maintenant les affectations et permissions canoniques a chaque
+  requete au lieu d'utiliser la portee figee dans le JWT.
 - Zoom 200 % : aucun debordement horizontal de page.
 - Console : aucune erreur critique dans la matrice finale.
 - XSS : balisage et attribut evenementiel affiches comme texte, jamais executes.
@@ -66,6 +82,20 @@ Themes testes : Classic, Glass Light et Glass Dark.
 Les captures et mesures sont conservees hors depot dans
 `D:\CORO-QA\tracking\organization-map\browser`. Le rapport machine est
 `organization-map-browser.json`.
+
+Les preuves integrees sont conservees dans
+`D:\CORO-QA\tracking\organization-map\integrated` et les preuves fournisseur
+dans `D:\CORO-QA\tracking\organization-map\provider-network`.
+
+## Defauts reveles pendant l'acceptation finale
+
+- Le portail pouvait afficher la liste sans initialiser Leaflet lorsque son
+  utilisateur authentifie devenait disponible apres les donnees. Le montage du
+  conteneur est maintenant un signal explicite; la regression est couverte.
+- Une session `CLIENT_MANAGER` conservait une ancienne liste `buildingIds`.
+  `ClientJwtGuard` conserve le JWT comme preuve d'identite et relit la portee
+  mutable canonique en base a chaque requete. Le retrait est effectif sans
+  deconnexion et sans affaiblissement inter-tenant.
 
 ## Autorisation
 
@@ -84,13 +114,15 @@ Ce lot ne cree aucun endpoint de mutation et ne remplace pas les gardes serveur.
 - Lecteur d'ecran reel : `NOT_VERIFIED` faute d'outil fiable dans ce runtime.
 - Exactitude physique d'adresses reelles : `NOT_VERIFIED`; aucune adresse reelle
   n'etait necessaire ou autorisee.
-- Regle de renouvellement basee sur `updatedAt` : decision metier distincte.
+- L'heuristique de fraicheur ne remplace aucune regle reglementaire; une future
+  echeance metier exigerait une decision et une source de donnees distinctes.
 - Activation d'un fournisseur de geocodage public : decision de gouvernance
   distincte; le chemin est desactive par defaut.
+- Disponibilite et SLA OSM : non garantis par ce chargement ponctuel.
 
 ## Verdict
 
-`CORRECTION_IMPLEMENTED_QA_ACCEPTED_READY_FOR_PR_REVIEW`
+`ACCEPTATION_INTÉGRÉE_PASS`
 
 Aucune fusion, aucun deploiement, aucune mutation de production, aucune
 communication externe et aucun appel reel de geocodage n'ont ete effectues.

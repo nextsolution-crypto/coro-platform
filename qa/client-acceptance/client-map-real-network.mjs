@@ -96,6 +96,7 @@ try {
     map: (() => { const r = document.querySelector('.leaflet-container')?.getBoundingClientRect(); return r ? { x: r.x, y: r.y, width: r.width, height: r.height } : null; })(),
   }));
   await page.screenshot({ path: path.join(evidenceDir, 'map-real-network.png'), fullPage: true });
+  const providerTileResponseCount = tileResponses.length;
   denyTiles = true;
   await page.reload({ waitUntil: 'networkidle2', timeout: 60_000 });
   await page.waitForSelector('[aria-label*="Liste des b"] button', { timeout: 30_000 });
@@ -105,10 +106,12 @@ try {
   }));
   await page.screenshot({ path: path.join(evidenceDir, 'map-tile-failure-fallback.png'), fullPage: true });
   result = {
-    status: tileResponses.some((entry) => entry.status === 200) && attribution && unpkgRequests.length === 0 && !geometry.globalOverflow && fallback.listButtons === 1 ? 'PASS' : 'FAIL',
+    status: tileResponses.slice(0, providerTileResponseCount).some((entry) => entry.status === 200) && attribution && unpkgRequests.length === 0 && !geometry.globalOverflow && fallback.listButtons === 1 ? 'PASS' : 'FAIL',
     portalOrigin,
     library: 'leaflet@1.9.4 bundled locally',
     tileResponses,
+    providerTileResponseCount,
+    simulatedFailureTileCount: tileResponses.length - providerTileResponseCount,
     attribution,
     unpkgRequestCount: unpkgRequests.length,
     geometry,
