@@ -28,10 +28,34 @@ export class ClientJwtGuard implements CanActivate {
           isActive: true,
           client: { isActive: true },
         },
-        select: { sessionVersion: true },
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          clientId: true,
+          organizationId: true,
+          buildingIds: true,
+          populationPermissions: true,
+          operationalReviewPermissions: true,
+          correctiveActionPermissions: true,
+          sessionVersion: true,
+        },
       });
       if (!user || user.sessionVersion !== payload.sessionVersion) throw new UnauthorizedException('Token invalide.');
-      request.clientUser = payload;
+      // Identity proof comes from the signed token; mutable authorization scope
+      // always comes from the current canonical ClientUser row.
+      request.clientUser = {
+        ...payload,
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+        clientId: user.clientId,
+        organizationId: user.organizationId,
+        buildingIds: user.buildingIds,
+        populationPermissions: user.populationPermissions,
+        operationalReviewPermissions: user.operationalReviewPermissions,
+        correctiveActionPermissions: user.correctiveActionPermissions,
+      };
       return true;
     } catch {
       throw new UnauthorizedException('Token client invalide ou expiré.');

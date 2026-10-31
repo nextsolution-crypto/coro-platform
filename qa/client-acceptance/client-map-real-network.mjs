@@ -28,6 +28,7 @@ const user = {
 await mkdir(evidenceDir, { recursive: true });
 const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
 const page = await browser.newPage();
+await page.setBypassServiceWorker(true);
 const tileResponses = [];
 const failures = [];
 const consoleErrors = [];
@@ -81,7 +82,6 @@ try {
   await page.goto(`${portalOrigin}/map`, { waitUntil: 'networkidle2', timeout: 60_000 });
   await page.waitForSelector('.leaflet-marker-icon', { timeout: 30_000 });
   await page.waitForFunction(() => document.querySelectorAll('.leaflet-tile-loaded').length > 0, { timeout: 30_000 });
-  await page.click('.leaflet-marker-icon');
   await page.waitForFunction(() => document.body.innerText.includes('Édifice synthétique Montréal'));
   const attribution = await page.evaluate(() => document.body.innerText.includes('OpenStreetMap contributors'));
   const unpkgRequests = [...tileResponses, ...failures].filter((entry) => entry.url.includes('unpkg.com'));
@@ -91,14 +91,43 @@ try {
     map: (() => { const r = document.querySelector('.leaflet-container')?.getBoundingClientRect(); return r ? { x: r.x, y: r.y, width: r.width, height: r.height } : null; })(),
   }));
   await page.screenshot({ path: path.join(evidenceDir, 'map-real-network.png'), fullPage: true });
+  const providerTileResponseCount = tileResponses.length;
+  const corruptedTileCount = await page.evaluate(() => {
+    const tiles = [...document.querySelectorAll('.leaflet-tile')];
+    for (const tile of tiles) tile.setAttribute('src', 'data:image/png;base64,invalid-tile');
+    return tiles.length;
+  });
+  await page.waitForFunction(
+    () => document.body.innerText.includes('Le fond de carte est indisponible'),
+    { timeout: 30_000 },
+  );
+  await page.waitForSelector('[aria-label*="Liste des b"] button', { timeout: 30_000 });
+  const fallback = await page.evaluate(() => ({
+    announced: document.body.innerText.includes('Utilisez la liste des bâtiments ci-dessous'),
+    accessibleAlert: Boolean(document.querySelector('[role="alert"]')),
+    listButtons: document.querySelectorAll('[aria-label*="Liste des b"] button').length,
+  }));
+  await page.screenshot({ path: path.join(evidenceDir, 'map-tile-failure-fallback.png'), fullPage: true });
+  await page.reload({ waitUntil: 'networkidle2', timeout: 60_000 });
+  await page.waitForFunction(() => document.querySelectorAll('.leaflet-tile-loaded').length > 0, { timeout: 30_000 });
+  const recovery = await page.evaluate(() => ({
+    alertCleared: !document.body.innerText.includes('Le fond de carte est indisponible'),
+    markerCount: document.querySelectorAll('.leaflet-marker-icon').length,
+    listButtons: document.querySelectorAll('[aria-label*="Liste des b"] button').length,
+  }));
+  await page.screenshot({ path: path.join(evidenceDir, 'map-tile-recovery.png'), fullPage: true });
   result = {
-    status: tileResponses.some((entry) => entry.status === 200) && attribution && unpkgRequests.length === 0 && !geometry.globalOverflow ? 'PASS' : 'FAIL',
+    status: tileResponses.slice(0, providerTileResponseCount).some((entry) => entry.status === 200) && attribution && unpkgRequests.length === 0 && !geometry.globalOverflow && corruptedTileCount > 0 && fallback.announced && fallback.accessibleAlert && fallback.listButtons === 1 && recovery.alertCleared && recovery.markerCount === 1 && recovery.listButtons === 1 ? 'PASS' : 'FAIL',
     portalOrigin,
     library: 'leaflet@1.9.4 bundled locally',
     tileResponses,
+    providerTileResponseCount,
+    corruptedTileCount,
     attribution,
     unpkgRequestCount: unpkgRequests.length,
     geometry,
+    fallback,
+    recovery,
     failedRequests: failures,
     consoleErrors,
     testedAt: new Date().toISOString(),
