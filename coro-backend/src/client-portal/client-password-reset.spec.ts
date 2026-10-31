@@ -358,7 +358,10 @@ describe('Client password reset', () => {
       organizationId: user.organizationId,
       sessionVersion: 0,
     });
-    h.prisma.clientUser.findFirst.mockResolvedValue({ sessionVersion: 1 });
+    h.prisma.clientUser.findFirst.mockResolvedValue({
+      ...user,
+      sessionVersion: 1,
+    });
     await expect(guard.canActivate(context)).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
@@ -384,7 +387,7 @@ describe('Client password reset', () => {
     const jwt = new JwtService({ secret });
     const prisma: any = {
       clientUser: {
-        findFirst: jest.fn().mockResolvedValue({ sessionVersion: 5 }),
+        findFirst: jest.fn().mockResolvedValue({ ...user, sessionVersion: 5 }),
       },
     };
     const guard = new ClientJwtGuard(jwt, prisma);
@@ -411,8 +414,43 @@ describe('Client password reset', () => {
         isActive: true,
         client: { isActive: true },
       },
-      select: { sessionVersion: true },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        clientId: true,
+        organizationId: true,
+        buildingIds: true,
+        populationPermissions: true,
+        operationalReviewPermissions: true,
+        correctiveActionPermissions: true,
+        sessionVersion: true,
+      },
     });
+  });
+
+  it('actualise le périmètre bâtiment depuis la base à chaque requête', async () => {
+    const h = harness();
+    const guard = new ClientJwtGuard({
+      verify: jest.fn().mockReturnValue({
+        type: 'CLIENT',
+        sub: user.id,
+        organizationId: user.organizationId,
+        sessionVersion: user.sessionVersion,
+        buildingIds: ['ancienne-affectation'],
+      }),
+    } as any, h.prisma);
+    h.prisma.clientUser.findFirst.mockResolvedValue({
+      ...user,
+      buildingIds: [],
+    });
+    const request: any = { headers: { authorization: 'Bearer token' } };
+    const context: any = {
+      switchToHttp: () => ({ getRequest: () => request }),
+    };
+
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+    expect(request.clientUser.buildingIds).toEqual([]);
   });
 
   it('login et MFA acceptent le courriel avec casse et espaces sans contourner MFA', async () => {

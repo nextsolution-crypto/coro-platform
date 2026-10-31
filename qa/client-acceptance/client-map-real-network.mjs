@@ -28,6 +28,7 @@ const user = {
 await mkdir(evidenceDir, { recursive: true });
 const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
 const page = await browser.newPage();
+await page.setBypassServiceWorker(true);
 const tileResponses = [];
 const failures = [];
 const consoleErrors = [];
@@ -41,8 +42,12 @@ page.on('response', (response) => {
 });
 page.on('requestfailed', (request) => failures.push({ url: request.url(), error: request.failure()?.errorText }));
 await page.setRequestInterception(true);
+let denyTiles = false;
 page.on('request', async (request) => {
   const url = request.url();
+  if (denyTiles && url.startsWith('https://tile.openstreetmap.org/')) {
+    return request.respond({ status: 200, contentType: 'image/png', body: Buffer.from('invalid-tile') });
+  }
   const parsed = new URL(url);
   if (!['localhost', '127.0.0.1'].includes(parsed.hostname) || !parsed.pathname.startsWith('/api/')) return request.continue();
   const route = parsed.pathname.slice('/api'.length);
@@ -91,14 +96,23 @@ try {
     map: (() => { const r = document.querySelector('.leaflet-container')?.getBoundingClientRect(); return r ? { x: r.x, y: r.y, width: r.width, height: r.height } : null; })(),
   }));
   await page.screenshot({ path: path.join(evidenceDir, 'map-real-network.png'), fullPage: true });
+  denyTiles = true;
+  await page.reload({ waitUntil: 'networkidle2', timeout: 60_000 });
+  await page.waitForSelector('[aria-label*="Liste des b"] button', { timeout: 30_000 });
+  const fallback = await page.evaluate(() => ({
+    announced: document.body.innerText.includes('Utilisez la liste des bâtiments ci-dessous'),
+    listButtons: document.querySelectorAll('[aria-label*="Liste des b"] button').length,
+  }));
+  await page.screenshot({ path: path.join(evidenceDir, 'map-tile-failure-fallback.png'), fullPage: true });
   result = {
-    status: tileResponses.some((entry) => entry.status === 200) && attribution && unpkgRequests.length === 0 && !geometry.globalOverflow ? 'PASS' : 'FAIL',
+    status: tileResponses.some((entry) => entry.status === 200) && attribution && unpkgRequests.length === 0 && !geometry.globalOverflow && fallback.listButtons === 1 ? 'PASS' : 'FAIL',
     portalOrigin,
     library: 'leaflet@1.9.4 bundled locally',
     tileResponses,
     attribution,
     unpkgRequestCount: unpkgRequests.length,
     geometry,
+    fallback,
     failedRequests: failures,
     consoleErrors,
     testedAt: new Date().toISOString(),

@@ -79,7 +79,7 @@ function getBuildingStatus(building: any): {
     return {
       color: "#E74C3C",
       glow: "rgba(231,76,60,0.5)",
-      label: "À renouveler",
+      label: "Mise à jour à vérifier",
     };
   const hasInProgress = projects.some((p: any) =>
     ["DRAFT", "IN_PROGRESS", "REVIEW"].includes(p.status),
@@ -286,7 +286,7 @@ export default function BuildingsMapPage() {
       (b) => getBuildingStatus(b).label === "En cours",
     ).length,
     aRenouveler: filteredBuildings.filter(
-      (b) => getBuildingStatus(b).label === "À renouveler",
+      (b) => getBuildingStatus(b).label === "Mise à jour à vérifier",
     ).length,
     sansDoc: filteredBuildings.filter(
       (b) => getBuildingStatus(b).label === "Aucun document",
@@ -406,7 +406,7 @@ export default function BuildingsMapPage() {
             { value: stats.enCours, label: "En cours", color: "#F39C12" },
             {
               value: stats.aRenouveler,
-              label: "À renouveler",
+              label: "Mise à jour à vérifier",
               color: "#E74C3C",
             },
           ].map((k) => (
@@ -469,7 +469,7 @@ export default function BuildingsMapPage() {
           {
             color: "#E74C3C",
             glow: "rgba(231,76,60,0.5)",
-            label: "À renouveler",
+            label: "Mise à jour à vérifier",
           },
           {
             color: "#4A5568",

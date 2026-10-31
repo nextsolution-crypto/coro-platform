@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiGet, getUser } from "../store/auth";
 import PortalLayout from "../components/PortalLayout";
@@ -95,7 +95,7 @@ function getBuildingStatus(building: any): {
     return {
       color: "#E74C3C",
       glow: "rgba(231,76,60,0.5)",
-      label: "À renouveler",
+      label: "Mise à jour à vérifier",
       priority: 0,
     };
   const hasInProgress = projects.some((p: any) =>
@@ -130,6 +130,11 @@ export default function MapPage() {
   const router = useRouter();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  const [mapContainerMounted, setMapContainerMounted] = useState(false);
+  const setMapContainer = useCallback((element: HTMLDivElement | null) => {
+    mapRef.current = element;
+    setMapContainerMounted(element !== null);
+  }, []);
   const [user, setUser] = useState<any>(null);
   const [buildings, setBuildings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -204,7 +209,7 @@ export default function MapPage() {
         mapInstanceRef.current = null;
       }
     };
-  }, [loading, buildings]);
+  }, [loading, buildings, user, mapContainerMounted]);
 
   const initMap = (L: typeof import("leaflet")) => {
     if (!mapRef.current || !L) return;
@@ -375,7 +380,7 @@ export default function MapPage() {
     enCours: buildings.filter((b) => getBuildingStatus(b).label === "En cours")
       .length,
     aRenouveler: buildings.filter(
-      (b) => getBuildingStatus(b).label === "À renouveler",
+      (b) => getBuildingStatus(b).label === "Mise à jour à vérifier",
     ).length,
   };
 
@@ -394,7 +399,7 @@ export default function MapPage() {
     >
       {/* Carte */}
       <div
-        ref={mapRef}
+        ref={setMapContainer}
         role="region"
         aria-label="Carte de mes bâtiments autorisés"
         style={{ width: "100%", height: "100%" }}
@@ -489,7 +494,7 @@ export default function MapPage() {
             { value: stats.enCours, label: "En cours", color: "#F39C12" },
             {
               value: stats.aRenouveler,
-              label: "À renouveler",
+              label: "Mise à jour à vérifier",
               color: "#E74C3C",
             },
           ].map((k) => (
@@ -552,7 +557,7 @@ export default function MapPage() {
           {
             color: "#E74C3C",
             glow: "rgba(231,76,60,0.5)",
-            label: "À renouveler",
+            label: "Mise à jour à vérifier",
           },
           {
             color: "#4A5568",

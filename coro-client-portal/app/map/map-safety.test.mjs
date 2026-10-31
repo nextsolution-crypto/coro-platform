@@ -27,3 +27,14 @@ test("the public tile contract retains explicit attribution", () => {
   );
   assert.match(page, /L\.control\.attribution/);
 });
+
+test("map initialization is retried when the authenticated user becomes available", () => {
+  assert.match(page, /ref=\{setMapContainer\}/);
+  assert.match(page, /\[loading, buildings, user, mapContainerMounted\]/);
+});
+
+test("the freshness heuristic is labelled as a verification cue, not a regulatory renewal", () => {
+  assert.match(page, /new Date\(p\.updatedAt\)/);
+  assert.match(page, /Mise à jour à vérifier/);
+  assert.doesNotMatch(page, /À renouveler/);
+});

@@ -26,3 +26,9 @@ test("navigation accepts only canonical entity identifiers", () => {
   assert.match(helper, /\^\[A-Za-z0-9_-\]\{1,128\}\$/);
   assert.match(page, /safeEntityPath/);
 });
+
+test("the freshness heuristic is labelled as a verification cue, not a regulatory renewal", () => {
+  assert.match(page, /new Date\(p\.updatedAt\)/);
+  assert.match(page, /Mise à jour à vérifier/);
+  assert.doesNotMatch(page, /À renouveler/);
+});
