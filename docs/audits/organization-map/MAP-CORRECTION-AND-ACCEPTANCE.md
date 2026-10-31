@@ -36,9 +36,10 @@ le candidat corrige. Il ne remplace pas l'historique de l'audit.
   utilisable sans carte.
 - Un chargement public limite avec coordonnees synthetiques a obtenu des
   reponses OSM `200`, affiche l'attribution et n'a emis aucun appel UNPKG.
-- La panne de tuiles simulee conserve la liste actionnable. L'annonce
-  `tileerror` n'a pas ete observable avec l'interception Chrome et n'est donc
-  pas utilisee comme preuve de disponibilite fournisseur.
+- La panne deterministe de 24 tuiles apres un chargement reel affiche le message
+  de repli dans un element `role="alert"`, conserve la liste actionnable, puis
+  disparait apres rechargement et reprise de 24 tuiles valides. L'erreur console
+  d'image volontairement corrompue est attendue et isolee a cette phase.
 - Le geocodage Nominatim public exige
   `BUILDING_PUBLIC_GEOCODING_ENABLED=true`. Il est desactive par defaut, utilise
   un cache memoire de 24 heures, deduplique les appels concurrents, limite les
@@ -119,6 +120,8 @@ Ce lot ne cree aucun endpoint de mutation et ne remplace pas les gardes serveur.
 - Activation d'un fournisseur de geocodage public : decision de gouvernance
   distincte; le chemin est desactive par defaut.
 - Disponibilite et SLA OSM : non garantis par ce chargement ponctuel.
+- Lecteur d'ecran reel : `NOT_VERIFIED`; le role et le message accessibles sont
+  prouves dans le DOM, sans revendiquer de restitution vocale.
 
 ## Verdict
 
