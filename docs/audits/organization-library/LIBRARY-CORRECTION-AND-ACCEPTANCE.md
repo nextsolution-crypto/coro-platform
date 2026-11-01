@@ -110,3 +110,48 @@ La vérification PostgreSQL après refus donne zéro écriture interdite dans `P
 `ACCEPTATION_INTÉGRÉE_PASS`
 
 Ce verdict couvre le catalogue Bibliothèque et ses autorisations sur le candidat de la PR #144. Il n'ajoute aucun raccordement IA et ne vaut ni fusion, ni déploiement.
+
+## Livraison et réconciliation de production
+
+- PR : `#144`, fusionnée dans `main` par le commit `204ad4cc73f8df363473b88373c3461079254c1b`.
+- CI de `main` : run `41317412253`, `SUCCESS`.
+- Inspection pré-release : run `41317792240`, `GO/PASS` sur le candidat exact.
+- Gate de capacité pré-release : run `41317794501`, `SUCCESS`; 45 274 783 744 octets libres, besoin calculé de 19 705 751 792 octets et marge de 25 569 031 952 octets.
+- Release gouvernée : run `41318001243`, `SUCCESS`; construction et vérification de quatre images immuables, déploiement fail-closed, rotation et nettoyage après réconciliation.
+- Inspection post-release : run `41319314721`, `GO/PASS`.
+- Gate de capacité post-release : run `41319316690`, `SUCCESS`; 45 045 506 048 octets libres et marge de release de 25 339 749 936 octets.
+- SHA actif vérifié : `204ad4cc73f8df363473b88373c3461079254c1b`.
+- PostgreSQL : 164 migrations, tête `20261117010000_building_governance`, aucune migration échouée; aucune migration ajoutée par ce lot.
+- Récupération : sauvegarde `REMOTE_VERIFIED`, hachage distant vérifié, restauration `RESTORE_VERIFIED`, verrou de déploiement libre et quatre images de rollback disponibles.
+
+Images actives vérifiées :
+
+- backend : `sha256:f52da24c39af7bfa72459ffc9cdc3347e1b49f74ca2759c13441508ae4e1dfd0`;
+- frontend : `sha256:ea388e7e14d84352ff06580c08dc42240ce62b96cf640e5ada9cbdd1974b2732`;
+- portail client : `sha256:f9fb7120b1d8d5deb8165537bbc204a1438c96da3a27e435270396948000b94b`;
+- site public : `sha256:9c027f80d3d0f7fc23fc8a9ffe72f7639679732ad9c1e69919d8dd797488fd8d`.
+
+## Vérification visuelle authentifiée en production
+
+La route `https://app.getcoro.io/library` a été contrôlée en lecture seule avec une session autorisée après la release :
+
+- chargement des 28 codes incidents, 43 rôles et 43 procédures;
+- ouverture d'une procédure longue (`P004`, 90 étapes);
+- recherche accentuée `générales` et état explicite sans résultat;
+- mention visible du catalogue global en lecture seule;
+- actualisation F5 avec session et route conservées;
+- rendu desktop et `390 × 844` sans débordement horizontal ni contrôle tronqué.
+
+Trois messages console identiques provenaient du canal asynchrone d'une extension Chrome; aucun défaut produit critique n'a été observé. Aucun parcours d'échec n'a été provoqué en production : les pannes principale et partielle restent couvertes par les preuves QA synthétiques du candidat fonctionnel `4f54055b`.
+
+## Rollback et limites finales
+
+Le manifeste réconcilié conserve un jeu complet de quatre images de rollback. Comme ce jeu correspond à la release antérieure au correctif Bibliothèque, un rollback applicatif réintroduirait les anciens chemins d'autorisation du catalogue. En cas de rollback nécessaire, l'accès à la Bibliothèque doit être suspendu opérationnellement jusqu'au rétablissement de la release corrigée; aucune activation de route ou mutation de configuration n'a été exécutée dans cette livraison.
+
+Les limites fonctionnelles demeurent inchangées : Knowledge, CORO AI authentifié et l'assistant public restent `NON_CONNECTÉ` au catalogue; le lecteur d'écran réel reste `NOT_VERIFIED`. Les rôles, alertes accessibles, parcours clavier et responsive ont toutefois été vérifiés en QA et le rendu de production a été vérifié visuellement.
+
+## Verdict de livraison
+
+`VALIDÉ_QA — FUSIONNÉ — DÉPLOYÉ — RÉCONCILIÉ`
+
+Ce verdict couvre uniquement le lot Bibliothèque #144. Il ne valide ni un raccordement IA, ni Manuel, ni Paramètres.
