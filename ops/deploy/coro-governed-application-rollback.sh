@@ -109,4 +109,3 @@ printf '{"rollbackAuthorization":"ROLLBACK_APPLICATIONS","rollbackEvidence":"%s"
 node "$release_dir/runtime/release-state.mjs" transition --root "$state_root" --release-id "$release_id" --to ROLLED_BACK --patch "$state_patch" >/dev/null || fail RELEASE_STATE_UPDATE_FAILED
 recovery_required=false
 echo "GOVERNED_ROLLBACK_RESULT mode=EXECUTE status=SUCCESS releaseId=$release_id evidence=$evidence"
-

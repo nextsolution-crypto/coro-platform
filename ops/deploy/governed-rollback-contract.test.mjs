@@ -16,4 +16,3 @@ test('uses exact four images, never changes the database schema and rolls forwar
   assert.match(source,/previousImages/);assert.match(source,/ACTIVE_IMAGE_DRIFT/);assert.match(source,/DATABASE_HEAD_CHANGED/);assert.match(source,/OUTBOX_EVENT_COUNT_CHANGED/);assert.match(source,/recovery_required/);
   assert.doesNotMatch(source,/migrate deploy|prisma migrate|pg_restore|docker system prune|docker volume/);
 });
-
