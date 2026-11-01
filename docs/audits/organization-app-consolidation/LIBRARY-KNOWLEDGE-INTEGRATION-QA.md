@@ -24,7 +24,7 @@
 | --- | --- |
 | information présente uniquement dans le catalogue | PASS, source `LIBRARY_PROCEDURE` |
 | portée globale / organisation / projet | PASS par priorité déterministe |
-| citation ouvrable, version et SHA-256 | PASS côté contrats et build; navigateur intégré à exécuter avant clôture produit |
+| citation ouvrable, version et SHA-256 | PASS côté contrats, autorisation serveur et build; navigateur authentifié production `NOT_VERIFIED` faute de session autorisée disponible |
 | modification | PASS, version et empreinte changent; ancien résultat absent |
 | retrait/inactivation | PASS, aucun résultat courant |
 | projet hors périmètre / inter-tenant | PASS, refus avant lecture du catalogue |
@@ -34,3 +34,11 @@
 ## IA et coûts
 
 Les preuves ci-dessus sont des preuves de récupération et de réponse déterministe simulée. Aucun fournisseur réel n’a été activé, aucune invocation Bedrock n’a été effectuée et aucune preuve de génération réelle n’est revendiquée.
+
+## Livraison
+
+- PR #157, HEAD testé `dbe7d7c9fb9ebfd2c9487d54c311b1ecbecb1ed7`, fusion `c91543efdf34c6429d1877a0b92f0a28567b5bb7`.
+- CI PR et main : PASS; release `41360598223` SUCCESS.
+- Inspection `41361880281` : `PASS/GO`, SHA actif exact, migration 166, services sains, backup/restore et quatre rollbacks vérifiés.
+- Statut : `RETRIEVAL_AUTHORITY_DEPLOYED_AND_RECONCILED`; `REAL_PROVIDER_GENERATION_NOT_VERIFIED`.
+- La preuve navigateur authentifiée de l’ouverture d’une citation reste une intervention humaine minimale; elle ne remet pas en cause la récupération déterministe déployée et ne doit pas être déclarée PASS sans session réelle.
