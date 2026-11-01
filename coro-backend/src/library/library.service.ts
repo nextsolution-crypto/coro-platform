@@ -45,11 +45,4 @@ export class LibraryService {
   }));
 }
 
-  async createProcedure(data: any) {
-    return this.prisma.procedure.create({ data });
-  }
-
-  async updateProcedure(id: string, data: any) {
-    return this.prisma.procedure.update({ where: { id }, data });
-  }
 }

@@ -33,8 +33,8 @@ export class ProceduresController {
     @Request() req: any,
   ) {
     return this.proceduresService.findAllForProject(
-      req.user.organizationId,
       projectId,
+      req.user,
     );
   }
 
@@ -65,8 +65,8 @@ export class ProceduresController {
   ) {
     return this.proceduresService.findOne(
       id,
-      req.user.organizationId,
       projectId,
+      req.user,
     );
   }
 

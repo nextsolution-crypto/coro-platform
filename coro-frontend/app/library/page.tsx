@@ -30,6 +30,8 @@ export default function LibraryPage() {
   const [procedures, setProcedures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedProc, setExpandedProc] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!isAuthenticated) { router.push('/login'); return; }
@@ -37,18 +39,34 @@ export default function LibraryPage() {
   }, [isAuthenticated]);
 
   const fetchData = async () => {
-    try {
-      const [codesRes, rolesRes, proceduresRes] = await Promise.all([
-        api.get('/library/incident-codes'),
-        api.get('/library/roles'),
-        api.get('/library/procedures'),
-      ]);
-      setIncidentCodes(codesRes.data);
-      setRoles(rolesRes.data);
-      setProcedures(proceduresRes.data);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+    setLoading(true);
+    setErrors({});
+    const [codesRes, rolesRes, proceduresRes] = await Promise.allSettled([
+      api.get('/library/incident-codes'),
+      api.get('/library/roles'),
+      api.get('/library/procedures'),
+    ]);
+    const nextErrors: Record<string, string> = {};
+    if (codesRes.status === 'fulfilled') setIncidentCodes(codesRes.value.data);
+    else nextErrors.codes = 'Impossible de charger les codes incidents.';
+    if (rolesRes.status === 'fulfilled') setRoles(rolesRes.value.data);
+    else nextErrors.roles = 'Impossible de charger les rôles.';
+    if (proceduresRes.status === 'fulfilled') setProcedures(proceduresRes.value.data);
+    else nextErrors.procedures = 'Impossible de charger les procédures.';
+    setErrors(nextErrors);
+    setLoading(false);
   };
+
+  const query = search.trim().toLocaleLowerCase('fr-CA');
+  const visibleCodes = incidentCodes.filter((item) =>
+    [item.code, item.name, item.description].some((value) => value?.toLocaleLowerCase('fr-CA').includes(query)),
+  );
+  const visibleRoles = roles.filter((item) =>
+    [item.roleCode, item.name, item.description].some((value) => value?.toLocaleLowerCase('fr-CA').includes(query)),
+  );
+  const visibleProcedures = procedures.filter((item) =>
+    [item.code, item.titleFR, item.titleEN].some((value: string | undefined) => value?.toLocaleLowerCase('fr-CA').includes(query)),
+  );
 
   const getActivationLabel = (rule: string) => {
     const map: Record<string, string> = {
@@ -80,7 +98,7 @@ export default function LibraryPage() {
           Bibliothèque centrale
         </h2>
         <p className="text-sm mt-1" style={{ color: '#6C757D' }}>
-          Codes incidents, rôles et procédures officiels CORO
+          Catalogue global en lecture seule : codes incidents, rôles et procédures officielles CORO
         </p>
       </div>
 
@@ -110,6 +128,32 @@ export default function LibraryPage() {
         ))}
       </div>
 
+      <div className="mb-5 max-w-xl">
+        <label htmlFor="library-search" className="block text-sm font-medium mb-1" style={{ color: '#495057' }}>
+          Rechercher dans la catégorie active
+        </label>
+        <input
+          id="library-search"
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Code, titre ou description"
+          className="w-full rounded px-3 py-2 text-sm"
+          style={{ border: '1px solid #CED4DA', backgroundColor: '#FFFFFF', color: '#2C3E50' }}
+        />
+      </div>
+
+      {errors[activeTab] && (
+        <div role="alert" className="mb-5 rounded p-4 flex flex-wrap items-center justify-between gap-3"
+          style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A', color: '#922B21' }}>
+          <span>{errors[activeTab]}</span>
+          <button type="button" onClick={fetchData} className="rounded px-3 py-1.5 text-sm font-medium"
+            style={{ backgroundColor: '#FFFFFF', border: '1px solid #C0392B', color: '#C0392B' }}>
+            Réessayer
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <div className="text-center py-12">
           <p className="text-sm animate-pulse" style={{ color: '#ADB5BD' }}>Chargement...</p>
@@ -119,7 +163,7 @@ export default function LibraryPage() {
           {/* ── CODES INCIDENTS ── */}
           {activeTab === 'codes' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {incidentCodes.map(code => (
+              {visibleCodes.map(code => (
                 <div key={code.id}
                   className="flex items-start gap-3 p-3 transition-colors min-w-0"
                   style={{
@@ -152,7 +196,7 @@ export default function LibraryPage() {
           {/* ── RÔLES ── */}
           {activeTab === 'roles' && (
             <div className="grid gap-1.5">
-              {roles.map(role => (
+              {visibleRoles.map(role => (
                 <div key={role.id}
                   className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 transition-colors"
                   style={{
@@ -190,7 +234,7 @@ export default function LibraryPage() {
           {/* ── PROCÉDURES ── */}
           {activeTab === 'procedures' && (
             <div className="grid gap-1.5">
-              {procedures.map(proc => (
+              {visibleProcedures.map(proc => (
                 <div key={proc.id}
                   style={{
                     backgroundColor: '#FFFFFF',
