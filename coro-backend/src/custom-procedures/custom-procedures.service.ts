@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AdviserActor, mutableProjectAccessWhere, projectAccessWhere } from '../auth/project-access';
 
 // ── Rôles CORO connus ───────────────────────────────────────
 const KNOWN_ROLES = [
@@ -19,6 +20,27 @@ const KNOWN_ROLES = [
 @Injectable()
 export class CustomProceduresService {
   constructor(private prisma: PrismaService) {}
+
+  private async assertReadableProject(projectId: string, actor: AdviserActor) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, ...projectAccessWhere(actor) },
+      select: { id: true },
+    });
+    if (!project) throw new NotFoundException('Projet introuvable');
+  }
+
+  private async assertMutableProject(projectId: string, actor: AdviserActor) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, ...mutableProjectAccessWhere(actor) },
+      select: { id: true },
+    });
+    if (!project) throw new NotFoundException('Projet introuvable');
+  }
+
+  private requireOrganizationManager(actor: AdviserActor) {
+    if (!['ADMIN', 'SUPER_ADMIN'].includes(actor.role))
+      throw new ForbiddenException('Autorisation de gestion requise.');
+  }
 
   // ── Générer un code unique CP001, CP002... ──────────────
   private async generateCode(organizationId: string): Promise<string> {
@@ -57,9 +79,13 @@ export class CustomProceduresService {
   async generateFromText(
     text: string,
     projectId: string,
-    organizationId: string,
-    userId: string,
+    actor: AdviserActor,
   ) {
+    await this.assertMutableProject(projectId, actor);
+    const organizationId = actor.organizationId;
+    const userId = actor.userId;
+    if (typeof text !== 'string' || text.trim().length < 50 || text.length > 8000)
+      throw new BadRequestException('Texte de procédure invalide.');
     const Anthropic = require('@anthropic-ai/sdk').default;
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -199,9 +225,11 @@ RÉPONDS UNIQUEMENT avec ce JSON, sans texte avant ou après :
     fileName: string,
     mimeType: string,
     projectId: string,
-    organizationId: string,
-    userId: string,
+    actor: AdviserActor,
   ) {
+    await this.assertMutableProject(projectId, actor);
+    if (typeof fileBase64 !== 'string' || fileBase64.length === 0 || fileBase64.length > 14_000_000)
+      throw new BadRequestException('Fichier de procédure invalide.');
     let extractedText = '';
 
     if (
@@ -252,8 +280,7 @@ RÉPONDS UNIQUEMENT avec ce JSON, sans texte avant ou après :
     const result = await this.generateFromText(
       extractedText.substring(0, 8000),
       projectId,
-      organizationId,
-      userId,
+      actor,
     );
 
     // Mettre à jour les champs source
@@ -270,7 +297,9 @@ RÉPONDS UNIQUEMENT avec ce JSON, sans texte avant ou après :
   }
 
   // ── CRUD ────────────────────────────────────────────────
-  async findAll(projectId: string, organizationId: string) {
+  async findAll(projectId: string, actor: AdviserActor) {
+    await this.assertReadableProject(projectId, actor);
+    const organizationId = actor.organizationId;
     return this.prisma.customProcedure.findMany({
       where: {
         OR: [
@@ -286,27 +315,40 @@ RÉPONDS UNIQUEMENT avec ce JSON, sans texte avant ou après :
     });
   }
 
-  async findOne(id: string, organizationId: string) {
+  async findOne(id: string, actor: AdviserActor) {
     const proc = await this.prisma.customProcedure.findFirst({
-      where: { id, organizationId },
+      where: { id, organizationId: actor.organizationId },
     });
     if (!proc) throw new NotFoundException('Procédure introuvable');
+    if (proc.projectId) await this.assertReadableProject(proc.projectId, actor);
     return proc;
   }
 
-  async update(id: string, data: any, organizationId: string) {
-    await this.findOne(id, organizationId);
+  async update(id: string, data: any, actor: AdviserActor) {
+    const procedure = await this.findOne(id, actor);
+    if (procedure.projectId) await this.assertMutableProject(procedure.projectId, actor);
+    else this.requireOrganizationManager(actor);
+    const allowed = ['titleFR', 'titleEN', 'objective', 'color', 'content', 'status', 'rolesDetected'];
+    const update = Object.fromEntries(
+      Object.entries(data ?? {}).filter(([key]) => allowed.includes(key)),
+    );
+    if (Object.keys(update).length === 0)
+      throw new BadRequestException('Aucun champ modifiable fourni.');
+    if (update.status && !['DRAFT', 'ACTIVE', 'ARCHIVED'].includes(String(update.status)))
+      throw new BadRequestException('Statut de procédure invalide.');
     return this.prisma.customProcedure.update({
       where: { id },
       data: {
-        ...data,
+        ...update,
         updatedAt: new Date(),
       },
     });
   }
 
-  async clone(id: string, projectId: string, organizationId: string, userId: string) {
-    const source = await this.findOne(id, organizationId);
+  async clone(id: string, projectId: string, actor: AdviserActor) {
+    const source = await this.findOne(id, actor);
+    await this.assertMutableProject(projectId, actor);
+    const organizationId = actor.organizationId;
     const code = await this.generateCode(organizationId);
     return this.prisma.customProcedure.create({
       data: {
@@ -322,21 +364,25 @@ RÉPONDS UNIQUEMENT avec ce JSON, sans texte avant ou après :
         sourceText: source.sourceText,
         isPublished: false,
         rolesDetected: source.rolesDetected,
-        createdById: userId,
+        createdById: actor.userId,
       },
     });
   }
 
-  async publish(id: string, organizationId: string) {
-    await this.findOne(id, organizationId);
+  async publish(id: string, actor: AdviserActor) {
+    this.requireOrganizationManager(actor);
+    const procedure = await this.findOne(id, actor);
+    if (procedure.projectId) await this.assertMutableProject(procedure.projectId, actor);
     return this.prisma.customProcedure.update({
       where: { id },
       data: { isPublished: true, projectId: null },
     });
   }
 
-  async remove(id: string, organizationId: string) {
-    await this.findOne(id, organizationId);
+  async remove(id: string, actor: AdviserActor) {
+    const procedure = await this.findOne(id, actor);
+    if (procedure.projectId) await this.assertMutableProject(procedure.projectId, actor);
+    else this.requireOrganizationManager(actor);
     return this.prisma.customProcedure.delete({ where: { id } });
   }
 

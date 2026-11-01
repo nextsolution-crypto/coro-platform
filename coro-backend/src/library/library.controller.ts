@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, UseGuards, ForbiddenException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { LibraryService } from './library.service';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
@@ -25,11 +25,18 @@ export class LibraryController {
 
   @Post('procedures')
   createProcedure(@Body() body: any) {
-    return this.libraryService.createProcedure(body);
+    void body;
+    throw new ForbiddenException(
+      'La modification du catalogue global n’est pas autorisée par cette route.',
+    );
   }
 
   @Put('procedures/:id')
   updateProcedure(@Param('id') id: string, @Body() body: any) {
-    return this.libraryService.updateProcedure(id, body);
+    void id;
+    void body;
+    throw new ForbiddenException(
+      'La modification du catalogue global n’est pas autorisée par cette route.',
+    );
   }
 }

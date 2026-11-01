@@ -51,7 +51,8 @@ export class ProceduresService {
   //
   // Priorité :
   // override projet > override organisation > défaut
-  async findOne(id: string, organizationId: string, projectId?: string) {
+  async findOne(id: string, projectId: string | undefined, actor: AdviserActor) {
+    const organizationId = actor.organizationId;
     const proc = await this.prisma.procedureDefault.findUnique({
       where: { id },
     });
@@ -62,6 +63,11 @@ export class ProceduresService {
 
     // Override projet — priorité maximale
     if (projectId) {
+      const project = await this.prisma.project.findFirst({
+        where: { id: projectId, ...projectAccessWhere(actor) },
+        select: { id: true },
+      });
+      if (!project) throw new NotFoundException('Projet introuvable');
       const projectOverride = await this.prisma.procedureOverride.findUnique({
         where: {
           procedureId_organizationId_projectId: {
@@ -114,9 +120,10 @@ export class ProceduresService {
   // Applique :
   // projet > organisation > défaut
   // + état isActive propre au projet
-  async findAllForProject(organizationId: string, projectId: string) {
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
+  async findAllForProject(projectId: string, actor: AdviserActor) {
+    const organizationId = actor.organizationId;
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, ...projectAccessWhere(actor) },
       select: { documentType: true },
     });
 
@@ -409,7 +416,11 @@ export class ProceduresService {
   // organisation (projectId = null), au lieu du pseudo-projet
   // historique "org-level".
   async findOne_legacy(id: string, organizationId: string) {
-    return this.findOne(id, organizationId);
+    return this.findOne(id, undefined, {
+      userId: 'legacy-read',
+      organizationId,
+      role: 'ADMIN',
+    });
   }
 
   async update(id: string, organizationId: string, content: any) {

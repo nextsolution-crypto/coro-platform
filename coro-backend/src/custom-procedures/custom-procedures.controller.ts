@@ -20,12 +20,12 @@ export class CustomProceduresController {
 
   @Get('project/:projectId')
   findAll(@Param('projectId') projectId: string, @Request() req: any) {
-    return this.service.findAll(projectId, req.user.organizationId);
+    return this.service.findAll(projectId, req.user);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string, @Request() req: any) {
-    return this.service.findOne(id, req.user.organizationId);
+    return this.service.findOne(id, req.user);
   }
 
   @Post('generate')
@@ -33,8 +33,7 @@ export class CustomProceduresController {
     return this.service.generateFromText(
       body.text,
       body.projectId,
-      req.user.organizationId,
-      req.user.userId,
+      req.user,
     );
   }
 
@@ -48,14 +47,13 @@ export class CustomProceduresController {
       body.fileName,
       body.mimeType,
       body.projectId,
-      req.user.organizationId,
-      req.user.userId,
+      req.user,
     );
   }
 
   @Put(':id')
   update(@Param('id') id: string, @Body() body: any, @Request() req: any) {
-    return this.service.update(id, body, req.user.organizationId);
+    return this.service.update(id, body, req.user);
   }
 
   @Post(':id/clone')
@@ -64,16 +62,16 @@ export class CustomProceduresController {
     @Body() body: { projectId: string },
     @Request() req: any,
   ) {
-    return this.service.clone(id, body.projectId, req.user.organizationId, req.user.userId);
+    return this.service.clone(id, body.projectId, req.user);
   }
 
   @Post(':id/publish')
   publish(@Param('id') id: string, @Request() req: any) {
-    return this.service.publish(id, req.user.organizationId);
+    return this.service.publish(id, req.user);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req: any) {
-    return this.service.remove(id, req.user.organizationId);
+    return this.service.remove(id, req.user);
   }
 }
