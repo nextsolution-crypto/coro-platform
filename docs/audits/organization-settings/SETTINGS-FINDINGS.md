@@ -75,3 +75,19 @@
 - Désactivation : prochaine requête 401; ancien jeton encore 401 après réactivation; nouvelle authentification requise.
 - Identité inactive : connexion refusée.
 - Audit durable des transitions active/inactive : présent.
+
+## Clôture du lot correctif
+
+| Constat | Statut | Correction et preuve |
+| --- | --- | --- |
+| SET-001 | CORRIGÉ | `GET /users/organization` exige ADMIN/SUPER_ADMIN; OPERATOR reçoit 403 sans contenu. |
+| SET-002 | CORRIGÉ | `/organizations/me/info` ne renvoie que `id`, `name`, `isInternal`, `licenseType`, `isActive`; l’annuaire demeure sur la route administrative. |
+| SET-003 | CORRIGÉ | Logo limité à ADMIN/SUPER_ADMIN avant traitement; autorité canonique portée par `Organization`. |
+| SET-004 | CORRIGÉ | Secret actuel exigé; politique existante appliquée; anciennes sessions, refresh tokens et appareils de confiance révoqués. |
+| SET-005 | CORRIGÉ | État 503 distinct, `role=alert`, action Réessayer; preuve Chrome déterministe. |
+| SET-006 | CORRIGÉ | Lecture/mutation Module 1 réservées à ADMIN/SUPER_ADMIN et tenant-scopées. |
+| SET-007 | CORRIGÉ AVEC REPRISE GOUVERNÉE | Champs organisationnels déplacés sur `Organization`. Les valeurs historiques unanimes sont copiées; les divergences restent intactes sur `User` et produisent un conflit à résoudre explicitement. |
+| SET-008 | CORRIGÉ | Création et renvoi transactionnels avec intention chiffrée durable, idempotence, leasing, reprise et contrôle d’admissibilité. Aucune promesse exactly-once externe. |
+| SET-009 | CORRIGÉ | Outils administratifs retirés du catalogue OPERATOR; contrôles serveur maintenus. |
+
+La recette intégrée ne contient aucun appel fournisseur réel. L’état `DELIVERED` prouve uniquement l’acceptation par le fournisseur simulé QA.
