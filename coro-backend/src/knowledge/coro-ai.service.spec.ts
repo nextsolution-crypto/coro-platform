@@ -11,14 +11,28 @@ const actor = {
 function harness() {
   const find = jest.fn().mockResolvedValue({ buildingId: 'building-a' });
   const prisma: any = {
-    clientUser: { findFirst: jest.fn().mockResolvedValue({ clientId: 'customer-a', role: 'CLIENT_MANAGER', buildingIds: ['building-a'], operationalReviewPermissions: [] }) },
+    clientUser: {
+      findFirst: jest
+        .fn()
+        .mockResolvedValue({
+          clientId: 'customer-a',
+          role: 'CLIENT_MANAGER',
+          buildingIds: ['building-a'],
+          operationalReviewPermissions: [],
+        }),
+    },
     incidentEvent: { findFirst: find },
     evacuationEvent: { findFirst: find },
     exerciseReport: { findFirst: find },
     correctiveAction: { findFirst: find },
     building: { findFirst: jest.fn().mockResolvedValue({ id: 'building-a' }) },
     coroKnowledgeInteraction: {
-      create: jest.fn().mockImplementation(async ({ data }) => ({ id: 'interaction-a', ...data })),
+      create: jest
+        .fn()
+        .mockImplementation(async ({ data }) => ({
+          id: 'interaction-a',
+          ...data,
+        })),
     },
   };
   const retrieval: any = {
@@ -36,7 +50,12 @@ function harness() {
     }),
   };
   const authorization: any = {
-    scope: jest.fn().mockResolvedValue({ organizationId: 'org-a', buildingIds: ['building-a'] }),
+    scope: jest
+      .fn()
+      .mockResolvedValue({
+        organizationId: 'org-a',
+        buildingIds: ['building-a'],
+      }),
   };
   const providerGateway: any = {
     providerName: jest.fn().mockReturnValue('DETERMINISTIC_SIMULATED'),
@@ -64,11 +83,26 @@ describe('CoroAiService', () => {
   it('reports the real selected provider when Bedrock fails without exposing an answer', async () => {
     const h = harness();
     h.providerGateway.providerName.mockReturnValue('AWS_BEDROCK_CA_CENTRAL_1');
-    h.providerGateway.answer.mockRejectedValue(new Error('provider unavailable'));
-    const result = await h.service.ask(actor, { question: 'Question de recette fictive' });
-    expect(result).toMatchObject({ status: 'PROVIDER_FAILURE', provider: 'AWS_BEDROCK_CA_CENTRAL_1', answer: null, citations: [] });
+    h.providerGateway.answer.mockRejectedValue(
+      new Error('provider unavailable'),
+    );
+    const result = await h.service.ask(actor, {
+      question: 'Question de recette fictive',
+    });
+    expect(result).toMatchObject({
+      status: 'PROVIDER_FAILURE',
+      provider: 'AWS_BEDROCK_CA_CENTRAL_1',
+      answer: null,
+      citations: [],
+    });
   });
-  it.each(['INCIDENT', 'SENTINELLE', 'NETWORK', 'EXERCISE_REPORT', 'CORRECTIVE_ACTION'] as const)(
+  it.each([
+    'INCIDENT',
+    'SENTINELLE',
+    'NETWORK',
+    'EXERCISE_REPORT',
+    'CORRECTIVE_ACTION',
+  ] as const)(
     'binds %s assistance to the authorized building without a mutation path',
     async (operationalContext) => {
       const h = harness();
@@ -78,14 +112,24 @@ describe('CoroAiService', () => {
         operationalResourceId: 'resource-a',
       });
       expect(result.status).toBe('INSUFFICIENT_EVIDENCE');
-      expect(h.retrieval.search).toHaveBeenCalledWith(actor, expect.any(String), 'building-a');
+      expect(h.retrieval.search).toHaveBeenCalledWith(
+        actor,
+        expect.any(String),
+        'building-a',
+        8,
+        undefined,
+      );
       expect(h.prisma.coroKnowledgeInteraction.create).toHaveBeenCalled();
     },
   );
 
   it('applies canonical client confidentiality when binding corrective actions', async () => {
     const h = harness();
-    await h.service.ask(actor, { question: 'Question fictive', operationalContext: 'CORRECTIVE_ACTION', operationalResourceId: 'action-a' });
+    await h.service.ask(actor, {
+      question: 'Question fictive',
+      operationalContext: 'CORRECTIVE_ACTION',
+      operationalResourceId: 'action-a',
+    });
     const where = h.prisma.correctiveAction.findFirst.mock.calls[0][0].where;
     expect(where.buildingId).toEqual({ in: ['building-a'] });
     expect(where.building).toEqual({ is: { clientId: 'customer-a' } });
@@ -96,22 +140,43 @@ describe('CoroAiService', () => {
   });
   it('restricts client report assistance to published, active canonical projects', async () => {
     const h = harness();
-    await h.service.ask(actor, { question: 'Question fictive', operationalContext: 'EXERCISE_REPORT', operationalResourceId: 'report-a' });
-    expect(h.prisma.exerciseReport.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
-      status: 'PUBLISHED', project: { is: { isActive: true, organizationId: 'org-a' } },
-    }) }));
+    await h.service.ask(actor, {
+      question: 'Question fictive',
+      operationalContext: 'EXERCISE_REPORT',
+      operationalResourceId: 'report-a',
+    });
+    expect(h.prisma.exerciseReport.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: 'PUBLISHED',
+          project: { is: { isActive: true, organizationId: 'org-a' } },
+        }),
+      }),
+    );
   });
   it('rejects inaccessible contexts before retrieval or provider invocation', async () => {
     const h = harness();
-    h.prisma.incidentEvent.findFirst.mockResolvedValue({ buildingId: 'forbidden-building' });
-    await expect(h.service.ask(actor, { question: 'Question fictive', operationalContext: 'INCIDENT', operationalResourceId: 'other-event' })).rejects.toThrow('Contexte non disponible');
+    h.prisma.incidentEvent.findFirst.mockResolvedValue({
+      buildingId: 'forbidden-building',
+    });
+    await expect(
+      h.service.ask(actor, {
+        question: 'Question fictive',
+        operationalContext: 'INCIDENT',
+        operationalResourceId: 'other-event',
+      }),
+    ).rejects.toThrow('Contexte non disponible');
     expect(h.retrieval.search).not.toHaveBeenCalled();
     expect(h.providerGateway.answer).not.toHaveBeenCalled();
   });
   it('fails closed and records a provider failure without citations', async () => {
     const h = harness();
-    h.grounding.answer.mockImplementation(() => { throw new Error('SIMULATED_PROVIDER_FAILURE'); });
-    const result = await h.service.ask(actor, { question: 'Question autorisée' });
+    h.grounding.answer.mockImplementation(() => {
+      throw new Error('SIMULATED_PROVIDER_FAILURE');
+    });
+    const result = await h.service.ask(actor, {
+      question: 'Question autorisée',
+    });
     expect(result).toMatchObject({
       status: 'PROVIDER_FAILURE',
       answer: null,
@@ -119,13 +184,17 @@ describe('CoroAiService', () => {
       provider: 'DETERMINISTIC_SIMULATED',
     });
     expect(h.prisma.coroKnowledgeInteraction.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: 'PROVIDER_FAILURE' }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'PROVIDER_FAILURE' }),
+      }),
     );
   });
   it('links only grounded citations to the canonical source viewer, not a project document route', async () => {
     const h = harness();
     const hit = {
       citationId: 'citation-a',
+      sourceType: 'PROJECT_FILE',
+      scope: undefined,
       chunkId: 'chunk-a',
       projectFileId: 'file-a',
       projectFileVersion: 3,
@@ -136,7 +205,10 @@ describe('CoroAiService', () => {
       sourceSha256: 'a'.repeat(64),
       score: 1,
     };
-    h.retrieval.search.mockResolvedValue([hit, { ...hit, citationId: 'unused-citation' }]);
+    h.retrieval.search.mockResolvedValue([
+      hit,
+      { ...hit, citationId: 'unused-citation' },
+    ]);
     h.grounding.answer.mockReturnValue({
       answer: 'Réponse sourcée.',
       uncertainty: null,
@@ -144,19 +216,24 @@ describe('CoroAiService', () => {
       conflicts: [],
       usedCitationIds: ['citation-a'],
     });
-    const result = await h.service.ask(actor, { question: 'Que dit la source approuvée ?' });
+    const result = await h.service.ask(actor, {
+      question: 'Que dit la source approuvée ?',
+    });
     expect(result.status).toBe('ANSWERED');
-    expect(result.citations).toEqual([{
-      citationId: 'citation-a',
-      projectFileId: 'file-a',
-      version: 3,
-      name: 'source.pdf',
-      pageStart: 2,
-      pageEnd: 2,
-      sectionPath: 'Section 1',
-      sha256: 'a'.repeat(64),
-      href: '/knowledge/sources/file-a',
-    }]);
+    expect(result.citations).toEqual([
+      {
+        citationId: 'citation-a',
+        sourceType: 'PROJECT_FILE',
+        scope: undefined,
+        projectFileId: 'file-a',
+        version: 3,
+        name: 'source.pdf',
+        pageStart: 2,
+        pageEnd: 2,
+        sectionPath: 'Section 1',
+        sha256: 'a'.repeat(64),
+        href: '/knowledge/sources/file-a',
+      },
+    ]);
   });
-
 });

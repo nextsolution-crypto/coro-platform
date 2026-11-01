@@ -9,8 +9,10 @@ import styles from "./knowledge.module.css";
 
 type Citation = {
   citationId: string;
-  projectFileId: string;
-  version: number;
+  sourceType?: "PROJECT_FILE" | "LIBRARY_PROCEDURE";
+  scope?: "GLOBAL" | "ORGANIZATION" | "PROJECT";
+  projectFileId?: string;
+  version?: number;
   name: string;
   pageStart: number;
   pageEnd: number;
@@ -32,8 +34,11 @@ type Answer = {
 
 type SearchHit = {
   citationId: string;
-  projectFileId: string;
-  projectFileVersion: number;
+  sourceType?: "PROJECT_FILE" | "LIBRARY_PROCEDURE";
+  sourceVersion?: string;
+  sourceScope?: "GLOBAL" | "ORGANIZATION" | "PROJECT";
+  projectFileId?: string;
+  projectFileVersion?: number;
   documentName: string;
   pageStart: number;
   pageEnd: number;
@@ -137,7 +142,7 @@ export default function KnowledgePage() {
             <div className={styles.resultList}>
               {results.map((result) => (
                 <article key={result.citationId} className={styles.resultCard}>
-                  <div><strong>{result.documentName}</strong><span>Version {result.projectFileVersion} · page {result.pageStart}{result.pageEnd !== result.pageStart ? `–${result.pageEnd}` : ""}</span></div>
+                  <div><strong>{result.documentName}</strong><span>{result.sourceType === "LIBRARY_PROCEDURE" ? `Catalogue ${result.sourceScope?.toLowerCase()} · version ${result.sourceVersion?.slice(0, 24)}` : `Version ${result.projectFileVersion} · page ${result.pageStart}${result.pageEnd !== result.pageStart ? `–${result.pageEnd}` : ""}`}</span></div>
                   <p>{result.text}</p>
                 </article>
               ))}
@@ -150,5 +155,6 @@ export default function KnowledgePage() {
 }
 
 function FileCitation({ citation }: { citation: Citation }) {
+  if (citation.sourceType === "LIBRARY_PROCEDURE") return <><div><strong>{citation.name}</strong><span>Catalogue {citation.scope?.toLowerCase()}</span></div><p>Version et provenance vérifiables</p><small>SHA-256 {citation.sha256.slice(0, 12)}…</small></>;
   return <><div><strong>{citation.name}</strong><span>Version {citation.version}</span></div><p>Page {citation.pageStart}{citation.pageEnd !== citation.pageStart ? `–${citation.pageEnd}` : ""}{citation.sectionPath ? ` · section ${citation.sectionPath}` : ""}</p><small>SHA-256 {citation.sha256.slice(0, 12)}…</small></>;
 }
