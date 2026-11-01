@@ -67,6 +67,11 @@ export default function LibraryPage() {
   const visibleProcedures = procedures.filter((item) =>
     [item.code, item.titleFR, item.titleEN].some((value: string | undefined) => value?.toLocaleLowerCase('fr-CA').includes(query)),
   );
+  const visibleCount = activeTab === 'codes'
+    ? visibleCodes.length
+    : activeTab === 'roles'
+      ? visibleRoles.length
+      : visibleProcedures.length;
 
   const getActivationLabel = (rule: string) => {
     const map: Record<string, string> = {
@@ -160,6 +165,12 @@ export default function LibraryPage() {
         </div>
       ) : (
         <>
+          {visibleCount === 0 && !errors[activeTab] && (
+            <p role="status" className="rounded border px-4 py-8 text-center text-sm"
+              style={{ borderColor: '#DEE2E6', backgroundColor: '#F8F9FA', color: '#6C757D' }}>
+              Aucun résultat dans cette catégorie.
+            </p>
+          )}
           {/* ── CODES INCIDENTS ── */}
           {activeTab === 'codes' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
