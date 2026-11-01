@@ -65,7 +65,19 @@ describe('CONTROL-00B PostgreSQL invariants', () => {
   });
 
   it('rollback une commande MUST-audit si son audit ne peut pas etre ecrit', async () => {
-    const users = new UsersService(prisma as any, { sendWelcomeTeamMember: jest.fn() } as any, new AdminAuditService());
+    const invitationOutbox = {
+      protect: jest.fn().mockReturnValue({
+        recipientHash: 'a'.repeat(64),
+        encryptedEnvelope: Buffer.from('control-00b').toString('base64'),
+        encryptionKeyId: 'test',
+      }),
+    };
+    const users = new UsersService(
+      prisma as any,
+      { sendWelcomeTeamMember: jest.fn() } as any,
+      new AdminAuditService(),
+      invitationOutbox as any,
+    );
     const email = `rollback-${suffix}@example.invalid`;
     await expect(users.createInOrganization(ids.org, {
       email, password: 'Password1!', firstName: 'Rollback', lastName: 'Test', role: UserRole.OPERATOR,
