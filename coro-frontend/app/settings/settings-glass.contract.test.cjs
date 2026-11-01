@@ -15,8 +15,9 @@ const view = fs.readFileSync(path.join(__dirname, 'SettingsGlassView.tsx'), 'utf
 const viewCode = view.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 const { ROUTE_REGISTRY } = require('../../design-system/routes/route-registry.ts');
 
-// Empreinte (SHA-256) de app/settings/page.tsx tel que commité avant la migration (a7d46913), fins de ligne LF.
-const LEGACY_PAGE_SHA256 = 'df1dcde41969971b4d44440226d6ee92c9215392e24365a14215ccd94ff2dff0';
+// Empreinte revue après l’alignement de sécurité Paramètres : les outils
+// administratifs sont désormais absents pour OPERATOR dans les deux rendus.
+const LEGACY_PAGE_SHA256 = 'ebfb92a2c5b964bc30bf17dec5078485b41feba58b4c2584b23a1e2a97d6ce02';
 const LEGACY_HEX_COUNT = 18;
 
 function withoutGlassBlocks(src) {
