@@ -247,7 +247,7 @@ export class AuthService {
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
-        resetToken: token,
+        resetToken: crypto.createHash('sha256').update(token, 'utf8').digest('hex'),
         resetTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
       },
     });
@@ -262,8 +262,11 @@ export class AuthService {
 
   async resetPassword(token: string, password: string) {
     this.validatePassword(password);
+    const tokenHash = crypto.createHash('sha256').update(token, 'utf8').digest('hex');
     const user = await this.prisma.user.findFirst({
-      where: { resetToken: token, resetTokenExpiry: { gt: new Date() } },
+      // The raw-token branch is a bounded compatibility path for links issued
+      // before token hashing was introduced. Every successful use clears it.
+      where: { resetToken: { in: [tokenHash, token] }, resetTokenExpiry: { gt: new Date() } },
     });
     if (!user) throw new BadRequestException('Lien invalide ou expiré.');
     const hashed = await bcrypt.hash(password, 10);

@@ -11,6 +11,9 @@ describe('OrganizationsController route contract', () => {
   const service = {
     getMapOverview: jest.fn(),
     findOne: jest.fn(),
+    findMyInfo: jest.fn(),
+    getSettings: jest.fn(),
+    updateSettings: jest.fn(),
     findAllProjectsGlobal: jest.fn(),
     getHealthScores: jest.fn(),
   };
@@ -73,6 +76,11 @@ describe('OrganizationsController route contract', () => {
       ),
     ).toBeUndefined();
     void controller.getMyOrganization({ user: { organizationId: 'org-1' } });
-    expect(service.findOne).toHaveBeenCalledWith('org-1');
+    expect(service.findMyInfo).toHaveBeenCalledWith('org-1');
+  });
+
+  it('refuse les paramètres organisationnels à un opérateur avant le service', () => {
+    expect(() => controller.getMyOrganizationSettings({ user: { role: 'OPERATOR', organizationId: 'org-1' } })).toThrow();
+    expect(service.getSettings).not.toHaveBeenCalled();
   });
 });

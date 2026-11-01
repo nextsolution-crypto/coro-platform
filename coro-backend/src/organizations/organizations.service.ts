@@ -13,6 +13,11 @@ import { randomInt } from 'crypto';
 export class OrganizationsService {
   constructor(private prisma: PrismaService, private adminAudit: AdminAuditService) {}
 
+  private readonly settingsFields = [
+    'companyName', 'companyLogoB64', 'companyLogoFullB64', 'companyPhone',
+    'companyEmail', 'companyAddress', 'companyWebsite', 'companyTagline', 'companyLicense',
+  ] as const;
+
   async findAll() {
     return this.prisma.organization.findMany({
       orderBy: { createdAt: 'desc' },
@@ -44,6 +49,74 @@ export class OrganizationsService {
     });
     if (!org) throw new NotFoundException('Organisation introuvable');
     return org;
+  }
+
+  async findMyInfo(id: string) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id },
+      select: { id: true, name: true, isInternal: true, licenseType: true, isActive: true },
+    });
+    if (!org) throw new NotFoundException('Organisation introuvable');
+    return org;
+  }
+
+  async getSettings(id: string) {
+    const settings = await this.prisma.organization.findUnique({
+      where: { id },
+      select: {
+        id: true, name: true, companyName: true, companyLogoB64: true,
+        licenseType: true,
+        companyLogoFullB64: true, companyPhone: true, companyEmail: true,
+        companyAddress: true, companyWebsite: true, companyTagline: true,
+        companyLicense: true,
+        settingsConflicts: {
+          where: { resolvedAt: null },
+          select: { field: true, createdAt: true },
+          orderBy: { field: 'asc' },
+        },
+        _count: { select: { users: true, projects: true } },
+      },
+    });
+    if (!settings) throw new NotFoundException('Organisation introuvable');
+    return settings;
+  }
+
+  async updateSettings(id: string, input: Record<string, unknown>, actor: any) {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) {
+      throw new BadRequestException('Paramètres organisationnels invalides.');
+    }
+    const data: Record<string, string | null> = {};
+    for (const [field, value] of Object.entries(input)) {
+      if (!(this.settingsFields as readonly string[]).includes(field)) {
+        throw new BadRequestException(`Champ organisationnel interdit : ${field}`);
+      }
+      if (value !== null && typeof value !== 'string') {
+        throw new BadRequestException(`Valeur organisationnelle invalide : ${field}`);
+      }
+      const limit = field.includes('Logo') ? 3_000_000 : 500;
+      if (typeof value === 'string' && value.length > limit) {
+        throw new BadRequestException(`Valeur organisationnelle trop longue : ${field}`);
+      }
+      if (field.includes('Logo') && value && !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value)) {
+        throw new BadRequestException('Logo invalide.');
+      }
+      data[field] = typeof value === 'string' ? value.trim() || null : null;
+    }
+    if (!Object.keys(data).length) throw new BadRequestException('Aucune modification fournie.');
+    return this.prisma.$transaction(async (tx) => {
+      const before = await tx.organization.findUnique({ where: { id }, select: Object.fromEntries(this.settingsFields.map((field) => [field, true])) as any });
+      if (!before) throw new NotFoundException('Organisation introuvable');
+      const updated = await tx.organization.update({ where: { id }, data, select: Object.fromEntries(['id', ...this.settingsFields].map((field) => [field, true])) as any });
+      await tx.organizationSettingsConflict.updateMany({
+        where: { organizationId: id, field: { in: Object.keys(data) }, resolvedAt: null },
+        data: { resolvedAt: new Date(), resolvedById: actor.userId },
+      });
+      await this.adminAudit.record(tx, {
+        actorUserId: actor.userId, action: 'ORGANIZATION_SETTINGS_UPDATED', targetType: 'Organization',
+        targetId: id, organizationId: id, beforeData: before as any, afterData: data as any,
+      });
+      return updated;
+    });
   }
 
     async createWithAdmin(data: {

@@ -25,6 +25,7 @@ export class UsersController {
   @Get('organization')
   @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
   async getOrganizationUsers(@Request() req: any) {
+    this.assertAdmin(req);
     return this.usersService.findByOrganization(req.user.organizationId);
   }
 
@@ -39,11 +40,11 @@ export class UsersController {
   @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
   async resendInvite(
     @Param('userId') userId: string,
-    @Body() body: { password: string },
+    @Body() body: { requestId?: string },
     @Request() req: any,
   ) {
     this.assertAdmin(req);
-    return this.usersService.resendInvite(userId, body.password, req.user.organizationId);
+    return this.usersService.resendInvite(userId, req.user.organizationId, req.user, body.requestId);
   }
 
   @Put('organization/:id/active')
@@ -58,13 +59,13 @@ export class UsersController {
   }
 
   @Get('me')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
   async getMe(@Request() req: any) {
     return this.usersService.findById(req.user.userId);
   }
 
   @Put('organization/:userId/time-zone')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
   async setTimeZone(@Param('userId') userId: string, @Body() body: { timeZone: string }, @Request() req: any) {
     this.assertAdmin(req);
     return this.usersService.setTimeZone(userId, req.user.organizationId, body?.timeZone);
@@ -78,22 +79,24 @@ export class UsersController {
 
   @Put('me/password')
   @UseGuards(AuthGuard('jwt'))
-  async changePassword(@Request() req: any, @Body() body: { newPassword: string }) {
+  async changePassword(@Request() req: any, @Body() body: { currentPassword: string; newPassword: string }) {
     if (!body.newPassword || body.newPassword.length < 8) {
       throw new ForbiddenException('Le mot de passe doit contenir au moins 8 caractères.');
     }
-    return this.usersService.changePassword(req.user.userId, body.newPassword);
+    return this.usersService.changePassword(req.user.userId, body.currentPassword, body.newPassword);
   }
 
   @Put('me/logo')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
   async updateLogo(@Request() req: any, @Body() body: { companyLogoB64: string }) {
-    return this.usersService.updateLogo(req.user.userId, 'companyLogoB64', body.companyLogoB64);
+    this.assertAdmin(req);
+    return this.usersService.updateOrganizationLogo(req.user.organizationId, req.user, 'companyLogoB64', body.companyLogoB64);
   }
 
   @Put('me/logo-full')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
   async updateLogoFull(@Request() req: any, @Body() body: { companyLogoFullB64: string }) {
-    return this.usersService.updateLogo(req.user.userId, 'companyLogoFullB64', body.companyLogoFullB64);
+    this.assertAdmin(req);
+    return this.usersService.updateOrganizationLogo(req.user.organizationId, req.user, 'companyLogoFullB64', body.companyLogoFullB64);
   }
 }

@@ -57,6 +57,7 @@ export class ApprovalService {
           client: true,
           building: true,
           user: true,
+          organization: true,
           buildingPlans: { orderBy: { order: 'asc' } },
           documents: { orderBy: { updatedAt: 'desc' }, take: 1 },
         },
@@ -151,6 +152,7 @@ export class ApprovalService {
           client: true,
           building: true,
           user: true,
+          organization: true,
           buildingPlans: { orderBy: { order: 'asc' } },
         },
       });
@@ -533,6 +535,7 @@ export class ApprovalService {
   }
 
   private snapshot(project: any, document: any) {
+    const organizationSettings = project.organization ?? project.user;
     return createReviewSnapshot({
       project: {
         id: project.id,
@@ -557,14 +560,14 @@ export class ApprovalService {
         },
         adviser: {
           id: project.user.id,
-          companyName: project.user.companyName,
-          companyLogoB64: project.user.companyLogoB64,
-          companyLogoFullB64: project.user.companyLogoFullB64,
-          companyPhone: project.user.companyPhone,
-          companyEmail: project.user.companyEmail,
-          companyAddress: project.user.companyAddress,
-          companyWebsite: project.user.companyWebsite,
-          companyTagline: project.user.companyTagline,
+          companyName: organizationSettings.companyName,
+          companyLogoB64: organizationSettings.companyLogoB64,
+          companyLogoFullB64: organizationSettings.companyLogoFullB64,
+          companyPhone: organizationSettings.companyPhone,
+          companyEmail: organizationSettings.companyEmail,
+          companyAddress: organizationSettings.companyAddress,
+          companyWebsite: organizationSettings.companyWebsite,
+          companyTagline: organizationSettings.companyTagline,
         },
         plans: (project.buildingPlans ?? []).map((plan: any) => ({
           id: plan.id,

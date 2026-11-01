@@ -19,6 +19,15 @@ model Organization {
   isActive               Boolean                 @default(true)
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
+  companyName            String?
+  companyLogoB64         String?
+  companyLogoFullB64     String?
+  companyPhone           String?
+  companyEmail           String?
+  companyAddress         String?
+  companyWebsite         String?
+  companyTagline         String?
+  companyLicense         String?
   // Programme de recommandation CORO
   referralCode           String?                 @unique
   // Champs PCA
@@ -71,6 +80,8 @@ model Organization {
   advisorInternalCostRates         AdvisorInternalCostRate[]
   platformAuthority                PlatformAuthorityConfiguration?   @relation("PlatformOperatorOrganization")
   platformPermissionScopes         PlatformPermissionGrant[]         @relation("PlatformPermissionTargetOrganization")
+  userInvitationEvents             OrganizationUserInvitationEvent[]
+  settingsConflicts                OrganizationSettingsConflict[]
 }
 
 model User {
@@ -221,8 +232,47 @@ model User {
   platformPermissionGrants              PlatformPermissionGrant[]          @relation("PlatformPermissionSubject")
   platformPermissionGrantsIssued        PlatformPermissionGrant[]          @relation("PlatformPermissionIssuer")
   platformPermissionGrantsRevoked       PlatformPermissionGrant[]          @relation("PlatformPermissionRevoker")
+  organizationInvitationEvents          OrganizationUserInvitationEvent[]  @relation("OrganizationUserInvitationRecipient")
 
   @@unique([id, organizationId])
+}
+
+model OrganizationSettingsConflict {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  field          String
+  values         Json
+  resolvedAt     DateTime?
+  resolvedById   String?
+  createdAt      DateTime     @default(now())
+
+  @@unique([organizationId, field])
+  @@index([organizationId, resolvedAt])
+}
+
+model OrganizationUserInvitationEvent {
+  id                String                      @id @default(uuid())
+  organizationId    String
+  organization      Organization                @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  userId            String
+  user              User                        @relation("OrganizationUserInvitationRecipient", fields: [userId], references: [id], onDelete: Restrict)
+  idempotencyKey    String                      @unique
+  recipientHash     String                      @db.Char(64)
+  encryptedEnvelope String
+  encryptionKeyId   String
+  status            ClientInvitationEventStatus @default(PENDING)
+  attempts          Int                         @default(0)
+  nextAttemptAt     DateTime?                   @default(now())
+  leaseExpiresAt    DateTime?
+  providerMessageId String?
+  deliveredAt       DateTime?
+  lastErrorCode     String?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([organizationId, userId, createdAt])
 }
 
 model UserWorkSchedule {
@@ -2743,7 +2793,7 @@ model DocumentReviewRequest {
   createdAt           DateTime                          @default(now())
   updatedAt           DateTime                          @updatedAt
   notificationEvents  DocumentReviewNotificationEvent[]
-  pdfExports           DocumentPdfExport[]
+  pdfExports          DocumentPdfExport[]
 
   @@index([projectId, status])
   @@index([organizationId, submittedAt])
@@ -3481,19 +3531,19 @@ model ProjectComment {
 }
 
 model TimelogEntry {
-  id             String   @id @default(uuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id])
-  organizationId String
-  date           DateTime
-  heures         Float
-  category       String
-  note           String?
-  isBillable     Boolean  @default(false)
-  lockVersion    Int      @default(0)
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  organizationId  String
+  date            DateTime
+  heures          Float
+  category        String
+  note            String?
+  isBillable      Boolean  @default(false)
+  lockVersion     Int      @default(0)
   clientRequestId String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@unique([organizationId, userId, clientRequestId])
 }
@@ -3657,27 +3707,27 @@ model ClientProvisioningRequest {
 }
 
 model ClientInvitationEvent {
-  id                  String                      @id @default(uuid())
-  organizationId      String
-  clientId            String
-  client              Client                      @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  clientUserId        String
-  clientUser          ClientUser                  @relation(fields: [clientUserId], references: [id], onDelete: Restrict)
-  buildingId          String?
-  building            Building?                   @relation(fields: [buildingId], references: [id], onDelete: Restrict)
-  idempotencyKey      String                      @unique
-  recipientHash       String                      @db.Char(64)
-  encryptedEnvelope   String
-  encryptionKeyId     String
-  status              ClientInvitationEventStatus @default(PENDING)
-  attempts            Int                         @default(0)
-  nextAttemptAt       DateTime?                    @default(now())
-  leaseExpiresAt      DateTime?
-  providerMessageId   String?
-  deliveredAt         DateTime?
-  lastErrorCode       String?
-  createdAt           DateTime                     @default(now())
-  updatedAt           DateTime                     @updatedAt
+  id                String                      @id @default(uuid())
+  organizationId    String
+  clientId          String
+  client            Client                      @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  clientUserId      String
+  clientUser        ClientUser                  @relation(fields: [clientUserId], references: [id], onDelete: Restrict)
+  buildingId        String?
+  building          Building?                   @relation(fields: [buildingId], references: [id], onDelete: Restrict)
+  idempotencyKey    String                      @unique
+  recipientHash     String                      @db.Char(64)
+  encryptedEnvelope String
+  encryptionKeyId   String
+  status            ClientInvitationEventStatus @default(PENDING)
+  attempts          Int                         @default(0)
+  nextAttemptAt     DateTime?                   @default(now())
+  leaseExpiresAt    DateTime?
+  providerMessageId String?
+  deliveredAt       DateTime?
+  lastErrorCode     String?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
 
   @@index([status, nextAttemptAt])
   @@index([organizationId, clientId, createdAt])

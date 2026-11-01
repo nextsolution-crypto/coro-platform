@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Body, Request, UseGuards } from '@nestjs/common';
+import { Controller, Get, Put, Body, Request, UseGuards, ForbiddenException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Module1TemplateService } from './module1-template.service';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
@@ -15,6 +15,9 @@ export class Module1TemplateController {
 
   @Put()
   async save(@Request() req: any, @Body() body: { sections: any[] }) {
-    return this.service.saveTemplate(req.user.organizationId, body.sections);
+    if (!['ADMIN', 'SUPER_ADMIN'].includes(req.user.role)) {
+      throw new ForbiddenException('Accès réservé aux administrateurs.');
+    }
+    return this.service.saveTemplate(req.user.organizationId, body.sections, req.user);
   }
 }

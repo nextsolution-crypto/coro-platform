@@ -424,4 +424,30 @@ export class EmailService {
       htmlContent,
     );
   }
+
+  async sendOrganizationUserInvitation(data: {
+    toEmail: string;
+    toFirstName: string;
+    toLastName: string;
+    organizationName: string;
+    activationUrl: string;
+  }): Promise<EmailSendResult> {
+    const escape = (value: string) => value.replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    })[char]!);
+    const name = `${data.toFirstName} ${data.toLastName}`.trim();
+    const htmlContent = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#263238">
+      <h1 style="font-size:22px">Invitation CORO</h1>
+      <p>Bonjour ${escape(data.toFirstName)},</p>
+      <p>Vous êtes invité à rejoindre l'organisation <strong>${escape(data.organizationName)}</strong>.</p>
+      <p><a href="${data.activationUrl}">Activer mon accès et choisir mon mot de passe</a></p>
+      <p>Ce lien est personnel, temporaire et utilisable une seule fois.</p>
+      <p>Si vous n'attendiez pas cette invitation, ignorez ce courriel.</p>
+    </div>`;
+    return this.sendEmail(
+      { email: data.toEmail, name },
+      `Invitation CORO — ${data.organizationName}`,
+      htmlContent,
+    );
+  }
 }
