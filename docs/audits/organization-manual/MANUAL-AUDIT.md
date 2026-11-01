@@ -110,3 +110,7 @@ Le Manuel peut rester accessible comme aide partielle et prudente. Il ne doit pa
 - `APPLICATION_DEPLOYMENT: NO`
 - `REAL_NOTIFICATION: NO`
 - `WEB_AI_ACTIVATION: NO`
+
+## Réconciliation du lot correctif
+
+Cet audit initial est remplacé, pour les constats MAN-001 à MAN-005, par `MANUAL-CORRECTION-AND-ACCEPTANCE.md`. MAN-006 demeure `NOT_VERIFIED` faute de lecteur d’écran réel. La correction n’accorde aucun droit supplémentaire et ne modifie pas la production.
