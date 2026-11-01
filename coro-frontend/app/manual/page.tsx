@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
 import api from "@/lib/api";
@@ -32,30 +32,51 @@ export default function ManualPage() {
   const [loading, setLoading] = useState(true);
   const [asking, setAsking] = useState(false);
   const [error, setError] = useState("");
-  useEffect(() => {
-    let alive = true;
-    api
-      .get("/user-manual")
-      .then((r) => r.data as { articles: Article[]; version: string })
-      .then((data) => {
-        if (alive) {
-          setArticles(data.articles);
-          setVersion(data.version);
-        }
-      })
-      .catch(() => {
-        if (alive)
-          setError(
-            "Le manuel est indisponible. Réessayez après avoir vérifié votre connexion.",
-          );
-      })
-      .finally(() => {
-        if (alive) setLoading(false);
-      });
-    return () => {
-      alive = false;
-    };
+  const loadManual = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await api
+        .get("/user-manual")
+        .then((r) => r.data as { articles: Article[]; version: string });
+      setArticles(data.articles);
+      setVersion(data.version);
+    } catch {
+      setError(
+        "Le manuel est indisponible. Réessayez après avoir vérifié votre connexion.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }, []);
+  useEffect(() => {
+    void loadManual();
+  }, [loadManual]);
+  useEffect(() => {
+    if (loading || !articles.length) return;
+    let frame = 0;
+    const scrollToCurrentArticle = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        let id = window.location.hash.slice(1);
+        if (!id) return;
+        try {
+          id = decodeURIComponent(id);
+        } catch {
+          return;
+        }
+        document.getElementById(id)?.scrollIntoView({ block: "start" });
+      });
+    };
+    scrollToCurrentArticle();
+    window.addEventListener("hashchange", scrollToCurrentArticle);
+    window.addEventListener("popstate", scrollToCurrentArticle);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("hashchange", scrollToCurrentArticle);
+      window.removeEventListener("popstate", scrollToCurrentArticle);
+    };
+  }, [articles.length, loading]);
   async function ask(event: FormEvent) {
     event.preventDefault();
     if (asking) return;
@@ -141,8 +162,20 @@ export default function ManualPage() {
             activées.
           </p>
         </header>
+        {!loading && articles.length > 0 && (
+          <nav className={styles.panel} aria-labelledby="manual-contents">
+            <h2 id="manual-contents">Dans ce manuel</h2>
+            <ul className={styles.contents}>
+              {articles.map((article) => (
+                <li key={article.id}>
+                  <Link href={`#${article.id}`}>{article.title}</Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
         <section className={styles.panel} aria-labelledby="manual-ai">
-          <h2 id="manual-ai">Aide CORO AI — utiliser l’application</h2>
+          <h2 id="manual-ai">Recherche guidée dans le Manuel</h2>
           <p>
             Cette aide recherche les instructions du manuel et les restitue avec
             leur référence, sans génération libre. Elle ne consulte aucun
@@ -175,9 +208,14 @@ export default function ManualPage() {
           {answer?.articles.map((a) => renderArticle(a, true))}
         </section>
         {error && (
-          <p role="alert" className={styles.error}>
-            {error}
-          </p>
+          <div role="alert" className={styles.error}>
+            <p>{error}</p>
+            {!loading && !articles.length && (
+              <button type="button" onClick={() => void loadManual()}>
+                Réessayer
+              </button>
+            )}
+          </div>
         )}
         <section aria-labelledby="manual-articles">
           <h2 id="manual-articles">Parcourir le manuel</h2>

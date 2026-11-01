@@ -42,6 +42,25 @@ describe('Versioned product manual', () => {
     );
   });
   it.each([
+    ['clients', 'Comment désactiver un client et ses sessions ?'],
+    ['carte', 'Où consulter la carte et les marqueurs des bâtiments ?'],
+    ['conformite', 'Comment lire le suivi documentaire conformité ?'],
+    ['bibliotheque', 'Où consulter la bibliothèque des procédures ?'],
+    ['parametres', 'Où trouver les paramètres de mon organisation ?'],
+  ])('documents the consolidated internal chapter %s', (id, question) => {
+    expect(service.get('INTERNAL', id).id).toBe(id);
+    expect(service.ask('INTERNAL', question).articles.map((a) => a.id)).toContain(id);
+    expect(() => service.get('CLIENT', id)).toThrow(NotFoundException);
+  });
+  it('keeps recent governance limits explicit and avoids excessive promises', () => {
+    const internal = JSON.stringify(service.list('INTERNAL'));
+    expect(internal).toContain('ne constitue ni une attestation réglementaire');
+    expect(internal).toContain('géocodage public est désactivé par défaut');
+    expect(internal).toContain('n’est actuellement raccordée ni à Knowledge');
+    expect(internal).toContain('ne restaure aucune ancienne session');
+    expect(internal).toContain('ne constitue pas le tableau Rendement équipe');
+  });
+  it.each([
     'Comment interroger mes documents avec Knowledge ?',
     'Où trouver les connaissances et citations ?',
   ])('finds documented Knowledge usage: %s', (q) => {

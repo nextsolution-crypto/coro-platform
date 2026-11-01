@@ -13,7 +13,7 @@ export type ManualArticle = {
   route: string;
   sourceRefs: string[];
 };
-export const MANUAL_VERSION = '2026-10-24.1';
+export const MANUAL_VERSION = '2026-11-01.1';
 const both: ManualAudience[] = ['INTERNAL', 'CLIENT'];
 const internal: ManualAudience[] = ['INTERNAL'];
 const client: ManualAudience[] = ['CLIENT'];
@@ -87,6 +87,136 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     ],
   ),
   article(
+    'clients',
+    'Gérer les clients et leurs accès portail',
+    'Portefeuille',
+    internal,
+    '/clients',
+    ['client', 'portail', 'contact', 'invitation', 'désactiver', 'réactiver', 'session', 'accès'],
+    'Créer et administrer une fiche Client sans confondre sa conservation avec les accès du portail.',
+    [
+      'Ouvrez Clients. La liste et les fiches restent limitées à votre organisation.',
+      'Pour créer une fiche, un administrateur utilise Nouveau client et renseigne le client ainsi que le contact principal. Si un accès portail est demandé, le compte et l’intention d’invitation sont créés par le circuit gouverné.',
+      'Ouvrez une fiche pour consulter ses bâtiments, projets, coordonnées et accès autorisés.',
+      'Un administrateur peut utiliser Désactiver. Cette action suspend immédiatement les accès portail rattachés au Client et invalide les sessions, appareils de confiance, invitations et liens encore actifs.',
+      'La désactivation conserve les données et l’historique. Une réactivation exige une nouvelle authentification et ne restaure aucune ancienne session ni aucun ancien lien.',
+    ],
+    'La fiche reflète l’état du Client; les accès portail suivent cet état sans supprimer les données métier.',
+    [
+      'coro-frontend/app/clients/page.tsx',
+      'coro-frontend/app/clients/[id]/page.tsx',
+      'coro-backend/src/clients/clients.service.ts',
+    ],
+    ['Compte interne actif; rôle ADMIN ou SUPER_ADMIN pour créer, modifier, désactiver ou réactiver un Client.'],
+    [
+      'Un opérateur peut consulter les Clients de son organisation selon les permissions existantes, mais ne peut pas effectuer les mutations administratives.',
+      'Une communication déjà acceptée par un fournisseur ne peut pas être rappelée; son lien demeure néanmoins inutilisable après désactivation.',
+      'Un ClientUser individuellement désactivé reste désactivé après la réactivation du Client.',
+      'En cas d’erreur de chargement, utilisez Réessayer. En cas d’échec d’une mutation, vérifiez l’état affiché avant toute nouvelle tentative.',
+    ],
+  ),
+  article(
+    'carte',
+    'Consulter la carte des bâtiments autorisés',
+    'Portefeuille',
+    internal,
+    '/buildings/map',
+    ['carte', 'bâtiment', 'marqueur', 'filtre', 'tuile', 'coordonnée', 'géocodage', 'liste'],
+    'Visualiser les bâtiments accessibles et conserver une alternative textuelle lorsque le fond cartographique est indisponible.',
+    [
+      'Ouvrez Carte. Seuls les bâtiments renvoyés par votre périmètre autorisé contribuent aux compteurs, marqueurs et filtres.',
+      'Utilisez le filtre Client et les états documentaires pour réduire les résultats.',
+      'Sélectionnez un marqueur ou une entrée de la liste pour afficher le bâtiment correspondant, puis ouvrez sa fiche si nécessaire.',
+      'Si les tuiles publiques ne se chargent pas, lisez le message d’erreur et utilisez la liste des bâtiments autorisés; rechargez ensuite la carte pour réessayer.',
+    ],
+    'La carte, les compteurs et la liste décrivent le même ensemble de bâtiments autorisés.',
+    ['coro-frontend/app/buildings/map/page.tsx'],
+    ['Compte interne actif et accès aux bâtiments concernés.'],
+    [
+      'Le fond utilise des tuiles publiques OpenStreetMap et dépend de leur disponibilité; aucune disponibilité garantie n’est déduite de cet affichage.',
+      'Le géocodage public est désactivé par défaut. Les coordonnées doivent provenir d’une source déjà autorisée.',
+      '« Mise à jour à vérifier » est une heuristique fondée sur la dernière modification documentaire; ce n’est pas une échéance réglementaire.',
+    ],
+  ),
+  article(
+    'conformite',
+    'Lire le suivi documentaire des bâtiments',
+    'Documents et connaissances',
+    internal,
+    '/buildings/compliance',
+    ['conformité', 'suivi', 'documentaire', 'statut', 'approbation', 'historique', 'provenance', 'date'],
+    'Comparer la disponibilité documentaire des bâtiments à partir des projets et documents que votre compte peut consulter.',
+    [
+      'Ouvrez Conformité. L’écran s’intitule Suivi documentaire des bâtiments.',
+      'Filtrez par client, statut documentaire ou recherche de bâtiment, projet ou document.',
+      'Lisez la provenance affichée : document, type, version, projet source et état de la source.',
+      'Interprétez Dernière modification comme la date technique de la source. Date d’approbation est affichée seulement lorsqu’elle est enregistrée; « Non enregistrée » ne signifie pas que le document est conforme ou non conforme.',
+      'Utilisez Voir le projet source pour examiner le dossier autorisé qui produit l’indicateur.',
+      'Si le chargement échoue, utilisez Réessayer; aucun état vide ne doit être interprété comme une preuve de conformité.',
+    ],
+    'Chaque indicateur reste rattaché à une source documentaire identifiable et accessible.',
+    [
+      'coro-frontend/app/buildings/compliance/page.tsx',
+      'coro-backend/src/projects/projects.service.ts',
+    ],
+    ['Compte interne actif et accès aux projets et bâtiments concernés.'],
+    [
+      'Cet écran fournit un suivi documentaire factuel. Il ne constitue ni une attestation réglementaire, ni une validation juridique.',
+      'Aucune échéance légale, obligation applicable ou date de renouvellement réglementaire n’est inférée automatiquement.',
+      'Les documents techniques du bâtiment et les documents suivis dans les projets conservent leurs autorités et cycles de vie propres.',
+    ],
+  ),
+  article(
+    'bibliotheque',
+    'Consulter la Bibliothèque centrale',
+    'Documents et connaissances',
+    internal,
+    '/library',
+    ['bibliothèque', 'catalogue', 'code', 'incident', 'rôle', 'procédure', 'global', 'lecture seule'],
+    'Consulter le catalogue global des codes incidents, rôles et procédures officielles CORO.',
+    [
+      'Ouvrez Bibliothèque.',
+      'Choisissez Codes incidents, Rôles ou Procédures.',
+      'Utilisez Rechercher dans la catégorie active pour filtrer le contenu affiché.',
+      'Ouvrez une procédure pour lire son contenu et ses règles d’activation.',
+      'Si une catégorie échoue, le message identifie la partie indisponible; utilisez Réessayer sans considérer les autres catégories chargées comme incomplètes.',
+    ],
+    'Le catalogue global est consulté en lecture seule, sans modifier son autorité centrale.',
+    [
+      'coro-frontend/app/library/page.tsx',
+      'coro-backend/src/library/library.service.ts',
+    ],
+    ['Compte interne actif. Les personnalisations de projet exigent séparément les droits et le périmètre du projet concerné.'],
+    [
+      'Le catalogue global ne peut pas être modifié depuis cet écran.',
+      'Les personnalisations autorisées héritent du périmètre de leur projet et ne remplacent pas le catalogue global.',
+      'La Bibliothèque n’est actuellement raccordée ni à Knowledge, ni à CORO AI authentifié, ni à l’assistant public.',
+    ],
+  ),
+  article(
+    'parametres',
+    'Se repérer dans les Paramètres',
+    'Accès et préférences',
+    internal,
+    '/settings',
+    ['paramètres', 'profil', 'organisation', 'équipe', 'activité', 'timelog', 'tâche', 'feedback'],
+    'Identifier les réglages visibles pour votre rôle avant d’ouvrir leur écran spécialisé.',
+    [
+      'Ouvrez Paramètres.',
+      'Mon profil est disponible depuis Mon compte.',
+      'Les administrateurs voient aussi les réglages Organisation, Modèle Module 1, Membres de l’équipe et Types d’activités.',
+      'Les outils visibles peuvent inclure Catégories de timelog, Modèles de tâches et Nous écrire.',
+      'Ouvrez uniquement le réglage nécessaire et vérifiez les permissions et confirmations présentées par son écran.',
+    ],
+    'La liste des réglages correspond au rôle connecté; ouvrir Paramètres ne donne aucune permission supplémentaire.',
+    ['coro-frontend/app/settings/page.tsx'],
+    ['Compte interne actif; les réglages d’organisation et d’équipe sont réservés aux rôles ADMIN ou SUPER_ADMIN.'],
+    [
+      'Ce chapitre est un aperçu des entrées directement vérifiables. Les procédures détaillées restent à réconcilier après l’audit Paramètres.',
+      'Ne modifiez pas un réglage sensible sans comprendre son effet et disposer de l’autorité requise.',
+    ],
+  ),
+  article(
     'projets',
     'Retrouver un projet',
     'Documents et projets',
@@ -98,6 +228,7 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
       'Ouvrez Projets.',
       'Sélectionnez le projet concerné.',
       'Vérifiez le client et le bâtiment avant de consulter ses documents ou activités.',
+      'Si le projet est archivé, utilisez-le en lecture seule : consultez ses versions et téléchargements autorisés sans tenter de mutation ou de régénération.',
     ],
     'Le dossier du bon projet est affiché.',
     [
@@ -164,7 +295,9 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     ['Version à réviser et droits de transition nécessaires.'],
     [
       'L’IA n’approuve aucun document.',
+      'L’approbation exige un acteur habilité distinct de l’auteur lorsque le workflow le prévoit; le PDF officiel demeure lié à la version approuvée.',
       'Une version approuvée future, expirée ou inaccessible ne peut pas servir de preuve Knowledge.',
+      'Un projet archivé ou inactif n’accepte pas de nouvelle mutation documentaire.',
     ],
   ),
   article(
@@ -297,7 +430,7 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     client,
     '/activities',
     ['activite', 'calendrier', 'exercice', 'planifier'],
-    'Retrouver les activités accessibles dans le portail.',
+    'Retrouver les activités accessibles dans le portail. Ces activités de projet (ProjectActivity) sont distinctes du Planning d’équipe et des entrées Timelog.',
     [
       'Ouvrez Activités.',
       'Consultez les éléments du bâtiment ou du projet concerné.',
@@ -313,7 +446,7 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     internal,
     '/activities/portfolio',
     ['activite', 'calendrier', 'portefeuille'],
-    'Consulter le portefeuille des activités de travail.',
+    'Consulter le portefeuille des activités de projet (ProjectActivity), distinctes du Planning d’équipe et des entrées Timelog.',
     [
       'Ouvrez Activités.',
       'Repérez le projet et l’activité concernés.',
@@ -353,6 +486,8 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     ],
     'Le suivi du temps est consulté dans le bon périmètre.',
     ['coro-frontend/app/timelog/page.tsx'],
+    undefined,
+    ['Timelog enregistre et consulte du temps de travail; il ne constitue pas le tableau Rendement équipe ni une mesure financière.'],
   ),
   article(
     'sentinelle',
