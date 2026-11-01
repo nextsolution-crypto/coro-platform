@@ -2,7 +2,7 @@
 
 ## Statut courant
 
-`EN_EXÉCUTION — AUCUNE RÉSERVE NOUVELLEMENT CLOSE`
+`EN_EXÉCUTION — TRAVAUX INDÉPENDANTS IMPLÉMENTÉS, LIVRAISON EN COURS`
 
 La fusion de la consolidation documentaire ne constitue pas une livraison produit. Le produit actif de référence reste `91c1313c393bd630489e66e26aa5557ca53c2dd`, migration 165, jusqu’à vérification contraire par un manifeste autoritatif.
 
@@ -10,10 +10,10 @@ La fusion de la consolidation documentaire ne constitue pas une livraison produi
 
 | Sujet | Pourquoi une intervention humaine peut rester nécessaire | Préparation technique à terminer avant sollicitation |
 | --- | --- | --- |
-| Invitations internes | constater la réception et utiliser le lien reçu à `info@getcoro.io` | identité isolée, préflight fournisseur, portée minimale, preuves et remise en état prêtes |
-| Lecteur d’écran | restitution vocale réelle non déductible du DOM | script court et parcours représentatifs stabilisés |
-| PDF/UA | une certification ou un remplacement de moteur peut nécessiter coût/licence | analyse du moteur, écarts et options chiffrées |
-| Progression Projet | aucune règle actuelle ne permet de transformer objectivement l’avancement documentaire en pourcentage | proposition `JALONS_GOUVERNÉS` versus `PROGRESSION_DÉCLARÉE` documentée |
+| Invitations internes | session ADMIN/SUPER_ADMIN puis constat de réception et utilisation du lien reçu à `info@getcoro.io` | ouvrir `https://app.getcoro.io/settings/users`; aucune autre autorisation métier n’est requise, mais l’envoi final exige confirmation immédiate |
+| Lecteur d’écran | restitution vocale réelle non déductible du DOM | exécuter `SCREEN-READER-HUMAN-ACCEPTANCE.md` et retourner le formulaire de constat |
+| PDF/UA | inclusion contractuelle ou exclusion explicite V1 | choisir `PDF_UA_INCLUS_CONTRACTUELLEMENT` ou `PDF_UA_EXCLU_V1` |
+| Progression Projet | aucune règle actuelle ne permet de transformer objectivement l’avancement documentaire en pourcentage | choisir `JALONS_GOUVERNÉS` ou `PROGRESSION_DÉCLARÉE` |
 
 ## Exclusions maintenues
 
@@ -21,7 +21,7 @@ La fusion de la consolidation documentaire ne constitue pas une livraison produi
 - Signature fournisseur réelle et valeur juridique : non validées.
 - Géocodage public : désactivé; aucune activation implicite.
 - OSM : dépendance facultative sans SLA.
-- Assistant public : aucun accès au catalogue Bibliothèque interne.
+- Assistant public : aucun accès au catalogue Bibliothèque interne; cette isolation est désormais couverte par non-régression.
 
 ## Verdict final
 
