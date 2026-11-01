@@ -25,4 +25,13 @@
 - Choisir si PDF/UA est une exigence commerciale ou réglementaire du périmètre vendu.
 - Si oui, approuver l’étude d’outil/licence et le niveau de conformité visé avant de modifier le moteur.
 
+Le script et le formulaire de constat sont prêts dans `SCREEN-READER-HUMAN-ACCEPTANCE.md`.
+
+## Décision à Mathieu
+
+- `PDF_UA_EXCLU_V1` : maintenir la V1 avec HTML accessible, PDF ouvrable/texte extractible et une exclusion contractuelle explicite de PDF/UA;
+- `PDF_UA_INCLUS_CONTRACTUELLEMENT` : lancer un chantier séparé de moteur/balisage, validation, licences et non-régression avant toute promesse.
+
+Aucune option n’est réputée approuvée dans ce document.
+
 La réserve ne doit pas être classée close sur la seule base des contrôles DOM, clavier ou extraction de texte.

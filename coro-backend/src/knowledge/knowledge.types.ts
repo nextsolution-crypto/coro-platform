@@ -10,6 +10,7 @@ export type KnowledgeActor =
       id: string;
       organizationId: string;
       role: 'CLIENT_MANAGER' | 'CLIENT_CORPORATE';
+      clientId?: string;
       buildingIds: string[];
     };
 
@@ -21,10 +22,16 @@ export interface ExtractedPage {
 }
 
 export interface KnowledgeSearchHit {
+  sourceType?: 'PROJECT_FILE' | 'LIBRARY_PROCEDURE';
+  sourceReference?: string;
+  sourceVersion?: string;
+  sourceFingerprint?: string;
+  sourceScope?: 'GLOBAL' | 'ORGANIZATION' | 'PROJECT';
+  href?: string;
   chunkId: string;
   citationId: string;
-  projectFileId: string;
-  projectFileVersion: number;
+  projectFileId?: string;
+  projectFileVersion?: number;
   documentName: string;
   buildingId: string;
   pageStart: number;
@@ -32,5 +39,5 @@ export interface KnowledgeSearchHit {
   sectionPath: string | null;
   text: string;
   score: number;
-  sourceSha256: string;
+  sourceSha256?: string;
 }

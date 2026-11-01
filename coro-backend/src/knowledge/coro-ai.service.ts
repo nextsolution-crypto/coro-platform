@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { createHash, randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { KnowledgeGroundingService } from './knowledge-grounding.service';
@@ -31,6 +35,7 @@ export class CoroAiService {
     input: {
       question: string;
       buildingId?: string;
+      projectId?: string;
       operationalContext?: OperationalContext;
       operationalResourceId?: string;
       correlationId?: string;
@@ -46,10 +51,20 @@ export class CoroAiService {
           input.operationalResourceId!,
         )
       : undefined;
-    if (input.buildingId && contextBuildingId && input.buildingId !== contextBuildingId)
+    if (
+      input.buildingId &&
+      contextBuildingId &&
+      input.buildingId !== contextBuildingId
+    )
       throw new NotFoundException('Contexte non disponible.');
     const buildingId = contextBuildingId ?? input.buildingId;
-    const hits = await this.retrieval.search(actor, input.question, buildingId);
+    const hits = await this.retrieval.search(
+      actor,
+      input.question,
+      buildingId,
+      8,
+      input.projectId,
+    );
     let grounded;
     let provider: string = this.providerGateway.providerName();
     try {
@@ -66,10 +81,13 @@ export class CoroAiService {
           operationalContext: input.operationalContext,
           operationalResourceId: input.operationalResourceId,
           status: 'PROVIDER_FAILURE',
-          questionFingerprint: this.retrieval.questionFingerprint(input.question),
+          questionFingerprint: this.retrieval.questionFingerprint(
+            input.question,
+          ),
           sourceCount: hits.length,
           usedSourceCount: 0,
-          uncertainty: 'Le fournisseur de réponses est temporairement indisponible.',
+          uncertainty:
+            'Le fournisseur de réponses est temporairement indisponible.',
           correlationId,
           completedAt: new Date(),
         },
@@ -80,7 +98,8 @@ export class CoroAiService {
         status: 'PROVIDER_FAILURE',
         provider,
         answer: null,
-        uncertainty: 'Le fournisseur de réponses est temporairement indisponible.',
+        uncertainty:
+          'Le fournisseur de réponses est temporairement indisponible.',
         missingInformation: [],
         conflicts: [],
         citations: [],
@@ -113,8 +132,17 @@ export class CoroAiService {
         completedAt: new Date(),
         sources: {
           create: hits.map((hit, index) => ({
-            citationId: hit.citationId,
-            chunkId: hit.chunkId,
+            sourceType: hit.sourceType ?? 'PROJECT_FILE',
+            sourceReference:
+              hit.sourceReference ?? `project-file-citation:${hit.citationId}`,
+            sourceVersion: hit.sourceVersion ?? String(hit.projectFileVersion),
+            sourceFingerprint: hit.sourceFingerprint ?? hit.sourceSha256!,
+            citationId:
+              hit.sourceType === 'LIBRARY_PROCEDURE'
+                ? undefined
+                : hit.citationId,
+            chunkId:
+              hit.sourceType === 'LIBRARY_PROCEDURE' ? undefined : hit.chunkId,
             retrievalRank: index + 1,
             retrievalScore: hit.score,
             usedInAnswer: grounded.usedCitationIds.includes(hit.citationId),
@@ -135,14 +163,16 @@ export class CoroAiService {
         .filter((hit) => grounded.usedCitationIds.includes(hit.citationId))
         .map((hit) => ({
           citationId: hit.citationId,
+          sourceType: hit.sourceType ?? 'PROJECT_FILE',
+          scope: hit.sourceScope,
           projectFileId: hit.projectFileId,
           version: hit.projectFileVersion,
           name: hit.documentName,
           pageStart: hit.pageStart,
           pageEnd: hit.pageEnd,
           sectionPath: hit.sectionPath,
-          sha256: hit.sourceSha256,
-          href: `/knowledge/sources/${hit.projectFileId}`,
+          sha256: hit.sourceFingerprint ?? hit.sourceSha256,
+          href: hit.href ?? `/knowledge/sources/${hit.projectFileId}`,
         })),
     };
   }
@@ -166,34 +196,68 @@ export class CoroAiService {
       });
     else if (context === 'EXERCISE_REPORT')
       resource = await this.prisma.exerciseReport.findFirst({
-        where: { id: resourceId, organizationId: actor.organizationId,
-          project: { is: { isActive: true, ...(actor.type === 'INTERNAL_USER'
-            ? projectAccessWhere({ userId: actor.id, organizationId: actor.organizationId, role: actor.role })
-            : { organizationId: actor.organizationId }) } },
-          building: { is: { isActive: true, organizationId: actor.organizationId } },
-          ...(actor.type === 'CLIENT_USER' ? { status: 'PUBLISHED' as const } : {}),
+        where: {
+          id: resourceId,
+          organizationId: actor.organizationId,
+          project: {
+            is: {
+              isActive: true,
+              ...(actor.type === 'INTERNAL_USER'
+                ? projectAccessWhere({
+                    userId: actor.id,
+                    organizationId: actor.organizationId,
+                    role: actor.role,
+                  })
+                : { organizationId: actor.organizationId }),
+            },
+          },
+          building: {
+            is: { isActive: true, organizationId: actor.organizationId },
+          },
+          ...(actor.type === 'CLIENT_USER'
+            ? { status: 'PUBLISHED' as const }
+            : {}),
         },
         select: { buildingId: true },
       });
     else if (context === 'CORRECTIVE_ACTION') {
-      const client = actor.type === 'CLIENT_USER' ? await this.prisma.clientUser.findFirst({
-        where: { id: actor.id, organizationId: actor.organizationId, isActive: true },
-        select: { clientId: true, role: true, buildingIds: true },
-      }) : null;
-      if (actor.type === 'CLIENT_USER' && !client) throw new NotFoundException('Contexte non disponible.');
+      const client =
+        actor.type === 'CLIENT_USER'
+          ? await this.prisma.clientUser.findFirst({
+              where: {
+                id: actor.id,
+                organizationId: actor.organizationId,
+                isActive: true,
+              },
+              select: { clientId: true, role: true, buildingIds: true },
+            })
+          : null;
+      if (actor.type === 'CLIENT_USER' && !client)
+        throw new NotFoundException('Contexte non disponible.');
       // Reuse the canonical read authorization, including RESTRICTED/ADVISOR visibility.
-      const action = await new CorrectiveActionsService(this.prisma).findAccessibleAction(resourceId, {
-        organizationId: actor.organizationId, role: client?.role ?? actor.role,
-        ...(client ? { sub: actor.id, clientId: client.clientId, buildingIds: client.buildingIds } : {}),
+      const action = await new CorrectiveActionsService(
+        this.prisma,
+      ).findAccessibleAction(resourceId, {
+        organizationId: actor.organizationId,
+        role: client?.role ?? actor.role,
+        ...(client
+          ? {
+              sub: actor.id,
+              clientId: client.clientId,
+              buildingIds: client.buildingIds,
+            }
+          : {}),
       });
       resource = { buildingId: action.buildingId };
-    }
-    else if (context === 'NETWORK')
-      resource = await this.prisma.building.findFirst({
-        where: { id: resourceId, organizationId: actor.organizationId },
-        select: { id: true },
-      }).then((value) => (value ? { buildingId: value.id } : null));
-    if (!resource?.buildingId) throw new NotFoundException('Contexte non disponible.');
+    } else if (context === 'NETWORK')
+      resource = await this.prisma.building
+        .findFirst({
+          where: { id: resourceId, organizationId: actor.organizationId },
+          select: { id: true },
+        })
+        .then((value) => (value ? { buildingId: value.id } : null));
+    if (!resource?.buildingId)
+      throw new NotFoundException('Contexte non disponible.');
     if (scope.buildingIds && !scope.buildingIds.includes(resource.buildingId))
       throw new NotFoundException('Contexte non disponible.');
     return resource.buildingId;

@@ -2,7 +2,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const test = require('node:test');
-const { AUTHORITY_QUERIES, artifactKeys, inventory, parseListPage, referenceKey, runReadOnlyInventory } = require('./storage-object-authority-inventory.cjs');
+const { AUTHORITY_QUERIES, artifactKeys, candidateCategory, inventory, parseListPage, parseVersionPage, referenceKey, runReadOnlyInventory } = require('./storage-object-authority-inventory.cjs');
 
 function prismaFixture(overrides = {}) {
   const prisma = {};
@@ -45,7 +45,24 @@ test('opens a read-only transaction before inventory', async () => {
   assert.equal(command, 'SET TRANSACTION READ ONLY');
 });
 test('parses paginated S3 object metadata without object bodies', () => {
-  assert.deepEqual(parseListPage('<ListBucketResult><Contents><Key>a&amp;b.pdf</Key><Size>12</Size></Contents><NextContinuationToken>next%2Fpage</NextContinuationToken></ListBucketResult>'), { objects: [{ key: 'a&b.pdf', size: 12 }], nextToken: 'next%2Fpage' });
+  assert.deepEqual(parseListPage('<ListBucketResult><Contents><Key>a&amp;b.pdf</Key><LastModified>2026-10-01T00:00:00.000Z</LastModified><Size>12</Size></Contents><NextContinuationToken>next%2Fpage</NextContinuationToken></ListBucketResult>'), { objects: [{ key: 'a&b.pdf', size: 12, lastModified: '2026-10-01T00:00:00.000Z' }], nextToken: 'next%2Fpage' });
+});
+test('classifies candidates without emitting their keys or references', async () => {
+  const report = await inventory({
+    prisma: prismaFixture(), now: new Date('2026-11-01T00:00:00.000Z'),
+    bucketObjects: objects([
+      { key: 'official-project-pdfs/a.pdf', size: 10, lastModified: '2026-10-15T00:00:00.000Z' },
+      { key: 'tmp/build.bin', size: 20, lastModified: '2025-01-01T00:00:00.000Z' },
+    ]),
+  });
+  assert.deepEqual(report.candidateCategories.OFFICIAL_PDF_OR_EXPORT, { objects: 1, bytes: 10 });
+  assert.deepEqual(report.candidateAges.LT_30_DAYS, { objects: 1, bytes: 10 });
+  assert.equal(JSON.stringify(report).includes('official-project-pdfs'), false);
+  assert.equal(candidateCategory('unknown.bin'), 'UNCLASSIFIED_HISTORICAL');
+});
+test('parses current and historical object versions without reading bodies', () => {
+  const page = parseVersionPage('<ListVersionsResult><Version><Key>a&amp;b.pdf</Key><VersionId>v1</VersionId><IsLatest>false</IsLatest><LastModified>2026-01-01T00:00:00.000Z</LastModified><Size>12</Size></Version><NextKeyMarker>next</NextKeyMarker><NextVersionIdMarker>v2</NextVersionIdMarker></ListVersionsResult>');
+  assert.deepEqual(page, { versions: [{ key: 'a&b.pdf', versionId: 'v1', isLatest: false, lastModified: '2026-01-01T00:00:00.000Z', size: 12 }], nextKeyMarker: 'next', nextVersionIdMarker: 'v2' });
 });
 test('supports the explicit stdin execution switch used by the governed workflow', () => {
   const source = fs.readFileSync(require.resolve('./storage-object-authority-inventory.cjs'), 'utf8');

@@ -4370,17 +4370,23 @@ model CoroKnowledgeInteractionSource {
   id             String                       @id @default(uuid())
   interactionId  String
   interaction    CoroKnowledgeInteraction     @relation(fields: [interactionId], references: [id], onDelete: Cascade)
-  citationId     String
-  citation       ProjectFileKnowledgeCitation @relation(fields: [citationId], references: [id], onDelete: Restrict)
-  chunkId        String
-  chunk          ProjectFileKnowledgeChunk    @relation(fields: [chunkId], references: [id], onDelete: Restrict)
+  sourceType       String                       @default("PROJECT_FILE")
+  sourceReference  String
+  sourceVersion    String
+  sourceFingerprint String
+  citationId       String?
+  citation         ProjectFileKnowledgeCitation? @relation(fields: [citationId], references: [id], onDelete: Restrict)
+  chunkId          String?
+  chunk            ProjectFileKnowledgeChunk?    @relation(fields: [chunkId], references: [id], onDelete: Restrict)
   retrievalRank  Int
   retrievalScore Float
   usedInAnswer   Boolean                      @default(false)
   createdAt      DateTime                     @default(now())
 
   @@unique([interactionId, citationId])
+  @@unique([interactionId, sourceType, sourceReference])
   @@index([citationId, createdAt])
+  @@index([sourceType, sourceReference, createdAt])
 }
 
 enum PublicKnowledgeSourceType {

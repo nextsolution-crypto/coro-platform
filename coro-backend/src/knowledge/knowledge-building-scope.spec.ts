@@ -19,6 +19,7 @@ describe('Knowledge exact requested building context', () => {
       authorization,
       { embed: () => [] } as any,
       { maxResults: 8 } as any,
+      { search: jest.fn(async () => []) } as any,
     );
     await service.search(
       {

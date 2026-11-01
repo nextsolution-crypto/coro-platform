@@ -1,14 +1,25 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ClientJwtGuard } from '../client-portal/client-jwt.guard';
 import { CoroAiService } from './coro-ai.service';
 import { KnowledgeIngestionService } from './knowledge-ingestion.service';
 import { KnowledgeRetrievalService } from './knowledge-retrieval.service';
+import { LibraryKnowledgeRetrievalService } from './library-knowledge-retrieval.service';
 import { KnowledgeActor } from './knowledge.types';
 
 type AskBody = {
   question: string;
   buildingId?: string;
+  projectId?: string;
   operationalContext?:
     | 'INCIDENT'
     | 'SENTINELLE'
@@ -34,6 +45,7 @@ function clientActor(req: any): KnowledgeActor {
     id: req.clientUser.sub,
     organizationId: req.clientUser.organizationId,
     role: req.clientUser.role,
+    clientId: req.clientUser.clientId,
     buildingIds: req.clientUser.buildingIds ?? [],
   };
 }
@@ -45,6 +57,7 @@ export class KnowledgeInternalController {
     private readonly ingestion: KnowledgeIngestionService,
     private readonly retrieval: KnowledgeRetrievalService,
     private readonly ai: CoroAiService,
+    private readonly library: LibraryKnowledgeRetrievalService,
   ) {}
 
   @Post('project-files/:id/index')
@@ -52,13 +65,29 @@ export class KnowledgeInternalController {
     return this.ingestion.index(internalActor(req), id);
   }
 
+  @Get('library-sources/:id')
+  librarySource(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Query('projectId') projectId?: string,
+  ) {
+    return this.library.source(internalActor(req), id, projectId);
+  }
+
   @Get('search')
   search(
     @Req() req: any,
     @Query('q') question: string,
     @Query('buildingId') buildingId?: string,
+    @Query('projectId') projectId?: string,
   ) {
-    return this.retrieval.search(internalActor(req), question, buildingId);
+    return this.retrieval.search(
+      internalActor(req),
+      question,
+      buildingId,
+      8,
+      projectId,
+    );
   }
 
   @Post('ask')
@@ -73,6 +102,7 @@ export class KnowledgeClientController {
   constructor(
     private readonly retrieval: KnowledgeRetrievalService,
     private readonly ai: CoroAiService,
+    private readonly library: LibraryKnowledgeRetrievalService,
   ) {}
 
   @Get('search')
@@ -80,12 +110,28 @@ export class KnowledgeClientController {
     @Req() req: any,
     @Query('q') question: string,
     @Query('buildingId') buildingId?: string,
+    @Query('projectId') projectId?: string,
   ) {
-    return this.retrieval.search(clientActor(req), question, buildingId);
+    return this.retrieval.search(
+      clientActor(req),
+      question,
+      buildingId,
+      8,
+      projectId,
+    );
   }
 
   @Post('ask')
   ask(@Req() req: any, @Body() body: AskBody) {
     return this.ai.ask(clientActor(req), body);
+  }
+
+  @Get('library-sources/:id')
+  librarySource(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Query('projectId') projectId?: string,
+  ) {
+    return this.library.source(clientActor(req), id, projectId);
   }
 }

@@ -5,6 +5,7 @@ import { DeterministicEmbeddingService } from './deterministic-embedding.service
 import { KnowledgeAuthorizationService } from './knowledge-authorization.service';
 import { KnowledgeConfig } from './knowledge.config';
 import { KnowledgeActor, KnowledgeSearchHit } from './knowledge.types';
+import { LibraryKnowledgeRetrievalService } from './library-knowledge-retrieval.service';
 
 @Injectable()
 export class KnowledgeRetrievalService {
@@ -13,6 +14,7 @@ export class KnowledgeRetrievalService {
     private readonly authorization: KnowledgeAuthorizationService,
     private readonly embeddings: DeterministicEmbeddingService,
     private readonly config: KnowledgeConfig,
+    private readonly library: LibraryKnowledgeRetrievalService,
   ) {}
 
   async search(
@@ -20,12 +22,17 @@ export class KnowledgeRetrievalService {
     question: string,
     buildingId?: string,
     limit = 8,
+    projectId?: string,
   ): Promise<KnowledgeSearchHit[]> {
     const normalized = question.trim();
     if (normalized.length < 3 || normalized.length > 2000)
       throw new BadRequestException('Question invalide.');
     const scope = await this.authorization.scope(actor);
-    if (buildingId && scope.buildingIds && !scope.buildingIds.includes(buildingId))
+    if (
+      buildingId &&
+      scope.buildingIds &&
+      !scope.buildingIds.includes(buildingId)
+    )
       return [];
     const now = new Date();
     const chunks = await this.prisma.projectFileKnowledgeChunk.findMany({
@@ -58,7 +65,9 @@ export class KnowledgeRetrievalService {
       include: {
         ingestion: {
           include: {
-            projectFile: { select: { id: true, version: true, name: true, sha256: true } },
+            projectFile: {
+              select: { id: true, version: true, name: true, sha256: true },
+            },
           },
         },
         citations: { take: 1 },
@@ -67,7 +76,7 @@ export class KnowledgeRetrievalService {
     });
     const queryTerms = this.terms(normalized);
     const queryVector = this.embeddings.embed(normalized);
-    return chunks
+    const projectFileHits: KnowledgeSearchHit[] = chunks
       .map((chunk) => {
         const documentVector = this.embeddings.embed(chunk.text);
         const semantic = documentVector.reduce(
@@ -76,7 +85,8 @@ export class KnowledgeRetrievalService {
         );
         const terms = this.terms(chunk.text);
         const lexical = queryTerms.size
-          ? [...queryTerms].filter((term) => terms.has(term)).length / queryTerms.size
+          ? [...queryTerms].filter((term) => terms.has(term)).length /
+            queryTerms.size
           : 0;
         const citation = chunk.citations[0];
         return citation
@@ -92,12 +102,30 @@ export class KnowledgeRetrievalService {
               sectionPath: chunk.sectionPath,
               text: chunk.text,
               score: lexical * 0.65 + Math.max(0, semantic) * 0.35,
+              sourceType: 'PROJECT_FILE' as const,
+              sourceReference: `project-file-citation:${citation.id}`,
+              sourceVersion: String(chunk.ingestion.projectFile.version),
+              sourceFingerprint: chunk.ingestion.projectFile.sha256!,
+              sourceScope: 'PROJECT' as const,
+              href: `/knowledge/sources/${chunk.ingestion.projectFile.id}`,
               sourceSha256: chunk.ingestion.projectFile.sha256!,
             }
           : null;
       })
-      .filter((hit): hit is KnowledgeSearchHit => Boolean(hit && hit.score > 0))
-      .sort((left, right) => right.score - left.score || left.chunkId.localeCompare(right.chunkId))
+      .filter((hit): hit is NonNullable<typeof hit> =>
+        Boolean(hit && hit.score > 0),
+      )
+      .sort(
+        (left, right) =>
+          right.score - left.score || left.chunkId.localeCompare(right.chunkId),
+      );
+    const libraryHits = await this.library.search(actor, normalized, projectId);
+    return [...projectFileHits, ...libraryHits]
+      .sort(
+        (left, right) =>
+          right.score - left.score ||
+          left.citationId.localeCompare(right.citationId),
+      )
       .slice(0, Math.min(limit, this.config.maxResults));
   }
 
@@ -107,8 +135,29 @@ export class KnowledgeRetrievalService {
 
   private terms(text: string) {
     const stopWords = new Set([
-      'au', 'aux', 'ce', 'ces', 'dans', 'de', 'des', 'du', 'elle', 'en', 'est',
-      'et', 'il', 'la', 'le', 'les', 'ou', 'pour', 'quel', 'quelle', 'se', 'un', 'une',
+      'au',
+      'aux',
+      'ce',
+      'ces',
+      'dans',
+      'de',
+      'des',
+      'du',
+      'elle',
+      'en',
+      'est',
+      'et',
+      'il',
+      'la',
+      'le',
+      'les',
+      'ou',
+      'pour',
+      'quel',
+      'quelle',
+      'se',
+      'un',
+      'une',
     ]);
     return new Set(
       text
