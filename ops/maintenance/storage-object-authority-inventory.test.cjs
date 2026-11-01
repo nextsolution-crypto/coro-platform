@@ -6,7 +6,7 @@ const { AUTHORITY_QUERIES, artifactKeys, inventory, parseListPage, referenceKey,
 function prismaFixture(overrides = {}) {
   const prisma = {};
   for (const [, model] of AUTHORITY_QUERIES) prisma[model] = { findMany: async () => [] };
-  for (const [model, rows] of Object.entries(overrides)) prisma[model] = { findMany: async () => rows };
+  for (const [model, rows] of Object.entries(overrides)) prisma[model] = { findMany: async (query) => query.cursor ? [] : rows.map((row, index) => ({ id: `${model}-${index}`, ...row })) };
   return prisma;
 }
 async function* objects(rows) { yield* rows; }

@@ -14,6 +14,7 @@ La fusion de la consolidation documentaire ne constitue pas une livraison produi
 | Divergences historiques | aucune règle ne permet de choisir automatiquement une valeur ambiguë | inventaire privé groupé avec provenance et impact |
 | Lecteur d’écran | restitution vocale réelle non déductible du DOM | script court et parcours représentatifs stabilisés |
 | PDF/UA | une certification ou un remplacement de moteur peut nécessiter coût/licence | analyse du moteur, écarts et options chiffrées |
+| Progression Projet | aucune règle actuelle ne permet de transformer objectivement l’avancement documentaire en pourcentage | proposition `JALONS_GOUVERNÉS` versus `PROGRESSION_DÉCLARÉE` documentée |
 
 ## Exclusions maintenues
 

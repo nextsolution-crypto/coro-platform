@@ -56,21 +56,27 @@ async function readAuthorityKeys(prisma, allowedOrigins) {
   for (const [label, model, fields] of AUTHORITY_QUERIES) {
     const delegate = prisma[model];
     if (!delegate?.findMany) throw new Error(`AUTHORITY_MODEL_UNAVAILABLE:${model}`);
-    const select = Object.fromEntries(fields.map((field) => [field, true]));
-    const rows = await delegate.findMany({ select });
-    coverage[label] = { rows: rows.length, references: 0 };
-    for (const row of rows) for (const field of fields) {
-      const values = field === 'artifacts' ? artifactKeys(row[field]) : [row[field]];
-      for (const value of values) {
-        if (!value) continue;
-        coverage[label].references += 1;
-        const key = referenceKey(value, allowedOrigins);
-        if (!key) continue;
-        const hash = fingerprint(key);
-        if (!keys.has(hash)) keys.set(hash, new Set());
-        keys.get(hash).add(label);
+    const select = { id: true, ...Object.fromEntries(fields.map((field) => [field, true])) };
+    coverage[label] = { rows: 0, references: 0 };
+    let cursor;
+    do {
+      const rows = await delegate.findMany({ take: 500, ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}), orderBy: { id: 'asc' }, select });
+      for (const row of rows) for (const field of fields) {
+        const values = field === 'artifacts' ? artifactKeys(row[field]) : [row[field]];
+        for (const value of values) {
+          if (!value) continue;
+          coverage[label].references += 1;
+          const key = referenceKey(value, allowedOrigins);
+          if (!key) continue;
+          const hash = fingerprint(key);
+          if (!keys.has(hash)) keys.set(hash, new Set());
+          keys.get(hash).add(label);
+        }
       }
-    }
+      coverage[label].rows += rows.length;
+      cursor = rows.at(-1)?.id;
+      if (rows.length < 500) break;
+    } while (cursor);
   }
   return { keys, coverage };
 }

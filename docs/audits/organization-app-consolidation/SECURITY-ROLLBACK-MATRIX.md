@@ -17,7 +17,7 @@ Un jeu de quatre images disponible n’est admissible que si les quatre référe
 | Disponibilité des clés | CORRIGÉ_QA | seuls les identifiants, jamais les valeurs, sont comparés; clé absente refusée |
 | Workers/outbox | CORRIGÉ_QA | approbation `COMPATIBLE` et état `QUIESCED` requis |
 | Suspension effective des routes vulnérables | OUVERT | plusieurs rapports la prescrivent, sans contrôle serveur d’urgence démontré |
-| Rollback et roll-forward isolés | OUVERT | test de plan présent; parcours applicatif complet à construire |
+| Rollback et roll-forward isolés | DÉMONTRÉ_QA | quatre conteneurs et un volume jetables : bascule autorisée, refus avant mutation, rétablissement, donnée et événement conservés |
 
 ## Releases connues à qualifier
 
@@ -48,7 +48,8 @@ Cette table ne bloque pas arbitrairement tous les historiques : elle identifie l
 
 ## Résultat QA initial
 
-- `rollback-security-policy.test.mjs` : 4/4 PASS (admissible, digest bloqué, absence d’approbation, schéma/clé/worker).
+- `rollback-security-policy.test.mjs` : 5/5 PASS (admissible, digest bloqué, absence d’approbation, schéma/clé/worker et double validation).
+- `governed-rollback-contract.test.mjs` : 4/4 PASS, dont le probe backend canonique de la release; aucun endpoint de santé fictif.
 - Suite `ops/capacity` rejouée fichier par fichier : 33/33 PASS.
 - `git diff --check` : PASS.
 - Le lanceur parallèle `node --test ops/capacity/*.test.mjs` est inutilisable dans ce shell Windows (`spawn EPERM`); chaque même fichier a été exécuté directement sans modifier son contenu.
