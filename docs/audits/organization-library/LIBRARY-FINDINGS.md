@@ -1,0 +1,21 @@
+# Constats — Bibliothèque organisation
+
+Audit du candidat `65f58ddb10b3eb61878627d33bb5befc385499df`, avec référence produit active `cedbcbf40db4279ac6d7dec82dc58ec6f5976a38`.
+
+| ID | Sévérité | Statut | Constat démontré | Impact | Condition de levée |
+|---|---|---|---|---|---|
+| LIB-SEC-01 | Critique | DÉFECTUEUX | `POST /library/procedures` et `PUT /library/procedures/:id` exigent uniquement JWT + organisation active. Aucun acteur, permission fonctionnelle, DTO ni provenance d’audit. | Tout conseiller authentifié admissible peut tenter de modifier le catalogue global. | Supprimer ces routes si mortes, ou leur attribuer une autorité administrative explicite, validation, audit et tests autorisé/refusé. |
+| LIB-INT-01 | Élevée | DÉFECTUEUX | Les mutations écrivent `Procedure`, tandis que `GET /library/procedures` lit exclusivement le registre statique `getAllProcedures()`. | Faux succès et divergence durable entre contenu persisté et contenu affiché/réutilisé. | Désigner une source canonique unique et migrer/retirer l’autre chemin. |
+| LIB-SEC-02 | Critique | DÉFECTUEUX | `findAllForProject` charge le projet par `id` et `findOne` accepte un `projectId` sans `projectAccessWhere`. Les mutations, elles, appliquent `assertMutableProject`. | Un identifiant connu peut révéler le type documentaire et le catalogue effectif/overrides hors périmètre; lecture et mutation ne partagent pas la même portée. | Centraliser l’autorité projet pour toutes les lectures et mutations; masquer l’existence hors périmètre; ajouter matrice multi-organisation. |
+| LIB-SEC-03 | Critique | DÉFECTUEUX | Les routes `custom-procedures` valident l’organisation sur l’objet final, mais `generate`, `import-file`, `findAll(projectId)` et `clone(projectId)` ne démontrent pas l’accès canonique au projet parent. | Création/lecture/rattachement possibles avec un identifiant de projet non autorisé; appels IA externes possibles avant preuve de portée. | Résoudre le projet côté serveur avec l’acteur avant lecture, IA ou écriture; autorisation fonctionnelle et état métier explicites. |
+| LIB-UX-01 | Moyenne | DÉFECTUEUX | Une erreur de l’un des trois appels `Promise.all` est seulement journalisée en console; l’écran devient vide sans message ni nouvelle tentative. | Faux état « catalogue vide », diagnostic impossible, accessibilité dégradée. | État d’erreur visible/accesssible, granularité par catalogue et reprise déterministe. |
+| LIB-SCOPE-01 | Élevée | CONFIRMÉ | `/library` expose trois catalogues globaux (28 codes, 43 rôles, 43 procédures en production), sans fichiers, versions, téléchargement, prévisualisation, provenance ou Knowledge. | Le terme « Bibliothèque centrale » peut laisser croire à une bibliothèque documentaire plus large. | Clarifier le produit/UX ou relier explicitement les autorités documentaires sans les fusionner. |
+| LIB-UX-02 | Moyenne | PARTIAL | Les cartes utilisent des retours à la ligne et une grille responsive; aucune recherche, filtre, tri, pagination ni navigation clavier explicite des panneaux de procédure. | Exploitation lente à 43+ entrées; preuve 12 configurations non exécutée dans ce lot. | Recette Chrome synthétique 12/12 et critères clavier/focus; ajouter les fonctions seulement après décision produit. |
+| LIB-KNOW-01 | Élevée | NOT_VERIFIED | Aucun lien technique démontré entre `/library`, ProjectFile canonique et CORO Knowledge. | Impossible d’affirmer indexation, citations, fraîcheur ou retrait des sources. | Définir les frontières et exécuter une preuve d’ingestion/retrait autorisée sur sources synthétiques. |
+| LIB-DOC-01 | Moyenne | NOT_APPLICABLE | L’écran ne possède aucun objet téléchargeable ni accès au stockage privé. | Les critères téléchargement/intégrité ne peuvent pas être attribués à cette route. | Auditer ProjectFile/Knowledge séparément, sans présenter ce catalogue comme preuve documentaire. |
+
+## Limites d’évidence
+
+- La production a été consultée en lecture seule avec une session autorisée; aucune mutation ni téléchargement.
+- Le stack QA complet multi-organisation et la matrice Chrome 12/12 n’ont pas été exécutés. Les défauts d’autorisation sont prouvés par contrats de code et tests de caractérisation, pas par exploitation de données étrangères.
+- Aucun fournisseur IA, courriel, SMS ou stockage externe n’a été appelé.
