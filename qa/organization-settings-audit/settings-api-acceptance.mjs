@@ -36,7 +36,7 @@ async function login(email, password = secrets.syntheticPassword) {
 try {
   const adminA = await login('customer-admin-a@global-e2e.test');
   const adminB = await login('customer-admin-b@global-e2e.test');
-  const advisor = await login('advisor-a@global-e2e.test');
+  let advisor = await login('advisor-a@global-e2e.test');
   const revoked = await login('revoked@global-e2e.test');
   check('identity-readiness', 'three active identities authenticate', [adminA.status, adminB.status, advisor.status], [adminA, adminB, advisor].every((x) => x.status < 300));
   check('inactive-login', 'inactive identity denied', revoked.status, revoked.status === 401);
@@ -68,6 +68,12 @@ try {
   check('organization-settings-shared-isolated', 'two authorized accounts read the same canonical organization value; other tenant differs', { update: settingsUpdate.status, secondAdmin: secondAdminSettings.status, shared: secondAdminSettings.data?.companyName, otherTenant: otherTenantSettings.data?.companyName }, settingsUpdate.status === 200 && secondAdminSettings.status === 200 && secondAdminSettings.data?.companyName === sharedName && otherTenantSettings.data?.companyName !== sharedName);
   await prisma.user.update({ where: { id: ids.advisorA }, data: { role: 'OPERATOR', authVersion: { increment: 1 } } });
   await lab.call('/organizations/me/settings', { method: 'PUT', token: adminA.token, body: { companyName: settingsBefore?.companyName ?? null } });
+
+  // The temporary role change deliberately increments authVersion. Respect the
+  // canonical authentication window, then acquire a fresh OPERATOR session.
+  await new Promise((resolve) => setTimeout(resolve, 61_000));
+  advisor = await login('advisor-a@global-e2e.test');
+  if (advisor.status >= 300) throw new Error(`OPERATOR session refresh failed closed: ${advisor.status}`);
 
   const crossOrg = await lab.call(`/organizations/${ids.orgB}`, { token: adminA.token });
   check('cross-tenant-organization-direct', 'ADMIN cannot address another organization', crossOrg.status, crossOrg.status === 403);
@@ -112,9 +118,6 @@ try {
   const audits = await prisma.adminAuditEvent.findMany({ where: { targetId: ids.advisorA }, orderBy: { createdAt: 'desc' }, take: 2, select: { action: true, actorUserId: true, organizationId: true, beforeData: true, afterData: true } }).catch(() => []);
   check('deactivation-audit', 'disable and enable have durable business audit', audits.map((x) => x.action), audits.some((x) => x.action === 'PLATFORM_USER_DISABLED') && audits.some((x) => x.action === 'PLATFORM_USER_ENABLED'));
 
-  // Authentication is intentionally throttled to five starts per minute.
-  // Resume password validation only in the next normal execution window.
-  await new Promise((resolve) => setTimeout(resolve, 61_000));
   const rotatedPassword = 'Settings-QA-Rotated!2026';
   const advisorPasswordBefore = await prisma.user.findUnique({ where: { id: ids.advisorA }, select: { password: true, authVersion: true } });
   await prisma.trustedDevice.create({ data: { userId: ids.advisorA, token: `settings-password-${Date.now()}`, authVersion: advisorPasswordBefore.authVersion, expiresAt: new Date(Date.now() + 60_000) } });
