@@ -24,9 +24,15 @@
 | Audit métier | PASS | transitions et invitations auditées dans les transactions métier |
 | Lecteur d’écran réel | NOT_VERIFIED | runtime indisponible |
 | Facturation, quotas, intégrations | NON_APPLICABLE | aucune fonction sur `/settings` |
+| CI du SHA fusionné | PASS | `41347941081`, SHA `91c1313c393bd630489e66ee26aa5557ca53c2dd` |
+| Release gouvernée | PASS | `41348342595`, terminal SUCCESS |
+| Inspection technique production | PASS | `41349712708`, SHA actif vérifié par le workflow, artefact assaini avec digest vérifié |
+| Capacité post-release | PASS | `41349728310`, terminal SUCCESS |
+| Recette visuelle production | PASS | huit routes, desktop + 390×844, F5, contrôles visibles, aucune mutation |
+| Rollback applicatif de sécurité | CONDITIONNEL | schéma additif; ancien backend interdit sans correction ou suspension gouvernée |
 
 ## Verdict
 
-`PASS — ACCEPTATION_INTÉGRÉE_PARAMÈTRES`
+`VALIDÉ_QA — FUSIONNÉ — DÉPLOYÉ — RÉCONCILIÉ`
 
-Limites : lecteur d’écran réel `NOT_VERIFIED`; livraison courriel réelle hors mandat; conflits historiques divergents à confirmer par un administrateur; secret de chiffrement de production à configurer avant une future release.
+Limites : lecteur d’écran réel `NOT_VERIFIED`; livraison courriel réelle hors mandat; conflits historiques divergents à confirmer par un administrateur. La clé d’outbox gouvernée existante a été conservée et validée sans exposition de sa valeur.

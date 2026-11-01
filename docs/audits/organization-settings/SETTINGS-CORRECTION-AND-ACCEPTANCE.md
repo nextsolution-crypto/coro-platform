@@ -65,8 +65,39 @@ Lecteur d’écran réel : `NOT_VERIFIED` faute d’un moyen fiable dans le runt
 - `CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64` : objet JSON des anciennes clés conservées tant que des événements chiffrés les référencent.
 - Les secrets ne doivent être présents ni dans Git, ni dans les logs, ni dans les preuves. Leur disponibilité production n’a pas été modifiée dans ce mandat.
 
+## Livraison et réconciliation de la PR #151
+
+- HEAD fonctionnel testé : `5a304f760bbccc19d45b952f06fd444c8d1ede8b`.
+- PR #151 fusionnée dans `main` : `91c1313c393bd630489e66ee26aa5557ca53c2dd`.
+- CI `main` : workflow `41347941081`, terminal `SUCCESS` sur le SHA fusionné.
+- Inspection pré-release : workflow `41347968243`, `SUCCESS`.
+- Gate de capacité pré-release : workflow `41347970309`, `SUCCESS`; environ 34,67 GiB libres et 17,52 GiB de marge de release rapportée.
+- Release gouvernée : workflow `41348342595`, `SUCCESS`; quatre images immuables construites et déployées, sans relance concurrente.
+- Inspection post-release : workflow `41349712708`, `SUCCESS` sur `91c1313c393bd630489e66ee26aa5557ca53c2dd`; artefact assaini `production-inspection-41349712708` (digest `sha256:5df49892dc924a571fd120557725751ee81876906d375b052305a9beed066d9b`).
+- Gate de capacité post-release : workflow `41349728310`, `SUCCESS`.
+- Migration : `20261118010000_organization_settings_governance`, passage gouverné 164 → 165; chaîne depuis zéro, upgrade historique et checksum validés avant fusion.
+- Sauvegarde et restauration : `REMOTE_VERIFIED` et `RESTORE_VERIFIED` avant release; quatre références de rollback présentes.
+- Clé d’outbox : l’identifiant gouverné `2026-10-clients-v1` a été conservé; le pipeline valide un décodage base64 de 32 octets sans exposer la valeur.
+- Worker : la nouvelle table d’événements d’invitation interne est créée vide; aucun événement historique arbitraire n’est rejoué au démarrage. L’outbox Client existante conserve son fonctionnement antérieur.
+
+Le schéma 165 reste additif, mais un rollback complet vers l’ancien backend réintroduirait des défauts de sécurité corrigés (mot de passe sans secret actuel, accès opérateur trop large, faux succès d’invitation et écrasement des paramètres organisationnels). Le rollback sûr exige donc un backend corrigé ou une suspension gouvernée des parcours concernés; la seule présence des quatre anciennes images n’est pas une preuve suffisante de compatibilité de sécurité.
+
+## Vérification visuelle authentifiée en production
+
+Une session administrateur autorisée a été utilisée exclusivement en lecture :
+
+- huit routes Paramètres ouvertes avec succès : catalogue, organisation, profil, membres, modèle Module 1, types d’activités, catégories timelog, modèles de tâches et rétroaction;
+- actions visibles cohérentes avec le rôle disponible; aucun formulaire sauvegardé, aucune invitation, mutation de rôle, de permission, de secret ou de statut;
+- informations organisationnelles, logos, formulaires, membres et libellés affichés;
+- F5 sur `/settings/organization` : session et page conservées;
+- desktop et mobile 390×844 inspectés; largeur mesurée sans débordement horizontal (`scrollWidth` inférieur à `innerWidth`);
+- contrôles principaux accessibles et non tronqués dans les captures inspectées;
+- aucune erreur applicative critique dans la console. Les messages observés concernent la fermeture d’un canal de l’extension Chrome, pas une exception CORO.
+
+Les mutations, pannes, reprises et refus multi-acteurs restent démontrés par la campagne QA synthétique. Le lecteur d’écran réel demeure `NOT_VERIFIED` et aucune livraison fournisseur réelle n’a été exercée dans ce lot.
+
 ## Décision
 
-`ACCEPTATION_INTÉGRÉE_PASS — PRÊT_POUR_REVUE`
+`VALIDÉ_QA — FUSIONNÉ — DÉPLOYÉ — RÉCONCILIÉ`
 
 Décision métier restante : chaque conflit historique divergent doit recevoir une confirmation administrative explicite avant de devenir une valeur canonique. Cela ne bloque pas les organisations sans conflit ni la revue de la PR.
