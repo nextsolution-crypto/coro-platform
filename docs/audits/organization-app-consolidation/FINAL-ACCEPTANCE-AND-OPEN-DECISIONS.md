@@ -11,7 +11,6 @@ La fusion de la consolidation documentaire ne constitue pas une livraison produi
 | Sujet | Pourquoi une intervention humaine peut rester nécessaire | Préparation technique à terminer avant sollicitation |
 | --- | --- | --- |
 | Invitations internes | constater la réception et utiliser le lien reçu à `info@getcoro.io` | identité isolée, préflight fournisseur, portée minimale, preuves et remise en état prêtes |
-| Divergences historiques | aucune règle ne permet de choisir automatiquement une valeur ambiguë | inventaire privé groupé avec provenance et impact |
 | Lecteur d’écran | restitution vocale réelle non déductible du DOM | script court et parcours représentatifs stabilisés |
 | PDF/UA | une certification ou un remplacement de moteur peut nécessiter coût/licence | analyse du moteur, écarts et options chiffrées |
 | Progression Projet | aucune règle actuelle ne permet de transformer objectivement l’avancement documentaire en pourcentage | proposition `JALONS_GOUVERNÉS` versus `PROGRESSION_DÉCLARÉE` documentée |
@@ -27,3 +26,5 @@ La fusion de la consolidation documentaire ne constitue pas une livraison produi
 ## Verdict final
 
 À compléter uniquement après traitement indépendant des lots A à H. Aucun statut global « 100 % » ne sera produit.
+
+Le lot des divergences historiques est clos par l’inventaire production `41356195887` : aucune ligne de conflit et aucune organisation affectée. Le stockage reste ouvert : les 116 objets non rapprochés sont des candidats, pas des orphelins démontrés.
