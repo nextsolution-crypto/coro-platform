@@ -56,6 +56,7 @@ export default function ManualPage() {
   useEffect(() => {
     if (loading || !articles.length) return;
     let frame = 0;
+    const retryTimers: ReturnType<typeof setTimeout>[] = [];
     const scrollToCurrentArticle = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
@@ -70,10 +71,17 @@ export default function ManualPage() {
       });
     };
     scrollToCurrentArticle();
+    // PortalLayout finishes restoring its responsive shell after the manual
+    // data is rendered. Re-apply the same hash without moving focus so a
+    // direct link and an F5 cannot be reset to the top of the page.
+    for (const delay of [100, 300, 700]) {
+      retryTimers.push(setTimeout(scrollToCurrentArticle, delay));
+    }
     window.addEventListener("hashchange", scrollToCurrentArticle);
     window.addEventListener("popstate", scrollToCurrentArticle);
     return () => {
       cancelAnimationFrame(frame);
+      retryTimers.forEach(clearTimeout);
       window.removeEventListener("hashchange", scrollToCurrentArticle);
       window.removeEventListener("popstate", scrollToCurrentArticle);
     };
