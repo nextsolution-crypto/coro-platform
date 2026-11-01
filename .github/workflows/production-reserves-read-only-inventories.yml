@@ -1,0 +1,62 @@
+name: Production Reserves Read-Only Inventories
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: node --test ops/maintenance/storage-object-authority-inventory.test.cjs
+      - run: node --test ops/maintenance/organization-settings-conflict-inventory.test.cjs
+
+  inventory:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Validate pinned host identity
+        env:
+          HOST_FINGERPRINT: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+        run: '[[ "$HOST_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]'
+      - name: Execute aggregate read-only inventories
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            storage_script="$(mktemp /tmp/coro-storage-authority-inventory.XXXXXX.cjs)"
+            conflict_script="$(mktemp /tmp/coro-settings-conflict-inventory.XXXXXX.cjs)"
+            storage_evidence="$(mktemp /tmp/coro-storage-authority-inventory.XXXXXX.json)"
+            conflict_evidence="$(mktemp /tmp/coro-settings-conflict-inventory.XXXXXX.json)"
+            trap 'rm -f -- "$storage_script" "$conflict_script" "$storage_evidence" "$conflict_evidence"' EXIT
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
+            git -C "$repo" show "$SOURCE_SHA:ops/maintenance/storage-object-authority-inventory.cjs" >"$storage_script"
+            git -C "$repo" show "$SOURCE_SHA:ops/maintenance/organization-settings-conflict-inventory.cjs" >"$conflict_script"
+            cd "$repo"
+            docker compose exec -T -e CORO_STORAGE_AUTHORITY_INVENTORY_RUN=true backend node - <"$storage_script" >"$storage_evidence"
+            docker compose exec -T -e CORO_SETTINGS_CONFLICT_INVENTORY_RUN=true backend node - <"$conflict_script" >"$conflict_evidence"
+            node -e 'const fs=require("fs");for(const p of process.argv.slice(1)){const r=JSON.parse(fs.readFileSync(p,"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||r.readOnly!==true)process.exit(1);const s=JSON.stringify(r);if(/https?:|coro-private|storageKey|objectKey|organizationId|@[A-Za-z0-9.-]+/i.test(s))process.exit(1)}' "$storage_evidence" "$conflict_evidence"
+            cat "$storage_evidence"
+            cat "$conflict_evidence"
+      - name: Record evidence boundary
+        if: always()
+        run: echo 'Only aggregate counts and byte totals are emitted; object keys, settings values, identifiers, content and credentials remain undisclosed.'

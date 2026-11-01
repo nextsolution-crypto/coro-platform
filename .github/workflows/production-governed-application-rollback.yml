@@ -1,0 +1,76 @@
+name: Governed Production Application Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: DRY_RUN or EXECUTE
+        required: true
+        type: choice
+        options: [DRY_RUN, EXECUTE]
+      rollback_approval:
+        description: For EXECUTE type ROLLBACK_APPLICATIONS
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-deployment
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: |
+          bash -n ops/deploy/coro-governed-application-rollback.sh
+          node --test ops/capacity/rollback-security-policy.test.mjs ops/deploy/governed-rollback-contract.test.mjs
+
+  rollback:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Validate request
+        env:
+          MODE: ${{ inputs.mode }}
+          APPROVAL: ${{ inputs.rollback_approval }}
+          ENABLED: ${{ vars.CORO_GOVERNED_ROLLBACK_ENABLED }}
+        run: |
+          [[ "$MODE" == DRY_RUN || "$MODE" == EXECUTE ]]
+          [[ "$MODE" == DRY_RUN || "$APPROVAL" == ROLLBACK_APPLICATIONS ]]
+          [[ "$MODE" == DRY_RUN || "$ENABLED" == true ]]
+      - name: Validate pinned host identity
+        env:
+          HOST_FINGERPRINT: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+        run: '[[ "$HOST_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]'
+      - name: Execute governed rollback authority
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          ROLLBACK_MODE: ${{ inputs.mode }}
+          ROLLBACK_APPROVAL: ${{ inputs.rollback_approval }}
+          CORO_GOVERNED_ROLLBACK_ENABLED: ${{ vars.CORO_GOVERNED_ROLLBACK_ENABLED }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          command_timeout: 20m
+          envs: SOURCE_SHA,ROLLBACK_MODE,ROLLBACK_APPROVAL,CORO_GOVERNED_ROLLBACK_ENABLED
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            git -C "$repo" fetch --quiet origin main
+            [[ "$ROLLBACK_MODE" == DRY_RUN ]] || test "$(git -C "$repo" rev-parse origin/main)" = "$SOURCE_SHA"
+            script="$(mktemp)"; validator="$(mktemp)"; policy="$(mktemp)"
+            trap 'rm -f -- "$script" "$validator" "$policy"' EXIT
+            git -C "$repo" show "$SOURCE_SHA:ops/deploy/coro-governed-application-rollback.sh" >"$script"
+            git -C "$repo" show "$SOURCE_SHA:ops/capacity/rollback-security-policy.mjs" >"$validator"
+            git -C "$repo" show "$SOURCE_SHA:ops/capacity/rollback-security-policy.json" >"$policy"
+            chmod 0700 "$script"
+            CORO_ROLLBACK_SECURITY_TOOL="$validator" CORO_ROLLBACK_SECURITY_POLICY="$policy" "$script"
