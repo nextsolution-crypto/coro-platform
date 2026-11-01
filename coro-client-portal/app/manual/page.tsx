@@ -74,7 +74,7 @@ export default function ManualPage() {
     // PortalLayout finishes restoring its responsive shell after the manual
     // data is rendered. Re-apply the same hash without moving focus so a
     // direct link and an F5 cannot be reset to the top of the page.
-    for (const delay of [100, 300, 700]) {
+    for (const delay of [100, 300, 700, 1200]) {
       retryTimers.push(setTimeout(scrollToCurrentArticle, delay));
     }
     window.addEventListener("hashchange", scrollToCurrentArticle);
