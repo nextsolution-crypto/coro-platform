@@ -122,6 +122,7 @@ export default function SettingsPage() {
     {
       title: 'Outils',
       items: [
+        ...(isAdmin ? [
         {
           icon: <Clock size={20} />,
           label: 'Catégories de timelog',
@@ -137,6 +138,7 @@ export default function SettingsPage() {
           path: '/settings/task-templates',
           color: '#16A085',
         },
+        ] : []),
 
         {
           icon: <MessageSquare size={20} />,

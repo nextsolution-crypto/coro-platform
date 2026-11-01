@@ -566,6 +566,7 @@ export class GeneratorService {
         client: true,
         building: true,
         user: true,
+        organization: true,
       },
     });
 
@@ -575,7 +576,7 @@ export class GeneratorService {
 
     const isPca = project.documentType === 'PCA';
 
-    const defaultResponsableNom = `${project.user.firstName} ${project.user.lastName} — ${project.user.companyName || 'CORO'}`;
+    const defaultResponsableNom = `${project.user.firstName} ${project.user.lastName} — ${project.organization.companyName || 'CORO'}`;
 
     return {
       clientName: project.client.name,
@@ -628,7 +629,7 @@ export class GeneratorService {
 
       multiLocataires: isPca ? false : this.asBool(config.multiLocataires),
 
-      companyName: project.user.companyName || 'CORO',
+      companyName: project.organization.companyName || 'CORO',
 
       buildingType: isPca
         ? project.building.buildingType || ''

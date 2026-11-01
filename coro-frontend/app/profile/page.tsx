@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
@@ -12,7 +11,6 @@ import { createPalette } from '@/design-system/glass-palette';
 import type { ThemePreference } from '@/design-system/theme/theme-core';
 
 export default function ProfilePage() {
-  const router = useRouter();
   const { user, initAuth } = useAuthStore();
   const { ui, uiPreference, preference, setUi, setPreference } = useTheme();
   const glass = ui === 'glass';
@@ -38,11 +36,13 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user) {
+      // The authenticated store is the external source synchronized by this effect.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         email: user.email || '',
-        horaireBase: (user as any).horaireBase || 40,
+        horaireBase: (user as { horaireBase?: number }).horaireBase || 40,
       });
     }
   }, [user]);
@@ -58,7 +58,7 @@ export default function ProfilePage() {
       setTimeout(() => setSaved(false), 3000);
       initAuth();
       toast('Profil sauvegardé avec succès.');
-    } catch (err) {
+    } catch {
       toast('Erreur lors de la sauvegarde du profil.', 'error');
     } finally { setSaving(false); }
   };
@@ -91,12 +91,13 @@ export default function ProfilePage() {
     }
     setSavingPassword(true);
     try {
-      await api.put('/users/me/password', { newPassword: passwordForm.newPassword });
+      await api.put('/users/me/password', { currentPassword: passwordForm.currentPassword, newPassword: passwordForm.newPassword });
       setPasswordSaved(true);
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setTimeout(() => setPasswordSaved(false), 3000);
       toast('Mot de passe modifié avec succès.');
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string | string[] } }; message?: string };
       const message =
         err?.response?.data?.message ||
         err?.message ||
@@ -273,6 +274,14 @@ export default function ProfilePage() {
           <h2 className="font-semibold mb-4" style={{ color: p.text('#2C3E50') }}>Changer le mot de passe</h2>
           <div className="space-y-3 mb-4">
             <div>
+              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: p.text('#6C757D') }}>Mot de passe actuel</label>
+              <input type="password" autoComplete="current-password" value={passwordForm.currentPassword}
+                onChange={e => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                className={inputCls} style={inputSty}
+                onFocus={e => e.target.style.borderColor = p.line('#C0392B')}
+                onBlur={e => e.target.style.borderColor = p.line('#CED4DA')} />
+            </div>
+            <div>
               <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: p.text('#6C757D') }}>Nouveau mot de passe</label>
               <input type="password" value={passwordForm.newPassword}
                 onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
@@ -294,7 +303,7 @@ export default function ProfilePage() {
           {passwordError && (
             <p className="text-xs mb-3" style={{ color: p.text('#C0392B') }}>{passwordError}</p>
           )}
-          <button onClick={handleChangePassword} disabled={savingPassword || !passwordForm.newPassword}
+          <button onClick={handleChangePassword} disabled={savingPassword || !passwordForm.currentPassword || !passwordForm.newPassword}
             className="w-full sm:w-auto text-white text-sm font-medium px-4 py-2 rounded disabled:opacity-50"
             style={{ backgroundColor: passwordSaved ? p.bg('#27AE60') : p.bg('#2980B9') }}
             onMouseEnter={e => { if (!savingPassword) e.currentTarget.style.backgroundColor = passwordSaved ? p.bg('#1E8449') : p.bg('#1A5276'); }}

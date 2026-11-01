@@ -33,29 +33,28 @@ export default function TeamUsersPage() {
   const [showModal, setShowModal] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState('');
   const [planningUserId, setPlanningUserId] = useState('');
   const [scheduleDirty, setScheduleDirty] = useState(false);
 
   const [form, setForm] = useState({
-    firstName: '', lastName: '', email: '', password: '', role: 'OPERATOR',
+    firstName: '', lastName: '', email: '', role: 'OPERATOR',
   });
 
   useEffect(() => { initAuth(); }, []);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      if (user?.role !== 'ADMIN' && user?.role !== 'SUPER_ADMIN') {
-        router.push('/dashboard');
-        return;
-      }
-      fetchData();
-    } else {
-      const token = localStorage.getItem('coro_token');
-      if (!token) router.push('/login');
-    }
-  }, [isAuthenticated, user]);
+    if (!showModal) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !creating) setShowModal(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [showModal, creating]);
 
-  const fetchData = async () => {
+  async function fetchData() {
+    setLoading(true);
+    setLoadError('');
     try {
       const [usersRes, orgRes] = await Promise.all([
         api.get('/users/organization'),
@@ -67,43 +66,52 @@ export default function TeamUsersPage() {
         ESSAI_GRATUIT: 1, STANDARD: null, ENTREPRISE: null,
       };
       setMaxUsers(limits[orgRes.data.licenseType] ?? null);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      setLoadError('Impossible de charger les membres. Vérifiez votre connexion puis réessayez.');
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (user?.role !== 'ADMIN' && user?.role !== 'SUPER_ADMIN') {
+        router.push('/dashboard');
+        return;
+      }
+      // Authentication state is the external source that triggers this load.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchData();
+    } else {
+      const token = localStorage.getItem('coro_token');
+      if (!token) router.push('/login');
+    }
+  }, [isAuthenticated, user]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
     setError('');
     try {
-      await api.post('/users/organization', form);
+      await api.post('/users/organization', { ...form, requestId: crypto.randomUUID() });
       setShowModal(false);
-      setForm({ firstName: '', lastName: '', email: '', password: '', role: 'OPERATOR' });
+      setForm({ firstName: '', lastName: '', email: '', role: 'OPERATOR' });
       fetchData();
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
       setError(err.response?.data?.message || 'Erreur lors de la création.');
     } finally {
       setCreating(false);
     }
   };
 
-  const generatePassword = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';
-    let pwd = '';
-    for (let i = 0; i < 10; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
-    return pwd;
-  };
-
   const handleResendInvite = async (u: TeamUser) => {
-    const tempPassword = generatePassword();
-    if (!confirm(`Réinitialiser le mot de passe de ${u.firstName} ${u.lastName} et renvoyer l'invitation ?`)) return;
+    if (!confirm(`Créer un nouveau lien d'activation pour ${u.firstName} ${u.lastName} ? L'accès actuel ne sera pas modifié tant que le lien n'est pas utilisé.`)) return;
     try {
-      await api.post(`/users/organization/${u.id}/resend-invite`, { password: tempPassword });
-      alert(`✅ Invitation renvoyée à ${u.email} avec un nouveau mot de passe temporaire.`);
-    } catch (err: any) {
+      await api.post(`/users/organization/${u.id}/resend-invite`, { requestId: crypto.randomUUID() });
+      alert(`Invitation enregistrée pour ${u.email}. L'envoi est en attente de traitement.`);
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
       alert(err.response?.data?.message || 'Erreur lors de l\'envoi.');
     }
   };
@@ -125,6 +133,13 @@ export default function TeamUsersPage() {
     );
   }
 
+  if (loadError) {
+    return <AppLayout><div role="alert" className="rounded-md p-4" style={{ backgroundColor: '#FDEDEC', color: '#922B21' }}>
+      <p>{loadError}</p>
+      <button type="button" onClick={fetchData} className="mt-3 rounded px-4 py-2 text-white" style={{ backgroundColor: '#C0392B' }}>Réessayer</button>
+    </div></AppLayout>;
+  }
+
   return (
     <AppLayout>
       <div className="rounded-md bg-white border border-gray-200 p-4 mb-6 space-y-3">
@@ -143,17 +158,14 @@ export default function TeamUsersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>
-            Membres de l'équipe
+            Membres de l&apos;équipe
           </h2>
           <p className="text-sm mt-1" style={{ color: '#6C757D' }}>
             {users.length} / {maxUsers === null ? 'illimité' : maxUsers} membre{users.length !== 1 ? 's' : ''}
           </p>
         </div>
         <button
-          onClick={() => {
-            setShowModal(true);
-            setForm(prev => ({ ...prev, password: generatePassword() }));
-          }}
+          onClick={() => setShowModal(true)}
           disabled={maxUsers !== null && users.length >= maxUsers}
           title={maxUsers !== null && users.length >= maxUsers ? `Limite de ${maxUsers} membre(s) atteinte pour votre licence` : ''}
           className="w-full sm:w-auto text-white text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -317,9 +329,10 @@ export default function TeamUsersPage() {
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <div className="w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-md p-5 sm:p-8"
+          <div role="dialog" aria-modal="true" aria-labelledby="add-member-title"
+            className="w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-md p-5 sm:p-8"
             style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
-            <h3 className="font-semibold text-lg mb-6" style={{ color: '#2C3E50' }}>
+            <h3 id="add-member-title" className="font-semibold text-lg mb-6" style={{ color: '#2C3E50' }}>
               Ajouter un membre
             </h3>
 
@@ -355,14 +368,9 @@ export default function TeamUsersPage() {
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50' }} />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Mot de passe temporaire *</label>
-                <input type="text" required value={form.password}
-                  onChange={e => setForm({ ...form, password: e.target.value })}
-                  placeholder="À transmettre au membre"
-                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
-                  style={{ border: '1px solid #CED4DA', color: '#2C3E50' }} />
-              </div>
+              <p className="rounded p-3 text-sm" style={{ backgroundColor: '#EBF5FB', color: '#1B4F72' }}>
+                Une invitation sécurisée sera enregistrée. Le membre choisira lui-même son mot de passe depuis un lien temporaire.
+              </p>
 
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Rôle</label>

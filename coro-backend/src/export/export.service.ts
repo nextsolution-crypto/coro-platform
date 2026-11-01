@@ -108,7 +108,7 @@ export class ExportService {
       where: { projectId, project: { organizationId } },
       include: {
         project: {
-          include: { client: true, building: true, user: true },
+          include: { client: true, building: true, user: true, organization: true },
         },
       },
     });
@@ -234,11 +234,11 @@ export class ExportService {
       language: lang,
       clientLogoBase64: project.client.logoBase64,
       coroLogoBase64:
-        project.user?.companyLogoFullB64 ||
-        project.user?.companyLogoB64 ||
+        project.organization?.companyLogoFullB64 ||
+        project.organization?.companyLogoB64 ||
         undefined,
-      coroPhone: project.user?.companyPhone || undefined,
-      coroEmail: project.user?.companyEmail || undefined,
+      coroPhone: project.organization?.companyPhone || undefined,
+      coroEmail: project.organization?.companyEmail || undefined,
       revisionDate: lastEntry?.date || content.config?.dateReleve || undefined,
       revisionType:
         lastEntry?.type || content.config?.versionDocument || undefined,
@@ -565,17 +565,17 @@ export class ExportService {
 
       // ── Dernière page ──
       const lastPageHtml = generateLastPage({
-        companyName: project.user?.companyName || undefined,
+        companyName: project.organization?.companyName || undefined,
         companyLogoFullB64:
-          project.user?.companyLogoB64 ||
-          project.user?.companyLogoFullB64 ||
+          project.organization?.companyLogoB64 ||
+          project.organization?.companyLogoFullB64 ||
           undefined,
-        companyLogoB64: project.user?.companyLogoB64 || undefined,
-        companyPhone: project.user?.companyPhone || undefined,
-        companyEmail: project.user?.companyEmail || undefined,
-        companyAddress: (project.user as any)?.companyAddress || undefined,
-        companyWebsite: (project.user as any)?.companyWebsite || undefined,
-        companyTagline: (project.user as any)?.companyTagline || undefined,
+        companyLogoB64: project.organization?.companyLogoB64 || undefined,
+        companyPhone: project.organization?.companyPhone || undefined,
+        companyEmail: project.organization?.companyEmail || undefined,
+        companyAddress: project.organization?.companyAddress || undefined,
+        companyWebsite: project.organization?.companyWebsite || undefined,
+        companyTagline: project.organization?.companyTagline || undefined,
         year: project.year,
         language: lang,
       });
@@ -672,7 +672,7 @@ export class ExportService {
       // metadata and the natural language to assist readers and catalogues.
       const accessibleTitle = `${docTypeLabel} - ${project.building?.name || project.name}`;
       mergedPdf.pdfDoc.setTitle(accessibleTitle);
-      mergedPdf.pdfDoc.setAuthor(project.user?.companyName || 'CORO');
+      mergedPdf.pdfDoc.setAuthor(project.organization?.companyName || 'CORO');
       mergedPdf.pdfDoc.setSubject(
         isFr ? 'Document organisationnel approuvé' : 'Approved organizational document',
       );

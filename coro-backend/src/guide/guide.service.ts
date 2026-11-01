@@ -19,7 +19,7 @@ export class GuideService {
       where: { projectId, project: { organizationId } },
       include: {
         project: {
-          include: { client: true, building: true, user: true },
+          include: { client: true, building: true, user: true, organization: true },
         },
       },
     });
@@ -123,9 +123,9 @@ export class GuideService {
         year: project.year,
         language: lang,
         clientLogoBase64: project.client.logoBase64 || undefined,
-        coroLogoBase64: project.user?.companyLogoFullB64 || project.user?.companyLogoB64 || undefined,
-        coroPhone: project.user?.companyPhone || undefined,
-        coroEmail: project.user?.companyEmail || undefined,
+        coroLogoBase64: project.organization?.companyLogoFullB64 || project.organization?.companyLogoB64 || undefined,
+        coroPhone: project.organization?.companyPhone || undefined,
+        coroEmail: project.organization?.companyEmail || undefined,
         revisionDate: lastEntry?.date || config.dateReleve || undefined,
         revisionType: lastEntry?.type || config.versionDocument || undefined,
         versionNumber,
@@ -262,14 +262,14 @@ export class GuideService {
 
       // ── NUMÉROS DE PAGE ──
       const lastPageHtml = generateLastPage({
-        companyName: (project.user as any)?.companyName || undefined,
-        companyLogoFullB64: (project.user as any)?.companyLogoFullB64 || undefined,
-        companyLogoB64: (project.user as any)?.companyLogoB64 || undefined,
-        companyPhone: (project.user as any)?.companyPhone || undefined,
-        companyEmail: (project.user as any)?.companyEmail || undefined,
-        companyAddress: (project.user as any)?.companyAddress || undefined,
-        companyWebsite: (project.user as any)?.companyWebsite || undefined,
-        companyTagline: (project.user as any)?.companyTagline || undefined,
+        companyName: project.organization?.companyName || undefined,
+        companyLogoFullB64: project.organization?.companyLogoFullB64 || undefined,
+        companyLogoB64: project.organization?.companyLogoB64 || undefined,
+        companyPhone: project.organization?.companyPhone || undefined,
+        companyEmail: project.organization?.companyEmail || undefined,
+        companyAddress: project.organization?.companyAddress || undefined,
+        companyWebsite: project.organization?.companyWebsite || undefined,
+        companyTagline: project.organization?.companyTagline || undefined,
         year: project.year,
         language: lang,
       });

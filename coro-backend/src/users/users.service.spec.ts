@@ -13,12 +13,11 @@ describe('UsersService profile allowlist', () => {
     expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
-  it('preserves legitimate profile fields and restricts organization settings to managers', async () => {
+  it('preserves legitimate personal fields and rejects organization fields for every personal profile', async () => {
     await service.updateMe('user-a', { firstName: 'Amel', horaireBase: 37.5 }, false);
     expect(prisma.user.update).toHaveBeenCalledWith(expect.objectContaining({ data: { firstName: 'Amel', horaireBase: 37.5 } }));
     await expect(service.updateMe('user-a', { companyName: 'CORO' }, false)).rejects.toBeInstanceOf(BadRequestException);
-    await service.updateMe('user-a', { companyName: 'CORO' }, true);
-    expect(prisma.user.update).toHaveBeenLastCalledWith(expect.objectContaining({ data: { companyName: 'CORO' } }));
+    await expect(service.updateMe('user-a', { companyName: 'CORO' }, true)).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('verifies only an authorized, scoped IANA timezone', async () => {

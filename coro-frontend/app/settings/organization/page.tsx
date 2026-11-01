@@ -16,11 +16,12 @@ export default function OrganizationSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
 
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFullPreview, setLogoFullPreview] = useState<string | null>(null);
 
-  const [orgInfo, setOrgInfo] = useState<any>(null);
+  const [orgInfo, setOrgInfo] = useState<{ name: string; licenseType: string; _count?: { users?: number; projects?: number } } | null>(null);
 
   const [form, setForm] = useState({
     companyName: '',
@@ -35,24 +36,11 @@ export default function OrganizationSettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInputFullRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    initAuth();
-  }, [initAuth]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      if (!['ADMIN', 'SUPER_ADMIN'].includes(user?.role || '')) {
-        router.push('/settings');
-        return;
-      }
-
-      fetchData();
-    }
-  }, [isAuthenticated, user, router]);
-
-  const fetchData = async () => {
+  async function fetchData() {
+    setLoading(true);
+    setError('');
     try {
-      const res = await api.get('/users/me');
+      const res = await api.get('/organizations/me/settings');
 
       setForm({
         companyName: res.data.companyName || '',
@@ -64,38 +52,46 @@ export default function OrganizationSettingsPage() {
         companyLicense: res.data.companyLicense || '',
       });
 
-      if (res.data.companyLogoB64) {
-        setLogoPreview(res.data.companyLogoB64);
-      }
-
-      if (res.data.companyLogoFullB64) {
-        setLogoFullPreview(res.data.companyLogoFullB64);
-      }
-
-      const orgRes = await api
-        .get('/organizations/me/info')
-        .catch(() => ({ data: null }));
-
-      setOrgInfo(orgRes.data);
-    } catch (err) {
-      console.error(err);
+      setLogoPreview(res.data.companyLogoB64 || null);
+      setLogoFullPreview(res.data.companyLogoFullB64 || null);
+      setOrgInfo(res.data);
+    } catch {
+      setError('Impossible de charger les paramètres de l’organisation. Réessayez après avoir vérifié votre connexion.');
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    initAuth();
+  }, [initAuth]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (!['ADMIN', 'SUPER_ADMIN'].includes(user?.role || '')) {
+        router.push('/settings');
+        return;
+      }
+
+      // Authentication state is the external source that triggers this load.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchData();
+    }
+  }, [isAuthenticated, user, router]);
 
   const handleSave = async () => {
     if (saving) return;
     setSaving(true);
+    setError('');
     try {
-      await api.put('/users/me', form);
+      await api.put('/organizations/me/settings', form);
       await refreshUser();
       setSaved(true);
       setTimeout(() => {
         setSaved(false);
       }, 3000);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      setError('Les paramètres n’ont pas été enregistrés. Vos modifications sont conservées dans ce formulaire.');
     } finally {
       setSaving(false);
     }
@@ -122,8 +118,8 @@ export default function OrganizationSettingsPage() {
           companyLogoB64: base64,
         });
         await refreshUser();
-      } catch (err) {
-        console.error(err);
+      } catch {
+        setError('Le logo icône n’a pas été enregistré.');
       }
     };
 
@@ -147,12 +143,12 @@ export default function OrganizationSettingsPage() {
       const base64 = ev.target?.result as string;
       setLogoFullPreview(base64);
       try {
-        await api.put('/users/me/logo', {
+        await api.put('/users/me/logo-full', {
           companyLogoFullB64: base64,
         });
         await refreshUser();
-      } catch (err) {
-        console.error(err);
+      } catch {
+        setError('Le logo complet n’a pas été enregistré.');
       }
     };
 
@@ -333,6 +329,16 @@ export default function OrganizationSettingsPage() {
         </button>
       </div>
 
+      {error && (
+        <div role="alert" className="mb-6 rounded-md p-4" style={{ backgroundColor: '#FDEDEC', color: '#922B21' }}>
+          <p>{error}</p>
+          {error.startsWith('Impossible de charger') && (
+            <button type="button" onClick={fetchData} className="mt-3 rounded px-4 py-2 text-white" style={{ backgroundColor: '#C0392B' }}>
+              Réessayer
+            </button>
+          )}
+        </div>
+      )}
 
       {/* ═══════════════════════════════════
           GRILLE PRINCIPALE
@@ -367,7 +373,7 @@ export default function OrganizationSettingsPage() {
                 await api.put('/users/me/logo', { companyLogoB64: base64 });
               }}
               label="Téléverser le logo icône"
-              hint="PNG ou SVG recommandé · Max 2 MB"
+              hint="PNG, JPEG ou WebP · Max 2 MB"
               maxSizeMB={2}
               aspectRatio="square"
               previewHeight={140}
@@ -396,7 +402,7 @@ export default function OrganizationSettingsPage() {
                 await api.put('/users/me/logo-full', { companyLogoFullB64: base64 });
               }}
               label="Téléverser le logo complet"
-              hint="PNG ou SVG recommandé · Max 2 MB"
+              hint="PNG, JPEG ou WebP · Max 2 MB"
               maxSizeMB={2}
               aspectRatio="wide"
               previewHeight={100}
@@ -438,7 +444,7 @@ export default function OrganizationSettingsPage() {
                   className="block text-sm font-medium mb-1.5"
                   style={{ color: '#495057' }}
                 >
-                  Nom de l'entreprise
+                  Nom de l&apos;entreprise
                 </label>
 
                 <input
@@ -673,10 +679,7 @@ export default function OrganizationSettingsPage() {
                   },
                   {
                     label: 'Membres',
-                    value:
-                      orgInfo.users?.length ??
-                      orgInfo._count?.users ??
-                      '—',
+                    value: orgInfo._count?.users ?? '—',
                   },
                   {
                     label: 'Projets',

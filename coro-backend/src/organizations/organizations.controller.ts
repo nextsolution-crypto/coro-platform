@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, UseGuards, Request, ForbiddenException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { OrganizationsService } from './organizations.service';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
@@ -46,7 +46,19 @@ export class OrganizationsController {
   // Accessible à tout utilisateur connecté — uniquement sa propre organisation
   @Get('me/info')
   getMyOrganization(@Request() req: any) {
-    return this.organizationsService.findOne(req.user.organizationId);
+    return this.organizationsService.findMyInfo(req.user.organizationId);
+  }
+
+  @Get('me/settings')
+  getMyOrganizationSettings(@Request() req: any) {
+    this.assertOrganizationAdmin(req);
+    return this.organizationsService.getSettings(req.user.organizationId);
+  }
+
+  @Put('me/settings')
+  updateMyOrganizationSettings(@Request() req: any, @Body() body: Record<string, unknown>) {
+    this.assertOrganizationAdmin(req);
+    return this.organizationsService.updateSettings(req.user.organizationId, body, req.user);
   }
 
   @Get('admin/all-projects')
@@ -66,5 +78,11 @@ export class OrganizationsController {
   @SuperAdminOnly()
   findOne(@Param('id') id: string) {
     return this.organizationsService.findOne(id);
+  }
+
+  private assertOrganizationAdmin(req: any) {
+    if (!['ADMIN', 'SUPER_ADMIN'].includes(req.user.role)) {
+      throw new ForbiddenException('Accès réservé aux administrateurs.');
+    }
   }
 }
