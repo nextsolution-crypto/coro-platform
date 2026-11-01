@@ -284,6 +284,8 @@ jobs:
             repo=/opt/coro-platform
             tmp="$(mktemp -d /tmp/coro-capacity-pre.XXXXXX)"
             trap 'rm -f -- "$tmp"/*; rmdir -- "$tmp"' EXIT
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" fetch --quiet origin "$SOURCE_SHA"
             for file in coro-capacity-cleanup.sh release-retention-plan.mjs release-retention-policy.json; do
               git -C "$repo" show "$SOURCE_SHA:ops/capacity/$file" >"$tmp/$file"
             done
@@ -344,6 +346,8 @@ jobs:
             repo=/opt/coro-platform
             tmp="$(mktemp -d /tmp/coro-capacity-post.XXXXXX)"
             trap 'rm -f -- "$tmp"/*; rmdir -- "$tmp"' EXIT
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" fetch --quiet origin "$SOURCE_SHA"
             for file in coro-capacity-cleanup.sh release-retention-plan.mjs release-retention-policy.json; do
               git -C "$repo" show "$SOURCE_SHA:ops/capacity/$file" >"$tmp/$file"
             done
