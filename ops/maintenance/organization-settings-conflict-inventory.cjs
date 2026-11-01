@@ -33,4 +33,4 @@ async function main() {
   try { process.stdout.write(`${JSON.stringify(await runReadOnly(prisma))}\n`); } finally { await prisma.$disconnect(); }
 }
 module.exports = { runReadOnly, summarize };
-if (require.main === module) main().catch(() => { process.stdout.write('{"schemaVersion":1,"execution":"FAILED","readOnly":true}\n'); process.exitCode = 1; });
+if (require.main === module || process.env.CORO_SETTINGS_CONFLICT_INVENTORY_RUN === 'true') main().catch(() => { process.stdout.write('{"schemaVersion":1,"execution":"FAILED","readOnly":true}\n'); process.exitCode = 1; });

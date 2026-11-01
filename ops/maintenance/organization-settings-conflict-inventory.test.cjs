@@ -1,5 +1,6 @@
 'use strict';
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const test = require('node:test');
 const { runReadOnly, summarize } = require('./organization-settings-conflict-inventory.cjs');
 
@@ -21,4 +22,8 @@ test('uses a read-only transaction', async () => {
   const report = await runReadOnly(prisma);
   assert.equal(statement, 'SET TRANSACTION READ ONLY');
   assert.equal(report.decision, 'NO_UNRESOLVED_DECISION');
+});
+test('supports the explicit stdin execution switch used by the governed workflow', () => {
+  const source = fs.readFileSync(require.resolve('./organization-settings-conflict-inventory.cjs'), 'utf8');
+  assert.match(source, /require\.main === module \|\| process\.env\.CORO_SETTINGS_CONFLICT_INVENTORY_RUN === 'true'/);
 });

@@ -1,5 +1,6 @@
 'use strict';
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const test = require('node:test');
 const { AUTHORITY_QUERIES, artifactKeys, inventory, parseListPage, referenceKey, runReadOnlyInventory } = require('./storage-object-authority-inventory.cjs');
 
@@ -45,4 +46,8 @@ test('opens a read-only transaction before inventory', async () => {
 });
 test('parses paginated S3 object metadata without object bodies', () => {
   assert.deepEqual(parseListPage('<ListBucketResult><Contents><Key>a&amp;b.pdf</Key><Size>12</Size></Contents><NextContinuationToken>next%2Fpage</NextContinuationToken></ListBucketResult>'), { objects: [{ key: 'a&b.pdf', size: 12 }], nextToken: 'next%2Fpage' });
+});
+test('supports the explicit stdin execution switch used by the governed workflow', () => {
+  const source = fs.readFileSync(require.resolve('./storage-object-authority-inventory.cjs'), 'utf8');
+  assert.match(source, /require\.main === module \|\| process\.env\.CORO_STORAGE_AUTHORITY_INVENTORY_RUN === 'true'/);
 });

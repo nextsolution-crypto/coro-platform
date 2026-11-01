@@ -164,4 +164,4 @@ async function main() {
 }
 
 module.exports = { AUTHORITY_QUERIES, artifactKeys, inventory, parseListPage, readAuthorityKeys, referenceKey, runReadOnlyInventory, safeKey, signedListPage };
-if (require.main === module) main().catch(() => { process.stdout.write('{"schemaVersion":1,"execution":"FAILED","readOnly":true,"deletionCapability":false}\n'); process.exitCode = 1; });
+if (require.main === module || process.env.CORO_STORAGE_AUTHORITY_INVENTORY_RUN === 'true') main().catch(() => { process.stdout.write('{"schemaVersion":1,"execution":"FAILED","readOnly":true,"deletionCapability":false}\n'); process.exitCode = 1; });
