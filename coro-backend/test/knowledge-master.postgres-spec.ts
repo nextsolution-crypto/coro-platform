@@ -51,7 +51,13 @@ describePg('Knowledge master canonical lifecycle and tenant isolation PostgreSQL
   const extractor = new KnowledgeExtractorService(config);
   const ingestion = new KnowledgeIngestionService(prisma as any, files, authorization, extractor,
     new KnowledgeChunkerService(config, new KnowledgeNormalizer()), embeddings, config);
-  const retrieval = new KnowledgeRetrievalService(prisma as any, authorization, embeddings, config);
+  const retrieval = new KnowledgeRetrievalService(
+    prisma as any,
+    authorization,
+    embeddings,
+    config,
+    { search: jest.fn(async () => []) } as any,
+  );
   const fixture = (name = 'master-native-v1.pdf') => readFileSync(join(__dirname, '../assets/knowledge-qa', name));
   const transition = (file: any) => ({ fileId: file.id, organizationId: org, actorId: owner,
     reason: 'Validation synthétique automatisée du chantier Knowledge', requestId: randomUUID(), lockVersion: file.lockVersion });
