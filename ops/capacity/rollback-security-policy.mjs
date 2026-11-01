@@ -31,9 +31,11 @@ export function validateRollbackSecurity({ manifest, policy, runtime }) {
   if (!Array.isArray(approval.requiredKeyIds) || approval.requiredKeyIds.some((keyId) => !runtime.availableKeyIds?.includes(keyId))) {
     throw new Error("ROLLBACK_SECURITY_KEY_UNAVAILABLE");
   }
-  if (approval.workerCompatibility !== "COMPATIBLE" || runtime.workerState !== "QUIESCED") {
+  if (!['PREFLIGHT', 'EXECUTION'].includes(runtime?.phase)) throw new Error("ROLLBACK_SECURITY_PHASE_INVALID");
+  if (approval.workerCompatibility !== "COMPATIBLE") {
     throw new Error("ROLLBACK_SECURITY_WORKER_UNSAFE");
   }
+  if (runtime.phase === 'EXECUTION' && runtime.workerState !== "QUIESCED") throw new Error("ROLLBACK_SECURITY_WORKER_UNSAFE");
   if (!approval.reviewedAt || !approval.reason || approval.status !== "APPROVED") {
     throw new Error("ROLLBACK_SECURITY_APPROVAL_INVALID");
   }
@@ -44,6 +46,7 @@ export function validateRollbackSecurity({ manifest, policy, runtime }) {
     previousMigrationHead: manifest.previousMigrationHead,
     currentMigrationHead: runtime.migrationHead,
     approvalId: approval.id,
+    phase: runtime.phase,
   };
 }
 if (process.argv[1] && import.meta.url === new URL(`file:${process.argv[1]}`).href) {

@@ -19,7 +19,7 @@ const approval = {
   reason: "synthetic compatible rollback",
   reviewedAt: "2026-11-01T00:00:00Z",
 };
-const runtime = { migrationHead: currentHead, availableKeyIds: ["outbox-v1"], workerState: "QUIESCED" };
+const runtime = { phase: "EXECUTION", migrationHead: currentHead, availableKeyIds: ["outbox-v1"], workerState: "QUIESCED" };
 
 test("accepts only an explicitly approved compatible set", () => {
   const result = validateRollbackSecurity({ manifest, policy: { schemaVersion: 1, blockedRollbackImages: [], approvedRollbackSets: [approval] }, runtime });
@@ -38,5 +38,11 @@ test("refuses schema, key and worker incompatibilities independently", () => {
   assert.throws(() => validateRollbackSecurity({ manifest, policy, runtime: { ...runtime, migrationHead: "20261119010000_future" } }), /SCHEMA_INCOMPATIBLE/);
   assert.throws(() => validateRollbackSecurity({ manifest, policy, runtime: { ...runtime, availableKeyIds: [] } }), /KEY_UNAVAILABLE/);
   assert.throws(() => validateRollbackSecurity({ manifest, policy, runtime: { ...runtime, workerState: "RUNNING" } }), /WORKER_UNSAFE/);
+});
+
+test("permits a non-mutating preflight while requiring quiescence at execution", () => {
+  const policy = { schemaVersion: 1, blockedRollbackImages: [], approvedRollbackSets: [approval] };
+  assert.equal(validateRollbackSecurity({ manifest, policy, runtime: { ...runtime, phase: "PREFLIGHT", workerState: "RUNNING" } }).phase, "PREFLIGHT");
+  assert.throws(() => validateRollbackSecurity({ manifest, policy, runtime: { ...runtime, phase: "EXECUTION", workerState: "RUNNING" } }), /WORKER_UNSAFE/);
 });
 

@@ -27,6 +27,15 @@ Un jeu de quatre images disponible n’est admissible que si les quatre référe
 | `204ad4cc…` | Bibliothèque | chemins d’autorisation du catalogue antérieurs | INADMISSIBLE sans suspension serveur démontrée |
 | `91c1313c…` | Paramètres | mot de passe, portée opérateur, invitations et écrasement organisationnel antérieurs | INADMISSIBLE sans protection équivalente démontrée |
 
+Le dry-run gouverné `41354344585` a lu le manifeste actif le 2026-11-01 sans pull ni changement de conteneur. Il confirme le jeu immédiatement antérieur :
+
+- backend `ghcr.io/nextsolution-crypto/coro-backend@sha256:bb9de4e528641851e577fa8e1172d7cb02ca2164e533f9dd24c404c12282f88a`;
+- frontend `ghcr.io/nextsolution-crypto/coro-frontend@sha256:08772d7f2dc6034f6cdde6808bf7ab6c6795916a1dac3ba0505e496a32008d5c`;
+- portail client `ghcr.io/nextsolution-crypto/coro-client-portal@sha256:2cc1cc1262f9989d36188ff059f3f9a64cbc96aa289decc791ea8da028922a08`;
+- site `ghcr.io/nextsolution-crypto/coro-website@sha256:5e804f4b08601e6e8143d968a8bb3cd7226d8692cb82f5fa7e949afc2d4564e6`.
+
+Les quatre images étaient disponibles, les conteneurs actifs sont restés inchangés et l’espace libre mesuré était `34 649 989 120` octets. Le backend est explicitement bloqué par la politique : sa disponibilité n’autorise pas son exécution.
+
 Cette table ne bloque pas arbitrairement tous les historiques : elle identifie les domaines déjà documentés. Les digests exacts doivent être récupérés des manifestes réconciliés avant d’alimenter l’autorité d’exploitation.
 
 ## Critères de fermeture
@@ -43,4 +52,6 @@ Cette table ne bloque pas arbitrairement tous les historiques : elle identifie l
 - Suite `ops/capacity` rejouée fichier par fichier : 33/33 PASS.
 - `git diff --check` : PASS.
 - Le lanceur parallèle `node --test ops/capacity/*.test.mjs` est inutilisable dans ce shell Windows (`spawn EPERM`); chaque même fichier a été exécuté directement sans modifier son contenu.
-- Statut du lot : `CORRIGÉ_QA`, pas `DÉPLOYÉ`. Le raccordement au geste de bascule et la qualification du manifeste actif restent obligatoires.
+- Chemin de bascule ajouté : workflow `Governed Production Application Rollback`, désactivé par défaut, approbation d’environnement, verrou commun, validation avant et après arrêt des workers, quatre services exacts, aucune migration descendante, roll-forward automatique et preuve immuable.
+- Les points d’entrée ont été distingués : restauration d’images (aucune exécution), maintenance mono-service (retour à l’image active capturée), release normale (aucun rollback automatique général), transition d’état (aucun Docker) et nouveau workflow gouverné (seule bascule complète autorisée).
+- Statut du lot : `CORRIGÉ_QA`, pas `DÉPLOYÉ`. Une bascule Docker intégrée sur services synthétiques et la CI du HEAD final restent obligatoires avant fermeture.

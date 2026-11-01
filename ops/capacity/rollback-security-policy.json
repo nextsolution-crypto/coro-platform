@@ -1,5 +1,7 @@
 {
   "schemaVersion": 1,
-  "blockedRollbackImages": [],
+  "blockedRollbackImages": [
+    "ghcr.io/nextsolution-crypto/coro-backend@sha256:bb9de4e528641851e577fa8e1172d7cb02ca2164e533f9dd24c404c12282f88a"
+  ],
   "approvedRollbackSets": []
 }
