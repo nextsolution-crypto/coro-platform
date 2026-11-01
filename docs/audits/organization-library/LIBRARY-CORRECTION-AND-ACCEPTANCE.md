@@ -55,6 +55,7 @@ Complément futur possible : un adaptateur d’ingestion distinct, versionné et
 ## Acceptation intégrée Chrome — PR #144
 
 - Candidat de départ : `8b10b4973392477efa51d00b9c6dd7d21a913ef1`.
+- Candidat fonctionnel exact testé puis figé : `4f54055b` (le commit documentaire de clôture qui suit ne modifie pas le produit ni les runners exécutés).
 - Correctif découvert pendant la recette : état accessible et explicite « Aucun résultat dans cette catégorie. » au lieu d'une zone vide.
 - Provenance des images QA : images construites directement depuis le worktree de la PR, avec étiquette `org.opencontainers.image.revision`; frontend reconstruit après le correctif ciblé.
 - Données : organisations, projets, acteurs, code incident, rôle et procédure exclusivement synthétiques.
