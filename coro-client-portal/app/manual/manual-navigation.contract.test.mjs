@@ -6,7 +6,7 @@ const css = readFileSync(new URL('./manual.module.css', import.meta.url), 'utf8'
 
 assert.match(page, /requestAnimationFrame/);
 assert.match(page, /document\.getElementById\(id\)\?\.scrollIntoView/);
-assert.match(page, /\[100, 300, 700\]/);
+assert.match(page, /\[100, 300, 700, 1200\]/);
 assert.match(page, /retryTimers\.forEach\(clearTimeout\)/);
 assert.match(page, /addEventListener\("hashchange"/);
 assert.match(page, /addEventListener\("popstate"/);
