@@ -679,10 +679,7 @@ export default function OrganizationSettingsPage() {
                   },
                   {
                     label: 'Membres',
-                    value:
-                      orgInfo.users?.length ??
-                      orgInfo._count?.users ??
-                      '—',
+                    value: orgInfo._count?.users ?? '—',
                   },
                   {
                     label: 'Projets',
