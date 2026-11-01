@@ -1,0 +1,42 @@
+# Matrice consolidée d’acceptation
+
+Tous les correctifs listés sont des ancêtres Git du produit actif `91c1313c393bd630489e66ee26aa5557ca53c2dd`. « Présent » ne signifie pas que la recette historique a été rejouée sur ce SHA.
+
+| Périmètre | Couverture et acteurs | QA / Chrome | PR et livraison de référence | Continuité actuelle | Limites / statut final |
+| --- | --- | --- | --- | --- | --- |
+| Dashboard | KPI, projets récents, tâches, sources secondaires; ADMIN/OPERATOR | QA 12/12; observation SUPER_ADMIN limitée | PR #99, SHA `44772a7e`; release `40406925893`, inspection `40408643149` | Présent | contrôles de session/retrait d’affectation historiques incomplets; **ACCEPTÉ AVEC LIMITES** |
+| Liste Projets | listes/direct, archives, quota, erreurs, multi-sélection; ADMIN/OPERATOR | 21/21, Chrome 12/12 | PR #100, SHA `2ff9db7b`; release `40415529076`, inspection `40417223581` | Présent | progression métier et fonctions absentes non validées; **VALIDÉ QA/DÉPLOYÉ HISTORIQUE** |
+| Fiche Projet | relations, qualité, concurrence, erreurs; multi-tenant | API/navigateur 22/22, Chrome 12/12 | PR #101, SHA `87c5de5f`; première release bloquée capacité | Embarqué par les releases suivantes | pas d’inspection dédiée réussie de ce SHA; **VALIDÉ QA, CONTINUITÉ GIT PROUVÉE** |
+| Documents projet | liste, dépôt privé, versions, téléchargement, archive; acteurs affectés/non affectés | API/stockage 13/13, Chrome 12/12 | PR #103, merge `495e8510` | Embarqué par releases documentaires et suivantes | objets orphelins hors inventaire; **VALIDÉ QA, PRÉSENT** |
+| Génération | PMU/PSI/PCA, atomicité, idempotence, reprise | PostgreSQL/API et Chrome 12/12 | PR #116, merge `18e34734`; release consolidée `93fedd79` / `40963487156` | Présent | PGC/PRA/PUE exclus; **VALIDÉ/DÉPLOYÉ VIA CANDIDAT CONSOLIDÉ** |
+| Éditeur | contenu riche, XSS, versions, concurrence, états | parcours PMU/PSI/PCA; Chrome | PR #117, merge `fbccdd1c`; release consolidée `93fedd79` | Présent | permission fine dédiée absente; **VALIDÉ/DÉPLOYÉ VIA CANDIDAT CONSOLIDÉ** |
+| Révision/approbation | soumission versionnée, auteur≠approbateur, obsolescence, outbox | serveur + parcours Chrome final | PR #124, merge `5b6b4fd0`; release consolidée `93fedd79` | Présent | quorum/affectation nominative non inclus; **VALIDÉ/DÉPLOYÉ VIA CANDIDAT CONSOLIDÉ** |
+| Export PDF | snapshot approuvé, stockage privé, reprise, hash; PMU/PSI/PCA | PDF réels + Chrome 12/12 | PR #125, SHA `93fedd79`; release `40963487156`, inspection `40965196916` | Présent | PDF/UA, lecteur d’écran, PGC/PRA/PUE, signature exclus; **PASS AVEC LIMITES ACCESSIBILITÉ** |
+| Activités | portefeuille, activité, réservation, annulation, ICS; conseiller/client | API/PostgreSQL, 69 tests, Chrome 12/12 | PR #126, `76e7a3c6`; release `40977838218`, inspection `40979105630` | Présent | fournisseur réel non exercé; **VALIDÉ/DÉPLOYÉ/RÉCONCILIÉ** |
+| Timelog | CRUD, propriétaire, DST, totaux, équipe, concurrence | PostgreSQL/API, Chrome 12/12 | PR #128, `f638d7be`; release `40986534316`, inspection `40987658033`; migration 162 | Présent | timer/export/approbation hors mandat; **VALIDÉ/DÉPLOYÉ** |
+| Planification équipe | activité, Booking, replanification, annulation, idempotence | 59+76 tests, Chrome 12/12 | PR #129, `6d8e18ba`; CI et inspections `41059684955`/`41059688826` | Embarqué par releases suivantes | pas de release dédiée documentée; **VALIDÉ QA, CONTINUITÉ GIT PROUVÉE** |
+| Clients | création, invitation, suspension, sessions/liens; ADMIN/SUPER_ADMIN/refus opérateur | 51 ciblés, Chrome 12/12 | PR #135, `08d4a0e0`; release `41097439169`, inspection `41099241216`; migration 163 | Présent | lecteur d’écran; fournisseur simulé; **VALIDÉ/DÉPLOYÉ/RÉCONCILIÉ** |
+| Bâtiments | liste/direct, création, portail Manager/Corporate, documents | API/PostgreSQL, Chrome 24/24 | PR #137, `2e6c06ef`; release `41134179928`; migration 164 | Présent | rollback ancien vulnérable; **VALIDÉ/DÉPLOYÉ/RÉCONCILIÉ** |
+| Carte | portée organisation/portail, marqueurs, filtres, panne tuiles | Chrome 24/24 + réseau OSM limité | PR #139, `903f910d`; livraison réconciliée dans le rapport Carte | Présent | géocodage off, OSM sans SLA, lecteur d’écran; **VALIDÉ AVEC CONDITIONS FOURNISSEUR** |
+| Conformité | états documentaires factuels, filtres, périmètres | Chrome 12/12 + production mobile/desktop | PR #142, `cedbcbf4`; release `41308088727`, inspection `41309283499` | Présent | aucune attestation réglementaire; **VALIDÉ/DÉPLOYÉ/RÉCONCILIÉ** |
+| Bibliothèque | codes, rôles, procédures, lecture/personnalisation | API/PostgreSQL, Chrome 12/12, prod lecture seule | PR #144, `204ad4cc`; release `41318001243`, inspection `41319314721` | Présent | IA/Knowledge non connectés; **VALIDÉ/DÉPLOYÉ/RÉCONCILIÉ** |
+| Manuel | contenu par rôle, recherche guidée, ancres, liens | QA + production authentifiée | PR #146–149, SHA `165b41a0`; release `41334823191`, inspection `41336102818` | Présent | recherche guidée ≠ IA; **VALIDÉ/DÉPLOYÉ/RÉCONCILIÉ** |
+| Paramètres | organisation, membres, mot de passe, invitations, outils | QA intégrée, Chrome 12/12, prod desktop/mobile | PR #151, `91c1313c`; release `41348342595`, inspection `41349712708`; migration 165 | Actif | divergences historiques et rollback conditionnel; **VALIDÉ/DÉPLOYÉ/RÉCONCILIÉ** |
+
+## Portée commerciale
+
+### A — Démontrable
+
+Projets et documents PMU/PSI/PCA, activités/réservations, timelog, planification, clients, bâtiments, carte avec repli, conformité factuelle, Bibliothèque, Manuel et Paramètres dans les rôles et limites ci-dessus.
+
+### B — Utilisable sous conditions
+
+Carte dépendante d’OSM sans SLA; invitations avec secret/outbox gouvernés; PDF lisible mais non PDF/UA; rollback avec suspension des routes dont l’ancienne version réintroduit un défaut; données historiques conflictuelles soumises à confirmation administrative.
+
+### C — Non démontré ou exclu
+
+Signature fournisseur réelle et valeur juridique; PGC/PRA/PUE documentaires; lecteur d’écran réel; PDF/UA; géocodage public; indexation du catalogue Bibliothèque; inventaire exhaustif des objets de stockage orphelins.
+
+### D — Hors campagne
+
+Modules commerciaux, Sentinelle avancée, Population, Incident complet, CORO Network, fournisseurs IA réels, communications d’urgence réelles et verdict global du portail client.
