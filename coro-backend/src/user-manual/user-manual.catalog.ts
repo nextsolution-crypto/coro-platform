@@ -231,6 +231,7 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
       'Ouvrez Projets.',
       'Sélectionnez le projet concerné.',
       'Vérifiez le client et le bâtiment avant de consulter ses documents ou activités.',
+      'Lisez la Progression déclarée comme une valeur manuelle persistée. Elle n’est pas calculée depuis les documents et demeure distincte du score qualité.',
       'Si le projet est archivé, utilisez-le en lecture seule : consultez ses versions et téléchargements autorisés sans tenter de mutation ou de régénération.',
     ],
     'Le dossier du bon projet est affiché.',

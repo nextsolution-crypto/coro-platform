@@ -25,3 +25,11 @@ Workflow `41361883831`, exécution `PASS`, lecture seule et sans capacité de su
 - 145 versions énumérées, 0 version non courante.
 
 Conclusion : aucune suppression n'est justifiée automatiquement. La catégorie projet/bâtiment exige un rapprochement historique individuel avec versions, métadonnées et usages applicatifs; la catégorie historique non classée exige l'identification de l'autorité d'origine et de sa rétention. Aucune URL, clé d'objet, donnée personnelle ou contenu n'a été publié.
+
+## Suivi distinct approuvé
+
+- Responsable : sécurité stockage.
+- Contributeurs requis : propriétaire de l’autorité applicative historique et exploitation stockage.
+- Statut : `CANDIDATE_REQUIRES_INDIVIDUAL_REVIEW` pour les 116 objets; aucun n’est déclaré orphelin.
+- Critères de décision : autorité d’origine retrouvée, versions et métadonnées rapprochées, usage applicatif exclu, rétention applicable identifiée, sauvegarde/retour arrière vérifiés et autorisation de suppression distincte.
+- Action autorisée dans ce MASTER : conservation et suivi uniquement. Aucune suppression d’objet, de version ou de sauvegarde.
