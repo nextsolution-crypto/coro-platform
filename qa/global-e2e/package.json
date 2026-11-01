@@ -38,6 +38,7 @@
     "organization-map:integrated": "node src/organization-map-integrated.mjs",
     "organization-library:browser": "node src/organization-library-browser.mjs",
     "organization-library:acceptance": "node src/organization-library-acceptance.mjs",
+    "organization-manual:browser": "node src/organization-manual-browser.mjs",
     "identity:cleanup": "node src/identity-cleanup.mjs"
   }
 }
