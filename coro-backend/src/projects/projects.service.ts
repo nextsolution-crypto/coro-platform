@@ -701,84 +701,127 @@ export class ProjectsService {
 
     return { score: totalScore, level, details };
   }
-  async getBuildingsCompliance(organizationId: string) {
+  async getBuildingsCompliance(actor: AdviserActor) {
+    const projectScope = projectAccessWhere(actor);
     const buildings = await this.prisma.building.findMany({
-      where: { organizationId, isActive: true },
+      where: {
+        organizationId: actor.organizationId,
+        isActive: true,
+        ...(actor.role === 'OPERATOR'
+          ? { projects: { some: projectScope } }
+          : {}),
+      },
       include: {
         client: { select: { name: true } },
         projects: {
-          where: { isActive: true, status: { not: 'ARCHIVED' } },
+          where: {
+            ...projectScope,
+            isActive: true,
+            status: { not: 'ARCHIVED' },
+          },
           orderBy: { updatedAt: 'desc' },
-          take: 1,
           include: {
             documents: {
               orderBy: { updatedAt: 'desc' },
-              take: 1,
-              select: { updatedAt: true, status: true },
+              select: {
+                id: true,
+                title: true,
+                status: true,
+                version: true,
+                updatedAt: true,
+              },
             },
           },
         },
       },
     });
 
-    const now = new Date();
-
     return buildings
-      .map((b) => {
-        const lastProject = b.projects[0];
-        const lastDoc = lastProject?.documents[0];
-
-        let complianceStatus:
-          | 'CONFORME'
-          | 'AVERTISSEMENT'
-          | 'EXPIRE'
-          | 'AUCUN_DOCUMENT';
-        let monthsAgo: number | null = null;
-        let lastUpdated: Date | null = null;
-
-        if (!lastDoc) {
-          complianceStatus = 'AUCUN_DOCUMENT';
-        } else {
-          lastUpdated = new Date(lastDoc.updatedAt);
-          monthsAgo = Math.floor(
-            (now.getTime() - lastUpdated.getTime()) /
-              (1000 * 60 * 60 * 24 * 30.44),
+      .map((building) => {
+        const sources = building.projects.flatMap((project) =>
+          project.documents.map((document) => ({
+            documentId: document.id,
+            documentTitle: document.title,
+            documentStatus: document.status,
+            version: document.version,
+            documentType: project.documentType,
+            projectId: project.id,
+            projectName: project.name,
+            projectStatus: project.status,
+            lastModifiedAt: document.updatedAt,
+            approvalDate:
+              document.status === 'VALIDATED' || document.status === 'EXPORTED'
+                ? project.approvedAt
+                : null,
+            dateMeaning:
+              document.status === 'VALIDATED' || document.status === 'EXPORTED'
+                ? project.approvedAt
+                  ? 'PROJECT_APPROVAL_DATE'
+                  : 'APPROVAL_DATE_UNKNOWN'
+                : 'LAST_MODIFIED_DATE',
+            current: document.status !== 'ARCHIVED',
+          })),
+        );
+        const current = sources.filter((source) => source.current);
+        const approved = current.filter(
+          (source) =>
+            source.documentStatus === 'VALIDATED' ||
+            source.documentStatus === 'EXPORTED',
+        );
+        const inReview = current.filter((source) => {
+          const project = building.projects.find(
+            (candidate) => candidate.id === source.projectId,
           );
-          complianceStatus =
-            monthsAgo >= 12
-              ? 'EXPIRE'
-              : monthsAgo >= 10
-                ? 'AVERTISSEMENT'
-                : 'CONFORME';
-        }
-
+          return (
+            source.documentStatus === 'IN_PROGRESS' ||
+            project?.status === 'REVIEW'
+          );
+        });
+        const drafts = current.filter(
+          (source) => source.documentStatus === 'DRAFT',
+        );
+        const primarySource =
+          approved[0] || inReview[0] || drafts[0] || sources[0] || null;
+        const documentaryStatus = approved.length
+          ? 'APPROVED_AVAILABLE'
+          : inReview.length
+            ? 'IN_REVIEW'
+            : drafts.length
+              ? 'DRAFT_ONLY'
+              : sources.length
+                ? 'HISTORICAL_ONLY'
+                : 'NO_ACCESSIBLE_DOCUMENT';
         return {
-          id: b.id,
-          name: b.name,
-          address: b.address,
-          city: b.city,
-          province: b.province,
-          buildingType: b.buildingType,
-          clientName: b.client.name,
-          projectId: lastProject?.id || null,
-          projectName: lastProject?.name || null,
-          documentType: lastProject?.documentType || null,
-          lastUpdated,
-          monthsAgo,
-          complianceStatus,
+          id: building.id,
+          name: building.name,
+          address: building.address,
+          city: building.city,
+          province: building.province,
+          buildingType: building.buildingType,
+          clientName: building.client.name,
+          documentaryStatus,
+          sourceCount: sources.length,
+          approvedCount: approved.length,
+          reviewCount: inReview.length,
+          draftCount: drafts.length,
+          historicalCount: sources.length - current.length,
+          primarySource,
+          sources,
+          exclusions: ['INACTIVE_PROJECT', 'ARCHIVED_PROJECT'],
+          regulatoryAttestation: false,
         };
       })
       .sort((a, b) => {
-        // Trier d'abord par client, puis par état de conformité
         const clientCompare = a.clientName.localeCompare(b.clientName, 'fr');
         if (clientCompare !== 0) return clientCompare;
         const order = {
-          EXPIRE: 0,
-          AVERTISSEMENT: 1,
-          AUCUN_DOCUMENT: 2,
-          CONFORME: 3,
+          NO_ACCESSIBLE_DOCUMENT: 0,
+          DRAFT_ONLY: 1,
+          IN_REVIEW: 2,
+          HISTORICAL_ONLY: 3,
+          APPROVED_AVAILABLE: 4,
         };
-        return order[a.complianceStatus] - order[b.complianceStatus];
+        return order[a.documentaryStatus] - order[b.documentaryStatus];
       });
   }
   async submitForApproval(id: string, organizationId: string, userId: string) {

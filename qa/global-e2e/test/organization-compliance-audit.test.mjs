@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '../../..');
@@ -8,28 +8,32 @@ const page = await readFile(resolve(root, 'coro-frontend/app/buildings/complianc
 const service = await readFile(resolve(root, 'coro-backend/src/projects/projects.service.ts'), 'utf8');
 const controller = await readFile(resolve(root, 'coro-backend/src/projects/projects.controller.ts'), 'utf8');
 
-test('compliance endpoint remains read-only and authenticated', () => {
+test('endpoint is authenticated, read-only and passes the full actor', () => {
   assert.match(controller, /@Controller\('projects'\)[\s\S]*@UseGuards\(AuthGuard\('jwt'\), OrganizationStatusGuard\)/);
   assert.match(controller, /@Get\('buildings-compliance'\)/);
+  assert.match(controller, /getBuildingsCompliance\(req\.user\)/);
   assert.doesNotMatch(controller, /@(Post|Put|Patch|Delete)\('buildings-compliance'/);
 });
 
-test('characterizes the current technical-age formula and labels', () => {
-  assert.match(service, /lastDoc\.updatedAt/);
-  assert.match(service, /30\.44/);
-  assert.match(service, /monthsAgo >= 12/);
-  assert.match(page, /Conforme/);
-  assert.match(page, /Expir/);
+test('uses canonical scope and factual document states without regulatory inference', () => {
+  const method = service.slice(service.indexOf('async getBuildingsCompliance'), service.indexOf('async submitForApproval'));
+  assert.match(method, /projectAccessWhere\(actor\)/);
+  assert.match(method, /APPROVED_AVAILABLE/);
+  assert.match(method, /DRAFT_ONLY/);
+  assert.doesNotMatch(method, /30\.44|monthsAgo >= 12|CONFORME/);
+  assert.match(page, /ne constitue pas une attestation de conformité réglementaire/);
+  assert.match(page, /Document approuvé disponible/);
 });
 
-test('characterizes missing error and retry presentation', () => {
-  assert.match(page, /catch \(err\) \{ console\.error\(err\); \}/);
-  assert.doesNotMatch(page, /role=["']alert["']/);
-  assert.doesNotMatch(page, /R[eé]essayer/);
+test('presents failures separately from empty states with retry', () => {
+  assert.match(page, /role="alert"/);
+  assert.match(page, /Réessayer/);
+  assert.match(page, /Aucun bâtiment accessible dans votre périmètre/);
+  assert.match(page, /Aucun résultat ne correspond aux filtres sélectionnés/);
 });
 
-test('characterizes absent portal counterpart and absent exports', async () => {
-  const portalFiles = await import('node:fs/promises').then(({ readdir }) => readdir(resolve(root, 'coro-client-portal/app')));
+test('keeps the portal counterpart and export outside this targeted batch', async () => {
+  const portalFiles = await readdir(resolve(root, 'coro-client-portal/app'));
   assert.ok(!portalFiles.includes('compliance'));
-  assert.doesNotMatch(page, />\s*(Exporter|T[eé]l[eé]charger)/i);
+  assert.doesNotMatch(page, />\s*(Exporter|Télécharger)/i);
 });

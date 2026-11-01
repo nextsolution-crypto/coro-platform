@@ -21,7 +21,7 @@ const evidenceRoot = assertUnderQaRoot(
 const report = {
   sha: process.env.CORO_QA_COMMIT_SHA,
   executedAt: new Date().toISOString(),
-  fixture: 'compliance-audit-v1',
+  fixture: 'compliance-correction-v2',
   checks: [],
   browser: [],
   limitations: [
@@ -125,13 +125,13 @@ try {
   ]);
   const byName = new Map(adminResponse.data.map((item) => [item.name, item]));
   check('api-admin-success', adminResponse.status === 200 ? 'PASS' : 'FAIL', adminResponse.status, 200);
-  check('zero-data-explicit', byName.get('Audit No Document')?.complianceStatus === 'AUCUN_DOCUMENT' ? 'PASS' : 'FAIL', byName.get('Audit No Document'), 'AUCUN_DOCUMENT');
-  check('draft-not-regulatory-proof', byName.get('Audit Draft Recent')?.complianceStatus === 'CONFORME' ? 'FAIL' : 'PASS', byName.get('Audit Draft Recent'), 'A draft document must not be called compliant');
-  check('ten-month-threshold', byName.get('Audit Valid Ten Months')?.complianceStatus === 'AVERTISSEMENT' ? 'PASS' : 'FAIL', byName.get('Audit Valid Ten Months'), 'AVERTISSEMENT under current formula');
-  check('twelve-month-threshold', byName.get('Audit Valid Twelve Months')?.complianceStatus === 'EXPIRE' ? 'PASS' : 'FAIL', byName.get('Audit Valid Twelve Months'), 'EXPIRE under current formula');
-  check('archived-project-excluded', byName.get('Audit Archived Only')?.complianceStatus === 'AUCUN_DOCUMENT' ? 'PASS' : 'FAIL', byName.get('Audit Archived Only'), 'AUCUN_DOCUMENT');
+  check('zero-data-explicit', byName.get('Audit No Document')?.documentaryStatus === 'NO_ACCESSIBLE_DOCUMENT' ? 'PASS' : 'FAIL', byName.get('Audit No Document'), 'NO_ACCESSIBLE_DOCUMENT');
+  check('draft-not-regulatory-proof', byName.get('Audit Draft Recent')?.documentaryStatus === 'DRAFT_ONLY' && byName.get('Audit Draft Recent')?.regulatoryAttestation === false ? 'PASS' : 'FAIL', byName.get('Audit Draft Recent'), 'DRAFT_ONLY without regulatory attestation');
+  check('approved-recent-factual', byName.get('Audit Valid Recent')?.documentaryStatus === 'APPROVED_AVAILABLE' ? 'PASS' : 'FAIL', byName.get('Audit Valid Recent'), 'APPROVED_AVAILABLE');
+  check('age-does-not-infer-expiry', ['Audit Valid Ten Months', 'Audit Valid Twelve Months'].every((name) => byName.get(name)?.documentaryStatus === 'APPROVED_AVAILABLE') ? 'PASS' : 'FAIL', [byName.get('Audit Valid Ten Months'), byName.get('Audit Valid Twelve Months')], 'Both remain factual approved-document states');
+  check('archived-project-excluded', byName.get('Audit Archived Only')?.documentaryStatus === 'NO_ACCESSIBLE_DOCUMENT' ? 'PASS' : 'FAIL', byName.get('Audit Archived Only'), 'NO_ACCESSIBLE_DOCUMENT');
   check('inactive-building-excluded', byName.has('Audit Inactive Building') ? 'FAIL' : 'PASS', byName.get('Audit Inactive Building') ?? null, 'absent');
-  check('latest-project-hides-evidence', byName.get('Audit Latest Project Hides Evidence')?.complianceStatus === 'AUCUN_DOCUMENT' ? 'FAIL' : 'PASS', byName.get('Audit Latest Project Hides Evidence'), 'Existing eligible evidence must not disappear because another project is newer');
+  check('latest-project-preserves-evidence', byName.get('Audit Latest Project Hides Evidence')?.documentaryStatus === 'APPROVED_AVAILABLE' ? 'PASS' : 'FAIL', byName.get('Audit Latest Project Hides Evidence'), 'Existing approved evidence remains selected when another project is newer');
   check('operator-scope', advisorResponse.data.some((item) => item.name === 'Audit Other Owner') ? 'FAIL' : 'PASS', advisorResponse.data.map((item) => item.name), 'Only canonically assigned projects/buildings');
   check('cross-tenant-api', advisorResponse.data.some((item) => item.name === 'Synthetic Building B') ? 'FAIL' : 'PASS', advisorResponse.data.map((item) => item.name), 'No organization B');
   check('read-only-contract', 'PASS', { methods: ['GET'], mutationEndpoints: 0 }, 'No compliance mutation endpoint exists');
@@ -161,7 +161,7 @@ try {
     await page.goto(`${process.env.CORO_QA_FRONTEND_URL}/buildings/compliance`, { waitUntil: 'networkidle0', timeout: 60_000 });
     const state = await page.evaluate(() => ({
       overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
-      heading: document.querySelector('h2')?.textContent?.trim(),
+      heading: document.querySelector('h1')?.textContent?.trim(),
       buttonsWithoutName: [...document.querySelectorAll('button')].filter((button) => !button.innerText.trim() && !button.getAttribute('aria-label')).length,
       body: document.body.innerText,
     }));
@@ -169,22 +169,23 @@ try {
     await page.screenshot({ path: join(evidenceRoot, `${id}.png`), fullPage: true });
     report.browser.push({ id, status: !state.overflow && state.heading && consoleErrors.length === 0 ? 'PASS' : 'FAIL', ...state, body: undefined, consoleErrors });
     if (id === '1440x900-classic') {
-      const search = 'input[placeholder*="Rechercher"]';
-      await page.$eval(search, (input) => {
-        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-        setter.call(input, 'Audit Draft Recent');
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      });
+      const search = '#compliance-search';
+      await page.type(search, 'Audit Draft Recent');
       await new Promise((resolve) => setTimeout(resolve, 200));
-      const searchState = await page.evaluate(() => ({ value: document.querySelector('input[placeholder*="Rechercher"]')?.value, rows: document.querySelectorAll('tbody tr').length }));
-      check('search-filter', searchState.value === 'Audit Draft Recent' && searchState.rows === 1 ? 'PASS' : 'NOT_VERIFIED', searchState, 'one matching building; synthetic input event did not update React state reliably');
+      const searchState = await page.evaluate(() => ({ value: document.querySelector('#compliance-search')?.value, cards: document.querySelectorAll('article').length }));
+      check('search-filter', searchState.value === 'Audit Draft Recent' && searchState.cards === 1 ? 'PASS' : 'FAIL', searchState, 'one matching building');
       await page.click(search, { clickCount: 3 });
       await page.keyboard.press('Backspace');
-      await page.evaluate(() => [...document.querySelectorAll('button')].find((button) => button.innerText.includes('Conformes'))?.click());
-      const statusState = await page.evaluate(() => ({ rows: document.querySelectorAll('tbody tr').length }));
-      check('status-filter', statusState.rows === 3 ? 'PASS' : 'FAIL', statusState, 'three current-status rows');
+      await page.evaluate(() => [...document.querySelectorAll('button')].find((button) => button.innerText.includes('Brouillon seulement'))?.click());
+      const statusState = await page.evaluate(() => ({ cards: document.querySelectorAll('article').length }));
+      check('status-filter', statusState.cards === 1 ? 'PASS' : 'FAIL', statusState, 'one draft-only building');
       await page.reload({ waitUntil: 'networkidle0' });
-      check('f5-session', (await page.$eval('h2', (node) => node.textContent)).includes('conformité') ? 'PASS' : 'FAIL', 'authenticated page restored', 'authenticated page restored');
+      const f5State = await page.evaluate(() => ({
+        heading: document.querySelector('h1')?.textContent?.trim() ?? null,
+        loginVisible: Boolean(document.querySelector('input[type="password"]')),
+        path: location.pathname,
+      }));
+      check('f5-session', f5State.path === '/buildings/compliance' && Boolean(f5State.heading) && !f5State.loginVisible ? 'PASS' : 'FAIL', f5State, 'authenticated compliance page restored');
       await page.keyboard.press('Tab');
       check('keyboard-focus', await page.evaluate(() => document.activeElement !== document.body) ? 'PASS' : 'FAIL', await page.evaluate(() => document.activeElement?.tagName), 'focus moves to an interactive control');
     }

@@ -62,7 +62,7 @@ export class ProjectsController {
 
   @Get('buildings-compliance')
   getBuildingsCompliance(@Request() req: any) {
-    return this.projectsService.getBuildingsCompliance(req.user.organizationId);
+    return this.projectsService.getBuildingsCompliance(req.user);
   }
 
   @Get('pending-approval')
