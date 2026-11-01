@@ -45,4 +45,3 @@ test("permits a non-mutating preflight while requiring quiescence at execution",
   assert.equal(validateRollbackSecurity({ manifest, policy, runtime: { ...runtime, phase: "PREFLIGHT", workerState: "RUNNING" } }).phase, "PREFLIGHT");
   assert.throws(() => validateRollbackSecurity({ manifest, policy, runtime: { ...runtime, phase: "EXECUTION", workerState: "RUNNING" } }), /WORKER_UNSAFE/);
 });
-

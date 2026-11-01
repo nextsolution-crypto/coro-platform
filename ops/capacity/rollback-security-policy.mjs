@@ -53,4 +53,3 @@ if (process.argv[1] && import.meta.url === new URL(`file:${process.argv[1]}`).hr
   const input = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
   process.stdout.write(`${JSON.stringify(validateRollbackSecurity(input), null, 2)}\n`);
 }
-

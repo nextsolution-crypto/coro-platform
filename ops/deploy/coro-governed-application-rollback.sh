@@ -90,11 +90,18 @@ build_security_input EXECUTION QUIESCED
 node "$validator" "$security_input" >/dev/null || fail SECURITY_EXECUTION_REFUSED
 docker compose -f "$repo/docker-compose.yml" -f "$rollback_override" up -d --no-deps --no-build backend frontend client-portal website >/dev/null || fail ROLLBACK_SWITCH_FAILED
 
-for endpoint in 'http://127.0.0.1:3002/api/health' 'http://127.0.0.1:3000' 'http://127.0.0.1:3003' 'http://127.0.0.1:3001'; do
+for endpoint in 'http://127.0.0.1:3000' 'http://127.0.0.1:3003' 'http://127.0.0.1:3001'; do
   ready=false
   for _ in $(seq 1 40); do code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 "$endpoint" || true)"; [[ "$code" =~ ^[23][0-9][0-9]$ ]] && { ready=true; break; }; sleep 3; done
   [[ "$ready" == true ]] || fail HEALTH_CHECK_FAILED
 done
+backend_ready=false
+for _ in $(seq 1 40); do
+  code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 -H 'content-type: application/json' -d '{}' http://127.0.0.1:3002/api/auth/login || true)"
+  [[ "$code" =~ ^(400|401)$ ]] && { backend_ready=true; break; }
+  sleep 3
+done
+[[ "$backend_ready" == true ]] || fail BACKEND_READINESS_FAILED
 [[ "$(docker compose -f "$repo/docker-compose.yml" exec -T postgres sh -ceu 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc '\''SELECT migration_name FROM "_prisma_migrations" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY finished_at DESC LIMIT 1'\''')" == "$current_head" ]] || fail DATABASE_HEAD_CHANGED
 after_outbox="$(docker compose -f "$repo/docker-compose.yml" exec -T postgres sh -ceu 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc '\''SELECT (SELECT count(*) FROM "ClientInvitationEvent") || ':'\'' || (SELECT count(*) FROM "OrganizationUserInvitationEvent")'\''')" || fail OUTBOX_POSTCHECK_FAILED
 [[ "$after_outbox" == "$before_outbox" ]] || fail OUTBOX_EVENT_COUNT_CHANGED
