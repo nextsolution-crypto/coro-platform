@@ -2,9 +2,11 @@
 
 ## Statut courant
 
-`EN_EXÉCUTION — TRAVAUX INDÉPENDANTS IMPLÉMENTÉS, LIVRAISON EN COURS`
+`TRAVAUX_INDÉPENDANTS_LIVRÉS — DÉCISIONS_HUMAINES_RESTANTES`
 
-La fusion de la consolidation documentaire ne constitue pas une livraison produit. Le produit actif de référence reste `91c1313c393bd630489e66e26aa5557ca53c2dd`, migration 165, jusqu’à vérification contraire par un manifeste autoritatif.
+Réconciliation autoritative : le produit actif vérifié est `c91543efdf34c6429d1877a0b92f0a28567b5bb7`, migration 166. La release `41360598223` et l'inspection `41361880281` sont réussies. Bibliothèque → Knowledge/CORO AI authentifié est livré; Bedrock réel reste désactivé. L'inventaire stockage `41361883831` est strictement en lecture seule et n'a supprimé aucun objet.
+
+Le manifeste autoritatif post-release remplace la baseline historique `91c1313c…` / migration 165. La baseline active est désormais `c91543efdf34c6429d1877a0b92f0a28567b5bb7`, migration 166.
 
 ## Décisions et validations humaines attendues
 
@@ -25,6 +27,15 @@ La fusion de la consolidation documentaire ne constitue pas une livraison produi
 
 ## Verdict final
 
-À compléter uniquement après traitement indépendant des lots A à H. Aucun statut global « 100 % » ne sera produit.
+Les travaux indépendants autorisés sont achevés et livrés. Les réserves restantes dépendent exclusivement d'une preuve ou d'une décision humaine :
+
+1. connexion ADMIN/SUPER_ADMIN à `https://app.getcoro.io/settings/users`, puis confirmation immédiate de l'envoi unique vers `info@getcoro.io`; constat humain séparé de la réception et du lien; nettoyage de l'identité QA après la recette;
+2. exécution de `SCREEN-READER-HUMAN-ACCEPTANCE.md` avec NVDA, JAWS ou VoiceOver;
+3. décision `PDF_UA_INCLUS_CONTRACTUELLEMENT` ou `PDF_UA_EXCLU_V1`;
+4. décision `JALONS_GOUVERNÉS` ou `PROGRESSION_DÉCLARÉE`.
+
+Le stockage reste une réserve de qualification : les 116 candidats sont catégorisés, mais aucun n'est démontré supprimable. Le rollback est prêt et répété en environnement isolé, sans prétendre à une exécution réelle de production.
+
+Le MASTER ne recevra aucun statut global « 100 % ». Sa clôture finale reste suspendue uniquement aux preuves et décisions humaines listées ci-dessus; les travaux techniques indépendants sont terminés.
 
 Le lot des divergences historiques est clos par l’inventaire production `41356195887` : aucune ligne de conflit et aucune organisation affectée. Le stockage reste ouvert : les 116 objets non rapprochés sont des candidats, pas des orphelins démontrés.

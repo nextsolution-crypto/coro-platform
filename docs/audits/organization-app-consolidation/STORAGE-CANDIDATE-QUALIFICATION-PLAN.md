@@ -11,3 +11,17 @@ L’extension prépare, sans lire les corps ni exposer les clés:
 - maintien du statut `CANDIDATE_REQUIRES_INDIVIDUAL_REVIEW`.
 
 Une future remédiation exige, objet par objet ou groupe démontré homogène: autorité historique retrouvée, politique de rétention applicable, copie distante ou remplacement vérifié, absence d’usage applicatif, retour arrière sans exposition publique, puis autorisation de suppression distincte. Aucune suppression d’objet, version ou sauvegarde n’est contenue dans l’outil.
+
+## Résultat production du 2026-11-01
+
+Workflow `41361883831`, exécution `PASS`, lecture seule et sans capacité de suppression :
+
+- 145 objets courants, 814 284 456 octets;
+- 29 objets référencés présents, 0 référence manquante;
+- 116 candidats, 690 458 654 octets;
+- `UNCLASSIFIED_HISTORICAL`: 60 objets, 33 348 239 octets;
+- `PROJECT_OR_BUILDING_DOCUMENT`: 56 objets, 657 110 415 octets;
+- 110 objets de 30–89 jours, 6 objets de moins de 30 jours;
+- 145 versions énumérées, 0 version non courante.
+
+Conclusion : aucune suppression n'est justifiée automatiquement. La catégorie projet/bâtiment exige un rapprochement historique individuel avec versions, métadonnées et usages applicatifs; la catégorie historique non classée exige l'identification de l'autorité d'origine et de sa rétention. Aucune URL, clé d'objet, donnée personnelle ou contenu n'a été publié.
