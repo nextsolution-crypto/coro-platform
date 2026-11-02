@@ -136,11 +136,8 @@ npm run qr:generate -- contact https://getcoro.io/qr/contact
 
 ## Limites restantes
 
-- Recette physique sur plusieurs téléphones : `NOT_VERIFIED`.
-- Test d'impression réel : `NOT_VERIFIED`.
-- HTTPS public `https://getcoro.io/qr/contact` : `NOT_DEPLOYED` et non activé au terme de la tentative gouvernée du 2 novembre 2026.
-- Migration de production : non exécutée; la tête demeure `20261119010000_library_knowledge_source_authority` et `20261120010000_permanent_qr_codes` apparaît zéro fois dans l'historique de production.
-- Le déploiement doit être repris à partir d'un nouveau candidat explicitement revu, car `main` a avancé vers un commit Rendement non inclus dans l'autorisation QR-001 pendant le build immuable.
+- Recette physique sur téléphone : `NOT_VERIFIED` jusqu'à confirmation de Mathieu.
+- Impression à la taille finale : `NOT_VERIFIED` jusqu'à essai physique.
 
 ## Intégration et tentative de release gouvernée — 2 novembre 2026
 
@@ -155,11 +152,23 @@ npm run qr:generate -- contact https://getcoro.io/qr/contact
 - Digests candidats construits mais non activés : backend `sha256:7ba17b1ca55517377f09cc270a0dd305a29a74f9646c96ae9ab260d9d140ab1d`, frontend `sha256:ba06b4396978df4402d76eef4ed79fcca2da0cf8113645d4ed510c7183112bf4`, website `sha256:526091390a8349820b29646340179ee79eae87f7e5b0d2a6ccd701c44063afaa`, portail `sha256:8dd208fd86b9888f123b7a5328b5a1e986372ef88739e11007c64b31067ea592`.
 - Checksum local attendu de la migration QR : `cb2b8d33f67bea6f5ebf490e55ced05c82b50d792e33c8b7cf43cfd96980cabc`.
 
+## Clôture de production combinée — 2 novembre 2026
+
+- Candidat commun livré : `205eb1283b7de71a338e36647ecb5c91b6ed0784`.
+- Pipeline gouverné : run `41533537344`, **SUCCESS**.
+- Réconciliation commune : run `41535693393`, **SUCCESS**.
+- Inspection post-release : run `41535829755`, verdict **GO**.
+- Migration `20261120010000_permanent_qr_codes` : appliquée exactement une fois, tête active, checksum `cb2b8d33f67bea6f5ebf490e55ced05c82b50d792e33c8b7cf43cfd96980cabc`, aucun échec.
+- Provisionnement : `contact`, portée `GLOBAL`, statut actif, destination `https://getcoro.io/contact`; aucune destination préexistante divergente n'a été remplacée.
+- Route publique : HTTP 307, `Location: https://getcoro.io/contact`, `Cache-Control: no-store, max-age=0`, Cloudflare `DYNAMIC`; destination finale HTTP 200 et slug inconnu HTTP 404.
+- Administration : session `SUPER_ADMIN` observée, registre chargé, destination exacte, état actif et persistance après F5; appel anonyme refusé HTTP 401.
+- SVG et PNG publics : HTTP 200 et empreintes identiques au candidat. Le PNG public 2048 × 2048 a été décodé vers `https://getcoro.io/qr/contact`.
+
 ## Invariants de remise
 
-- Travaux Rendement modifiés : **0**.
-- Base propriétaire mutée : **NON**.
+- Travaux Rendement : livrés séparément dans le même candidat autorisé; aucune modification supplémentaire par la réconciliation QR.
+- Base propriétaire mutée : **OUI**, uniquement par la migration QR et son provisionnement gouverné attendus.
 - Destination publique existante modifiée : **NON**.
 - Fusion PR #164 : **OUI**, merge commit `a5cc1ddcc163b39b99ee6a8cf9f5864a29b130f4`.
-- Migration production : **NON**.
-- Activation/release : **AUCUNE**; tentative bloquée avant mutation par la garde immuable.
+- Migration production : **OUI**, une application vérifiée.
+- Activation/release : **OUI**, candidat commun gouverné `205eb1283b7de71a338e36647ecb5c91b6ed0784`.
