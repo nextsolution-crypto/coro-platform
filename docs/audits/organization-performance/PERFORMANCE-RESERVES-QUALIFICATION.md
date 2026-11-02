@@ -79,4 +79,13 @@ Décisions métier toujours ouvertes et non modifiées par ce lot :
 - proposition `Mandats avec participation de` : sélection des mandats auxquels le conseiller participe, avec toute leur main-d'œuvre;
 - aucune de ces propositions n'est une règle approuvée et `asOf` n'est pas présenté comme une photographie financière historique.
 
-La vérification authentifiée en production et la restitution par lecteur d'écran réel restent `NOT_VERIFIED`; aucune production n'a été consultée ou modifiée dans ce lot.
+## Réconciliation de livraison
+
+- Correction QA : `ACCEPTATION_INTÉGRÉE_PASS` sur `7f6580b0788ed22705b0604911c76189632c5a90`.
+- Fusion : PR `#165`, merge `600b1a4134ada3b3c9dd15b7333876f6e511fcdd`.
+- Candidat final explicitement qualifié : `205eb1283b7de71a338e36647ecb5c91b6ed0784`; l'écart après la fusion Rendement est documentaire et concerne le checkpoint QR `#166`.
+- Déploiement : workflow `41533537344` SUCCESS.
+- Inspection : workflow `41535662856` PASS/GO; SHA, digests, services, migration 167, sauvegarde distante, restauration, capacité et verrou réconciliés.
+- Rollback applicatif : `REFUSÉ` vers le backend précédent tant qu'un jeu compatible n'est pas explicitement approuvé; la simple disponibilité de quatre images ne prouve pas la sécurité fonctionnelle.
+
+La vérification authentifiée en production reste `NOT_VERIFIED` jusqu'à l'ouverture d'un onglet autorisé. La restitution par lecteur d'écran réel reste `NOT_VERIFIED`; les preuves DOM, clavier, focus et zoom ne sont pas assimilées à une restitution vocale. Les décisions `Travail réalisé jusqu'au` et `Mandats avec participation de` restent ouvertes et aucun calcul ni libellé n'a été modifié.
