@@ -28,9 +28,9 @@
 
 ## Verdict
 
-`AUDIT_COMPLETED_WITH_FINDINGS`
+`CORRECTION_REQUISE`
 
-Le calcul nominal est déterministe, l’isolation inter-tenant et l’autorité financière sont fail-closed, et la matrice visuelle demandée est réussie. Le produit conserve actuellement dans les agrégats l’historique d’une identité désactivée; cette conservation est techniquement cohérente mais non explicitée dans l’interface. Les projets archivés, le filtre conseiller, la photographie `asOf`, le volume, le rechargement 503/réponses désordonnées, le lecteur d’écran réel et la lecture production restent non démontrés ou ambigus. Aucun correctif produit n’a été entrepris, conformément au mandat.
+Le calcul nominal est déterministe, l’isolation inter-tenant et l’autorité financière sont fail-closed, et la matrice visuelle demandée est réussie. La qualification complémentaire démontre l’exhaustivité à 1 001 saisies et la protection contre les réponses réseau désordonnées. Elle confirme aussi que `asOf` est une borne de date de travail, non une photographie historique, et que le filtre conseiller sélectionne des mandats plutôt qu’une main-d’œuvre individuelle. Un défaut bloquant a été reproduit : un projet archivé accepte encore une nouvelle tâche et une nouvelle saisie de temps. Le lecteur d’écran réel et la lecture production restent `NOT_VERIFIED`. Aucun correctif produit n’a été entrepris, conformément au mandat.
 
 ## Preuves
 
@@ -38,4 +38,6 @@ Le calcul nominal est déterministe, l’isolation inter-tenant et l’autorité
 - Identité inactive : `D:\CORO-QA\tracking\organization-performance\api\performance-inactive-acceptance.json`
 - Chrome et captures : `D:\CORO-QA\tracking\organization-performance\browser\performance-browser-acceptance.json`
 - Panne 503 et reprise : `D:\CORO-QA\tracking\organization-performance\browser\performance-browser-errors.json`
+- Réserves API/PostgreSQL : `D:\CORO-QA\tracking\organization-performance\api\performance-reserves-acceptance.json`
+- Réponses désordonnées : `D:\CORO-QA\tracking\organization-performance\browser\performance-browser-ordering.json`
 - Le checkpoint contenant les sessions reste hors des preuves et du dépôt, puis est supprimé à la fermeture du stack.

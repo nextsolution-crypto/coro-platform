@@ -4,11 +4,11 @@ Ce document prépare un lot ultérieur; il n’autorise aucune modification prod
 
 ## Priorité 1 — sémantique et sécurité des données
 
-1. Faire approuver le traitement des utilisateurs désactivés et projets archivés : exclusion de la vue courante, inclusion historique libellée, ou filtre explicite.
+1. Conserver l'historique des projets archivés dans les lectures et agrégats, mais ajouter un garde serveur partagé qui refuse toute nouvelle écriture sur un projet archivé ou inactif.
 2. Formaliser `userId` financier et `asOf`; interdire toute présentation « individuelle » ou « historique » non démontrée.
 3. Ajouter des tests à deux organisations, acteurs actifs/inactifs, projet actif/archivé et taux complet/partiel.
 
-Critère d’acceptation : chaque montant et compteur est traçable vers un ensemble déterministe de lignes; aucun état inactif ou historique n’est inclus silencieusement.
+Critère d’acceptation : chaque montant et compteur est traçable vers un ensemble déterministe de lignes; une archive reste consultable mais toute création/mutation est refusée avant écriture, événement ou notification.
 
 ## Priorité 2 — robustesse et échelle
 

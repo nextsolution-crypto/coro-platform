@@ -43,7 +43,7 @@ async function login(email) {
 async function reusableSession(name, email, saved) {
   const candidate = saved?.[name];
   if (!candidate?.access_token || !candidate?.user) return null;
-  const me = await call('GET', '/auth/me', candidate.access_token);
+  const me = await call('GET', '/users/me', candidate.access_token);
   if (me.status !== 200 || String(me.data?.email || '').toLowerCase() !== email) return null;
   report.checks.push({ id: `session-reused-${name}`, status: 'PASS', detail: 'existing QA session remained valid' });
   return candidate;

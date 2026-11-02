@@ -11,7 +11,10 @@
 | Isolation | organisation B ne reçoit aucune donnée A | PASS | acteur organisation B : aucun conseiller A; délégation vers B refusée |
 | Interface | 390/768/1440/2560 × Classic/Glass Light/Glass Dark | PASS | Chrome réel 12/12; captures sous le dossier de preuves |
 | Interface | F5, clavier, zoom 200 %, absence de débordement | PASS | session conservée après F5, focus clavier, zoom 200 %, 0 débordement |
-| Erreurs | vide, 403, 503, reprise, réponses désordonnées | PARTIAL | vide, 403 et 503/reprise PASS; réponses désordonnées NOT_VERIFIED |
+| Erreurs | vide, 403, 503, reprise, réponses désordonnées | PASS | réponses inversées : dernière sélection conservée; erreur ultérieure : anciennes données masquées |
+| Archives | historique lisible et nouvelles écritures interdites | FAIL | historique conservé; nouvelle tâche et nouvelle saisie de temps acceptées (`201`) après archivage |
+| Volume | plus de 1 000 saisies sans perte ni double compte | PASS | 1 001/1 001 lignes; 100,1 h attendues; lectures mesurées à 29,2 ms et 30,7 ms |
+| Sémantique | `asOf` et filtre conseiller | DÉCISION_MÉTIER_REQUISE | borne de date de travail, non photographie historique; sélection de mandats avec toute leur main-d'œuvre |
 | Identité inactive | session refusée, historique conservé, réactivation sans restauration de session | PASS | 401 après désactivation et après réactivation; 8 h / 640 CAD historiques conservés |
 | Régression | backend Rendement | PASS | 2 suites, 16 tests |
 | Régression | frontend Rendement | PASS | 2 tests contrat + 7 tests monétaires; TypeScript PASS |
