@@ -15,6 +15,8 @@
 | Rollback ancien | CONDITIONNEL | sécurité exploitation | certaines images réintroduisent des défauts corrigés | matrice par release, image corrigée ou suspension des routes | release manager |
 | Progression/qualité Projet | CLOS — `PROGRESSION_DÉCLARÉE` DÉPLOYÉE | décision métier | valeur manuelle persistée, explicitement distincte du score qualité | aucune; SHA actif `b0183e56`, inspection `41366771019` | produit |
 | Dashboard multi-rôle actuel | PREUVE HISTORIQUE LIMITÉE | preuve manquante | correctif présent, mais certains scénarios historiques non rejoués sur le SHA actif | campagne ciblée seulement en cas de changement ou indice de régression | QA produit |
+| Désactivation User interne | CLOS — DÉPLOYÉ / RÉCONCILIÉ | intégrité et audit | motif obligatoire transmis au backend; annulation et erreur sans effet; session révoquée après désactivation | aucune; surveiller les régressions | produit Paramètres |
+| Invitation interne restante | OUVERT — DESTINATAIRE DISTINCT REQUIS | identité / fournisseur | aucune nouvelle invitation ne doit viser `info@getcoro.io` ni modifier une identité homonyme | autorisation explicite d’un destinataire QA distinct et livrable | Mathieu + QA |
 
 ## Contradictions réconciliées
 

@@ -49,3 +49,9 @@ Le stockage reste une réserve de qualification : les 116 candidats sont catégo
 Le MASTER ne recevra aucun statut global « 100 % ». Il peut être clos avec les exclusions et réserves explicites ci-dessus après livraison des libellés approuvés; les preuves humaines non réalisables demeurent `NOT_VERIFIED`.
 
 Le lot des divergences historiques est clos par l’inventaire production `41356195887` : aucune ligne de conflit et aucune organisation affectée. Le stockage reste ouvert : les 116 objets non rapprochés sont des candidats, pas des orphelins démontrés.
+
+## Correctif de désactivation interne — PR #162
+
+Le correctif imposant un motif d’audit explicite avant désactivation est déployé et réconcilié sur `c41e05b891cdcfcc23a1a64e27278ca942d417fe`. La recette synthétique a démontré : annulation sans requête, refus d’un motif vide, transmission du motif au backend, désactivation autorisée, révocation de la session à la requête suivante, restauration de la fixture et erreur serveur visible sans mutation. La vérification production a ouvert le dialogue de motif sur l’identité QA puis l’a annulé; aucun compte réel n’a été désactivé ou supprimé.
+
+Preuves : CI main `41370506741`, capacité `41371906982`, inspection pré-release `41371909251`, release `41372128690`, inspection post-release `41373592084` et réconciliation `41373639994`, toutes `SUCCESS`/`PASS` selon leur contrat. L’invitation interne reste ouverte jusqu’à l’autorisation explicite d’un destinataire QA distinct et livrable; `info@getcoro.io` et toute identité homonyme demeurent inchangés.
