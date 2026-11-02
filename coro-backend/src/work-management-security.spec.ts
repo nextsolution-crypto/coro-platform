@@ -1,22 +1,45 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
-import { requireInternal, requireSuperAdmin, requireTenantAdmin } from './auth/work-management-access';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  requireInternal,
+  requireSuperAdmin,
+  requireTenantAdmin,
+} from './auth/work-management-access';
 import { TaskTemplatesService } from './task-templates/task-templates.service';
 import { TaskListsService } from './task-lists/task-lists.service';
 import { TimelogService } from './timelog/timelog.service';
 import { MandateService } from './mandate/mandate.service';
 import { TaskListsController } from './task-lists/task-lists.controller';
 
-const actor = (role: string, organizationId = 'org-a') => ({ userId: 'user-a', role, organizationId });
-const model = () => new Proxy({}, { get: (target: any, key) => target[key] ||= jest.fn() });
+const actor = (role: string, organizationId = 'org-a') => ({
+  userId: 'user-a',
+  role,
+  organizationId,
+});
+const model = () =>
+  new Proxy({}, { get: (target: any, key) => (target[key] ||= jest.fn()) });
+const transactional = (prisma: any) => {
+  prisma.$queryRaw = jest.fn().mockResolvedValue([{ id: 'project-a' }]);
+  prisma.$transaction = jest.fn((callback: any) => callback(prisma));
+  return prisma;
+};
 
 describe('Work Management security hardening', () => {
-  it.each(['CLIENT_MANAGER', 'CLIENT_CORPORATE'])('blocks client role %s from internal work management', role => {
+  it.each(['CLIENT_MANAGER', 'CLIENT_CORPORATE'])(
+    'blocks client role %s from internal work management',
+    (role) => {
     expect(() => requireInternal(actor(role))).toThrow(ForbiddenException);
-  });
+    },
+  );
 
   it('allows operators into project operations but not tenant administration', () => {
     expect(() => requireInternal(actor('OPERATOR'))).not.toThrow();
-    expect(() => requireTenantAdmin(actor('OPERATOR'))).toThrow(ForbiddenException);
+    expect(() => requireTenantAdmin(actor('OPERATOR'))).toThrow(
+      ForbiddenException,
+    );
   });
 
   it('reserves global administration to SUPER_ADMIN', () => {
@@ -27,79 +50,184 @@ describe('Work Management security hardening', () => {
   it('derives TaskTemplate organization instead of accepting body organizationId', async () => {
     const prisma: any = { taskTemplate: model() };
     prisma.taskTemplate.create.mockResolvedValue({ id: 'template' });
-    await new TaskTemplatesService(prisma).create({ taskTitle: 'T', categoryName: 'C', organizationId: 'org-b' }, 'org-a');
-    expect(prisma.taskTemplate.create.mock.calls[0][0].data.organizationId).toBe('org-a');
+    await new TaskTemplatesService(prisma).create(
+      { taskTitle: 'T', categoryName: 'C', organizationId: 'org-b' },
+      'org-a',
+    );
+    expect(
+      prisma.taskTemplate.create.mock.calls[0][0].data.organizationId,
+    ).toBe('org-a');
   });
 
   it('denies cross-tenant TaskTemplate update and leaves it unchanged', async () => {
     const prisma: any = { taskTemplate: model() };
     prisma.taskTemplate.findFirst.mockResolvedValue(null);
-    await expect(new TaskTemplatesService(prisma).update('template-b', { taskTitle: 'pwned' }, 'org-a')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      new TaskTemplatesService(prisma).update(
+        'template-b',
+        { taskTitle: 'pwned' },
+        'org-a',
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.taskTemplate.update).not.toHaveBeenCalled();
-    expect(prisma.taskTemplate.findFirst).toHaveBeenCalledWith({ where: { id: 'template-b', organizationId: 'org-a' } });
+    expect(prisma.taskTemplate.findFirst).toHaveBeenCalledWith({
+      where: { id: 'template-b', organizationId: 'org-a' },
+    });
   });
 
   it('denies cross-tenant TaskList mutation', async () => {
     const prisma: any = { taskList: model() };
     prisma.taskList.findFirst.mockResolvedValue(null);
-    await expect(new TaskListsService(prisma).update('list-b', { name: 'pwned' }, 'org-a')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      new TaskListsService(prisma).update('list-b', { name: 'pwned' }, 'org-a'),
+    ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.taskList.update).not.toHaveBeenCalled();
   });
 
   it('allows same-tenant TaskList mutation', async () => {
     const prisma: any = { taskList: model() };
-    prisma.taskList.findFirst.mockResolvedValue({ id: 'list-a', organizationId: 'org-a', name: 'Old' });
+    prisma.taskList.findFirst.mockResolvedValue({
+      id: 'list-a',
+      organizationId: 'org-a',
+      name: 'Old',
+    });
     prisma.taskList.update.mockResolvedValue({ id: 'list-a', name: 'New' });
-    await new TaskListsService(prisma).update('list-a', { name: 'New' }, 'org-a');
+    await new TaskListsService(prisma).update(
+      'list-a',
+      { name: 'New' },
+      'org-a',
+    );
     expect(prisma.taskList.update).toHaveBeenCalled();
   });
 
   it('denies importing a TaskList into a foreign Project before writes', async () => {
-    const prisma: any = { project: model(), taskList: model(), projectTaskList: model(), projectTask: model() };
+    const prisma: any = {
+      project: model(),
+      taskList: model(),
+      projectTaskList: model(),
+      projectTask: model(),
+    };
+    transactional(prisma);
     prisma.project.findFirst.mockResolvedValue(null);
-    await expect(new TaskListsService(prisma).importToProject('list', 'project-b', '', 'org-a')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      new TaskListsService(prisma).importToProject(
+        'list',
+        'project-b',
+        '',
+        actor('ADMIN'),
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.projectTaskList.create).not.toHaveBeenCalled();
   });
 
   it('denies cross-tenant ProjectTaskList rename', async () => {
     const prisma: any = { projectTaskList: model() };
+    transactional(prisma);
     prisma.projectTaskList.findFirst.mockResolvedValue(null);
-    await expect(new TaskListsService(prisma).renameProjectTaskList('list-b', 'pwned', 'org-a')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      new TaskListsService(prisma).renameProjectTaskList(
+        'list-b',
+        'pwned',
+        actor('ADMIN'),
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.projectTaskList.update).not.toHaveBeenCalled();
   });
 
   it('removes an empty same-tenant ProjectTaskList with one delete', async () => {
-    const prisma: any = { projectTaskList: model(), projectTask: model() };
-    prisma.projectTaskList.findFirst.mockResolvedValue({ id: 'list-a', organizationId: 'org-a' });
+    const prisma: any = {
+      project: model(),
+      projectTaskList: model(),
+      projectTask: model(),
+    };
+    transactional(prisma);
+    prisma.project.findFirst.mockResolvedValue({
+      id: 'project-a',
+      organizationId: 'org-a',
+      status: 'DRAFT',
+      isActive: true,
+    });
+    prisma.projectTaskList.findFirst.mockResolvedValue({
+      id: 'list-a',
+      projectId: 'project-a',
+      organizationId: 'org-a',
+    });
     prisma.projectTaskList.delete.mockResolvedValue({ id: 'list-a' });
-    await new TaskListsService(prisma).deleteProjectTaskList('list-a', 'org-a');
-    expect(prisma.projectTaskList.delete).toHaveBeenCalledWith({ where: { id: 'list-a' } });
+    await new TaskListsService(prisma).deleteProjectTaskList(
+      'list-a',
+      actor('ADMIN'),
+    );
+    expect(prisma.projectTaskList.delete).toHaveBeenCalledWith({
+      where: { id: 'list-a' },
+    });
     expect(prisma.projectTask.deleteMany).not.toHaveBeenCalled();
   });
 
   it('preserves Tasks by relying on ON DELETE SET NULL instead of deleting them', async () => {
-    const prisma: any = { projectTaskList: model(), projectTask: model() };
-    prisma.projectTaskList.findFirst.mockResolvedValue({ id: 'list-with-tasks', organizationId: 'org-a' });
+    const prisma: any = {
+      project: model(),
+      projectTaskList: model(),
+      projectTask: model(),
+    };
+    transactional(prisma);
+    prisma.project.findFirst.mockResolvedValue({
+      id: 'project-a',
+      organizationId: 'org-a',
+      status: 'DRAFT',
+      isActive: true,
+    });
+    prisma.projectTaskList.findFirst.mockResolvedValue({
+      id: 'list-with-tasks',
+      projectId: 'project-a',
+      organizationId: 'org-a',
+    });
     prisma.projectTaskList.delete.mockResolvedValue({ id: 'list-with-tasks' });
-    await new TaskListsService(prisma).deleteProjectTaskList('list-with-tasks', 'org-a');
+    await new TaskListsService(prisma).deleteProjectTaskList(
+      'list-with-tasks',
+      actor('ADMIN'),
+    );
     expect(prisma.projectTask.deleteMany).not.toHaveBeenCalled();
     expect(prisma.projectTask.updateMany).not.toHaveBeenCalled();
   });
 
   it('refuses deletion of an Activity-configured ProjectTaskList', async () => {
-    const prisma: any = { projectTaskList: model(), projectTask: model() };
-    prisma.projectTaskList.findFirst.mockResolvedValue({ id: 'configured', organizationId: 'org-a',
-      instantiationSource: 'ACTIVITY_TYPE_CONFIG' });
-    await expect(new TaskListsService(prisma).deleteProjectTaskList('configured', 'org-a'))
-      .rejects.toBeInstanceOf(BadRequestException);
+    const prisma: any = {
+      project: model(),
+      projectTaskList: model(),
+      projectTask: model(),
+    };
+    transactional(prisma);
+    prisma.project.findFirst.mockResolvedValue({
+      id: 'project-a',
+      organizationId: 'org-a',
+      status: 'DRAFT',
+      isActive: true,
+    });
+    prisma.projectTaskList.findFirst.mockResolvedValue({
+      id: 'configured',
+      projectId: 'project-a',
+      organizationId: 'org-a',
+      instantiationSource: 'ACTIVITY_TYPE_CONFIG',
+    });
+    await expect(
+      new TaskListsService(prisma).deleteProjectTaskList(
+        'configured',
+        actor('ADMIN'),
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.projectTaskList.delete).not.toHaveBeenCalled();
   });
 
   it('denies cross-tenant ProjectTaskList removal before delete', async () => {
     const prisma: any = { projectTaskList: model(), projectTask: model() };
+    transactional(prisma);
     prisma.projectTaskList.findFirst.mockResolvedValue(null);
-    await expect(new TaskListsService(prisma).deleteProjectTaskList('list-b', 'org-a'))
-      .rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      new TaskListsService(prisma).deleteProjectTaskList(
+        'list-b',
+        actor('ADMIN'),
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.projectTaskList.delete).not.toHaveBeenCalled();
     expect(prisma.projectTask.deleteMany).not.toHaveBeenCalled();
   });
@@ -107,106 +235,211 @@ describe('Work Management security hardening', () => {
   it('denies a client role from the ProjectTaskList removal route', async () => {
     const service: any = { deleteProjectTaskList: jest.fn() };
     const controller = new TaskListsController(service);
-    expect(() => controller.deleteProjectTaskList('list-a', { user: actor('CLIENT_MANAGER') }))
-      .toThrow(ForbiddenException);
+    expect(() =>
+      controller.deleteProjectTaskList('list-a', {
+        user: actor('CLIENT_MANAGER'),
+      }),
+    ).toThrow(ForbiddenException);
     expect(service.deleteProjectTaskList).not.toHaveBeenCalled();
   });
 
   it('cannot update a global TimelogCategory through a tenant mutation', async () => {
     const prisma: any = { timelogCategory: model() };
     prisma.timelogCategory.findFirst.mockResolvedValue(null);
-    await expect(new TimelogService(prisma).updateCategory('global', { label: 'pwned' }, 'org-a')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      new TimelogService(prisma).updateCategory(
+        'global',
+        { label: 'pwned' },
+        'org-a',
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.timelogCategory.updateMany).not.toHaveBeenCalled();
-    expect(prisma.timelogCategory.findFirst).toHaveBeenCalledWith({ where: { key: 'global', organizationId: 'org-a' } });
+    expect(prisma.timelogCategory.findFirst).toHaveBeenCalledWith({
+      where: { key: 'global', organizationId: 'org-a' },
+    });
   });
 
   it('scopes TimelogEntry update by owner and tenant', async () => {
     const prisma: any = { timelogEntry: model() };
     prisma.timelogEntry.updateMany.mockResolvedValue({ count: 1 });
-    await new TimelogService(prisma).updateEntry('entry', 'user-a', 'org-a', { heures: 1, note: '', lockVersion: 3 });
-    expect(prisma.timelogEntry.updateMany.mock.calls[0][0].where).toEqual({ id: 'entry', userId: 'user-a', organizationId: 'org-a', lockVersion: 3 });
+    await new TimelogService(prisma).updateEntry('entry', 'user-a', 'org-a', {
+      heures: 1,
+      note: '',
+      lockVersion: 3,
+    });
+    expect(prisma.timelogEntry.updateMany.mock.calls[0][0].where).toEqual({
+      id: 'entry',
+      userId: 'user-a',
+      organizationId: 'org-a',
+      lockVersion: 3,
+    });
   });
 
   it('denies cross-tenant ProjectTask update', async () => {
     const prisma: any = { project: model(), projectTask: model() };
+    transactional(prisma);
     prisma.project.findFirst.mockResolvedValue(null);
     prisma.projectTask.findFirst.mockResolvedValue(null);
-    await expect(new MandateService(prisma).updateTask('project-b', 'task-b', actor('OPERATOR'), { status: 'fait' })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      new MandateService(prisma).updateTask(
+        'project-b',
+        'task-b',
+        actor('OPERATOR'),
+        { status: 'fait' },
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.projectTask.update).not.toHaveBeenCalled();
   });
 
   it('denies assigning a ProjectTask to a foreign tenant user', async () => {
-    const prisma: any = { project: model(), projectTask: model(), user: model() };
+    const prisma: any = {
+      project: model(),
+      projectTask: model(),
+      user: model(),
+    };
+    transactional(prisma);
     prisma.project.findFirst.mockResolvedValue({ id: 'project-a' });
-    prisma.projectTask.findFirst.mockResolvedValue({ id: 'task-a', organizationId: 'org-a' });
+    prisma.projectTask.findFirst.mockResolvedValue({
+      id: 'task-a',
+      organizationId: 'org-a',
+    });
     prisma.user.findFirst.mockResolvedValue(null);
-    await expect(new MandateService(prisma).updateTask('project-a', 'task-a', actor('OPERATOR'), { assigneeId: 'user-b' })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      new MandateService(prisma).updateTask(
+        'project-a',
+        'task-a',
+        actor('OPERATOR'),
+        { assigneeId: 'user-b' },
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.projectTask.update).not.toHaveBeenCalled();
   });
 
   it('denies a foreign Project before changing a Comment', async () => {
     const prisma: any = { project: model(), projectComment: model() };
+    transactional(prisma);
     prisma.project.findFirst.mockResolvedValue(null);
-    await expect(new MandateService(prisma).updateComment('project-b', 'comment-b', actor('OPERATOR'), 'pwned')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      new MandateService(prisma).updateComment(
+        'project-b',
+        'comment-b',
+        actor('OPERATOR'),
+        'pwned',
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.projectComment.update).not.toHaveBeenCalled();
   });
 
   it.each([
     ['ADMIN', { organizationId: 'org-a' }],
     ['SUPER_ADMIN', { organizationId: 'org-a' }],
-    ['OPERATOR', { organizationId: 'org-a', OR: [{ userId: 'user-a' }, { lastEditedById: 'user-a' }] }],
-  ])('applies Project access to Mandate reads for %s', async (role, accessWhere) => {
-    const prisma: any = { project: model(), projectMandate: model(), projectTask: model() };
+    [
+      'OPERATOR',
+      {
+        organizationId: 'org-a',
+        OR: [{ userId: 'user-a' }, { lastEditedById: 'user-a' }],
+      },
+    ],
+  ])(
+    'applies Project access to Mandate reads for %s',
+    async (role, accessWhere) => {
+      const prisma: any = {
+        project: model(),
+        projectMandate: model(),
+        projectTask: model(),
+      };
     prisma.project.findFirst.mockResolvedValue({ id: 'project-a' });
     prisma.projectMandate.findUnique.mockResolvedValue(null);
     prisma.projectTask.findMany.mockResolvedValue([]);
     await new MandateService(prisma).getMandate('project-a', actor(role));
     expect(prisma.project.findFirst).toHaveBeenCalledWith({
-      where: { id: 'project-a', ...accessWhere }, select: { id: true },
-    });
+        where: { id: 'project-a', ...accessWhere },
+        select: { id: true },
   });
+    },
+  );
 
-  it.each(['getMandate', 'getComments', 'getTimesheet', 'exportTimesheetPdf'])
-  ('denies an inaccessible Project before %s data is read', async method => {
-    const prisma: any = { project: model(), projectMandate: model(), projectComment: model(), taskTimeEntry: model() };
+  it.each(['getMandate', 'getComments', 'getTimesheet', 'exportTimesheetPdf'])(
+    'denies an inaccessible Project before %s data is read',
+    async (method) => {
+      const prisma: any = {
+        project: model(),
+        projectMandate: model(),
+        projectComment: model(),
+        taskTimeEntry: model(),
+      };
     prisma.project.findFirst.mockResolvedValue(null);
     const service: any = new MandateService(prisma);
-    await expect(service[method]('project-b', actor('OPERATOR'))).rejects.toBeInstanceOf(NotFoundException);
-    expect(prisma.project.findFirst).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ id: 'project-b', organizationId: 'org-a' }),
-    }));
-  });
+      await expect(
+        service[method]('project-b', actor('OPERATOR')),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(prisma.project.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: 'project-b',
+            organizationId: 'org-a',
+          }),
+        }),
+      );
+    },
+  );
 
-  it.each(['CLIENT_MANAGER', 'CLIENT_CORPORATE'])('denies client role %s from Mandate Project access', async role => {
+  it.each(['CLIENT_MANAGER', 'CLIENT_CORPORATE'])(
+    'denies client role %s from Mandate Project access',
+    async (role) => {
     const prisma: any = { project: model() };
-    await expect(new MandateService(prisma).getMandate('project-a', actor(role))).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(
+        new MandateService(prisma).getMandate('project-a', actor(role)),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     expect(prisma.project.findFirst).not.toHaveBeenCalled();
-  });
+    },
+  );
 
   it('checks Project access before creating a Comment and derives tenant and author from the actor', async () => {
     const prisma: any = { project: model(), projectComment: model() };
+    transactional(prisma);
     prisma.project.findFirst.mockResolvedValue({ id: 'project-a' });
     prisma.projectComment.create.mockResolvedValue({ id: 'comment-a' });
-    await new MandateService(prisma).addComment('project-a', actor('OPERATOR'), 'Bonjour');
+    await new MandateService(prisma).addComment(
+      'project-a',
+      actor('OPERATOR'),
+      'Bonjour',
+    );
     expect(prisma.projectComment.create.mock.calls[0][0].data).toEqual({
-      projectId: 'project-a', organizationId: 'org-a', actorType: 'INTERNAL_USER', userId: 'user-a', contenu: 'Bonjour',
+      projectId: 'project-a',
+      organizationId: 'org-a',
+      actorType: 'INTERNAL_USER',
+      userId: 'user-a',
+      contenu: 'Bonjour',
     });
   });
 
   it('scopes Timesheet rows to the accessed Project and tenant', async () => {
     const prisma: any = { project: model(), taskTimeEntry: model() };
+    transactional(prisma);
     prisma.project.findFirst.mockResolvedValue({ id: 'project-a' });
     prisma.taskTimeEntry.findMany.mockResolvedValue([]);
-    await new MandateService(prisma).getTimesheet('project-a', actor('OPERATOR'));
+    await new MandateService(prisma).getTimesheet(
+      'project-a',
+      actor('OPERATOR'),
+    );
     expect(prisma.taskTimeEntry.findMany.mock.calls[0][0].where).toEqual({
-      organizationId: 'org-a', task: { projectId: 'project-a', organizationId: 'org-a' },
+      organizationId: 'org-a',
+      task: { projectId: 'project-a', organizationId: 'org-a' },
     });
   });
 
   it('denies a foreign Project before deleting a TaskTimeEntry', async () => {
     const prisma: any = { project: model(), taskTimeEntry: model() };
+    transactional(prisma);
     prisma.project.findFirst.mockResolvedValue(null);
-    await expect(new MandateService(prisma).deleteTimeEntry('project-b', 'entry-b', actor('OPERATOR'))).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      new MandateService(prisma).deleteTimeEntry(
+        'project-b',
+        'entry-b',
+        actor('OPERATOR'),
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.taskTimeEntry.delete).not.toHaveBeenCalled();
   });
 });

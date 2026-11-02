@@ -457,7 +457,7 @@ describePostgres('Activity checklist instantiation 2D-A on PostgreSQL', () => {
     });
     const taskListsService = new TaskListsService(prisma as never);
     await expect(
-      taskListsService.deleteProjectTaskList(instance.id, fixture.org.id),
+      taskListsService.deleteProjectTaskList(instance.id, operator()),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
@@ -597,7 +597,10 @@ describePostgres('Activity checklist instantiation 2D-A on PostgreSQL', () => {
     );
     expect(
       await prisma.auditLog.count({
-        where: { entityId: created.activityId, action: 'PLANNING_ACTIVITY_CREATED' },
+        where: {
+          entityId: created.activityId,
+          action: 'PLANNING_ACTIVITY_CREATED',
+        },
       }),
     ).toBe(1);
   });
@@ -607,9 +610,7 @@ describePostgres('Activity checklist instantiation 2D-A on PostgreSQL', () => {
     await setTenant('REPLACE', ['C']);
     const scheduling = {
       lockUsers: jest.fn(),
-      analyzeUsers: jest
-        .fn()
-        .mockResolvedValue(
+      analyzeUsers: jest.fn().mockResolvedValue(
           new Map([
             [
               fixture.owner.id,

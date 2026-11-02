@@ -46,3 +46,37 @@ L'historique d'un projet archivé reste lisible et contribue aux agrégations, c
 - `D:\CORO-QA\tracking\organization-performance\browser\performance-browser-ordering.json`
 
 Les valeurs financières des preuves sont exclusivement synthétiques. Aucun export de données financières réelles n'a été produit.
+
+## Lot correctif — projets archivés et inactifs
+
+- Branche : `fix/organization-performance-archive-readonly`
+- Base : `e7dfc5d87b4ef7ae81af4b6549f193ba92f0c209`
+- Candidat testé : voir le SHA final de la PR dédiée
+- Verdict du lot : `ACCEPTATION_INTÉGRÉE_PASS`
+
+Le garde serveur partagé verrouille la ligne canonique `Project` dans la même transaction que la mutation, puis vérifie de nouveau l'organisation, l'affectation, `status` et `isActive`. Les créations et mutations de mandat, tâches, listes/checklists, commentaires et saisies de temps sont refusées par `409 Conflict` lorsque le projet est archivé ou inactif. Aucun rôle administratif implicite ne contourne cette règle.
+
+Preuves démontrées sur PostgreSQL 16, backend et frontend réels :
+
+- projet actif : création d'une tâche et d'une saisie de temps `201`;
+- projet archivé et projet inactif : `409`, compteurs inchangés, aucun audit ni effet secondaire;
+- archivage concurrent : la mutation attend le verrou, relit l'état archivé, puis échoue sans écriture;
+- inter-tenant et acteur non affecté : refus avant écriture;
+- historique, lectures et agrégations Rendement conservés;
+- archivage après chargement : erreur explicite dans Chrome, valeur de tâche inchangée, aucun faux succès;
+- F5 : bannière lecture seule, historique visible, contrôles de mutation absents;
+- Chrome : 390 × 844 Classic, 1440 × 900 Glass Light et Glass Dark, sans débordement.
+
+Preuves :
+
+- `D:\CORO-QA\tracking\organization-performance-fix\organization-performance-archive-acceptance.json`
+- captures PNG dans le même dossier;
+- test PostgreSQL `archive-project-readonly.postgres-spec.ts`.
+
+Décisions métier toujours ouvertes et non modifiées par ce lot :
+
+- proposition `Travail réalisé jusqu'au` : borne sur la date du travail; une saisie rétroactive ultérieure peut modifier le résultat;
+- proposition `Mandats avec participation de` : sélection des mandats auxquels le conseiller participe, avec toute leur main-d'œuvre;
+- aucune de ces propositions n'est une règle approuvée et `asOf` n'est pas présenté comme une photographie financière historique.
+
+La vérification authentifiée en production et la restitution par lecteur d'écran réel restent `NOT_VERIFIED`; aucune production n'a été consultée ou modifiée dans ce lot.

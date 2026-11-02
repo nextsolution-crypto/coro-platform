@@ -12,7 +12,7 @@
 | Interface | 390/768/1440/2560 × Classic/Glass Light/Glass Dark | PASS | Chrome réel 12/12; captures sous le dossier de preuves |
 | Interface | F5, clavier, zoom 200 %, absence de débordement | PASS | session conservée après F5, focus clavier, zoom 200 %, 0 débordement |
 | Erreurs | vide, 403, 503, reprise, réponses désordonnées | PASS | réponses inversées : dernière sélection conservée; erreur ultérieure : anciennes données masquées |
-| Archives | historique lisible et nouvelles écritures interdites | FAIL | historique conservé; nouvelle tâche et nouvelle saisie de temps acceptées (`201`) après archivage |
+| Archives | historique lisible et nouvelles écritures interdites | PASS_PR_EN_REVUE | actif `201`; archivé/inactif `409` sans effet; course verrouillée; historique et Rendement conservés; Chrome après archivage tardif sans faux succès |
 | Volume | plus de 1 000 saisies sans perte ni double compte | PASS | 1 001/1 001 lignes; 100,1 h attendues; lectures mesurées à 29,2 ms et 30,7 ms |
 | Sémantique | `asOf` et filtre conseiller | DÉCISION_MÉTIER_REQUISE | borne de date de travail, non photographie historique; sélection de mandats avec toute leur main-d'œuvre |
 | Identité inactive | session refusée, historique conservé, réactivation sans restauration de session | PASS | 401 après désactivation et après réactivation; 8 h / 640 CAD historiques conservés |

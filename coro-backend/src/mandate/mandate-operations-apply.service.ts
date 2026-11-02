@@ -7,7 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { createHash, randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { projectAccessWhere } from '../auth/project-access';
+import { lockMutableProject, projectAccessWhere } from '../auth/project-access';
 import type { WorkManagementActor } from '../auth/work-management-access';
 import { OPEN_BOOKING_STATUSES } from '../bookings/booking-status';
 import { ActivityTaskListsService } from '../activities/activity-task-lists.service';
@@ -136,6 +136,7 @@ export class MandateOperationsApplyService {
     dto: ApplyMandateOperationsDto,
     payloadHash: string,
   ) {
+    await lockMutableProject(tx, projectId, actor);
     const project = await tx.project.findFirst({
       where: { id: projectId, ...projectAccessWhere(actor) },
       select: {
