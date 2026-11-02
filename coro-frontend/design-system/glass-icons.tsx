@@ -3,7 +3,7 @@ import {
   CalendarRange, ChevronDown, ClipboardList, Circle, Coins, FilePlus2, FileSignature, FileText, FileWarning,
   Files, FolderKanban, FolderTree, Gauge, Gem, Gift, Globe, HeartPulse, History, Landmark, LayoutDashboard,
   KeyRound, Library, ListChecks, Map as MapIcon, Menu, MessageSquare, Package, PenLine, Pilcrow, Radar, Route, Scale,
-  Search, Settings, Shapes, ShieldCheck, SlidersHorizontal, Tags, Target, Timer, TrendingUp, UserCog, Users, X,
+  QrCode, Search, Settings, Shapes, ShieldCheck, SlidersHorizontal, Tags, Target, Timer, TrendingUp, UserCog, Users, X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -36,6 +36,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   '/settings/feedback': MessageSquare,
   '/admin/control-center': Radar,
   '/admin/metering': Activity,
+  '/admin/qr-codes': QrCode,
   '/admin/web-ai': Activity,
   '/admin/commercial': TrendingUp,
   '/admin/commercial/journey': Route,
