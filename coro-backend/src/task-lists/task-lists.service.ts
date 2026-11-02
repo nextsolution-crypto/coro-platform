@@ -1,13 +1,27 @@
-import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  Optional,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
+import type { WorkManagementActor } from '../auth/work-management-access';
+import { lockMutableProject } from '../auth/project-access';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class TaskListsService {
-  constructor(private prisma: PrismaService, @Optional() private adminAudit?: AdminAuditService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Optional() private adminAudit?: AdminAuditService,
+  ) {}
 
   private get audit(): AdminAuditService {
-    if (!this.adminAudit) throw new Error('AdminAuditService is required for global task-list mutations.');
+    if (!this.adminAudit)
+      throw new Error(
+        'AdminAuditService is required for global task-list mutations.',
+      );
     return this.adminAudit;
   }
 
@@ -16,10 +30,7 @@ export class TaskListsService {
     return this.prisma.taskList.findMany({
       where: {
         isActive: true,
-        OR: [
-          { organizationId: null },
-          { organizationId },
-        ],
+        OR: [{ organizationId: null }, { organizationId }],
       },
       include: {
         templates: {
@@ -64,36 +75,83 @@ export class TaskListsService {
   async createGlobal(dto: any, actor: any) {
     return this.prisma.$transaction(async (tx) => {
       const created = await tx.taskList.create({
-        data: { name: dto.name, description: dto.description || null, category: dto.category || 'DOCUMENT', documentTypes: dto.documentTypes || [], organizationId: null, isDefault: false },
+        data: {
+          name: dto.name,
+          description: dto.description || null,
+          category: dto.category || 'DOCUMENT',
+          documentTypes: dto.documentTypes || [],
+          organizationId: null,
+          isDefault: false,
+        },
       });
-      await this.audit.record(tx, { actorUserId: actor.userId, action: 'GLOBAL_TASK_LIST_CREATED', targetType: 'TaskList', targetId: created.id, targetLabel: created.name, afterData: { name: created.name, category: created.category } });
+      await this.audit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'GLOBAL_TASK_LIST_CREATED',
+        targetType: 'TaskList',
+        targetId: created.id,
+        targetLabel: created.name,
+        afterData: { name: created.name, category: created.category },
+      });
       return created;
     });
   }
 
   async updateGlobal(id: string, dto: any, actor: any) {
     return this.prisma.$transaction(async (tx) => {
-      const current = await tx.taskList.findFirst({ where: { id, organizationId: null } });
+      const current = await tx.taskList.findFirst({
+        where: { id, organizationId: null },
+      });
       if (!current) throw new NotFoundException('Liste globale introuvable');
-      const updated = await tx.taskList.update({ where: { id }, data: { name: dto.name ?? current.name, description: dto.description ?? current.description, category: dto.category ?? current.category, documentTypes: dto.documentTypes ?? current.documentTypes } });
-      await this.audit.record(tx, { actorUserId: actor.userId, action: 'GLOBAL_TASK_LIST_UPDATED', targetType: 'TaskList', targetId: id, targetLabel: updated.name, beforeData: { name: current.name, category: current.category }, afterData: { name: updated.name, category: updated.category } });
+      const updated = await tx.taskList.update({
+        where: { id },
+        data: {
+          name: dto.name ?? current.name,
+          description: dto.description ?? current.description,
+          category: dto.category ?? current.category,
+          documentTypes: dto.documentTypes ?? current.documentTypes,
+        },
+      });
+      await this.audit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'GLOBAL_TASK_LIST_UPDATED',
+        targetType: 'TaskList',
+        targetId: id,
+        targetLabel: updated.name,
+        beforeData: { name: current.name, category: current.category },
+        afterData: { name: updated.name, category: updated.category },
+      });
       return updated;
     });
   }
 
   async deleteGlobal(id: string, actor: any) {
     return this.prisma.$transaction(async (tx) => {
-      const current = await tx.taskList.findFirst({ where: { id, organizationId: null } });
+      const current = await tx.taskList.findFirst({
+        where: { id, organizationId: null },
+      });
       if (!current) throw new NotFoundException('Liste globale introuvable');
-      const updated = await tx.taskList.update({ where: { id }, data: { isActive: false } });
-      await this.audit.record(tx, { actorUserId: actor.userId, action: 'GLOBAL_TASK_LIST_DISABLED', targetType: 'TaskList', targetId: id, targetLabel: current.name, beforeData: { active: current.isActive }, afterData: { active: false } });
+      const updated = await tx.taskList.update({
+        where: { id },
+        data: { isActive: false },
+      });
+      await this.audit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'GLOBAL_TASK_LIST_DISABLED',
+        targetType: 'TaskList',
+        targetId: id,
+        targetLabel: current.name,
+        beforeData: { active: current.isActive },
+        afterData: { active: false },
+      });
       return updated;
     });
   }
 
   // Mettre à jour une liste
   async update(id: string, dto: any, organizationId: string | null) {
-    const list = await this.prisma.taskList.findFirst({ where: { id, organizationId } });
+    const list = await this.prisma.taskList.findFirst({
+      where: { id, organizationId },
+    });
     if (!list) throw new NotFoundException('Liste introuvable');
     return this.prisma.taskList.update({
       where: { id },
@@ -108,7 +166,9 @@ export class TaskListsService {
 
   // Supprimer une liste
   async delete(id: string, organizationId: string | null) {
-    const list = await this.prisma.taskList.findFirst({ where: { id, organizationId } });
+    const list = await this.prisma.taskList.findFirst({
+      where: { id, organizationId },
+    });
     if (!list) throw new NotFoundException('Liste introuvable');
     return this.prisma.taskList.update({
       where: { id },
@@ -118,10 +178,14 @@ export class TaskListsService {
 
   // Ajouter un template à une liste
   async addTemplate(listId: string, dto: any, organizationId: string) {
-    const list = await this.prisma.taskList.findFirst({ where: { id: listId, organizationId } });
+    const list = await this.prisma.taskList.findFirst({
+      where: { id: listId, organizationId },
+    });
     if (!list) throw new NotFoundException('Liste introuvable');
 
-    const count = await this.prisma.taskTemplate.count({ where: { taskListId: listId } });
+    const count = await this.prisma.taskTemplate.count({
+      where: { taskListId: listId },
+    });
 
     return this.prisma.taskTemplate.create({
       data: {
@@ -136,11 +200,21 @@ export class TaskListsService {
   }
 
   // Importer une liste dans un projet (crée une copie indépendante)
-  async importToProject(listId: string, projectId: string, customName: string, organizationId: string) {
-    const project = await this.prisma.project.findFirst({ where: { id: projectId, organizationId } });
-    if (!project) throw new NotFoundException('Projet introuvable');
-    const list = await this.prisma.taskList.findFirst({
-      where: { id: listId, OR: [{ organizationId: null }, { organizationId }] },
+  async importToProject(
+    listId: string,
+    projectId: string,
+    customName: string,
+    actor: WorkManagementActor,
+  ) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        await lockMutableProject(tx, projectId, actor);
+        const organizationId = actor.organizationId;
+        const list = await tx.taskList.findFirst({
+          where: {
+            id: listId,
+            OR: [{ organizationId: null }, { organizationId }],
+          },
       include: {
         templates: {
           where: { isActive: true },
@@ -151,7 +225,7 @@ export class TaskListsService {
     if (!list) throw new NotFoundException('Liste introuvable');
 
     // Créer l'instance de la liste dans le projet
-    const projectTaskList = await this.prisma.projectTaskList.create({
+        const projectTaskList = await tx.projectTaskList.create({
       data: {
         projectId,
         taskListId: listId,
@@ -161,8 +235,8 @@ export class TaskListsService {
     });
 
     // Créer une copie de chaque tâche
-    await this.prisma.projectTask.createMany({
-      data: list.templates.map(t => ({
+        await tx.projectTask.createMany({
+          data: list.templates.map((t) => ({
         projectId,
         projectTaskListId: projectTaskList.id,
         templateId: t.id,
@@ -174,18 +248,23 @@ export class TaskListsService {
       })),
     });
 
-    return this.prisma.projectTaskList.findUnique({
+        return tx.projectTaskList.findUnique({
       where: { id: projectTaskList.id },
       include: {
         tasks: { orderBy: [{ categoryName: 'asc' }, { order: 'asc' }] },
         taskList: true,
       },
     });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
   }
 
   // Listes d'un projet
   async getProjectTaskLists(projectId: string, organizationId: string) {
-    const project = await this.prisma.project.findFirst({ where: { id: projectId, organizationId } });
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, organizationId },
+    });
     if (!project) throw new NotFoundException('Projet introuvable');
     return this.prisma.projectTaskList.findMany({
       where: { projectId, organizationId },
@@ -194,7 +273,9 @@ export class TaskListsService {
         tasks: {
           include: {
             timeEntries: {
-              include: { user: { select: { firstName: true, lastName: true } } },
+              include: {
+                user: { select: { firstName: true, lastName: true } },
+              },
             },
             assignee: { select: { id: true, firstName: true, lastName: true } },
           },
@@ -206,26 +287,66 @@ export class TaskListsService {
   }
 
   // Renommer une instance de liste dans un projet
-  async renameProjectTaskList(id: string, customName: string, organizationId: string) {
-    const list = await this.prisma.projectTaskList.findFirst({ where: { id, organizationId } });
+  async renameProjectTaskList(
+    id: string,
+    customName: string,
+    actor: WorkManagementActor,
+  ) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        const candidate = await tx.projectTaskList.findFirst({
+          where: { id, organizationId: actor.organizationId },
+          select: { projectId: true },
+        });
+        if (!candidate)
+          throw new NotFoundException('Liste de projet introuvable');
+        await lockMutableProject(tx, candidate.projectId, actor);
+        const list = await tx.projectTaskList.findFirst({
+          where: {
+            id,
+            projectId: candidate.projectId,
+            organizationId: actor.organizationId,
+          },
+        });
     if (!list) throw new NotFoundException('Liste de projet introuvable');
-    return this.prisma.projectTaskList.update({
+        return tx.projectTaskList.update({
       where: { id },
       data: { customName },
     });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
   }
 
   // Supprimer une instance de liste d'un projet
-  async deleteProjectTaskList(id: string, organizationId: string) {
-    const list = await this.prisma.projectTaskList.findFirst({ where: { id, organizationId } });
+  async deleteProjectTaskList(id: string, actor: WorkManagementActor) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        const candidate = await tx.projectTaskList.findFirst({
+          where: { id, organizationId: actor.organizationId },
+          select: { projectId: true },
+        });
+        if (!candidate)
+          throw new NotFoundException('Liste de projet introuvable');
+        await lockMutableProject(tx, candidate.projectId, actor);
+        const list = await tx.projectTaskList.findFirst({
+          where: {
+            id,
+            projectId: candidate.projectId,
+            organizationId: actor.organizationId,
+          },
+        });
     if (!list) throw new NotFoundException('Liste de projet introuvable');
     if (list.instantiationSource === 'ACTIVITY_TYPE_CONFIG') {
-      throw new BadRequestException("Une checklist instanciée depuis une activité ne peut pas être supprimée");
+          throw new BadRequestException(
+            'Une checklist instanciée depuis une activité ne peut pas être supprimée',
+          );
     }
     // PostgreSQL détache atomiquement les tâches via ON DELETE SET NULL.
     // Le travail, les affectations et le temps saisi restent intacts.
-    return this.prisma.projectTaskList.delete({
-      where: { id },
-    });
+        return tx.projectTaskList.delete({ where: { id } });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
   }
 }

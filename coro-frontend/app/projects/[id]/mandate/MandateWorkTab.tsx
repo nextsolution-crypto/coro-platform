@@ -23,11 +23,11 @@ function errorMessage(cause: unknown) {
   return typeof value === 'string' ? value : 'La modification a échoué. Actualisez puis réessayez.';
 }
 
-export default function MandateWorkTab({ projectId, teamMembers, view, loading, refreshing, loadError, onRefresh }:
+export default function MandateWorkTab({ projectId, teamMembers, view, loading, refreshing, loadError, readOnly, onRefresh }:
   { projectId: string; teamMembers: Person[]; view: MandateWorkView | null; loading: boolean;
-    refreshing: boolean; loadError: string; onRefresh: () => Promise<void> }) {
+    refreshing: boolean; loadError: string; readOnly: boolean; onRefresh: () => Promise<void> }) {
   const role = useAuthStore(state => state.user?.role);
-  const canMutate = ['ADMIN', 'SUPER_ADMIN', 'OPERATOR'].includes(role ?? '');
+  const canMutate = !readOnly && ['ADMIN', 'SUPER_ADMIN', 'OPERATOR'].includes(role ?? '');
   const [expandedActivities, setExpandedActivities] = useState<Record<string, boolean>>({});
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [filter, setFilter] = useState('ACTIVE');

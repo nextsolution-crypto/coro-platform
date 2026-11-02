@@ -1,9 +1,27 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { TaskListsService } from './task-lists.service';
-import { requireInternal, requireSuperAdmin, requireTenantAdmin } from '../auth/work-management-access';
+import {
+  requireInternal,
+  requireSuperAdmin,
+  requireTenantAdmin,
+} from '../auth/work-management-access';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
-import { AddTaskListTemplateDto, CreateTaskListDto, UpdateTaskListDto } from './dto/task-list.dto';
+import {
+  AddTaskListTemplateDto,
+  CreateTaskListDto,
+  UpdateTaskListDto,
+} from './dto/task-list.dto';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
 import { SuperAdminOnly } from '../auth/platform-roles.decorator';
 
@@ -36,7 +54,11 @@ export class TaskListsController {
   }
 
   @Put('global/:id')
-  updateGlobal(@Param('id') id: string, @Body() dto: UpdateTaskListDto, @Request() req: any) {
+  updateGlobal(
+    @Param('id') id: string,
+    @Body() dto: UpdateTaskListDto,
+    @Request() req: any,
+  ) {
     requireSuperAdmin(req.user);
     return this.service.updateGlobal(id, dto, req.user);
   }
@@ -70,7 +92,11 @@ export class TaskListsController {
 
   // Ajouter un template à une liste
   @Post(':id/templates')
-  addTemplate(@Param('id') id: string, @Body() dto: AddTaskListTemplateDto, @Request() req: any) {
+  addTemplate(
+    @Param('id') id: string,
+    @Body() dto: AddTaskListTemplateDto,
+    @Request() req: any,
+  ) {
     requireTenantAdmin(req.user);
     return this.service.addTemplate(id, dto, req.user.organizationId);
   }
@@ -84,27 +110,39 @@ export class TaskListsController {
     @Request() req: any,
   ) {
     requireInternal(req.user);
-    return this.service.importToProject(id, projectId, dto.customName, req.user.organizationId);
+    return this.service.importToProject(
+      id,
+      projectId,
+      dto.customName,
+      req.user,
+    );
   }
 
   // Listes d'un projet
   @Get('project/:projectId')
-  getProjectTaskLists(@Param('projectId') projectId: string, @Request() req: any) {
+  getProjectTaskLists(
+    @Param('projectId') projectId: string,
+    @Request() req: any,
+  ) {
     requireInternal(req.user);
     return this.service.getProjectTaskLists(projectId, req.user.organizationId);
   }
 
   // Renommer une instance de liste dans un projet
   @Put('project-list/:id')
-  renameProjectTaskList(@Param('id') id: string, @Body() dto: any, @Request() req: any) {
+  renameProjectTaskList(
+    @Param('id') id: string,
+    @Body() dto: any,
+    @Request() req: any,
+  ) {
     requireInternal(req.user);
-    return this.service.renameProjectTaskList(id, dto.customName, req.user.organizationId);
+    return this.service.renameProjectTaskList(id, dto.customName, req.user);
   }
 
   // Supprimer une instance de liste d'un projet
   @Delete('project-list/:id')
   deleteProjectTaskList(@Param('id') id: string, @Request() req: any) {
     requireInternal(req.user);
-    return this.service.deleteProjectTaskList(id, req.user.organizationId);
+    return this.service.deleteProjectTaskList(id, req.user);
   }
 }

@@ -1,15 +1,26 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  Optional,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { WorkManagementActor } from '../auth/work-management-access';
-import { projectAccessWhere } from '../auth/project-access';
+import { lockMutableProject, projectAccessWhere } from '../auth/project-access';
 import { ActivityTypesService } from '../activity-types/activity-types.service';
 import { OPEN_BOOKING_STATUSES } from '../bookings/booking-status';
 import { mandatePlanningStatus } from './activity-planning-status';
 
+type Db = Prisma.TransactionClient | PrismaService;
+
 @Injectable()
 export class MandateService {
-  constructor(private prisma: PrismaService, @Optional() private readonly activityTypes?: ActivityTypesService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Optional() private readonly activityTypes?: ActivityTypesService,
+  ) {}
 
   private async assertOwnership(projectId: string, organizationId: string) {
     const project = await this.prisma.project.findFirst({
@@ -19,7 +30,10 @@ export class MandateService {
     return project;
   }
 
-  private async assertProjectAccess(projectId: string, actor: WorkManagementActor) {
+  private async assertProjectAccess(
+    projectId: string,
+    actor: WorkManagementActor,
+  ) {
     const project = await this.prisma.project.findFirst({
       where: { id: projectId, ...projectAccessWhere(actor) },
       select: { id: true },
@@ -43,8 +57,10 @@ export class MandateService {
       where: { projectId, organizationId: actor.organizationId },
       include: { timeEntries: true },
     });
-    const heuresReelles = tasks.reduce((sum, t) =>
-      sum + t.timeEntries.reduce((s, e) => s + e.heures, 0), 0);
+    const heuresReelles = tasks.reduce(
+      (sum, t) => sum + t.timeEntries.reduce((s, e) => s + e.heures, 0),
+      0,
+    );
 
     return { ...mandate, heuresReelles };
   }
@@ -53,134 +69,294 @@ export class MandateService {
     const project = await this.prisma.project.findFirst({
       where: { id: projectId, ...projectAccessWhere(actor) },
       select: {
-        id: true, name: true, documentType: true,
+        id: true,
+        name: true,
+        documentType: true,
         mandate: { select: { heuresBudgetees: true } },
         activities: {
-          orderBy: [{ scheduledDate: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+          orderBy: [
+            { scheduledDate: 'asc' },
+            { createdAt: 'asc' },
+            { id: 'asc' },
+          ],
           select: {
-            id: true, activityTypeId: true, label: true, customLabel: true, duration: true,
-            scheduledDate: true, status: true,
-            taskLists: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], select: {
-              id: true, taskListId: true, customName: true, instantiationSource: true,
+            id: true,
+            activityTypeId: true,
+            label: true,
+            customLabel: true,
+            duration: true,
+            scheduledDate: true,
+            status: true,
+            taskLists: {
+              orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          select: {
+                id: true,
+                taskListId: true,
+                customName: true,
+                instantiationSource: true,
               taskList: { select: { name: true } },
-            } },
-            bookings: { where: { status: { in: OPEN_BOOKING_STATUSES } }, orderBy: { updatedAt: 'desc' }, select: {
-              id: true, status: true, requestedDate: true, reportedDate: true, duration: true,
-              assignments: { where: { role: 'LEAD', status: { in: ['PENDING', 'ACCEPTED'] } },
-                orderBy: { assignedAt: 'desc' }, take: 1,
-                select: { status: true, user: { select: { id: true, firstName: true, lastName: true } } } },
-            } },
           },
         },
-        projectTaskLists: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], select: {
-          id: true, activityId: true, taskListId: true, customName: true, instantiationSource: true,
+            bookings: {
+              where: { status: { in: OPEN_BOOKING_STATUSES } },
+              orderBy: { updatedAt: 'desc' },
+              select: {
+                id: true,
+                status: true,
+                requestedDate: true,
+                reportedDate: true,
+                duration: true,
+                assignments: {
+                  where: {
+                    role: 'LEAD',
+                    status: { in: ['PENDING', 'ACCEPTED'] },
+                  },
+                  orderBy: { assignedAt: 'desc' },
+                  take: 1,
+                  select: {
+                    status: true,
+                    user: {
+                      select: { id: true, firstName: true, lastName: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        projectTaskLists: {
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          select: {
+            id: true,
+            activityId: true,
+            taskListId: true,
+            customName: true,
+            instantiationSource: true,
           taskList: { select: { name: true } },
-        } },
+          },
+        },
         projectTasks: {
           orderBy: [{ order: 'asc' }, { taskTitle: 'asc' }, { id: 'asc' }],
           select: {
-            id: true, activityId: true, projectTaskListId: true, taskTitle: true, categoryName: true,
-            status: true, dueDate: true, assigneeId: true,
+            id: true,
+            activityId: true,
+            projectTaskListId: true,
+            taskTitle: true,
+            categoryName: true,
+            status: true,
+            dueDate: true,
+            assigneeId: true,
             assignee: { select: { id: true, firstName: true, lastName: true } },
-            assignees: { include: { user: { select: { id: true, firstName: true, lastName: true } } } },
+            assignees: {
+              include: {
+                user: { select: { id: true, firstName: true, lastName: true } },
+              },
+            },
             timeEntries: { select: { heures: true } },
           },
         },
       },
     });
     if (!project) throw new NotFoundException('Projet introuvable');
-    if (!this.activityTypes) throw new Error('ActivityTypesService indisponible');
+    if (!this.activityTypes)
+      throw new Error('ActivityTypesService indisponible');
 
     const resolvedByType = await this.activityTypes.resolveTaskListsMany({
-      activityTypeIds: project.activities.flatMap(activity => activity.activityTypeId ? [activity.activityTypeId] : []),
+      activityTypeIds: project.activities.flatMap((activity) =>
+        activity.activityTypeId ? [activity.activityTypeId] : [],
+      ),
       organizationId: actor.organizationId,
       documentType: project.documentType,
     });
-    const listById = new Map(project.projectTaskLists.map(list => [list.id, list]));
-    const tasks = project.projectTasks.map(task => ({
+    const listById = new Map(
+      project.projectTaskLists.map((list) => [list.id, list]),
+    );
+    const tasks = project.projectTasks.map((task) => ({
       ...task,
-      actualHours: task.timeEntries.reduce((sum, entry) => sum + entry.heures, 0),
+      actualHours: task.timeEntries.reduce(
+        (sum, entry) => sum + entry.heures,
+        0,
+      ),
       timeEntries: undefined,
     }));
     const summarizeTasks = (items: any[]) => {
       const taskCount = items.length;
-      const completedTaskCount = items.filter(task => task.status === 'fait').length;
+      const completedTaskCount = items.filter(
+        (task) => task.status === 'fait',
+      ).length;
       return {
-        tasks: items, taskCount, completedTaskCount, openTaskCount: taskCount - completedTaskCount,
-        taskProgressPercent: taskCount ? Math.round((completedTaskCount / taskCount) * 100) : null,
+        tasks: items,
+        taskCount,
+        completedTaskCount,
+        openTaskCount: taskCount - completedTaskCount,
+        taskProgressPercent: taskCount
+          ? Math.round((completedTaskCount / taskCount) * 100)
+          : null,
         actualHours: items.reduce((sum, task) => sum + task.actualHours, 0),
       };
     };
-    const activityViews = project.activities.map(activity => {
-      const activityTasks = tasks.filter(task => task.activityId === activity.id);
-      const applicable = activity.activityTypeId ? (resolvedByType.get(activity.activityTypeId) ?? []) : [];
-      const applicableIds = new Set(applicable.map(item => item.id));
-      const configuredLists = activity.taskLists.filter(list => list.instantiationSource === 'ACTIVITY_TYPE_CONFIG');
-      const configuredIds = new Set(configuredLists.map(list => list.taskListId));
+    const activityViews = project.activities.map((activity) => {
+      const activityTasks = tasks.filter(
+        (task) => task.activityId === activity.id,
+      );
+      const applicable = activity.activityTypeId
+        ? (resolvedByType.get(activity.activityTypeId) ?? [])
+        : [];
+      const applicableIds = new Set(applicable.map((item) => item.id));
+      const configuredLists = activity.taskLists.filter(
+        (list) => list.instantiationSource === 'ACTIVITY_TYPE_CONFIG',
+      );
+      const configuredIds = new Set(
+        configuredLists.map((list) => list.taskListId),
+      );
       const summarizeList = (list: any, listTasks: any[]) => ({
-        projectTaskListId: list.id, taskListId: list.taskListId,
-        name: list.customName || list.taskList.name, instantiationSource: list.instantiationSource,
-        isCurrentlyApplicable: applicableIds.has(list.taskListId), ...summarizeTasks(listTasks),
+        projectTaskListId: list.id,
+        taskListId: list.taskListId,
+        name: list.customName || list.taskList.name,
+        instantiationSource: list.instantiationSource,
+        isCurrentlyApplicable: applicableIds.has(list.taskListId),
+        ...summarizeTasks(listTasks),
       });
-      const checklists = configuredLists.map(list => summarizeList(list,
-        activityTasks.filter(task => task.projectTaskListId === list.id)));
-      const configuredInstanceIds = new Set(configuredLists.map(list => list.id));
-      const linkedExistingLists = [...new Set(activityTasks
-        .filter(task => task.projectTaskListId && !configuredInstanceIds.has(task.projectTaskListId))
-        .map(task => task.projectTaskListId as string))]
-        .map(id => {
+      const checklists = configuredLists.map((list) =>
+        summarizeList(
+          list,
+          activityTasks.filter((task) => task.projectTaskListId === list.id),
+        ),
+      );
+      const configuredInstanceIds = new Set(
+        configuredLists.map((list) => list.id),
+      );
+      const linkedExistingLists = [
+        ...new Set(
+          activityTasks
+            .filter(
+              (task) =>
+                task.projectTaskListId &&
+                !configuredInstanceIds.has(task.projectTaskListId),
+            )
+            .map((task) => task.projectTaskListId as string),
+        ),
+      ].map((id) => {
           const list = listById.get(id);
-          return summarizeList(list ?? { id, taskListId: '', customName: 'Liste de travail existante',
-            taskList: { name: 'Liste de travail existante' }, instantiationSource: null },
-          activityTasks.filter(task => task.projectTaskListId === id));
+        return summarizeList(
+          list ?? {
+            id,
+            taskListId: '',
+            customName: 'Liste de travail existante',
+            taskList: { name: 'Liste de travail existante' },
+            instantiationSource: null,
+          },
+          activityTasks.filter((task) => task.projectTaskListId === id),
+        );
         });
       const booking = activity.bookings[0] ?? null;
       const lead = booking?.assignments[0] ?? null;
       const planningStatus = mandatePlanningStatus(activity);
       return {
-        id: activity.id, activityTypeId: activity.activityTypeId,
-        label: activity.customLabel || activity.label, duration: activity.duration,
-        scheduledDate: activity.scheduledDate, status: activity.status,
-        canonicalTypeMissing: !activity.activityTypeId, planningStatus,
-        booking: booking ? { id: booking.id, status: booking.status,
-          startUtc: booking.reportedDate ?? booking.requestedDate, durationMinutes: booking.duration } : null,
-        lead: lead ? { id: lead.user.id, displayName: `${lead.user.firstName} ${lead.user.lastName}`, status: lead.status } : null,
+        id: activity.id,
+        activityTypeId: activity.activityTypeId,
+        label: activity.customLabel || activity.label,
+        duration: activity.duration,
+        scheduledDate: activity.scheduledDate,
+        status: activity.status,
+        canonicalTypeMissing: !activity.activityTypeId,
+        planningStatus,
+        booking: booking
+          ? {
+              id: booking.id,
+              status: booking.status,
+              startUtc: booking.reportedDate ?? booking.requestedDate,
+              durationMinutes: booking.duration,
+            }
+          : null,
+        lead: lead
+          ? {
+              id: lead.user.id,
+              displayName: `${lead.user.firstName} ${lead.user.lastName}`,
+              status: lead.status,
+            }
+          : null,
         ...summarizeTasks(activityTasks),
-        checklists, historicalChecklists: checklists.filter(item => !item.isCurrentlyApplicable),
+        checklists,
+        historicalChecklists: checklists.filter(
+          (item) => !item.isCurrentlyApplicable,
+        ),
         linkedExistingLists,
-        directTasks: activityTasks.filter(task => !task.projectTaskListId),
-        missingTaskLists: applicable.filter(item => !configuredIds.has(item.id))
-          .map(item => ({ taskListId: item.id, name: item.name })),
+        directTasks: activityTasks.filter((task) => !task.projectTaskListId),
+        missingTaskLists: applicable
+          .filter((item) => !configuredIds.has(item.id))
+          .map((item) => ({ taskListId: item.id, name: item.name })),
       };
     });
-    const transversal = summarizeTasks(tasks.filter(task => !task.activityId && !task.projectTaskListId));
-    const legacyLists = project.projectTaskLists.filter(list => !list.activityId).map(list => ({
-      projectTaskListId: list.id, taskListId: list.taskListId, name: list.customName || list.taskList.name,
-      ...summarizeTasks(tasks.filter(task => !task.activityId && task.projectTaskListId === list.id)),
+    const transversal = summarizeTasks(
+      tasks.filter((task) => !task.activityId && !task.projectTaskListId),
+    );
+    const legacyLists = project.projectTaskLists
+      .filter((list) => !list.activityId)
+      .map((list) => ({
+        projectTaskListId: list.id,
+        taskListId: list.taskListId,
+        name: list.customName || list.taskList.name,
+        ...summarizeTasks(
+          tasks.filter(
+            (task) => !task.activityId && task.projectTaskListId === list.id,
+          ),
+        ),
     }));
     const actualHours = tasks.reduce((sum, task) => sum + task.actualHours, 0);
-    const plannedHours = project.activities.reduce((sum, activity) =>
-      sum + activity.bookings.reduce((bookingSum, booking) => bookingSum + booking.duration / 60, 0), 0);
+    const plannedHours = project.activities.reduce(
+      (sum, activity) =>
+        sum +
+        activity.bookings.reduce(
+          (bookingSum, booking) => bookingSum + booking.duration / 60,
+          0,
+        ),
+      0,
+    );
     const budgetHours = project.mandate?.heuresBudgetees ?? null;
-    const budgetRemainingHours = budgetHours === null ? null : Math.max(budgetHours - actualHours, 0);
-    const unplannedRemainingHours = budgetHours === null ? null : Math.max(budgetHours - actualHours - plannedHours, 0);
+    const budgetRemainingHours =
+      budgetHours === null ? null : Math.max(budgetHours - actualHours, 0);
+    const unplannedRemainingHours =
+      budgetHours === null
+        ? null
+        : Math.max(budgetHours - actualHours - plannedHours, 0);
     return {
-      project: { id: project.id, name: project.name, documentType: project.documentType },
-      summary: { budgetHours, actualHours, plannedHours, budgetRemainingHours, unplannedRemainingHours },
+      project: {
+        id: project.id,
+        name: project.name,
+        documentType: project.documentType,
+      },
+      summary: {
+        budgetHours,
+        actualHours,
+        plannedHours,
+        budgetRemainingHours,
+        unplannedRemainingHours,
+      },
       activities: activityViews,
       transversal,
       legacyLists,
-      classification: { activityTaskCount: tasks.filter(task => Boolean(task.activityId)).length,
-        legacyTaskCount: tasks.filter(task => !task.activityId && Boolean(task.projectTaskListId)).length,
-        transversalTaskCount: transversal.taskCount, totalTaskCount: tasks.length },
+      classification: {
+        activityTaskCount: tasks.filter((task) => Boolean(task.activityId))
+          .length,
+        legacyTaskCount: tasks.filter(
+          (task) => !task.activityId && Boolean(task.projectTaskListId),
+        ).length,
+        transversalTaskCount: transversal.taskCount,
+        totalTaskCount: tasks.length,
+      },
     };
   }
 
   async saveMandate(projectId: string, actor: WorkManagementActor, dto: any) {
-    await this.assertProjectAccess(projectId, actor);
+    return this.prisma.$transaction(
+      async (tx) => {
+        await lockMutableProject(tx, projectId, actor);
     const organizationId = actor.organizationId;
     if (dto.ownerId) {
-      const owner = await this.prisma.user.findFirst({ where: { id: dto.ownerId, organizationId, isActive: true } });
+          const owner = await tx.user.findFirst({
+            where: { id: dto.ownerId, organizationId, isActive: true },
+          });
       if (!owner) throw new NotFoundException('Responsable introuvable');
     }
 
@@ -190,7 +366,9 @@ export class MandateService {
 
     if (dto.typeMandat === 'FORFAITAIRE' && dto.dateDebutDelai) {
       const debut = new Date(dto.dateDebutDelai);
-      const heures = dto.heuresBudgetees ? parseFloat(dto.heuresBudgetees) : 0;
+          const heures = dto.heuresBudgetees
+            ? parseFloat(dto.heuresBudgetees)
+            : 0;
       const documentType = dto.typeDelai || 'STANDARD';
 
       if (documentType === 'EVACUATION') {
@@ -207,42 +385,63 @@ export class MandateService {
       dateLimite.setDate(dateLimite.getDate() + delaiJours);
     }
 
-    return this.prisma.projectMandate.upsert({
+        return tx.projectMandate.upsert({
       where: { projectId },
       update: {
         description: dto.description,
-        montantVendu: dto.montantVendu ? parseFloat(dto.montantVendu) : null,
+            montantVendu: dto.montantVendu
+              ? parseFloat(dto.montantVendu)
+              : null,
         tauxHoraire: dto.tauxHoraire ? parseFloat(dto.tauxHoraire) : null,
-        heuresBudgetees: dto.heuresBudgetees ? parseFloat(dto.heuresBudgetees) : null,
+            heuresBudgetees: dto.heuresBudgetees
+              ? parseFloat(dto.heuresBudgetees)
+              : null,
         lienDrive: dto.lienDrive,
         ownerId: dto.ownerId || null,
         typeMandat: dto.typeMandat || null,
         typeDelai: dto.typeDelai || null,
-        alerteActive: dto.alerteActive !== undefined ? dto.alerteActive : true,
-        ...(dto.dateDebutDelai ? { dateDebutDelai: new Date(dto.dateDebutDelai) } : {}),
+            alerteActive:
+              dto.alerteActive !== undefined ? dto.alerteActive : true,
+            ...(dto.dateDebutDelai
+              ? { dateDebutDelai: new Date(dto.dateDebutDelai) }
+              : {}),
         ...(dateLimite ? { dateLimite, delaiJours } : {}),
       },
       create: {
         projectId,
         organizationId,
         description: dto.description,
-        montantVendu: dto.montantVendu ? parseFloat(dto.montantVendu) : null,
+            montantVendu: dto.montantVendu
+              ? parseFloat(dto.montantVendu)
+              : null,
         tauxHoraire: dto.tauxHoraire ? parseFloat(dto.tauxHoraire) : null,
-        heuresBudgetees: dto.heuresBudgetees ? parseFloat(dto.heuresBudgetees) : null,
+            heuresBudgetees: dto.heuresBudgetees
+              ? parseFloat(dto.heuresBudgetees)
+              : null,
         lienDrive: dto.lienDrive,
         ownerId: dto.ownerId || null,
         typeMandat: dto.typeMandat || null,
         typeDelai: dto.typeDelai || null,
-        alerteActive: dto.alerteActive !== undefined ? dto.alerteActive : true,
-        ...(dto.dateDebutDelai ? { dateDebutDelai: new Date(dto.dateDebutDelai) } : {}),
+            alerteActive:
+              dto.alerteActive !== undefined ? dto.alerteActive : true,
+            ...(dto.dateDebutDelai
+              ? { dateDebutDelai: new Date(dto.dateDebutDelai) }
+              : {}),
         ...(dateLimite ? { dateLimite, delaiJours } : {}),
       },
     });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
   }
 
   // ── Déclencher le délai quand tâche relevé = fait ────────
-  async triggerDelaiFromTask(taskId: string, organizationId: string) {
-    const task = await this.prisma.projectTask.findFirst({
+  async triggerDelaiFromTask(
+    taskId: string,
+    organizationId: string,
+    db: Db = this.prisma,
+  ) {
+    const task = await db.projectTask.findFirst({
       where: { id: taskId, organizationId },
       include: { project: { include: { mandate: true } } },
     });
@@ -253,7 +452,8 @@ export class MandateService {
     if (mandate.dateDebutDelai) return; // déjà déclenché
 
     // Vérifier si c'est une tâche de type "relevé technique" ou "visite"
-    const isReleve = task.taskTitle.toLowerCase().includes('relev') ||
+    const isReleve =
+      task.taskTitle.toLowerCase().includes('relev') ||
                      task.taskTitle.toLowerCase().includes('visite');
     if (!isReleve) return;
 
@@ -269,7 +469,7 @@ export class MandateService {
     const dateLimite = new Date();
     dateLimite.setDate(dateLimite.getDate() + delaiJours);
 
-    await this.prisma.projectMandate.update({
+    await db.projectMandate.update({
       where: { projectId: task.projectId },
       data: { dateDebutDelai, dateLimite, delaiJours },
     });
@@ -294,37 +494,81 @@ export class MandateService {
     }));
   }
 
-  async addComment(projectId: string, actor: WorkManagementActor, contenu: string) {
-    await this.assertProjectAccess(projectId, actor);
+  async addComment(
+    projectId: string,
+    actor: WorkManagementActor,
+    contenu: string,
+  ) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        await lockMutableProject(tx, projectId, actor);
     const { organizationId, userId } = actor;
-    return this.prisma.projectComment.create({
-      data: { projectId, organizationId, actorType: 'INTERNAL_USER', userId, contenu },
-      include: { user: { select: { firstName: true, lastName: true, id: true } } },
+        return tx.projectComment.create({
+          data: {
+            projectId,
+            organizationId,
+            actorType: 'INTERNAL_USER',
+            userId,
+            contenu,
+          },
+          include: {
+            user: { select: { firstName: true, lastName: true, id: true } },
+          },
     });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
   }
 
-  async updateComment(projectId: string, commentId: string, actor: WorkManagementActor, contenu: string) {
-    await this.assertProjectAccess(projectId, actor);
+  async updateComment(
+    projectId: string,
+    commentId: string,
+    actor: WorkManagementActor,
+    contenu: string,
+  ) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        await lockMutableProject(tx, projectId, actor);
     const { organizationId, userId } = actor;
-    const comment = await this.prisma.projectComment.findFirst({
+        const comment = await tx.projectComment.findFirst({
       where: { id: commentId, projectId, organizationId, userId },
     });
-    if (!comment) throw new NotFoundException('Commentaire introuvable ou non autorisé');
-    return this.prisma.projectComment.update({
+        if (!comment)
+          throw new NotFoundException(
+            'Commentaire introuvable ou non autorisé',
+          );
+        return tx.projectComment.update({
       where: { id: commentId },
       data: { contenu },
-      include: { user: { select: { firstName: true, lastName: true, id: true } } },
+          include: {
+            user: { select: { firstName: true, lastName: true, id: true } },
+          },
     });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
   }
 
-  async deleteComment(projectId: string, commentId: string, actor: WorkManagementActor) {
-    await this.assertProjectAccess(projectId, actor);
+  async deleteComment(
+    projectId: string,
+    commentId: string,
+    actor: WorkManagementActor,
+  ) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        await lockMutableProject(tx, projectId, actor);
     const { organizationId, userId } = actor;
-    const comment = await this.prisma.projectComment.findFirst({
+        const comment = await tx.projectComment.findFirst({
       where: { id: commentId, projectId, organizationId, userId },
     });
-    if (!comment) throw new NotFoundException('Commentaire introuvable ou non autorisé');
-    return this.prisma.projectComment.delete({ where: { id: commentId } });
+        if (!comment)
+          throw new NotFoundException(
+            'Commentaire introuvable ou non autorisé',
+          );
+        return tx.projectComment.delete({ where: { id: commentId } });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
   }
 
   // ── TÂCHES ───────────────────────────────────────────────
@@ -336,11 +580,15 @@ export class MandateService {
       where: { projectId, organizationId },
       include: {
         timeEntries: {
-          include: { user: { select: { firstName: true, lastName: true, id: true } } },
+          include: {
+            user: { select: { firstName: true, lastName: true, id: true } },
+          },
           orderBy: { date: 'desc' },
         },
         assignees: {
-          include: { user: { select: { firstName: true, lastName: true, id: true } } },
+          include: {
+            user: { select: { firstName: true, lastName: true, id: true } },
+          },
         },
         assignee: { select: { id: true, firstName: true, lastName: true } },
         activity: { select: { id: true, label: true, customLabel: true } },
@@ -349,15 +597,21 @@ export class MandateService {
     });
   }
 
-  async initTasksFromTemplate(projectId: string, actor: WorkManagementActor, documentType: string) {
-    await this.assertProjectAccess(projectId, actor);
+  async initTasksFromTemplate(
+    projectId: string,
+    actor: WorkManagementActor,
+    documentType: string,
+  ) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        await lockMutableProject(tx, projectId, actor);
     const organizationId = actor.organizationId;
 
-    const existing = await this.prisma.projectTask.count({ where: { projectId } });
+        const existing = await tx.projectTask.count({ where: { projectId } });
     if (existing > 0) return { message: 'Tâches déjà initialisées' };
 
     // Prendre d'abord les templates de l'organisation, sinon les globaux
-    let templates = await this.prisma.taskTemplate.findMany({
+        let templates = await tx.taskTemplate.findMany({
       where: {
         isActive: true,
         organizationId,
@@ -371,7 +625,7 @@ export class MandateService {
 
     // Si aucun template org, prendre les globaux
     if (templates.length === 0) {
-      templates = await this.prisma.taskTemplate.findMany({
+          templates = await tx.taskTemplate.findMany({
         where: {
           isActive: true,
           organizationId: null,
@@ -384,10 +638,11 @@ export class MandateService {
       });
     }
 
-    if (templates.length === 0) return { message: 'Aucun template disponible' };
+        if (templates.length === 0)
+          return { message: 'Aucun template disponible' };
 
-    await this.prisma.projectTask.createMany({
-      data: templates.map(t => ({
+        await tx.projectTask.createMany({
+          data: templates.map((t) => ({
         projectId,
         organizationId,
         templateId: t.id,
@@ -398,72 +653,127 @@ export class MandateService {
       })),
     });
 
-    return this.getTasks(projectId, actor);
+        return tx.projectTask.findMany({
+          where: { projectId, organizationId },
+          include: {
+            timeEntries: {
+              include: {
+                user: { select: { firstName: true, lastName: true, id: true } },
+              },
+              orderBy: { date: 'desc' },
+            },
+            assignees: {
+              include: {
+                user: { select: { firstName: true, lastName: true, id: true } },
+              },
+            },
+            assignee: { select: { id: true, firstName: true, lastName: true } },
+            activity: { select: { id: true, label: true, customLabel: true } },
+          },
+          orderBy: [{ order: 'asc' }, { taskTitle: 'asc' }, { id: 'asc' }],
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
   }
 
   async createTask(projectId: string, dto: any, actor: WorkManagementActor) {
     const taskTitle = String(dto.taskTitle ?? '').trim();
-    if (!taskTitle) throw new BadRequestException('Le titre de la tâche est requis');
-    return this.prisma.$transaction(async (tx) => {
-      const project = await tx.project.findFirst({
-        where: { id: projectId, ...projectAccessWhere(actor) }, select: { id: true },
-      });
-      if (!project) throw new NotFoundException('Projet introuvable');
+    if (!taskTitle)
+      throw new BadRequestException('Le titre de la tâche est requis');
+    return this.prisma.$transaction(
+      async (tx) => {
+        await lockMutableProject(tx, projectId, actor);
       if (dto.assigneeId) {
         const assignee = await tx.user.findFirst({
-          where: { id: dto.assigneeId, organizationId: actor.organizationId, isActive: true }, select: { id: true },
+            where: {
+              id: dto.assigneeId,
+              organizationId: actor.organizationId,
+              isActive: true,
+            },
+            select: { id: true },
         });
         if (!assignee) throw new NotFoundException('Conseiller introuvable');
       }
       if (dto.activityId) {
         const activity = await tx.projectActivity.findFirst({
-          where: { id: dto.activityId, projectId, organizationId: actor.organizationId }, select: { id: true },
+            where: {
+              id: dto.activityId,
+              projectId,
+              organizationId: actor.organizationId,
+            },
+            select: { id: true },
         });
         if (!activity) throw new NotFoundException('Activité introuvable');
       }
       return tx.projectTask.create({
         data: {
-          projectId, organizationId: actor.organizationId, activityId: dto.activityId || null,
-          taskTitle, categoryName: String(dto.categoryName ?? 'Activité').trim() || 'Activité',
+            projectId,
+            organizationId: actor.organizationId,
+            activityId: dto.activityId || null,
+            taskTitle,
+            categoryName:
+              String(dto.categoryName ?? 'Activité').trim() || 'Activité',
           dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
-          assigneeId: dto.assigneeId || null, status: 'a_faire',
+            assigneeId: dto.assigneeId || null,
+            status: 'a_faire',
         },
         include: {
           assignee: { select: { id: true, firstName: true, lastName: true } },
-          assignees: { include: { user: { select: { id: true, firstName: true, lastName: true } } } },
+            assignees: {
+              include: {
+                user: { select: { id: true, firstName: true, lastName: true } },
+              },
+            },
           timeEntries: { select: { heures: true } },
         },
       });
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
   }
 
-  async updateTask(projectId: string, taskId: string, actor: WorkManagementActor, dto: any) {
-    await this.assertProjectAccess(projectId, actor);
+  async updateTask(
+    projectId: string,
+    taskId: string,
+    actor: WorkManagementActor,
+    dto: any,
+  ) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        await lockMutableProject(tx, projectId, actor);
     const organizationId = actor.organizationId;
-    const task = await this.prisma.projectTask.findFirst({
+        const task = await tx.projectTask.findFirst({
       where: { id: taskId, projectId, organizationId },
     });
     if (!task) throw new NotFoundException('Tâche introuvable');
     if (dto.assigneeId) {
-      const assignee = await this.prisma.user.findFirst({ where: { id: dto.assigneeId, organizationId, isActive: true } });
+          const assignee = await tx.user.findFirst({
+            where: { id: dto.assigneeId, organizationId, isActive: true },
+          });
       if (!assignee) throw new NotFoundException('Conseiller introuvable');
     }
 
-    const updated = await this.prisma.projectTask.update({
+        const updated = await tx.projectTask.update({
       where: { id: taskId },
       data: {
         status: dto.status,
         dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
-        assigneeId: dto.assigneeId !== undefined ? (dto.assigneeId || null) : undefined,
+            assigneeId:
+              dto.assigneeId !== undefined ? dto.assigneeId || null : undefined,
       },
     });
 
     // Déclencher le délai si tâche relevé technique = fait
-    if (dto.status === 'fait') {
-      await this.triggerDelaiFromTask(taskId, organizationId).catch(() => {});
-    }
+        if (dto.status === 'fait')
+          await this.triggerDelaiFromTask(taskId, organizationId, tx).catch(
+            () => {},
+          );
 
     return updated;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
   }
 
   async setTaskActivity(
@@ -472,25 +782,33 @@ export class MandateService {
     activityId: string | null,
     actor: WorkManagementActor,
   ) {
-    return this.prisma.$transaction(async (tx) => {
-      const project = await tx.project.findFirst({
-        where: { id: projectId, ...projectAccessWhere(actor) },
-        select: { id: true },
-      });
-      if (!project) throw new NotFoundException('Projet introuvable');
+    return this.prisma.$transaction(
+      async (tx) => {
+        await lockMutableProject(tx, projectId, actor);
       const task = await tx.projectTask.findFirst({
-        where: { id: taskId, projectId, organizationId: actor.organizationId },
+          where: {
+            id: taskId,
+            projectId,
+            organizationId: actor.organizationId,
+          },
         include: { _count: { select: { timeEntries: true } } },
       });
       if (!task) throw new NotFoundException('Tâche introuvable');
       if (task.activityId === activityId) {
-        return tx.projectTask.findUnique({ where: { id: task.id }, include: { activity: true } });
+          return tx.projectTask.findUnique({
+            where: { id: task.id },
+            include: { activity: true },
+          });
       }
       if (task.activityId && activityId) {
-        throw new ConflictException('La tâche est déjà liée à une autre activité');
+          throw new ConflictException(
+            'La tâche est déjà liée à une autre activité',
+          );
       }
       if (task._count.timeEntries > 0 || task.status !== 'a_faire') {
-        throw new ConflictException("Cette tâche contient déjà un historique d'exécution et ne peut pas être déplacée.");
+          throw new ConflictException(
+            "Cette tâche contient déjà un historique d'exécution et ne peut pas être déplacée.",
+          );
       }
 
       if (activityId) {
@@ -500,7 +818,9 @@ export class MandateService {
         });
         if (!activity) throw new NotFoundException('Activité introuvable');
         if (activity.projectId !== projectId) {
-          throw new BadRequestException('La tâche et l’activité doivent appartenir au même projet');
+            throw new BadRequestException(
+              'La tâche et l’activité doivent appartenir au même projet',
+            );
         }
       }
 
@@ -516,30 +836,53 @@ export class MandateService {
         data: { activityId },
       });
       if (changed.count !== 1) {
-        throw new ConflictException('La tâche vient d’être modifiée; rechargez les données');
+          throw new ConflictException(
+            'La tâche vient d’être modifiée; rechargez les données',
+          );
       }
 
-      await tx.auditLog.create({ data: {
-        action: activityId ? 'TASK_LINKED_TO_ACTIVITY' : 'TASK_UNLINKED_FROM_ACTIVITY',
-        entityType: 'ProjectTask', entityId: task.id, projectId,
-        description: activityId ? 'Tâche liée à une activité.' : 'Tâche déliée de son activité.',
+        await tx.auditLog.create({
+          data: {
+            action: activityId
+              ? 'TASK_LINKED_TO_ACTIVITY'
+              : 'TASK_UNLINKED_FROM_ACTIVITY',
+            entityType: 'ProjectTask',
+            entityId: task.id,
+            projectId,
+            description: activityId
+              ? 'Tâche liée à une activité.'
+              : 'Tâche déliée de son activité.',
         metadata: { previousActivityId: task.activityId, activityId },
-        userId: actor.userId, organizationId: actor.organizationId,
-      } });
-      return tx.projectTask.findUnique({ where: { id: task.id }, include: { activity: true } });
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
+            userId: actor.userId,
+            organizationId: actor.organizationId,
+          },
+        });
+        return tx.projectTask.findUnique({
+          where: { id: task.id },
+          include: { activity: true },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
   }
 
   // ── ENTRÉES DE TEMPS ─────────────────────────────────────
 
-  async addTimeEntry(projectId: string, taskId: string, actor: WorkManagementActor, dto: any) {
-    await this.assertProjectAccess(projectId, actor);
+  async addTimeEntry(
+    projectId: string,
+    taskId: string,
+    actor: WorkManagementActor,
+    dto: any,
+  ) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        await lockMutableProject(tx, projectId, actor);
     const { organizationId, userId } = actor;
-    const task = await this.prisma.projectTask.findFirst({
+        const task = await tx.projectTask.findFirst({
       where: { id: taskId, projectId, organizationId },
     });
     if (!task) throw new NotFoundException('Tâche introuvable');
-    return this.prisma.taskTimeEntry.create({
+        return tx.taskTimeEntry.create({
       data: {
         taskId,
         userId,
@@ -548,23 +891,48 @@ export class MandateService {
         heures: parseFloat(dto.heures),
         note: dto.note || null,
       },
-      include: { user: { select: { firstName: true, lastName: true, id: true } } },
+          include: {
+            user: { select: { firstName: true, lastName: true, id: true } },
+          },
     });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
   }
 
-  async deleteTimeEntry(projectId: string, entryId: string, actor: WorkManagementActor) {
-    await this.assertProjectAccess(projectId, actor);
+  async deleteTimeEntry(
+    projectId: string,
+    entryId: string,
+    actor: WorkManagementActor,
+  ) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        await lockMutableProject(tx, projectId, actor);
     const { organizationId, userId } = actor;
-    const entry = await this.prisma.taskTimeEntry.findFirst({
-      where: { id: entryId, userId, organizationId, task: { projectId, organizationId } },
+        const entry = await tx.taskTimeEntry.findFirst({
+          where: {
+            id: entryId,
+            userId,
+            organizationId,
+            task: { projectId, organizationId },
+          },
     });
-    if (!entry) throw new NotFoundException('Entrée introuvable ou non autorisée');
-    return this.prisma.taskTimeEntry.delete({ where: { id: entryId } });
+        if (!entry)
+          throw new NotFoundException('Entrée introuvable ou non autorisée');
+        return tx.taskTimeEntry.delete({ where: { id: entryId } });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
   }
 
   // ── FEUILLE D'HEURES ─────────────────────────────────────
 
-  async getTimesheet(projectId: string, actor: WorkManagementActor, dateFrom?: string, dateTo?: string) {
+  async getTimesheet(
+    projectId: string,
+    actor: WorkManagementActor,
+    dateFrom?: string,
+    dateTo?: string,
+  ) {
     await this.assertProjectAccess(projectId, actor);
     const organizationId = actor.organizationId;
 
@@ -589,7 +957,12 @@ export class MandateService {
     return { entries, totalHeures };
   }
 
-  async exportTimesheetPdf(projectId: string, actor: WorkManagementActor, dateFrom?: string, dateTo?: string) {
+  async exportTimesheetPdf(
+    projectId: string,
+    actor: WorkManagementActor,
+    dateFrom?: string,
+    dateTo?: string,
+  ) {
     const project = await this.prisma.project.findFirst({
       where: { id: projectId, ...projectAccessWhere(actor) },
       include: {
@@ -601,7 +974,9 @@ export class MandateService {
     if (!project) throw new NotFoundException('Projet introuvable');
     const organizationId = actor.organizationId;
 
-    const mandate = await this.prisma.projectMandate.findUnique({ where: { projectId } });
+    const mandate = await this.prisma.projectMandate.findUnique({
+      where: { projectId },
+    });
 
     const where: any = { organizationId, task: { projectId, organizationId } };
     if (dateFrom || dateTo) {
@@ -624,15 +999,21 @@ export class MandateService {
     const montant = mandate?.montantVendu || 0;
     const coutReel = totalHeures * taux;
 
-    const formatDate = (d: Date) => new Date(d).toLocaleDateString('fr-CA', {
-      day: 'numeric', month: 'long', year: 'numeric'
+    const formatDate = (d: Date) =>
+      new Date(d).toLocaleDateString('fr-CA', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
     });
 
-    const periodLabel = dateFrom && dateTo
+    const periodLabel =
+      dateFrom && dateTo
       ? `Du ${formatDate(new Date(dateFrom))} au ${formatDate(new Date(dateTo))}`
       : 'Toutes les périodes';
 
-    const rows = entries.map(e => `
+    const rows = entries
+      .map(
+        (e) => `
       <tr>
         <td>${formatDate(new Date(e.date))}</td>
         <td>${e.task?.categoryName || ''}</td>
@@ -641,7 +1022,9 @@ export class MandateService {
         <td class="center">${e.heures}h</td>
         <td>${(e as any).note || '—'}</td>
       </tr>
-    `).join('');
+    `,
+      )
+      .join('');
 
     const html = `
     <!DOCTYPE html>
@@ -738,7 +1121,12 @@ export class MandateService {
 
     return html;
   }
-  async getRendement(organizationId: string, userId?: string, dateFrom?: string, dateTo?: string) {
+  async getRendement(
+    organizationId: string,
+    userId?: string,
+    dateFrom?: string,
+    dateTo?: string,
+  ) {
     const where: any = { task: { project: { organizationId } } };
     if (userId) where.userId = userId;
     if (dateFrom || dateTo) {
@@ -767,7 +1155,7 @@ export class MandateService {
 
     // Grouper par conseiller
     const byUser: Record<string, any> = {};
-    entries.forEach(e => {
+    entries.forEach((e) => {
       const uid = e.user.id;
       if (!byUser[uid]) {
         byUser[uid] = {
@@ -802,12 +1190,13 @@ export class MandateService {
       const mandatsList = Object.values(c.mandats).map((m: any) => {
         const coutReel = m.heures * m.tauxHoraire;
         const marge = m.montantVendu - coutReel;
-        const margePct = m.montantVendu > 0 ? Math.round((marge / m.montantVendu) * 100) : 0;
+        const margePct =
+          m.montantVendu > 0 ? Math.round((marge / m.montantVendu) * 100) : 0;
         return { ...m, coutReel, marge, margePct };
       });
 
       const revenusTotal = mandatsList.reduce((sum, m) => sum + m.coutReel, 0);
-      const mandatsDeficitaires = mandatsList.filter(m => m.marge < 0).length;
+      const mandatsDeficitaires = mandatsList.filter((m) => m.marge < 0).length;
 
       return {
         ...c,
@@ -822,7 +1211,10 @@ export class MandateService {
     const teamStats = {
       heuresTotal: conseillers.reduce((sum, c) => sum + c.heuresTotal, 0),
       revenusTotal: conseillers.reduce((sum, c) => sum + c.revenusTotal, 0),
-      mandatsDeficitaires: conseillers.reduce((sum, c) => sum + c.mandatsDeficitaires, 0),
+      mandatsDeficitaires: conseillers.reduce(
+        (sum, c) => sum + c.mandatsDeficitaires,
+        0,
+      ),
     };
 
     return { conseillers, teamStats };
@@ -854,25 +1246,37 @@ export class MandateService {
     });
 
     const heuresParProjet: Record<string, number> = {};
-    tasks.forEach(t => {
+    tasks.forEach((t) => {
       const total = t.timeEntries.reduce((s, e) => s + e.heures, 0);
-      heuresParProjet[t.projectId] = (heuresParProjet[t.projectId] || 0) + total;
+      heuresParProjet[t.projectId] =
+        (heuresParProjet[t.projectId] || 0) + total;
     });
 
-    return mandates.map(m => {
+    return mandates.map((m) => {
       const heuresReelles = heuresParProjet[m.projectId] || 0;
       const heuresBudgetees = m.heuresBudgetees || 0;
-      const budgetPct = heuresBudgetees > 0 ? Math.round((heuresReelles / heuresBudgetees) * 100) : 0;
+      const budgetPct =
+        heuresBudgetees > 0
+          ? Math.round((heuresReelles / heuresBudgetees) * 100)
+          : 0;
 
       // Calcul délai
       let diffDays: number | null = null;
       let delaiLevel: string | null = null;
       if (m.dateLimite && m.typeMandat === 'FORFAITAIRE') {
-        diffDays = Math.ceil((new Date(m.dateLimite).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        delaiLevel = diffDays < 0 ? 'DEPASSE'
-          : diffDays <= 3 ? 'CRITIQUE'
-          : diffDays <= 7 ? 'URGENT'
-          : diffDays <= 14 ? 'ATTENTION'
+        diffDays = Math.ceil(
+          (new Date(m.dateLimite).getTime() - today.getTime()) /
+            (1000 * 60 * 60 * 24),
+        );
+        delaiLevel =
+          diffDays < 0
+            ? 'DEPASSE'
+            : diffDays <= 3
+              ? 'CRITIQUE'
+              : diffDays <= 7
+                ? 'URGENT'
+                : diffDays <= 14
+                  ? 'ATTENTION'
           : 'OK';
       }
 

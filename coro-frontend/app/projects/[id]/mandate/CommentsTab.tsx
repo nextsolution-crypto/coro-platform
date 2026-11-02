@@ -4,12 +4,19 @@ import { useState, useEffect } from 'react';
 import { Trash2, Pencil, Check, X } from 'lucide-react';
 import api from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
+import axios from 'axios';
 
 interface Props {
   projectId: string;
+  readOnly: boolean;
 }
 
-export default function CommentsTab({ projectId }: Props) {
+function mutationError(cause: unknown, fallback: string) {
+  const message = axios.isAxiosError(cause) ? cause.response?.data?.message : null;
+  return typeof message === 'string' ? message : fallback;
+}
+
+export default function CommentsTab({ projectId, readOnly }: Props) {
   const { user } = useAuthStore();
   const [comments, setComments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +46,7 @@ export default function CommentsTab({ projectId }: Props) {
       await api.post(`/projects/${projectId}/comments`, { contenu: newComment.trim() });
       setNewComment('');
       await fetchComments(); setSuccess('Commentaire enregistré.');
-    } catch { setError("Le commentaire n'a pas pu être enregistré."); }
+    } catch (cause) { setError(mutationError(cause, "Le commentaire n'a pas pu être enregistré.")); }
     finally { setSaving(false); }
   };
 
@@ -51,7 +58,7 @@ export default function CommentsTab({ projectId }: Props) {
       setEditingId(null);
       setEditingText('');
       await fetchComments(); setSuccess('Commentaire enregistré.');
-    } catch { setError("Le commentaire n'a pas pu être modifié."); }
+    } catch (cause) { setError(mutationError(cause, "Le commentaire n'a pas pu être modifié.")); }
   };
 
   const handleDelete = async (commentId: string) => {
@@ -60,7 +67,7 @@ export default function CommentsTab({ projectId }: Props) {
     try {
       await api.delete(`/projects/${projectId}/comments/${commentId}`);
       await fetchComments(); setSuccess('Commentaire supprimé.');
-    } catch { setError("Le commentaire n'a pas pu être supprimé."); }
+    } catch (cause) { setError(mutationError(cause, "Le commentaire n'a pas pu être supprimé.")); }
   };
 
   if (loading) return (
@@ -74,8 +81,9 @@ export default function CommentsTab({ projectId }: Props) {
       {error && <p role="alert" className="text-sm mb-4" style={{ color: '#C0392B' }}>{error}</p>}
       {success && <p className="text-sm mb-4" style={{ color: '#27AE60' }}>{success}</p>}
 
+      {readOnly && <p role="status" className="text-sm mb-4" style={{ color: '#6C757D' }}>Commentaires en lecture seule pour ce projet.</p>}
       {/* Zone de saisie */}
-      <div className="rounded-md p-5 mb-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+      {!readOnly && <div className="rounded-md p-5 mb-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
         <label className="block text-xs font-semibold mb-2 uppercase tracking-wide" style={{ color: '#6C757D' }}>
           Nouveau commentaire
         </label>
@@ -100,7 +108,7 @@ export default function CommentsTab({ projectId }: Props) {
             {saving ? 'Envoi...' : 'Ajouter'}
           </button>
         </div>
-      </div>
+      </div>}
 
       {/* Liste des commentaires */}
       {comments.length === 0 ? (
@@ -136,7 +144,7 @@ export default function CommentsTab({ projectId }: Props) {
                     </div>
                   </div>
 
-                  {isOwner && !isEditing && (
+                  {isOwner && !isEditing && !readOnly && (
                     <div className="flex gap-1.5 flex-shrink-0">
                       <button aria-label="Modifier le commentaire" onClick={() => { setEditingId(comment.id); setEditingText(comment.contenu); }}
                         className="p-1.5 rounded transition-colors"

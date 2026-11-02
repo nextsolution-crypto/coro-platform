@@ -122,7 +122,8 @@ export default function MandatePage() {
     finally { setLoading(false); }
   };
 
-  const canEditMandate = ['ADMIN', 'SUPER_ADMIN'].includes(authUser?.role || '');
+  const projectReadOnly = project?.isActive === false || project?.status === 'ARCHIVED';
+  const canEditMandate = !projectReadOnly && ['ADMIN', 'SUPER_ADMIN'].includes(authUser?.role || '');
   const mandateFieldsDirty = !mandateFieldsAreEqual(form, serverSnapshot);
   const commercialServicesDirty = mandateServicesAreDirty(commercialState.draft, commercialState.snapshot);
   const isDirty = mandateFieldsDirty || commercialServicesDirty;
@@ -416,6 +417,11 @@ export default function MandatePage() {
 
       {saveError && <p role="alert" className="text-sm mb-4" style={{ color: '#C0392B' }}>{saveError}</p>}
       {saveSuccess && <p aria-live="polite" className="text-sm mb-4" style={{ color: '#27864A' }}>{saveSuccess}</p>}
+      {projectReadOnly && (
+        <p role="status" className="text-sm mb-4 rounded p-3" style={{ color: '#6C4A00', backgroundColor: '#FFF8E1', border: '1px solid #F3D27A' }}>
+          Ce projet est archivé ou inactif. Son mandat, ses tâches et son historique demeurent consultables en lecture seule.
+        </p>
+      )}
       {!canEditMandate && activeTab === 'fiche' && (
         <p className="text-sm mb-4" style={{ color: '#6C757D' }}>Fiche et offre en lecture seule. Seuls les administrateurs peuvent les modifier.</p>
       )}
@@ -727,12 +733,12 @@ export default function MandatePage() {
         <div id="mandate-panel-work" role="tabpanel" aria-labelledby="mandate-tab-work" tabIndex={0}>
           <MandateWorkTab projectId={projectId} teamMembers={teamMembers} view={mandateWork.data}
             loading={mandateWork.loading} refreshing={mandateWork.refreshing} loadError={mandateWork.error}
-            onRefresh={mandateWork.refresh} />
+            readOnly={projectReadOnly} onRefresh={mandateWork.refresh} />
         </div>
       )}
 
       {activeTab === 'comments' && (
-        <div id="mandate-panel-comments" role="tabpanel" aria-labelledby="mandate-tab-comments" tabIndex={0}><CommentsTab projectId={projectId} /></div>
+        <div id="mandate-panel-comments" role="tabpanel" aria-labelledby="mandate-tab-comments" tabIndex={0}><CommentsTab projectId={projectId} readOnly={projectReadOnly} /></div>
       )}
 
       {activeTab === 'timesheet' && (
