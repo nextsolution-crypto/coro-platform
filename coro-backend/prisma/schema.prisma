@@ -3764,6 +3764,43 @@ model AdminAuditEvent {
   @@index([requestId])
 }
 
+enum QrCodeStatus {
+  ACTIVE
+  DISABLED
+}
+
+model QrCode {
+  id                    String       @id @default(uuid())
+  slug                  String       @unique
+  permanentPath         String       @unique
+  destinationUrl        String
+  status                QrCodeStatus @default(ACTIVE)
+  configurationVersion  Int          @default(1)
+  humanScanCount        Int          @default(0)
+  technicalRequestCount Int          @default(0)
+  lastScanAt            DateTime?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  changes               QrCodeChange[]
+
+  @@index([status])
+}
+
+model QrCodeChange {
+  id             String   @id @default(uuid())
+  qrCodeId       String
+  actorUserId    String
+  action         String
+  reason         String
+  previousState  Json?
+  nextState      Json
+  createdAt      DateTime @default(now())
+  qrCode         QrCode   @relation(fields: [qrCodeId], references: [id], onDelete: Restrict)
+
+  @@index([qrCodeId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
 model ClientPasswordResetToken {
   id           String     @id @default(uuid())
   clientUserId String

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "slug": "contact",
+  "permanentUrl": "https://getcoro.io/qr/contact",
+  "style": {
+    "foreground": "#000000",
+    "background": "#FFFFFF",
+    "errorCorrectionLevel": "H",
+    "quietZoneModules": 4,
+    "centerLogo": false
+  },
+  "files": {
+    "svg": {
+      "path": "/qr/contact.svg",
+      "sha256": "eeac299775a079a6d23a188fcca2643bf9cfa21ab37f34821a1c22cb7bc885ac"
+    },
+    "png": {
+      "path": "/qr/contact.png",
+      "width": 2048,
+      "height": 2048,
+      "sha256": "ddc1e0997183eff6f96642cec81319589399769f062e49881345a3e30b6ea25f"
+    }
+  }
+}
