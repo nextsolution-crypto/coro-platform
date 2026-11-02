@@ -120,7 +120,11 @@ try {
   const input = await racePage.$('input');
   await input?.type('incendie');
   await new Promise((resolvePromise) => setTimeout(resolvePromise, 350));
-  await input?.click({ clickCount: 3 });
+  await input?.focus();
+  await racePage.keyboard.down('Control');
+  await racePage.keyboard.press('A');
+  await racePage.keyboard.up('Control');
+  await racePage.keyboard.press('Backspace');
   await input?.type('medical');
   await racePage.waitForFunction(() => document.body.innerText.includes('46 résultats'));
   await new Promise((resolvePromise) => setTimeout(resolvePromise, 900));
@@ -130,6 +134,16 @@ try {
   await writeFile(join(evidenceRoot, 'incident-list-browser-acceptance.json'), `${JSON.stringify(report, null, 2)}\n`);
   console.log(JSON.stringify(report, null, 2));
   await context.close();
+} catch (error) {
+  const diagnostic = {
+    generatedAt: new Date().toISOString(),
+    sourceHead: process.env.CORO_QA_COMMIT_SHA,
+    message: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack?.split('\n').slice(0, 8) : undefined,
+  };
+  await writeFile(join(evidenceRoot, 'incident-list-browser-error.json'), `${JSON.stringify(diagnostic, null, 2)}\n`);
+  console.error(JSON.stringify(diagnostic, null, 2));
+  process.exitCode = 1;
 } finally {
   await browser.close().catch(() => undefined);
   await adapter.close().catch(() => undefined);
