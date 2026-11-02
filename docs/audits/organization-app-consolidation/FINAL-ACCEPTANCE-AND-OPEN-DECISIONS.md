@@ -2,11 +2,13 @@
 
 ## Statut courant
 
-`TRAVAUX_INDÉPENDANTS_LIVRÉS — DÉCISIONS_HUMAINES_RESTANTES`
+`MASTER_CLOS_AVEC_RÉSERVES_EXPLICITES — INVITATION_ET_LECTEUR_ÉCRAN_EN_ATTENTE_HUMAINE`
 
 Réconciliation autoritative : le produit actif vérifié est `c91543efdf34c6429d1877a0b92f0a28567b5bb7`, migration 166. La release `41360598223` et l'inspection `41361880281` sont réussies. Bibliothèque → Knowledge/CORO AI authentifié est livré; Bedrock réel reste désactivé. L'inventaire stockage `41361883831` est strictement en lecture seule et n'a supprimé aucun objet.
 
-Le manifeste autoritatif post-release remplace la baseline historique `91c1313c…` / migration 165. La baseline active est désormais `c91543efdf34c6429d1877a0b92f0a28567b5bb7`, migration 166.
+Le manifeste autoritatif post-release remplace les baselines historiques. La baseline active est désormais `b0183e56c0b84a7b8eb3c7f9d55efef7345c83d5`, migration 166, release `41365428137`, inspection `41366771019` `PASS/GO`.
+
+La décision `PROGRESSION_DÉCLARÉE` est livrée et vérifiée en production : listes, fiche Projet, Dashboard et administration emploient le libellé approuvé; la fiche explique qu'il s'agit d'une valeur manuelle persistée et distincte du score qualité. La décision `PDF_UA_EXCLU_V1` est enregistrée sans revendication de certification.
 
 ## Décisions et validations humaines attendues
 
@@ -14,6 +16,12 @@ Le manifeste autoritatif post-release remplace la baseline historique `91c1313c�
 | --- | --- | --- |
 | Invitations internes | session ADMIN/SUPER_ADMIN puis constat de réception et utilisation du lien reçu à `info@getcoro.io` | ouvrir `https://app.getcoro.io/settings/users`; aucune autre autorisation métier n’est requise, mais l’envoi final exige confirmation immédiate |
 | Lecteur d’écran | restitution vocale réelle non déductible du DOM | exécuter `SCREEN-READER-HUMAN-ACCEPTANCE.md` et retourner le formulaire de constat |
+
+## Preuve navigateur Knowledge
+
+Le 2026-11-02, la session ClientUser autorisée a obtenu une réponse sur la procédure Bibliothèque PC014, puis ouvert la citation `/knowledge/library-sources/60c2367b-df50-418e-a62e-fdd3ce4db9fb`. La page a confirmé la portée globale, la version `2026-08-23T21:09:43.289Z`, le contenu PC014 et l'empreinte SHA-256 `81fb773211443a2d48e928e31eb51d6bccd5dfd1c60caa385de819ad72e4943d`; F5 a conservé le résultat et les droits.
+
+L'interface indiquait `CORO AI · AWS Canada`, état déjà actif avant cette vérification. Aucun fournisseur, flag ou secret n'a été activé ou modifié. Cette preuve valide le chemin de récupération et d'ouverture de citation; elle ne vaut pas acceptation générale de génération IA, de coût, de qualité ou de disponibilité fournisseur.
 
 ## Décisions Mathieu enregistrées le 2026-11-01
 
@@ -34,7 +42,7 @@ Les décisions produit sont arrêtées. Les preuves humaines restantes sont :
 
 1. connexion ADMIN/SUPER_ADMIN à `https://app.getcoro.io/settings/users`, puis confirmation immédiate de l'envoi unique vers `info@getcoro.io`; constat humain séparé de la réception et du lien; nettoyage de l'identité QA après la recette;
 2. exécution de `SCREEN-READER-HUMAN-ACCEPTANCE.md` avec NVDA, JAWS ou VoiceOver;
-3. ouverture authentifiée d’une citation Bibliothèque dans Chrome, sans activation de fournisseur IA réel.
+3. la citation Bibliothèque est désormais vérifiée en Chrome; aucune activation fournisseur n'a été effectuée, mais le fournisseur AWS était déjà signalé actif et reste exclu du verdict global de génération.
 
 Le stockage reste une réserve de qualification : les 116 candidats sont catégorisés, mais aucun n'est démontré supprimable. Le rollback est prêt et répété en environnement isolé, sans prétendre à une exécution réelle de production.
 
