@@ -41,3 +41,9 @@ Le calcul nominal est déterministe, l’isolation inter-tenant et l’autorité
 - Réserves API/PostgreSQL : `D:\CORO-QA\tracking\organization-performance\api\performance-reserves-acceptance.json`
 - Réponses désordonnées : `D:\CORO-QA\tracking\organization-performance\browser\performance-browser-ordering.json`
 - Le checkpoint contenant les sessions reste hors des preuves et du dépôt, puis est supprimé à la fermeture du stack.
+
+## Réconciliation finale
+
+Le verdict historique `CORRECTION_REQUISE` a conduit au lot ciblé `#165`. Ce lot a été testé sur `7f6580b0788ed22705b0604911c76189632c5a90`, fusionné, puis livré dans le candidat explicite `205eb1283b7de71a338e36647ecb5c91b6ed0784`. La release `41533537344` et l'inspection post-release `41535662856` sont réussies.
+
+La recette de production en lecture seule confirme l'ouverture de Rendement, la persistance après F5 et les rendus desktop/mobile de l'état vide sans erreur console critique. Aucun mandat financier ni projet archivé n'étant visible dans ce périmètre, les filtres non exposés et la lecture visuelle d'un historique archivé ne sont pas revendiqués comme exercés en production. Les refus de mutation et la concurrence restent prouvés par le stack QA réel. Verdict final du défaut PERF-02 : `CORRIGÉ_TESTÉ_DÉPLOYÉ`.
