@@ -138,15 +138,28 @@ npm run qr:generate -- contact https://getcoro.io/qr/contact
 
 - Recette physique sur plusieurs téléphones : `NOT_VERIFIED`.
 - Test d'impression réel : `NOT_VERIFIED`.
-- HTTPS public `https://getcoro.io/qr/contact` : `NOT_DEPLOYED` et non activé.
-- Migration de production : non exécutée.
-- La CI de la PR constitue la dernière barrière automatique; son état terminal doit être attaché à la remise de revue.
+- HTTPS public `https://getcoro.io/qr/contact` : `NOT_DEPLOYED` et non activé au terme de la tentative gouvernée du 2 novembre 2026.
+- Migration de production : non exécutée; la tête demeure `20261119010000_library_knowledge_source_authority` et `20261120010000_permanent_qr_codes` apparaît zéro fois dans l'historique de production.
+- Le déploiement doit être repris à partir d'un nouveau candidat explicitement revu, car `main` a avancé vers un commit Rendement non inclus dans l'autorisation QR-001 pendant le build immuable.
+
+## Intégration et tentative de release gouvernée — 2 novembre 2026
+
+- PR #164 fusionnée par merge commit `a5cc1ddcc163b39b99ee6a8cf9f5864a29b130f4`.
+- Parent QR exact : `c6f334291ebec83eb5c22e704a8118a468cb2c18`.
+- CI de `main` : **PASS**; tests backend/PostgreSQL, quatre typechecks et build du portail validés.
+- Audit de capacité `41438054785` : **HEALTHY**, 26 767 949 824 octets libres, disque à 68 %, aucun candidat de rétention admissible.
+- Inspection pré-release `41438268781` : **GO**; sauvegarde `REMOTE_VERIFIED`, restauration `RESTORE_VERIFIED`, quatre images de rollback disponibles et verrou de déploiement libre.
+- Pipeline gouverné `41438384184` : images immuables construites, puis arrêt **fail-closed avant migration et avant bascule**.
+- Cause : `origin/main` a avancé pendant le build de `a5cc1ddc…` vers `600b1a4134ada3b3c9dd15b7333876f6e511fcdd` (PR #165, Rendement). La garde exige que le SHA autorisé soit encore exactement la tête de `main`; elle a donc empêché de livrer silencieusement le chantier Rendement.
+- Inspection post-échec `41440123087` : **GO**, production toujours au SHA `c41e05b891cdcfcc23a1a64e27278ca942d417fe`, 166 migrations, zéro occurrence de la migration QR, aucun échec de migration, sauvegarde et restauration toujours vérifiées, verrou libre.
+- Digests candidats construits mais non activés : backend `sha256:7ba17b1ca55517377f09cc270a0dd305a29a74f9646c96ae9ab260d9d140ab1d`, frontend `sha256:ba06b4396978df4402d76eef4ed79fcca2da0cf8113645d4ed510c7183112bf4`, website `sha256:526091390a8349820b29646340179ee79eae87f7e5b0d2a6ccd701c44063afaa`, portail `sha256:8dd208fd86b9888f123b7a5328b5a1e986372ef88739e11007c64b31067ea592`.
+- Checksum local attendu de la migration QR : `cb2b8d33f67bea6f5ebf490e55ced05c82b50d792e33c8b7cf43cfd96980cabc`.
 
 ## Invariants de remise
 
 - Travaux Rendement modifiés : **0**.
 - Base propriétaire mutée : **NON**.
 - Destination publique existante modifiée : **NON**.
-- Fusion : **NON**.
+- Fusion PR #164 : **OUI**, merge commit `a5cc1ddcc163b39b99ee6a8cf9f5864a29b130f4`.
 - Migration production : **NON**.
-- Activation/release : **AUCUNE**.
+- Activation/release : **AUCUNE**; tentative bloquée avant mutation par la garde immuable.
