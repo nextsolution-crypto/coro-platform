@@ -41,12 +41,12 @@ Preuves hors dépôt : `D:\CORO-QA\tracking\organization-performance-fix`.
 
 ## Réserves
 
-- Production authentifiée : `NOT_VERIFIED`, hors mandat sans déploiement.
+- Production authentifiée : module Rendement chargé et persistant après F5 sous session autorisée. Aucun projet archivé n'existe dans le périmètre visible de ce compte; la bannière et les contrôles de lecture seule d'un projet archivé restent donc `NOT_VERIFIED` visuellement en production, sans création ni mutation de donnée pour forcer le cas. Les refus serveur, la concurrence et la préservation de l'historique demeurent **PASS** dans les tests PostgreSQL/API du candidat livré.
 - Lecteur d'écran réel : `NOT_VERIFIED`; les rôles et alertes accessibles sont couverts par les contrats et Chrome, sans revendiquer de restitution vocale.
 - `asOf` : proposition `Travail réalisé jusqu'au`, non approuvée; le résultat peut changer après une saisie rétroactive.
 - Filtre conseiller : proposition `Mandats avec participation de`, non approuvée; il inclut toute la main-d'œuvre des mandats sélectionnés.
 
-## Livraison gouvernée
+## Clôture de production combinée — 2 novembre 2026
 
 - PR produit : `#165`, HEAD testé `7f6580b0788ed22705b0604911c76189632c5a90`, fusionnée par `600b1a4134ada3b3c9dd15b7333876f6e511fcdd`.
 - Candidat final : `205eb1283b7de71a338e36647ecb5c91b6ed0784`. Il contient la correction Rendement, le système QR de `#164` et la mise à jour documentaire QR de `#166`; aucun autre chantier applicatif non autorisé n'a été ajouté après la fusion de `#165`.
@@ -58,4 +58,5 @@ Preuves hors dépôt : `D:\CORO-QA\tracking\organization-performance-fix`.
 - Sauvegarde : `REMOTE_VERIFIED`; restauration : `RESTORE_VERIFIED`.
 - Capacité : l'entretien pré-release gouverné a supprimé 16 images expirées non référencées et récupéré physiquement 9 434 075 136 octets. La rotation post-release n'avait plus aucun candidat. L'inspection finale mesure 80 162 804 KiB au total et 37 326 564 KiB disponibles (54 % utilisés).
 - Rollback : les quatre images précédentes sont physiquement disponibles, mais le backend antérieur réintroduit les écritures sur projets archivés. En l'absence d'un jeu explicitement approuvé par l'autorité de rollback, ce retour applicatif reste interdit; la restauration de données est vérifiée et la correction doit être conservée par roll-forward.
-- Vérification navigateur de production : en attente d'un onglet CORO authentifié; aucune mutation de production n'est autorisée pour cette preuve.
+- Recette Chrome authentifiée : page Rendement chargée et identique après F5. Le compte observé affiche zéro mandat financier et zéro projet archivé; aucune écriture métier réelle n'a été effectuée. La lecture seule visuelle d'un projet archivé demeure donc `NOT_VERIFIED`, tandis que les refus backend/PostgreSQL, la concurrence et l'historique sont couverts par les tests réussis.
+- Les calculs `asOf` et conseiller n'ont pas été modifiés; leurs décisions de libellés restent ouvertes.
