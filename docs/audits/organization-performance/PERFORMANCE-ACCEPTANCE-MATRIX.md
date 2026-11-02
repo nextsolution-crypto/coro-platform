@@ -20,6 +20,6 @@
 | Régression | frontend Rendement | PASS | 2 tests contrat + 7 tests monétaires; TypeScript PASS |
 | Lecteur d’écran réel | restitution vocale | NOT_VERIFIED | aucun lecteur fiable disponible dans le harnais |
 | Production | release et inspection | PASS | workflow `41533537344` SUCCESS; inspection `41535662856` PASS/GO; SHA `205eb128…`; 4 services actifs; PostgreSQL 16.15 / 167 migrations |
-| Production | lecture seule authentifiée | NOT_VERIFIED | onglet CORO authentifié demandé; non substituée à la recette synthétique |
+| Production | lecture seule authentifiée | PASS_LIMITÉ | ouverture et F5 sous session autorisée; rendu desktop et mobile 320 px lisible; aucun débordement; aucun message console critique après rechargement. Le compte observé ne contient aucun mandat financier : filtres, historique archivé et actions en lecture seule non exerçables sans mutation réelle. |
 
 Un scénario non exécuté ne devient pas PASS par inférence.
