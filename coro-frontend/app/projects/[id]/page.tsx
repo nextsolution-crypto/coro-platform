@@ -1107,7 +1107,7 @@ export default function ProjectDetailPage() {
         })()
       }
 
-      {/* Progression */}
+      {/* Progression déclarée */}
       <div className="rounded-md p-6 mb-6"
         style={{
           backgroundColor: '#FFFFFF',
@@ -1115,7 +1115,7 @@ export default function ProjectDetailPage() {
           boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
         }}>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold" style={{ color: '#2C3E50' }} title="Avancement des grandes étapes du projet (Configuration → Génération → Éditeur), pas le détail du formulaire de configuration">Progression ⓘ</h3>
+          <h3 className="font-semibold" style={{ color: '#2C3E50' }} title="Valeur manuelle persistée pour ce projet. Elle n’est ni calculée depuis les documents ni confondue avec le score qualité.">Progression déclarée ⓘ</h3>
           <span className="font-bold" style={{ color: '#C0392B' }}>
             {project.progress}%
           </span>

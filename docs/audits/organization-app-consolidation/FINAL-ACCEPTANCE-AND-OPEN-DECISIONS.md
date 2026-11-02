@@ -14,8 +14,11 @@ Le manifeste autoritatif post-release remplace la baseline historique `91c1313c�
 | --- | --- | --- |
 | Invitations internes | session ADMIN/SUPER_ADMIN puis constat de réception et utilisation du lien reçu à `info@getcoro.io` | ouvrir `https://app.getcoro.io/settings/users`; aucune autre autorisation métier n’est requise, mais l’envoi final exige confirmation immédiate |
 | Lecteur d’écran | restitution vocale réelle non déductible du DOM | exécuter `SCREEN-READER-HUMAN-ACCEPTANCE.md` et retourner le formulaire de constat |
-| PDF/UA | inclusion contractuelle ou exclusion explicite V1 | choisir `PDF_UA_INCLUS_CONTRACTUELLEMENT` ou `PDF_UA_EXCLU_V1` |
-| Progression Projet | aucune règle actuelle ne permet de transformer objectivement l’avancement documentaire en pourcentage | choisir `JALONS_GOUVERNÉS` ou `PROGRESSION_DÉCLARÉE` |
+
+## Décisions Mathieu enregistrées le 2026-11-01
+
+- `PDF_UA_EXCLU_V1` : PDF/UA est exclu du périmètre contractuel V1; aucune certification n’est revendiquée.
+- `PROGRESSION_DÉCLARÉE` : la progression Projet demeure une valeur manuelle persistée, distincte du score qualité; aucun calcul automatique ni jalon implicite.
 
 ## Exclusions maintenues
 
@@ -27,15 +30,14 @@ Le manifeste autoritatif post-release remplace la baseline historique `91c1313c�
 
 ## Verdict final
 
-Les travaux indépendants autorisés sont achevés et livrés. Les réserves restantes dépendent exclusivement d'une preuve ou d'une décision humaine :
+Les décisions produit sont arrêtées. Les preuves humaines restantes sont :
 
 1. connexion ADMIN/SUPER_ADMIN à `https://app.getcoro.io/settings/users`, puis confirmation immédiate de l'envoi unique vers `info@getcoro.io`; constat humain séparé de la réception et du lien; nettoyage de l'identité QA après la recette;
 2. exécution de `SCREEN-READER-HUMAN-ACCEPTANCE.md` avec NVDA, JAWS ou VoiceOver;
-3. décision `PDF_UA_INCLUS_CONTRACTUELLEMENT` ou `PDF_UA_EXCLU_V1`;
-4. décision `JALONS_GOUVERNÉS` ou `PROGRESSION_DÉCLARÉE`.
+3. ouverture authentifiée d’une citation Bibliothèque dans Chrome, sans activation de fournisseur IA réel.
 
 Le stockage reste une réserve de qualification : les 116 candidats sont catégorisés, mais aucun n'est démontré supprimable. Le rollback est prêt et répété en environnement isolé, sans prétendre à une exécution réelle de production.
 
-Le MASTER ne recevra aucun statut global « 100 % ». Sa clôture finale reste suspendue uniquement aux preuves et décisions humaines listées ci-dessus; les travaux techniques indépendants sont terminés.
+Le MASTER ne recevra aucun statut global « 100 % ». Il peut être clos avec les exclusions et réserves explicites ci-dessus après livraison des libellés approuvés; les preuves humaines non réalisables demeurent `NOT_VERIFIED`.
 
 Le lot des divergences historiques est clos par l’inventaire production `41356195887` : aucune ligne de conflit et aucune organisation affectée. Le stockage reste ouvert : les 116 objets non rapprochés sont des candidats, pas des orphelins démontrés.

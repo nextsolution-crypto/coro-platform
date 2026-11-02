@@ -1,4 +1,8 @@
-# Décision métier requise — progression Projet
+# Décision approuvée — progression déclarée Projet
+
+## Décision Mathieu — 2026-11-01
+
+`PROGRESSION_DÉCLARÉE` est approuvée. `Project.progress` demeure une valeur manuelle persistée. Les interfaces doivent employer « Progression déclarée » et préciser qu’elle n’est ni calculée depuis les documents ni confondue avec le score qualité. Aucun jalon implicite, calcul automatique, backfill ou changement de valeur n’est autorisé par cette décision.
 
 ## État démontré
 
@@ -6,7 +10,7 @@
 
 Le score de qualité est une autorité distincte. Il est calculé côté serveur depuis des critères techniques propres au PCA ou au PMU/PSI. Il ne doit pas être présenté comme la progression du projet.
 
-La présente PR conserve cette sémantique. Aucun recalcul, backfill ou changement de libellé n’est appliqué sans décision métier.
+La présente livraison conserve cette sémantique et aligne les libellés. Aucun recalcul ni backfill n’est appliqué.
 
 ## Proposition concrète
 
@@ -42,12 +46,6 @@ Exemples :
 
 Conserver la valeur manuelle, mais renommer partout l’indicateur « progression déclarée » et afficher sa provenance ainsi que sa date de mise à jour. Cette option évite une migration, mais conserve une mesure subjective.
 
-## Décision demandée
+## Décision enregistrée
 
-Choisir entre :
-
-- `JALONS_GOUVERNÉS` (recommandé);
-- `PROGRESSION_DÉCLARÉE`;
-- maintien temporaire de la sémantique actuelle.
-
-Cette décision peut être regroupée avec les arbitrages sur les divergences historiques. Elle ne bloque pas les inventaires, le raccordement Knowledge ni les autres preuves indépendantes.
+`PROGRESSION_DÉCLARÉE`. L’option `JALONS_GOUVERNÉS` reste une évolution future non approuvée et ne doit pas être présentée comme le comportement actuel.

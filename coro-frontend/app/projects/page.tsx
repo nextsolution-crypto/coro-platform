@@ -620,7 +620,7 @@ export default function ProjectsPage() {
                 ) : (
                   <div className="mb-3">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs" style={{ color: '#ADB5BD' }}>Progression</span>
+                      <span className="text-xs" style={{ color: '#ADB5BD' }} title="Valeur manuelle persistée, distincte du score qualité.">Progression déclarée</span>
                       <span className="text-xs font-medium" style={{ color: '#6C757D' }}>{project.progress}%</span>
                     </div>
                     <div className="w-full rounded-full h-1.5" style={{ backgroundColor: '#E9ECEF' }}>

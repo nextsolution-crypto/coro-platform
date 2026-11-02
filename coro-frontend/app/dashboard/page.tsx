@@ -779,7 +779,7 @@ export default function DashboardPage() {
                     className="text-xs"
                     style={{ color: p.text('#ADB5BD') }}
                   >
-                    Progression
+                    Progression déclarée
                   </span>
 
                   <span
@@ -825,7 +825,7 @@ export default function DashboardPage() {
                 'Bâtiment',
                 'Type',
                 'Statut',
-                'Progression',
+                'Progression déclarée',
                 'Modifié',
               ].map(col => (
                 <th

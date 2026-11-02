@@ -115,7 +115,7 @@ export default function AllProjectsAdminPage() {
         <table className="w-full text-sm">
           <thead>
             <tr style={{ backgroundColor: '#F8F9FA' }}>
-              {['Projet', 'Organisation', 'Client / Bâtiment', 'Responsable', 'Statut', 'Progression'].map(col => (
+              {['Projet', 'Organisation', 'Client / Bâtiment', 'Responsable', 'Statut', 'Progression déclarée'].map(col => (
                 <th key={col} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
                   style={{ color: '#6C757D', borderBottom: '1px solid #E9ECEF' }}>
                   {col}
