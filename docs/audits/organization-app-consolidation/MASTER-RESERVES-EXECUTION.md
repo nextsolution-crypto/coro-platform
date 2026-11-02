@@ -80,6 +80,7 @@ Le SHA documentaire de `main` ne remplace pas silencieusement le SHA produit act
 - 2026-11-02 — PR #159 fusionnée; release `41365428137` SUCCESS; inspection `41366771019` PASS/GO; SHA actif `b0183e56`; libellés et aide « Progression déclarée » vérifiés en Chrome production et après F5.
 - 2026-11-02 — citation Bibliothèque PC014 ouverte dans le portail authentifié; portée, version et empreinte vérifiées après F5. L'interface signalait AWS Canada déjà actif; aucune activation n'a été réalisée et la génération réelle reste hors verdict global.
 - 2026-11-02 — invitation QA minimale confirmée puis refusée avant mutation pour collision globale sur `info@getcoro.io`; liste organisationnelle inchangée, aucun renvoi, compte existant préservé. La campagne fournisseur/réception reste non exécutée.
+- 2026-11-02 — PR #162 fusionnée au SHA `c41e05b8`; QA synthétique du motif de désactivation exécutée sur les images exactes (annulation, motif vide, payload backend, action autorisée, révocation de session, erreur 503 visible sans mutation). CI main `41370506741`, capacité `41371906982`, inspection pré-release `41371909251`, release `41372128690`, inspection post-release `41373592084` et réconciliation `41373639994` réussies. Production active `c41e05b8`, migration inchangée `20261119010000_library_knowledge_source_authority`, quatre rollbacks disponibles; dialogue de motif vérifié puis annulé en production, sans désactivation ni suppression réelle.
 
 ## État de livraison explicite
 
@@ -90,3 +91,4 @@ Le SHA documentaire de `main` ne remplace pas silencieusement le SHA produit act
 | Inventaire stockage multi-autorités | oui | oui | oui | oui (`96800e95`) | workflow disponible | oui (`41356195887`) | non, 116 candidats à qualifier |
 | Bibliothèque → Knowledge/CORO AI authentifié | oui (`64e8335a`) | oui, déterministe + migration 166 | oui | oui (`c91543ef`) | oui | oui (`41361880281`) | oui pour récupération authentifiée; génération fournisseur réelle reste NOT_VERIFIED |
 | Progression Projet | oui, libellés + Manuel | oui, contrat 2/2, Manuel 24/24, TypeScript et build | oui | oui (`b0183e56`) | oui | oui (`41366771019`) | oui pour la décision et les interfaces |
+| Motif de désactivation User interne | oui (`8f382b27`) | oui, contrat + QA synthétique | oui | oui (`c41e05b8`) | oui (`41372128690`) | oui (`41373639994`) | oui; vérification production annulée sans mutation |
