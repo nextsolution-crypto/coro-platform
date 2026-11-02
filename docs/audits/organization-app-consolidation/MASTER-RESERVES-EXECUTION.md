@@ -1,5 +1,18 @@
 # Registre maître — clôture des réserves de consolidation
 
+## Réconciliation de clôture du 2026-11-02
+
+- Décisions produit enregistrées : `PDF_UA_EXCLU_V1` et `PROGRESSION_DÉCLARÉE`.
+- PR #159 fusionnée au SHA `b0183e56c0b84a7b8eb3c7f9d55efef7345c83d5`; CI main `41365027388` et release gouvernée `41365428137` : SUCCESS.
+- Inspection post-release `41366771019` : `PASS/GO`; SHA actif exact `b0183e56c0b84a7b8eb3c7f9d55efef7345c83d5`; PostgreSQL 16.15; 166 migrations; tête `20261119010000_library_knowledge_source_authority`; verrou libre.
+- Digests actifs : backend `sha256:0215801c6c3b7302fe8b4413d1a0e2f88d8cd8b4198fd74c6aa6f0d94f3a79b1`; frontend `sha256:d6f2ffcfb7074c98b7fbdaa045de4c7fb518accafe6809e6183cf647b255fc29`; portail `sha256:b964e0dad7cc82d1ce6b22a57b358cddf034473a5857adbacad4b85d831ebc24`; site `sha256:0ab6fb7f9eca105acb33839043c7629f453e17ded0201cb1df727209a26d0add`.
+- Sauvegarde `production-20261102T001849Z-8c66880152c4` : `REMOTE_VERIFIED`; restauration `20261102T001913Z-6d4937579d6f` : `RESTORE_VERIFIED`; quatre images de rollback disponibles; disque 28 725 664 Ko libres (65 % utilisé).
+- Recette Chrome production : libellé « Progression déclarée » vérifié sur liste, fiche Projet, Dashboard et administration; aide concise visible sur la fiche; score qualité distinct; F5 concluant.
+- Citation Bibliothèque : la réponse authentifiée sur PC014 a présenté une citation ouvrable; source globale, version `2026-08-23T21:09:43.289Z` et empreinte `81fb773211443a2d48e928e31eb51d6bccd5dfd1c60caa385de819ad72e4943d` vérifiées avant et après F5. Le fournisseur affiché était déjà `CORO AI · AWS Canada`; aucun flag, secret ou fournisseur n'a été activé pendant cette recette. Cette observation ne constitue pas une validation générale de génération IA.
+- Invitation interne : formulaire préparé pour une identité QA minimale vers l'unique destinataire autorisé `info@getcoro.io`; aucun envoi effectué sans confirmation d'action immédiate.
+- Lecteur d'écran réel : `NOT_VERIFIED`; aucun NVDA, JAWS ou VoiceOver pilotable n'est disponible. La preuve DOM n'est pas requalifiée en restitution vocale.
+- Stockage : les 116 candidats sont conservés; aucune suppression; qualification restante maintenue dans `STORAGE-CANDIDATE-QUALIFICATION-PLAN.md`.
+
 ## Réconciliation finale du 2026-11-01
 
 - PR #157 : HEAD testé `dbe7d7c9fb9ebfd2c9487d54c311b1ecbecb1ed7`, fusion `c91543efdf34c6429d1877a0b92f0a28567b5bb7`.
@@ -16,9 +29,9 @@
 | Élément | Valeur vérifiée | Preuve |
 | --- | --- | --- |
 | Consolidation fusionnée | `0c76580648996ad6f2ccbb29e760772372619d48` | PR #153, fusionnée le 2026-11-01; CI `41352262505` réussie; aucun job de release |
-| Produit actif de référence | `c91543efdf34c6429d1877a0b92f0a28567b5bb7` | release `41360598223`; inspection `41361880281` |
-| PostgreSQL | 166 migrations; tête `20261119010000_library_knowledge_source_authority` | inspection `41361880281` |
-| Capacité post-release | 31,3 Go libres; verrou libre | inspection `41361880281` |
+| Produit actif de référence | `b0183e56c0b84a7b8eb3c7f9d55efef7345c83d5` | release `41365428137`; inspection `41366771019` |
+| PostgreSQL | 166 migrations; tête `20261119010000_library_knowledge_source_authority` | inspection `41366771019` |
+| Capacité post-release | 28 725 664 Ko libres; verrou libre | inspection `41366771019` |
 
 Le SHA documentaire de `main` ne remplace pas silencieusement le SHA produit actif. Toute future livraison doit rétablir cette baseline depuis le manifeste de production au moment du gate.
 
@@ -40,7 +53,7 @@ Le SHA documentaire de `main` ne remplace pas silencieusement le SHA produit act
 | D | Accessibilité et PDF | périmètre déclaré; lecteur d’écran réel représentatif; défauts partagés corrigés; analyse PDF PMU/PSI/PCA et limites honnêtes | NVDA/JAWS/VoiceOver | DÉCISION PDF CLOSE / LECTEUR D’ÉCRAN NOT_VERIFIED | `PDF_UA_EXCLU_V1`; clavier/focus/zoom et PDF extractible couverts; script humain prêt | candidat final à renseigner | aucune certification PDF/UA; restitution vocale réelle non exécutée | conserver l’exclusion V1; exécuter la recette humaine lorsqu’un lecteur réel est disponible |
 | E | Stockage orphelin | inventaire multi-références; classification; exposition privée traitée de façon réversible; aucun effacement | accès métadonnées stockage et DB | INVENTAIRE_PRODUCTION_QUALIFIÉ_PARTIEL | `41361883831`: 145 objets; 29/29 référencés présents; 116 candidats / 690458654 octets; catégories, âges et versions agrégés | `c91543ef` / outil exécuté en production lecture seule | aucun candidat qualifié orphelin; rapprochement individuel historique requis | aucune suppression; appliquer le plan documenté si une remédiation distincte est autorisée |
 | F | Bibliothèque → Knowledge/CORO AI | source typée, portée avant récupération, provenance/version, citation autorisée, remplacement/retrait, prompt injection; public isolé | architecture Knowledge; fournisseur simulé | DÉPLOYÉ / RÉCONCILIÉ | migration 166, tests ciblés et complets, CI, release `41360598223`, inspection `41361880281` | `c91543ef` / actif | génération fournisseur réelle non exercée; aucun coût engagé | conserver Bedrock désactivé; campagne fournisseur distincte seulement si autorisée |
-| G | Indicateurs Projet et Dashboard | formules/sources documentées; fixtures indépendantes; libellés exacts; preuves ciblées multi-rôle | décision `PROGRESSION_DÉCLARÉE` | EN LIVRAISON | valeur manuelle persistée; libellés « Progression déclarée »; Manuel et non-régression | candidat final à renseigner | score qualité distinct; aucun calcul automatique ni jalon implicite | livrer, inspecter et réconcilier le candidat exact |
+| G | Indicateurs Projet et Dashboard | formules/sources documentées; fixtures indépendantes; libellés exacts; preuves ciblées multi-rôle | décision `PROGRESSION_DÉCLARÉE` | DÉPLOYÉ / RÉCONCILIÉ | valeur manuelle persistée; libellés « Progression déclarée »; Manuel, test contractuel, TypeScript, build et recette Chrome production | `82ee97b8` testé / `b0183e56` actif | score qualité distinct; aucun calcul automatique ni jalon implicite | aucune action produit; surveiller les régressions |
 | H | PGC/PRA/PUE, signature, juridique, carte | capacité, preuve manquante, risque, décision et critères de clôture; interface/Manuel non trompeurs | décisions distinctes | EXCLU_PAR_DÉCISION | consolidation PR #153 | `91c1313c…` | aucune activation dans ce master | vérifier les libellés et maintenir les exclusions |
 
 ## Journal d’exécution
@@ -64,6 +77,8 @@ Le SHA documentaire de `main` ne remplace pas silencieusement le SHA produit act
 - 2026-11-01 — inventaire stockage étendu: catégories/âges agrégés et versions non courantes, 9/9 tests PASS; aucune capacité de suppression.
 - 2026-11-01 — PR #157 fusionnée au SHA `c91543ef`; release `41360598223` SUCCESS; inspection `41361880281` PASS/GO; migration 166, sauvegarde et restauration vérifiées, quatre images de rollback disponibles.
 - 2026-11-01 — inventaire production final `41361883831` PASS : 145 objets / 814 284 456 octets, 29/29 références présentes, 116 candidats / 690 458 654 octets, aucune version non courante et aucune suppression.
+- 2026-11-02 — PR #159 fusionnée; release `41365428137` SUCCESS; inspection `41366771019` PASS/GO; SHA actif `b0183e56`; libellés et aide « Progression déclarée » vérifiés en Chrome production et après F5.
+- 2026-11-02 — citation Bibliothèque PC014 ouverte dans le portail authentifié; portée, version et empreinte vérifiées après F5. L'interface signalait AWS Canada déjà actif; aucune activation n'a été réalisée et la génération réelle reste hors verdict global.
 
 ## État de livraison explicite
 
@@ -73,4 +88,4 @@ Le SHA documentaire de `main` ne remplace pas silencieusement le SHA produit act
 | Inventaire divergences | oui | oui | oui | oui (`96800e95`) | workflow disponible | oui (`41356195887`) | oui, aucun conflit |
 | Inventaire stockage multi-autorités | oui | oui | oui | oui (`96800e95`) | workflow disponible | oui (`41356195887`) | non, 116 candidats à qualifier |
 | Bibliothèque → Knowledge/CORO AI authentifié | oui (`64e8335a`) | oui, déterministe + migration 166 | oui | oui (`c91543ef`) | oui | oui (`41361880281`) | oui pour récupération authentifiée; génération fournisseur réelle reste NOT_VERIFIED |
-| Progression Projet | oui, libellés + Manuel | test contractuel + TypeScript/build à compléter | à publier | non | non | non | décision métier close; livraison en cours |
+| Progression Projet | oui, libellés + Manuel | oui, contrat 2/2, Manuel 24/24, TypeScript et build | oui | oui (`b0183e56`) | oui | oui (`41366771019`) | oui pour la décision et les interfaces |
