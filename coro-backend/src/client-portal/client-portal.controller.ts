@@ -29,6 +29,7 @@ import {
   CreateActivityBookingDto,
 } from '../bookings/booking.dto';
 import { IncidentService } from '../occupancy/incident.service';
+import { IncidentHistoryQueryDto } from '../occupancy/incident-history.dto';
 import { OccupancyEmployeesService } from '../occupancy/occupancy-employees.service';
 import { OccupancyService } from '../occupancy/occupancy.service';
 import {
@@ -1787,6 +1788,7 @@ export class ClientPortalController {
   @Get('incidents/buildings/:buildingId/history')
   async getIncidentHistory(
     @Param('buildingId') buildingId: string,
+    @Query() query: IncidentHistoryQueryDto,
     @Request() req: any,
   ) {
     await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_READ);
@@ -1797,6 +1799,7 @@ export class ClientPortalController {
     return this.incidentService.getIncidentHistory(
       buildingId,
       req.clientUser.organizationId,
+      query,
     );
   }
 

@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { IncidentService } from './incident.service';
 import { OperationalContinuityAccess } from '../auth/organization-access.decorator';
 import { IncidentPermission, PlatformPermission } from '@prisma/client';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
 import { RequirePlatformPermission } from '../auth/platform-permission.decorator';
+import { IncidentHistoryQueryDto } from './incident-history.dto';
 
 @Controller('incidents')
 @OperationalContinuityAccess()
@@ -189,8 +190,16 @@ export class IncidentController {
   @UseGuards(PlatformRolesGuard)
   @RequirePlatformPermission(PlatformPermission.INCIDENT_READ)
   @Get('buildings/:buildingId/history')
-  history(@Param('buildingId') buildingId: string, @Request() req: any) {
-    return this.service.getIncidentHistory(buildingId, req.user.organizationId);
+  history(
+    @Param('buildingId') buildingId: string,
+    @Query() query: IncidentHistoryQueryDto,
+    @Request() req: any,
+  ) {
+    return this.service.getIncidentHistory(
+      buildingId,
+      req.user.organizationId,
+      query,
+    );
   }
 
   @UseGuards(AuthGuard('jwt'))

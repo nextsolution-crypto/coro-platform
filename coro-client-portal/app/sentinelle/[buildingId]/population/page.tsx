@@ -829,10 +829,10 @@ export default function PopulationPage() {
         `/client-portal/incidents/buildings/${buildingId}/history`,
       );
 
-      const receivedHistory: PopulationIncident[] = Array.isArray(result)
-        ? result
-        : result
-          ? [result as PopulationIncident]
+      const receivedHistory: PopulationIncident[] =
+        typeof result === "object" && result !== null && "items" in result &&
+        Array.isArray((result as { items: unknown[] }).items)
+          ? ((result as { items: PopulationIncident[] }).items)
           : [];
 
       setIncidentHistory(receivedHistory);
