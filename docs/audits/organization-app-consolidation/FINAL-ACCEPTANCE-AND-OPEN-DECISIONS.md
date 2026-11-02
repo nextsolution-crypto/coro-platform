@@ -14,7 +14,7 @@ La décision `PROGRESSION_DÉCLARÉE` est livrée et vérifiée en production : 
 
 | Sujet | Pourquoi une intervention humaine peut rester nécessaire | Préparation technique à terminer avant sollicitation |
 | --- | --- | --- |
-| Invitations internes | session ADMIN/SUPER_ADMIN puis constat de réception et utilisation du lien reçu à `info@getcoro.io` | ouvrir `https://app.getcoro.io/settings/users`; aucune autre autorisation métier n’est requise, mais l’envoi final exige confirmation immédiate |
+| Invitations internes | `info@getcoro.io` correspond déjà à un `User`; la création QA isolée a été refusée atomiquement avant outbox | autoriser un destinataire QA distinct ou un alias explicitement approuvé; ne pas réaffecter, désactiver ni modifier le compte existant |
 | Lecteur d’écran | restitution vocale réelle non déductible du DOM | exécuter `SCREEN-READER-HUMAN-ACCEPTANCE.md` et retourner le formulaire de constat |
 
 ## Preuve navigateur Knowledge
@@ -40,7 +40,7 @@ L'interface indiquait `CORO AI · AWS Canada`, état déjà actif avant cette v�
 
 Les décisions produit sont arrêtées. Les preuves humaines restantes sont :
 
-1. connexion ADMIN/SUPER_ADMIN à `https://app.getcoro.io/settings/users`, puis confirmation immédiate de l'envoi unique vers `info@getcoro.io`; constat humain séparé de la réception et du lien; nettoyage de l'identité QA après la recette;
+1. fournir un destinataire QA distinct autorisé pour l'invitation interne : la tentative vers `info@getcoro.io` a été refusée pour collision avant création/outbox; aucune réception n'est attendue et aucune remise en état n'est nécessaire pour cette tentative;
 2. exécution de `SCREEN-READER-HUMAN-ACCEPTANCE.md` avec NVDA, JAWS ou VoiceOver;
 3. la citation Bibliothèque est désormais vérifiée en Chrome; aucune activation fournisseur n'a été effectuée, mais le fournisseur AWS était déjà signalé actif et reste exclu du verdict global de génération.
 
