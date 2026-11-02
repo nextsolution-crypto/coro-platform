@@ -1,0 +1,20 @@
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import QRCode from 'qrcode';
+
+const [slug = 'contact', permanentUrl = 'https://getcoro.io/qr/contact'] = process.argv.slice(2);
+if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(slug)) throw new Error('Slug QR invalide.');
+const url = new URL(permanentUrl);
+if (url.protocol !== 'https:' || url.hostname !== 'getcoro.io' || url.pathname !== `/qr/${slug}`) throw new Error('L’URL permanente doit correspondre à https://getcoro.io/qr/{slug}.');
+const directory = path.join(process.cwd(), 'public', 'qr');
+fs.mkdirSync(directory, { recursive: true });
+const common = { errorCorrectionLevel: 'H', margin: 4, color: { dark: '#000000', light: '#FFFFFF' } };
+const svg = await QRCode.toString(permanentUrl, { ...common, type: 'svg', width: 1200 });
+const png = await QRCode.toBuffer(permanentUrl, { ...common, type: 'png', width: 2048 });
+fs.writeFileSync(path.join(directory, `${slug}.svg`), svg);
+fs.writeFileSync(path.join(directory, `${slug}.png`), png);
+const sha256 = (value) => crypto.createHash('sha256').update(value).digest('hex');
+const manifest = { schemaVersion: 1, slug, permanentUrl, style: { foreground: '#000000', background: '#FFFFFF', errorCorrectionLevel: 'H', quietZoneModules: 4, centerLogo: false }, files: { svg: { path: `/qr/${slug}.svg`, sha256: sha256(Buffer.from(svg)) }, png: { path: `/qr/${slug}.png`, width: 2048, height: 2048, sha256: sha256(png) } } };
+fs.writeFileSync(path.join(directory, `${slug}.manifest.json`), `${JSON.stringify(manifest, null, 2)}\n`);
+console.log(JSON.stringify(manifest, null, 2));

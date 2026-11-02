@@ -71,6 +71,7 @@ import { CommercialLegalIssuerModule } from './commercial-legal-issuer/commercia
 import { CommercialClauseModule } from './commercial-clauses/commercial-clause.module';
 import { ProposalDocumentCompositionModule } from './proposal-document-composition/proposal-document-composition.module';
 import { CustomerNetworkModule } from './customer-network/customer-network.module';
+import { QrCodesModule } from './qr-codes/qr-codes.module';
 import { CommercialSubscriptionsModule } from './commercial-subscriptions/commercial-subscriptions.module';
 import { CommercialBillingModule } from './commercial-billing/commercial-billing.module';
 import { KnowledgeModule } from './knowledge/knowledge.module';
@@ -97,6 +98,7 @@ import { PublicKnowledgeModule } from './public-knowledge/public-knowledge.modul
     CommercialClauseModule,
     ProposalDocumentCompositionModule,
     CustomerNetworkModule,
+    QrCodesModule,
     CommercialSubscriptionsModule,
     CommercialBillingModule,
     KnowledgeModule,
