@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
@@ -117,10 +118,29 @@ export default function TeamUsersPage() {
   };
 
   const handleToggleActive = async (userId: string, isActive: boolean) => {
+    let reason: string | undefined;
+    if (!isActive) {
+      const enteredReason = window.prompt(
+        'Indiquez le motif de la désactivation. Ce motif sera conservé dans le journal d’audit.',
+      );
+      if (enteredReason === null) return;
+      reason = enteredReason.trim();
+      if (!reason) {
+        window.alert('Un motif est requis pour désactiver un membre.');
+        return;
+      }
+    }
+
     try {
-      await api.put(`/users/organization/${userId}/active`, { isActive });
-      fetchData();
-    } catch (err) { console.error(err); }
+      await api.put(`/users/organization/${userId}/active`, { isActive, reason });
+      await fetchData();
+    } catch (err: unknown) {
+      console.error(err);
+      const message = axios.isAxiosError(err) && typeof err.response?.data?.message === 'string'
+        ? err.response.data.message
+        : 'Impossible de modifier le statut du membre.';
+      window.alert(message);
+    }
   };
 
   if (loading) {
