@@ -2,7 +2,7 @@
 
 ## Candidat et environnement
 
-- SHA produit : `cb41581b5d11273d8fa388bd10f0d5e1551e2687`
+- SHA produit : `9ed296186733934395e757ca90133f4606b28c4e`
 - PostgreSQL 16, 167 migrations, tête `20261120010000_permanent_qr_codes`
 - Réseau deny-by-default; fournisseurs simulés uniquement
 - Preuves : `D:\CORO-QA\tracking\organization-incident-detail`

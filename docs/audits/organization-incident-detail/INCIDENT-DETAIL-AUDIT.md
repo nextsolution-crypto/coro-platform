@@ -4,7 +4,7 @@
 
 - Branche corrective : `fix/organization-incident-detail`
 - Baseline : `origin/main` au SHA `08e64862b42c5d4f45a86c2a35e17cc077fc1be5`
-- Candidat produit testé : `cb41581b5d11273d8fa388bd10f0d5e1551e2687`
+- Candidat produit testé : `9ed296186733934395e757ca90133f4606b28c4e`
 - PostgreSQL 16 : 167 migrations, tête `20261120010000_permanent_qr_codes`
 - Réseau : deny-by-default; stockage et fournisseurs simulés
 - Preuves : `D:\CORO-QA\tracking\organization-incident-detail`

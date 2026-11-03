@@ -13,12 +13,13 @@
 
 ## Validation
 
-- SHA produit : `cb41581b5d11273d8fa388bd10f0d5e1551e2687`.
+- SHA produit : `9ed296186733934395e757ca90133f4606b28c4e`.
 - API/PostgreSQL : 13/13 PASS.
 - Chrome : 12/12 PASS; aucune erreur console critique.
 - Backend ciblé : 5 suites, 37 tests PASS.
 - Build backend et build Client Portal : PASS.
 - `git diff --check` : PASS.
+- ESLint ciblé : aucune erreur introduite ou aggravée par le lot. La baseline comptait 24 erreurs et 4 avertissements; le candidat en compte 23 et 3. Cette dette historique reste hors de la correction ciblée.
 
 ## Limites
 
