@@ -57,3 +57,18 @@ Les 12 combinaisons sont `PASS` : 390×844, 768×1024, 1440×900 et 2560×1440, 
 | Lecteur d'écran réel | NOT_VERIFIED |
 
 Version QA : `1b91e9af8b1c933babf21c9a8438232660ba2734`. Version fusionnée et active : `e28eec4fb26288768e147ec08fada24b2d92140a`. Release `41690727735`, inspection `41694100917` et réconciliation `41694254014` : `SUCCESS`.
+
+## Reprise synthétique de clôture
+
+| Contrôle | Résultat |
+|---|---|
+| Fondation QA isolée et effets externes neutralisés | PASS — dry-run `41698375099`, préparation `41698697992` |
+| Attribution minimale `INCIDENT_READ` à l'exercice synthétique | NOT_VERIFIED — aucun point d'entrée gouverné disponible pour la session administrateur inter-organisation |
+| Liste et fiche autorisées avec l'identité QA | NOT_EXECUTED |
+| Absence de droits `SUPERVISE` et `COMMAND` | PASS — aucun droit Incident n'a été accordé |
+| Remise en état | PASS — `41699393782` |
+| Refus et absence d'accès résiduel après remise en état | PASS — `residualAccess:false`; dry-run final `41699726935` |
+| Identité inactive, sessions/liens/appareils révoqués | PASS |
+| Patrick et identités réelles inchangés | PASS |
+
+Verdict : `ACCEPTATION_PRODUCTION_SYNTHETIQUE_PARTIAL`. L'accès autorisé navigateur demeure `NOT_VERIFIED`; le refus et la remise en état sont démontrés.

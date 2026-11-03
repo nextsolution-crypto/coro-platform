@@ -88,3 +88,11 @@ Images actives :
 - Website : `ghcr.io/nextsolution-crypto/coro-website@sha256:da81ae5e63e8ca3694e243a310d9a39719dc3bef857f4fec886b85c4982a770a`.
 
 La vérification navigateur de production a confirmé la session Client, le tableau de bord, le bâtiment BUREAUX, Sentinelle et le refus explicite de l'historique Incident pour l'identité disponible; le refus persiste après F5 et n'expose aucune donnée Incident. Cette identité n'étant pas autorisée, l'ouverture d'une fiche autorisée reste `NOT_VERIFIED` en production et n'a pas été contournée par une attribution réelle. La preuve fonctionnelle des capacités demeure la recette QA intégrée. Le lecteur d'écran réel demeure `NOT_VERIFIED`.
+
+## Clôture de la reprise synthétique après #182
+
+Le correctif #182 reste livré et réconcilié au SHA actif `e28eec4fb26288768e147ec08fada24b2d92140a`. La reprise n'a déclenché ni build ni release applicative.
+
+La campagne gouvernée a été préparée avec succès (`41698697992`) après un dry-run propre (`41698375099`), mais l'accès autorisé n'a pas pu être démontré. L'administration disponible ne permet pas à la session réelle ouverte d'attribuer une autorité Incident inter-organisation au ClientUser QA; le workflow de préparation n'accorde volontairement aucun droit. La liste et la fiche n'ont donc pas été ouvertes sous cette identité, et aucun `403` n'est présenté comme une validation fonctionnelle.
+
+La remise en état obligatoire `41699393782` est `PASS` et le dry-run final `41699726935` confirme : identité inactive, aucune permission individuelle, aucune affectation Incident active, aucune session ou lien actif, aucune fixture active et aucune capacité publique. Verdict : `BROWSER_AUTHORIZED_NOT_VERIFIED — CLEANUP_PASS — NO_RESIDUAL_ACCESS`.
