@@ -21,6 +21,6 @@
 
 ## Résultat
 
-Tous les critères sont démontrés dans le stack QA isolé. **ACCEPTATION_INTÉGRÉE_PASS — PR_READY**.
+Tous les critères sont démontrés dans le stack QA isolé. La PR #170 a été fusionnée; le SHA `082f396bf3d6e9ae85c5d47e980d09bac0df13fc` est déployé, inspecté et réconcilié. **ACCEPTATION_INTÉGRÉE_PASS — DEPLOYED_RECONCILED**.
 
-Hors périmètre : fiche détaillée, transitions métier, communications, Ops, évacuation, fournisseurs externes, autorité globale de responsable/sévérité, lecteur d’écran réel et production.
+Hors périmètre : fiche détaillée, transitions métier, communications, Ops, évacuation, fournisseurs externes, autorité globale de responsable/sévérité et lecteur d’écran réel. La vérification production reste strictement en lecture seule.

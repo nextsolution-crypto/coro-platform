@@ -1,6 +1,6 @@
 # Matrice consolidée d’acceptation
 
-Tous les correctifs listés sont des ancêtres Git du produit actif `c91543efdf34c6429d1877a0b92f0a28567b5bb7`. « Présent » ne signifie pas que la recette historique a été rejouée sur ce SHA.
+Tous les correctifs listés sont des ancêtres Git du produit actif `082f396bf3d6e9ae85c5d47e980d09bac0df13fc`. « Présent » ne signifie pas que la recette historique a été rejouée sur ce SHA.
 
 | Périmètre | Couverture et acteurs | QA / Chrome | PR et livraison de référence | Continuité actuelle | Limites / statut final |
 | --- | --- | --- | --- | --- | --- |
@@ -22,6 +22,7 @@ Tous les correctifs listés sont des ancêtres Git du produit actif `c91543efdf3
 | Bibliothèque | codes, rôles, procédures, lecture/personnalisation; source Knowledge typée | catalogue historique: API/PostgreSQL, Chrome 12/12, prod lecture seule; raccord Knowledge: 27 tests, suite backend, migration 166 et builds | PR #144, `204ad4cc`; raccord PR #157, merge/release `c91543ef`; inspection `41361880281` | Catalogue et raccord authentifié actifs | assistant public isolé; génération fournisseur réelle non exercée; **VALIDÉ/DÉPLOYÉ/RÉCONCILIÉ — RÉCUPÉRATION DÉTERMINISTE** |
 | Manuel | contenu par rôle, recherche guidée, ancres, liens | QA + production authentifiée | PR #146–149, SHA `165b41a0`; release `41334823191`, inspection `41336102818` | Présent | recherche guidée ≠ IA; **VALIDÉ/DÉPLOYÉ/RÉCONCILIÉ** |
 | Paramètres | organisation, membres, mot de passe, invitations, outils | QA intégrée, Chrome 12/12, prod desktop/mobile | PR #151, `91c1313c`; release `41348342595`, inspection `41349712708`; migration 165 | Actif | divergences historiques et rollback conditionnel; **VALIDÉ/DÉPLOYÉ/RÉCONCILIÉ** |
+| Incident — liste | historique paginé, recherche, filtres, tri, statuts et exercices; Manager/Corporate/refus | API/PostgreSQL, Chrome QA 12/12; production refus/F5/reprise | PR #170, merge/release `082f396b`; release `41552585795`, inspection `41554507500` | Actif | production avec identité sans `INCIDENT_READ`, fonctions de données non observables; dette console service worker; lecteur d’écran hors lot; **VALIDÉ QA/DÉPLOYÉ/RÉCONCILIÉ — PROD PARTIAL** |
 
 ## Portée commerciale
 
