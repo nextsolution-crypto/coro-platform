@@ -53,3 +53,5 @@ Le lot correctif est suivi sous `docs/audits/organization-incident-authorization
 La dépendance d'administration est désormais livrée et active au SHA `d9eb6d84668a5773257ec75b7a06c062b7786384` : migration `20261121010000_incident_authority_idempotency`, release `41638570059`, inspection `41640868682`. Le mécanisme conserve la double autorité et la révocation à la requête suivante; aucun droit n'a été attribué en production pendant la livraison.
 
 La fiche autorisée en production demeure `NOT_VERIFIED` jusqu'à approbation d'une attribution nominative minimale. `INCIDENT_READ` est suffisant pour la recette de lecture; `INCIDENT_COMMAND` ne doit pas être accordé. Aucune entrée de chronologie, transition, résolution, impression ou export réel n'est requis pour cette preuve.
+
+La tentative approuvée avec Patrick JEAN-ERNEST s'est arrêtée fail-closed avant tout accès Incident : le serveur a refusé l'affectation BUREAUX, car ce ClientUser n'est pas affecté à ce bâtiment. La permission individuelle ajoutée pour la tentative a été immédiatement retirée; aucune affectation active ne subsiste. Verdict production : `RECETTE_NON_REALISEE — BENEFICIAIRE_NON_ADMISSIBLE`.
