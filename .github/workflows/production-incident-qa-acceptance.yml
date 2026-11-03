@@ -1,0 +1,89 @@
+name: Governed Production Incident QA Acceptance
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: dry-run, prepare, or cleanup
+        required: true
+        type: choice
+        options: [dry-run, prepare, cleanup]
+      approval:
+        description: Exact phase-specific approval token
+        required: true
+        type: string
+      incident_id:
+        description: Exact synthetic Incident id (cleanup only)
+        required: false
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      script_sha256: ${{ steps.hash.outputs.script_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Validate fixed request and tests
+        env:
+          PHASE: ${{ inputs.phase }}
+          APPROVAL: ${{ inputs.approval }}
+          INCIDENT_ID: ${{ inputs.incident_id }}
+        run: |
+          set -Eeuo pipefail
+          case "$PHASE" in
+            dry-run) test "$APPROVAL" = DRY_RUN_INCIDENT_PRODUCTION_QA_2026_11_03; test -z "$INCIDENT_ID" ;;
+            prepare) test "$APPROVAL" = PREPARE_INCIDENT_PRODUCTION_QA_2026_11_03; test -z "$INCIDENT_ID" ;;
+            cleanup) test "$APPROVAL" = CLEANUP_INCIDENT_PRODUCTION_QA_2026_11_03 ;;
+            *) exit 1 ;;
+          esac
+          node --test ops/maintenance/incident-production-acceptance.test.cjs
+      - id: hash
+        run: echo "script_sha256=$(sha256sum ops/maintenance/incident-production-acceptance.cjs | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+  execute:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SCRIPT_SHA256: ${{ needs.validate.outputs.script_sha256 }}
+          INCIDENT_QA_PHASE: ${{ inputs.phase }}
+          INCIDENT_QA_APPROVAL: ${{ inputs.approval }}
+          INCIDENT_QA_INCIDENT_ID: ${{ inputs.incident_id }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,SCRIPT_SHA256,INCIDENT_QA_PHASE,INCIDENT_QA_APPROVAL,INCIDENT_QA_INCIDENT_ID,GITHUB_RUN_ID
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            script="$(mktemp /tmp/coro-incident-qa-acceptance.XXXXXX.cjs)"
+            evidence="$(mktemp /tmp/coro-incident-qa-acceptance.XXXXXX.json)"
+            trap 'rm -f -- "$script" "$evidence"' EXIT
+            exec 9>/run/lock/coro-production-deployment.lock
+            flock -n 9
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
+            git -C "$repo" show "$SOURCE_SHA:ops/maintenance/incident-production-acceptance.cjs" >"$script"
+            test "$(sha256sum "$script" | cut -d' ' -f1)" = "$SCRIPT_SHA256"
+            test "$(docker inspect -f '{{.State.Running}}' coro-backend)" = true
+            systemctl start coro-db-backup.service
+            test "$(systemctl show -p Result --value coro-db-backup.service)" = success
+            cd "$repo"
+            docker compose exec -T \
+              -e INCIDENT_QA_PHASE="$INCIDENT_QA_PHASE" \
+              -e INCIDENT_QA_APPROVAL="$INCIDENT_QA_APPROVAL" \
+              -e INCIDENT_QA_INCIDENT_ID="$INCIDENT_QA_INCIDENT_ID" \
+              -e GITHUB_RUN_ID="$GITHUB_RUN_ID" \
+              backend node - <"$script" >"$evidence"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.execution!=="PASS"||r.phase!==process.argv[2])process.exit(1);' "$evidence" "$INCIDENT_QA_PHASE"
+            cat "$evidence"
