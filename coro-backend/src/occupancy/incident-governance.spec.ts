@@ -101,6 +101,14 @@ describe('IncidentService P-4.1 governance', () => {
     await expect(service.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId: 'client-user-1', organizationId: 'org-1', incidentEventId: 'incident-1', permission: 'INCIDENT_COMMAND' as any })).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  it('allows only an explicitly requested resolved replay through the same authority', async () => {
+    prisma.incidentEvent.findFirst.mockResolvedValue({ buildingId: 'b-1', status: 'RESOLVED', isActive: false });
+    prisma.clientUser.findFirst.mockResolvedValue({ id: 'client-user-1' });
+    prisma.incidentAuthorityAssignment.findFirst.mockResolvedValue({ id: 'assignment-1', operationalRole: 'COMMANDER' });
+    await expect(service.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId: 'client-user-1', organizationId: 'org-1', incidentEventId: 'incident-1', permission: 'INCIDENT_COMMAND' as any, allowResolvedReplay: true })).resolves.toMatchObject({ id: 'assignment-1' });
+    await expect(service.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId: 'client-user-1', organizationId: 'org-1', incidentEventId: 'incident-1', permission: 'INCIDENT_COMMAND' as any })).rejects.toBeInstanceOf(NotFoundException);
+  });
+
   it('revokes an assignment atomically using its lock version', async () => {
     prisma.incidentAuthorityAssignment.findFirst.mockResolvedValue({ id: 'assignment-1', organizationId: 'org-1', buildingId: 'building-1', incidentEventId: null, status: 'ACTIVE', lockVersion: 2 });
     prisma.incidentAuthorityAssignment.updateMany.mockResolvedValue({ count: 1 });

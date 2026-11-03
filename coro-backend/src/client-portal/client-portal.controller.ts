@@ -30,6 +30,7 @@ import {
 } from '../bookings/booking.dto';
 import { IncidentService } from '../occupancy/incident.service';
 import { IncidentHistoryQueryDto } from '../occupancy/incident-history.dto';
+import { AddIncidentLogDto, ContainIncidentDto, ResolveIncidentDto, UpdateIncidentRexDto } from '../occupancy/incident-detail.dto';
 import { OccupancyEmployeesService } from '../occupancy/occupancy-employees.service';
 import { OccupancyService } from '../occupancy/occupancy.service';
 import {
@@ -1670,7 +1671,7 @@ export class ClientPortalController {
   @Post('incidents/:incidentId/logs')
   async addIncidentLog(
     @Param('incidentId') incidentId: string,
-    @Body() body: any,
+    @Body() body: AddIncidentLogDto,
     @Request() req: any,
   ) {
     await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_SUPERVISE);
@@ -1683,6 +1684,7 @@ export class ClientPortalController {
       incidentId,
       body,
       req.clientUser.organizationId,
+      { type: 'CLIENT_USER', id: req.clientUser.sub || req.clientUser.id },
     );
   }
 
@@ -1729,6 +1731,7 @@ export class ClientPortalController {
   @Put('incidents/:incidentId/contain')
   async containIncident(
     @Param('incidentId') incidentId: string,
+    @Body() body: ContainIncidentDto,
     @Request() req: any,
   ) {
     await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_COMMAND);
@@ -1741,6 +1744,7 @@ export class ClientPortalController {
     return this.incidentService.containIncident(
       incidentId,
       req.clientUser.organizationId,
+      body,
       { actorType: 'CLIENT_USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_COMMAND, reason: 'Incident command transition to contained', requestId: req.id || req.headers?.['x-request-id'] },
     );
   }
@@ -1748,12 +1752,12 @@ export class ClientPortalController {
   @Put('incidents/:incidentId/resolve')
   async resolveIncident(
     @Param('incidentId') incidentId: string,
-    @Body() body: any,
+    @Body() body: ResolveIncidentDto,
     @Request() req: any,
   ) {
     await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_COMMAND);
     const actorId = req.clientUser.sub || req.clientUser.id;
-    const assignment = await this.incidentService.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId, organizationId: req.clientUser.organizationId, incidentEventId: incidentId, permission: IncidentPermission.INCIDENT_COMMAND });
+    const assignment = await this.incidentService.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId, organizationId: req.clientUser.organizationId, incidentEventId: incidentId, permission: IncidentPermission.INCIDENT_COMMAND, allowResolvedReplay: true });
     await this.clientPortalService.assertIncidentAccess(
       incidentId,
       req.clientUser,
@@ -1839,7 +1843,7 @@ export class ClientPortalController {
   @Put('incidents/:incidentId/rex')
   async updateRex(
     @Param('incidentId') incidentId: string,
-    @Body() body: any,
+    @Body() body: UpdateIncidentRexDto,
     @Request() req: any,
   ) {
     await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_SUPERVISE);

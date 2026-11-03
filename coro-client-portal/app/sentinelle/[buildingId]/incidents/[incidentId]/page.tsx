@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { getUser } from '../../../../store/auth';
 import PortalLayout from '../../../../components/PortalLayout';
@@ -8,14 +8,37 @@ import styles from './incident-escalation.module.css';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
 
-const clientFetch = async (path: string, method = 'GET', body?: any) => {
+class ClientRequestError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message);
+  }
+}
+
+const clientFetch = async (path: string, method = 'GET', body?: any, signal?: AbortSignal) => {
   const res = await fetch(`${API}${path}`, {
     method,
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('coro_client_token')}` },
     body: body ? JSON.stringify(body) : undefined,
+    signal,
   });
-  if (!res.ok) throw new Error('Erreur réseau');
+  if (!res.ok) {
+    const payload = await res.json().catch(() => null);
+    throw new ClientRequestError(res.status, payload?.message || `Erreur HTTP ${res.status}`);
+  }
   return res.json();
+};
+
+const asArray = <T,>(value: unknown): T[] => Array.isArray(value) ? value : [];
+const escapeHtml = (value: unknown): string => String(value ?? '')
+  .replaceAll('&', '&amp;')
+  .replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;')
+  .replaceAll("'", '&#039;');
+
+const STATUS_LABELS: Record<string, string> = {
+  PRE_ALERT: 'Préalerte', ACTIVE: 'En cours', CONTAINED: 'Contenu',
+  RESOLVED: 'Résolu', CANCELLED: 'Annulé',
 };
 
 const INCIDENT_LABELS: Record<string, string> = {
@@ -54,36 +77,89 @@ export default function IncidentDetailPage() {
 
   const [incident, setIncident] = useState<any>(null);
   const [loading, setLoading]   = useState(true);
+  const [loadError, setLoadError] = useState<{ status: number; message: string } | null>(null);
   const [rex, setRex]           = useState({ rexWentWell: '', rexToImprove: '', rexRecommendations: '', rexCorrectiveActions: '' });
   const [savingRex, setSavingRex] = useState(false);
   const [rexSaved, setRexSaved]   = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [closingReason, setClosingReason] = useState('');
+  const [actionBusy, setActionBusy] = useState<'contain' | 'resolve' | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const loadSequence = useRef(0);
+  const activeLoad = useRef<AbortController | null>(null);
+  const transitionInFlight = useRef(false);
+
+  const loadIncident = useCallback(async () => {
+    activeLoad.current?.abort();
+    const sequence = ++loadSequence.current;
+    const controller = new AbortController();
+    activeLoad.current = controller;
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const inc = await clientFetch(`/client-portal/incidents/${incidentId}/detail`, 'GET', undefined, controller.signal);
+      if (sequence !== loadSequence.current) return;
+      setIncident(inc);
+      setRex({
+        rexWentWell: inc.rexWentWell || '',
+        rexToImprove: inc.rexToImprove || '',
+        rexRecommendations: inc.rexRecommendations || '',
+        rexCorrectiveActions: inc.rexCorrectiveActions || '',
+      });
+    } catch (error) {
+      if (controller.signal.aborted || sequence !== loadSequence.current) return;
+      const requestError = error instanceof ClientRequestError
+        ? error
+        : new ClientRequestError(0, 'Le service est injoignable.');
+      setIncident(null);
+      setLoadError({ status: requestError.status, message: requestError.message });
+    } finally {
+      if (sequence === loadSequence.current) setLoading(false);
+    }
+  }, [incidentId]);
 
   useEffect(() => {
     const u = getUser();
     if (!u) { router.replace('/login'); return; }
-    clientFetch(`/client-portal/incidents/${incidentId}/detail`)
-      .then(inc => {
-        setIncident(inc);
-        setRex({
-          rexWentWell:          inc.rexWentWell          || '',
-          rexToImprove:         inc.rexToImprove         || '',
-          rexRecommendations:   inc.rexRecommendations   || '',
-          rexCorrectiveActions: inc.rexCorrectiveActions || '',
-        });
-      }).catch(console.error).finally(() => setLoading(false));
-  }, [incidentId]);
+    const loadTimer = window.setTimeout(() => void loadIncident(), 0);
+    return () => {
+      window.clearTimeout(loadTimer);
+      loadSequence.current += 1;
+      activeLoad.current?.abort();
+    };
+  }, [loadIncident, router]);
 
   const handleSaveRex = async () => {
     setSavingRex(true);
     try {
-      await clientFetch(`/client-portal/incidents/${incidentId}/rex`, 'PUT', {
-        ...rex, rexCompletedAt: new Date().toISOString(),
-      });
+      await clientFetch(`/client-portal/incidents/${incidentId}/rex`, 'PUT', rex);
       setRexSaved(true);
       setTimeout(() => setRexSaved(false), 3000);
     } catch (e) { console.error(e); }
     finally { setSavingRex(false); }
+  };
+
+  const runTransition = async (transition: 'contain' | 'resolve') => {
+    if (transitionInFlight.current) return;
+    if (transition === 'resolve' && !closingReason.trim()) {
+      setActionError('Le motif de résolution est obligatoire.');
+      return;
+    }
+    transitionInFlight.current = true;
+    setActionBusy(transition);
+    setActionError(null);
+    try {
+      const body = transition === 'resolve'
+        ? { closingNotes: closingReason.trim(), lockVersion: incident.lockVersion }
+        : { lockVersion: incident.lockVersion };
+      await clientFetch(`/client-portal/incidents/${incidentId}/${transition}`, 'PUT', body);
+      await loadIncident();
+    } catch (error) {
+      setActionError(error instanceof ClientRequestError ? error.message : 'La transition a échoué. Réessayez.');
+    } finally {
+      transitionInFlight.current = false;
+      setActionBusy(null);
+    }
   };
 
   const handleExportPdf = async () => {
@@ -94,8 +170,13 @@ export default function IncidentDetailPage() {
       const completed   = coordSteps.filter((t: any) => t.status === 'COMPLETED').length;
       const pct         = coordSteps.length > 0 ? Math.round((completed / coordSteps.length) * 100) : 0;
       const duration    = getDuration(incident.triggeredAt, incident.resolvedAt);
-      const teamSnap    = (incident.teamSnapshot as any[]) || [];
-      const occupantSnap = (incident.occupantsSnapshot as any[]) || [];
+      const teamSnap = asArray<any>(incident.teamSnapshot);
+      const occupantSnap = asArray<any>(incident.occupantsSnapshot);
+      const safeType = escapeHtml(INCIDENT_LABELS[incident.type] || incident.type);
+      const safeStatus = escapeHtml(STATUS_LABELS[incident.status] || `Statut inconnu (${incident.status})`);
+      const safeTriggeredBy = escapeHtml(incident.triggeredBy || 'Non renseigné');
+      const safeAssemblyPoint = escapeHtml(incident.assemblyPoint);
+      const safeProcedureCode = escapeHtml(incident.procedureCode || '—');
 
       const html = `
 <!DOCTYPE html>
@@ -154,22 +235,22 @@ export default function IncidentDetailPage() {
   <div class="header-sub">
     <div style="font-size:12px;color:white;">N° ${incidentId.substring(0, 8).toUpperCase()}</div>
     <div>Généré le ${new Date().toLocaleDateString('fr-CA', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-    <div>Conforme CNPI 2020 · ISO 22301 · CNESST</div>
+    <div>Copie d'impression générée depuis CORO Sentinelle</div>
   </div>
 </div>
 
 <div class="alert-bar">
-  <div class="alert-type">🚨 ${INCIDENT_LABELS[incident.type] || incident.type}</div>
+  <div class="alert-type">🚨 ${safeType}</div>
   <div class="alert-meta">
-    Statut : <strong>${incident.status === 'RESOLVED' ? 'RÉSOLU' : incident.status === 'CONTAINED' ? 'CONTENU' : 'EN COURS'}</strong>
+    Statut : <strong>${safeStatus}</strong>
     &nbsp;·&nbsp; Durée totale : <strong>${duration}</strong>
-    &nbsp;·&nbsp; Déclenché par : <strong>${incident.triggeredBy}</strong>
-    ${incident.assemblyPoint ? `&nbsp;·&nbsp; Point de rassemblement : <strong>${incident.assemblyPoint}</strong>` : ''}
+    &nbsp;·&nbsp; Déclenché par : <strong>${safeTriggeredBy}</strong>
+    ${incident.assemblyPoint ? `&nbsp;·&nbsp; Point de rassemblement : <strong>${safeAssemblyPoint}</strong>` : ''}
   </div>
 </div>
 
 <div class="conformite-bar">
-  📋 Conservation obligatoire : 36 mois (ISO 22301) · 24 mois exercices (CNPI 2020) · 5 ans si blessés (CNESST) · Archivé automatiquement par CORO Sentinelle
+  Copie d'impression informative. Aucune certification PDF/UA ou valeur juridique n'est revendiquée.
 </div>
 
 <div class="content">
@@ -189,16 +270,16 @@ export default function IncidentDetailPage() {
         </div>
         <div class="info-block">
           <div class="info-label">Type d'incident</div>
-          <div class="info-value">${INCIDENT_LABELS[incident.type] || incident.type}</div>
+          <div class="info-value">${safeType}</div>
         </div>
         <div class="info-block">
           <div class="info-label">Procédure activée</div>
-          <div class="info-value">${incident.procedureCode || '—'}</div>
+          <div class="info-value">${safeProcedureCode}</div>
         </div>
         ${incident.assemblyPoint ? `
         <div class="info-block">
           <div class="info-label">Point de rassemblement</div>
-          <div class="info-value">${incident.assemblyPoint}</div>
+          <div class="info-value">${safeAssemblyPoint}</div>
         </div>` : ''}
         <div class="info-block">
           <div class="info-label">Durée totale de l'intervention</div>
@@ -216,9 +297,9 @@ export default function IncidentDetailPage() {
         <div class="timeline-row">
           <div class="timeline-time">${new Date(log.timestamp).toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}</div>
           <div class="timeline-text">
-            ${log.action}
-            ${log.actor ? `<span style="color:#ADB5BD;font-size:11px;"> — ${log.actor}</span>` : ''}
-            ${log.details ? `<br><span style="color:#6C757D;font-size:11px;">${log.details}</span>` : ''}
+            ${escapeHtml(log.action)}
+            ${log.actor ? `<span style="color:#ADB5BD;font-size:11px;"> — ${escapeHtml(log.actor)}</span>` : ''}
+            ${log.details ? `<br><span style="color:#6C757D;font-size:11px;">${escapeHtml(log.details)}</span>` : ''}
           </div>
           ${log.isAutomatic ? `<span style="font-size:9px;color:#DEE2E6;">auto</span>` : ''}
         </div>
@@ -250,8 +331,8 @@ export default function IncidentDetailPage() {
       ${teamSnap.length === 0 ? '<p style="color:#ADB5BD;">Aucun membre d\'urgence présent au déclenchement.</p>' :
         teamSnap.map((m: any) => `
           <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #F8F9FA;">
-            <span style="font-size:12px;font-weight:600;color:#2C3E50;">${m.firstName} ${m.lastName}</span>
-            ${m.roles?.map((r: any) => `<span class="badge badge-red">${r.role}</span>`).join('') || ''}
+            <span style="font-size:12px;font-weight:600;color:#2C3E50;">${escapeHtml(m.firstName)} ${escapeHtml(m.lastName)}</span>
+            ${asArray<{ role: string }>(m.roles).map((r) => `<span class="badge badge-red">${escapeHtml(r.role)}</span>`).join('')}
           </div>
         `).join('')}
     </div>
@@ -259,7 +340,7 @@ export default function IncidentDetailPage() {
 
   <!-- SECTION 5 : Procédure -->
   <div class="section">
-    <div class="section-header">5. Déroulement de l'intervention — Procédure ${incident.procedureCode || ''}</div>
+    <div class="section-header">5. Déroulement de l'intervention — Procédure ${safeProcedureCode}</div>
     <div class="section-body">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
         <span style="font-size:13px;font-weight:700;color:${pct === 100 ? '#27AE60' : '#C0392B'};">${completed} / ${coordSteps.length} étapes complétées (${pct}%)</span>
@@ -270,7 +351,7 @@ export default function IncidentDetailPage() {
         <div class="step-row">
           <span class="step-check">${t.status === 'COMPLETED' ? '✅' : '⬜'}</span>
           <span class="step-text ${t.status === 'COMPLETED' ? 'step-done' : ''}">
-            <strong>${idx + 1}.</strong> ${t.stepText || t.title}
+            <strong>${idx + 1}.</strong> ${escapeHtml(t.stepText || t.title)}
           </span>
         </div>
       `).join('')}
@@ -283,19 +364,19 @@ export default function IncidentDetailPage() {
     <div class="section-body">
       <div class="rex-field">
         <div class="rex-label">✅ Ce qui a bien fonctionné</div>
-        <div class="rex-text">${rex.rexWentWell || '—'}</div>
+        <div class="rex-text">${escapeHtml(rex.rexWentWell || '—')}</div>
       </div>
       <div class="rex-field">
         <div class="rex-label">⚠️ Points à améliorer</div>
-        <div class="rex-text">${rex.rexToImprove || '—'}</div>
+        <div class="rex-text">${escapeHtml(rex.rexToImprove || '—')}</div>
       </div>
       <div class="rex-field">
         <div class="rex-label">💡 Recommandations</div>
-        <div class="rex-text">${rex.rexRecommendations || '—'}</div>
+        <div class="rex-text">${escapeHtml(rex.rexRecommendations || '—')}</div>
       </div>
       <div class="rex-field">
         <div class="rex-label">🔧 Actions correctives proposées</div>
-        <div class="rex-text">${rex.rexCorrectiveActions || '—'}</div>
+        <div class="rex-text">${escapeHtml(rex.rexCorrectiveActions || '—')}</div>
       </div>
     </div>
   </div>
@@ -307,13 +388,13 @@ export default function IncidentDetailPage() {
       ${incident.closingNotes ? `
         <div style="background:#F8F9FA;padding:12px 14px;border-radius:6px;margin-bottom:16px;">
           <div style="font-size:10px;font-weight:700;color:#ADB5BD;text-transform:uppercase;margin-bottom:4px;">Notes de clôture</div>
-          <div style="font-size:12px;color:#2C3E50;">${incident.closingNotes}</div>
+          <div style="font-size:12px;color:#2C3E50;">${escapeHtml(incident.closingNotes)}</div>
         </div>
       ` : ''}
       <div class="signature-grid">
         <div class="sig-box">
           <div class="sig-label">Coordonnateur d'urgence</div>
-          <div class="sig-name">${incident.triggeredBy}</div>
+          <div class="sig-name">${safeTriggeredBy}</div>
         </div>
         <div class="sig-box">
           <div class="sig-label">Responsable du bâtiment</div>
@@ -350,6 +431,29 @@ export default function IncidentDetailPage() {
     </PortalLayout>
   );
 
+  if (loadError) {
+    const title = loadError.status === 403
+      ? 'Accès refusé'
+      : loadError.status === 404
+        ? 'Incident introuvable'
+        : loadError.status === 503
+          ? 'Service temporairement indisponible'
+          : 'Impossible de charger l’incident';
+    return (
+      <PortalLayout>
+        <div role="alert" aria-live="assertive" style={{ maxWidth: 640, margin: '48px auto', padding: 24, border: '1px solid #C0392B', borderRadius: 12 }}>
+          <h1 style={{ marginTop: 0, fontSize: 20 }}>{title}</h1>
+          <p>{loadError.message}</p>
+          {loadError.status !== 403 && loadError.status !== 404 && (
+            <button type="button" onClick={() => void loadIncident()} style={{ minHeight: 44, padding: '10px 18px', borderRadius: 8, border: 0, background: '#2C3E50', color: '#FFF', fontWeight: 700 }}>
+              Réessayer
+            </button>
+          )}
+        </div>
+      </PortalLayout>
+    );
+  }
+
   if (!incident) return (
     <PortalLayout>
       <div style={{ padding: 48, textAlign: 'center' }}>
@@ -361,14 +465,15 @@ export default function IncidentDetailPage() {
   const coordSteps = (incident.tasks || []).filter((t: any) => t.isCoordinatorStep);
   const completed  = coordSteps.filter((t: any) => t.status === 'COMPLETED').length;
   const pct        = coordSteps.length > 0 ? Math.round((completed / coordSteps.length) * 100) : 0;
-  const teamSnap   = (incident.teamSnapshot as any[]) || [];
+  const teamSnap = asArray<any>(incident.teamSnapshot);
   const governedTasks = (incident.tasks || []).filter((t: any) => t.ackDeadlineAt || t.missedAcknowledgmentAt || t.escalationStatus !== 'PENDING');
 
   return (
     <PortalLayout>
+      <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
       <header style={{ marginBottom: 24 }}>
         <button type="button" onClick={() => router.push(`/sentinelle/${buildingId}/incidents`)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#ADB5BD', padding: 0, marginBottom: 8 }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#ADB5BD', padding: '10px 0', minHeight: 44, marginBottom: 8 }}>
           ← Retour à l'historique
         </button>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
@@ -385,21 +490,50 @@ export default function IncidentDetailPage() {
             </p>
           </div>
           <button type="button" onClick={handleExportPdf} disabled={generating}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 8, border: 'none', backgroundColor: '#2C3E50', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: generating ? 0.7 : 1 }}>
-            <Download size={15} /> {generating ? 'Génération...' : 'Exporter le rapport PDF'}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '10px 20px', borderRadius: 8, border: 'none', backgroundColor: '#2C3E50', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: generating ? 0.7 : 1 }}>
+            <Download size={15} /> {generating ? 'Préparation...' : 'Imprimer le rapport'}
           </button>
         </div>
       </header>
+
+      {asArray<string>(incident.snapshotWarnings).length > 0 && (
+        <div role="status" style={{ marginBottom: 16, padding: '12px 16px', borderRadius: 8, background: '#FEF9E7', color: '#7D6608' }}>
+          Certaines données historiques de l’incident sont incomplètes. Les éléments valides demeurent accessibles.
+        </div>
+      )}
+
+      {(incident.status === 'ACTIVE' || incident.status === 'CONTAINED') && (
+        <section aria-labelledby="incident-actions-title" style={{ marginBottom: 16, padding: 16, border: '1px solid #E9ECEF', borderRadius: 12, background: '#FFFFFF' }}>
+          <h2 id="incident-actions-title" style={{ margin: '0 0 12px', fontSize: 16 }}>Actions sur l’incident</h2>
+          <label htmlFor="incident-closing-reason" style={{ display: 'block', marginBottom: 4, fontSize: 12, fontWeight: 700 }}>Motif de résolution</label>
+          <textarea id="incident-closing-reason" value={closingReason} onChange={(event) => setClosingReason(event.target.value)} rows={2} disabled={Boolean(actionBusy)} style={{ width: '100%', minHeight: 64, boxSizing: 'border-box', padding: 10, borderRadius: 8, border: '1px solid #ADB5BD' }} />
+          {actionError && <p role="alert" style={{ color: '#C0392B', margin: '8px 0' }}>{actionError}</p>}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+            {incident.status === 'ACTIVE' && (
+              <button type="button" onClick={() => void runTransition('contain')} disabled={Boolean(actionBusy)} style={{ minHeight: 44, padding: '10px 18px', border: 0, borderRadius: 8, background: '#E67E22', color: '#FFF', fontWeight: 700 }}>
+                {actionBusy === 'contain' ? 'Traitement...' : 'Contenir l’incident'}
+              </button>
+            )}
+            <button type="button" onClick={() => void runTransition('resolve')} disabled={Boolean(actionBusy)} style={{ minHeight: 44, padding: '10px 18px', border: 0, borderRadius: 8, background: '#2C3E50', color: '#FFF', fontWeight: 700 }}>
+              {actionBusy === 'resolve' ? 'Traitement...' : 'Résoudre l’incident'}
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* Identification */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 16 }}>
         {[
           { label: 'Type', value: INCIDENT_LABELS[incident.type] || incident.type },
+          { label: 'Nature', value: incident.isExercise ? 'Exercice' : 'Incident réel' },
+          { label: 'Statut', value: STATUS_LABELS[incident.status] || `Statut inconnu (${incident.status})` },
           { label: 'Procédure activée', value: incident.procedureCode || '—' },
           { label: 'Point de rassemblement', value: incident.assemblyPoint || '—' },
           { label: 'Déclenché par', value: incident.triggeredBy },
           { label: 'Durée', value: getDuration(incident.triggeredAt, incident.resolvedAt) },
           { label: 'Membres mobilisés', value: `${teamSnap.length}` },
+          { label: 'Responsable', value: incident.responsible?.displayName || 'Aucun responsable désigné' },
+          { label: 'Dernière mise à jour enregistrée', value: incident.updatedAt ? new Date(incident.updatedAt).toLocaleString('fr-CA') : 'Non renseignée' },
         ].map(item => (
           <div key={item.label} style={{ backgroundColor: '#FFFFFF', borderRadius: 10, border: '1px solid #E9ECEF', padding: '12px 14px' }}>
             <p style={{ margin: '0 0 3px', fontSize: 10, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase' }}>{item.label}</p>
@@ -522,7 +656,7 @@ export default function IncidentDetailPage() {
           <div style={{ backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF', overflow: 'hidden' }}>
             <div style={{ padding: '12px 20px', borderBottom: '1px solid #E9ECEF', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#2C3E50' }}>📋 Retour d'expérience (REX)</h2>
-              <span style={{ fontSize: 11, color: '#ADB5BD' }}>Obligatoire — ISO 22301</span>
+              <span style={{ fontSize: 11, color: '#ADB5BD' }}>Retour d’expérience</span>
             </div>
             <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               {[
@@ -539,7 +673,7 @@ export default function IncidentDetailPage() {
                 </div>
               ))}
               <button type="button" onClick={handleSaveRex} disabled={savingRex}
-                style={{ padding: '10px 20px', borderRadius: 8, border: 'none', backgroundColor: rexSaved ? '#27AE60' : '#2C3E50', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: savingRex ? 0.7 : 1 }}>
+                style={{ minHeight: 44, padding: '10px 20px', borderRadius: 8, border: 'none', backgroundColor: rexSaved ? '#27AE60' : '#2C3E50', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: savingRex ? 0.7 : 1 }}>
                 {rexSaved ? '✅ REX sauvegardé' : savingRex ? 'Sauvegarde...' : 'Sauvegarder le REX'}
               </button>
             </div>
@@ -554,6 +688,7 @@ export default function IncidentDetailPage() {
           <p style={{ margin: 0, fontSize: 13, color: '#2C3E50' }}>{incident.closingNotes}</p>
         </div>
       )}
+      </div>
     </PortalLayout>
   );
 }
