@@ -38,6 +38,8 @@ L’autorité demeure : identité et Client actifs, permission Incident, organis
 
 Le mécanisme d'administration Incident de la PR `#175` est déployé au SHA `d9eb6d84668a5773257ec75b7a06c062b7786384` (release `41638570059`, inspection `41640868682`). Il permet l'administration gouvernée de la permission individuelle et de l'affectation active, sans créer de droit implicite. La liste autorisée en production reste `NOT_VERIFIED` tant qu'une attribution nominative minimale n'a pas été approuvée puis appliquée. Le refus historique ne doit plus être qualifié de blocage produit, mais d'absence volontaire d'attribution.
 
+La tentative nominative approuvée pour Patrick JEAN-ERNEST n'a pas créé d'accès effectif : l'affectation BUREAUX a été refusée car le compte client n'est pas affecté à ce bâtiment. La permission individuelle transitoire a été révoquée et l'état initial vérifié. La recette de liste autorisée reste `NOT_VERIFIED`; aucune donnée Incident réelle n'a été consultée.
+
 ## Chrome 12/12
 
 | Thème \ Format | 390×844 | 768×1024 | 1440×900 | 2560×1440 |

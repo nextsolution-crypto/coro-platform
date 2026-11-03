@@ -112,3 +112,16 @@
 - Révocation : écran Client > Autorisations Incident; retrait de l'affectation puis retrait de la permission individuelle, avec vérification du refus sur la session existante.
 
 Cette proposition n'est pas une attribution approuvée. `INCIDENT_SUPERVISE` et `INCIDENT_COMMAND` restent exclus.
+
+## Tentative nominative et remise en état
+
+- Attribution approuvée : Patrick JEAN-ERNEST, Client `GELE SECURITE`, bâtiment `BUREAUX`, `INCIDENT_READ` uniquement.
+- État initial relevé : aucune permission Incident individuelle; aucune affectation Incident active; permissions opérationnelles préexistantes inchangées.
+- Permission individuelle `INCIDENT_READ` enregistrée à `2026-11-03T14:21:17.541Z`.
+- Affectation bâtiment refusée par l'autorité serveur : « Le compte client n est pas affecte a ce batiment. »
+- Aucun contournement : Patrick n'a pas été ajouté au bâtiment et aucun rôle, périmètre ou incident n'a été modifié.
+- Permission individuelle retirée à `2026-11-03T14:24:47.186Z`.
+- Après F5 : `INCIDENT_READ`, `INCIDENT_SUPERVISE` et `INCIDENT_COMMAND` absents; aucune affectation Incident active; état initial rétabli.
+- Audit append-only observé dans Organization 360 / CORO Internal : deux événements `CLIENT_USER_INCIDENT_PERMISSIONS_CHANGED`, acteurs, cibles redacted et motifs distincts pour l'ajout et la révocation.
+
+Verdict : `RECETTE_NON_REALISEE — BENEFICIAIRE_NON_ADMISSIBLE`.
