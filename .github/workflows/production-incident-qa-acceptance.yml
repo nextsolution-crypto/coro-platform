@@ -75,7 +75,9 @@ jobs:
             git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
             git -C "$repo" show "$SOURCE_SHA:ops/maintenance/incident-production-acceptance.cjs" >"$script"
             test "$(sha256sum "$script" | cut -d' ' -f1)" = "$SCRIPT_SHA256"
-            test "$(docker inspect -f '{{.State.Running}}' coro-backend)" = true
+            backend_container="$(docker compose -f "$repo/docker-compose.yml" ps -q backend)"
+            test -n "$backend_container"
+            test "$(docker inspect -f '{{.State.Running}}' "$backend_container")" = true
             systemctl start coro-db-backup.service
             test "$(systemctl show -p Result --value coro-db-backup.service)" = success
             cd "$repo"
