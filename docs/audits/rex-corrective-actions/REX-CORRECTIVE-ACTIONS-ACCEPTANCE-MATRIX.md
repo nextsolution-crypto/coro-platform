@@ -19,6 +19,6 @@
 | Finalisation concurrente avec création d'action | sérialisation PostgreSQL | PASS |
 | Brouillon lors d'une erreur/actualisation | tests `reviewDraftState.test.mjs` | PASS |
 | Build backend et portail | builds locaux du candidat | PASS |
-| Chrome 12/12 | à exécuter sur stack intégré | NOT_VERIFIED |
+| Chrome 12/12 | stack QA réel prêt; extension bloquée avant interaction (`timeoutMs`) | NOT_VERIFIED |
 | Production authentifiée lecture seule | après livraison gouvernée | NOT_VERIFIED |
 | Lecteur d'écran réel | observation humaine requise | NOT_VERIFIED |

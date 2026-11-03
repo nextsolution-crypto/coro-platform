@@ -6,14 +6,17 @@
 - Défauts UX reproduits : trois, corrigés localement.
 - Tests backend et PostgreSQL : PASS.
 - Build backend et portail : PASS.
-- Chrome, PR, CI, fusion, release et production : en cours / non encore revendiqués.
+- PR #186 publiée; HEAD `3f4be4296d762ce5f40fdb0d4f4a331673579858`.
+- CI terminale : PASS (`41723148659`, `41723149150`).
+- Chrome 12/12 : `NOT_VERIFIED`, contrôle de l'onglet bloqué par l'extension avant interaction.
+- Fusion, release et production : non exécutées.
 
 ## Prochaine action exacte
 
-1. Démarrer le stack QA isolé sur le HEAD commité.
-2. Exécuter le parcours synthétique et la matrice Chrome.
-3. Publier une PR ciblée, attendre la CI terminale et revoir le diff exact.
-4. Fusionner et livrer uniquement si tous les gates gouvernés passent.
+1. Restaurer un contrôle fonctionnel de l'onglet Chrome QA.
+2. Exécuter le parcours synthétique et la matrice Chrome 12/12 sur le candidat exact.
+3. Revoir le diff final et la CI du HEAD si les preuves ajoutent un commit documentaire.
+4. Fusionner et livrer uniquement après acceptation navigateur et gates gouvernés.
 5. Inspecter la production en lecture seule et réconcilier le SHA/digests/migrations.
 
 ## Nettoyage
