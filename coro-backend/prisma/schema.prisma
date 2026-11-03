@@ -6755,6 +6755,8 @@ model IncidentAuthorityAssignment {
   grantedByType    CoroActorType
   grantedById      String
   grantReason      String
+  idempotencyKey   String?
+  payloadHash      String?                           @db.Char(64)
   grantedAt        DateTime                          @default(now())
   revokedByType    CoroActorType?
   revokedById      String?
@@ -6766,6 +6768,7 @@ model IncidentAuthorityAssignment {
 
   @@index([organizationId, buildingId, status])
   @@index([incidentEventId, subjectType, subjectId, status])
+  @@unique([organizationId, idempotencyKey])
 }
 
 model IncidentAuditEvent {

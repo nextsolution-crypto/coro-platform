@@ -1,14 +1,42 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Headers, UseGuards, UsePipes, ValidationPipe, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Headers,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+  Request,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ClientsService } from './clients.service';
 import { UpdateClientUserOperationalPermissionsDto } from './dto/update-client-user-operational-permissions.dto';
+import {
+  GrantClientUserIncidentAuthorityDto,
+  RevokeClientUserIncidentAuthorityDto,
+  SetClientUserIncidentPermissionsDto,
+} from './dto/incident-authorization.dto';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 import { requireTenantAdmin } from '../auth/work-management-access';
-import { CreateClientDto, UpdateClientDto, UpdateClientLogoDto } from './dto/client.dto';
+import {
+  CreateClientDto,
+  UpdateClientDto,
+  UpdateClientLogoDto,
+} from './dto/client.dto';
 
 @Controller('clients')
 @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
-@UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
+@UsePipes(
+  new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }),
+)
 export class ClientsController {
   constructor(private clientsService: ClientsService) {}
 
@@ -55,26 +83,110 @@ export class ClientsController {
     );
   }
 
+  @Get(':id/client-users/:clientUserId/incident-authorizations')
+  getClientUserIncidentAuthorizations(
+    @Param('id') id: string,
+    @Param('clientUserId') clientUserId: string,
+    @Request() req: any,
+  ) {
+    return this.clientsService.getClientUserIncidentAuthorizations(
+      id,
+      clientUserId,
+      req.user,
+    );
+  }
+
+  @Put(':id/client-users/:clientUserId/incident-permissions')
+  setClientUserIncidentPermissions(
+    @Param('id') id: string,
+    @Param('clientUserId') clientUserId: string,
+    @Body() body: SetClientUserIncidentPermissionsDto,
+    @Request() req: any,
+  ) {
+    return this.clientsService.setClientUserIncidentPermissions(
+      id,
+      clientUserId,
+      body,
+      req.user,
+    );
+  }
+
+  @Post(':id/client-users/:clientUserId/incident-authorizations')
+  grantClientUserIncidentAuthorization(
+    @Param('id') id: string,
+    @Param('clientUserId') clientUserId: string,
+    @Body() body: GrantClientUserIncidentAuthorityDto,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Request() req: any,
+  ) {
+    return this.clientsService.grantClientUserIncidentAuthorization(
+      id,
+      clientUserId,
+      body,
+      req.user,
+      idempotencyKey,
+    );
+  }
+
+  @Put(
+    ':id/client-users/:clientUserId/incident-authorizations/:assignmentId/revoke',
+  )
+  revokeClientUserIncidentAuthorization(
+    @Param('id') id: string,
+    @Param('clientUserId') clientUserId: string,
+    @Param('assignmentId') assignmentId: string,
+    @Body() body: RevokeClientUserIncidentAuthorityDto,
+    @Request() req: any,
+  ) {
+    return this.clientsService.revokeClientUserIncidentAuthorization(
+      id,
+      clientUserId,
+      assignmentId,
+      body,
+      req.user,
+    );
+  }
+
   @Post()
-  create(@Body() body: CreateClientDto, @Headers('idempotency-key') idempotencyKey: string | undefined, @Request() req: any) {
+  create(
+    @Body() body: CreateClientDto,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Request() req: any,
+  ) {
     requireTenantAdmin(req.user);
     return this.clientsService.create(
       { ...body, organizationId: req.user.organizationId },
-      { userId: req.user.userId, role: req.user.role, organizationId: req.user.organizationId },
+      {
+        userId: req.user.userId,
+        role: req.user.role,
+        organizationId: req.user.organizationId,
+      },
       idempotencyKey,
     );
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() body: UpdateClientDto, @Request() req: any) {
+  update(
+    @Param('id') id: string,
+    @Body() body: UpdateClientDto,
+    @Request() req: any,
+  ) {
     requireTenantAdmin(req.user);
     return this.clientsService.update(id, body, req.user.organizationId);
   }
 
   @Put(':id/logo')
-  uploadLogo(@Param('id') id: string, @Body() body: UpdateClientLogoDto, @Request() req: any) {
+  uploadLogo(
+    @Param('id') id: string,
+    @Body() body: UpdateClientLogoDto,
+    @Request() req: any,
+  ) {
     requireTenantAdmin(req.user);
-    return this.clientsService.uploadLogo(id, body.logoBase64, req.user.organizationId);
+    return this.clientsService.uploadLogo(
+      id,
+      body.logoBase64,
+      req.user.organizationId,
+    );
   }
 
   @Delete(':id')
@@ -100,6 +212,13 @@ export class ClientsController {
 
 @Controller('admin/organizations')
 @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
+@UsePipes(
+  new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }),
+)
 export class PlatformClientAdministrationController {
   constructor(private clientsService: ClientsService) {}
 
@@ -148,7 +267,9 @@ export class PlatformClientAdministrationController {
     );
   }
 
-  @Get(':organizationId/clients/:clientId/client-users/:clientUserId/operational-permissions')
+  @Get(
+    ':organizationId/clients/:clientId/client-users/:clientUserId/operational-permissions',
+  )
   getPermissions(
     @Param('organizationId') organizationId: string,
     @Param('clientId') clientId: string,
@@ -163,7 +284,9 @@ export class PlatformClientAdministrationController {
     );
   }
 
-  @Put(':organizationId/clients/:clientId/client-users/:clientUserId/operational-permissions')
+  @Put(
+    ':organizationId/clients/:clientId/client-users/:clientUserId/operational-permissions',
+  )
   updatePermissions(
     @Param('organizationId') organizationId: string,
     @Param('clientId') clientId: string,
@@ -175,6 +298,84 @@ export class PlatformClientAdministrationController {
       organizationId,
       clientId,
       clientUserId,
+      body,
+      req.user,
+    );
+  }
+
+  @Get(
+    ':organizationId/clients/:clientId/client-users/:clientUserId/incident-authorizations',
+  )
+  getIncidentAuthorizations(
+    @Param('organizationId') organizationId: string,
+    @Param('clientId') clientId: string,
+    @Param('clientUserId') clientUserId: string,
+    @Request() req: any,
+  ) {
+    return this.clientsService.getPlatformClientUserIncidentAuthorizations(
+      organizationId,
+      clientId,
+      clientUserId,
+      req.user,
+    );
+  }
+
+  @Put(
+    ':organizationId/clients/:clientId/client-users/:clientUserId/incident-permissions',
+  )
+  setIncidentPermissions(
+    @Param('organizationId') organizationId: string,
+    @Param('clientId') clientId: string,
+    @Param('clientUserId') clientUserId: string,
+    @Body() body: SetClientUserIncidentPermissionsDto,
+    @Request() req: any,
+  ) {
+    return this.clientsService.setPlatformClientUserIncidentPermissions(
+      organizationId,
+      clientId,
+      clientUserId,
+      body,
+      req.user,
+    );
+  }
+
+  @Post(
+    ':organizationId/clients/:clientId/client-users/:clientUserId/incident-authorizations',
+  )
+  grantIncidentAuthorization(
+    @Param('organizationId') organizationId: string,
+    @Param('clientId') clientId: string,
+    @Param('clientUserId') clientUserId: string,
+    @Body() body: GrantClientUserIncidentAuthorityDto,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Request() req: any,
+  ) {
+    return this.clientsService.grantPlatformClientUserIncidentAuthorization(
+      organizationId,
+      clientId,
+      clientUserId,
+      body,
+      req.user,
+      idempotencyKey,
+    );
+  }
+
+  @Put(
+    ':organizationId/clients/:clientId/client-users/:clientUserId/incident-authorizations/:assignmentId/revoke',
+  )
+  revokeIncidentAuthorization(
+    @Param('organizationId') organizationId: string,
+    @Param('clientId') clientId: string,
+    @Param('clientUserId') clientUserId: string,
+    @Param('assignmentId') assignmentId: string,
+    @Body() body: RevokeClientUserIncidentAuthorityDto,
+    @Request() req: any,
+  ) {
+    return this.clientsService.revokePlatformClientUserIncidentAuthorization(
+      organizationId,
+      clientId,
+      clientUserId,
+      assignmentId,
       body,
       req.user,
     );
