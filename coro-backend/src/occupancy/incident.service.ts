@@ -1,9 +1,20 @@
 import { ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { createHash, randomUUID } from 'crypto';
-import { CoroActorType, IncidentPermission } from '@prisma/client';
+import {
+  CoroActorType,
+  IncidentPermission,
+  IncidentStatus,
+  IncidentType,
+  Prisma,
+} from '@prisma/client';
 import { IncidentNotificationDispatcherService } from './incident-notification-dispatcher.service';
 import { Cron } from '@nestjs/schedule';
+import {
+  IncidentHistoryExerciseFilter,
+  IncidentHistoryQueryDto,
+  IncidentHistoryStatusFilter,
+} from './incident-history.dto';
 
 type IncidentAuditContext = {
   actorType: CoroActorType;
@@ -37,6 +48,38 @@ const INCIDENT_PROCEDURE_MAP: Record<string, string> = {
   HAZMAT: 'P018', BOMB_THREAT: 'P019', LITHIUM_BATTERY: 'P026',
   FLOODING: 'P024', VIOLENT_WINDS: 'P022', OTHER: 'P001',
 };
+
+const INCIDENT_SEARCH_LABELS: Record<IncidentType, string> = {
+  SMOKE_DISCOVERY: 'decouverte fumee',
+  FIRE_ALERT: 'alerte incendie',
+  FIRE_ALARM: 'alarme incendie',
+  GAS_LEAK: 'fuite gaz',
+  ACTIVE_THREAT: 'menace active',
+  MEDICAL: 'urgence medicale',
+  TOXIC_GAS: 'gaz toxique',
+  SUSPICIOUS_PACKAGE: 'colis suspect',
+  POWER_OUTAGE: 'coupure courant',
+  HAZMAT: 'matieres dangereuses',
+  BOMB_THREAT: 'alerte bombe',
+  LITHIUM_BATTERY: 'batterie lithium',
+  FLOODING: 'inondations',
+  VIOLENT_WINDS: 'vents violents',
+  OTHER: 'autre',
+};
+
+const OPEN_INCIDENT_STATUSES: IncidentStatus[] = [
+  IncidentStatus.PRE_ALERT,
+  IncidentStatus.ACTIVE,
+  IncidentStatus.CONTAINED,
+];
+
+function normalizeIncidentSearch(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
 
 const PROCEDURE_MAP: Record<string, ProcedureTemplate> = {
   P001: P001_DIRECTIVES_GENERALES, P002: P002_DECOUVERTE_FUMEE,
@@ -1272,13 +1315,136 @@ export class IncidentService {
   }
 
   // ── Historique + Détail ───────────────────────────────────────────────────
-  async getIncidentHistory(buildingId: string, organizationId: string) {
-    return this.prisma.incidentEvent.findMany({
-      where: { buildingId, organizationId },
-      orderBy: { triggeredAt: 'desc' },
-      take: 50,
-      include: { tasks: { select: { status: true, isCoordinatorStep: true, acknowledgedAt: true } }, logs: { orderBy: { timestamp: 'asc' }, take: 1 } },
-    });
+  async getIncidentHistory(
+    buildingId: string,
+    organizationId: string,
+    query: IncidentHistoryQueryDto = new IncidentHistoryQueryDto(),
+  ) {
+    const baseWhere: Prisma.IncidentEventWhereInput = {
+      buildingId,
+      organizationId,
+    };
+    const search = normalizeIncidentSearch(query.search || '');
+    const matchingTypes = search
+      ? (Object.values(IncidentType) as IncidentType[]).filter((type) =>
+          `${type.toLowerCase()} ${INCIDENT_SEARCH_LABELS[type]}`.includes(search),
+        )
+      : [];
+    const statusWhere =
+      query.status === IncidentHistoryStatusFilter.ALL
+        ? {}
+        : query.status === IncidentHistoryStatusFilter.OPEN
+          ? { status: { in: OPEN_INCIDENT_STATUSES } }
+          : { status: query.status as unknown as IncidentStatus };
+    const exerciseWhere =
+      query.exercise === IncidentHistoryExerciseFilter.ALL
+        ? {}
+        : { isExercise: query.exercise === IncidentHistoryExerciseFilter.EXERCISE };
+    const where: Prisma.IncidentEventWhereInput = {
+      ...baseWhere,
+      ...statusWhere,
+      ...exerciseWhere,
+      ...(search
+        ? {
+            OR: [
+              { procedureCode: { contains: search, mode: 'insensitive' } },
+              ...(matchingTypes.length ? [{ type: { in: matchingTypes } }] : []),
+            ],
+          }
+        : {}),
+    };
+    const orderBy: Prisma.IncidentEventOrderByWithRelationInput[] = [
+      { [query.sortBy]: query.sortOrder },
+      { id: query.sortOrder },
+    ];
+    const skip = (query.page - 1) * query.pageSize;
+    const [
+      total,
+      all,
+      preAlerts,
+      active,
+      contained,
+      resolved,
+      cancelled,
+      exercises,
+      incidents,
+    ] = await this.prisma.$transaction([
+      this.prisma.incidentEvent.count({ where }),
+      this.prisma.incidentEvent.count({ where: baseWhere }),
+      this.prisma.incidentEvent.count({ where: { ...baseWhere, status: IncidentStatus.PRE_ALERT } }),
+      this.prisma.incidentEvent.count({ where: { ...baseWhere, status: IncidentStatus.ACTIVE } }),
+      this.prisma.incidentEvent.count({ where: { ...baseWhere, status: IncidentStatus.CONTAINED } }),
+      this.prisma.incidentEvent.count({ where: { ...baseWhere, status: IncidentStatus.RESOLVED } }),
+      this.prisma.incidentEvent.count({ where: { ...baseWhere, status: IncidentStatus.CANCELLED } }),
+      this.prisma.incidentEvent.count({ where: { ...baseWhere, isExercise: true } }),
+      this.prisma.incidentEvent.findMany({
+        where,
+        orderBy,
+        skip,
+        take: query.pageSize,
+        select: {
+          id: true,
+          status: true,
+          type: true,
+          triggeredAt: true,
+          resolvedAt: true,
+          procedureCode: true,
+          isExercise: true,
+          rexWentWell: true,
+          rexToImprove: true,
+          rexRecommendations: true,
+          tasks: {
+            where: { isCoordinatorStep: true },
+            select: { status: true },
+          },
+        },
+      }),
+    ]);
+
+    const countByStatus: Record<IncidentStatus, number> = {
+      PRE_ALERT: preAlerts,
+      ACTIVE: active,
+      CONTAINED: contained,
+      RESOLVED: resolved,
+      CANCELLED: cancelled,
+    };
+
+    return {
+      items: incidents.map((incident) => ({
+        id: incident.id,
+        status: incident.status,
+        type: incident.type,
+        triggeredAt: incident.triggeredAt,
+        resolvedAt: incident.resolvedAt,
+        procedureCode: incident.procedureCode,
+        isExercise: incident.isExercise,
+        hasRex: Boolean(
+          incident.rexWentWell ||
+            incident.rexToImprove ||
+            incident.rexRecommendations,
+        ),
+        coordinatorStepsTotal: incident.tasks.length,
+        coordinatorStepsCompleted: incident.tasks.filter(
+          (task) => task.status === 'COMPLETED',
+        ).length,
+      })),
+      pagination: {
+        page: query.page,
+        pageSize: query.pageSize,
+        total,
+        totalPages: Math.ceil(total / query.pageSize),
+      },
+      counts: {
+        all,
+        open: OPEN_INCIDENT_STATUSES.reduce(
+          (sum, status) => sum + countByStatus[status],
+          0,
+        ),
+        byStatus: countByStatus,
+        exercises,
+        real: all - exercises,
+      },
+    };
   }
 
   async getIncidentDetail(incidentId: string, organizationId: string) {

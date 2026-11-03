@@ -1,324 +1,139 @@
 'use client';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { apiGet, getUser } from '../../../store/auth';
+import { useParams, useRouter } from 'next/navigation';
+import { AlertTriangle, CheckSquare, Clock, FileText, RefreshCw, Search } from 'lucide-react';
 import PortalLayout from '../../../components/PortalLayout';
-import { FileText, Clock, CheckSquare, AlertTriangle, RefreshCw } from 'lucide-react';
-import {
-  createInitialHistoryState,
-  filterIncidentHistory,
-  getHistoryError,
-  parseIncidentHistory,
-  reduceHistoryState,
-} from './incidentHistoryState';
+import { apiGet, getUser } from '../../../store/auth';
+import { createInitialHistoryState, getHistoryError, parseIncidentHistory, reduceHistoryState } from './incidentHistoryState';
 
 const INCIDENT_LABELS: Record<string, string> = {
-  SMOKE_DISCOVERY: 'Découverte de fumée', FIRE_ALERT: 'Alerte incendie',
-  FIRE_ALARM: 'Alarme incendie', GAS_LEAK: 'Fuite de gaz',
-  ACTIVE_THREAT: 'Menace active', MEDICAL: 'Urgence médicale',
-  TOXIC_GAS: 'Gaz toxique', SUSPICIOUS_PACKAGE: 'Colis suspect',
-  POWER_OUTAGE: 'Coupure de courant', HAZMAT: 'Matières dangereuses',
-  BOMB_THREAT: 'Alerte à la bombe', LITHIUM_BATTERY: 'Batterie lithium',
+  SMOKE_DISCOVERY: 'Découverte de fumée', FIRE_ALERT: 'Alerte incendie', FIRE_ALARM: 'Alarme incendie',
+  GAS_LEAK: 'Fuite de gaz', ACTIVE_THREAT: 'Menace active', MEDICAL: 'Urgence médicale',
+  TOXIC_GAS: 'Gaz toxique', SUSPICIOUS_PACKAGE: 'Colis suspect', POWER_OUTAGE: 'Coupure de courant',
+  HAZMAT: 'Matières dangereuses', BOMB_THREAT: 'Alerte à la bombe', LITHIUM_BATTERY: 'Batterie lithium',
   FLOODING: 'Inondations', VIOLENT_WINDS: 'Vents violents', OTHER: 'Autre',
 };
-
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  ACTIVE:    { label: 'En cours',  color: '#C0392B', bg: '#FDEDEC' },
-  CONTAINED: { label: 'Contenu',   color: '#E67E22', bg: '#FEF9E7' },
-  RESOLVED:  { label: 'Résolu',    color: '#27AE60', bg: '#EAFAF1' },
+  PRE_ALERT: { label: 'Préalerte', color: '#8E44AD', bg: '#F4ECF7' },
+  ACTIVE: { label: 'Actif', color: '#C0392B', bg: '#FDEDEC' },
+  CONTAINED: { label: 'Contenu', color: '#B35C00', bg: '#FEF5E7' },
+  RESOLVED: { label: 'Résolu', color: '#1E8449', bg: '#EAFAF1' },
+  CANCELLED: { label: 'Annulé', color: '#566573', bg: '#F2F3F4' },
 };
+const PAGE_SIZE = 25;
+
+type StatusFilter = 'ALL' | 'OPEN' | 'PRE_ALERT' | 'ACTIVE' | 'CONTAINED' | 'RESOLVED' | 'CANCELLED';
+type ExerciseFilter = 'ALL' | 'REAL' | 'EXERCISE';
+type SortValue = 'triggeredAt-desc' | 'triggeredAt-asc' | 'status-asc' | 'type-asc';
 
 function getDuration(start: string, end?: string | null): string {
-  const ms = (end ? new Date(end) : new Date()).getTime() - new Date(start).getTime();
-  const min = Math.floor(ms / 60000);
-  if (min < 60) return `${min} min`;
-  return `${Math.floor(min / 60)}h ${min % 60}min`;
+  const minutes = Math.max(0, Math.floor(((end ? new Date(end) : new Date()).getTime() - new Date(start).getTime()) / 60000));
+  return minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)}h ${minutes % 60}min`;
 }
 
 export default function IncidentHistoryPage() {
   const router = useRouter();
-  const params = useParams();
-  const buildingId = params.buildingId as string;
-
-  const [history, dispatch] = useReducer(
-    reduceHistoryState,
-    undefined,
-    () => createInitialHistoryState(),
-  );
-  const [filterState, setFilterState] = useState<{
-    buildingId: string;
-    value: 'all' | 'RESOLVED' | 'ACTIVE';
-  }>({ buildingId, value: 'all' });
+  const buildingId = useParams().buildingId as string;
+  const [history, dispatch] = useReducer(reduceHistoryState, undefined, () => createInitialHistoryState());
+  const [searchDraft, setSearchDraft] = useState('');
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState<StatusFilter>('ALL');
+  const [exercise, setExercise] = useState<ExerciseFilter>('ALL');
+  const [sort, setSort] = useState<SortValue>('triggeredAt-desc');
+  const [page, setPage] = useState(1);
   const requestIdRef = useRef(0);
-  const filter = filterState.buildingId === buildingId ? filterState.value : 'all';
+  const scopeRef = useRef(buildingId);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearch(searchDraft.trim());
+      setPage(1);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchDraft]);
+
+  useEffect(() => {
+    if (scopeRef.current === buildingId) return;
+    scopeRef.current = buildingId;
+    setSearchDraft(''); setSearch(''); setStatus('ALL'); setExercise('ALL'); setSort('triggeredAt-desc'); setPage(1);
+  }, [buildingId]);
 
   const loadHistory = useCallback(async (preserveData: boolean) => {
     const requestId = ++requestIdRef.current;
     dispatch({ type: 'start', requestId, preserveData });
-
+    const [sortBy, sortOrder] = sort.split('-');
+    const query = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE), status, exercise, sortBy, sortOrder });
+    if (search) query.set('search', search);
     try {
-      const data = await apiGet(`/client-portal/incidents/buildings/${buildingId}/history`);
+      const data = await apiGet(`/client-portal/incidents/buildings/${buildingId}/history?${query}`);
       if (requestId !== requestIdRef.current) return;
-      dispatch({
-        type: 'success',
-        requestId,
-        incidents: parseIncidentHistory(data),
-      });
+      dispatch({ type: 'success', requestId, result: parseIncidentHistory(data) });
     } catch (error) {
       if (requestId !== requestIdRef.current) return;
-      dispatch({
-        type: 'failure',
-        requestId,
-        error: getHistoryError(error),
-      });
+      dispatch({ type: 'failure', requestId, error: getHistoryError(error) });
     }
-  }, [buildingId]);
+  }, [buildingId, exercise, page, search, sort, status]);
 
   useEffect(() => {
-    const u = getUser();
-    if (!u) { router.replace('/login'); return; }
-    void loadHistory(false);
+    if (!getUser()) { router.replace('/login'); return; }
+    void loadHistory(history.result !== null);
+    return () => { requestIdRef.current += 1; };
+    // The request inputs intentionally define every reload.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadHistory, router]);
 
-    return () => {
-      requestIdRef.current += 1;
-    };
-  }, [buildingId, loadHistory, router]);
+  const result = history.result;
+  const incidents = result?.items ?? [];
+  const pagination = result?.pagination;
+  const isInitialLoading = history.phase === 'loading' && result === null;
+  const isRefreshing = history.phase === 'loading' && result !== null;
+  const hasBlockingError = history.phase === 'error' && result === null;
+  const resetFilters = () => { setSearchDraft(''); setSearch(''); setStatus('ALL'); setExercise('ALL'); setPage(1); };
 
-  const incidents = history.incidents ?? [];
-  const filtered = filterIncidentHistory(incidents, filter);
-  const isInitialLoading = history.phase === 'loading' && history.incidents === null;
-  const isRefreshing = history.phase === 'loading' && history.incidents !== null;
-  const hasBlockingError = history.phase === 'error' && history.incidents === null;
-
-  if (isInitialLoading) return (
-    <PortalLayout>
-      <div role="status" aria-live="polite" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
-        <p className="animate-pulse" style={{ color: '#6C757D', fontSize: 14 }}>Chargement de l’historique des incidents…</p>
-      </div>
-    </PortalLayout>
-  );
+  if (isInitialLoading) return <PortalLayout><div role="status" aria-live="polite" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300 }}><p style={{ color: '#6C757D' }}>Chargement de l’historique des incidents…</p></div></PortalLayout>;
 
   return (
     <PortalLayout>
-      <header style={{ marginBottom: 24 }}>
-        <button type="button" onClick={() => router.push(`/sentinelle/${buildingId}`)}
-          style={{ minHeight: 44, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#6C757D', padding: 0, marginBottom: 8 }}>
-          ← Retour au registre
-        </button>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-          <div>
-            <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.08em' }}>CORO Sentinelle</p>
-            <h1 style={{ margin: 0, fontSize: 'clamp(20px, 5vw, 26px)', fontWeight: 800, color: '#2C3E50', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <FileText size={22} color="#6C757D" /> Historique des incidents
-            </h1>
-          </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {(['all', 'RESOLVED', 'ACTIVE'] as const).map(f => (
-              <button key={f} type="button" onClick={() => setFilterState({ buildingId, value: f })}
-                aria-pressed={filter === f}
-                style={{ minHeight: 44, padding: '7px 14px', borderRadius: 8, border: '1px solid', cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                  borderColor: filter === f ? '#2C3E50' : '#E9ECEF',
-                  backgroundColor: filter === f ? '#2C3E50' : '#FFFFFF',
-                  color: filter === f ? '#FFFFFF' : '#6C757D' }}>
-                {f === 'all' ? 'Tous' : f === 'RESOLVED' ? 'Résolus' : 'En cours'}
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => void loadHistory(true)}
-              disabled={history.phase === 'loading'}
-              aria-label="Actualiser l’historique des incidents"
-              style={{
-                minHeight: 44,
-                padding: '7px 14px',
-                borderRadius: 8,
-                border: '1px solid #E9ECEF',
-                cursor: history.phase === 'loading' ? 'wait' : 'pointer',
-                fontSize: 12,
-                fontWeight: 600,
-                backgroundColor: '#FFFFFF',
-                color: '#6C757D',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                opacity: history.phase === 'loading' ? 0.65 : 1,
-              }}
-            >
-              <RefreshCw size={14} aria-hidden="true" />
-              {isRefreshing ? 'Actualisation…' : 'Actualiser'}
-            </button>
-          </div>
+      <header style={{ marginBottom: 20 }}>
+        <button type="button" onClick={() => router.push(`/sentinelle/${buildingId}`)} style={{ minHeight: 44, padding: '8px 4px', background: 'none', border: 0, cursor: 'pointer', color: '#6C757D' }}>← Retour au registre</button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <div><p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase' }}>CORO Sentinelle</p><h1 style={{ margin: 0, fontSize: 'clamp(20px, 5vw, 26px)', color: '#2C3E50', display: 'flex', gap: 8, alignItems: 'center' }}><FileText size={22} /> Historique des incidents</h1></div>
+          <button type="button" onClick={() => void loadHistory(true)} disabled={history.phase === 'loading'} aria-label="Actualiser l’historique des incidents" style={{ minWidth: 44, minHeight: 44, padding: '8px 14px', borderRadius: 8, border: '1px solid #D5D8DC', background: '#FFF', color: '#566573', cursor: isRefreshing ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}><RefreshCw size={16} aria-hidden="true" />{isRefreshing ? 'Actualisation…' : 'Actualiser'}</button>
         </div>
       </header>
 
-      {hasBlockingError && history.error && (
-        <section
-          role="alert"
-          aria-live="assertive"
-          style={{
-            marginBottom: 16,
-            padding: 24,
-            borderRadius: 12,
-            border: '1px solid #F5B7B1',
-            backgroundColor: '#FDEDEC',
-            color: '#922B21',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-            <AlertTriangle size={22} aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }} />
-            <div style={{ minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>{history.error.message}</p>
-              {history.error.kind === 'technical' && (
-                <p style={{ margin: '6px 0 0', fontSize: 13 }}>
-                  Vérifiez votre connexion, puis essayez de nouveau.
-                </p>
-              )}
-              {history.error.kind !== 'session' && (
-                <button
-                  type="button"
-                  onClick={() => void loadHistory(false)}
-                  style={{
-                    minHeight: 44,
-                    marginTop: 14,
-                    padding: '9px 16px',
-                    borderRadius: 8,
-                    border: '1px solid #922B21',
-                    backgroundColor: '#FFFFFF',
-                    color: '#922B21',
-                    cursor: 'pointer',
-                    fontWeight: 700,
-                  }}
-                >
-                  Réessayer
-                </button>
-              )}
-            </div>
-          </div>
+      {hasBlockingError && history.error && <ErrorPanel error={history.error.message} retry={history.error.kind !== 'session' ? () => void loadHistory(false) : undefined} />}
+      {history.phase === 'error' && history.stale && history.error && <section role="alert" aria-live="polite" style={{ marginBottom: 16, padding: '12px 16px', borderRadius: 8, border: '1px solid #F8C471', background: '#FEF9E7', color: '#7D5109', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}><span><strong>Actualisation échouée.</strong> Les résultats affichés peuvent être anciens.</span><button type="button" onClick={() => void loadHistory(true)} style={{ minHeight: 44, padding: '8px 14px', borderRadius: 8, border: '1px solid #7D5109', background: '#FFF', color: '#7D5109', cursor: 'pointer', fontWeight: 700 }}>Réessayer</button></section>}
+
+      {!hasBlockingError && result && <>
+        <section aria-label="Recherche et filtres" style={{ marginBottom: 16, padding: 16, border: '1px solid #E9ECEF', borderRadius: 10, background: '#FFF', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: 12 }}>
+          <label style={{ display: 'grid', gap: 5, fontSize: 12, fontWeight: 700, color: '#566573' }}>Recherche type ou procédure<div style={{ position: 'relative' }}><Search size={16} aria-hidden="true" style={{ position: 'absolute', left: 12, top: 14, color: '#7F8C8D' }} /><input value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} maxLength={80} placeholder="Ex. incendie ou P003" style={{ width: '100%', minHeight: 44, boxSizing: 'border-box', padding: '8px 12px 8px 36px', border: '1px solid #BFC9CA', borderRadius: 8 }} /></div></label>
+          <Select label="Statut" value={status} onChange={(value) => { setStatus(value as StatusFilter); setPage(1); }} options={[['ALL', `Tous (${result.counts.all})`], ['OPEN', `Ouverts (${result.counts.open})`], ['PRE_ALERT', 'Préalertes'], ['ACTIVE', 'Actifs'], ['CONTAINED', 'Contenus'], ['RESOLVED', 'Résolus'], ['CANCELLED', 'Annulés']]} />
+          <Select label="Nature" value={exercise} onChange={(value) => { setExercise(value as ExerciseFilter); setPage(1); }} options={[['ALL', 'Incidents et exercices'], ['REAL', `Incidents réels (${result.counts.real})`], ['EXERCISE', `Exercices (${result.counts.exercises})`]]} />
+          <Select label="Trier par" value={sort} onChange={(value) => { setSort(value as SortValue); setPage(1); }} options={[['triggeredAt-desc', 'Plus récents'], ['triggeredAt-asc', 'Plus anciens'], ['status-asc', 'Statut'], ['type-asc', 'Type']]} />
         </section>
-      )}
 
-      {history.phase === 'error' && history.stale && history.error && (
-        <section
-          role="alert"
-          aria-live="polite"
-          style={{
-            marginBottom: 16,
-            padding: '12px 16px',
-            borderRadius: 8,
-            border: '1px solid #F8C471',
-            backgroundColor: '#FEF9E7',
-            color: '#9C640C',
-            fontSize: 13,
-            display: 'flex',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 12,
-          }}
-        >
-          <span><strong>Actualisation échouée.</strong> Les données affichées proviennent du dernier chargement réussi et peuvent être anciennes.</span>
-          <button
-            type="button"
-            onClick={() => void loadHistory(true)}
-            style={{ minHeight: 44, padding: '7px 14px', borderRadius: 8, border: '1px solid #9C640C', backgroundColor: '#FFFFFF', color: '#9C640C', cursor: 'pointer', fontWeight: 700 }}
-          >
-            Réessayer
-          </button>
-        </section>
-      )}
+        <div style={{ marginBottom: 16, padding: '10px 16px', borderRadius: 8, background: '#EBF5FB', border: '1px solid #AED6F1', fontSize: 12, color: '#2471A3' }}>📋 <strong>Conservation réglementaire :</strong> Incidents conservés 36 mois (ISO 22301) · Incidents avec blessés : 5 ans (CNESST) · Exercices : 24 mois (CNPI 2020)</div>
 
-      {/* Note conservation réglementaire */}
-      <div style={{ marginBottom: 16, padding: '10px 16px', borderRadius: 8, backgroundColor: '#EBF5FB', border: '1px solid #AED6F1', fontSize: 12, color: '#2980B9' }}>
-        📋 <strong>Conservation réglementaire :</strong> Incidents conservés 36 mois (ISO 22301) · Incidents avec blessés : 5 ans (CNESST) · Exercices : 24 mois (CNPI 2020)
-      </div>
-
-      {!hasBlockingError && incidents.length === 0 ? (
-        <div style={{ padding: 48, textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF' }}>
-          <AlertTriangle size={36} color="#DEE2E6" style={{ margin: '0 auto 16px' }} />
-          <p style={{ margin: 0, color: '#6C757D', fontSize: 14 }}>Aucun incident enregistré pour ce bâtiment.</p>
-        </div>
-      ) : !hasBlockingError && filtered.length === 0 ? (
-        <div style={{ padding: 48, textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF' }}>
-          <AlertTriangle size={36} color="#DEE2E6" style={{ margin: '0 auto 16px' }} />
-          <p style={{ margin: 0, color: '#6C757D', fontSize: 14 }}>Aucun incident ne correspond à ce filtre.</p>
-          <button
-            type="button"
-            onClick={() => setFilterState({ buildingId, value: 'all' })}
-            style={{ minHeight: 44, marginTop: 14, padding: '9px 16px', borderRadius: 8, border: '1px solid #2C3E50', backgroundColor: '#FFFFFF', color: '#2C3E50', cursor: 'pointer', fontWeight: 700 }}
-          >
-            Afficher tous les incidents
-          </button>
-        </div>
-      ) : !hasBlockingError ? (
-        <section style={{ backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF', overflow: 'hidden' }}>
-          <div style={{ padding: '14px 20px', borderBottom: '1px solid #E9ECEF', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#2C3E50' }}>
-              {filtered.length} incident{filtered.length > 1 ? 's' : ''}
-            </h2>
-          </div>
-          {filtered.map((inc, i) => {
-            const scfg = STATUS_CONFIG[inc.status] || STATUS_CONFIG.RESOLVED;
-            const coordSteps = (inc.tasks || []).filter(t => t.isCoordinatorStep);
-            const completed  = coordSteps.filter(t => t.status === 'COMPLETED').length;
-            const pct        = coordSteps.length > 0 ? Math.round((completed / coordSteps.length) * 100) : null;
-            const hasRex     = !!(inc.rexWentWell || inc.rexToImprove || inc.rexRecommendations);
-
-            return (
-              <div key={inc.id} role="link" tabIndex={0} aria-label={`Ouvrir l’incident ${INCIDENT_LABELS[inc.type] || inc.type}`}
-                style={{ padding: '16px 20px', borderBottom: i < filtered.length - 1 ? '1px solid #F1F3F5' : 'none', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', cursor: 'pointer' }}
-                onClick={() => router.push(`/sentinelle/${buildingId}/incidents/${inc.id}`)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    router.push(`/sentinelle/${buildingId}/incidents/${inc.id}`);
-                  }
-                }}>
-                {/* Date */}
-                <div style={{ flexShrink: 0, width: 56, textAlign: 'center' }}>
-                  <p style={{ margin: 0, fontSize: 18, fontWeight: 900, color: '#2C3E50', lineHeight: 1 }}>
-                    {new Date(inc.triggeredAt).getDate()}
-                  </p>
-                  <p style={{ margin: '2px 0 0', fontSize: 10, color: '#ADB5BD', textTransform: 'uppercase' }}>
-                    {new Date(inc.triggeredAt).toLocaleDateString('fr-CA', { month: 'short' })}
-                  </p>
-                  <p style={{ margin: '1px 0 0', fontSize: 10, color: '#ADB5BD' }}>
-                    {new Date(inc.triggeredAt).getFullYear()}
-                  </p>
-                </div>
-
-                {/* Infos principales */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: '#2C3E50' }}>
-                      {INCIDENT_LABELS[inc.type] || inc.type}
-                    </span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: scfg.color, backgroundColor: scfg.bg, padding: '2px 7px', borderRadius: 4 }}>
-                      {scfg.label}
-                    </span>
-                    {hasRex && <span style={{ fontSize: 11, fontWeight: 600, color: '#27AE60', backgroundColor: '#EAFAF1', padding: '2px 7px', borderRadius: 4 }}>REX ✓</span>}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 12, color: '#ADB5BD', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <Clock size={11} /> {new Date(inc.triggeredAt).toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}
-                      {inc.resolvedAt && ` — durée : ${getDuration(inc.triggeredAt, inc.resolvedAt)}`}
-                    </span>
-                    {inc.procedureCode && (
-                      <span style={{ fontSize: 12, color: '#ADB5BD' }}>Procédure {inc.procedureCode}</span>
-                    )}
-                    {pct !== null && (
-                      <span style={{ fontSize: 12, color: '#ADB5BD', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <CheckSquare size={11} /> {completed}/{coordSteps.length} étapes ({pct}%)
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Flèche */}
-                <span style={{ color: '#ADB5BD', fontSize: 18, flexShrink: 0 }}>→</span>
-              </div>
-            );
+        {result.counts.all === 0 ? <EmptyState text="Aucun incident enregistré pour ce bâtiment." /> : pagination?.total === 0 ? <EmptyState text="Aucun incident ne correspond aux critères." action={resetFilters} /> : <section style={{ background: '#FFF', borderRadius: 10, border: '1px solid #E9ECEF', overflow: 'hidden' }}>
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid #E9ECEF', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}><h2 style={{ margin: 0, fontSize: 14, color: '#2C3E50' }}>{pagination?.total} résultat{pagination?.total === 1 ? '' : 's'}</h2><span style={{ fontSize: 12, color: '#6C757D' }}>Page {pagination?.page} sur {Math.max(1, pagination?.totalPages ?? 1)}</span></div>
+          {incidents.map((incident, index) => {
+            const statusConfig = STATUS_CONFIG[incident.status] ?? { label: `Statut inconnu (${incident.status})`, color: '#566573', bg: '#F2F3F4' };
+            const percentage = incident.coordinatorStepsTotal ? Math.round((incident.coordinatorStepsCompleted / incident.coordinatorStepsTotal) * 100) : null;
+            return <div key={incident.id} role="link" tabIndex={0} aria-label={`Ouvrir ${incident.isExercise ? 'l’exercice' : 'l’incident'} ${INCIDENT_LABELS[incident.type] || incident.type}`} onClick={() => router.push(`/sentinelle/${buildingId}/incidents/${incident.id}`)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); router.push(`/sentinelle/${buildingId}/incidents/${incident.id}`); } }} style={{ minHeight: 44, padding: '16px 20px', borderBottom: index < incidents.length - 1 ? '1px solid #F1F3F5' : 0, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', cursor: 'pointer' }}>
+              <div style={{ width: 58, flexShrink: 0, textAlign: 'center' }}><strong style={{ display: 'block', fontSize: 18, color: '#2C3E50' }}>{new Date(incident.triggeredAt).getDate()}</strong><span style={{ fontSize: 10, color: '#7F8C8D', textTransform: 'uppercase' }}>{new Date(incident.triggeredAt).toLocaleDateString('fr-CA', { month: 'short', year: 'numeric' })}</span></div>
+              <div style={{ flex: 1, minWidth: 0 }}><div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 5 }}><strong style={{ color: '#2C3E50' }}>{INCIDENT_LABELS[incident.type] || incident.type}</strong><Badge label={statusConfig.label} color={statusConfig.color} background={statusConfig.bg} /><Badge label={incident.isExercise ? 'Exercice' : 'Incident réel'} color={incident.isExercise ? '#9C640C' : '#1F618D'} background={incident.isExercise ? '#FEF9E7' : '#EBF5FB'} />{incident.hasRex && <Badge label="REX ✓" color="#1E8449" background="#EAFAF1" />}</div><div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, color: '#6C757D', fontSize: 12 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Clock size={12} />{new Date(incident.triggeredAt).toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}{incident.resolvedAt ? ` — durée : ${getDuration(incident.triggeredAt, incident.resolvedAt)}` : ''}</span>{incident.procedureCode && <span>Procédure {incident.procedureCode}</span>}{percentage !== null && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckSquare size={12} />{incident.coordinatorStepsCompleted}/{incident.coordinatorStepsTotal} étapes ({percentage}%)</span>}</div></div><span aria-hidden="true" style={{ color: '#7F8C8D', fontSize: 20 }}>→</span>
+            </div>;
           })}
-        </section>
-      ) : null}
+          <nav aria-label="Pagination des incidents" style={{ padding: 16, borderTop: '1px solid #E9ECEF', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}><button type="button" disabled={page <= 1 || isRefreshing} onClick={() => setPage((value) => Math.max(1, value - 1))} style={pageButtonStyle}>Page précédente</button><span style={{ color: '#566573', fontSize: 13 }}>{((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, pagination?.total ?? 0)} sur {pagination?.total}</span><button type="button" disabled={!pagination || page >= pagination.totalPages || isRefreshing} onClick={() => setPage((value) => value + 1)} style={pageButtonStyle}>Page suivante</button></nav>
+        </section>}
+      </>}
     </PortalLayout>
   );
 }
+
+const pageButtonStyle = { minHeight: 44, padding: '8px 14px', borderRadius: 8, border: '1px solid #BFC9CA', background: '#FFF', color: '#2C3E50', cursor: 'pointer' } as const;
+function Badge({ label, color, background }: { label: string; color: string; background: string }) { return <span style={{ padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, color, backgroundColor: background }}>{label}</span>; }
+function Select({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: string[][] }) { return <label style={{ display: 'grid', gap: 5, fontSize: 12, fontWeight: 700, color: '#566573' }}>{label}<select value={value} onChange={(event) => onChange(event.target.value)} style={{ minHeight: 44, padding: '8px 10px', border: '1px solid #BFC9CA', borderRadius: 8, background: '#FFF' }}>{options.map(([optionValue, text]) => <option key={optionValue} value={optionValue}>{text}</option>)}</select></label>; }
+function EmptyState({ text, action }: { text: string; action?: () => void }) { return <div style={{ padding: 48, textAlign: 'center', background: '#FFF', borderRadius: 10, border: '1px solid #E9ECEF' }}><AlertTriangle size={36} color="#BFC9CA" style={{ margin: '0 auto 16px' }} /><p style={{ margin: 0, color: '#566573' }}>{text}</p>{action && <button type="button" onClick={action} style={{ ...pageButtonStyle, marginTop: 14, fontWeight: 700 }}>Réinitialiser les critères</button>}</div>; }
+function ErrorPanel({ error, retry }: { error: string; retry?: () => void }) { return <section role="alert" aria-live="assertive" style={{ marginBottom: 16, padding: 24, borderRadius: 10, border: '1px solid #F5B7B1', background: '#FDEDEC', color: '#922B21' }}><div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}><AlertTriangle size={22} aria-hidden="true" /><div><strong>{error}</strong><p style={{ margin: '6px 0 0' }}>Vérifiez votre connexion, puis essayez de nouveau.</p>{retry && <button type="button" onClick={retry} style={{ ...pageButtonStyle, marginTop: 14, color: '#922B21', borderColor: '#922B21', fontWeight: 700 }}>Réessayer</button>}</div></div></section>; }

@@ -553,6 +553,7 @@ export default function PopulationPage() {
   const [incidentHistory, setIncidentHistory] = useState<PopulationIncident[]>(
     [],
   );
+  const [incidentHistoryTotal, setIncidentHistoryTotal] = useState(0);
 
   const [incidentHistoryLoading, setIncidentHistoryLoading] = useState(false);
 
@@ -826,18 +827,28 @@ export default function PopulationPage() {
 
     try {
       const result = await apiGet(
-        `/client-portal/incidents/buildings/${buildingId}/history`,
+        `/client-portal/incidents/buildings/${buildingId}/history?page=1&pageSize=25&sortBy=triggeredAt&sortOrder=desc`,
       );
 
-      const receivedHistory: PopulationIncident[] = Array.isArray(result)
-        ? result
-        : result
-          ? [result as PopulationIncident]
+      const receivedHistory: PopulationIncident[] =
+        typeof result === "object" && result !== null && "items" in result &&
+        Array.isArray((result as { items: unknown[] }).items)
+          ? ((result as { items: PopulationIncident[] }).items)
           : [];
 
       setIncidentHistory(receivedHistory);
+      setIncidentHistoryTotal(
+        typeof result === "object" &&
+          result !== null &&
+          "pagination" in result &&
+          typeof (result as { pagination?: { total?: unknown } }).pagination
+            ?.total === "number"
+          ? (result as { pagination: { total: number } }).pagination.total
+          : receivedHistory.length,
+      );
     } catch (error: any) {
       setIncidentHistory([]);
+      setIncidentHistoryTotal(0);
 
       setIncidentHistoryError(
         typeof error?.message === "string"
@@ -3097,6 +3108,40 @@ export default function PopulationPage() {
                   gap: 7,
                 }}
               >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 8,
+                    color: "#6C757D",
+                    fontSize: 9,
+                  }}
+                >
+                  <span>
+                    {incidentHistory.length} incidents récents sur {incidentHistoryTotal}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      router.push(`/sentinelle/${buildingId}/incidents`)
+                    }
+                    style={{
+                      minHeight: 44,
+                      padding: "8px 10px",
+                      border: "1px solid #167D6A",
+                      borderRadius: 8,
+                      backgroundColor: "#FFFFFF",
+                      color: "#167D6A",
+                      cursor: "pointer",
+                      fontSize: 9,
+                      fontWeight: 800,
+                    }}
+                  >
+                    Voir l’historique complet
+                  </button>
+                </div>
                 {incidentHistory.map((incident) => {
                   const operational =
                     incident.status !== "PRE_ALERT" &&
