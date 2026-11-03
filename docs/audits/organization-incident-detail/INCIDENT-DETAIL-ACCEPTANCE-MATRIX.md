@@ -1,45 +1,35 @@
-# Matrice d'acceptation — fiche Incident
+# Matrice d’acceptation — fiche Incident
 
-## API et intégrité
+## Candidat et environnement
 
-| Contrôle | Statut |
-|---|---|
-| Lecture autorisée | PASS |
-| Refus hors bâtiment | PASS (403) |
-| Refus inter-tenant | PASS (404) |
-| Refus anonyme | PASS (401) |
-| Projection minimale | FAIL |
-| Auteur/date détenus par le serveur | FAIL |
-| Containment idempotent | FAIL |
-| Résolution avec motif et préconditions | FAIL |
-| REX avec date serveur | FAIL |
-| Ordre déterministe des égalités | FAIL / RISQUE STATIQUE |
-| Tests gouvernance/tâches/historique existants | PASS — 28/28 |
+- SHA produit : `cb41581b5d11273d8fa388bd10f0d5e1551e2687`
+- PostgreSQL 16, 167 migrations, tête `20261120010000_permanent_qr_codes`
+- Réseau deny-by-default; fournisseurs simulés uniquement
+- Preuves : `D:\CORO-QA\tracking\organization-incident-detail`
+
+## API et PostgreSQL
+
+Les 13 contrôles sont `PASS` : lecture autorisée; refus bâtiment, tenant et anonyme; projection minimale; auteur serveur; refus d’une sous-ressource étrangère sans écriture; containment idempotent; motif de résolution obligatoire; résolution, audit et rejeu; rollback intégral sur panne SQL; date REX serveur; ordre stable des égalités.
 
 ## Chrome authentifié
 
-Les 12 combinaisons suivantes ont été exécutées : 390×844, 768×1024, 1440×900 et 2560×1440, chacune en Classic, Glass Light et Glass Dark. Toutes sont `FAIL` au verdict global, avec absence de débordement horizontal.
+Les 12 combinaisons sont `PASS` : 390×844, 768×1024, 1440×900 et 2560×1440, chacune en Classic, Glass Light et Glass Dark.
 
-| Critère commun | Statut |
+| Contrôle | Résultat |
 |---|---|
-| Chargement sur snapshot conforme | PASS |
-| Exercice explicitement distingué | FAIL |
-| Statut/responsable/fraîcheur | FAIL |
-| Cibles tactiles 44 px | FAIL |
-| Thèmes Glass réellement appliqués | FAIL |
-| F5 | PASS |
-| Zoom 200 % sans débordement | PASS |
-| Focus clavier visible | PASS |
-| XSS exécutée dans le DOM React | PASS (aucune exécution) |
-| 503 explicite, accessible et récupérable | FAIL |
-| Erreur console critique | PASS (aucune) |
-| Lecteur d'écran réel | NOT_VERIFIED |
+| Nature exercice, statut, responsable, fraîcheur | PASS |
+| Snapshots mal formés, contenu valide conservé | PASS |
+| Motif requis et transitions depuis l’interface | PASS |
+| Double clic containment/résolution, un effet | PASS |
+| Refus acteur hors périmètre | PASS |
+| 503 visible, accessible et récupérable | PASS |
+| F5, clavier/focus et zoom 200 % | PASS |
+| Cibles tactiles et débordement horizontal | PASS |
+| XSS DOM et impression | PASS — aucune exécution |
+| Erreur console critique | PASS — aucune |
+| Lecteur d’écran réel | NOT_VERIFIED |
 
-Captures : `D:\CORO-QA\tracking\organization-incident-detail\browser`.
+## Non applicable ou distinct
 
-## Fonctions absentes
-
-- Pièce jointe Incident dédiée : NON_APPLICABLE.
-- Réouverture : NON_APPLICABLE.
-- Création/suppression de tâche depuis la fiche : NON_APPLICABLE.
-- Fiche Organisation équivalente : NON_APPLICABLE.
+- Réouverture, pièces jointes Incident et création/suppression de tâche depuis cette fiche : non présentes dans ce lot.
+- Production authentifiée : `NOT_VERIFIED`; aucune mutation réelle n’est autorisée.

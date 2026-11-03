@@ -1,46 +1,29 @@
-# Lot correctif proposé — fiche Incident
+# Lot correctif — fiche Incident
 
-## Lot unique recommandé
+## Implémentation
 
-1. **Autorité et contrats**
-   - DTO de détail minimal et projections permissionnées;
-   - garde parent Incident partagée par toutes les sous-ressources et par les deux contrôleurs;
-   - acteur/date/organisation/bâtiment attribués exclusivement côté serveur.
-2. **Machine d'états et concurrence**
-   - transitions explicites approuvées;
-   - motifs obligatoires;
-   - `lockVersion`, idempotency key et mises à jour conditionnelles;
-   - transaction statut + audit + journal + tâches + outbox.
-3. **Chronologie et REX**
-   - provenance typée, `occurredAt`/`recordedAt`, ordre stable;
-   - REX versionné, date serveur et audit;
-   - rendu et export avec échappement.
-4. **Fiche opérationnelle**
-   - marqueur exercice, statut, responsable, dernière mise à jour et conséquences des actions;
-   - erreurs 403/404/503 distinctes, reprise et conservation de saisie;
-   - validation défensive des snapshots;
-   - cibles 44 px et tokens Glass.
-5. **Export**
-   - qualifier le besoin PDF séparément; en attendant, ne pas présenter l'impression HTML comme PDF officiel;
-   - supprimer les claims non gouvernés et couvrir XSS/statuts.
+- DTO stricts pour journal, containment, résolution et REX.
+- Projection minimale du détail et normalisation défensive des snapshots.
+- Autorité canonique avant lecture ou mutation dans Organisation et Portail Client.
+- Transitions transactionnelles, optimistes et idempotentes; provenance serveur.
+- UI de containment/résolution avec motif obligatoire, refus visible et verrou anti-double-clic.
+- États 403/404/503 distincts, reprise, F5 et conservation d’un rendu honnête.
+- Impression HTML échappée, statuts canoniques et retrait des affirmations non démontrées.
+- Harnais API/PostgreSQL et Chrome couvrant concurrence, panne SQL, XSS et portée.
 
-## Critères d'acceptation
+## Validation
 
-- zéro champ secret dans le contrat de détail;
-- aucune usurpation d'acteur/date;
-- transitions répétées/concurrentes : un effet au plus;
-- panne injectée : aucune écriture partielle;
-- refus enfant/parent inter-tenant et hors bâtiment sans effet;
-- 503 visible et récupérable, aucune fausse absence;
-- 12/12 Chrome, cibles 44 px, thèmes effectifs;
-- régressions tâches/historique et liste Incident conservées;
-- lecteur d'écran réel suivi séparément.
+- SHA produit : `cb41581b5d11273d8fa388bd10f0d5e1551e2687`.
+- API/PostgreSQL : 13/13 PASS.
+- Chrome : 12/12 PASS; aucune erreur console critique.
+- Backend ciblé : 5 suites, 37 tests PASS.
+- Build backend et build Client Portal : PASS.
+- `git diff --check` : PASS.
 
-## Décisions métier nécessaires
+## Limites
 
-- machine d'états terminale et éventuelle réouverture;
-- motif requis pour containment;
-- statut des tâches incomplètes à la résolution;
-- portée contractuelle de l'export et des claims de conformité.
+Le lecteur d’écran réel et la production authentifiée restent `NOT_VERIFIED`. L’impression n’est pas un PDF officiel et aucune valeur juridique n’est revendiquée. Aucun fournisseur réel, notification externe, fusion ou déploiement n’appartient à ce lot.
 
-Verdict du lot d'audit : `CORRECTION_REQUISE`; aucun correctif produit, push, PR, fusion ou déploiement n'a été effectué.
+## Verdict
+
+`ACCEPTATION_INTÉGRÉE_PASS — PR_READY` sous réserve de la CI terminale du HEAD publié.

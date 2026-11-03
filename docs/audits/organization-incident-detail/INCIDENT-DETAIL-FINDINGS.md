@@ -1,24 +1,27 @@
 # Constats — fiche Incident
 
-| ID | Gravité | Classe | Scénario / observé | Attendu / impact | Preuve | Correction proposée |
-|---|---|---|---|---|---|---|
-| ID-01 | Critique | Défaut reproduit | `GET detail` renvoie `publicAccessToken`, snapshots occupants/équipe et fiche d'intervention complète. | Projection minimale après autorisation; un lecteur ne doit pas recevoir de secret ou données opérationnelles inutiles. | `detail-minimal-projection` FAIL | DTO de détail explicite, sous-projections selon permission, jamais de jeton public. |
-| ID-02 | Critique | Défaut reproduit | `POST logs` accepte `actor` fourni par le navigateur; « Présidente usurpée » est persisté. | Acteur, type, identifiant et date attribués par le serveur et audités. | `server-owned-log-author` FAIL | DTO strict; ignorer les champs techniques client; transaction log + audit canonique. |
-| ID-03 | Élevée | Défaut reproduit | Deux appels `contain` réussissent et créent deux journaux. | Transition source validée, verrou optimiste/idempotence, un seul effet. | `contain-idempotency` FAIL | Machine d'états partagée, `lockVersion`/clé d'idempotence et écriture conditionnelle. |
-| ID-04 | Élevée | Défaut reproduit | `resolve` sans motif réussit et clôt l'incident. | Motif obligatoire et état source autorisé; refus sans effet. | `resolution-reason-required` FAIL | DTO validé et transaction conditionnelle statut+audit+tâches+outbox. |
-| ID-05 | Élevée | Défaut reproduit | REX accepte `rexCompletedAt=2001-01-01` fourni par le navigateur. | Date de complétion détenue par le serveur; état et version requis. | `server-owned-rex-date` FAIL | DTO métier sans date technique, provenance et verrou. |
-| ID-06 | Élevée | Risque statique | Contrôleur Organisation `detail` applique seulement organisation+permission, sans autorité bâtiment explicite. | Même portée bâtiment pour liste et lecture directe. | Code `IncidentController.detail` | Résoudre le parent serveur puis appliquer l'autorité canonique INCIDENT_READ. |
-| ID-07 | Élevée | Défaut reproduit | Une 503 devient « Incident introuvable », sans alerte ni réessai. | États 403/404/503 distincts, reprise et aucune fausse absence. | Capture `503-state.png` | État d'erreur typé, `role=alert`, bouton réessayer et conservation du contexte. |
-| ID-08 | Élevée | Risque statique + panne QA | Les snapshots sont des `Json`; un objet `teamSnapshot` fait tomber toute la fiche (`.map` non protégé). | Validation/normalisation serveur et garde UI. | Page Next « This page couldn't load » | Schéma de snapshot versionné et parsing défensif. |
-| ID-09 | Élevée | Risque statique | Export « PDF » interpole sans échappement description, logs, REX et tâches dans un HTML, puis imprime localement. | Échappement systématique, génération gouvernée; aucune exécution de contenu stocké. | `handleExportPdf` | Générateur sûr, tests XSS; renommer tant qu'il ne produit pas un PDF gouverné. |
-| ID-10 | Moyenne | Défaut reproduit | Un exercice s'affiche comme un incident ordinaire; aucun statut, responsable ou fraîcheur visibles. | Mode réel/exercice, état actuel, responsabilité et dernière mise à jour explicites. | 12 captures, champs `has* = false` | Bandeau canonique et données de provenance. |
-| ID-11 | Moyenne | Défaut reproduit | Cibles tactiles à 20/40 px; 12/12 configurations échouent. | Minimum Design System 44 px. | Mesures Chrome | Styles partagés, focus et cibles 44 px. |
-| ID-12 | Moyenne | Défaut reproduit | Glass Light/Dark conservent `data-ui=legacy`; la fiche reste visuellement classique. | Thèmes appliqués ou portée explicitement déclarée. | Rapport navigateur | Migrer la fiche vers les tokens V2 ou documenter l'exclusion. |
-| ID-13 | Moyenne | Risque statique | Chronologie triée seulement par `timestamp`; deux événements au même instant n'ont pas de départage contractuel. | Ordre déterministe (`timestamp`, séquence/id) et distinction survenue/enregistrement. | `timeline-deterministic-tie-break` | Ajouter séquence/occurredAt/recordedAt et ordre stable. |
-| ID-14 | Moyenne | Risque statique | Libellés PDF réduisent les statuts non RESOLVED/CONTAINED à « EN COURS » et affichent des claims de conformité non gouvernés. | Chaque statut canonique propre; claims seulement démontrés. | Inspection `handleExportPdf` | Map exhaustive et registre de claims. |
+Candidat produit validé : `cb41581b5d11273d8fa388bd10f0d5e1551e2687`.
 
-## Limites
+| ID | Constat initial | Correction démontrée | Statut |
+|---|---|---|---|
+| ID-01 | Le détail exposait jeton public et snapshots excessifs. | Projection explicite; aucun jeton; occupants réduits au comptage et équipe aux champs utiles. | CLOS |
+| ID-02 | L’auteur du journal pouvait être fourni par le navigateur. | Acteur et identifiant dérivés de la session serveur; DTO strict. | CLOS |
+| ID-03 | Deux appels `contain` produisaient deux journaux. | Transaction, verrou optimiste, rejeu idempotent et verrou client synchrone; un seul effet. | CLOS |
+| ID-04 | La résolution sans motif était acceptée. | Motif non vide obligatoire; refus HTTP 400 sans écriture. | CLOS |
+| ID-05 | La date REX pouvait être fournie par le navigateur. | Date attribuée par le serveur; champ technique absent du DTO. | CLOS |
+| ID-06 | La lecture Organisation ne démontrait pas l’autorité Incident. | Autorité `INCIDENT_READ` vérifiée avant le détail. | CLOS |
+| ID-07 | Une 503 était affichée comme incident introuvable. | États 403/404/503 distincts, alerte accessible et reprise. | CLOS |
+| ID-08 | Un snapshot mal formé faisait tomber la fiche. | Normalisation défensive et avertissement visible sans masquer les données valides. | CLOS |
+| ID-09 | L’impression interpolait du contenu persistant non échappé. | Échappement de tous les champs; aucune charge exécutée; libellé « Imprimer le rapport » et limite légale explicite. | CLOS |
+| ID-10 | Exercice, statut, responsable et fraîcheur étaient absents. | Nature, statut canonique, responsable explicite et date de mise à jour affichés. | CLOS |
+| ID-11 | Cibles tactiles sous 44 px. | Contrôles mesurés conformes dans les 12 configurations. | CLOS |
+| ID-12 | Les thèmes Glass n’étaient pas identifiables. | Classic, Glass Light et Glass Dark appliqués et capturés. | CLOS |
+| ID-13 | Chronologie sans départage stable. | Ordre `timestamp`, puis identifiant; égalité testée. | CLOS |
+| ID-14 | Statuts d’impression et affirmations de conformité non gouvernées. | Libellés canoniques, statut inconnu explicite et affirmations non démontrées retirées. | CLOS |
 
-- Notifications/fournisseurs : frontière inspectée, aucun envoi réel; la reprise worker n'est pas revendiquée.
-- Lecteur d'écran réel : `NOT_VERIFIED`.
-- Observation production : `NOT_VERIFIED`.
+## Limites conservées
+
+- Lecteur d’écran réel : `NOT_VERIFIED`.
+- Vérification authentifiée de production : `NOT_VERIFIED` et hors du point d’arrêt de cette PR.
+- Impression HTML : ce n’est ni un PDF officiel, ni une preuve PDF/UA, ni une validation juridique.
+- Aucun fournisseur externe ni notification réelle n’a été exercé.
