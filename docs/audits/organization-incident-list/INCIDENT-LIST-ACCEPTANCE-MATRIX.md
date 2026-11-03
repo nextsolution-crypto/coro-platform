@@ -30,6 +30,8 @@ L’autorité demeure : identité et Client actifs, permission Incident, organis
 | 503, filtres conservés et reprise | PASS Chrome |
 | Réponses désordonnées | PASS Chrome |
 | F5, clavier, focus et zoom 200 % | PASS |
+| Consommateur Population : sous-ensemble récent + total + lien complet | PASS |
+| Consommateur Organisation | NOT_APPLICABLE — aucun appel à ce endpoint dans le dépôt |
 | Lecteur d’écran réel | NOT_VERIFIED |
 
 ## Chrome 12/12

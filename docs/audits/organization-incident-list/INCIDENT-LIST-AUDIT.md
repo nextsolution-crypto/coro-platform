@@ -27,6 +27,7 @@ La liste est paginée côté serveur, son contrat est minimal, ses compteurs cou
 - Protection par identifiant de requête contre les réponses obsolètes.
 - États distincts : chargement, vide, filtre vide, erreur, refus et données périmées avec reprise.
 - Cibles interactives de 44 px minimum.
+- Le registre Population présente explicitement sa page comme les 25 incidents récents sur le total et renvoie vers l’historique paginé complet; il ne traite plus une page comme l’historique exhaustif. Aucun consommateur Organisation du endpoint Incident n’existe dans le dépôt.
 
 ## Acceptation intégrée
 
@@ -47,7 +48,7 @@ La liste est paginée côté serveur, son contrat est minimal, ses compteurs cou
 12/12 PASS : 390×844, 768×1024, 1440×900 et 2560×1440 sous Classic, Glass Light et Glass Dark. Les captures ont été inspectées : aucun débordement horizontal, contenu long lisible, pagination utilisable et aucune cible sous 44 px.
 
 - Backend ciblé : 28/28 PASS.
-- Portail Incident : 7/7 PASS.
+- Portail Incident et compatibilité Population : 8/8 PASS.
 - Design System/navigation : 26/26 PASS.
 - TypeScript et builds backend/portail : PASS.
 - PostgreSQL 16 : 167 migrations PASS depuis zéro.
