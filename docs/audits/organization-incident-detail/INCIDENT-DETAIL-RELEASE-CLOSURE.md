@@ -37,9 +37,11 @@ Les quatre images précédentes sont disponibles, mais leur disponibilité ne va
 
 Une session Client légitime a permis d'ouvrir le tableau de bord, un bâtiment de démonstration et Sentinelle en lecture seule. L'accès à l'historique Incident a retourné un refus explicite pour cette identité. Aucun incident autorisé n'a donc été ouvert; le contrôle fonctionnel de la fiche et la vérification réseau de l'absence de champs sensibles restent `NOT_VERIFIED` en production. Les preuves QA intégrées demeurent `PASS`.
 
+La qualification du refus confirme deux contrôles serveur cumulatifs : l'identité doit posséder `INCIDENT_READ` dans `ClientUser.incidentPermissions`, puis une `IncidentAuthorityAssignment` active doit lui accorder cette permission dans le périmètre du bâtiment ou de l'incident. L'API gouvernée sait administrer ces deux éléments, mais l'interface Organisation ne permet pas de les configurer : le panneau « Permissions opérationnelles » ne présente que REX et actions correctives, et aucun écran ne crée l'affectation d'autorité Incident. Le blocage observé n'est donc pas levable par un administrateur depuis l'interface actuelle et ne doit pas être contourné par une modification directe de production.
+
 ## Réserves
 
 - Lecteur d'écran réel : `NOT_VERIFIED`.
 - Impression HTML : distincte d'un PDF officiel et de PDF/UA.
 - Jetons historiquement exposés : aucune révocation rétroactive n'est revendiquée.
-- Fiche autorisée en production : intervention minimale requise — ouvrir un onglet `client.getcoro.io` avec une identité disposant de `INCIDENT_READ` sur un incident accessible.
+- Fiche autorisée en production : `BLOCKED_BY_PROVISIONING_UI`. Un lot ciblé doit exposer l'attribution gouvernée de `INCIDENT_READ`, `INCIDENT_SUPERVISE` et `INCIDENT_COMMAND` ainsi que les affectations d'autorité par bâtiment ou incident, avec audit, révocation et refus inter-tenant. Après livraison, une identité synthétique ou explicitement autorisée pourra servir à la vérification en lecture seule.
