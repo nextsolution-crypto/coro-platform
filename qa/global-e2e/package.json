@@ -41,6 +41,7 @@
     "organization-incident-authorizations:acceptance": "node src/organization-incident-authorizations-acceptance.mjs",
     "organization-incident-authorizations:browser": "node src/organization-incident-authorizations-browser.mjs",
     "organization-incident-authorizations:migration-upgrade": "node src/organization-incident-authorizations-migration-upgrade.mjs",
+    "client-incident-capabilities:acceptance": "node src/client-incident-capabilities-acceptance.mjs",
     "organization-manual:browser": "node src/organization-manual-browser.mjs",
     "identity:cleanup": "node src/identity-cleanup.mjs"
   }

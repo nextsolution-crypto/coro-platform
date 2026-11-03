@@ -22,7 +22,8 @@ describe('IncidentService detail integrity', () => {
       updateMany: jest.fn(),
       update: jest.fn(),
     },
-    incidentAuthorityAssignment: { findFirst: jest.fn() },
+    clientUser: { findFirst: jest.fn() },
+    incidentAuthorityAssignment: { findFirst: jest.fn(), findMany: jest.fn() },
     incidentLog: { create: jest.fn() },
     incidentTask: { updateMany: jest.fn() },
     incidentAuditEvent: { findFirst: jest.fn(), create: jest.fn() },
@@ -51,6 +52,44 @@ describe('IncidentService detail integrity', () => {
     prisma.incidentLog.create.mockResolvedValue({ id: 'log-1' });
     await service.addLog('incident-1', { action: ' Decision ', details: ' Detail ' }, 'org-1', { type: 'CLIENT_USER', id: 'actor-1' });
     expect(prisma.incidentLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({ action: 'Decision', details: 'Detail', actor: 'CLIENT_USER:actor-1' }) });
+  });
+
+  it('derives UI capabilities from both individual permission and active incident assignment', async () => {
+    prisma.clientUser.findFirst.mockResolvedValue({
+      incidentPermissions: ['INCIDENT_READ', 'INCIDENT_SUPERVISE', 'INCIDENT_COMMAND'],
+    });
+    prisma.incidentAuthorityAssignment.findMany.mockResolvedValue([
+      { permissions: ['INCIDENT_READ', 'INCIDENT_SUPERVISE'] },
+    ]);
+
+    await expect(service.getIncidentCapabilities({
+      actorId: 'client-user-1',
+      organizationId: 'org-1',
+      incidentEventId: 'incident-1',
+    })).resolves.toEqual({
+      canRead: true,
+      canParticipate: false,
+      canSupervise: true,
+      canCommand: false,
+      canActivatePca: false,
+    });
+  });
+
+  it('fails closed when the client identity is inactive or has no matching assignment', async () => {
+    prisma.clientUser.findFirst.mockResolvedValue(null);
+    prisma.incidentAuthorityAssignment.findMany.mockResolvedValue([]);
+
+    await expect(service.getIncidentCapabilities({
+      actorId: 'client-user-1',
+      organizationId: 'org-1',
+      incidentEventId: 'incident-1',
+    })).resolves.toEqual({
+      canRead: false,
+      canParticipate: false,
+      canSupervise: false,
+      canCommand: false,
+      canActivatePca: false,
+    });
   });
 
   it('contains once and treats an identical replay as idempotent', async () => {

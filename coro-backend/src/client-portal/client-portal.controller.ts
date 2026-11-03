@@ -1862,10 +1862,19 @@ export class ClientPortalController {
       incidentId,
       req.clientUser,
     );
-    return this.incidentService.getIncidentDetail(
-      incidentId,
-      req.clientUser.organizationId,
-    );
+    const actorId = req.clientUser.sub || req.clientUser.id;
+    const [detail, capabilities] = await Promise.all([
+      this.incidentService.getIncidentDetail(
+        incidentId,
+        req.clientUser.organizationId,
+      ),
+      this.incidentService.getIncidentCapabilities({
+        actorId,
+        organizationId: req.clientUser.organizationId,
+        incidentEventId: incidentId,
+      }),
+    ]);
+    return { ...detail, capabilities };
   }
 
   @Put('incidents/:incidentId/rex')

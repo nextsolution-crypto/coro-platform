@@ -271,6 +271,45 @@ export class IncidentService {
     return assignment;
   }
 
+  async getIncidentCapabilities(input: {
+    actorId: string;
+    organizationId: string;
+    incidentEventId: string;
+  }) {
+    const [identity, assignments] = await Promise.all([
+      this.prisma.clientUser.findFirst({
+        where: {
+          id: input.actorId,
+          organizationId: input.organizationId,
+          isActive: true,
+        },
+        select: { incidentPermissions: true },
+      }),
+      this.prisma.incidentAuthorityAssignment.findMany({
+        where: {
+          organizationId: input.organizationId,
+          incidentEventId: input.incidentEventId,
+          subjectType: 'CLIENT_USER',
+          subjectId: input.actorId,
+          status: 'ACTIVE',
+        },
+        select: { permissions: true },
+      }),
+    ]);
+    const individual = new Set(identity?.incidentPermissions ?? []);
+    const assigned = new Set(assignments.flatMap((assignment) => assignment.permissions));
+    const has = (permission: IncidentPermission) =>
+      individual.has(permission) && assigned.has(permission);
+
+    return {
+      canRead: has(IncidentPermission.INCIDENT_READ),
+      canParticipate: has(IncidentPermission.INCIDENT_TASK_PARTICIPATE),
+      canSupervise: has(IncidentPermission.INCIDENT_SUPERVISE),
+      canCommand: has(IncidentPermission.INCIDENT_COMMAND),
+      canActivatePca: has(IncidentPermission.PCA_ACTIVATE),
+    };
+  }
+
   async requireTaskAuthority(taskId: string, actorType: 'USER' | 'CLIENT_USER', actorId: string, organizationId: string, permission: IncidentPermission) {
     const task = await this.prisma.incidentTask.findFirst({ where: { id: taskId, incidentEvent: { organizationId } }, select: { incidentEventId: true } });
     if (!task) throw new NotFoundException('Tache introuvable.');
