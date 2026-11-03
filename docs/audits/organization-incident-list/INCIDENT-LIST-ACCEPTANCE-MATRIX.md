@@ -46,4 +46,12 @@ Captures inspectées dans `D:\CORO-QA\tracking\organization-incident-list\browse
 
 ## Production
 
-**NOT_VERIFIED.** Cette correction n’est ni fusionnée ni déployée.
+| Contrôle | Statut |
+|---|---|
+| PR #170 / SHA fusionné | PASS — `082f396bf3d6e9ae85c5d47e980d09bac0df13fc` |
+| CI, gates et release gouvernée | PASS — `41551760955`, `41552412893`, `41552417723`, `41552585795` |
+| Inspection et réconciliation | PASS — `41554507500`, `41554515301`, `41554684601` |
+| Services, PostgreSQL, sauvegarde/restauration, rollback | PASS |
+| Navigateur authentifié lecture seule | PARTIAL — route ouverte, refus 403 explicite, F5 et reprise PASS; identité sans `INCIDENT_READ`, données/filtres/pagination non observables |
+| Console production | PARTIAL — 403 attendus et rejets du service worker sur schéma `chrome-extension`; aucun faux succès |
+| Lecteur d’écran réel | NOT_VERIFIED |

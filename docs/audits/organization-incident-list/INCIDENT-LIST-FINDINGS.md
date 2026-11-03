@@ -16,4 +16,8 @@ Baseline : `4871f31823682a73bbd3e5af9e1c12ac3bbc52d2`. Candidat produit testé :
 
 Les nouveaux paramètres sont validés et bornés. Les refus 401/403/404 ne livrent ni liste, ni compteur, ni détail. Aucun fournisseur externe n’a été contacté.
 
-Réserves : lecteur d’écran réel et production authentifiée `NOT_VERIFIED`; responsable/sévérité globale non ajoutés faute d’autorité métier approuvée.
+Livraison : PR #170 fusionnée et candidat `082f396bf3d6e9ae85c5d47e980d09bac0df13fc` déployé, inspecté et réconcilié par les runs `41552585795`, `41554507500` et `41554684601`.
+
+Production : session authentifiée, ouverture de la route, refus 403 explicite, F5 et reprise démontrés sans contenu protégé ni faux succès. Recherche, filtres, tri et pagination restent non observables avec cette identité sans permission Incident; leur preuve demeure la QA. La console expose également une dette du service worker face aux requêtes `chrome-extension`.
+
+Réserves : lecteur d’écran réel `NOT_VERIFIED`; production navigateur `PARTIAL`; responsable/sévérité globale non ajoutés faute d’autorité métier approuvée.
