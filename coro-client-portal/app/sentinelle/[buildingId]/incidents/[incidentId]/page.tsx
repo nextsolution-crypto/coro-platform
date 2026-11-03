@@ -121,8 +121,12 @@ export default function IncidentDetailPage() {
   useEffect(() => {
     const u = getUser();
     if (!u) { router.replace('/login'); return; }
-    void loadIncident();
-    return () => { loadSequence.current += 1; activeLoad.current?.abort(); };
+    const loadTimer = window.setTimeout(() => void loadIncident(), 0);
+    return () => {
+      window.clearTimeout(loadTimer);
+      loadSequence.current += 1;
+      activeLoad.current?.abort();
+    };
   }, [loadIncident, router]);
 
   const handleSaveRex = async () => {
@@ -328,7 +332,7 @@ export default function IncidentDetailPage() {
         teamSnap.map((m: any) => `
           <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #F8F9FA;">
             <span style="font-size:12px;font-weight:600;color:#2C3E50;">${escapeHtml(m.firstName)} ${escapeHtml(m.lastName)}</span>
-            ${asArray<any>(m.roles).map((r: any) => `<span class="badge badge-red">${escapeHtml(r.role)}</span>`).join('')}
+            ${asArray<{ role: string }>(m.roles).map((r) => `<span class="badge badge-red">${escapeHtml(r.role)}</span>`).join('')}
           </div>
         `).join('')}
     </div>
