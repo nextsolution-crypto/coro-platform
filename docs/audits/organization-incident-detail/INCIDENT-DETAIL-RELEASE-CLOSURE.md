@@ -55,3 +55,9 @@ La dépendance d'administration est désormais livrée et active au SHA `d9eb6d8
 La fiche autorisée en production demeure `NOT_VERIFIED` jusqu'à approbation d'une attribution nominative minimale. `INCIDENT_READ` est suffisant pour la recette de lecture; `INCIDENT_COMMAND` ne doit pas être accordé. Aucune entrée de chronologie, transition, résolution, impression ou export réel n'est requis pour cette preuve.
 
 La tentative approuvée avec Patrick JEAN-ERNEST s'est arrêtée fail-closed avant tout accès Incident : le serveur a refusé l'affectation BUREAUX, car ce ClientUser n'est pas affecté à ce bâtiment. La permission individuelle ajoutée pour la tentative a été immédiatement retirée; aucune affectation active ne subsiste. Verdict production : `RECETTE_NON_REALISEE — BENEFICIAIRE_NON_ADMISSIBLE`.
+
+## Campagne synthétique de production
+
+L'exercice synthétique et la double autorité `INCIDENT_READ` strictement limitée à cet incident ont été préparés par le workflow gouverné `41666211609`, sans communication externe et sans capacité publique. La fiche n'a pas été ouverte avec l'identité QA : Mathieu ne dispose pas de ses identifiants d'authentification, et la session d'une autre identité n'a pas été utilisée comme substitut. Le parcours navigateur autorisé reste donc `NOT_VERIFIED`.
+
+La remise en état `41668163043` est `PASS`, confirmée idempotente par `41668416320` : identité inactive, permission individuelle absente, affectation révoquée, sessions/liens/appareils neutralisés, fixture inactive et annulée, aucun accès temporaire résiduel. Aucune donnée Incident réelle n'a été consultée ou modifiée.

@@ -33,3 +33,11 @@ La recette PostgreSQL/API est `14/14 PASS`, l'upgrade historique est `PASS`, la 
 ## Après ce mandat
 
 Une fusion ou une release exigera une autorisation distincte. Toute attribution réelle devra nommer le bénéficiaire, les permissions, le bâtiment ou l'incident et le motif; elle ne sera jamais déduite de cette livraison.
+
+## Reprise après campagne synthétique
+
+L'outillage ciblé est fusionné dans `main` au SHA `34a09e56c89b947e890c066bff42e337f8a9643f`. Il a démontré le dry-run, le verrou partagé, la sauvegarde, la préparation transactionnelle, l'absence d'effets externes, la finalisation indépendante et sa reprise idempotente. Aucune release applicative n'a été déclenchée.
+
+La recette navigateur reste `NOT_VERIFIED` : l'identité synthétique existante `info@getcoro.io` n'est pas authentifiable par Mathieu avec les identifiants disponibles. Ne pas utiliser `admin@getcoro.io`, une identité homonyme ou un compte réel comme substitut. Toute nouvelle campagne doit d'abord disposer d'une identité QA distincte dont le parcours d'authentification et le MFA normaux sont utilisables.
+
+État final vérifié : identité QA inactive, zéro permission Incident individuelle, zéro affectation active, zéro appareil de confiance, zéro lien actif, fixture synthétique annulée/inactive et aucun accès résiduel. Runs : préparation `41666211609`, finalisation `41668163043`, reprise idempotente `41668416320`.
