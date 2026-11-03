@@ -19,6 +19,10 @@ Candidat produit validé : `9ed296186733934395e757ca90133f4606b28c4e`.
 | ID-13 | Chronologie sans départage stable. | Ordre `timestamp`, puis identifiant; égalité testée. | CLOS |
 | ID-14 | Statuts d’impression et affirmations de conformité non gouvernées. | Libellés canoniques, statut inconnu explicite et affirmations non démontrées retirées. | CLOS |
 
+## Réconciliation de production
+
+Les constats `ID-01` à `ID-14` sont fusionnés et déployés au SHA `7184456f42d43429d38ccbdaa87f141df774a2c9`. La preuve QA reste l'autorité pour les mutations, la concurrence, la résolution et les refus sans effet secondaire. Aucune mutation de production n'a été effectuée.
+
 ## Limites conservées
 
 - Lecteur d’écran réel : `NOT_VERIFIED`.

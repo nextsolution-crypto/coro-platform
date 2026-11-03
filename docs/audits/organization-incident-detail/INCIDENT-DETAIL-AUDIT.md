@@ -25,6 +25,14 @@ La fiche résiste aux snapshots mal formés, aux charges XSS persistées et à u
 - Lecteur d’écran réel : `NOT_VERIFIED`.
 - Production authentifiée : `NOT_VERIFIED`.
 
+## Clôture de livraison
+
+Le candidat produit `9ed296186733934395e757ca90133f4606b28c4e` a été fusionné par la PR `#172` dans `7184456f42d43429d38ccbdaa87f141df774a2c9`.
+
+La release gouvernée `41570892531` et sa réconciliation `41572538222` sont `SUCCESS`. L'inspection post-release `41572536046` confirme le SHA actif, les quatre services sans redémarrage, PostgreSQL 16.15, 167 migrations, le backup distant et la restauration vérifiés, le verrou libre et 39,12 Go disponibles.
+
+La vérification navigateur de production est `PARTIAL` : connexion, portail, bâtiment et Sentinelle ont été ouverts en lecture seule; aucune fiche autorisée n'a pu être ouverte avec l'identité disponible.
+
 ## Verdict
 
 `ACCEPTATION_INTÉGRÉE_PASS — PR_READY` pour le candidat testé. La liste Incident livrée antérieurement n’est pas rouverte. La fusion et la production restent exclues de ce mandat.

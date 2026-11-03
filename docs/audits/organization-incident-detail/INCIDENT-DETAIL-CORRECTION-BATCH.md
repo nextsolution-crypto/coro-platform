@@ -25,6 +25,14 @@
 
 Le lecteur d’écran réel et la production authentifiée restent `NOT_VERIFIED`. L’impression n’est pas un PDF officiel et aucune valeur juridique n’est revendiquée. Aucun fournisseur réel, notification externe, fusion ou déploiement n’appartient à ce lot.
 
+## État livré
+
+- PR `#172` : fusionnée.
+- SHA actif : `7184456f42d43429d38ccbdaa87f141df774a2c9`.
+- Release `41570892531`, inspection `41572536046` et réconciliation `41572538222` : `SUCCESS`.
+- Images actives : backend `sha256:07aec5b8...a6a5cde`, frontend `sha256:7eef0508...abfdf2f`, Client Portal `sha256:5993a8de...704a638`, site `sha256:ef0b8ff1...9021b61`.
+- Recette navigateur production : `PARTIAL`; le refus observé n'est pas compté comme un PASS fonctionnel.
+
 ## Verdict
 
 `ACCEPTATION_INTÉGRÉE_PASS — PR_READY` sous réserve de la CI terminale du HEAD publié.
