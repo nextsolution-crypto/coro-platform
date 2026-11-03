@@ -125,3 +125,20 @@ Cette proposition n'est pas une attribution approuvée. `INCIDENT_SUPERVISE` et 
 - Audit append-only observé dans Organization 360 / CORO Internal : deux événements `CLIENT_USER_INCIDENT_PERMISSIONS_CHANGED`, acteurs, cibles redacted et motifs distincts pour l'ajout et la révocation.
 
 Verdict : `RECETTE_NON_REALISEE — BENEFICIAIRE_NON_ADMISSIBLE`.
+
+## Campagne synthétique gouvernée du 3 novembre 2026
+
+- Outillage initial : `4fd5cd80c04e7ff05ea31d2c54d480e4bb9c7ce7`, PR `#178`, fusion `4376c30f7eda5b87e44c1c1bb8499032ae559705`.
+- Résolution du conteneur Compose : `ae23fe31bd80991b6bbb6889864625143fe8cac0`, PR `#179`, fusion `847e670b1d4fea6ab0a4562b335f2677b4fa67bd`.
+- Audit système typé : `bf0c0c71`, PR `#180`, fusion `34a09e56c89b947e890c066bff42e337f8a9643f`.
+- CI terminales : `41662520758`, `41664464679` et `41665325225`, `SUCCESS`; aucune release applicative déclenchée.
+- Dry-run initial : `41663459253`, `PASS`, aucune mutation, identité inactive, zéro droit, zéro affectation, zéro fixture.
+- Première préparation : `41663699268`, `FAIL` sur `AuditLog_exactly_one_actor_check`; transaction annulée intégralement. Dry-run de réconciliation `41663979393` : baseline intacte.
+- Préparation corrigée : `41666211609`, `PASS`; identité QA activée, exercice synthétique minimal créé, capacité publique désactivée à la création, zéro communication ou événement Population.
+- Administration : `INCIDENT_READ` individuel et affectation `INCIDENT_READ` limitée à l'incident synthétique; aucune portée bâtiment, aucun `INCIDENT_SUPERVISE` ou `INCIDENT_COMMAND`.
+- Recette navigateur authentifiée : `NOT_VERIFIED`. Mathieu ne dispose pas des identifiants de l'identité QA `info@getcoro.io`; la session Client ouverte appartenait à une autre identité et n'a pas été utilisée comme substitut.
+- Finalisation : `41668163043`, `PASS`; identité inactive, permission individuelle absente, affectation révoquée, zéro appareil et zéro lien actif, fixture `CANCELLED` et inactive, capacité publique révoquée, `residualAccess:false`.
+- Reprise idempotente : `41668416320`, `PASS`, `productionMutation:false`, `alreadyFinalized:true`, `residualAccess:false`.
+- Vérification UI finale : compte marqué inactif, aucune permission Incident individuelle, affectation ciblée marquée révoquée et aucune permission effective.
+
+Verdict de campagne : `OUTILLAGE_GOUVERNE_PASS — REMISE_EN_ETAT_PASS — ACCEPTATION_NAVIGATEUR_NOT_VERIFIED_IDENTITE_NON_AUTHENTIFIABLE`.

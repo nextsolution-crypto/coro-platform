@@ -40,6 +40,8 @@ Le mécanisme d'administration Incident de la PR `#175` est déployé au SHA `d9
 
 La tentative nominative approuvée pour Patrick JEAN-ERNEST n'a pas créé d'accès effectif : l'affectation BUREAUX a été refusée car le compte client n'est pas affecté à ce bâtiment. La permission individuelle transitoire a été révoquée et l'état initial vérifié. La recette de liste autorisée reste `NOT_VERIFIED`; aucune donnée Incident réelle n'a été consultée.
 
+Une campagne synthétique ultérieure a provisionné un exercice minimal et une double autorité `INCIDENT_READ` limitée à cet incident (`41666211609`). La recette de liste n'a pas été exécutée : l'identité QA préparée n'était pas authentifiable par Mathieu avec les identifiants disponibles. Aucun autre compte n'a été utilisé comme substitut. La finalisation `41668163043` et sa reprise idempotente `41668416320` confirment zéro accès résiduel. La liste authentifiée en production demeure `NOT_VERIFIED`.
+
 ## Chrome 12/12
 
 | Thème \ Format | 390×844 | 768×1024 | 1440×900 | 2560×1440 |
