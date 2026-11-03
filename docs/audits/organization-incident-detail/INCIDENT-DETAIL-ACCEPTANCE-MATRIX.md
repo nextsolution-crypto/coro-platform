@@ -40,3 +40,20 @@ Les 12 combinaisons sont `PASS` : 390×844, 768×1024, 1440×900 et 2560×1440, 
 
 - Réouverture, pièces jointes Incident et création/suppression de tâche depuis cette fiche : non présentes dans ce lot.
 - Production authentifiée : `NOT_VERIFIED`; aucune mutation réelle n’est autorisée.
+
+## Complément PR #182 — capacités effectives
+
+| Contrôle | Résultat |
+|---|---|
+| Capacités calculées par intersection permission individuelle / affectation active | PASS |
+| Lecture seule desktop et mobile | PASS |
+| Supervision sans commande | PASS |
+| Commande sans supervision | PASS |
+| Révocation serveur et navigateur à la requête suivante | PASS |
+| Refus sans mutation d'état ni incrément de `lockVersion` | PASS |
+| Contrat API fail-closed si capacités absentes ou mal formées | PASS |
+| Production : refus explicite et persistant après F5 pour l'identité non autorisée | PASS |
+| Production : ouverture d'une fiche avec une identité autorisée | NOT_VERIFIED — aucune attribution réelle créée pour la recette |
+| Lecteur d'écran réel | NOT_VERIFIED |
+
+Version QA : `1b91e9af8b1c933babf21c9a8438232660ba2734`. Version fusionnée et active : `e28eec4fb26288768e147ec08fada24b2d92140a`. Release `41690727735`, inspection `41694100917` et réconciliation `41694254014` : `SUCCESS`.
