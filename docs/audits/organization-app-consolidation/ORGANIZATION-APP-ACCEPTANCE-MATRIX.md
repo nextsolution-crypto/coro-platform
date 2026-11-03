@@ -1,6 +1,6 @@
 # Matrice consolidée d’acceptation
 
-Tous les correctifs listés sont des ancêtres Git du produit actif `082f396bf3d6e9ae85c5d47e980d09bac0df13fc`. « Présent » ne signifie pas que la recette historique a été rejouée sur ce SHA.
+Tous les correctifs listés sont des ancêtres Git du produit actif `7184456f42d43429d38ccbdaa87f141df774a2c9`. « Présent » ne signifie pas que la recette historique a été rejouée sur ce SHA.
 
 | Périmètre | Couverture et acteurs | QA / Chrome | PR et livraison de référence | Continuité actuelle | Limites / statut final |
 | --- | --- | --- | --- | --- | --- |
@@ -23,6 +23,10 @@ Tous les correctifs listés sont des ancêtres Git du produit actif `082f396bf3d
 | Manuel | contenu par rôle, recherche guidée, ancres, liens | QA + production authentifiée | PR #146–149, SHA `165b41a0`; release `41334823191`, inspection `41336102818` | Présent | recherche guidée ≠ IA; **VALIDÉ/DÉPLOYÉ/RÉCONCILIÉ** |
 | Paramètres | organisation, membres, mot de passe, invitations, outils | QA intégrée, Chrome 12/12, prod desktop/mobile | PR #151, `91c1313c`; release `41348342595`, inspection `41349712708`; migration 165 | Actif | divergences historiques et rollback conditionnel; **VALIDÉ/DÉPLOYÉ/RÉCONCILIÉ** |
 | Incident — liste | historique paginé, recherche, filtres, tri, statuts et exercices; Manager/Corporate/refus | API/PostgreSQL, Chrome QA 12/12; production refus/F5/reprise | PR #170, merge/release `082f396b`; release `41552585795`, inspection `41554507500` | Actif | production avec identité sans `INCIDENT_READ`, fonctions de données non observables; dette console service worker; lecteur d’écran hors lot; **VALIDÉ QA/DÉPLOYÉ/RÉCONCILIÉ — PROD PARTIAL** |
+
+| Incident — fiche et cycle de vie | détail minimal, chronologie, containment, résolution motivée, REX; autorité parent/sous-ressources | API/PostgreSQL 13/13, Chrome QA 12/12 | PR #172, merge/release `7184456f`; release `41570892531`, inspection `41572536046` | Actif au SHA `7184456f42d43429d38ccbdaa87f141df774a2c9` | production authentifiée sans identité `INCIDENT_READ` disponible; lecteur d'écran; impression HTML seulement; jetons historiques non déclarés révoqués; **VALIDÉ QA/DÉPLOYÉ/RÉCONCILIÉ — PROD PARTIAL** |
+
+> Référence active au 3 novembre 2026 : `7184456f42d43429d38ccbdaa87f141df774a2c9`. Cette référence remplace `082f396bf3d6e9ae85c5d47e980d09bac0df13fc` comme produit actif sans invalider sa continuité Git.
 
 ## Portée commerciale
 

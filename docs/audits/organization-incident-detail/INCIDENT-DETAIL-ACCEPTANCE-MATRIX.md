@@ -7,6 +7,13 @@
 - Réseau deny-by-default; fournisseurs simulés uniquement
 - Preuves : `D:\CORO-QA\tracking\organization-incident-detail`
 
+## Livraison gouvernée
+
+- PR `#172`, fusionnée au SHA `7184456f42d43429d38ccbdaa87f141df774a2c9`.
+- CI `41569957791`, capacité `41570498562`, inspection pré-release `41570500820`, release `41570892531`, inspection post-release `41572536046` et réconciliation `41572538222` : `SUCCESS`.
+- Production : SHA actif `7184456f42d43429d38ccbdaa87f141df774a2c9`; PostgreSQL 16.15, 167 migrations, tête `20261120010000_permanent_qr_codes`.
+- Navigateur production : `PARTIAL`. Le portail et Sentinelle sont accessibles, mais l'identité disponible reçoit un refus sur l'historique Incident. Ce `403` ne valide pas une fiche autorisée.
+
 ## API et PostgreSQL
 
 Les 13 contrôles sont `PASS` : lecture autorisée; refus bâtiment, tenant et anonyme; projection minimale; auteur serveur; refus d’une sous-ressource étrangère sans écriture; containment idempotent; motif de résolution obligatoire; résolution, audit et rejeu; rollback intégral sur panne SQL; date REX serveur; ordre stable des égalités.
