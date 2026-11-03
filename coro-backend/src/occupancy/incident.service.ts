@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { createHash, randomUUID } from 'crypto';
 import {
@@ -15,6 +15,7 @@ import {
   IncidentHistoryQueryDto,
   IncidentHistoryStatusFilter,
 } from './incident-history.dto';
+import { AddIncidentLogDto, ContainIncidentDto, ResolveIncidentDto, UpdateIncidentRexDto } from './incident-detail.dto';
 
 type IncidentAuditContext = {
   actorType: CoroActorType;
@@ -229,6 +230,7 @@ export class IncidentService {
     buildingId?: string;
     incidentEventId?: string;
     permission: IncidentPermission;
+    allowResolvedReplay?: boolean;
   }) {
     if (!input.actorId) throw new NotFoundException('Identite operationnelle introuvable.');
     let buildingId = input.buildingId;
@@ -237,7 +239,8 @@ export class IncidentService {
         where: { id: input.incidentEventId, organizationId: input.organizationId },
         select: { buildingId: true, status: true, isActive: true },
       });
-      if (!incident || !incident.isActive || !['PRE_ALERT', 'ACTIVE', 'CONTAINED'].includes(incident.status)) {
+      const resolvedReplay = input.allowResolvedReplay && incident?.status === IncidentStatus.RESOLVED;
+      if (!incident || (!resolvedReplay && (!incident.isActive || !['PRE_ALERT', 'ACTIVE', 'CONTAINED'].includes(incident.status)))) {
         throw new NotFoundException('Incident actif introuvable.');
       }
       buildingId = incident.buildingId;
@@ -1282,36 +1285,60 @@ export class IncidentService {
   }
 
   // ── Journal ───────────────────────────────────────────────────────────────
-  async addLog(incidentId: string, body: any, organizationId: string) {
+  async addLog(incidentId: string, body: AddIncidentLogDto, organizationId: string, actor: { type: CoroActorType; id: string }) {
     const incident = await this.prisma.incidentEvent.findFirst({ where: { id: incidentId, organizationId } });
     if (!incident) throw new NotFoundException('Incident introuvable');
-    return this.prisma.incidentLog.create({ data: { incidentEventId: incidentId, action: body.action, actor: body.actor || null, details: body.details || null, isAutomatic: false } });
+    return this.prisma.incidentLog.create({ data: { incidentEventId: incidentId, action: body.action.trim(), actor: `${actor.type}:${actor.id}`, details: body.details?.trim() || null, isAutomatic: false } });
   }
 
   // ── Contenir / Résoudre ───────────────────────────────────────────────────
-  async containIncident(incidentId: string, organizationId: string, audit?: IncidentAuditContext) {
-    const incident = await this.prisma.incidentEvent.findFirst({ where: { id: incidentId, organizationId } });
-    if (!incident) throw new NotFoundException();
+  async containIncident(incidentId: string, organizationId: string, body: ContainIncidentDto = {}, audit?: IncidentAuditContext) {
     return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.incidentEvent.update({ where: { id: incidentId }, data: { status: 'CONTAINED', containedAt: new Date(), lockVersion: { increment: 1 } } });
+      const incident = await tx.incidentEvent.findFirst({ where: { id: incidentId, organizationId } });
+      if (!incident) throw new NotFoundException('Incident introuvable');
+      if (audit?.assignmentId) {
+        const assignment = await tx.incidentAuthorityAssignment.findFirst({ where: { id: audit.assignmentId, organizationId, incidentEventId: incidentId, status: 'ACTIVE', permissions: { has: IncidentPermission.INCIDENT_COMMAND } }, select: { id: true } });
+        if (!assignment) throw new NotFoundException('Autorite incident introuvable.');
+      }
+      if (incident.status === IncidentStatus.CONTAINED) return incident;
+      if (incident.status !== IncidentStatus.ACTIVE || !incident.isActive) throw new ConflictException('Seul un incident actif peut etre contenu.');
+      if (body.lockVersion !== undefined && body.lockVersion !== incident.lockVersion) throw new ConflictException('La fiche a ete modifiee. Actualisez avant de poursuivre.');
+      const result = await tx.incidentEvent.updateMany({ where: { id: incidentId, organizationId, status: IncidentStatus.ACTIVE, isActive: true, lockVersion: incident.lockVersion }, data: { status: IncidentStatus.CONTAINED, containedAt: new Date(), lockVersion: { increment: 1 } } });
+      if (result.count !== 1) {
+        const current = await tx.incidentEvent.findFirst({ where: { id: incidentId, organizationId } });
+        if (current?.status === IncidentStatus.CONTAINED) return current;
+        throw new ConflictException('Transition concurrente detectee.');
+      }
+      const updated = await tx.incidentEvent.findUniqueOrThrow({ where: { id: incidentId } });
       await tx.incidentLog.create({ data: { incidentEventId: incidentId, action: 'Incident contenu', isAutomatic: false } });
       if (audit) await this.appendCriticalAudit(tx, { organizationId, buildingId: incident.buildingId, incidentEventId: incidentId, operation: 'INCIDENT_CONTAINED', ...audit, previousState: { status: incident.status, lockVersion: incident.lockVersion }, resultingState: { status: updated.status, lockVersion: updated.lockVersion } });
       return updated;
     });
   }
 
-  async resolveIncident(incidentId: string, body: any, organizationId: string, audit?: IncidentAuditContext) {
-    const incident = await this.prisma.incidentEvent.findFirst({ where: { id: incidentId, organizationId } });
-    if (!incident) throw new NotFoundException();
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const resolved = await tx.incidentEvent.update({ where: { id: incidentId }, data: { status: 'RESOLVED', resolvedAt: new Date(), closingNotes: body.closingNotes || null, isActive: false, publicAccessRevokedAt: new Date(), lockVersion: { increment: 1 } } });
-      await tx.incidentTask.updateMany({ where: { incidentEventId: incidentId }, data: { ackRevokedAt: new Date(), escalationStatus: 'CANCELLED', nextEscalationAt: null, escalationCancelledAt: new Date(), escalationCancellationReason: 'INCIDENT_RESOLVED', lockVersion: { increment: 1 } } });
+  async resolveIncident(incidentId: string, body: ResolveIncidentDto, organizationId: string, audit?: IncidentAuditContext) {
+    const closingNotes = body.closingNotes?.trim();
+    if (!closingNotes) throw new BadRequestException('Le motif de resolution est obligatoire.');
+    return this.prisma.$transaction(async (tx) => {
+      const incident = await tx.incidentEvent.findFirst({ where: { id: incidentId, organizationId } });
+      if (!incident) throw new NotFoundException('Incident introuvable');
+      if (audit?.assignmentId) {
+        const assignment = await tx.incidentAuthorityAssignment.findFirst({ where: { id: audit.assignmentId, organizationId, incidentEventId: incidentId, status: 'ACTIVE', permissions: { has: IncidentPermission.INCIDENT_COMMAND } }, select: { id: true } });
+        if (!assignment) throw new NotFoundException('Autorite incident introuvable.');
+      }
+      if (incident.status === IncidentStatus.RESOLVED && incident.closingNotes === closingNotes) return incident;
+      if ((incident.status !== IncidentStatus.ACTIVE && incident.status !== IncidentStatus.CONTAINED) || !incident.isActive) throw new ConflictException('Cet incident ne peut pas etre resolu dans son etat actuel.');
+      if (body.lockVersion !== undefined && body.lockVersion !== incident.lockVersion) throw new ConflictException('La fiche a ete modifiee. Actualisez avant de poursuivre.');
+      const now = new Date();
+      const result = await tx.incidentEvent.updateMany({ where: { id: incidentId, organizationId, status: { in: [IncidentStatus.ACTIVE, IncidentStatus.CONTAINED] }, isActive: true, lockVersion: incident.lockVersion }, data: { status: IncidentStatus.RESOLVED, resolvedAt: now, closingNotes, isActive: false, publicAccessRevokedAt: now, lockVersion: { increment: 1 } } });
+      if (result.count !== 1) throw new ConflictException('Transition concurrente detectee.');
+      const resolved = await tx.incidentEvent.findUniqueOrThrow({ where: { id: incidentId } });
+      await tx.incidentTask.updateMany({ where: { incidentEventId: incidentId }, data: { ackRevokedAt: now, escalationStatus: 'CANCELLED', nextEscalationAt: null, escalationCancelledAt: now, escalationCancellationReason: 'INCIDENT_RESOLVED', lockVersion: { increment: 1 } } });
       if (this.dispatcher) await this.dispatcher.cancelIncident(incidentId, 'INCIDENT_RESOLVED', tx);
-      await tx.incidentLog.create({ data: { incidentEventId: incidentId, action: 'Incident résolu', details: body.closingNotes || null, isAutomatic: false } });
+      await tx.incidentLog.create({ data: { incidentEventId: incidentId, action: 'Incident résolu', details: closingNotes, isAutomatic: false } });
       if (audit) await this.appendCriticalAudit(tx, { organizationId, buildingId: incident.buildingId, incidentEventId: incidentId, operation: 'INCIDENT_RESOLVED', ...audit, previousState: { status: incident.status, isActive: incident.isActive, lockVersion: incident.lockVersion }, resultingState: { status: resolved.status, isActive: resolved.isActive, lockVersion: resolved.lockVersion } });
       return resolved;
     });
-    return updated;
   }
 
   // ── Historique + Détail ───────────────────────────────────────────────────
@@ -1450,14 +1477,41 @@ export class IncidentService {
   async getIncidentDetail(incidentId: string, organizationId: string) {
     const incident = await this.prisma.incidentEvent.findFirst({
       where: { id: incidentId, organizationId },
-      include: { tasks: { orderBy: { stepOrder: 'asc' } }, logs: { orderBy: { timestamp: 'asc' } } },
+      select: {
+        id: true, buildingId: true, type: true, status: true, triggeredAt: true, triggeredBy: true,
+        description: true, procedureCode: true, assemblyPoint: true, containedAt: true, resolvedAt: true,
+        closingNotes: true, isActive: true, isExercise: true, createdAt: true, updatedAt: true, lockVersion: true,
+        occupantsSnapshot: true, teamSnapshot: true,
+        rexWentWell: true, rexToImprove: true, rexRecommendations: true, rexCorrectiveActions: true, rexCompletedAt: true,
+        building: { select: { name: true } },
+        tasks: { orderBy: [{ stepOrder: 'asc' }, { id: 'asc' }], select: { id: true, role: true, title: true, description: true, stepId: true, stepText: true, stepOrder: true, isCoordinatorStep: true, status: true, severity: true, ackDeadlineAt: true, missedAcknowledgmentAt: true, escalationStatus: true, escalationLevel: true, acknowledgedAt: true, completedAt: true, lockVersion: true } },
+        logs: { orderBy: [{ timestamp: 'asc' }, { id: 'asc' }], select: { id: true, timestamp: true, action: true, actor: true, details: true, isAutomatic: true } },
+      },
     });
     if (!incident) throw new NotFoundException('Incident introuvable');
-    return incident;
+    const {
+      occupantsSnapshot,
+      teamSnapshot,
+      publicAccessToken: _publicAccessToken,
+      interventionSheet: _interventionSheet,
+      ...safeIncident
+    } = incident as typeof incident & { publicAccessToken?: unknown; interventionSheet?: unknown };
+    const occupants = Array.isArray(occupantsSnapshot) ? occupantsSnapshot : [];
+    const team = Array.isArray(teamSnapshot) ? teamSnapshot : [];
+    return {
+      ...safeIncident,
+      occupantsSnapshot: occupants.map(() => ({})),
+      teamSnapshot: team.map((member: any) => ({ id: member?.id, firstName: member?.firstName, lastName: member?.lastName, roles: Array.isArray(member?.roles) ? member.roles.map((role: any) => ({ role: role?.role })) : [] })),
+      snapshotWarnings: [
+        ...(!Array.isArray(occupantsSnapshot) ? ['occupantsSnapshot'] : []),
+        ...(!Array.isArray(teamSnapshot) ? ['teamSnapshot'] : []),
+      ],
+      responsible: null,
+    };
   }
 
   // ── REX ───────────────────────────────────────────────────────────────────
-  async updateRex(incidentId: string, body: any, organizationId: string) {
+  async updateRex(incidentId: string, body: UpdateIncidentRexDto, organizationId: string) {
     const incident = await this.prisma.incidentEvent.findFirst({ where: { id: incidentId, organizationId } });
     if (!incident) throw new NotFoundException();
     return this.prisma.incidentEvent.update({
@@ -1467,7 +1521,7 @@ export class IncidentService {
         rexToImprove:         body.rexToImprove         ?? null,
         rexRecommendations:   body.rexRecommendations   ?? null,
         rexCorrectiveActions: body.rexCorrectiveActions ?? null,
-        rexCompletedAt:       body.rexCompletedAt ? new Date(body.rexCompletedAt) : null,
+        rexCompletedAt:       new Date(),
       },
     });
   }

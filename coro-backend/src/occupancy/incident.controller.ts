@@ -6,6 +6,7 @@ import { IncidentPermission, PlatformPermission } from '@prisma/client';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
 import { RequirePlatformPermission } from '../auth/platform-permission.decorator';
 import { IncidentHistoryQueryDto } from './incident-history.dto';
+import { AddIncidentLogDto, ContainIncidentDto, ResolveIncidentDto, UpdateIncidentRexDto } from './incident-detail.dto';
 
 @Controller('incidents')
 @OperationalContinuityAccess()
@@ -133,27 +134,29 @@ export class IncidentController {
   @UseGuards(PlatformRolesGuard)
   @RequirePlatformPermission(PlatformPermission.INCIDENT_SUPERVISE)
   @Post(':incidentId/logs')
-  addLog(@Param('incidentId') incidentId: string, @Body() body: any, @Request() req: any) {
-    return this.service.addLog(incidentId, body, req.user.organizationId);
+  async addLog(@Param('incidentId') incidentId: string, @Body() body: AddIncidentLogDto, @Request() req: any) {
+    const actorId = req.user.userId || req.user.sub;
+    await this.service.requireIncidentAuthority({ actorType: 'USER', actorId, organizationId: req.user.organizationId, incidentEventId: incidentId, permission: IncidentPermission.INCIDENT_SUPERVISE });
+    return this.service.addLog(incidentId, body, req.user.organizationId, { type: 'USER', id: actorId });
   }
 
   @UseGuards(AuthGuard('jwt'))
   @UseGuards(PlatformRolesGuard)
   @RequirePlatformPermission(PlatformPermission.INCIDENT_COMMAND)
   @Put(':incidentId/contain')
-  async contain(@Param('incidentId') incidentId: string, @Request() req: any) {
+  async contain(@Param('incidentId') incidentId: string, @Body() body: ContainIncidentDto, @Request() req: any) {
     const actorId = req.user.userId || req.user.sub;
     const assignment = await this.service.requireIncidentAuthority({ actorType: 'USER', actorId, organizationId: req.user.organizationId, incidentEventId: incidentId, permission: IncidentPermission.INCIDENT_COMMAND });
-    return this.service.containIncident(incidentId, req.user.organizationId, { actorType: 'USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_COMMAND, reason: 'Incident command transition to contained', requestId: req.id || req.headers?.['x-request-id'] });
+    return this.service.containIncident(incidentId, req.user.organizationId, body, { actorType: 'USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_COMMAND, reason: 'Incident command transition to contained', requestId: req.id || req.headers?.['x-request-id'] });
   }
 
   @UseGuards(AuthGuard('jwt'))
   @UseGuards(PlatformRolesGuard)
   @RequirePlatformPermission(PlatformPermission.INCIDENT_COMMAND)
   @Put(':incidentId/resolve')
-  async resolve(@Param('incidentId') incidentId: string, @Body() body: any, @Request() req: any) {
+  async resolve(@Param('incidentId') incidentId: string, @Body() body: ResolveIncidentDto, @Request() req: any) {
     const actorId = req.user.userId || req.user.sub;
-    const assignment = await this.service.requireIncidentAuthority({ actorType: 'USER', actorId, organizationId: req.user.organizationId, incidentEventId: incidentId, permission: IncidentPermission.INCIDENT_COMMAND });
+    const assignment = await this.service.requireIncidentAuthority({ actorType: 'USER', actorId, organizationId: req.user.organizationId, incidentEventId: incidentId, permission: IncidentPermission.INCIDENT_COMMAND, allowResolvedReplay: true });
     return this.service.resolveIncident(incidentId, body, req.user.organizationId, { actorType: 'USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_COMMAND, reason: body.closingNotes || 'Incident resolution', requestId: req.id || req.headers?.['x-request-id'] });
   }
 
@@ -206,7 +209,8 @@ export class IncidentController {
   @UseGuards(PlatformRolesGuard)
   @RequirePlatformPermission(PlatformPermission.INCIDENT_READ)
   @Get(':incidentId/detail')
-  detail(@Param('incidentId') incidentId: string, @Request() req: any) {
+  async detail(@Param('incidentId') incidentId: string, @Request() req: any) {
+    await this.service.requireIncidentAuthority({ actorType: 'USER', actorId: req.user.userId || req.user.sub, organizationId: req.user.organizationId, incidentEventId: incidentId, permission: IncidentPermission.INCIDENT_READ });
     return this.service.getIncidentDetail(incidentId, req.user.organizationId);
   }
 
@@ -214,7 +218,7 @@ export class IncidentController {
   @UseGuards(PlatformRolesGuard)
   @RequirePlatformPermission(PlatformPermission.INCIDENT_SUPERVISE)
   @Put(':incidentId/rex')
-  async updateRex(@Param('incidentId') incidentId: string, @Body() body: any, @Request() req: any) {
+  async updateRex(@Param('incidentId') incidentId: string, @Body() body: UpdateIncidentRexDto, @Request() req: any) {
     await this.service.requireIncidentAuthority({ actorType: 'USER', actorId: req.user.userId || req.user.sub, organizationId: req.user.organizationId, incidentEventId: incidentId, permission: PlatformPermission.INCIDENT_SUPERVISE as any });
     return this.service.updateRex(incidentId, body, req.user.organizationId);
   }
