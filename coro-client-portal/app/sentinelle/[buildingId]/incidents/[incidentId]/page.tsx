@@ -87,6 +87,7 @@ export default function IncidentDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const loadSequence = useRef(0);
   const activeLoad = useRef<AbortController | null>(null);
+  const transitionInFlight = useRef(false);
 
   const loadIncident = useCallback(async () => {
     activeLoad.current?.abort();
@@ -135,11 +136,12 @@ export default function IncidentDetailPage() {
   };
 
   const runTransition = async (transition: 'contain' | 'resolve') => {
-    if (actionBusy) return;
+    if (transitionInFlight.current) return;
     if (transition === 'resolve' && !closingReason.trim()) {
       setActionError('Le motif de résolution est obligatoire.');
       return;
     }
+    transitionInFlight.current = true;
     setActionBusy(transition);
     setActionError(null);
     try {
@@ -151,6 +153,7 @@ export default function IncidentDetailPage() {
     } catch (error) {
       setActionError(error instanceof ClientRequestError ? error.message : 'La transition a échoué. Réessayez.');
     } finally {
+      transitionInFlight.current = false;
       setActionBusy(null);
     }
   };
