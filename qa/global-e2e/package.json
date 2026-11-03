@@ -38,6 +38,9 @@
     "organization-map:integrated": "node src/organization-map-integrated.mjs",
     "organization-library:browser": "node src/organization-library-browser.mjs",
     "organization-library:acceptance": "node src/organization-library-acceptance.mjs",
+    "organization-incident-authorizations:acceptance": "node src/organization-incident-authorizations-acceptance.mjs",
+    "organization-incident-authorizations:browser": "node src/organization-incident-authorizations-browser.mjs",
+    "organization-incident-authorizations:migration-upgrade": "node src/organization-incident-authorizations-migration-upgrade.mjs",
     "organization-manual:browser": "node src/organization-manual-browser.mjs",
     "identity:cleanup": "node src/identity-cleanup.mjs"
   }

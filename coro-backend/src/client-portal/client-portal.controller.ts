@@ -12,6 +12,7 @@ import {
   Res,
   UploadedFile,
   UseInterceptors,
+  ForbiddenException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
@@ -1283,6 +1284,13 @@ export class ClientPortalController {
     @Request() req: any,
   ) {
     await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_READ);
+    await this.incidentService.requireIncidentAuthority({
+      actorType: 'CLIENT_USER',
+      actorId: req.clientUser.sub || req.clientUser.id,
+      organizationId: req.clientUser.organizationId,
+      buildingId,
+      permission: IncidentPermission.INCIDENT_READ,
+    });
     await this.clientPortalService.assertBuildingAccess(
       buildingId,
       req.clientUser,
@@ -1299,6 +1307,13 @@ export class ClientPortalController {
     @Request() req: any,
   ) {
     await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_READ);
+    await this.incidentService.requireIncidentAuthority({
+      actorType: 'CLIENT_USER',
+      actorId: req.clientUser.sub || req.clientUser.id,
+      organizationId: req.clientUser.organizationId,
+      buildingId,
+      permission: IncidentPermission.INCIDENT_READ,
+    });
     await this.clientPortalService.assertBuildingAccess(
       buildingId,
       req.clientUser,
@@ -1654,18 +1669,17 @@ export class ClientPortalController {
 
   @Post('incidents/authority/assign')
   async assignIncidentAuthority(@Body() body: { buildingId: string; incidentEventId?: string; subjectId: string; operationalRole: string; permissions: IncidentPermission[]; reason: string }, @Request() req: any) {
-    const actorId = req.clientUser.sub || req.clientUser.id;
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_SUPERVISE);
-    const assignment = await this.incidentService.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId, organizationId: req.clientUser.organizationId, buildingId: body.buildingId, permission: IncidentPermission.INCIDENT_SUPERVISE });
-    return this.incidentService.grantIncidentAuthority({ ...body, organizationId: req.clientUser.organizationId, subjectType: 'CLIENT_USER', grantedByType: 'CLIENT_USER', grantedById: actorId, authorizationAssignmentId: assignment.id, requestId: req.id || req.headers?.['x-request-id'] });
+    void body;
+    void req;
+    throw new ForbiddenException('L administration des autorisations Incident est reservee aux administrateurs habilites.');
   }
 
   @Put('incidents/authority/:assignmentId/revoke')
   async revokeIncidentAuthority(@Param('assignmentId') assignmentId: string, @Body() body: { reason: string; lockVersion: number; buildingId: string; incidentEventId?: string }, @Request() req: any) {
-    const actorId = req.clientUser.sub || req.clientUser.id;
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_SUPERVISE);
-    const assignment = await this.incidentService.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId, organizationId: req.clientUser.organizationId, buildingId: body.buildingId, incidentEventId: body.incidentEventId, permission: IncidentPermission.INCIDENT_SUPERVISE });
-    return this.incidentService.revokeIncidentAuthority(assignmentId, req.clientUser.organizationId, 'CLIENT_USER', actorId, body.reason, body.lockVersion, assignment.id, req.id || req.headers?.['x-request-id']);
+    void assignmentId;
+    void body;
+    void req;
+    throw new ForbiddenException('L administration des autorisations Incident est reservee aux administrateurs habilites.');
   }
 
   @Post('incidents/:incidentId/logs')
@@ -1796,6 +1810,13 @@ export class ClientPortalController {
     @Request() req: any,
   ) {
     await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_READ);
+    await this.incidentService.requireIncidentAuthority({
+      actorType: 'CLIENT_USER',
+      actorId: req.clientUser.sub || req.clientUser.id,
+      organizationId: req.clientUser.organizationId,
+      buildingId,
+      permission: IncidentPermission.INCIDENT_READ,
+    });
     await this.clientPortalService.assertBuildingAccess(
       buildingId,
       req.clientUser,
@@ -1830,6 +1851,13 @@ export class ClientPortalController {
     @Request() req: any,
   ) {
     await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_READ);
+    await this.incidentService.requireIncidentAuthority({
+      actorType: 'CLIENT_USER',
+      actorId: req.clientUser.sub || req.clientUser.id,
+      organizationId: req.clientUser.organizationId,
+      incidentEventId: incidentId,
+      permission: IncidentPermission.INCIDENT_READ,
+    });
     await this.clientPortalService.assertIncidentAccess(
       incidentId,
       req.clientUser,

@@ -26,6 +26,8 @@ Tous les correctifs listés sont des ancêtres Git du produit actif `7184456f42d
 
 | Incident — fiche et cycle de vie | détail minimal, chronologie, containment, résolution motivée, REX; autorité parent/sous-ressources | API/PostgreSQL 13/13, Chrome QA 12/12 | PR #172, merge/release `7184456f`; release `41570892531`, inspection `41572536046` | Actif au SHA `7184456f42d43429d38ccbdaa87f141df774a2c9` | production authentifiée bloquée par l'absence d'administration UI de `incidentPermissions` et des `IncidentAuthorityAssignment`; lecteur d'écran; impression HTML seulement; jetons historiques non déclarés révoqués; **VALIDÉ QA/DÉPLOYÉ/RÉCONCILIÉ — PROD PARTIAL / PROVISIONING UI REQUIRED** |
 
+> Dépendance en correction : branche `fix/incident-authorization-administration`. Cette ligne ne sera requalifiée qu'après acceptation intégrée, fusion, livraison et attribution de production explicitement approuvée.
+
 > Référence active au 3 novembre 2026 : `7184456f42d43429d38ccbdaa87f141df774a2c9`. Cette référence remplace `082f396bf3d6e9ae85c5d47e980d09bac0df13fc` comme produit actif sans invalider sa continuité Git.
 
 ## Portée commerciale

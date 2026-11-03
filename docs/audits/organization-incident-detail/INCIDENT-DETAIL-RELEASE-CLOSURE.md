@@ -45,3 +45,5 @@ La qualification du refus confirme deux contrôles serveur cumulatifs : l'identi
 - Impression HTML : distincte d'un PDF officiel et de PDF/UA.
 - Jetons historiquement exposés : aucune révocation rétroactive n'est revendiquée.
 - Fiche autorisée en production : `BLOCKED_BY_PROVISIONING_UI`. Un lot ciblé doit exposer l'attribution gouvernée de `INCIDENT_READ`, `INCIDENT_SUPERVISE` et `INCIDENT_COMMAND` ainsi que les affectations d'autorité par bâtiment ou incident, avec audit, révocation et refus inter-tenant. Après livraison, une identité synthétique ou explicitement autorisée pourra servir à la vérification en lecture seule.
+
+Le lot correctif est suivi sous `docs/audits/organization-incident-authorizations/`. Les preuves historiques de la fiche restent inchangées jusqu'à livraison et recette de cette dépendance.
