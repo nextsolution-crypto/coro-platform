@@ -142,3 +142,14 @@ Verdict : `RECETTE_NON_REALISEE — BENEFICIAIRE_NON_ADMISSIBLE`.
 - Vérification UI finale : compte marqué inactif, aucune permission Incident individuelle, affectation ciblée marquée révoquée et aucune permission effective.
 
 Verdict de campagne : `OUTILLAGE_GOUVERNE_PASS — REMISE_EN_ETAT_PASS — ACCEPTATION_NAVIGATEUR_NOT_VERIFIED_IDENTITE_NON_AUTHENTIFIABLE`.
+
+## Reprise de clôture après le correctif #182 — 3 novembre 2026
+
+- Dry-run initial `41698375099` : `PASS`; identité inactive, aucune permission Incident individuelle, aucune affectation de campagne, aucune fixture active, aucun employé ni occupant synthétique résiduel.
+- Préparation `41698697992` : `PASS`; ClientUser QA `7a366320-0505-4280-a915-e3e784d22407` activé et exercice synthétique `ab86b0a6-c70c-4c26-9ed7-ad596fea4cff` créé dans le bâtiment QA; capacité publique désactivée dès la création; zéro livraison externe, événement Population ou alerte Population.
+- Attribution minimale : `NOT_VERIFIED`. Le workflow ne confère volontairement aucun droit Incident. La session `SUPER_ADMIN` disponible peut observer l'organisation QA, mais la fiche Client inter-organisation est en lecture seule et la route Client directe est refusée par le périmètre canonique. Aucun opérateur interne habilité n'existe dans l'organisation QA pour effectuer l'attribution; aucun contournement SQL ou utilisation d'une identité réelle n'a été tenté.
+- Authentification, liste, fiche, F5 et responsive avec le ClientUser QA : `NOT_EXECUTED`, car la double autorité minimale n'a pas pu être constituée par un point d'entrée gouverné existant.
+- Remise en état `41699393782` : `PASS`; identité inactive, `individualIncidentRead:false`, zéro affectation active, zéro appareil de confiance, zéro magic link, zéro lien de réinitialisation, fixture inactive et `CANCELLED`, capacité publique révoquée, `residualAccess:false`.
+- Dry-run final `41699726935` : `PASS`, `productionMutation:false`, baseline de nouveau admissible et entièrement vide.
+
+Verdict de cette reprise : `ACCES_AUTORISE_NON_DEMONTRE — REMISE_EN_ETAT_VERIFIEE`. Le refus d'une identité non autorisée n'est pas assimilé à l'acceptation d'une lecture autorisée. Patrick et les identités réelles n'ont pas été utilisés ou modifiés.
