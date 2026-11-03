@@ -41,3 +41,11 @@ L'outillage ciblé est fusionné dans `main` au SHA `34a09e56c89b947e890c066bff4
 La recette navigateur reste `NOT_VERIFIED` : l'identité synthétique existante `info@getcoro.io` n'est pas authentifiable par Mathieu avec les identifiants disponibles. Ne pas utiliser `admin@getcoro.io`, une identité homonyme ou un compte réel comme substitut. Toute nouvelle campagne doit d'abord disposer d'une identité QA distincte dont le parcours d'authentification et le MFA normaux sont utilisables.
 
 État final vérifié : identité QA inactive, zéro permission Incident individuelle, zéro affectation active, zéro appareil de confiance, zéro lien actif, fixture synthétique annulée/inactive et aucun accès résiduel. Runs : préparation `41666211609`, finalisation `41668163043`, reprise idempotente `41668416320`.
+
+## Reprise du parcours administratif
+
+Le blocage de provisionnement n'est pas un défaut de l'autorité serveur. La route tenant exige un administrateur de l'organisation cible; la route plateforme exige un `SUPER_ADMIN` et un contexte organisation/client explicite. Le parcours plateforme a permis d'enregistrer, dans l'interface produit, `INCIDENT_READ` individuel puis une affectation limitée à l'exercice synthétique. La topologie opposant un administrateur d'une autre organisation au ClientUser cible a été rejouée en QA : refus inter-organisation sans effet, attribution par l'administrateur légitime, lecture autorisée API, révocation et refus immédiat.
+
+La production n'a pas fourni d'identité QA normalement authentifiable : `info@getcoro.io` existe comme `ClientUser` technique, mais Mathieu ne dispose pas d'un compte portail utilisable. Une session réelle distincte a été reconnue avant toute navigation Incident et n'a pas servi de substitut. L'accès autorisé par navigateur reste donc `NOT_VERIFIED`.
+
+Runs finaux : dry-run `41706049549`, préparation `41706451419`, finalisation `41712544470`. État final : identité inactive, aucun droit individuel, aucune affectation active, aucun appareil ou lien actif, exercice annulé, `residualAccess:false`.

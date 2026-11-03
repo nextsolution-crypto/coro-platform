@@ -96,3 +96,11 @@ Le correctif #182 reste livré et réconcilié au SHA actif `e28eec4fb26288768e1
 La campagne gouvernée a été préparée avec succès (`41698697992`) après un dry-run propre (`41698375099`), mais l'accès autorisé n'a pas pu être démontré. L'administration disponible ne permet pas à la session réelle ouverte d'attribuer une autorité Incident inter-organisation au ClientUser QA; le workflow de préparation n'accorde volontairement aucun droit. La liste et la fiche n'ont donc pas été ouvertes sous cette identité, et aucun `403` n'est présenté comme une validation fonctionnelle.
 
 La remise en état obligatoire `41699393782` est `PASS` et le dry-run final `41699726935` confirme : identité inactive, aucune permission individuelle, aucune affectation Incident active, aucune session ou lien actif, aucune fixture active et aucune capacité publique. Verdict : `BROWSER_AUTHORIZED_NOT_VERIFIED — CLEANUP_PASS — NO_RESIDUAL_ACCESS`.
+
+## Réconciliation finale du provisionnement
+
+Le parcours d'administration n'est plus bloqué : le `SUPER_ADMIN` peut administrer un `ClientUser` d'une autre organisation uniquement par la vue plateforme avec organisation et Client explicitement ciblés; l'administrateur de tenant reste limité à sa propre organisation. Ce comportement a été vérifié avec backend/PostgreSQL réels et Chrome, sans créer de contournement universel.
+
+La campagne finale a attribué `INCIDENT_READ` individuellement et sur le seul exercice synthétique `b429345c-40c7-4cad-b448-ba2b6cb08d53` par l'interface produit. La fiche autorisée n'a pas été ouverte, car l'identité technique `info@getcoro.io` ne correspond pas à un compte portail utilisable par Mathieu. La session Client disponible appartenait à une identité réelle distincte et a été abandonnée avant toute navigation vers un bâtiment ou un incident.
+
+La finalisation `41712544470` est `PASS` : aucun droit individuel ou affectation active, identité inactive, sessions/liens/appareils neutralisés, exercice annulé, capacité publique révoquée et `residualAccess:false`. La fiche autorisée en production demeure `NOT_VERIFIED`; la preuve QA intégrée demeure `PASS`.

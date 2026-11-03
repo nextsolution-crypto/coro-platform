@@ -34,6 +34,14 @@ L’autorité demeure : identité et Client actifs, permission Incident, organis
 | Consommateur Organisation | NOT_APPLICABLE — aucun appel à ce endpoint dans le dépôt |
 | Lecteur d’écran réel | NOT_VERIFIED |
 
+## Reprise du provisionnement du 3 novembre 2026
+
+Le parcours administratif canonique a été démontré en QA et observé en production : refus de l'administrateur inter-organisation, attribution par l'administrateur légitime, double autorité et révocation immédiate. La campagne de production a attribué temporairement `INCIDENT_READ` à l'identité et au seul exercice synthétiques, sans `SUPERVISE` ni `COMMAND`.
+
+La liste autorisée n'a cependant pas été ouverte : l'unique session Client disponible appartenait à une identité réelle distincte, reconnue avant toute navigation Incident, et `info@getcoro.io` n'est pas un compte portail utilisable par Mathieu. La liste reste `NOT_VERIFIED` en production; aucune observation d'un `403` n'est convertie en preuve d'accès autorisé.
+
+La finalisation `41712544470` confirme `residualAccess:false`, identité inactive, zéro permission individuelle, zéro affectation active, zéro session/lien/appareil actif et exercice annulé. Les preuves QA de liste et de détail autorisés restent `PASS`.
+
 ## Dépendance d'autorisation livrée
 
 Le mécanisme d'administration Incident de la PR `#175` est déployé au SHA `d9eb6d84668a5773257ec75b7a06c062b7786384` (release `41638570059`, inspection `41640868682`). Il permet l'administration gouvernée de la permission individuelle et de l'affectation active, sans créer de droit implicite. La liste autorisée en production reste `NOT_VERIFIED` tant qu'une attribution nominative minimale n'a pas été approuvée puis appliquée. Le refus historique ne doit plus être qualifié de blocage produit, mais d'absence volontaire d'attribution.
