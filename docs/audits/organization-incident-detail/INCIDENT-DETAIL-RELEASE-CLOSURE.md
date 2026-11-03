@@ -61,3 +61,30 @@ La tentative approuvée avec Patrick JEAN-ERNEST s'est arrêtée fail-closed ava
 L'exercice synthétique et la double autorité `INCIDENT_READ` strictement limitée à cet incident ont été préparés par le workflow gouverné `41666211609`, sans communication externe et sans capacité publique. La fiche n'a pas été ouverte avec l'identité QA : Mathieu ne dispose pas de ses identifiants d'authentification, et la session d'une autre identité n'a pas été utilisée comme substitut. Le parcours navigateur autorisé reste donc `NOT_VERIFIED`.
 
 La remise en état `41668163043` est `PASS`, confirmée idempotente par `41668416320` : identité inactive, permission individuelle absente, affectation révoquée, sessions/liens/appareils neutralisés, fixture inactive et annulée, aucun accès temporaire résiduel. Aucune donnée Incident réelle n'a été consultée ou modifiée.
+
+## Alignement final des capacités de la fiche Incident
+
+Le correctif de fermeture fail-closed des actions de la fiche a été livré par la PR `#182`.
+
+- Commit produit : `1b91e9af8b1c933babf21c9a8438232660ba2734`.
+- SHA fusionné et actif : `e28eec4fb26288768e147ec08fada24b2d92140a`.
+- CI de PR : `41688094822`, `41688094842` et `41688095103`, toutes `SUCCESS`.
+- CI du SHA fusionné : `41689177700`, `SUCCESS`.
+- Capacité pré-release : `41690327745`, `SUCCESS` avec 17 441 953 491 octets de marge au-dessus du besoin calculé.
+- Inspection pré-release : `41690335440`, `PASS / GO`.
+- Release gouvernée : `41690727735`, `SUCCESS`.
+- Inspection post-release : `41694100917`, `PASS / GO`.
+- Réconciliation : `41694254014`, `SUCCESS`.
+
+La recette QA attachée au commit produit est `PASS` sur 8 scénarios : lecture seule desktop et mobile, supervision seule, commande seule, révocation serveur et navigateur à la requête suivante, absence de mutation après révocation et projection API des capacités. Le backend calcule les capacités effectives par intersection entre la permission individuelle active et l'affectation Incident active; l'interface ne présente plus d'action de commande ou d'écriture REX en l'absence de l'autorité correspondante.
+
+L'inspection post-release confirme PostgreSQL 16.15, 168 migrations, tête `20261121010000_incident_authority_idempotency`, sauvegarde `REMOTE_VERIFIED`, restauration `RESTORE_VERIFIED`, quatre images de rollback disponibles, verrou libre et 33 741 900 KiB disponibles sur `/dev/vda1`.
+
+Images actives :
+
+- Backend : `ghcr.io/nextsolution-crypto/coro-backend@sha256:a7cb9181e9cf40afa54955764f3385c68c292282cb78ebb5f7137bc8899a8e95`.
+- Frontend : `ghcr.io/nextsolution-crypto/coro-frontend@sha256:d2e06023ec2b47e9cb2c6c4d6081fc63bd84c452109ee21434e6e6bbd1665ada`.
+- Client Portal : `ghcr.io/nextsolution-crypto/coro-client-portal@sha256:2425631fe854d9b0b72e5d6c52f378b69206adff0490c170361586e44a00ff63`.
+- Website : `ghcr.io/nextsolution-crypto/coro-website@sha256:da81ae5e63e8ca3694e243a310d9a39719dc3bef857f4fec886b85c4982a770a`.
+
+La vérification navigateur de production a confirmé la session Client, le tableau de bord, le bâtiment BUREAUX, Sentinelle et le refus explicite de l'historique Incident pour l'identité disponible; le refus persiste après F5 et n'expose aucune donnée Incident. Cette identité n'étant pas autorisée, l'ouverture d'une fiche autorisée reste `NOT_VERIFIED` en production et n'a pas été contournée par une attribution réelle. La preuve fonctionnelle des capacités demeure la recette QA intégrée. Le lecteur d'écran réel demeure `NOT_VERIFIED`.
