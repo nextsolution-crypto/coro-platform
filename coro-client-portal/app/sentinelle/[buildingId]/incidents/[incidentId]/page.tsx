@@ -5,6 +5,12 @@ import { getUser } from '../../../../store/auth';
 import PortalLayout from '../../../../components/PortalLayout';
 import { FileText, CheckSquare, Square, Download, Clock } from 'lucide-react';
 import styles from './incident-escalation.module.css';
+import {
+  canEditIncidentRex,
+  canShowIncidentActions,
+  isIncidentAuthorizationError,
+  normalizeIncidentDetailCapabilities,
+} from './incidentDetailCapabilities';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
 
@@ -85,6 +91,9 @@ export default function IncidentDetailPage() {
   const [closingReason, setClosingReason] = useState('');
   const [actionBusy, setActionBusy] = useState<'contain' | 'resolve' | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [rexError, setRexError] = useState<string | null>(null);
+  const [commandAccessRevoked, setCommandAccessRevoked] = useState(false);
+  const [superviseAccessRevoked, setSuperviseAccessRevoked] = useState(false);
   const loadSequence = useRef(0);
   const activeLoad = useRef<AbortController | null>(null);
   const transitionInFlight = useRef(false);
@@ -100,6 +109,10 @@ export default function IncidentDetailPage() {
       const inc = await clientFetch(`/client-portal/incidents/${incidentId}/detail`, 'GET', undefined, controller.signal);
       if (sequence !== loadSequence.current) return;
       setIncident(inc);
+      setCommandAccessRevoked(false);
+      setSuperviseAccessRevoked(false);
+      setActionError(null);
+      setRexError(null);
       setRex({
         rexWentWell: inc.rexWentWell || '',
         rexToImprove: inc.rexToImprove || '',
@@ -131,11 +144,18 @@ export default function IncidentDetailPage() {
 
   const handleSaveRex = async () => {
     setSavingRex(true);
+    setRexError(null);
     try {
       await clientFetch(`/client-portal/incidents/${incidentId}/rex`, 'PUT', rex);
       setRexSaved(true);
       setTimeout(() => setRexSaved(false), 3000);
-    } catch (e) { console.error(e); }
+    } catch (error) {
+      const requestError = error instanceof ClientRequestError
+        ? error
+        : new ClientRequestError(0, 'La sauvegarde du REX a échoué. Réessayez.');
+      if (isIncidentAuthorizationError(requestError.status)) setSuperviseAccessRevoked(true);
+      setRexError(requestError.message);
+    }
     finally { setSavingRex(false); }
   };
 
@@ -155,7 +175,11 @@ export default function IncidentDetailPage() {
       await clientFetch(`/client-portal/incidents/${incidentId}/${transition}`, 'PUT', body);
       await loadIncident();
     } catch (error) {
-      setActionError(error instanceof ClientRequestError ? error.message : 'La transition a échoué. Réessayez.');
+      const requestError = error instanceof ClientRequestError
+        ? error
+        : new ClientRequestError(0, 'La transition a échoué. Réessayez.');
+      if (isIncidentAuthorizationError(requestError.status)) setCommandAccessRevoked(true);
+      setActionError(requestError.message);
     } finally {
       transitionInFlight.current = false;
       setActionBusy(null);
@@ -467,6 +491,9 @@ export default function IncidentDetailPage() {
   const pct        = coordSteps.length > 0 ? Math.round((completed / coordSteps.length) * 100) : 0;
   const teamSnap = asArray<any>(incident.teamSnapshot);
   const governedTasks = (incident.tasks || []).filter((t: any) => t.ackDeadlineAt || t.missedAcknowledgmentAt || t.escalationStatus !== 'PENDING');
+  const capabilities = normalizeIncidentDetailCapabilities(incident.capabilities);
+  const showIncidentActions = canShowIncidentActions(incident.status, capabilities, commandAccessRevoked);
+  const rexIsEditable = canEditIncidentRex(capabilities, superviseAccessRevoked);
 
   return (
     <PortalLayout>
@@ -502,7 +529,7 @@ export default function IncidentDetailPage() {
         </div>
       )}
 
-      {(incident.status === 'ACTIVE' || incident.status === 'CONTAINED') && (
+      {showIncidentActions && (
         <section aria-labelledby="incident-actions-title" style={{ marginBottom: 16, padding: 16, border: '1px solid #E9ECEF', borderRadius: 12, background: '#FFFFFF' }}>
           <h2 id="incident-actions-title" style={{ margin: '0 0 12px', fontSize: 16 }}>Actions sur l’incident</h2>
           <label htmlFor="incident-closing-reason" style={{ display: 'block', marginBottom: 4, fontSize: 12, fontWeight: 700 }}>Motif de résolution</label>
@@ -519,6 +546,13 @@ export default function IncidentDetailPage() {
             </button>
           </div>
         </section>
+      )}
+
+      {(incident.status === 'ACTIVE' || incident.status === 'CONTAINED') && !showIncidentActions && (
+        <p role={actionError ? 'alert' : 'status'} style={{ margin: '0 0 16px', padding: '12px 16px', borderRadius: 8, background: actionError ? '#FDEDEC' : '#F8F9FA', color: actionError ? '#922B21' : '#6C757D' }}>
+          {actionError && <><strong>{actionError}</strong><br /></>}
+          Consultation en lecture seule — les transitions exigent la permission de commande Incident.
+        </p>
       )}
 
       {/* Identification */}
@@ -669,13 +703,22 @@ export default function IncidentDetailPage() {
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6C757D', marginBottom: 4, textTransform: 'uppercase' }}>{f.label}</label>
                   <textarea value={(rex as any)[f.key]} rows={2} placeholder="..."
                     onChange={e => setRex(prev => ({ ...prev, [f.key]: e.target.value }))}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #E9ECEF', fontSize: 13, resize: 'none', boxSizing: 'border-box' }} />
+                    readOnly={!rexIsEditable}
+                    aria-readonly={!rexIsEditable}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #E9ECEF', fontSize: 13, resize: 'none', boxSizing: 'border-box', backgroundColor: rexIsEditable ? '#FFFFFF' : '#F8F9FA', color: rexIsEditable ? '#2C3E50' : '#6C757D' }} />
                 </div>
               ))}
-              <button type="button" onClick={handleSaveRex} disabled={savingRex}
-                style={{ minHeight: 44, padding: '10px 20px', borderRadius: 8, border: 'none', backgroundColor: rexSaved ? '#27AE60' : '#2C3E50', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: savingRex ? 0.7 : 1 }}>
-                {rexSaved ? '✅ REX sauvegardé' : savingRex ? 'Sauvegarde...' : 'Sauvegarder le REX'}
-              </button>
+              {rexError && <p role="alert" style={{ color: '#C0392B', margin: 0 }}>{rexError}</p>}
+              {rexIsEditable ? (
+                <button type="button" onClick={handleSaveRex} disabled={savingRex}
+                  style={{ minHeight: 44, padding: '10px 20px', borderRadius: 8, border: 'none', backgroundColor: rexSaved ? '#27AE60' : '#2C3E50', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: savingRex ? 0.7 : 1 }}>
+                  {rexSaved ? '✅ REX sauvegardé' : savingRex ? 'Sauvegarde...' : 'Sauvegarder le REX'}
+                </button>
+              ) : (
+                <p role="status" style={{ margin: 0, color: '#6C757D', fontSize: 12 }}>
+                  REX en lecture seule — sa modification exige la permission de supervision Incident.
+                </p>
+              )}
             </div>
           </div>
         </div>
