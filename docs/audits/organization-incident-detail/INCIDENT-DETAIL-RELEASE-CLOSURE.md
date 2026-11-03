@@ -47,3 +47,9 @@ La qualification du refus confirme deux contrôles serveur cumulatifs : l'identi
 - Fiche autorisée en production : `BLOCKED_BY_PROVISIONING_UI`. Un lot ciblé doit exposer l'attribution gouvernée de `INCIDENT_READ`, `INCIDENT_SUPERVISE` et `INCIDENT_COMMAND` ainsi que les affectations d'autorité par bâtiment ou incident, avec audit, révocation et refus inter-tenant. Après livraison, une identité synthétique ou explicitement autorisée pourra servir à la vérification en lecture seule.
 
 Le lot correctif est suivi sous `docs/audits/organization-incident-authorizations/`. Les preuves historiques de la fiche restent inchangées jusqu'à livraison et recette de cette dépendance.
+
+## Réconciliation après PR #175
+
+La dépendance d'administration est désormais livrée et active au SHA `d9eb6d84668a5773257ec75b7a06c062b7786384` : migration `20261121010000_incident_authority_idempotency`, release `41638570059`, inspection `41640868682`. Le mécanisme conserve la double autorité et la révocation à la requête suivante; aucun droit n'a été attribué en production pendant la livraison.
+
+La fiche autorisée en production demeure `NOT_VERIFIED` jusqu'à approbation d'une attribution nominative minimale. `INCIDENT_READ` est suffisant pour la recette de lecture; `INCIDENT_COMMAND` ne doit pas être accordé. Aucune entrée de chronologie, transition, résolution, impression ou export réel n'est requis pour cette preuve.
