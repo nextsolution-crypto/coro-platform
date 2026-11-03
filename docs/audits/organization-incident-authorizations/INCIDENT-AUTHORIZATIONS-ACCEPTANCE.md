@@ -153,3 +153,18 @@ Verdict de campagne : `OUTILLAGE_GOUVERNE_PASS — REMISE_EN_ETAT_PASS — ACCEP
 - Dry-run final `41699726935` : `PASS`, `productionMutation:false`, baseline de nouveau admissible et entièrement vide.
 
 Verdict de cette reprise : `ACCES_AUTORISE_NON_DEMONTRE — REMISE_EN_ETAT_VERIFIEE`. Le refus d'une identité non autorisée n'est pas assimilé à l'acceptation d'une lecture autorisée. Patrick et les identités réelles n'ont pas été utilisés ou modifiés.
+
+## Résolution du blocage de provisionnement — 3 novembre 2026
+
+- PR documentaire `#184` : CI terminale réussie, diff exclusivement documentaire, fusion dans `5a797cee9d7edf16dd250d45266b4ceb84fb57b9`; aucune release applicative.
+- Règle canonique confirmée : un administrateur du tenant agit dans son organisation par les routes `/clients/:clientId/client-users/:clientUserId/...`; le `SUPER_ADMIN` utilise uniquement les routes plateforme `/admin/organizations/:organizationId/clients/:clientId/client-users/:clientUserId/...` avec contexte cible explicite. Les autorités `User` et `ClientUser` restent distinctes.
+- QA isolée sur `5a797cee9d7edf16dd250d45266b4ceb84fb57b9` : 168 migrations, test ciblé `9/9 PASS`, recette API/PostgreSQL `14/14 PASS`, Chrome `12/12 PASS`, F5, zoom 200 %, focus, panne 503 et reprise `PASS`.
+- Le refus d'un administrateur d'une autre organisation est `PASS` sans effet secondaire; l'administrateur légitime attribue et révoque l'autorité atomiquement; la révocation est effective à la requête suivante et l'identité désactivée est refusée.
+- Aucun correctif produit ni nouvelle délégation inter-organisation n'a été nécessaire. Le parcours plateforme existant a été observé dans Chrome avec le contexte organisation/client explicite.
+- Dry-run production `41706049549` : `PASS`, aucune mutation, baseline inactive et sans droit.
+- Préparation production `41706451419` : `PASS`; exercice synthétique `b429345c-40c7-4cad-b448-ba2b6cb08d53`, aucune livraison externe, aucune capacité publique.
+- Attribution par le parcours produit : `INCIDENT_READ` individuel puis affectation `INCIDENT_READ` limitée à cet exercice; aucun `SUPERVISE` ni `COMMAND`. L'interface a confirmé la permission effective.
+- Recette Client Portal autorisée : `NOT_EXECUTED`. L'onglet annoncé comme connecté appartenait à une identité réelle distincte; aucune fiche, aucun bâtiment et aucune donnée Incident de ce compte n'ont été consultés. Mathieu a confirmé ne pas disposer d'un compte portail utilisable pour `info@getcoro.io`.
+- Finalisation gouvernée `41712544470` : `PASS`; identité inactive, `individualIncidentRead:false`, zéro affectation active, zéro appareil de confiance, zéro magic link, zéro lien de réinitialisation, fixture `CANCELLED` et inactive, capacité publique révoquée, `residualAccess:false`.
+
+Verdict : `PARCOURS_ADMINISTRATIF_DEMONTRE — ACCES_AUTORISE_NAVIGATEUR_NON_DEMONTRE_IDENTITE_NON_AUTHENTIFIABLE — REMISE_EN_ETAT_PASS`.
