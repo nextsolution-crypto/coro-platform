@@ -53,6 +53,15 @@
 - Aucun fournisseur, alarme, communication externe ou compte de production n'a été utilisé.
 - La restitution par lecteur d'écran réel reste `NOT_VERIFIED`.
 
+## Réconciliation de migration avant intégration
+
+- Ancien identifiant local jamais partagé : `20261103020000_incident_authority_idempotency`.
+- Tête de production vérifiée : `20261120010000_permanent_qr_codes` (167 migrations).
+- Identifiant final : `20261121010000_incident_authority_idempotency`.
+- Création depuis zéro : PASS, 168 migrations dans l'ordre attendu.
+- Upgrade depuis la tête de production : PASS avec affectation historique conservée et aucune permission individuelle attribuée implicitement.
+- Preuve : `D:\CORO-QA\tracking\organization-incident-authorizations\migration-upgrade-20261121010000.json`.
+
 ## Verdict
 
 `ACCEPTATION_INTÉGRÉE_PASS — PR_READY`, sous réserve de la CI terminale du HEAD publié.

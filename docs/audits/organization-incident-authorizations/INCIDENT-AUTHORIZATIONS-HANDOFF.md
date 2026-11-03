@@ -1,5 +1,9 @@
 # Passation — administration Incident
 
+## Migration finale
+
+La migration additive, jamais appliquée dans un environnement partagé avant cette PR, a été réconciliée après la tête de production `20261120010000_permanent_qr_codes` sous l'identifiant `20261121010000_incident_authority_idempotency`. La création depuis zéro et l'upgrade avec affectation historique synthétique préexistante sont validés; aucune permission individuelle n'est attribuée implicitement par la migration.
+
 ## Portée et autorisations
 
 Implémentation, tests, migration additive, documentation, commit, push et PR sont autorisés. Fusion, release et attribution réelle en production sont exclues.
