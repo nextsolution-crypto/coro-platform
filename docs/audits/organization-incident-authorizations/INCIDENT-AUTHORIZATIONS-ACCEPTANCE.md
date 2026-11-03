@@ -65,3 +65,50 @@
 ## Verdict
 
 `ACCEPTATION_INTÉGRÉE_PASS — PR_READY`, sous réserve de la CI terminale du HEAD publié.
+
+## Livraison gouvernée du 3 novembre 2026
+
+- HEAD final revu : `59596909384b40c080f9e510d42440fae3cbc43b` (migration réconciliée après la tête réelle de production).
+- PR `#175` fusionnée dans `d9eb6d84668a5773257ec75b7a06c062b7786384`.
+- CI main : `41637714878`, `SUCCESS`.
+- Capacité pré-release : `41638346616`, `SUCCESS`.
+- Inspection pré-release : `41638351647`, `PASS / GO`.
+- Release unique : `41638570059`, `SUCCESS`; la réconciliation intégrée a produit `RECONCILIATION_SUCCEEDED`.
+- Inspection post-release : `41640868682`, `PASS / GO`.
+- Production active : `d9eb6d84668a5773257ec75b7a06c062b7786384`.
+- PostgreSQL 16.15 : 168 migrations, tête `20261121010000_incident_authority_idempotency`, aucune migration en échec.
+- Services applicatifs et PostgreSQL : tous actifs, aucun redémarrage; verrou de déploiement libre.
+- Sauvegarde : `REMOTE_VERIFIED`; restauration : `RESTORE_VERIFIED`.
+- Capacité post-release : 36 532 028 KiB libres sur `/dev/vda1` (55 % utilisés).
+
+### Images actives immuables
+
+- Backend : `ghcr.io/nextsolution-crypto/coro-backend@sha256:e0d21e2632e048d75ff3300d620a7a6109ea417bd7851f86ec63ef01b97744fd`.
+- Frontend : `ghcr.io/nextsolution-crypto/coro-frontend@sha256:279c718d0c3ad3dbb5c47128bee54e4f13782612ada6db4708d0c0c00ab7dcc0`.
+- Client Portal : `ghcr.io/nextsolution-crypto/coro-client-portal@sha256:ca5f3158421e7e59c6a6f20630d776dc54ea268109c7b43234b4a2025c5898a6`.
+- Website : `ghcr.io/nextsolution-crypto/coro-website@sha256:3c001027932b29388e5530ddf917d1b44650c1e0c53b5d2c34020afe7c91be12`.
+
+### État d'acceptation production
+
+- Mécanisme livré : `PASS`.
+- Administration vérifiée par inspection technique : `PASS` (routes et migration actives).
+- Administration vérifiée visuellement avec la session `SUPER_ADMIN` légitime de Mathieu : `PASS`; fiche Client, permissions individuelles, périmètres bâtiment/incident et affectations existantes consultés sans mutation.
+- F5 : `PASS`; l'administration et l'état « Aucune affectation Incident » sont restitués après rechargement.
+- Responsive : `PASS` à 390 × 844 et au viewport desktop courant; largeur documentaire 375 px pour 390 px, aucun débordement horizontal.
+- Console : aucune erreur applicative critique; trois erreurs de canal d'extension Chrome sans effet produit observé.
+- Attribution nominative : `EN_ATTENTE_APPROBATION`; aucune permission ni affectation de production n'a été modifiée.
+- Activation/expiration programmées : non disponibles; aucune promesse de droit temporaire automatique.
+- Lecteur d'écran réel : `NOT_VERIFIED`.
+
+### Proposition nominative minimale à approuver
+
+- Bénéficiaire : `Patrick JEAN-ERNEST` (ClientUser existant du Client `GELE SECURITE`).
+- Organisation : organisation actuellement rattachée à ce Client; aucune portée inter-organisation.
+- Bâtiment : `BUREAUX` uniquement.
+- Permission individuelle : `INCIDENT_READ` uniquement.
+- Affectation : bâtiment `BUREAUX`, portée bâtiment, permission `INCIDENT_READ` uniquement.
+- Justification : recette en lecture seule de la liste et d'une fiche Incident autorisée; aucune commande de cycle de vie.
+- Durée proposée : temporaire, avec révocation manuelle immédiatement après la recette, puisque l'expiration programmée n'est pas disponible.
+- Révocation : écran Client > Autorisations Incident; retrait de l'affectation puis retrait de la permission individuelle, avec vérification du refus sur la session existante.
+
+Cette proposition n'est pas une attribution approuvée. `INCIDENT_SUPERVISE` et `INCIDENT_COMMAND` restent exclus.

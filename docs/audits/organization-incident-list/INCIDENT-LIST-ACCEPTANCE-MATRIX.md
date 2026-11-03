@@ -34,6 +34,10 @@ L’autorité demeure : identité et Client actifs, permission Incident, organis
 | Consommateur Organisation | NOT_APPLICABLE — aucun appel à ce endpoint dans le dépôt |
 | Lecteur d’écran réel | NOT_VERIFIED |
 
+## Dépendance d'autorisation livrée
+
+Le mécanisme d'administration Incident de la PR `#175` est déployé au SHA `d9eb6d84668a5773257ec75b7a06c062b7786384` (release `41638570059`, inspection `41640868682`). Il permet l'administration gouvernée de la permission individuelle et de l'affectation active, sans créer de droit implicite. La liste autorisée en production reste `NOT_VERIFIED` tant qu'une attribution nominative minimale n'a pas été approuvée puis appliquée. Le refus historique ne doit plus être qualifié de blocage produit, mais d'absence volontaire d'attribution.
+
 ## Chrome 12/12
 
 | Thème \ Format | 390×844 | 768×1024 | 1440×900 | 2560×1440 |
