@@ -14,6 +14,7 @@
 - Inventaire en lecture seule après préparation : `41842914129`; 3 clients, 6 bâtiments, 12 projets, 9 incidents et 3 actions dans le tenant, incluant les données préexistantes conservées.
 - Les 40 nouvelles fixtures sont actives; communications `SIMULATE`, fournisseurs externes désactivés.
 - Documents privés et Knowledge : release `41857007049`, inspection `41859825671`, provisionnement réconcilié puis vérification indépendante `41863006419`. Deux ProjectFile privés sont enregistrés; v1 est remplacée, v2 est la version courante approuvée et indexée. Téléchargement privé, octets/SHA-256, citation/version/provenance, fraîcheur et refus inter-tenant sont démontrés.
+- Inventaire terminal en lecture seule : `41867733723` PASS; `files: 2`, cible canonique et projets Prémont inchangés.
 
 ## Prochaine action concrète
 
