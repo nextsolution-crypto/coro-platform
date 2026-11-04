@@ -5,6 +5,15 @@ import {
 import { PopulationService } from './population.service';
 
 describe('Population SMS global send gate', () => {
+  const prisma = {
+    populationProgram: {
+      findUnique: jest.fn().mockResolvedValue({
+        rueFacilityProfile: {
+          building: { organizationId: 'organization-1' },
+        },
+      }),
+    },
+  };
   const delivery = { sendSms: jest.fn(), sendEmail: jest.fn() };
   const suppressions = {
     isSuppressed: jest.fn(),
@@ -13,7 +22,7 @@ describe('Population SMS global send gate', () => {
     normalizePhoneNumber: jest.fn(() => ({ canonical: '+15145550123' })),
   };
   const service = new PopulationService(
-    {} as never,
+    prisma as never,
     {} as never,
     delivery as never,
     {} as never,
@@ -33,6 +42,7 @@ describe('Population SMS global send gate', () => {
           sendSubscriberOtp(data: object): Promise<string>;
         }
       ).sendSubscriberOtp({
+        programId: 'program-1',
         channel: PopulationVerificationChannel.SMS,
         destination: '+15145550123',
         code: '123456',
@@ -52,6 +62,7 @@ describe('Population SMS global send gate', () => {
           sendSubscriberOtp(data: object): Promise<string>;
         }
       ).sendSubscriberOtp({
+        programId: 'program-1',
         channel: PopulationVerificationChannel.SMS,
         destination: '+15145550123',
         code: '123456',

@@ -22,6 +22,7 @@ describe('Population identity acquisition', () => {
     rueFacilityProfile: {
       assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
       populationEnabled: true,
+      building: { organizationId: 'organization-1' },
     },
   };
   const prisma = {
