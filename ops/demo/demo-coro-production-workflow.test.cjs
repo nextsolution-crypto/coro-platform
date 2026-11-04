@@ -7,6 +7,10 @@ const workflow = fs.readFileSync(
   path.join(__dirname, '..', '..', '.github', 'workflows', 'production-demo-coro-fixtures.yml'),
   'utf8',
 );
+const fixtureAuthority = fs.readFileSync(
+  path.join(__dirname, 'demo-coro-fixtures.cjs'),
+  'utf8',
+);
 
 test('production fixture workflow is fixed, locked, backed up, and tenant-scoped', () => {
   assert.match(workflow, /options: \[dry-run, prepare, verify, reset\]/);
@@ -16,4 +20,10 @@ test('production fixture workflow is fixed, locked, backed up, and tenant-scoped
   assert.match(workflow, /demo-coro-fixture-manifest\.json/);
   assert.doesNotMatch(workflow, /organization[_-]?id.*inputs/i);
   assert.doesNotMatch(workflow, /docker system prune|docker volume prune/);
+});
+
+test('fixture authority resolves locked dependencies in the production backend image', () => {
+  assert.match(fixtureAuthority, /require\(`\/app\/node_modules\/\$\{name\}`\)/);
+  assert.match(fixtureAuthority, /loadRuntimeDependency\('bcryptjs'\)/);
+  assert.match(fixtureAuthority, /loadRuntimeDependency\('@prisma\/client'\)/);
 });

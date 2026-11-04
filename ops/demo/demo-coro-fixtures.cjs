@@ -1,19 +1,24 @@
 'use strict';
 
 const crypto = require('node:crypto');
-const bcrypt = require('../../coro-backend/node_modules/bcryptjs');
 const manifest = require('./demo-coro-fixture-manifest.json');
 
-function loadPrismaClient() {
+function loadRuntimeDependency(name) {
   try {
-    return require('../../coro-backend/node_modules/@prisma/client').PrismaClient;
+    return require(`../../coro-backend/node_modules/${name}`);
   } catch (localError) {
     try {
-      return require('/app/node_modules/@prisma/client').PrismaClient;
+      return require(`/app/node_modules/${name}`);
     } catch {
       throw localError;
     }
   }
+}
+
+const bcrypt = loadRuntimeDependency('bcryptjs');
+
+function loadPrismaClient() {
+  return loadRuntimeDependency('@prisma/client').PrismaClient;
 }
 
 const COMMANDS = new Set(['dry-run', 'provision', 'verify', 'prepare', 'reset']);
