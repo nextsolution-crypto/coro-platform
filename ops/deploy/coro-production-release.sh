@@ -148,6 +148,7 @@ for variable in BACKEND_IMAGE FRONTEND_IMAGE CLIENT_PORTAL_IMAGE WEBSITE_IMAGE; 
 done
 [[ "${CLIENT_INVITATION_OUTBOX_KEY_ID:-}" =~ ^[A-Za-z0-9_.-]{1,64}$ ]] || fail CLIENT_INVITATION_OUTBOX_KEY_ID_INVALID
 CLIENT_INVITATION_OUTBOX_KEY_BASE64="${CLIENT_INVITATION_OUTBOX_KEY_BASE64:-}" node -e 'const v=process.env.CLIENT_INVITATION_OUTBOX_KEY_BASE64||"";const b=Buffer.from(v,"base64");if(!/^[A-Za-z0-9+/]+={0,2}$/.test(v)||b.length!==32||b.toString("base64")!==v)process.exit(1)' || fail CLIENT_INVITATION_OUTBOX_KEY_INVALID
+DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST="${DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST:-}" node -e 'const v=(process.env.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST||"").split(",").map(x=>x.trim()).filter(Boolean);if(v.length!==4||new Set(v).size!==4||v.some(x=>!/[a-f0-9]{64}/.test(x)))process.exit(1)' || fail DEMO_AUTH_EMAIL_ALLOWLIST_INVALID
 
 exec 9>"$LOCK_FILE"
 flock --nonblock 9 || fail CONCURRENT_RELEASE
@@ -264,6 +265,7 @@ wait_for_application_ready coro_website http://127.0.0.1:3001/ WEBSITE
 wait_for_backend_ready coro_backend http://127.0.0.1:3002/api/auth/login
 run_backend_auth_smoke http://127.0.0.1:3002/api/auth/login
 docker exec coro_backend node -e 'const v=process.env.CLIENT_INVITATION_OUTBOX_KEY_BASE64||"";const b=Buffer.from(v,"base64");if(!/^[A-Za-z0-9+/]+={0,2}$/.test(v)||b.length!==32||b.toString("base64")!==v||!process.env.CLIENT_INVITATION_OUTBOX_KEY_ID)process.exit(1)' || fail CLIENT_INVITATION_OUTBOX_CONFIGURATION_INVALID
+docker exec coro_backend node -e 'const v=(process.env.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST||"").split(",").map(x=>x.trim()).filter(Boolean);if(v.length!==4||new Set(v).size!==4||v.some(x=>!/[a-f0-9]{64}/.test(x)))process.exit(1)' || fail DEMO_AUTH_EMAIL_ALLOWLIST_CONFIGURATION_INVALID
 client_auth_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{}' http://127.0.0.1:3002/api/client-auth/login)" || fail CLIENT_AUTH_SMOKE_FAILED
 booking_guard_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 http://127.0.0.1:3002/api/planning/my-assignments)" || fail BOOKING_SMOKE_FAILED
 rendement_guard_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 http://127.0.0.1:3002/api/rendement/financial)" || fail RENDEMENT_SMOKE_FAILED

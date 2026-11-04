@@ -74,10 +74,13 @@ test('reconciliation is read-only and verifies runtime against immutable evidenc
 });
 test('governed release injects and verifies the Client invitation outbox key without printing it', () => {
   assert.match(workflow, /CLIENT_INVITATION_OUTBOX_KEY_BASE64: \$\{\{ secrets\.CLIENT_INVITATION_OUTBOX_KEY_BASE64 \}\}/);
+  assert.match(workflow, /DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST: \$\{\{ secrets\.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST \}\}/);
   assert.match(workflow, /CLIENT_INVITATION_OUTBOX_KEY_ID: \$\{\{ vars\.CLIENT_INVITATION_OUTBOX_KEY_ID \}\}/);
   assert.match(control, /CLIENT_INVITATION_OUTBOX_KEY_INVALID/);
   assert.match(control, /CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_INVALID/);
   assert.match(control, /CLIENT_INVITATION_OUTBOX_KEY_BASE64=\$CLIENT_INVITATION_OUTBOX_KEY_BASE64/);
+  assert.match(control, /DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST=\$DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST/);
+  assert.match(control, /DEMO_AUTH_EMAIL_ALLOWLIST_INVALID/);
   assert.match(release, /CLIENT_INVITATION_OUTBOX_CONFIGURATION_INVALID/);
   assert.match(reconcile, /OUTBOX_CONFIGURATION_MISMATCH/);
   assert.doesNotMatch(control, /echo .*CLIENT_INVITATION_OUTBOX_KEY_BASE64/);
