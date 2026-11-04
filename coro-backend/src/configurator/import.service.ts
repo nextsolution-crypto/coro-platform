@@ -1,8 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import * as mammoth from 'mammoth';
+import { DemoCommunicationChannel } from '@prisma/client';
+import { DemoCommunicationPolicyService } from '../demo-environment/demo-communication-policy.service';
 
 @Injectable()
 export class ImportService {
+  constructor(
+    @Optional() private readonly demoCommunicationPolicy?: DemoCommunicationPolicyService,
+  ) {}
 
   async extractTextFromDocx(base64: string): Promise<string> {
     const cleaned = base64.includes(',') ? base64.split(',')[1] : base64;
@@ -130,7 +135,20 @@ export class ImportService {
     return result;
   }
 
-  async analyzeWithClaude(text: string): Promise<Record<string, any>> {
+  async analyzeWithClaude(text: string, organizationId: string): Promise<Record<string, any>> {
+    if (!this.demoCommunicationPolicy) {
+      if (process.env.NODE_ENV === 'production') throw new Error('DEMO_COMMUNICATION_POLICY_REQUIRED');
+    } else {
+      const decision = await this.demoCommunicationPolicy.evaluate({
+        organizationId,
+        channel: DemoCommunicationChannel.AI_PROVIDER,
+        operation: 'CONFIGURATOR_DOCUMENT_IMPORT',
+        payload: { textHashOnly: true, textLength: text.length },
+      });
+      if (decision.disposition !== 'LIVE') {
+        throw new Error('EXTERNAL_AI_DISABLED_FOR_DEMO');
+      }
+    }
     const prompt = `Tu es un expert en mesures d'urgence. Analyse ce document PMU/PSI et extrait les informations pour pré-remplir un configurateur de bâtiment.
 
 Retourne UNIQUEMENT un objet JSON valide sans aucun texte avant ou après, avec EXACTEMENT les clés suivantes si l'information est trouvée dans le document. N'inclus que les champs pour lesquels tu as trouvé une information claire. Omets les champs inconnus.
@@ -305,9 +323,9 @@ ${this.extractRelevantSections(text)}`;
     }
   }
 
-  async importDocument(base64: string): Promise<{ config: Record<string, any>; fieldsFound: number; text: string }> {
+  async importDocument(base64: string, organizationId: string): Promise<{ config: Record<string, any>; fieldsFound: number; text: string }> {
     const text = await this.extractTextFromDocx(base64);
-    const config = await this.analyzeWithClaude(text);
+    const config = await this.analyzeWithClaude(text, organizationId);
 
     // Extraction directe centrale de surveillance depuis le texte brut
     if (!config.centraleSurveillance || !config.centraleTelephone) {

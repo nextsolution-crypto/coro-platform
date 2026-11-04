@@ -1,12 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { DemoCommunicationChannel } from '@prisma/client';
+import { DemoCommunicationPolicyService } from '../demo-environment/demo-communication-policy.service';
 import {
   POPULATION_EMAIL_TIMEOUT_DEFAULT_MS,
   POPULATION_EMAIL_TIMEOUT_MAX_MS,
 } from './population-delivery.constants';
 
 export type PopulationProviderResult = {
-  provider: 'BREVO';
+  provider: 'BREVO' | 'DEMO_SIMULATED';
   providerMessageId: string | null;
 };
 
@@ -40,6 +42,40 @@ export class PopulationProviderError extends Error {
 
 @Injectable()
 export class PopulationDeliveryService {
+  constructor(
+    @Optional() private readonly demoCommunicationPolicy?: DemoCommunicationPolicyService,
+  ) {}
+
+  private async evaluateDemo(input: {
+    organizationId?: string;
+    channel: DemoCommunicationChannel;
+    operation: string;
+    recipient: string;
+    payload: unknown;
+    idempotencyKey?: string;
+  }): Promise<PopulationProviderResult | null> {
+    if (!input.organizationId) return null;
+    if (!this.demoCommunicationPolicy) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new PopulationProviderError('DEMO_COMMUNICATION_POLICY_REQUIRED', 'Politique de communication Démo indisponible', 'NON_RETRYABLE');
+      }
+      return null;
+    }
+    const decision = await this.demoCommunicationPolicy.evaluate({
+      organizationId: input.organizationId,
+      channel: input.channel,
+      operation: input.operation,
+      recipient: input.recipient,
+      payload: input.payload,
+      idempotencyKey: input.idempotencyKey,
+    });
+    if (decision.disposition === 'LIVE') return null;
+    if (decision.disposition === 'BLOCKED') {
+      throw new PopulationProviderError('DEMO_COMMUNICATION_BLOCKED', 'Communication externe bloquée pour cet environnement', 'NON_RETRYABLE');
+    }
+    return { provider: 'DEMO_SIMULATED', providerMessageId: `demo-simulated:${decision.eventId}` };
+  }
+
   private getEmailTimeoutMs(): number {
     const configured = process.env.POPULATION_EMAIL_TIMEOUT_MS?.trim();
     if (!configured) return POPULATION_EMAIL_TIMEOUT_DEFAULT_MS;
@@ -102,7 +138,19 @@ export class PopulationDeliveryService {
   async sendSms(
     destination: string,
     message: string,
+    organizationId?: string,
+    operation = 'POPULATION_SMS',
+    idempotencyKey?: string,
   ): Promise<PopulationProviderResult> {
+    const simulated = await this.evaluateDemo({
+      organizationId,
+      channel: DemoCommunicationChannel.SMS,
+      operation,
+      recipient: destination,
+      payload: { message },
+      idempotencyKey,
+    });
+    if (simulated) return simulated;
     const apiKey = this.getApiKey();
 
     let response: Response;
@@ -155,7 +203,18 @@ export class PopulationDeliveryService {
     subject: string;
     html: string;
     providerIdempotencyKey?: string;
+    organizationId?: string;
+    operation?: string;
   }): Promise<PopulationProviderResult> {
+    const simulated = await this.evaluateDemo({
+      organizationId: data.organizationId,
+      channel: DemoCommunicationChannel.EMAIL,
+      operation: data.operation ?? 'POPULATION_EMAIL',
+      recipient: data.destination,
+      payload: { subject: data.subject },
+      idempotencyKey: data.providerIdempotencyKey,
+    });
+    if (simulated) return simulated;
     const apiKey = this.getApiKey();
     const timeoutMs = this.getEmailTimeoutMs();
     const requestBody = JSON.stringify({

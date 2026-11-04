@@ -1,9 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+import { DemoCommunicationChannel } from '@prisma/client';
+import { DemoCommunicationPolicyService } from '../demo-environment/demo-communication-policy.service';
 
 export type EmailSendResult = { success: boolean; messageId?: string };
 
 @Injectable()
 export class EmailService {
+  constructor(
+    @Optional()
+    private readonly demoCommunicationPolicy?: DemoCommunicationPolicyService,
+  ) {}
+
   private clientPortalBaseUrl(): string {
     const configured = process.env.CLIENT_PORTAL_PUBLIC_URL?.trim();
     return configured && /^https?:\/\//i.test(configured)
@@ -29,6 +36,29 @@ export class EmailService {
     htmlContent: string,
   ): Promise<EmailSendResult> {
     try {
+      if (!this.demoCommunicationPolicy && process.env.NODE_ENV === 'production') {
+        return { success: false };
+      }
+      if (this.demoCommunicationPolicy) {
+        const organizationId =
+          await this.demoCommunicationPolicy.organizationIdForRecipient(to.email);
+        if (organizationId) {
+          const decision = await this.demoCommunicationPolicy.evaluate({
+            organizationId,
+            channel: DemoCommunicationChannel.EMAIL,
+            operation: 'CLIENT_PORTAL_EMAIL',
+            recipient: to.email,
+            payload: { subject, template: 'CLIENT_PORTAL_EMAIL' },
+          });
+          if (decision.disposition === 'BLOCKED') return { success: false };
+          if (decision.disposition === 'SIMULATED') {
+            return {
+              success: true,
+              messageId: `demo-simulated:${decision.eventId}`,
+            };
+          }
+        }
+      }
       const apiKey = process.env.BREVO_API_KEY || '';
       const configuredQaEndpoint =
         process.env.CLIENT_EMAIL_QA_PROVIDER_URL?.trim();

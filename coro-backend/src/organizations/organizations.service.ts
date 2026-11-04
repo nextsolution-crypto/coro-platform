@@ -8,10 +8,16 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
 import * as bcrypt from 'bcryptjs';
 import { randomInt } from 'crypto';
+import { DemoCommunicationChannel } from '@prisma/client';
+import { DemoCommunicationPolicyService } from '../demo-environment/demo-communication-policy.service';
 
 @Injectable()
 export class OrganizationsService {
-  constructor(private prisma: PrismaService, private adminAudit: AdminAuditService) {}
+  constructor(
+    private prisma: PrismaService,
+    private adminAudit: AdminAuditService,
+    private readonly demoCommunicationPolicy: DemoCommunicationPolicyService,
+  ) {}
 
   private readonly settingsFields = [
     'companyName', 'companyLogoB64', 'companyLogoFullB64', 'companyPhone',
@@ -305,6 +311,7 @@ if (
   // Les courriels sont envoyés APRÈS le commit.
   // Un problème Brevo ne doit jamais annuler les écritures en base.
   await this.sendInvitationEmail({
+    organizationId: result.organization.id,
     email: data.adminEmail,
     firstName: data.adminFirstName,
     lastName: data.adminLastName,
@@ -315,6 +322,7 @@ if (
 
   for (const member of preparedMembers) {
     await this.sendInvitationEmail({
+      organizationId: result.organization.id,
       email: member.email,
       firstName: member.firstName,
       lastName: member.lastName,
@@ -367,6 +375,7 @@ private async generateUniqueReferralCode(): Promise<string> {
   }
 
   private async sendInvitationEmail(data: {
+    organizationId: string;
     email: string;
     firstName: string;
     lastName: string;
@@ -375,6 +384,17 @@ private async generateUniqueReferralCode(): Promise<string> {
     role: string;
   }) {
     try {
+      const demoDecision = await this.demoCommunicationPolicy.evaluate({
+        organizationId: data.organizationId,
+        channel: DemoCommunicationChannel.INVITATION,
+        operation: 'ORGANIZATION_USER_INVITATION',
+        recipient: data.email,
+        payload: {
+          role: data.role,
+          template: 'ORGANIZATION_USER_INVITATION',
+        },
+      });
+      if (demoDecision.disposition !== 'LIVE') return;
       const roleLabel = data.role === 'ADMIN' ? 'Administrateur' : 'Conseiller';
       await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',

@@ -45,7 +45,10 @@ describe('MfaDeliveryService QA isolation', () => {
   const useEnvironment = (environment: NodeJS.ProcessEnv) => {
     for (const key of environmentKeys) delete process.env[key];
     Object.assign(process.env, environment);
-    return new MfaDeliveryService();
+    return new MfaDeliveryService({
+      organizationIdForRecipient: jest.fn().mockResolvedValue(null),
+      evaluate: jest.fn(),
+    } as any);
   };
 
   const qaEnvironment = (
@@ -119,6 +122,28 @@ describe('MfaDeliveryService QA isolation', () => {
       await readFile(join(captureDirectory, files[0]), 'utf8'),
     ) as MfaMessage & { capturedAt: string };
     expect(capture).toMatchObject(message);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('simule le MFA du tenant Démo sans appel fournisseur', async () => {
+    for (const key of environmentKeys) delete process.env[key];
+    process.env.NODE_ENV = 'production';
+    process.env.BREVO_API_KEY = 'production-key-not-used';
+    const policy = {
+      organizationIdForRecipient: jest.fn().mockResolvedValue('org-demo'),
+      evaluate: jest.fn().mockResolvedValue({
+        disposition: 'SIMULATED',
+        eventId: 'event-1',
+      }),
+    };
+    const service = new MfaDeliveryService(policy as any);
+    await service.send(message);
+    expect(policy.evaluate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org-demo',
+        operation: 'PLATFORM_MFA',
+      }),
+    );
     expect(global.fetch).not.toHaveBeenCalled();
   });
 

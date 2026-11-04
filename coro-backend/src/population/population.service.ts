@@ -240,12 +240,23 @@ export class PopulationService {
   }
 
   private async sendSubscriberOtp(data: {
+    programId: string;
     channel: PopulationVerificationChannel;
     destination: string;
     code: string;
     preferredLanguage: PopulationPreferredLanguage;
     purpose: 'VERIFICATION' | 'ACCESS';
   }): Promise<'SENT' | 'FAILED'> {
+    const programScope = await this.prisma.populationProgram.findUnique({
+      where: { id: data.programId },
+      select: {
+        rueFacilityProfile: {
+          select: { building: { select: { organizationId: true } } },
+        },
+      },
+    });
+    if (!programScope) return 'FAILED';
+    const organizationId = programScope.rueFacilityProfile.building.organizationId;
     const english = data.preferredLanguage === PopulationPreferredLanguage.EN;
     const isAccess = data.purpose === 'ACCESS';
 
@@ -258,7 +269,12 @@ export class PopulationService {
         const message = english
           ? `CORO Sentinelle Population: your ${isAccess ? 'access' : 'verification'} code is ${data.code}. Valid for 10 minutes.`
           : `CORO Sentinelle Population : votre code ${isAccess ? "d'accès" : 'de vérification'} est ${data.code}. Valide 10 minutes.`;
-        await this.populationDeliveryService.sendSms(data.destination, message);
+        await this.populationDeliveryService.sendSms(
+          data.destination,
+          message,
+          organizationId,
+          'POPULATION_SUBSCRIBER_OTP',
+        );
       } else {
         const subject = english
           ? `Your ${isAccess ? 'access' : 'verification'} code - Sentinelle Population`
@@ -273,6 +289,8 @@ export class PopulationService {
           destination: data.destination,
           subject,
           html: `<p>${intro} <strong>${data.code}</strong>.</p><p>${expiry}</p>`,
+          organizationId,
+          operation: 'POPULATION_SUBSCRIBER_OTP',
         });
       }
       return 'SENT';
@@ -1652,6 +1670,7 @@ export class PopulationService {
 
     if (outcome.destination) {
       await this.sendSubscriberOtp({
+        programId: program.id,
         channel: outcome.channel,
         destination: outcome.destination,
       code: verificationCode,
@@ -1838,6 +1857,7 @@ export class PopulationService {
     });
 
     const deliveryStatus = await this.sendSubscriberOtp({
+      programId: program.id,
       channel: dto.channel,
       destination:
         dto.channel === PopulationVerificationChannel.SMS
@@ -1966,6 +1986,7 @@ export class PopulationService {
     });
 
     await this.sendSubscriberOtp({
+      programId: program.id,
       channel: dto.channel,
       destination,
       code: verificationCode,
@@ -2103,6 +2124,7 @@ export class PopulationService {
             subscriberId = subscriber.id;
             verificationId = verification.id;
             await this.sendSubscriberOtp({
+              programId: program!.id,
               channel: dto.channel,
               destination:
                 dto.channel === PopulationVerificationChannel.SMS
@@ -3349,6 +3371,7 @@ export class PopulationService {
       },
       select: {
         id: true,
+        idempotencyKey: true,
         channel: true,
         status: true,
         language: true,
@@ -6342,6 +6365,7 @@ export class PopulationService {
       },
       select: {
         id: true,
+        idempotencyKey: true,
         channel: true,
         status: true,
         language: true,
@@ -6403,6 +6427,11 @@ export class PopulationService {
     alertId: string,
     deliveryId: string,
   ) {
+    const deliveryBuilding = await this.prisma.building.findUnique({
+      where: { id: buildingId },
+      select: { organizationId: true },
+    });
+    if (!deliveryBuilding) throw new NotFoundException('Bâtiment introuvable');
     const { alert } = await this.getPopulationAlertForBuilding(
       buildingId,
       alertId,
@@ -6427,6 +6456,7 @@ export class PopulationService {
       },
       select: {
         id: true,
+        idempotencyKey: true,
         channel: true,
         status: true,
         language: true,
@@ -6649,6 +6679,9 @@ export class PopulationService {
         providerResult = await this.populationDeliveryService.sendSms(
           delivery.destinationSnapshot,
           delivery.messageSnapshot,
+          deliveryBuilding.organizationId,
+          'POPULATION_ALERT',
+          delivery.idempotencyKey,
         );
       } else if (delivery.channel === PopulationAlertChannel.EMAIL) {
         const subject =
@@ -6678,6 +6711,8 @@ export class PopulationService {
           subject,
           html: `<p>${escapedMessage}</p>`,
           providerIdempotencyKey: providerIdempotencyKey!,
+          organizationId: deliveryBuilding.organizationId,
+          operation: 'POPULATION_ALERT',
         });
       } else {
         throw new PopulationProviderError(

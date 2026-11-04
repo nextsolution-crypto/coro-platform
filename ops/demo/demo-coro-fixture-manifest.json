@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "fixtureNamespace": "coro-demo-complete-v1",
+  "target": {
+    "organizationId": "916f54ec-af22-45e0-99db-a369d9630002",
+    "organizationName": "CORO Démo",
+    "referenceEmail": "demo@getcoro.io"
+  },
+  "clients": [
+    {
+      "key": "client-nordik",
+      "id": "d3000001-0000-4000-8000-000000000001",
+      "name": "Immobilier Nordik Démo",
+      "sector": "Gestion immobilière fictive",
+      "city": "Montréal",
+      "province": "QC"
+    },
+    {
+      "key": "client-atelier",
+      "id": "d3000001-0000-4000-8000-000000000002",
+      "name": "Ateliers du Saint-Laurent Démo",
+      "sector": "Industrie fictive",
+      "city": "Longueuil",
+      "province": "QC"
+    }
+  ],
+  "buildings": [
+    {
+      "key": "building-nordik-bureaux",
+      "id": "d3000002-0000-4000-8000-000000000001",
+      "clientKey": "client-nordik",
+      "name": "Édifice Boréal — Démo",
+      "address": "100, avenue Démonstration",
+      "city": "Montréal",
+      "province": "QC",
+      "postalCode": "H0H 0H0",
+      "buildingType": "Bureaux fictifs",
+      "latitude": 45.5019,
+      "longitude": -73.5674
+    },
+    {
+      "key": "building-nordik-residentiel",
+      "id": "d3000002-0000-4000-8000-000000000002",
+      "clientKey": "client-nordik",
+      "name": "Résidences des Érables — Démo",
+      "address": "220, rue des Maquettes",
+      "city": "Laval",
+      "province": "QC",
+      "postalCode": "H0H 0H0",
+      "buildingType": "Résidentiel fictif",
+      "latitude": 45.6066,
+      "longitude": -73.7124
+    },
+    {
+      "key": "building-atelier-industriel",
+      "id": "d3000002-0000-4000-8000-000000000003",
+      "clientKey": "client-atelier",
+      "name": "Complexe Horizon — Démo",
+      "address": "50, boulevard Prototype",
+      "city": "Longueuil",
+      "province": "QC",
+      "postalCode": "H0H 0H0",
+      "buildingType": "Industriel fictif",
+      "latitude": 45.5312,
+      "longitude": -73.5181
+    }
+  ],
+  "projects": [
+    { "key": "project-boreal-pmu", "id": "d3000003-0000-4000-8000-000000000001", "buildingKey": "building-nordik-bureaux", "name": "PMU — Édifice Boréal — Démo", "documentType": "PMU", "status": "IN_PROGRESS", "progress": 45 },
+    { "key": "project-boreal-psi", "id": "d3000003-0000-4000-8000-000000000002", "buildingKey": "building-nordik-bureaux", "name": "PSI — Édifice Boréal — Démo", "documentType": "PSI", "status": "REVIEW", "progress": 75 },
+    { "key": "project-boreal-pca", "id": "d3000003-0000-4000-8000-000000000003", "buildingKey": "building-nordik-bureaux", "name": "PCA — Édifice Boréal — Démo", "documentType": "PCA", "status": "VALIDATED", "progress": 100 },
+    { "key": "project-erables-pmu", "id": "d3000003-0000-4000-8000-000000000004", "buildingKey": "building-nordik-residentiel", "name": "PMU — Résidences des Érables — Démo", "documentType": "PMU", "status": "DRAFT", "progress": 15 },
+    { "key": "project-erables-psi", "id": "d3000003-0000-4000-8000-000000000005", "buildingKey": "building-nordik-residentiel", "name": "PSI — Résidences des Érables — Démo", "documentType": "PSI", "status": "IN_PROGRESS", "progress": 55 },
+    { "key": "project-erables-pca", "id": "d3000003-0000-4000-8000-000000000006", "buildingKey": "building-nordik-residentiel", "name": "PCA — Résidences des Érables — Démo", "documentType": "PCA", "status": "ARCHIVED", "progress": 100 },
+    { "key": "project-horizon-pmu", "id": "d3000003-0000-4000-8000-000000000007", "buildingKey": "building-atelier-industriel", "name": "PMU — Complexe Horizon — Démo", "documentType": "PMU", "status": "EXPORTED", "progress": 100 },
+    { "key": "project-horizon-psi", "id": "d3000003-0000-4000-8000-000000000008", "buildingKey": "building-atelier-industriel", "name": "PSI — Complexe Horizon — Démo", "documentType": "PSI", "status": "IN_PROGRESS", "progress": 60 },
+    { "key": "project-horizon-pca", "id": "d3000003-0000-4000-8000-000000000009", "buildingKey": "building-atelier-industriel", "name": "PCA — Complexe Horizon — Démo", "documentType": "PCA", "status": "REVIEW", "progress": 80 },
+    { "key": "project-horizon-exercice", "id": "d3000003-0000-4000-8000-000000000010", "buildingKey": "building-atelier-industriel", "name": "PMU — Exercice annuel Horizon — Démo", "documentType": "PMU", "status": "DRAFT", "progress": 5 }
+  ]
+}

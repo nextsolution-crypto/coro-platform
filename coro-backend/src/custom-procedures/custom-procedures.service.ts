@@ -1,6 +1,8 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdviserActor, mutableProjectAccessWhere, projectAccessWhere } from '../auth/project-access';
+import { DemoCommunicationChannel } from '@prisma/client';
+import { DemoCommunicationPolicyService } from '../demo-environment/demo-communication-policy.service';
 
 // ── Rôles CORO connus ───────────────────────────────────────
 const KNOWN_ROLES = [
@@ -19,7 +21,24 @@ const KNOWN_ROLES = [
 
 @Injectable()
 export class CustomProceduresService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Optional() private readonly demoCommunicationPolicy?: DemoCommunicationPolicyService,
+  ) {}
+
+  private async requireExternalAi(organizationId: string, operation: string, payload: unknown) {
+    if (!this.demoCommunicationPolicy) {
+      if (process.env.NODE_ENV === 'production') throw new Error('DEMO_COMMUNICATION_POLICY_REQUIRED');
+      return;
+    }
+    const decision = await this.demoCommunicationPolicy.evaluate({
+      organizationId,
+      channel: DemoCommunicationChannel.AI_PROVIDER,
+      operation,
+      payload,
+    });
+    if (decision.disposition !== 'LIVE') throw new Error('EXTERNAL_AI_DISABLED_FOR_DEMO');
+  }
 
   private async assertReadableProject(projectId: string, actor: AdviserActor) {
     const project = await this.prisma.project.findFirst({
@@ -86,6 +105,9 @@ export class CustomProceduresService {
     const userId = actor.userId;
     if (typeof text !== 'string' || text.trim().length < 50 || text.length > 8000)
       throw new BadRequestException('Texte de procédure invalide.');
+    await this.requireExternalAi(organizationId, 'CUSTOM_PROCEDURE_GENERATION', {
+      textLength: text.length,
+    });
     const Anthropic = require('@anthropic-ai/sdk').default;
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -243,6 +265,10 @@ RÉPONDS UNIQUEMENT avec ce JSON, sans texte avant ou après :
       extractedText = result.value;
     } else if (mimeType === 'application/pdf' || fileName.endsWith('.pdf')) {
       // Extraction PDF via Claude natif
+      await this.requireExternalAi(actor.organizationId, 'CUSTOM_PROCEDURE_PDF_EXTRACTION', {
+        fileName,
+        encodedLength: fileBase64.length,
+      });
       const Anthropic = require('@anthropic-ai/sdk').default;
       const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
       const pdfResponse = await client.messages.create({
