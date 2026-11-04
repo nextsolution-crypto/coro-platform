@@ -82,6 +82,85 @@ model Organization {
   platformPermissionScopes         PlatformPermissionGrant[]         @relation("PlatformPermissionTargetOrganization")
   userInvitationEvents             OrganizationUserInvitationEvent[]
   settingsConflicts                OrganizationSettingsConflict[]
+  demoEnvironment                  DemoEnvironment?
+  demoFixtures                     DemoFixtureRecord[]
+  demoCommunicationEvents          DemoCommunicationEvent[]
+}
+
+enum DemoEnvironmentStatus {
+  ACTIVE
+  PAUSED
+}
+
+enum DemoCommunicationMode {
+  SIMULATE
+  BLOCK
+}
+
+enum DemoFixtureState {
+  ACTIVE
+  SUPERSEDED
+  RETIRED
+}
+
+enum DemoCommunicationChannel {
+  EMAIL
+  SMS
+  PUSH
+  WEBHOOK
+  INVITATION
+  PHYSICAL_INTEGRATION
+  AI_PROVIDER
+}
+
+model DemoEnvironment {
+  organizationId            String                @id
+  organization              Organization          @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  fixtureNamespace          String                @unique
+  referenceEmailHash        String                @db.Char(64)
+  status                    DemoEnvironmentStatus @default(ACTIVE)
+  communicationMode         DemoCommunicationMode @default(SIMULATE)
+  externalProvidersDisabled Boolean               @default(true)
+  lockVersion               Int                   @default(0)
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+
+  @@index([status, communicationMode])
+}
+
+model DemoFixtureRecord {
+  id               String           @id @default(uuid())
+  organizationId   String
+  organization     Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  fixtureNamespace String
+  fixtureKey       String
+  entityType       String
+  entityId         String
+  state            DemoFixtureState @default(ACTIVE)
+  baseline         Json?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@unique([organizationId, fixtureNamespace, fixtureKey])
+  @@unique([organizationId, entityType, entityId])
+  @@index([organizationId, fixtureNamespace, state])
+}
+
+model DemoCommunicationEvent {
+  id             String                   @id @default(uuid())
+  organizationId String
+  organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  channel        DemoCommunicationChannel
+  operation      String
+  recipientHash  String?                  @db.Char(64)
+  payloadHash    String                   @db.Char(64)
+  idempotencyKey String?
+  simulated      Boolean                  @default(true)
+  blocked        Boolean                  @default(false)
+  createdAt      DateTime                 @default(now())
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, channel, createdAt])
 }
 
 model User {

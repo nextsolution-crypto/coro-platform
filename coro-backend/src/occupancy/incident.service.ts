@@ -16,6 +16,8 @@ import {
   IncidentHistoryStatusFilter,
 } from './incident-history.dto';
 import { AddIncidentLogDto, ContainIncidentDto, ResolveIncidentDto, UpdateIncidentRexDto } from './incident-detail.dto';
+import { DemoCommunicationPolicyService } from '../demo-environment/demo-communication-policy.service';
+import { DemoCommunicationChannel } from '@prisma/client';
 
 type IncidentAuditContext = {
   actorType: CoroActorType;
@@ -221,7 +223,11 @@ function buildInterventionSheet(building: any, configData: any, contactsModule2:
 
 @Injectable()
 export class IncidentService {
-  constructor(private prisma: PrismaService, @Optional() private readonly dispatcher?: IncidentNotificationDispatcherService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Optional() private readonly dispatcher?: IncidentNotificationDispatcherService,
+    @Optional() private readonly demoCommunicationPolicy?: DemoCommunicationPolicyService,
+  ) {}
 
   async requireIncidentAuthority(input: {
     actorType: 'USER' | 'CLIENT_USER';
@@ -405,9 +411,21 @@ export class IncidentService {
   }
 
   // ── SMS via Brevo ────────────────────────────────────────────────────────
-  private async sendSms(to: string, content: string): Promise<void> {
+  private async sendSms(to: string, content: string, organizationId: string): Promise<void> {
     const phone = normalizePhone(to);
     if (!phone) return;
+    if (!this.demoCommunicationPolicy) {
+      if (process.env.NODE_ENV === 'production') throw new Error('DEMO_COMMUNICATION_POLICY_REQUIRED');
+    } else {
+      const decision = await this.demoCommunicationPolicy.evaluate({
+        organizationId,
+        channel: DemoCommunicationChannel.SMS,
+        operation: 'INCIDENT_NOTIFICATION',
+        recipient: phone,
+        payload: { content },
+      });
+      if (decision.disposition !== 'LIVE') return;
+    }
     try {
       await fetch('https://api.brevo.com/v3/transactionalSMS/send', {
         method: 'POST',
@@ -423,7 +441,19 @@ export class IncidentService {
   }
 
   // ── Courriel générique ────────────────────────────────────────────────────
-  private async sendEmail(data: { to: string; toName: string; subject: string; html: string }) {
+  private async sendEmail(data: { to: string; toName: string; subject: string; html: string }, organizationId: string) {
+    if (!this.demoCommunicationPolicy) {
+      if (process.env.NODE_ENV === 'production') throw new Error('DEMO_COMMUNICATION_POLICY_REQUIRED');
+    } else {
+      const decision = await this.demoCommunicationPolicy.evaluate({
+        organizationId,
+        channel: DemoCommunicationChannel.EMAIL,
+        operation: 'INCIDENT_NOTIFICATION',
+        recipient: data.to,
+        payload: { subject: data.subject },
+      });
+      if (decision.disposition !== 'LIVE') return;
+    }
     try {
       await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
@@ -675,11 +705,11 @@ export class IncidentService {
     for (const contact of contacts) {
       if (contact.email && !sentEmails.has(contact.email)) {
         sentEmails.add(contact.email);
-        await this.sendEmail({ to: contact.email, toName: contact.name, subject: `🚨 ALERTE PANIQUE — ${building.name}`, html: htmlEmail });
+        await this.sendEmail({ to: contact.email, toName: contact.name, subject: `🚨 ALERTE PANIQUE — ${building.name}`, html: htmlEmail }, organizationId);
         notifiedCount++;
       }
       if (contact.phone) {
-        await this.sendSms(contact.phone, smsText);
+        await this.sendSms(contact.phone, smsText, organizationId);
       }
     }
 
@@ -1313,7 +1343,7 @@ export class IncidentService {
       </div>`;
 
     for (const email of validEmails) {
-      await this.sendEmail({ to: email, toName: '', subject: `🚨 Fiche d'intervention — ${label} · ${building?.name || ''}`, html });
+      await this.sendEmail({ to: email, toName: '', subject: `🚨 Fiche d'intervention — ${label} · ${building?.name || ''}`, html }, organizationId);
     }
 
     await this.prisma.incidentLog.create({

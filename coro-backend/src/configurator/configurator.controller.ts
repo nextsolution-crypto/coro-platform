@@ -49,7 +49,7 @@ export class ConfiguratorController {
   }
 
   @Post('import-word')
-  importWord(@Body() dto: { base64: string }) {
-    return this.importService.importDocument(dto.base64);
+  importWord(@Body() dto: { base64: string }, @Request() req: any) {
+    return this.importService.importDocument(dto.base64, req.user.organizationId);
   }
 }

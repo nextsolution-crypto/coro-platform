@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { DemoEnvironmentModule } from './demo-environment/demo-environment.module';
 import { StorageModule } from './storage/storage.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -80,6 +81,7 @@ import { PublicKnowledgeModule } from './public-knowledge/public-knowledge.modul
 
 @Module({
   imports: [
+    DemoEnvironmentModule,
     PrismaModule,
     AdminAuditModule,
     PlatformAuthorizationModule,

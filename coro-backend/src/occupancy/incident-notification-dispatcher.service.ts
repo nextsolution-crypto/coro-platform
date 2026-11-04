@@ -71,8 +71,8 @@ export class IncidentNotificationDispatcherService {
       const result = fake
         ? { providerMessageId: `fake-${createHash('sha256').update(current.idempotencyKey).digest('hex').slice(0, 20)}` }
         : current.channel === 'EMAIL'
-          ? await this.provider.sendEmail({ destination: envelope.destination, subject: envelope.subject || '', html: envelope.html || '', providerIdempotencyKey: current.idempotencyKey })
-          : await this.provider.sendSms(envelope.destination, envelope.message || '');
+          ? await this.provider.sendEmail({ destination: envelope.destination, subject: envelope.subject || '', html: envelope.html || '', providerIdempotencyKey: current.idempotencyKey, organizationId: current.organizationId, operation: current.purpose })
+          : await this.provider.sendSms(envelope.destination, envelope.message || '', current.organizationId, current.purpose, current.idempotencyKey);
       await this.prisma.incidentNotificationDelivery.update({ where: { id }, data: { status: 'SENT', providerMessageId: result.providerMessageId, providerAcceptedAt: new Date(), sentAt: new Date(), lastErrorCode: null, lastErrorAt: null } });
       return { claimed: true, accepted: true, delivered: false };
     } catch (error) {

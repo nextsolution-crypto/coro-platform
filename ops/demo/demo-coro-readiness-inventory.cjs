@@ -3,7 +3,8 @@
 const crypto = require('node:crypto');
 
 const TARGET_EMAIL = 'demo@getcoro.io';
-const TARGET_ORGANIZATION_NAME = 'Demo Coro';
+const TARGET_ORGANIZATION_NAME = 'CORO Démo';
+const TARGET_ORGANIZATION_ID = '916f54ec-af22-45e0-99db-a369d9630002';
 const EXPECTED_PROJECT_NAMES = [
   'PMU — Tour Prémont 2026',
   'PCA — Tour Prémont 2026',
@@ -131,6 +132,7 @@ async function runReadOnly(prisma) {
         identities.length === 1 &&
         organizationIds.length === 1 &&
         identities[0].organizationNameMatchesTarget === true &&
+        organizationIds[0] === TARGET_ORGANIZATION_ID &&
         identities[0].organizationActive === true &&
         identities[0].organizationInternal === false;
 
@@ -170,6 +172,7 @@ async function main() {
 module.exports = {
   TARGET_EMAIL,
   TARGET_ORGANIZATION_NAME,
+  TARGET_ORGANIZATION_ID,
   EXPECTED_PROJECT_NAMES,
   fingerprint,
   normalizeName,

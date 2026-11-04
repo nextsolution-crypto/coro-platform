@@ -47,6 +47,7 @@ describe('Population access recovery', () => {
     rueFacilityProfile: {
       assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
       populationEnabled: true,
+      building: { organizationId: 'organization-1' },
     },
   };
   const subscriber = {
@@ -163,6 +164,8 @@ describe('Population access recovery', () => {
     expect(delivery.sendSms).toHaveBeenCalledWith(
       '+14505551234',
       expect.any(String),
+      'organization-1',
+      'POPULATION_SUBSCRIBER_OTP',
     );
     expect(result).not.toHaveProperty('subscriberId');
     expect(result).not.toHaveProperty('verificationId');
@@ -182,6 +185,8 @@ describe('Population access recovery', () => {
     expect(delivery.sendSms).toHaveBeenCalledWith(
       '+14505551234',
       expect.any(String),
+      'organization-1',
+      'POPULATION_SUBSCRIBER_OTP',
     );
   });
 

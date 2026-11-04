@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { createHash, randomUUID } from 'crypto';
 import { mkdir, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { isAbsolute, relative, resolve } from 'path';
 import { PLATFORM_MFA_EMAIL_SENDER } from './platform-mfa-email';
+import { DemoCommunicationChannel } from '@prisma/client';
+import { DemoCommunicationPolicyService } from '../demo-environment/demo-communication-policy.service';
 
 export interface MfaMessage {
   to: string;
@@ -19,7 +21,10 @@ export class MfaDeliveryService {
   private readonly captureDirectory?: string;
   private readonly allowedSuffixes: string[];
 
-  constructor() {
+  constructor(
+    @Optional()
+    private readonly demoCommunicationPolicy?: DemoCommunicationPolicyService,
+  ) {
     const environment = this.environment;
     this.qaCapture = environment.MFA_QA_CAPTURE_ENABLED === 'true';
     const qaValuesPresent = [
@@ -81,6 +86,32 @@ export class MfaDeliveryService {
 
   async send(message: MfaMessage): Promise<void> {
     if (this.qaCapture) return this.capture(message);
+    if (!this.demoCommunicationPolicy) {
+      if (this.environment.NODE_ENV === 'production') {
+        throw new Error('DEMO_COMMUNICATION_POLICY_REQUIRED');
+      }
+      return this.sendProvider(message);
+    }
+    const organizationId = await this.demoCommunicationPolicy.organizationIdForRecipient(
+      message.to,
+    );
+    if (organizationId) {
+      const decision = await this.demoCommunicationPolicy.evaluate({
+        organizationId,
+        channel: DemoCommunicationChannel.EMAIL,
+        operation: 'PLATFORM_MFA',
+        recipient: message.to,
+        payload: {
+          subject: message.subject,
+          template: 'PLATFORM_MFA',
+        },
+      });
+      if (decision.disposition !== 'LIVE') return;
+    }
+    await this.sendProvider(message);
+  }
+
+  private async sendProvider(message: MfaMessage): Promise<void> {
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {

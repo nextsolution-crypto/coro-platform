@@ -1,8 +1,17 @@
 import { timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
 import { readdir, readFile, rm, stat } from "node:fs/promises";
-import { resolve, join } from "node:path";
-import { assertUnderQaRoot } from "./policy.mjs";
+import { tmpdir } from "node:os";
+import { resolve, join, relative, isAbsolute } from "node:path";
+
+export function assertMfaCaptureDirectory(value) {
+  const directory = resolve(value);
+  const rel = relative(resolve(tmpdir()), directory);
+  if (rel.startsWith("..") || isAbsolute(rel)) {
+    throw new Error("MFA capture directory must remain inside the operating-system temporary directory.");
+  }
+  return directory;
+}
 
 function secureEqual(left, right) {
   const a = Buffer.from(String(left));
@@ -15,7 +24,7 @@ function extractCode(message) {
 }
 
 export async function startMfaCaptureAdapter({ captureDirectory, channelToken, port = 34643, maxAgeMs = 600_000 }) {
-  const directory = assertUnderQaRoot(resolve(captureDirectory));
+  const directory = assertMfaCaptureDirectory(captureDirectory);
   if (!channelToken || channelToken.length < 24) throw new Error("Protected MFA channel token is required.");
   const consumed = new Set();
   const server = createServer(async (request, response) => {

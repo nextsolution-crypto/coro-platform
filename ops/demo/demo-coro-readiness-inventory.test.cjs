@@ -5,11 +5,12 @@ const fs = require('node:fs');
 const test = require('node:test');
 const {
   TARGET_EMAIL,
+  TARGET_ORGANIZATION_ID,
   runReadOnly,
   summarizeIdentity,
 } = require('./demo-coro-readiness-inventory.cjs');
 
-const organization = { name: 'Demo Coro', isActive: true, isInternal: false };
+const organization = { name: 'CORO Démo', isActive: true, isInternal: false };
 
 function createPrisma({ user = null, clientUser = null } = {}) {
   let transactionStatement = '';
@@ -45,13 +46,13 @@ function createPrisma({ user = null, clientUser = null } = {}) {
       findMany: async () => [
         {
           name: 'PMU — Tour Prémont 2026',
-          organizationId: 'org-demo',
-          client: { name: 'Groupe Immobilier Prémont', organizationId: 'org-demo' },
+          organizationId: TARGET_ORGANIZATION_ID,
+          client: { name: 'Groupe Immobilier Prémont', organizationId: TARGET_ORGANIZATION_ID },
         },
         {
           name: 'PCA — Tour Prémont 2026',
-          organizationId: 'org-demo',
-          client: { name: 'Groupe Immobilier Prémont', organizationId: 'org-demo' },
+          organizationId: TARGET_ORGANIZATION_ID,
+          client: { name: 'Groupe Immobilier Prémont', organizationId: TARGET_ORGANIZATION_ID },
         },
       ],
     },
@@ -64,7 +65,10 @@ function createPrisma({ user = null, clientUser = null } = {}) {
 
 test('verifies one active non-internal Demo Coro identity in a read-only transaction', async () => {
   const h = createPrisma({
-    user: { id: 'user-1', role: 'ADMIN', isActive: true, organizationId: 'org-demo', organization },
+    user: {
+      id: 'user-1', role: 'ADMIN', isActive: true,
+      organizationId: TARGET_ORGANIZATION_ID, organization,
+    },
   });
   const report = await runReadOnly(h.prisma);
   assert.equal(h.transactionStatement(), 'SET TRANSACTION READ ONLY');
@@ -72,8 +76,8 @@ test('verifies one active non-internal Demo Coro identity in a read-only transac
   assert.deepEqual(report.identityKinds, ['INTERNAL_USER']);
   assert.equal(report.tenantData.buildings, 6);
   assert.deepEqual(report.canonicalOrganization, {
-    id: 'org-demo',
-    name: 'Demo Coro',
+    id: TARGET_ORGANIZATION_ID,
+    name: 'CORO Démo',
   });
   assert.equal(
     report.projectOwnership.every((project) => project.belongsToTargetOrganization),
@@ -86,10 +90,10 @@ test('verifies one active non-internal Demo Coro identity in a read-only transac
 
 test('refuses ambiguous homonymous identities even when both point at Demo Coro', async () => {
   const h = createPrisma({
-    user: { id: 'user-1', role: 'ADMIN', isActive: true, organizationId: 'org-demo', organization },
+    user: { id: 'user-1', role: 'ADMIN', isActive: true, organizationId: TARGET_ORGANIZATION_ID, organization },
     clientUser: {
       id: 'client-user-1', role: 'CLIENT_CORPORATE', isActive: true,
-      organizationId: 'org-demo', clientId: 'client-1', buildingIds: [],
+      organizationId: TARGET_ORGANIZATION_ID, clientId: 'client-1', buildingIds: [],
       incidentPermissions: [], populationPermissions: [], organization,
       client: { isActive: true },
     },

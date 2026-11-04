@@ -13,7 +13,7 @@ import {
   BookingStatus,
   effectiveBookingDate,
 } from './booking-status';
-import { Prisma } from '@prisma/client';
+import { DemoCommunicationChannel, Prisma } from '@prisma/client';
 import { formatBuildingDate, resolveBookingInstant } from './booking-time';
 import {
   SchedulingService,
@@ -23,6 +23,7 @@ import { createCommitmentVersion } from './booking-commitment';
 import { BookingEligibilityService } from './booking-eligibility.service';
 import { toInternalBookingProjection } from './internal-booking-projection';
 import { AdviserActor, projectAccessWhere } from '../auth/project-access';
+import { DemoCommunicationPolicyService } from '../demo-environment/demo-communication-policy.service';
 
 type BookingCancellationActor = {
   type: 'USER' | 'CLIENT';
@@ -37,6 +38,8 @@ export class BookingsService {
     private prisma: PrismaService,
     private readonly scheduling: SchedulingService,
     @Optional() private readonly eligibility?: BookingEligibilityService,
+    @Optional()
+    private readonly demoCommunicationPolicy?: DemoCommunicationPolicyService,
   ) {}
 
   async createBooking(data: {
@@ -1250,6 +1253,26 @@ export class BookingsService {
     ics?: { content: string; filename: string };
   }) {
     try {
+      if (!this.demoCommunicationPolicy && process.env.NODE_ENV === 'production') {
+        return;
+      }
+      if (this.demoCommunicationPolicy) {
+        const organizationId =
+          await this.demoCommunicationPolicy.organizationIdForRecipient(data.to);
+        if (organizationId) {
+          const decision = await this.demoCommunicationPolicy.evaluate({
+            organizationId,
+            channel: DemoCommunicationChannel.EMAIL,
+            operation: 'BOOKING_NOTIFICATION',
+            recipient: data.to,
+            payload: {
+              subject: data.subject,
+              hasCalendarAttachment: Boolean(data.ics),
+            },
+          });
+          if (decision.disposition !== 'LIVE') return;
+        }
+      }
       const configuredQaEndpoint =
         process.env.CLIENT_EMAIL_QA_PROVIDER_URL?.trim();
       const qaProviderUrl =

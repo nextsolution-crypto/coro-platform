@@ -1,9 +1,34 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { DemoCommunicationChannel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { DemoCommunicationPolicyService } from '../demo-environment/demo-communication-policy.service';
 
 @Injectable()
 export class OccupancyEmployeesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Optional() private readonly demoCommunicationPolicy?: DemoCommunicationPolicyService,
+  ) {}
+
+  private async allowExternalEmail(input: {
+    organizationId: string;
+    operation: string;
+    recipient: string;
+    payload: unknown;
+  }): Promise<boolean> {
+    if (!this.demoCommunicationPolicy) {
+      if (process.env.NODE_ENV === 'production') throw new Error('DEMO_COMMUNICATION_POLICY_REQUIRED');
+      return true;
+    }
+    const decision = await this.demoCommunicationPolicy.evaluate({
+      organizationId: input.organizationId,
+      channel: DemoCommunicationChannel.EMAIL,
+      operation: input.operation,
+      recipient: input.recipient,
+      payload: input.payload,
+    });
+    return decision.disposition === 'LIVE';
+  }
 
   // ── Employés ─────────────────────────────────────────────────────────────
 
@@ -99,6 +124,12 @@ export class OccupancyEmployeesService {
   }
 
   private async sendPinEmail(employee: any, building: any) {
+    if (!(await this.allowExternalEmail({
+      organizationId: employee.organizationId,
+      operation: 'SENTINELLE_EMPLOYEE_PIN',
+      recipient: employee.email,
+      payload: { employeeId: employee.id, buildingId: building.id },
+    }))) return;
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
@@ -355,6 +386,13 @@ export class OccupancyEmployeesService {
 
     // Générer l'image QR via API publique
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrUrl)}`;
+
+    if (!(await this.allowExternalEmail({
+      organizationId: invitation.organizationId,
+      operation: 'SENTINELLE_VISITOR_INVITATION',
+      recipient: invitation.email,
+      payload: { invitationId: invitation.id, buildingId: building.id },
+    }))) return;
 
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',

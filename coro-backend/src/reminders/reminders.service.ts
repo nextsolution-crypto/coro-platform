@@ -1,8 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { OccupancyService } from '../occupancy/occupancy.service';
+import { DemoCommunicationPolicyService } from '../demo-environment/demo-communication-policy.service';
+import { DemoCommunicationChannel } from '@prisma/client';
 
 @Injectable()
 export class RemindersService {
@@ -11,7 +13,23 @@ export class RemindersService {
   constructor(
     private prisma: PrismaService,
     private occupancyService: OccupancyService,
+    @Optional() private readonly demoCommunicationPolicy?: DemoCommunicationPolicyService,
   ) {}
+
+  private async allowExternalEmail(organizationId: string, operation: string, recipient: string, payload: unknown) {
+    if (!this.demoCommunicationPolicy) {
+      if (process.env.NODE_ENV === 'production') throw new Error('DEMO_COMMUNICATION_POLICY_REQUIRED');
+      return true;
+    }
+    const decision = await this.demoCommunicationPolicy.evaluate({
+      organizationId,
+      channel: DemoCommunicationChannel.EMAIL,
+      operation,
+      recipient,
+      payload,
+    });
+    return decision.disposition === 'LIVE';
+  }
 
   @Cron(CronExpression.EVERY_DAY_AT_9AM)
   async checkPendingSignatures() {
@@ -62,6 +80,7 @@ export class RemindersService {
       try {
         // Notifier le conseiller
         await this.sendReminderEmail({
+          organizationId: p.organizationId,
           to: conseiller.email,
           toName: `${conseiller.firstName} ${conseiller.lastName}`,
           projectName: p.name,
@@ -79,6 +98,7 @@ export class RemindersService {
           const admin = p.organization?.users?.find((u: any) => u.role === UserRole.ADMIN);
           if (admin && admin.email !== conseiller.email) {
             await this.sendReminderEmail({
+              organizationId: p.organizationId,
               to: admin.email,
               toName: `${admin.firstName} ${admin.lastName}`,
               projectName: p.name,
@@ -292,6 +312,7 @@ export class RemindersService {
         // Envoyer un courriel aux ClientUsers du bâtiment
         for (const cu of clientUsers) {
           await this.sendGapAlertEmail({
+            organizationId: building.organizationId,
             to:           cu.email,
             toName:       `${cu.firstName} ${cu.lastName}`,
             buildingName: building.name,
@@ -307,11 +328,18 @@ export class RemindersService {
   }
 
   private async sendGapAlertEmail(data: {
+    organizationId: string;
     to: string;
     toName: string;
     buildingName: string;
     gapLabels: string;
   }) {
+    if (!(await this.allowExternalEmail(
+      data.organizationId,
+      'RESILIENCE_GAP_ALERT',
+      data.to,
+      { buildingName: data.buildingName, gapLabels: data.gapLabels },
+    ))) return;
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
@@ -352,6 +380,7 @@ export class RemindersService {
   }
 
   private async sendReminderEmail(data: {
+    organizationId: string;
     to: string;
     toName: string;
     projectName: string;
@@ -376,6 +405,13 @@ export class RemindersService {
            Note administrateur : Ce document n'a toujours pas été signé après ${data.daysSince} jours. Un suivi avec le conseiller responsable est recommandé.
          </p>`
       : '';
+
+    if (!(await this.allowExternalEmail(
+      data.organizationId,
+      'SIGNATURE_REMINDER',
+      data.to,
+      { projectName: data.projectName, daysSince: data.daysSince },
+    ))) return;
 
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',

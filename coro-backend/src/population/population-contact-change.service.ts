@@ -362,6 +362,7 @@ export class PopulationContactChangeService {
       destination,
       code,
       context.subscriber.preferredLanguage,
+      context.program.rueFacilityProfile.building.organizationId,
     );
     return this.finishDelivery(challenge.id, sent, input.challengeToken);
   }
@@ -506,6 +507,7 @@ export class PopulationContactChangeService {
       destination,
       code,
       context.subscriber.preferredLanguage,
+      context.program.rueFacilityProfile.building.organizationId,
     );
     return this.finishDelivery(created.id, sent, token);
   }
@@ -527,6 +529,9 @@ export class PopulationContactChangeService {
         consentTextEN: true,
         privacyTextFR: true,
         privacyTextEN: true,
+        rueFacilityProfile: {
+          select: { building: { select: { organizationId: true } } },
+        },
       },
     });
     if (!program) throw this.error('CONTACT_CHANGE_NOT_AUTHORIZED', 403);
@@ -567,6 +572,7 @@ export class PopulationContactChangeService {
     destination: string,
     code: string,
     language: PopulationPreferredLanguage,
+    organizationId: string,
   ) {
     try {
       const english = language === PopulationPreferredLanguage.EN;
@@ -577,6 +583,8 @@ export class PopulationContactChangeService {
           english
             ? `CORO Sentinelle Population: your phone verification code is ${code}. Valid for 10 minutes.`
             : `CORO Sentinelle Population : votre code de vérification du téléphone est ${code}. Valide 10 minutes.`,
+          organizationId,
+          'POPULATION_CONTACT_CHANGE_OTP',
         );
       } else {
         await this.delivery.sendEmail({
@@ -587,6 +595,8 @@ export class PopulationContactChangeService {
           html: english
             ? `<p>Your Sentinelle Population email verification code is <strong>${code}</strong>. It expires in 10 minutes.</p>`
             : `<p>Votre code de vérification du courriel Sentinelle Population est <strong>${code}</strong>. Il expire dans 10 minutes.</p>`,
+          organizationId,
+          operation: 'POPULATION_CONTACT_CHANGE_OTP',
         });
       }
       return true;

@@ -1813,6 +1813,7 @@ describe('PopulationService', () => {
       rueFacilityProfile: {
         assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
         populationEnabled: true,
+        building: { organizationId: 'organization-1' },
       },
     };
 
@@ -1958,6 +1959,8 @@ describe('PopulationService', () => {
       expect(populationDeliveryService.sendSms).toHaveBeenCalledWith(
         '+14505551234',
         expect.any(String),
+        'organization-1',
+        'POPULATION_SUBSCRIBER_OTP',
       );
     });
 
@@ -2161,6 +2164,7 @@ describe('PopulationService', () => {
       rueFacilityProfile: {
         assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
         populationEnabled: true,
+        building: { organizationId: 'organization-1' },
       },
     };
 
@@ -2218,6 +2222,8 @@ describe('PopulationService', () => {
       expect(populationDeliveryService.sendSms).toHaveBeenCalledWith(
         '+14505551234',
         expect.any(String),
+        'organization-1',
+        'POPULATION_SUBSCRIBER_OTP',
       );
     });
 
@@ -2717,6 +2723,7 @@ describe('PopulationService', () => {
         rueFacilityProfile: {
           assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
           populationEnabled: true,
+          building: { organizationId: 'organization-1' },
         },
       });
       prisma.populationSubscriber.findFirst.mockResolvedValue({
@@ -7330,6 +7337,9 @@ describe('PopulationService', () => {
     };
 
     beforeEach(() => {
+      prisma.building.findUnique.mockResolvedValue({
+        organizationId: 'organization-1',
+      });
       prisma.rueFacilityProfile.findUnique.mockResolvedValue(activeProfile);
 
       prisma.populationAlert.findFirst.mockResolvedValue(approvedAlert);
@@ -7361,6 +7371,9 @@ describe('PopulationService', () => {
       expect(populationDeliveryService.sendSms).toHaveBeenCalledWith(
         '+15145550101',
         'Mettez-vous immédiatement à l’abri.',
+        'organization-1',
+        'POPULATION_ALERT',
+        undefined,
       );
 
       expect(prisma.populationAlertDelivery.updateMany).toHaveBeenCalledWith({
@@ -7410,6 +7423,8 @@ describe('PopulationService', () => {
         subject: 'Ammonia alert',
         html: '<p>Shelter in place immediately.</p>',
         providerIdempotencyKey: '11111111-1111-4111-8111-111111111111',
+        organizationId: 'organization-1',
+        operation: 'POPULATION_ALERT',
       });
 
       expect(populationDeliveryService.sendSms).not.toHaveBeenCalled();
