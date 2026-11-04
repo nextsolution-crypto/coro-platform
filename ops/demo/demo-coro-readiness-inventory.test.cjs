@@ -37,6 +37,24 @@ function createPrisma({ user = null, clientUser = null } = {}) {
     incidentEvent: { count: async () => counts.incidentEvent },
     exerciseReport: { count: async () => counts.exerciseReport },
     correctiveAction: { count: async () => counts.correctiveAction },
+    organization: {
+      findUnique: async ({ where }) => ({ id: where.id, name: organization.name }),
+    },
+    project: {
+      count: async () => counts.project,
+      findMany: async () => [
+        {
+          name: 'PMU — Tour Prémont 2026',
+          organizationId: 'org-demo',
+          client: { name: 'Groupe Immobilier Prémont', organizationId: 'org-demo' },
+        },
+        {
+          name: 'PCA — Tour Prémont 2026',
+          organizationId: 'org-demo',
+          client: { name: 'Groupe Immobilier Prémont', organizationId: 'org-demo' },
+        },
+      ],
+    },
   };
   return {
     prisma: { $transaction: async (fn) => fn(tx) },
@@ -53,6 +71,17 @@ test('verifies one active non-internal Demo Coro identity in a read-only transac
   assert.equal(report.decision, 'TARGET_VERIFIED_ISOLATED_DEMO');
   assert.deepEqual(report.identityKinds, ['INTERNAL_USER']);
   assert.equal(report.tenantData.buildings, 6);
+  assert.deepEqual(report.canonicalOrganization, {
+    id: 'org-demo',
+    name: 'Demo Coro',
+  });
+  assert.equal(
+    report.projectOwnership.every((project) => project.belongsToTargetOrganization),
+    true,
+  );
+  assert.deepEqual(report.projectOwnership[0].clientNames, [
+    'Groupe Immobilier Prémont',
+  ]);
 });
 
 test('refuses ambiguous homonymous identities even when both point at Demo Coro', async () => {
@@ -79,14 +108,14 @@ test('refuses an internal or mismatched organization', () => {
   assert.equal(summary.organizationInternal, true);
 });
 
-test('never emits the target email or canonical identifiers', async () => {
+test('never emits the target email or identity identifier', async () => {
   const h = createPrisma({
     user: { id: 'canonical-user-id', role: 'ADMIN', isActive: true, organizationId: 'canonical-org-id', organization },
   });
   const serialized = JSON.stringify(await runReadOnly(h.prisma));
   assert.equal(serialized.includes(TARGET_EMAIL), false);
   assert.equal(serialized.includes('canonical-user-id'), false);
-  assert.equal(serialized.includes('canonical-org-id'), false);
+  assert.equal(serialized.includes('canonical-org-id'), true);
 });
 
 test('requires the explicit fixed runtime switch used by the governed workflow', () => {

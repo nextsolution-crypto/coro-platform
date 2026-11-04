@@ -4,6 +4,10 @@ const crypto = require('node:crypto');
 
 const TARGET_EMAIL = 'demo@getcoro.io';
 const TARGET_ORGANIZATION_NAME = 'Demo Coro';
+const EXPECTED_PROJECT_NAMES = [
+  'PMU — Tour Prémont 2026',
+  'PCA — Tour Prémont 2026',
+];
 
 function fingerprint(value) {
   return crypto.createHash('sha256').update(String(value)).digest('hex');
@@ -91,6 +95,38 @@ async function runReadOnly(prisma) {
       const tenantData = organizationIds.length === 1
         ? await countTenantData(tx, organizationIds[0])
         : null;
+      const canonicalOrganization = organizationIds.length === 1
+        ? await tx.organization.findUnique({
+            where: { id: organizationIds[0] },
+            select: { id: true, name: true },
+          })
+        : null;
+      const matchingProjects = organizationIds.length === 1
+        ? await tx.project.findMany({
+            where: { name: { in: EXPECTED_PROJECT_NAMES } },
+            select: {
+              name: true,
+              organizationId: true,
+              client: { select: { name: true, organizationId: true } },
+            },
+            orderBy: [{ name: 'asc' }, { id: 'asc' }],
+          })
+        : [];
+      const projectOwnership = EXPECTED_PROJECT_NAMES.map((name) => {
+        const candidates = matchingProjects.filter((project) => project.name === name);
+        const targetMatches = candidates.filter(
+          (project) =>
+            project.organizationId === organizationIds[0] &&
+            project.client.organizationId === organizationIds[0],
+        );
+        return {
+          name,
+          matchingRows: candidates.length,
+          targetTenantRows: targetMatches.length,
+          belongsToTargetOrganization: targetMatches.length === 1,
+          clientNames: [...new Set(targetMatches.map((project) => project.client.name))],
+        };
+      });
       const isolatedTarget =
         identities.length === 1 &&
         organizationIds.length === 1 &&
@@ -108,6 +144,8 @@ async function runReadOnly(prisma) {
         identityKinds: identities.map((entry) => entry.kind),
         identities,
         singleOrganization: organizationIds.length === 1,
+        canonicalOrganization,
+        projectOwnership,
         tenantData,
         decision: isolatedTarget ? 'TARGET_VERIFIED_ISOLATED_DEMO' : 'TARGET_NOT_VERIFIED_NO_WRITES',
       };
@@ -132,6 +170,7 @@ async function main() {
 module.exports = {
   TARGET_EMAIL,
   TARGET_ORGANIZATION_NAME,
+  EXPECTED_PROJECT_NAMES,
   fingerprint,
   normalizeName,
   runReadOnly,

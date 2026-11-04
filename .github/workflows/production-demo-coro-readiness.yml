@@ -49,8 +49,8 @@ jobs:
             git -C "$repo" show "$SOURCE_SHA:ops/demo/demo-coro-readiness-inventory.cjs" >"$script_path"
             cd "$repo"
             docker compose exec -T -e CORO_DEMO_READINESS_INVENTORY_RUN=true backend node - <"$script_path" >"$evidence_path"
-            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||r.readOnly!==true)process.exit(1);const s=JSON.stringify(r);if(/demo@getcoro\.io|password|secret|token|access[_-]?key|private[_-]?key|canonical-/i.test(s))process.exit(1);' "$evidence_path"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||r.readOnly!==true)process.exit(1);const s=JSON.stringify(r);if(/demo@getcoro\.io|password|secret|token|access[_-]?key|private[_-]?key|canonical-user/i.test(s))process.exit(1);' "$evidence_path"
             cat "$evidence_path"
       - name: Record evidence boundary
         if: always()
-        run: echo 'Only fingerprints, roles, booleans and aggregate tenant counts are emitted; canonical identifiers, content and credentials remain undisclosed.'
+        run: echo 'The explicitly requested canonical organization identity, project ownership results, fingerprints, roles, booleans and aggregate counts are emitted; user identifiers, document content and credentials remain undisclosed.'
