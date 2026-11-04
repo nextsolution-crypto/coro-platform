@@ -29,6 +29,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: coro-backend/package-lock.json
+      - name: Install locked backend dependencies
+        working-directory: coro-backend
+        run: npm ci --ignore-scripts
       - name: Validate fixed request and fixture contract
         env:
           PHASE: ${{ inputs.phase }}
