@@ -129,6 +129,7 @@ async function main() {
       },
     });
     const expectedRecords = manifest.clients.length + manifest.buildings.length + manifest.projects.length +
+      manifest.users.length + manifest.costRates.length +
       manifest.mandates.length + manifest.activities.length + manifest.tasks.length + manifest.timeEntries.length +
       manifest.employees.length + manifest.occupancyRecords.length + manifest.incidents.length + manifest.correctiveActions.length;
     if (!verified.ready || activeRecords !== expectedRecords) throw new Error('IDEMPOTENCY_VERIFICATION_FAILED');

@@ -6,7 +6,7 @@
 | Projets PMU/PSI/PCA | États variés, progression déclarée | DEMONTRABLE après provisionnement | Documents et transitions métier |
 | Documents privés et Knowledge | Upload, REVIEW, APPROVED, téléchargement, indexation, citation, révocation | PASS intégré local | Provisionnement gouverné du tenant et recette UI restent requis |
 | Activités et planning | 3 activités, 4 tâches, échéances et états variés | FIXTURES_VALIDÉES_LOCAL | Recette UI et réservation client restent à faire |
-| Timelog et Rendement | 3 mandats, 4 saisies de temps, 11,5 h attendues | PASS calcul intégré local | Marges volontairement indisponibles tant que vente/taux ne sont pas gouvernés |
+| Timelog et Rendement | 3 mandats, 4 saisies, ventes/taux CAD isolés | PASS calcul intégré local | Hypothèses de démonstration seulement; recette UI restante |
 | Réservations | Conseiller ↔ client, ICS | NOT_VERIFIED | Identité ClientUser et parcours produit requis |
 | Carte et suivi documentaire | Six sites et états variés | DEMONTRABLE après provisionnement | QA visuel et tuiles simulées |
 | Bibliothèque | Catalogue global en lecture seule | DEMONTRABLE | Ne pas modifier le catalogue global |

@@ -6,6 +6,12 @@
     "organizationName": "CORO Démo",
     "referenceEmail": "demo@getcoro.io"
   },
+  "users": [
+    { "key": "user-demo-advisor", "id": "d3000000-0000-4000-8000-000000000001", "email": "advisor-demo@presentation.invalid", "firstName": "Conseiller", "lastName": "Démo", "role": "OPERATOR" }
+  ],
+  "costRates": [
+    { "key": "cost-rate-demo-advisor-cad", "id": "d3000012-0000-4000-8000-000000000001", "userKey": "user-demo-advisor", "currency": "CAD", "hourlyCost": 72, "effectiveFrom": "2026-01-01T00:00:00.000Z" }
+  ],
   "clients": [
     {
       "key": "client-nordik",
@@ -78,9 +84,9 @@
     { "key": "project-horizon-exercice", "id": "d3000003-0000-4000-8000-000000000010", "buildingKey": "building-atelier-industriel", "name": "PMU — Exercice annuel Horizon — Démo", "documentType": "PMU", "status": "DRAFT", "progress": 5 }
   ],
   "mandates": [
-    { "key": "mandate-boreal-pmu", "id": "d3000004-0000-4000-8000-000000000001", "projectKey": "project-boreal-pmu", "description": "Mise à jour annuelle fictive du PMU", "soldAmount": 12800, "hourlyRate": 145, "budgetHours": 88 },
-    { "key": "mandate-erables-psi", "id": "d3000004-0000-4000-8000-000000000002", "projectKey": "project-erables-psi", "description": "Validation fictive des mesures de sécurité incendie", "soldAmount": 9400, "hourlyRate": 140, "budgetHours": 67 },
-    { "key": "mandate-horizon-psi", "id": "d3000004-0000-4000-8000-000000000003", "projectKey": "project-horizon-psi", "description": "Révision fictive du PSI industriel", "soldAmount": 17600, "hourlyRate": 150, "budgetHours": 117 }
+    { "key": "mandate-boreal-pmu", "id": "d3000004-0000-4000-8000-000000000001", "projectKey": "project-boreal-pmu", "description": "Mise à jour annuelle fictive du PMU", "soldAmount": 12800, "soldAt": "2026-01-15T00:00:00.000Z", "hourlyRate": 145, "budgetHours": 88 },
+    { "key": "mandate-erables-psi", "id": "d3000004-0000-4000-8000-000000000002", "projectKey": "project-erables-psi", "description": "Validation fictive des mesures de sécurité incendie", "soldAmount": 9400, "soldAt": "2026-02-10T00:00:00.000Z", "hourlyRate": 140, "budgetHours": 67 },
+    { "key": "mandate-horizon-psi", "id": "d3000004-0000-4000-8000-000000000003", "projectKey": "project-horizon-psi", "description": "Révision fictive du PSI industriel", "soldAmount": 17600, "soldAt": "2026-03-05T00:00:00.000Z", "hourlyRate": 150, "budgetHours": 117 }
   ],
   "activities": [
     { "key": "activity-boreal-inspection", "id": "d3000005-0000-4000-8000-000000000001", "projectKey": "project-boreal-pmu", "type": "inspection", "label": "Inspection annuelle — Démo", "duration": "2 h", "scheduledDate": "2026-11-12T14:00:00.000Z", "status": "a_faire" },

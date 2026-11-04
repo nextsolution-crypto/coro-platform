@@ -7,16 +7,16 @@
 | Manifeste stable | PASS local | Tests Node ciblage/collision |
 | Migration depuis zéro | PASS local | PostgreSQL 16, 169 migrations appliquées |
 | Upgrade depuis la tête précédente | PASS local | Migration Démo réappliquée sur données synthétiques préexistantes conservées |
-| Provisionnement idempotent PostgreSQL | PASS local | 38 registres après 1, 2 et 2 exécutions concurrentes |
+| Provisionnement idempotent PostgreSQL | PASS local | 40 registres après 1, 2 et 2 exécutions concurrentes |
 | Reprise après échec | PASS local | Collision projet injectée après écritures intermédiaires; transaction annulée, puis reprise réussie |
 | Refus autre tenant | PASS intégré local | Identité déplacée temporairement vers tenant QA distinct, aucune écriture Démo admise |
 | Communications courriel/SMS | PARTIAL | Transports principaux raccordés; inventaire restant |
 | Push/webhook/intégration physique | NOT_VERIFIED | Raccordement à terminer |
 | Documents privés ouvrables | PASS intégré local | Stockage S3 QA isolé, SHA-256 identique, aucun storageKey ni URL HTTP exposé |
 | Knowledge et citations | PASS intégré local | Source APPROVED indexée localement, citation/version exacte, retrait après révocation |
-| Indicateurs cohérents | PASS opérationnel local / PARTIAL financier | 11,5 h, 3 activités et 3 mandats; marges honnêtement INCOMPLETE sans vente/taux gouvernés |
+| Indicateurs cohérents | PASS intégré local | 11,5 h; ventes CAD 39 800,00; coût 828,00; marge 38 972,00; 3 mandats complets |
 | Multirôle et MFA | NOT_VERIFIED | Identités non créées |
-| Reset ciblé | PASS local | 38 fixtures retirées ou neutralisées, 2 projets Prémont synthétiques préexistants conservés, environnement PAUSED/BLOCK |
+| Reset ciblé | PASS local | 40 fixtures retirées, neutralisées ou désactivées; 2 projets Prémont synthétiques préexistants conservés; environnement PAUSED/BLOCK |
 | Activités/Planning | PASS données local | 3 activités et 4 tâches, rattachements projet et assignation vérifiés |
 | TimeLog/Rendement | PASS données local | 3 mandats et 4 saisies de temps; aucune validation financière officielle fabriquée |
 | Sortie de reset par `prepare` | PASS local | Reprovisionne 10 projets puis ACTIVE/SIMULATE, fournisseurs externes toujours désactivés |

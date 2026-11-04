@@ -1,7 +1,20 @@
 'use strict';
 
 const crypto = require('node:crypto');
+const bcrypt = require('../../coro-backend/node_modules/bcryptjs');
 const manifest = require('./demo-coro-fixture-manifest.json');
+
+function loadPrismaClient() {
+  try {
+    return require('../../coro-backend/node_modules/@prisma/client').PrismaClient;
+  } catch (localError) {
+    try {
+      return require('/app/node_modules/@prisma/client').PrismaClient;
+    } catch {
+      throw localError;
+    }
+  }
+}
 
 const COMMANDS = new Set(['dry-run', 'provision', 'verify', 'prepare', 'reset']);
 
@@ -18,6 +31,8 @@ function assertManifest() {
   }
   const ids = [
     ...manifest.clients,
+    ...manifest.users,
+    ...manifest.costRates,
     ...manifest.buildings,
     ...manifest.projects,
     ...manifest.mandates,
@@ -66,6 +81,8 @@ async function existingState(tx) {
     namespace,
     expected: {
       clients: manifest.clients.length,
+      users: manifest.users.length,
+      costRates: manifest.costRates.length,
       buildings: manifest.buildings.length,
       projects: manifest.projects.length,
       mandates: manifest.mandates.length,
@@ -158,6 +175,52 @@ async function provision(prisma) {
         lockVersion: { increment: 1 },
       },
     });
+    for (const user of manifest.users) {
+      const suppliedHash = process.env.CORO_DEMO_SYNTHETIC_PASSWORD_HASH?.trim();
+      const password = suppliedHash || await bcrypt.hash(`disabled-${crypto.randomUUID()}`, 10);
+      const row = await tx.user.upsert({
+        where: { email: user.email },
+        create: {
+          id: user.id,
+          email: user.email,
+          password,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          organizationId: manifest.target.organizationId,
+          isActive: true,
+        },
+        update: {
+          ...(suppliedHash ? { password: suppliedHash } : {}),
+          isActive: true,
+        },
+      });
+      if (row.id !== user.id || row.organizationId !== manifest.target.organizationId || row.role !== user.role) throw new Error('FIXTURE_COLLISION_USER');
+      await register(tx, user.key, 'User', row.id, { role: user.role, syntheticDomain: true });
+    }
+    for (const rate of manifest.costRates) {
+      const advisor = manifest.users.find((entry) => entry.key === rate.userKey);
+      if (!advisor) throw new Error('INVALID_COST_RATE_USER_REFERENCE');
+      const row = await tx.advisorInternalCostRate.upsert({
+        where: { id: rate.id },
+        create: {
+          id: rate.id,
+          organizationId: manifest.target.organizationId,
+          userId: advisor.id,
+          currency: rate.currency,
+          hourlyCost: rate.hourlyCost,
+          effectiveFrom: new Date(rate.effectiveFrom),
+          status: 'APPROVED',
+          proposedByUserId: advisor.id,
+          proposedAt: new Date('2026-01-02T14:00:00.000Z'),
+          approvedByUserId: identity.id,
+          approvedAt: new Date('2026-01-03T14:00:00.000Z'),
+        },
+        update: {},
+      });
+      if (row.userId !== advisor.id || row.organizationId !== manifest.target.organizationId || row.currency !== rate.currency || Number(row.hourlyCost) !== rate.hourlyCost) throw new Error('FIXTURE_COLLISION_COST_RATE');
+      await register(tx, rate.key, 'AdvisorInternalCostRate', row.id, { hypothesis: 'DEMONSTRATION_ONLY', currency: rate.currency });
+    }
     for (const client of manifest.clients) {
       const row = await tx.client.upsert({
         where: { id: client.id },
@@ -227,7 +290,7 @@ async function provision(prisma) {
     for (const mandate of manifest.mandates) {
       const project = manifest.projects.find((entry) => entry.key === mandate.projectKey);
       if (!project) throw new Error('INVALID_MANDATE_PROJECT_REFERENCE');
-      const row = await tx.projectMandate.upsert({
+      let row = await tx.projectMandate.upsert({
         where: { projectId: project.id },
         create: {
           id: mandate.id,
@@ -236,12 +299,33 @@ async function provision(prisma) {
           ownerId: identity.id,
           description: mandate.description,
           montantVendu: mandate.soldAmount,
+          soldAmountDecimal: mandate.soldAmount,
+          soldCurrency: 'CAD',
+          soldAt: new Date(mandate.soldAt),
+          soldValidatedByUserId: identity.id,
+          soldValidatedAt: new Date('2026-01-05T14:00:00.000Z'),
+          soldValidationReason: 'Hypothèse de démonstration — aucune valeur commerciale officielle',
           tauxHoraire: mandate.hourlyRate,
           heuresBudgetees: mandate.budgetHours,
           typeMandat: 'DEMO',
         },
         update: {},
       });
+      if (row.soldAmountDecimal === null) {
+        row = await tx.projectMandate.update({
+          where: { id: row.id },
+          data: {
+            soldAmountDecimal: mandate.soldAmount,
+            soldCurrency: 'CAD',
+            soldAt: new Date(mandate.soldAt),
+            soldValidatedByUserId: identity.id,
+            soldValidatedAt: new Date('2026-01-05T14:00:00.000Z'),
+            soldValidationReason: 'Hypothèse de démonstration — aucune valeur commerciale officielle',
+            financialLockVersion: { increment: 1 },
+          },
+        });
+      }
+      if (row.soldAmountDecimal === null || row.soldCurrency !== 'CAD' || Number(row.soldAmountDecimal) !== mandate.soldAmount) throw new Error('FIXTURE_COLLISION_MANDATE_FINANCIALS');
       if (row.id !== mandate.id || row.organizationId !== manifest.target.organizationId) throw new Error('FIXTURE_COLLISION_MANDATE');
       await register(tx, mandate.key, 'ProjectMandate', row.id, { projectId: project.id });
     }
@@ -283,7 +367,7 @@ async function provision(prisma) {
           taskTitle: task.title,
           status: task.status,
           dueDate: new Date(task.dueDate),
-          assigneeId: identity.id,
+          assigneeId: manifest.users[0].id,
         },
         update: {},
       });
@@ -298,7 +382,7 @@ async function provision(prisma) {
         create: {
           id: entry.id,
           taskId: task.id,
-          userId: identity.id,
+          userId: manifest.users[0].id,
           organizationId: manifest.target.organizationId,
           date: new Date(entry.date),
           heures: entry.hours,
@@ -447,6 +531,7 @@ async function verify(prisma) {
     const environment = await tx.demoEnvironment.findUnique({ where: { organizationId: manifest.target.organizationId } });
     const state = await existingState(tx);
     const expected = manifest.clients.length + manifest.buildings.length + manifest.projects.length +
+      manifest.users.length + manifest.costRates.length +
       manifest.mandates.length + manifest.activities.length + manifest.tasks.length + manifest.timeEntries.length +
       manifest.employees.length + manifest.occupancyRecords.length + manifest.incidents.length + manifest.correctiveActions.length;
     const ready = Boolean(
@@ -489,6 +574,7 @@ async function reset(prisma) {
     const incidentIds = owned('IncidentEvent');
     const occupancyIds = owned('OccupancyRecord');
     const employeeIds = owned('BuildingEmployee');
+    const userIds = owned('User');
     const neutralizedActions = await tx.correctiveAction.updateMany({
       where: { id: { in: correctiveActionIds }, organizationId: manifest.target.organizationId, status: { not: 'CLOSED' } },
       data: {
@@ -507,6 +593,10 @@ async function reset(prisma) {
     await tx.project.deleteMany({ where: { id: { in: projectIds }, organizationId: manifest.target.organizationId } });
     await tx.building.deleteMany({ where: { id: { in: buildingIds }, organizationId: manifest.target.organizationId, projects: { none: {} } } });
     await tx.client.deleteMany({ where: { id: { in: clientIds }, organizationId: manifest.target.organizationId, buildings: { none: {} }, projects: { none: {} } } });
+    await tx.refreshToken.deleteMany({ where: { userId: { in: userIds } } });
+    await tx.trustedDevice.deleteMany({ where: { userId: { in: userIds } } });
+    await tx.platformMfaChallenge.deleteMany({ where: { userId: { in: userIds } } });
+    await tx.user.updateMany({ where: { id: { in: userIds }, organizationId: manifest.target.organizationId }, data: { isActive: false } });
     const [projectsRemaining, buildingsRemaining, clientsRemaining, activeActionsRemaining, incidentsRemaining, occupancyRemaining, employeesRemaining] = await Promise.all([
       tx.project.count({ where: { id: { in: projectIds }, organizationId: manifest.target.organizationId } }),
       tx.building.count({ where: { id: { in: buildingIds }, organizationId: manifest.target.organizationId } }),
@@ -540,7 +630,7 @@ async function run(prisma, command) {
 async function main() {
   if (process.env.CORO_DEMO_FIXTURES_RUN !== 'true') throw new Error('EXPLICIT_RUNTIME_SWITCH_REQUIRED');
   const command = process.argv[2] || 'dry-run';
-  const { PrismaClient } = require('/app/node_modules/@prisma/client');
+  const PrismaClient = loadPrismaClient();
   const prisma = new PrismaClient();
   try {
     process.stdout.write(`${JSON.stringify(await run(prisma, command))}\n`);

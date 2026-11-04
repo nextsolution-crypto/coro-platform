@@ -28,14 +28,14 @@ describeQa('CORO Demo Rendement integration', () => {
     );
     expect(result.advisors).toHaveLength(1);
     expect(result.advisors[0]).toMatchObject({
-      userName: 'Démo CORO',
+      userName: 'Conseiller Démo',
       hours: 11.5,
     });
     expect(result.advisors[0].activities).toHaveLength(3);
     expect(result.advisors[0].participatedMandates).toHaveLength(3);
   });
 
-  it('reports synthetic legacy sale values honestly instead of inventing margins', async () => {
+  it('calculates complete margins from isolated demonstration assumptions', async () => {
     const result = await service.financial(
       { userId: 'unused-admin', organizationId, role: 'ADMIN' },
       { organizationId, view: 'cumulative' },
@@ -44,17 +44,45 @@ describeQa('CORO Demo Rendement integration', () => {
       mandate.projectId.startsWith('d3000003-'),
     );
     expect(demoMandates).toHaveLength(3);
-    for (const mandate of demoMandates) {
-      expect(mandate.completeness).toBe('INCOMPLETE');
-      expect(mandate.contributionMargin).toBeNull();
-      expect(mandate.incompleteReasons).toEqual(
-        expect.arrayContaining([
-          'LEGACY_SOLD_AMOUNT_UNVALIDATED',
-          'MISSING_SOLD_CURRENCY',
-          'MISSING_VALIDATED_SOLD_DATE',
-          'MISSING_ADVISOR_COST_RATE',
-        ]),
-      );
-    }
+    expect(
+      demoMandates.map((mandate) => ({
+        projectId: mandate.projectId,
+        completeness: mandate.completeness,
+        soldAmount: mandate.soldAmount,
+        knownLaborCost: mandate.knownLaborCost,
+        contributionMargin: mandate.contributionMargin,
+      })),
+    ).toEqual([
+      {
+        projectId: 'd3000003-0000-4000-8000-000000000001',
+        completeness: 'COMPLETE',
+        soldAmount: '12800.00',
+        knownLaborCost: '342.00',
+        contributionMargin: '12458.00',
+      },
+      {
+        projectId: 'd3000003-0000-4000-8000-000000000005',
+        completeness: 'COMPLETE',
+        soldAmount: '9400.00',
+        knownLaborCost: '288.00',
+        contributionMargin: '9112.00',
+      },
+      {
+        projectId: 'd3000003-0000-4000-8000-000000000008',
+        completeness: 'COMPLETE',
+        soldAmount: '17600.00',
+        knownLaborCost: '198.00',
+        contributionMargin: '17402.00',
+      },
+    ]);
+    expect(
+      result.totals.find((total) => total.currency === 'CAD'),
+    ).toMatchObject({
+      soldAmount: '39800.00',
+      knownLaborCost: '828.00',
+      contributionMargin: '38972.00',
+      completeMandates: 3,
+      incompleteMandates: 0,
+    });
   });
 });
