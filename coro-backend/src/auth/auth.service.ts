@@ -107,6 +107,7 @@ export class AuthService {
       `${code} — Votre code de connexion CORO`,
       renderPlatformMfaEmail(code),
       `${user.firstName} ${user.lastName}`.trim(),
+      'PLATFORM_MFA',
     );
     return { mfaRequired: true, email: user.email };
   }
@@ -256,6 +257,8 @@ export class AuthService {
       user.email,
       'Réinitialisation de votre mot de passe CORO',
       `<p>Réinitialisez votre mot de passe : <a href="${resetUrl}">continuer</a>.</p>`,
+      undefined,
+      'PLATFORM_PASSWORD_RESET',
     );
     return { success: true };
   }
@@ -310,9 +313,16 @@ export class AuthService {
     subject: string,
     htmlContent: string,
     recipientName?: string,
+    operation: 'PLATFORM_MFA' | 'PLATFORM_PASSWORD_RESET' = 'PLATFORM_MFA',
   ) {
     try {
-      await this.mfaDelivery.send({ to, subject, htmlContent, recipientName });
+      await this.mfaDelivery.send({
+        to,
+        subject,
+        htmlContent,
+        recipientName,
+        operation,
+      });
     } catch (error) {
       if (this.mfaDelivery.isQaCapture()) throw error;
       this.logger.error('[AUTH] Email delivery failed.');

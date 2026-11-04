@@ -32,6 +32,10 @@ let parsed; try { parsed=JSON.parse(process.env.CLIENT_INVITATION_OUTBOX_PREVIOU
 if (!parsed || Array.isArray(parsed) || typeof parsed!=="object") process.exit(1);
 for (const [id,value] of Object.entries(parsed)) { if (!/^[A-Za-z0-9_.-]{1,64}$/.test(id) || typeof value!=="string" || Buffer.from(value,"base64").length!==32 || Buffer.from(value,"base64").toString("base64")!==value) process.exit(1); }
 ' || { echo 'RELEASE_CONTROL_FAILED code=CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_INVALID' >&2; exit 1; }
+DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST="${DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST:-}" node -e '
+const values=(process.env.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST||"").split(",").map(v=>v.trim()).filter(Boolean);
+if (values.length !== 4 || new Set(values).size !== 4 || values.some(v=>!/[a-f0-9]{64}/.test(v))) process.exit(1);
+' || { echo 'RELEASE_CONTROL_FAILED code=DEMO_AUTH_EMAIL_ALLOWLIST_INVALID' >&2; exit 1; }
 
 release_id="production-${RELEASE_COMMIT}"
 unit="coro-release-${RELEASE_COMMIT:0:16}"
@@ -86,6 +90,7 @@ if [[ "$current" == PREPARED ]]; then
       "CLIENT_INVITATION_OUTBOX_KEY_BASE64=$CLIENT_INVITATION_OUTBOX_KEY_BASE64" \
       "CLIENT_INVITATION_OUTBOX_KEY_ID=$CLIENT_INVITATION_OUTBOX_KEY_ID" \
       "CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64=${CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64:-{}}" >"$env_file"
+    printf '%q\n' "DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST=$DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST" >>"$env_file"
     chmod 0600 "$env_file"
     cat >"$worker" <<'WORKER'
 #!/usr/bin/env bash

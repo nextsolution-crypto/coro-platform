@@ -12,6 +12,7 @@ export interface MfaMessage {
   recipientName?: string;
   subject: string;
   htmlContent: string;
+  operation?: 'PLATFORM_MFA' | 'PLATFORM_PASSWORD_RESET';
 }
 
 @Injectable()
@@ -99,7 +100,7 @@ export class MfaDeliveryService {
       const decision = await this.demoCommunicationPolicy.evaluate({
         organizationId,
         channel: DemoCommunicationChannel.EMAIL,
-        operation: 'PLATFORM_MFA',
+        operation: message.operation ?? 'PLATFORM_MFA',
         recipient: message.to,
         payload: {
           subject: message.subject,
@@ -112,7 +113,7 @@ export class MfaDeliveryService {
   }
 
   private async sendProvider(message: MfaMessage): Promise<void> {
-    await fetch('https://api.brevo.com/v3/smtp/email', {
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -130,6 +131,7 @@ export class MfaDeliveryService {
         htmlContent: message.htmlContent,
       }),
     });
+    if (!response.ok) throw new Error('MFA_PROVIDER_REJECTED');
   }
 
   private async capture(message: MfaMessage): Promise<void> {

@@ -147,6 +147,20 @@ describe('MfaDeliveryService QA isolation', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
+  it('signale un refus fournisseur sans exposer sa reponse', async () => {
+    for (const key of environmentKeys) delete process.env[key];
+    process.env.NODE_ENV = 'production';
+    process.env.BREVO_API_KEY = 'production-key-not-logged';
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 503 });
+    const policy = {
+      organizationIdForRecipient: jest.fn().mockResolvedValue(null),
+    };
+    const service = new MfaDeliveryService(policy as any);
+    await expect(service.send(message)).rejects.toThrow(
+      'MFA_PROVIDER_REJECTED',
+    );
+  });
+
   it('refuse un destinataire non synthétique sans fallback externe', async () => {
     const service = useEnvironment(qaEnvironment());
     await expect(
