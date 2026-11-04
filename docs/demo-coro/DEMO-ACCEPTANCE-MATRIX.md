@@ -29,6 +29,7 @@
 | Release de l'autorité documentaire Démo | PASS production | PR #196, SHA actif `b2d06dafd83d7d15a7f2c5c15a520755c9ad90e0`, release `41857007049`, inspection `41859825671`, 169 migrations inchangées, sauvegarde/restauration vérifiées et quatre images de rollback |
 | Documents privés livrés | PASS serveur production synthétique | Deux ProjectFile privés enregistrés; téléchargement de v2 et comparaison octets/SHA-256 réussis; v1 `SUPERSEDED`, v2 `APPROVED`, version courante 2 |
 | Knowledge livré | PASS serveur production synthétique | Vérification `41863006419`: `ready:true`, `registered:2`, `integrity:true`, `citation:true`, `freshness:true`, `crossTenantDenied:true` |
+| Inventaire documentaire livré | PASS lecture seule | Workflow `41867733723`; `files:2`, organisation canonique confirmée, données et projets Prémont préservés |
 | Ouverture UI multirôle documents/citations | NOT_VERIFIED livré | À exécuter après activation normale des trois comptes permanents; aucune identité ou MFA de production n'a été contourné |
 
 Verdict courant : `DEMO_PROVISIONED_ACCOUNT_ACCEPTANCE_PENDING`. L'environnement livré contient les fixtures synthétiques vérifiées ainsi que deux documents privés versionnés et leurs sources Knowledge vérifiées côté serveur. La preuve multirôle locale ne vaut pas activation des comptes permanents. `DEMO_READY` reste interdit avant trois connexions normales, MFA réellement utilisables et ouverture UI autorisée des documents/citations dans l'environnement livré.
