@@ -1,7 +1,7 @@
 'use strict';
 
 const { PrismaClient } = require('../../coro-backend/node_modules/@prisma/client');
-const { dryRun, manifest, provision, reset, verify } = require('./demo-coro-fixtures.cjs');
+const { dryRun, manifest, prepare, provision, reset, verify } = require('./demo-coro-fixtures.cjs');
 
 const QA_OTHER_ORGANIZATION_ID = 'd3ffffff-0000-4000-8000-000000000001';
 const QA_EXISTING_CLIENT_ID = 'd3ffffff-0000-4000-8000-000000000002';
@@ -129,7 +129,8 @@ async function main() {
       },
     });
     const expectedRecords = manifest.clients.length + manifest.buildings.length + manifest.projects.length +
-      manifest.mandates.length + manifest.activities.length + manifest.tasks.length + manifest.timeEntries.length;
+      manifest.mandates.length + manifest.activities.length + manifest.tasks.length + manifest.timeEntries.length +
+      manifest.employees.length + manifest.occupancyRecords.length + manifest.incidents.length + manifest.correctiveActions.length;
     if (!verified.ready || activeRecords !== expectedRecords) throw new Error('IDEMPOTENCY_VERIFICATION_FAILED');
 
     await prisma.user.update({
@@ -161,6 +162,28 @@ async function main() {
     if (preserved !== 2 || fixtureProjects !== 0 || environment?.status !== 'PAUSED' || environment.communicationMode !== 'BLOCK') {
       throw new Error('TARGETED_RESET_VERIFICATION_FAILED');
     }
+    const prepared = await prepare(prisma);
+    const preparedEnvironment = await prisma.demoEnvironment.findUnique({
+      where: { organizationId: manifest.target.organizationId },
+      select: { status: true, communicationMode: true, externalProvidersDisabled: true },
+    });
+    const preparedProjects = await prisma.project.count({
+      where: { id: { in: manifest.projects.map((entry) => entry.id) } },
+    });
+    if (
+      prepared.registered !== expectedRecords ||
+      preparedProjects !== manifest.projects.length ||
+      preparedEnvironment?.status !== 'ACTIVE' ||
+      preparedEnvironment.communicationMode !== 'SIMULATE' ||
+      !preparedEnvironment.externalProvidersDisabled
+    ) throw new Error('PREPARE_USABILITY_VERIFICATION_FAILED');
+    await reset(prisma);
+    const finalEnvironment = await prisma.demoEnvironment.findUnique({
+      where: { organizationId: manifest.target.organizationId },
+      select: { status: true, communicationMode: true, externalProvidersDisabled: true },
+    });
+    if (finalEnvironment?.status !== 'PAUSED' || finalEnvironment.communicationMode !== 'BLOCK' || !finalEnvironment.externalProvidersDisabled)
+      throw new Error('FINAL_RESET_PROTECTION_FAILED');
     process.stdout.write(`${JSON.stringify({
       schemaVersion: 1,
       execution: 'PASS',
@@ -174,6 +197,9 @@ async function main() {
       preexistingProjectsPreserved: preserved,
       fixtureProjectsAfterReset: fixtureProjects,
       environmentAfterReset: environment,
+      environmentAfterPrepare: preparedEnvironment,
+      preparedProjects,
+      finalEnvironmentAfterReset: finalEnvironment,
       resetRegistered: resetResult.registered,
     })}\n`);
   } finally {

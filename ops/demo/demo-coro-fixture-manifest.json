@@ -98,5 +98,22 @@
     { "key": "time-boreal-contacts-1", "id": "d3000007-0000-4000-8000-000000000002", "taskKey": "task-boreal-contacts", "date": "2026-10-22T12:00:00.000Z", "hours": 1.25, "note": "Coordination fictive" },
     { "key": "time-erables-roles-1", "id": "d3000007-0000-4000-8000-000000000003", "taskKey": "task-erables-roles", "date": "2026-10-24T12:00:00.000Z", "hours": 4, "note": "Révision fictive des rôles" },
     { "key": "time-horizon-scenario-1", "id": "d3000007-0000-4000-8000-000000000004", "taskKey": "task-horizon-scenario", "date": "2026-10-27T12:00:00.000Z", "hours": 2.75, "note": "Préparation fictive du scénario" }
+  ],
+  "employees": [
+    { "key": "employee-boreal-coordinator", "id": "d3000008-0000-4000-8000-000000000001", "buildingKey": "building-nordik-bureaux", "firstName": "Alex", "lastName": "Boréal", "position": "Coordonnateur fictif" },
+    { "key": "employee-boreal-warden", "id": "d3000008-0000-4000-8000-000000000002", "buildingKey": "building-nordik-bureaux", "firstName": "Sam", "lastName": "Évacuation", "position": "Responsable d'étage fictif" }
+  ],
+  "occupancyRecords": [
+    { "key": "occupancy-boreal-alex", "id": "d3000009-0000-4000-8000-000000000001", "buildingKey": "building-nordik-bureaux", "employeeKey": "employee-boreal-coordinator", "type": "EMPLOYE", "status": "IN", "firstName": "Alex", "lastName": "Boréal", "floor": "3" },
+    { "key": "occupancy-boreal-sam", "id": "d3000009-0000-4000-8000-000000000002", "buildingKey": "building-nordik-bureaux", "employeeKey": "employee-boreal-warden", "type": "EMPLOYE", "status": "IN", "firstName": "Sam", "lastName": "Évacuation", "floor": "2" },
+    { "key": "occupancy-boreal-visitor", "id": "d3000009-0000-4000-8000-000000000003", "buildingKey": "building-nordik-bureaux", "type": "VISITEUR", "status": "IN", "firstName": "Visiteur", "lastName": "Fictif", "floor": "Accueil" },
+    { "key": "occupancy-boreal-contractor", "id": "d3000009-0000-4000-8000-000000000004", "buildingKey": "building-nordik-bureaux", "type": "CONTRACTEUR", "status": "OUT", "firstName": "Contracteur", "lastName": "Fictif", "floor": "Sous-sol" }
+  ],
+  "incidents": [
+    { "key": "incident-boreal-exercise", "id": "d3000010-0000-4000-8000-000000000001", "buildingKey": "building-nordik-bureaux", "type": "FIRE_ALARM", "status": "RESOLVED", "triggeredAt": "2026-10-15T14:00:00.000Z", "resolvedAt": "2026-10-15T14:42:00.000Z", "description": "Exercice synthétique d'évacuation — aucune alarme réelle", "procedureCode": "P004" }
+  ],
+  "correctiveActions": [
+    { "key": "action-boreal-signage", "id": "d3000011-0000-4000-8000-000000000001", "incidentKey": "incident-boreal-exercise", "buildingKey": "building-nordik-bureaux", "title": "Clarifier la signalisation fictive", "description": "Action de démonstration issue du REX synthétique", "status": "IN_PROGRESS", "priority": "WARNING", "dueDate": "2026-12-15T17:00:00.000Z" },
+    { "key": "action-boreal-briefing", "id": "d3000011-0000-4000-8000-000000000002", "incidentKey": "incident-boreal-exercise", "buildingKey": "building-nordik-bureaux", "title": "Préparer un rappel de rôle fictif", "description": "Aucune communication externe associée", "status": "PLANNED", "priority": "INFO", "dueDate": "2027-01-15T17:00:00.000Z" }
   ]
 }

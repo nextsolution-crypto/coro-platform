@@ -7,8 +7,10 @@ L'outil `ops/demo/demo-coro-fixtures.cjs` expose :
 - `dry-run` : transaction en lecture seule;
 - `provision` : ajout idempotent sous verrou;
 - `verify` : cohérence et isolation;
-- `prepare` : remet l'environnement en mode actif/simulé sans réécrire l'historique;
+- `prepare` : provisionne idempotemment les fixtures, vérifie leur intégrité, puis remet l'environnement en mode actif/simulé;
 - `reset` : retire uniquement les fixtures enregistrées, ou annule entièrement la transaction si une dépendance les protège.
+
+Les actions correctives conservent leur historique gouverné : le reset les annule, retire leurs affectations et les marque `RETIRED`; il ne contourne pas les protections PostgreSQL pour les supprimer.
 
 L'exécution nécessite `CORO_DEMO_FIXTURES_RUN=true`. Le workflow de production fixe devra imposer le SHA et la commande; aucune saisie libre d'organisation ne sera acceptée.
 

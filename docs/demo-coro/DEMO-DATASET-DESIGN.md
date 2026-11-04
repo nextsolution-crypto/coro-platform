@@ -17,6 +17,8 @@ Le manifeste `ops/demo/demo-coro-fixture-manifest.json` est l'autorité des nouv
 
 - Activités/planning : 3 activités datées rattachées à des projets actifs et 4 tâches assignées au compte de référence.
 - Timelog/Rendement : 3 mandats fictifs, 4 saisies de temps réparties sur les tâches et des montants strictement synthétiques. Aucun montant n'est déclaré officiellement approuvé.
-- Documents et versions, Knowledge, Sentinelle, Incident/exercices, REX/actions, résilience et Population seront ajoutés seulement avec leurs autorités métier et preuves propres. Un statut approuvé ne sera pas fabriqué par une mise à jour SQL.
+- Sentinelle/Incident : 2 employés fictifs, 4 présences (employés, visiteur et contracteur), 1 exercice Incident résolu sans jeton public et 2 actions correctives liées.
+- Les actions correctives sont annulées et détachées au reset plutôt que supprimées, conformément à leur historique protégé; leur registre passe à `RETIRED`.
+- Documents et versions, Knowledge, résilience et Population seront ajoutés seulement avec leurs autorités métier et preuves propres. Un statut approuvé ne sera pas fabriqué par une mise à jour SQL.
 
 Tout document devra afficher : « DÉMONSTRATION — DONNÉES FICTIVES — NON UTILISABLE POUR UNE INTERVENTION RÉELLE ».

@@ -24,6 +24,10 @@ function assertManifest() {
     ...manifest.activities,
     ...manifest.tasks,
     ...manifest.timeEntries,
+    ...manifest.employees,
+    ...manifest.occupancyRecords,
+    ...manifest.incidents,
+    ...manifest.correctiveActions,
   ].map((entry) => entry.id);
   if (new Set(ids).size !== ids.length) throw new Error('DUPLICATE_FIXTURE_ID');
 }
@@ -68,6 +72,10 @@ async function existingState(tx) {
       activities: manifest.activities.length,
       tasks: manifest.tasks.length,
       timeEntries: manifest.timeEntries.length,
+      employees: manifest.employees.length,
+      occupancyRecords: manifest.occupancyRecords.length,
+      incidents: manifest.incidents.length,
+      correctiveActions: manifest.correctiveActions.length,
     },
     registered: records.length,
     records,
@@ -301,6 +309,132 @@ async function provision(prisma) {
       if (row.taskId !== task.id || row.organizationId !== manifest.target.organizationId) throw new Error('FIXTURE_COLLISION_TIME_ENTRY');
       await register(tx, entry.key, 'TaskTimeEntry', row.id, { taskId: task.id });
     }
+    for (const employee of manifest.employees) {
+      const building = manifest.buildings.find((entry) => entry.key === employee.buildingKey);
+      if (!building) throw new Error('INVALID_EMPLOYEE_BUILDING_REFERENCE');
+      const row = await tx.buildingEmployee.upsert({
+        where: { id: employee.id },
+        create: {
+          id: employee.id,
+          buildingId: building.id,
+          organizationId: manifest.target.organizationId,
+          firstName: employee.firstName,
+          lastName: employee.lastName,
+          poste: employee.position,
+          email: `${employee.key}@example.invalid`,
+          qrToken: crypto.randomUUID(),
+          isActive: true,
+          smsConsent: false,
+        },
+        update: {},
+      });
+      if (row.buildingId !== building.id || row.organizationId !== manifest.target.organizationId) throw new Error('FIXTURE_COLLISION_EMPLOYEE');
+      await register(tx, employee.key, 'BuildingEmployee', row.id, { buildingId: building.id });
+    }
+    for (const occupant of manifest.occupancyRecords) {
+      const building = manifest.buildings.find((entry) => entry.key === occupant.buildingKey);
+      const employee = occupant.employeeKey
+        ? manifest.employees.find((entry) => entry.key === occupant.employeeKey)
+        : null;
+      if (!building || (occupant.employeeKey && !employee)) throw new Error('INVALID_OCCUPANCY_REFERENCE');
+      const row = await tx.occupancyRecord.upsert({
+        where: { id: occupant.id },
+        create: {
+          id: occupant.id,
+          buildingId: building.id,
+          organizationId: manifest.target.organizationId,
+          employeeId: employee?.id ?? null,
+          type: occupant.type,
+          status: occupant.status,
+          firstName: occupant.firstName,
+          lastName: occupant.lastName,
+          company: 'Organisation fictive',
+          floor: occupant.floor,
+          checkedInAt: new Date('2026-10-15T13:30:00.000Z'),
+          checkedOutAt: occupant.status === 'OUT' ? new Date('2026-10-15T15:00:00.000Z') : null,
+        },
+        update: {},
+      });
+      if (row.buildingId !== building.id || row.organizationId !== manifest.target.organizationId) throw new Error('FIXTURE_COLLISION_OCCUPANCY');
+      await register(tx, occupant.key, 'OccupancyRecord', row.id, { buildingId: building.id });
+    }
+    for (const incident of manifest.incidents) {
+      const building = manifest.buildings.find((entry) => entry.key === incident.buildingKey);
+      if (!building) throw new Error('INVALID_INCIDENT_BUILDING_REFERENCE');
+      const row = await tx.incidentEvent.upsert({
+        where: { id: incident.id },
+        create: {
+          id: incident.id,
+          buildingId: building.id,
+          organizationId: manifest.target.organizationId,
+          type: incident.type,
+          status: incident.status,
+          triggeredAt: new Date(incident.triggeredAt),
+          triggeredBy: 'Système de démonstration',
+          description: incident.description,
+          occupantsSnapshot: { synthetic: true, present: 3, absent: 1 },
+          teamSnapshot: { synthetic: true, members: 2 },
+          procedureCode: incident.procedureCode,
+          publicAccessToken: null,
+          resolvedAt: new Date(incident.resolvedAt),
+          closingNotes: 'Exercice fictif terminé sans communication externe.',
+          rexWentWell: 'Recensement synthétique complété.',
+          rexToImprove: 'Clarifier la signalisation fictive.',
+          rexRecommendations: 'Répéter le briefing dans le scénario de démonstration.',
+          rexCorrectiveActions: 'Deux actions fictives sont suivies.',
+          rexCompletedAt: new Date('2026-10-16T14:00:00.000Z'),
+          isExercise: true,
+          isActive: false,
+        },
+        update: {},
+      });
+      if (row.buildingId !== building.id || row.organizationId !== manifest.target.organizationId || row.publicAccessToken) throw new Error('FIXTURE_COLLISION_INCIDENT');
+      await register(tx, incident.key, 'IncidentEvent', row.id, { buildingId: building.id, isExercise: true });
+    }
+    for (const action of manifest.correctiveActions) {
+      const incident = manifest.incidents.find((entry) => entry.key === action.incidentKey);
+      const building = manifest.buildings.find((entry) => entry.key === action.buildingKey);
+      if (!incident || !building) throw new Error('INVALID_CORRECTIVE_ACTION_REFERENCE');
+      const row = await tx.correctiveAction.upsert({
+        where: { id: action.id },
+        create: {
+          id: action.id,
+          organizationId: manifest.target.organizationId,
+          buildingId: building.id,
+          incidentId: incident.id,
+          category: 'EXERCISES',
+          title: action.title,
+          description: action.description,
+          status: action.status,
+          priority: action.priority,
+          assignedTo: 'Équipe de démonstration',
+          assigneeType: 'USER',
+          assigneeId: identity.id,
+          assigneeDisplayNameSnapshot: 'Démo CORO',
+          createdByType: 'USER',
+          createdById: identity.id,
+          dueDate: new Date(action.dueDate),
+        },
+        update: {
+          buildingId: building.id,
+          incidentId: incident.id,
+          category: 'EXERCISES',
+          title: action.title,
+          description: action.description,
+          status: action.status,
+          priority: action.priority,
+          assignedTo: 'Équipe de démonstration',
+          assigneeType: 'USER',
+          assigneeId: identity.id,
+          assigneeDisplayNameSnapshot: 'Démo CORO',
+          updatedByType: 'USER',
+          updatedById: identity.id,
+          dueDate: new Date(action.dueDate),
+        },
+      });
+      if (row.incidentId !== incident.id || row.organizationId !== manifest.target.organizationId) throw new Error('FIXTURE_COLLISION_CORRECTIVE_ACTION');
+      await register(tx, action.key, 'CorrectiveAction', row.id, { incidentId: incident.id });
+    }
     const state = await existingState(tx);
     return sanitizedSummary('provision', state, { mutation: true });
   }, { timeout: 120000 });
@@ -313,7 +447,8 @@ async function verify(prisma) {
     const environment = await tx.demoEnvironment.findUnique({ where: { organizationId: manifest.target.organizationId } });
     const state = await existingState(tx);
     const expected = manifest.clients.length + manifest.buildings.length + manifest.projects.length +
-      manifest.mandates.length + manifest.activities.length + manifest.tasks.length + manifest.timeEntries.length;
+      manifest.mandates.length + manifest.activities.length + manifest.tasks.length + manifest.timeEntries.length +
+      manifest.employees.length + manifest.occupancyRecords.length + manifest.incidents.length + manifest.correctiveActions.length;
     const ready = Boolean(
       environment && environment.status === 'ACTIVE' && environment.communicationMode === 'SIMULATE' &&
       environment.externalProvidersDisabled && state.registered === expected,
@@ -323,14 +458,19 @@ async function verify(prisma) {
 }
 
 async function prepare(prisma) {
-  return prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`demo-fixtures:${manifest.target.organizationId}`}, 0))`;
-    await assertTarget(tx);
-    const environment = await tx.demoEnvironment.update({
-      where: { organizationId: manifest.target.organizationId },
-      data: { status: 'ACTIVE', communicationMode: 'SIMULATE', externalProvidersDisabled: true, lockVersion: { increment: 1 } },
-    });
-    return sanitizedSummary('prepare', await existingState(tx), { mutation: true, environmentStatus: environment.status });
+  const provisioned = await provision(prisma);
+  const verified = await verify(prisma);
+  if (!verified.ready) throw new Error('PREPARE_VERIFICATION_FAILED');
+  return sanitizedSummary('prepare', {
+    namespace: provisioned.namespace,
+    expected: provisioned.expected,
+    registered: provisioned.registered,
+    records: provisioned.records,
+  }, {
+    mutation: true,
+    environmentStatus: 'ACTIVE',
+    communicationMode: 'SIMULATE',
+    externalProvidersDisabled: true,
   });
 }
 
@@ -345,16 +485,39 @@ async function reset(prisma) {
     const projectIds = owned('Project');
     const buildingIds = owned('Building');
     const clientIds = owned('Client');
+    const correctiveActionIds = owned('CorrectiveAction');
+    const incidentIds = owned('IncidentEvent');
+    const occupancyIds = owned('OccupancyRecord');
+    const employeeIds = owned('BuildingEmployee');
+    const neutralizedActions = await tx.correctiveAction.updateMany({
+      where: { id: { in: correctiveActionIds }, organizationId: manifest.target.organizationId, status: { not: 'CLOSED' } },
+      data: {
+        status: 'CANCELLED',
+        assignedTo: null,
+        assigneeType: null,
+        assigneeId: null,
+        updatedByType: 'SYSTEM',
+        updatedById: 'demo-reset',
+      },
+    });
+    if (neutralizedActions.count !== correctiveActionIds.length) throw new Error(`RESET_ACTION_NEUTRALIZE_MISMATCH:${neutralizedActions.count}:${correctiveActionIds.length}`);
+    await tx.incidentEvent.deleteMany({ where: { id: { in: incidentIds }, organizationId: manifest.target.organizationId } });
+    await tx.occupancyRecord.deleteMany({ where: { id: { in: occupancyIds }, organizationId: manifest.target.organizationId } });
+    await tx.buildingEmployee.deleteMany({ where: { id: { in: employeeIds }, organizationId: manifest.target.organizationId } });
     await tx.project.deleteMany({ where: { id: { in: projectIds }, organizationId: manifest.target.organizationId } });
     await tx.building.deleteMany({ where: { id: { in: buildingIds }, organizationId: manifest.target.organizationId, projects: { none: {} } } });
     await tx.client.deleteMany({ where: { id: { in: clientIds }, organizationId: manifest.target.organizationId, buildings: { none: {} }, projects: { none: {} } } });
-    const [projectsRemaining, buildingsRemaining, clientsRemaining] = await Promise.all([
+    const [projectsRemaining, buildingsRemaining, clientsRemaining, activeActionsRemaining, incidentsRemaining, occupancyRemaining, employeesRemaining] = await Promise.all([
       tx.project.count({ where: { id: { in: projectIds }, organizationId: manifest.target.organizationId } }),
       tx.building.count({ where: { id: { in: buildingIds }, organizationId: manifest.target.organizationId } }),
       tx.client.count({ where: { id: { in: clientIds }, organizationId: manifest.target.organizationId } }),
+      tx.correctiveAction.count({ where: { id: { in: correctiveActionIds }, organizationId: manifest.target.organizationId, status: { not: 'CANCELLED' } } }),
+      tx.incidentEvent.count({ where: { id: { in: incidentIds }, organizationId: manifest.target.organizationId } }),
+      tx.occupancyRecord.count({ where: { id: { in: occupancyIds }, organizationId: manifest.target.organizationId } }),
+      tx.buildingEmployee.count({ where: { id: { in: employeeIds }, organizationId: manifest.target.organizationId } }),
     ]);
-    if (projectsRemaining || buildingsRemaining || clientsRemaining) {
-      throw new Error('RESET_BLOCKED_BY_DEPENDENCIES');
+    if (projectsRemaining || buildingsRemaining || clientsRemaining || activeActionsRemaining || incidentsRemaining || occupancyRemaining || employeesRemaining) {
+      throw new Error(`RESET_BLOCKED_BY_DEPENDENCIES:${JSON.stringify({ projectsRemaining, buildingsRemaining, clientsRemaining, activeActionsRemaining, incidentsRemaining, occupancyRemaining, employeesRemaining })}`);
     }
     await tx.demoFixtureRecord.updateMany({
       where: { organizationId: manifest.target.organizationId, fixtureNamespace: manifest.fixtureNamespace, state: 'ACTIVE' },
@@ -386,7 +549,7 @@ async function main() {
   }
 }
 
-module.exports = { assertManifest, assertTarget, dryRun, existingState, fingerprint, manifest, provision, reset, run, verify };
+module.exports = { assertManifest, assertTarget, dryRun, existingState, fingerprint, manifest, prepare, provision, reset, run, verify };
 
 if (require.main === module) {
   main().catch((error) => {
