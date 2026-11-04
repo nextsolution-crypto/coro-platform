@@ -34,6 +34,9 @@ test("document workflow is fixed, locked, backed up and release-pinned", () => {
   assert.match(workflow, /production-\$RELEASE_COMMIT\.reconciled\.json/);
   assert.match(workflow, /git -C "\$repo" rev-parse HEAD/);
   assert.match(workflow, /CORO_DEMO_DOCUMENTS_RUN=true/);
+  assert.match(workflow, /DEMO_DOCUMENT_EVIDENCE_NOT_FOUND/);
+  assert.match(workflow, /candidate\?\.schemaVersion===1/);
+  assert.match(workflow, /rm -f -- "\$raw" "\$evidence"/);
   assert.doesNotMatch(workflow, /organization[_-]?id.*inputs/i);
 });
 
