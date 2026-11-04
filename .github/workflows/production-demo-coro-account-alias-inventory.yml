@@ -1,0 +1,56 @@
+name: Production Demo Coro Account Alias Inventory
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: node --test ops/demo/demo-coro-account-alias-inventory.test.cjs
+
+  inventory:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Validate pinned host identity
+        env:
+          HOST_FINGERPRINT: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+        run: '[[ "$HOST_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]'
+      - name: Execute fixed read-only alias inventory
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            script_path="$(mktemp /tmp/coro-demo-alias-inventory.XXXXXX.cjs)"
+            evidence_path="$(mktemp /tmp/coro-demo-alias-inventory.XXXXXX.json)"
+            trap 'rm -f -- "$script_path" "$evidence_path"' EXIT
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
+            git -C "$repo" show "$SOURCE_SHA:ops/demo/demo-coro-account-alias-inventory.cjs" >"$script_path"
+            cd "$repo"
+            docker compose exec -T -e CORO_DEMO_ACCOUNT_ALIAS_INVENTORY_RUN=true backend node - <"$script_path" >"$evidence_path"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||r.readOnly!==true)process.exit(1);const s=JSON.stringify(r);if(/demo-member@getcoro\.io|demo-clientcorp@getcoro\.io|demo-client@getcoro\.io|password|secret|token|access[_-]?key|private[_-]?key/i.test(s))process.exit(1);' "$evidence_path"
+            cat "$evidence_path"
+      - name: Record evidence boundary
+        if: always()
+        run: echo 'Only fixed alias labels, fingerprints, roles, tenant/client names, active booleans and assignment counts are emitted; raw emails, internal identifiers and credentials remain undisclosed.'
