@@ -72,8 +72,10 @@ jobs:
             backend_container="$(docker compose -f "$repo/docker-compose.yml" ps -q backend)"
             test -n "$backend_container"
             test "$(docker inspect -f '{{.State.Running}}' "$backend_container")" = true
-            active_image="$(docker inspect -f '{{.Config.Image}}' "$backend_container")"
-            [[ "$active_image" == *":$RELEASE_COMMIT" ]]
+            test "$(git -C "$repo" rev-parse HEAD)" = "$RELEASE_COMMIT"
+            reconciled="/opt/coro-ops/releases/state/production-$RELEASE_COMMIT.reconciled.json"
+            test -f "$reconciled" && test ! -L "$reconciled"
+            node -e 'const r=require(process.argv[1]);if(r.schemaVersion!==1||r.releaseCommit!==process.argv[2]||r.releaseId!==`production-${process.argv[2]}`)process.exit(1)' "$reconciled" "$RELEASE_COMMIT"
             systemctl start coro-db-backup.service
             test "$(systemctl show -p Result --value coro-db-backup.service)" = success
             evidence="$(mktemp /tmp/coro-demo-documents.XXXXXX.json)"
