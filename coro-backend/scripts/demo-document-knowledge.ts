@@ -45,7 +45,7 @@ function sha(value: Buffer | string) {
 }
 
 async function target(prisma: PrismaService, allowPaused = false) {
-  const user = await prisma.user.findUnique({
+  const referenceUser = await prisma.user.findUnique({
     where: { email: REFERENCE_EMAIL },
     select: { id: true, organizationId: true, role: true, isActive: true },
   });
@@ -57,7 +57,17 @@ async function target(prisma: PrismaService, allowPaused = false) {
       isActive: true,
       status: { not: 'ARCHIVED' },
     },
-    select: { id: true },
+    select: {
+      id: true,
+      user: {
+        select: {
+          id: true,
+          organizationId: true,
+          role: true,
+          isActive: true,
+        },
+      },
+    },
   });
   const environment = await prisma.demoEnvironment.findUnique({
     where: { organizationId: ORGANIZATION_ID },
@@ -68,11 +78,13 @@ async function target(prisma: PrismaService, allowPaused = false) {
     },
   });
   if (
-    !user ||
-    user.organizationId !== ORGANIZATION_ID ||
-    user.role !== 'ADMIN' ||
-    !user.isActive ||
-    !project
+    !referenceUser ||
+    referenceUser.organizationId !== ORGANIZATION_ID ||
+    referenceUser.role !== 'ADMIN' ||
+    !referenceUser.isActive ||
+    !project ||
+    project.user.organizationId !== ORGANIZATION_ID ||
+    !project.user.isActive
   )
     throw new Error('DEMO_DOCUMENT_TARGET_NOT_VERIFIED');
   const safeEnvironment =
@@ -85,7 +97,7 @@ async function target(prisma: PrismaService, allowPaused = false) {
         environment.communicationMode === 'BLOCK'));
   if (!safeEnvironment)
     throw new Error('DEMO_COMMUNICATION_ISOLATION_NOT_VERIFIED');
-  return user;
+  return { referenceUser, projectCustodian: project.user };
 }
 
 function services(prisma: PrismaService) {
@@ -239,12 +251,12 @@ async function advanceFile(
 }
 
 async function prepare(prisma: PrismaService) {
-  const user = await target(prisma);
+  const { projectCustodian } = await target(prisma);
   const { files, ingestion } = services(prisma);
   const actor = {
-    userId: user.id,
+    userId: projectCustodian.id,
     organizationId: ORGANIZATION_ID,
-    role: user.role,
+    role: projectCustodian.role,
   };
   const first = await advanceFile(prisma, files, ingestion, actor, 0);
   const second = await advanceFile(
@@ -265,18 +277,18 @@ async function prepare(prisma: PrismaService) {
 }
 
 async function verify(prisma: PrismaService) {
-  const user = await target(prisma);
+  const { referenceUser } = await target(prisma);
   const { files, retrieval } = services(prisma);
   const actor = {
-    userId: user.id,
+    userId: referenceUser.id,
     organizationId: ORGANIZATION_ID,
-    role: user.role,
+    role: referenceUser.role,
   };
   const knowledgeActor = {
     type: 'INTERNAL_USER' as const,
-    id: user.id,
+    id: referenceUser.id,
     organizationId: ORGANIZATION_ID,
-    role: user.role,
+    role: referenceUser.role,
   };
   const rows = await registered(prisma);
   if (rows.length !== 2 || rows.some((x) => x.state !== 'ACTIVE'))
@@ -347,7 +359,7 @@ async function verify(prisma: PrismaService) {
     await retrieval.search(
       {
         type: 'INTERNAL_USER',
-        id: user.id,
+        id: referenceUser.id,
         organizationId: '00000000-0000-4000-8000-000000000000',
         role: 'ADMIN',
       },
@@ -373,12 +385,12 @@ async function verify(prisma: PrismaService) {
 }
 
 async function reset(prisma: PrismaService) {
-  const user = await target(prisma, true);
+  const { projectCustodian } = await target(prisma, true);
   const { files, ingestion } = services(prisma);
   const actor = {
-    userId: user.id,
+    userId: projectCustodian.id,
     organizationId: ORGANIZATION_ID,
-    role: user.role,
+    role: projectCustodian.role,
   };
   const rows = await registered(prisma);
   for (const row of rows) {
@@ -389,7 +401,7 @@ async function reset(prisma: PrismaService) {
       await files.revokeFile({
         fileId: file.id,
         organizationId: ORGANIZATION_ID,
-        actorId: user.id,
+        actorId: projectCustodian.id,
         actor,
         reason: 'Réinitialisation documentaire de démonstration',
         requestId: `demo-doc-reset:${file.id}`,
