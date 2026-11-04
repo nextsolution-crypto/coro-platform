@@ -44,3 +44,11 @@ test("document authority uses canonical services and has no public storage fallb
   assert.match(authority, /downloadPrivateFile/);
   assert.doesNotMatch(authority, /public-read|axios|fetch\(/i);
 });
+
+test("document lifecycle transitions use the canonical project custodian", () => {
+  assert.match(authority, /project\.user\.organizationId !== ORGANIZATION_ID/);
+  assert.match(authority, /!project\.user\.isActive/);
+  assert.match(authority, /return \{ referenceUser, projectCustodian: project\.user \}/);
+  assert.match(authority, /userId: projectCustodian\.id/);
+  assert.match(authority, /role: projectCustodian\.role/);
+});
