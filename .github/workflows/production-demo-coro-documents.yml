@@ -1,0 +1,84 @@
+name: Governed Production Demo Coro Documents
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        required: true
+        type: choice
+        options: [dry-run, prepare, verify, reset]
+      approval:
+        required: true
+        type: string
+      release_commit:
+        description: Exact active application release containing the compiled authority
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Validate fixed request and authority contract
+        env:
+          PHASE: ${{ inputs.phase }}
+          APPROVAL: ${{ inputs.approval }}
+          RELEASE_COMMIT: ${{ inputs.release_commit }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          case "$PHASE:$APPROVAL" in
+            dry-run:DRY_RUN_CORO_DEMO_DOCUMENTS) ;;
+            prepare:PREPARE_CORO_DEMO_DOCUMENTS) ;;
+            verify:VERIFY_CORO_DEMO_DOCUMENTS) ;;
+            reset:RESET_CORO_DEMO_DOCUMENTS) ;;
+            *) exit 1 ;;
+          esac
+          node ops/demo/demo-coro-documents-workflow.test.cjs
+
+  execute:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Execute release-pinned document authority
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          RELEASE_COMMIT: ${{ inputs.release_commit }}
+          DEMO_DOCUMENT_PHASE: ${{ inputs.phase }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,RELEASE_COMMIT,DEMO_DOCUMENT_PHASE
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            exec 9>/run/lock/coro-production-deployment.lock
+            flock -n 9
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
+            backend_container="$(docker compose -f "$repo/docker-compose.yml" ps -q backend)"
+            test -n "$backend_container"
+            test "$(docker inspect -f '{{.State.Running}}' "$backend_container")" = true
+            active_image="$(docker inspect -f '{{.Config.Image}}' "$backend_container")"
+            [[ "$active_image" == *":$RELEASE_COMMIT" ]]
+            systemctl start coro-db-backup.service
+            test "$(systemctl show -p Result --value coro-db-backup.service)" = success
+            evidence="$(mktemp /tmp/coro-demo-documents.XXXXXX.json)"
+            trap 'rm -f -- "$evidence"' EXIT
+            docker exec -e CORO_DEMO_DOCUMENTS_RUN=true "$backend_container" \
+              node dist/scripts/demo-document-knowledge.js "$DEMO_DOCUMENT_PHASE" >"$evidence"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.command!==process.argv[2])process.exit(1);const s=JSON.stringify(r);if(/demo@getcoro\.io|password|secret|token|access[_-]?key|private[_-]?key|storageKey/i.test(s))process.exit(1);' "$evidence" "$DEMO_DOCUMENT_PHASE"
+            cat "$evidence"
