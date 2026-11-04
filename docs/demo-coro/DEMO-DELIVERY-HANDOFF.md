@@ -12,7 +12,7 @@
 
 ## Prochaine action concrète
 
-Terminer l'inventaire de tous les transports et workers, tester la migration et l'outil sur PostgreSQL réel, enrichir les fixtures par services métier, puis exécuter les parcours navigateur. Une PR ne sera ouverte que sur un candidat local qualifié.
+Les transports principaux sont protégés et la migration, l'idempotence, la concurrence, l'échec atomique et le reset sont démontrés sur PostgreSQL 16. Les fixtures Activités/Planning et TimeLog/Rendement sont maintenant incluses. Il reste à qualifier les documents/Knowledge et les modules opérationnels, puis à exécuter les parcours API et navigateur avant toute PR de livraison.
 
 ## Blocages/limites
 

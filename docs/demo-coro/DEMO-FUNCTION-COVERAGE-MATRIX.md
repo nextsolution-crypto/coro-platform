@@ -5,8 +5,9 @@
 | Tableau de bord, clients, bâtiments | Portefeuille fictif multi-sites | DEMONTRABLE après provisionnement | QA et navigateur |
 | Projets PMU/PSI/PCA | États variés, progression déclarée | DEMONTRABLE après provisionnement | Documents et transitions métier |
 | Documents, versions, approbation, export | Parcours ouvrable et historique | BLOQUEE_PAR_DEPENDANCE | Fixtures via services métier et stockage privé |
-| Activités, réservations, planning | Conseiller ↔ client, ICS | DEMONTRABLE_AVEC_SIMULATION_EXPLICITE | Isolation courriel et fixtures |
-| Timelog et Rendement | Plusieurs mois, marges cohérentes | DEMONTRABLE après provisionnement | Calculs attendus à valider |
+| Activités et planning | 3 activités, 4 tâches, échéances et états variés | FIXTURES_VALIDÉES_LOCAL | Recette UI et réservation client restent à faire |
+| Timelog et Rendement | 3 mandats, 4 saisies de temps, montants fictifs | FIXTURES_VALIDÉES_LOCAL | Calculs API/UI et historique multi-mois restent à valider |
+| Réservations | Conseiller ↔ client, ICS | NOT_VERIFIED | Identité ClientUser et parcours produit requis |
 | Carte et suivi documentaire | Six sites et états variés | DEMONTRABLE après provisionnement | QA visuel et tuiles simulées |
 | Bibliothèque | Catalogue global en lecture seule | DEMONTRABLE | Ne pas modifier le catalogue global |
 | Knowledge | Recherche et citations autorisées | DEMONTRABLE après indexation | Sources synthétiques et fraîcheur |

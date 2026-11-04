@@ -76,5 +76,27 @@
     { "key": "project-horizon-psi", "id": "d3000003-0000-4000-8000-000000000008", "buildingKey": "building-atelier-industriel", "name": "PSI — Complexe Horizon — Démo", "documentType": "PSI", "status": "IN_PROGRESS", "progress": 60 },
     { "key": "project-horizon-pca", "id": "d3000003-0000-4000-8000-000000000009", "buildingKey": "building-atelier-industriel", "name": "PCA — Complexe Horizon — Démo", "documentType": "PCA", "status": "REVIEW", "progress": 80 },
     { "key": "project-horizon-exercice", "id": "d3000003-0000-4000-8000-000000000010", "buildingKey": "building-atelier-industriel", "name": "PMU — Exercice annuel Horizon — Démo", "documentType": "PMU", "status": "DRAFT", "progress": 5 }
+  ],
+  "mandates": [
+    { "key": "mandate-boreal-pmu", "id": "d3000004-0000-4000-8000-000000000001", "projectKey": "project-boreal-pmu", "description": "Mise à jour annuelle fictive du PMU", "soldAmount": 12800, "hourlyRate": 145, "budgetHours": 88 },
+    { "key": "mandate-erables-psi", "id": "d3000004-0000-4000-8000-000000000002", "projectKey": "project-erables-psi", "description": "Validation fictive des mesures de sécurité incendie", "soldAmount": 9400, "hourlyRate": 140, "budgetHours": 67 },
+    { "key": "mandate-horizon-psi", "id": "d3000004-0000-4000-8000-000000000003", "projectKey": "project-horizon-psi", "description": "Révision fictive du PSI industriel", "soldAmount": 17600, "hourlyRate": 150, "budgetHours": 117 }
+  ],
+  "activities": [
+    { "key": "activity-boreal-inspection", "id": "d3000005-0000-4000-8000-000000000001", "projectKey": "project-boreal-pmu", "type": "inspection", "label": "Inspection annuelle — Démo", "duration": "2 h", "scheduledDate": "2026-11-12T14:00:00.000Z", "status": "a_faire" },
+    { "key": "activity-erables-review", "id": "d3000005-0000-4000-8000-000000000002", "projectKey": "project-erables-psi", "type": "revision", "label": "Révision des rôles — Démo", "duration": "90 min", "scheduledDate": "2026-11-18T15:30:00.000Z", "status": "planifiee" },
+    { "key": "activity-horizon-exercise", "id": "d3000005-0000-4000-8000-000000000003", "projectKey": "project-horizon-psi", "type": "exercice", "label": "Préparation exercice annuel — Démo", "duration": "3 h", "scheduledDate": "2026-12-03T13:00:00.000Z", "status": "a_faire" }
+  ],
+  "tasks": [
+    { "key": "task-boreal-plans", "id": "d3000006-0000-4000-8000-000000000001", "projectKey": "project-boreal-pmu", "activityKey": "activity-boreal-inspection", "category": "Documentation", "title": "Vérifier les plans d'étage", "status": "en_cours", "dueDate": "2026-11-10T17:00:00.000Z" },
+    { "key": "task-boreal-contacts", "id": "d3000006-0000-4000-8000-000000000002", "projectKey": "project-boreal-pmu", "activityKey": "activity-boreal-inspection", "category": "Coordination", "title": "Valider la liste des responsables", "status": "a_faire", "dueDate": "2026-11-11T17:00:00.000Z" },
+    { "key": "task-erables-roles", "id": "d3000006-0000-4000-8000-000000000003", "projectKey": "project-erables-psi", "activityKey": "activity-erables-review", "category": "Sécurité", "title": "Réviser les rôles d'urgence", "status": "terminee", "dueDate": "2026-11-17T17:00:00.000Z" },
+    { "key": "task-horizon-scenario", "id": "d3000006-0000-4000-8000-000000000004", "projectKey": "project-horizon-psi", "activityKey": "activity-horizon-exercise", "category": "Exercice", "title": "Préparer le scénario synthétique", "status": "en_cours", "dueDate": "2026-11-28T17:00:00.000Z" }
+  ],
+  "timeEntries": [
+    { "key": "time-boreal-plans-1", "id": "d3000007-0000-4000-8000-000000000001", "taskKey": "task-boreal-plans", "date": "2026-10-20T12:00:00.000Z", "hours": 3.5, "note": "Analyse fictive des plans" },
+    { "key": "time-boreal-contacts-1", "id": "d3000007-0000-4000-8000-000000000002", "taskKey": "task-boreal-contacts", "date": "2026-10-22T12:00:00.000Z", "hours": 1.25, "note": "Coordination fictive" },
+    { "key": "time-erables-roles-1", "id": "d3000007-0000-4000-8000-000000000003", "taskKey": "task-erables-roles", "date": "2026-10-24T12:00:00.000Z", "hours": 4, "note": "Révision fictive des rôles" },
+    { "key": "time-horizon-scenario-1", "id": "d3000007-0000-4000-8000-000000000004", "taskKey": "task-horizon-scenario", "date": "2026-10-27T12:00:00.000Z", "hours": 2.75, "note": "Préparation fictive du scénario" }
   ]
 }

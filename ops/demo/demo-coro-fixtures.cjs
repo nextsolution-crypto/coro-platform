@@ -16,7 +16,15 @@ function assertManifest() {
   if (manifest.target.referenceEmail !== 'demo@getcoro.io') {
     throw new Error('UNEXPECTED_REFERENCE_IDENTITY');
   }
-  const ids = [...manifest.clients, ...manifest.buildings, ...manifest.projects].map((entry) => entry.id);
+  const ids = [
+    ...manifest.clients,
+    ...manifest.buildings,
+    ...manifest.projects,
+    ...manifest.mandates,
+    ...manifest.activities,
+    ...manifest.tasks,
+    ...manifest.timeEntries,
+  ].map((entry) => entry.id);
   if (new Set(ids).size !== ids.length) throw new Error('DUPLICATE_FIXTURE_ID');
 }
 
@@ -56,6 +64,10 @@ async function existingState(tx) {
       clients: manifest.clients.length,
       buildings: manifest.buildings.length,
       projects: manifest.projects.length,
+      mandates: manifest.mandates.length,
+      activities: manifest.activities.length,
+      tasks: manifest.tasks.length,
+      timeEntries: manifest.timeEntries.length,
     },
     registered: records.length,
     records,
@@ -204,6 +216,91 @@ async function provision(prisma) {
       if (row.organizationId !== manifest.target.organizationId || row.buildingId !== building.id || row.name !== project.name) throw new Error('FIXTURE_COLLISION_PROJECT');
       await register(tx, project.key, 'Project', row.id, { name: project.name, status: project.status, progress: project.progress });
     }
+    for (const mandate of manifest.mandates) {
+      const project = manifest.projects.find((entry) => entry.key === mandate.projectKey);
+      if (!project) throw new Error('INVALID_MANDATE_PROJECT_REFERENCE');
+      const row = await tx.projectMandate.upsert({
+        where: { projectId: project.id },
+        create: {
+          id: mandate.id,
+          projectId: project.id,
+          organizationId: manifest.target.organizationId,
+          ownerId: identity.id,
+          description: mandate.description,
+          montantVendu: mandate.soldAmount,
+          tauxHoraire: mandate.hourlyRate,
+          heuresBudgetees: mandate.budgetHours,
+          typeMandat: 'DEMO',
+        },
+        update: {},
+      });
+      if (row.id !== mandate.id || row.organizationId !== manifest.target.organizationId) throw new Error('FIXTURE_COLLISION_MANDATE');
+      await register(tx, mandate.key, 'ProjectMandate', row.id, { projectId: project.id });
+    }
+    for (const activity of manifest.activities) {
+      const project = manifest.projects.find((entry) => entry.key === activity.projectKey);
+      if (!project) throw new Error('INVALID_ACTIVITY_PROJECT_REFERENCE');
+      const row = await tx.projectActivity.upsert({
+        where: { id: activity.id },
+        create: {
+          id: activity.id,
+          projectId: project.id,
+          organizationId: manifest.target.organizationId,
+          type: activity.type,
+          label: activity.label,
+          duration: activity.duration,
+          scheduledDate: new Date(activity.scheduledDate),
+          status: activity.status,
+          assigneeEmail: manifest.target.referenceEmail,
+          clientVisible: true,
+          clientBookable: false,
+        },
+        update: {},
+      });
+      if (row.projectId !== project.id || row.organizationId !== manifest.target.organizationId) throw new Error('FIXTURE_COLLISION_ACTIVITY');
+      await register(tx, activity.key, 'ProjectActivity', row.id, { projectId: project.id });
+    }
+    for (const task of manifest.tasks) {
+      const project = manifest.projects.find((entry) => entry.key === task.projectKey);
+      const activity = manifest.activities.find((entry) => entry.key === task.activityKey);
+      if (!project || !activity || activity.projectKey !== project.key) throw new Error('INVALID_TASK_REFERENCE');
+      const row = await tx.projectTask.upsert({
+        where: { id: task.id },
+        create: {
+          id: task.id,
+          projectId: project.id,
+          activityId: activity.id,
+          organizationId: manifest.target.organizationId,
+          categoryName: task.category,
+          taskTitle: task.title,
+          status: task.status,
+          dueDate: new Date(task.dueDate),
+          assigneeId: identity.id,
+        },
+        update: {},
+      });
+      if (row.projectId !== project.id || row.organizationId !== manifest.target.organizationId) throw new Error('FIXTURE_COLLISION_TASK');
+      await register(tx, task.key, 'ProjectTask', row.id, { projectId: project.id });
+    }
+    for (const entry of manifest.timeEntries) {
+      const task = manifest.tasks.find((item) => item.key === entry.taskKey);
+      if (!task) throw new Error('INVALID_TIME_ENTRY_TASK_REFERENCE');
+      const row = await tx.taskTimeEntry.upsert({
+        where: { id: entry.id },
+        create: {
+          id: entry.id,
+          taskId: task.id,
+          userId: identity.id,
+          organizationId: manifest.target.organizationId,
+          date: new Date(entry.date),
+          heures: entry.hours,
+          note: entry.note,
+        },
+        update: {},
+      });
+      if (row.taskId !== task.id || row.organizationId !== manifest.target.organizationId) throw new Error('FIXTURE_COLLISION_TIME_ENTRY');
+      await register(tx, entry.key, 'TaskTimeEntry', row.id, { taskId: task.id });
+    }
     const state = await existingState(tx);
     return sanitizedSummary('provision', state, { mutation: true });
   }, { timeout: 120000 });
@@ -215,7 +312,8 @@ async function verify(prisma) {
     await assertTarget(tx);
     const environment = await tx.demoEnvironment.findUnique({ where: { organizationId: manifest.target.organizationId } });
     const state = await existingState(tx);
-    const expected = manifest.clients.length + manifest.buildings.length + manifest.projects.length;
+    const expected = manifest.clients.length + manifest.buildings.length + manifest.projects.length +
+      manifest.mandates.length + manifest.activities.length + manifest.tasks.length + manifest.timeEntries.length;
     const ready = Boolean(
       environment && environment.status === 'ACTIVE' && environment.communicationMode === 'SIMULATE' &&
       environment.externalProvidersDisabled && state.registered === expected,
@@ -259,7 +357,7 @@ async function reset(prisma) {
       throw new Error('RESET_BLOCKED_BY_DEPENDENCIES');
     }
     await tx.demoFixtureRecord.updateMany({
-      where: { organizationId: manifest.target.organizationId, fixtureNamespace: manifest.fixtureNamespace, entityId: { in: [...projectIds, ...buildingIds, ...clientIds] } },
+      where: { organizationId: manifest.target.organizationId, fixtureNamespace: manifest.fixtureNamespace, state: 'ACTIVE' },
       data: { state: 'RETIRED' },
     });
     await tx.demoEnvironment.update({

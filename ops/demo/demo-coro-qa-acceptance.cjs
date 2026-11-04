@@ -128,7 +128,8 @@ async function main() {
         state: 'ACTIVE',
       },
     });
-    const expectedRecords = manifest.clients.length + manifest.buildings.length + manifest.projects.length;
+    const expectedRecords = manifest.clients.length + manifest.buildings.length + manifest.projects.length +
+      manifest.mandates.length + manifest.activities.length + manifest.tasks.length + manifest.timeEntries.length;
     if (!verified.ready || activeRecords !== expectedRecords) throw new Error('IDEMPOTENCY_VERIFICATION_FAILED');
 
     await prisma.user.update({
