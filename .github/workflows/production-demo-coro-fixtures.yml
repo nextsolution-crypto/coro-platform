@@ -1,0 +1,101 @@
+name: Governed Production Demo Coro Fixtures
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: Exact governed fixture phase
+        required: true
+        type: choice
+        options: [dry-run, prepare, verify, reset]
+      approval:
+        description: Exact phase-specific approval token
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      script_sha256: ${{ steps.hash.outputs.script_sha256 }}
+      manifest_sha256: ${{ steps.hash.outputs.manifest_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Validate fixed request and fixture contract
+        env:
+          PHASE: ${{ inputs.phase }}
+          APPROVAL: ${{ inputs.approval }}
+        run: |
+          set -Eeuo pipefail
+          case "$PHASE:$APPROVAL" in
+            dry-run:DRY_RUN_CORO_DEMO_FIXTURES) ;;
+            prepare:PREPARE_CORO_DEMO_FIXTURES) ;;
+            verify:VERIFY_CORO_DEMO_FIXTURES) ;;
+            reset:RESET_CORO_DEMO_FIXTURES) ;;
+            *) exit 1 ;;
+          esac
+          node --test ops/demo/demo-coro-fixtures.test.cjs ops/demo/demo-coro-production-workflow.test.cjs
+      - id: hash
+        run: |
+          echo "script_sha256=$(sha256sum ops/demo/demo-coro-fixtures.cjs | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "manifest_sha256=$(sha256sum ops/demo/demo-coro-fixture-manifest.json | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+  execute:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Execute fixed tenant-scoped fixture authority
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SCRIPT_SHA256: ${{ needs.validate.outputs.script_sha256 }}
+          MANIFEST_SHA256: ${{ needs.validate.outputs.manifest_sha256 }}
+          DEMO_FIXTURE_PHASE: ${{ inputs.phase }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,SCRIPT_SHA256,MANIFEST_SHA256,DEMO_FIXTURE_PHASE,GITHUB_RUN_ID
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            host_tmp="$(mktemp -d /tmp/coro-demo-fixtures.XXXXXX)"
+            container_tmp="/tmp/coro-demo-fixtures-$GITHUB_RUN_ID"
+            backend_container=""
+            cleanup() {
+              if [[ -n "$backend_container" ]]; then docker exec "$backend_container" rm -rf -- "$container_tmp" >/dev/null 2>&1 || true; fi
+              rm -rf -- "$host_tmp"
+            }
+            trap cleanup EXIT
+            exec 9>/run/lock/coro-production-deployment.lock
+            flock -n 9
+            git -C "$repo" fetch --quiet origin main
+            test "$(git -C "$repo" rev-parse origin/main)" = "$SOURCE_SHA"
+            git -C "$repo" show "$SOURCE_SHA:ops/demo/demo-coro-fixtures.cjs" >"$host_tmp/demo-coro-fixtures.cjs"
+            git -C "$repo" show "$SOURCE_SHA:ops/demo/demo-coro-fixture-manifest.json" >"$host_tmp/demo-coro-fixture-manifest.json"
+            test "$(sha256sum "$host_tmp/demo-coro-fixtures.cjs" | cut -d' ' -f1)" = "$SCRIPT_SHA256"
+            test "$(sha256sum "$host_tmp/demo-coro-fixture-manifest.json" | cut -d' ' -f1)" = "$MANIFEST_SHA256"
+            backend_container="$(docker compose -f "$repo/docker-compose.yml" ps -q backend)"
+            test -n "$backend_container"
+            test "$(docker inspect -f '{{.State.Running}}' "$backend_container")" = true
+            systemctl start coro-db-backup.service
+            test "$(systemctl show -p Result --value coro-db-backup.service)" = success
+            docker exec "$backend_container" mkdir -p "$container_tmp"
+            docker cp "$host_tmp/demo-coro-fixtures.cjs" "$backend_container:$container_tmp/demo-coro-fixtures.cjs"
+            docker cp "$host_tmp/demo-coro-fixture-manifest.json" "$backend_container:$container_tmp/demo-coro-fixture-manifest.json"
+            docker exec -e CORO_DEMO_FIXTURES_RUN=true "$backend_container" \
+              node "$container_tmp/demo-coro-fixtures.cjs" "$DEMO_FIXTURE_PHASE" >"$host_tmp/evidence.json"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.command!==process.argv[2])process.exit(1);const s=JSON.stringify(r);if(/demo@getcoro\.io|password|secret|token|access[_-]?key|private[_-]?key/i.test(s))process.exit(1);' "$host_tmp/evidence.json" "$DEMO_FIXTURE_PHASE"
+            cat "$host_tmp/evidence.json"
+
