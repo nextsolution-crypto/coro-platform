@@ -78,9 +78,11 @@ jobs:
             node -e 'const r=require(process.argv[1]);if(r.schemaVersion!==1||r.releaseCommit!==process.argv[2]||r.releaseId!==`production-${process.argv[2]}`)process.exit(1)' "$reconciled" "$RELEASE_COMMIT"
             systemctl start coro-db-backup.service
             test "$(systemctl show -p Result --value coro-db-backup.service)" = success
+            raw="$(mktemp /tmp/coro-demo-documents.XXXXXX.log)"
             evidence="$(mktemp /tmp/coro-demo-documents.XXXXXX.json)"
-            trap 'rm -f -- "$evidence"' EXIT
+            trap 'rm -f -- "$raw" "$evidence"' EXIT
             docker exec -e CORO_DEMO_DOCUMENTS_RUN=true "$backend_container" \
-              node dist/scripts/demo-document-knowledge.js "$DEMO_DOCUMENT_PHASE" >"$evidence"
+              node dist/scripts/demo-document-knowledge.js "$DEMO_DOCUMENT_PHASE" >"$raw"
+            node -e 'const fs=require("fs");const lines=fs.readFileSync(process.argv[1],"utf8").split(/\r?\n/).filter(Boolean);let result;for(let i=lines.length-1;i>=0;i--){try{const candidate=JSON.parse(lines[i]);if(candidate?.schemaVersion===1){result=candidate;break;}}catch{}}if(!result){console.error("DEMO_DOCUMENT_EVIDENCE_NOT_FOUND");process.exit(1);}fs.writeFileSync(process.argv[2],JSON.stringify(result)+"\n",{mode:0o600});' "$raw" "$evidence"
             node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.command!==process.argv[2])process.exit(1);const s=JSON.stringify(r);if(/demo@getcoro\.io|password|secret|token|access[_-]?key|private[_-]?key|storageKey/i.test(s))process.exit(1);' "$evidence" "$DEMO_DOCUMENT_PHASE"
             cat "$evidence"
