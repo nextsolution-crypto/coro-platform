@@ -34,6 +34,7 @@ export class EmailService {
     to: { email: string; name: string },
     subject: string,
     htmlContent: string,
+    operation: string,
   ): Promise<EmailSendResult> {
     try {
       if (!this.demoCommunicationPolicy && process.env.NODE_ENV === 'production') {
@@ -46,9 +47,9 @@ export class EmailService {
           const decision = await this.demoCommunicationPolicy.evaluate({
             organizationId,
             channel: DemoCommunicationChannel.EMAIL,
-            operation: 'CLIENT_PORTAL_EMAIL',
+            operation,
             recipient: to.email,
-            payload: { subject, template: 'CLIENT_PORTAL_EMAIL' },
+            payload: { subject, template: operation },
           });
           if (decision.disposition === 'BLOCKED') return { success: false };
           if (decision.disposition === 'SIMULATED') {
@@ -144,6 +145,7 @@ export class EmailService {
       { email: data.toEmail, name: data.toName },
       'Réinitialisation de votre mot de passe CORO',
       htmlContent,
+      'CLIENT_PASSWORD_RESET',
     );
   }
 
@@ -175,6 +177,7 @@ export class EmailService {
       { email: data.toEmail, name: data.toName },
       'Votre lien de connexion CORO',
       htmlContent,
+      'CLIENT_MAGIC_LINK',
     );
   }
 
@@ -229,6 +232,7 @@ export class EmailService {
       { email: data.toEmail, name: data.toName },
       subject,
       htmlContent,
+      'CLIENT_INVITATION',
     );
   }
 
@@ -286,6 +290,7 @@ export class EmailService {
       { email: data.toEmail, name: data.toName },
       subject,
       htmlContent,
+      'DOCUMENT_AVAILABLE',
     );
   }
 
@@ -340,6 +345,7 @@ export class EmailService {
       { email: data.toEmail, name: data.toName },
       subject,
       htmlContent,
+      'DOCUMENT_REFUSED',
     );
   }
 
@@ -390,6 +396,7 @@ export class EmailService {
       { email: data.toEmail, name: data.toName },
       subject,
       htmlContent,
+      'DOCUMENT_SIGNED',
     );
   }
 
@@ -452,6 +459,7 @@ export class EmailService {
       { email: data.toEmail, name: `${data.toFirstName} ${data.toLastName}` },
       subject,
       htmlContent,
+      'TEAM_MEMBER_WELCOME',
     );
   }
 
@@ -478,6 +486,7 @@ export class EmailService {
       { email: data.toEmail, name },
       `Invitation CORO — ${data.organizationName}`,
       htmlContent,
+      'ORGANIZATION_USER_INVITATION',
     );
   }
 }

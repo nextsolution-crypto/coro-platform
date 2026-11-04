@@ -2,6 +2,7 @@ import {
   DemoCommunicationChannel,
   DemoCommunicationMode,
 } from '@prisma/client';
+import { createHash } from 'crypto';
 import { DemoCommunicationPolicyService } from './demo-communication-policy.service';
 
 function harness(environment: any) {
@@ -15,7 +16,8 @@ function harness(environment: any) {
     demoCommunicationEvent: {
       upsert: jest.fn(async ({ where, create }: any) => {
         const key = `${where.organizationId_idempotencyKey.organizationId}:${where.organizationId_idempotencyKey.idempotencyKey}`;
-        if (!events.has(key)) events.set(key, { id: `event-${events.size + 1}`, ...create });
+        if (!events.has(key))
+          events.set(key, { id: `event-${events.size + 1}`, ...create });
         return { id: events.get(key).id };
       }),
     },
@@ -28,6 +30,19 @@ function harness(environment: any) {
 }
 
 describe('DemoCommunicationPolicyService', () => {
+  const demoOrganizationId = '916f54ec-af22-45e0-99db-a369d9630002';
+  const recipient = 'demo-authorized@example.test';
+  const previousAllowlist =
+    process.env.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST;
+
+  afterEach(() => {
+    if (previousAllowlist === undefined)
+      delete process.env.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST;
+    else
+      process.env.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST =
+        previousAllowlist;
+  });
+
   it('laisse les tenants ordinaires utiliser leur transport existant', async () => {
     const h = harness(null);
     await expect(
@@ -63,6 +78,170 @@ describe('DemoCommunicationPolicyService', () => {
     expect(JSON.stringify(stored)).not.toContain('not-persisted');
     expect(stored.recipientHash).toMatch(/^[a-f0-9]{64}$/);
     expect(stored.payloadHash).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  function allowRecipient() {
+    process.env.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST = createHash(
+      'sha256',
+    )
+      .update(recipient)
+      .digest('hex');
+  }
+
+  function eligibleHarness(kind: 'user' | 'clientUser') {
+    const h = harness({
+      status: 'ACTIVE',
+      communicationMode: DemoCommunicationMode.SIMULATE,
+      externalProvidersDisabled: true,
+    });
+    h.prisma.user.findUnique.mockResolvedValue(
+      kind === 'user'
+        ? { organizationId: demoOrganizationId, isActive: true }
+        : null,
+    );
+    h.prisma.clientUser.findUnique.mockResolvedValue(
+      kind === 'clientUser'
+        ? {
+            organizationId: demoOrganizationId,
+            isActive: true,
+            client: { isActive: true },
+          }
+        : null,
+    );
+    return h;
+  }
+
+  it.each([
+    ['PLATFORM_MFA', 'user'],
+    ['PLATFORM_PASSWORD_RESET', 'user'],
+    ['ORGANIZATION_USER_INVITATION', 'user'],
+    ['CLIENT_PASSWORD_RESET', 'clientUser'],
+    ['CLIENT_MAGIC_LINK', 'clientUser'],
+    ['CLIENT_INVITATION', 'clientUser'],
+  ] as const)(
+    'autorise %s seulement pour une identite %s active du tenant canonique',
+    async (operation, kind) => {
+      allowRecipient();
+      const h = eligibleHarness(kind);
+      await expect(
+        h.service.evaluate({
+          organizationId: demoOrganizationId,
+          channel: DemoCommunicationChannel.EMAIL,
+          operation,
+          recipient,
+          payload: { template: operation },
+        }),
+      ).resolves.toEqual({ disposition: 'LIVE' });
+      const stored = [...h.events.values()][0];
+      expect(stored).toMatchObject({ simulated: false, blocked: false });
+    },
+  );
+
+  it('autorise PLATFORM_MFA pour un seul type d identite admissible', async () => {
+    allowRecipient();
+    const h = eligibleHarness('clientUser');
+    await expect(
+      h.service.evaluate({
+        organizationId: demoOrganizationId,
+        channel: DemoCommunicationChannel.EMAIL,
+        operation: 'PLATFORM_MFA',
+        recipient,
+        payload: { template: 'PLATFORM_MFA' },
+      }),
+    ).resolves.toEqual({ disposition: 'LIVE' });
+    const stored = [...h.events.values()][0];
+    expect(stored).toMatchObject({ simulated: false, blocked: false });
+  });
+
+  it.each([
+    [
+      'destinataire absent',
+      'other@example.test',
+      'PLATFORM_MFA',
+      DemoCommunicationChannel.EMAIL,
+    ],
+    [
+      'operation metier',
+      'demo-authorized@example.test',
+      'POPULATION_ALERT',
+      DemoCommunicationChannel.EMAIL,
+    ],
+    [
+      'canal SMS',
+      'demo-authorized@example.test',
+      'PLATFORM_MFA',
+      DemoCommunicationChannel.SMS,
+    ],
+  ])(
+    'maintient la simulation pour %s',
+    async (_label, recipient, operation, channel) => {
+      allowRecipient();
+      const h = eligibleHarness('user');
+      await expect(
+        h.service.evaluate({
+          organizationId: demoOrganizationId,
+          channel,
+          operation,
+          recipient,
+          payload: {},
+        }),
+      ).resolves.toEqual({ disposition: 'SIMULATED', eventId: 'event-1' });
+    },
+  );
+
+  it.each([
+    ['mauvais tenant', 'other-organization', true, false],
+    ['identite inactive', demoOrganizationId, false, false],
+    ['identites ambigues', demoOrganizationId, true, true],
+  ])(
+    'maintient la simulation pour %s',
+    async (_label, organizationId, userActive, clientActive) => {
+      allowRecipient();
+      const h = harness({
+        status: 'ACTIVE',
+        communicationMode: DemoCommunicationMode.SIMULATE,
+        externalProvidersDisabled: true,
+      });
+      h.prisma.user.findUnique.mockResolvedValue({
+        organizationId: demoOrganizationId,
+        isActive: userActive,
+      });
+      h.prisma.clientUser.findUnique.mockResolvedValue(
+        clientActive
+          ? {
+              organizationId: demoOrganizationId,
+              isActive: true,
+              client: { isActive: true },
+            }
+          : null,
+      );
+      await expect(
+        h.service.evaluate({
+          organizationId,
+          channel: DemoCommunicationChannel.EMAIL,
+          operation: 'PLATFORM_MFA',
+          recipient,
+          payload: {},
+        }),
+      ).resolves.toEqual({ disposition: 'SIMULATED', eventId: 'event-1' });
+    },
+  );
+
+  it('ne contourne jamais BLOCK avec l allowlist authentification', async () => {
+    allowRecipient();
+    const h = harness({
+      status: 'PAUSED',
+      communicationMode: DemoCommunicationMode.BLOCK,
+      externalProvidersDisabled: true,
+    });
+    const decision = await h.service.evaluate({
+      organizationId: demoOrganizationId,
+      channel: DemoCommunicationChannel.EMAIL,
+      operation: 'PLATFORM_MFA',
+      recipient,
+      payload: {},
+    });
+    expect(decision.disposition).toBe('BLOCKED');
   });
 
   it('bloque un environnement en pause et reste idempotent', async () => {
@@ -105,11 +284,15 @@ describe('DemoCommunicationPolicyService', () => {
   it('résout un destinataire seulement si User et ClientUser ne divergent pas', async () => {
     const h = harness(null);
     h.prisma.user.findUnique.mockResolvedValue({ organizationId: 'org-demo' });
-    h.prisma.clientUser.findUnique.mockResolvedValue({ organizationId: 'org-demo' });
+    h.prisma.clientUser.findUnique.mockResolvedValue({
+      organizationId: 'org-demo',
+    });
     await expect(
       h.service.organizationIdForRecipient(' Demo@Example.Invalid '),
     ).resolves.toBe('org-demo');
-    h.prisma.clientUser.findUnique.mockResolvedValue({ organizationId: 'org-other' });
+    h.prisma.clientUser.findUnique.mockResolvedValue({
+      organizationId: 'org-other',
+    });
     await expect(
       h.service.organizationIdForRecipient('demo@example.invalid'),
     ).resolves.toBeNull();

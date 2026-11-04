@@ -38,7 +38,7 @@ describe('EmailService Demo isolation', () => {
     expect(global.fetch).not.toHaveBeenCalled();
     expect(policy.evaluate).toHaveBeenCalledWith(
       expect.objectContaining({
-        operation: 'CLIENT_PORTAL_EMAIL',
+        operation: 'CLIENT_PASSWORD_RESET',
         payload: expect.not.objectContaining({ resetUrl: expect.anything() }),
       }),
     );

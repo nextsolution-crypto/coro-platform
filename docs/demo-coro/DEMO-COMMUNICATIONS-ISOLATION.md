@@ -6,6 +6,22 @@
 
 La configuration invalide `externalProvidersDisabled=false` échoue avant la création d'une preuve de simulation. L'absence du garde dans un transport intégré échoue fermé en production.
 
+## Exception d'authentification bornée
+
+`DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST` peut contenir une liste
+séparée par des virgules d'empreintes SHA-256 de destinataires explicitement
+autorisés. Cette configuration ne change pas le mode `SIMULATE` et ne désactive
+pas `externalProvidersDisabled`. Elle autorise uniquement le canal `EMAIL` pour
+les opérations d'authentification suivantes : MFA plateforme, récupération de
+mot de passe plateforme ou portail, magic link portail et invitations User ou
+ClientUser.
+
+Toutes les notifications documentaires, communications métier, alertes, SMS et
+webhooks demeurent simulés. Un environnement `PAUSED` ou `BLOCK` refuse aussi
+les destinataires allowlistés. Une empreinte absente ou mal formée échoue en
+simulation. La valeur de configuration et les adresses sources ne doivent pas
+être ajoutées au dépôt ni aux preuves.
+
 ## Transports raccordés dans le candidat local
 
 - MFA plateforme.
