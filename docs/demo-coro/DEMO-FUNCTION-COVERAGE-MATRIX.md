@@ -4,13 +4,13 @@
 |---|---|---|---|
 | Tableau de bord, clients, bâtiments | Portefeuille fictif multi-sites | DEMONTRABLE après provisionnement | QA et navigateur |
 | Projets PMU/PSI/PCA | États variés, progression déclarée | DEMONTRABLE après provisionnement | Documents et transitions métier |
-| Documents privés et Knowledge | Upload, REVIEW, APPROVED, téléchargement, indexation, citation, révocation | PASS intégré local | Provisionnement gouverné du tenant et recette UI restent requis |
+| Documents privés et Knowledge | Upload, REVIEW, APPROVED, téléchargement, indexation, citation, révocation | PASS livré côté serveur | Deux versions privées provisionnées; SHA-256, version courante, citation et portées vérifiés. Recette UI multirôle restante |
 | Activités et planning | 3 activités, 4 tâches, échéances et états variés | FIXTURES_VALIDÉES_LOCAL | Recette UI et réservation client restent à faire |
 | Timelog et Rendement | 3 mandats, 4 saisies, ventes/taux CAD isolés | PASS calcul intégré local | Hypothèses de démonstration seulement; recette UI restante |
 | Réservations | Conseiller ↔ client, ICS | NOT_VERIFIED | Identité ClientUser et parcours produit requis |
 | Carte et suivi documentaire | Six sites et états variés | DONNÉES PROVISIONNÉES | QA visuel local réussi; vérification livrée multirôle en attente |
 | Bibliothèque | Catalogue global en lecture seule | DEMONTRABLE | Ne pas modifier le catalogue global |
-| Knowledge | Recherche et citations autorisées | PASS QA / NON PROVISIONNÉ LIVRÉ | Source synthétique, citation et révocation réussies en QA; aucune source ProjectFile livrée (`files: 0`) |
+| Knowledge | Recherche et citations autorisées | PASS QA ET SERVEUR LIVRÉ | Source v2 APPROVED/READY, v1 STALE, citation/version/SHA exacts et refus inter-tenant démontrés; ouverture UI multirôle restante |
 | CORO AI authentifié | Génération réelle | BLOQUEE_PAR_DEPENDANCE | Fournisseur réel désactivé; ne pas simuler comme réel |
 | Sentinelle | 2 employés et 4 présences synthétiques | FIXTURES_VALIDÉES_LOCAL | Recette API/UI et rôles d'urgence restent requis |
 | Incident et exercices | Exercice résolu, REX descriptif, aucun jeton public | FIXTURES_VALIDÉES_LOCAL | Cycle de mutation produit et UI restent requis |
