@@ -15,14 +15,14 @@
 | Documents privés ouvrables | PASS intégré local | Stockage S3 QA isolé, SHA-256 identique, aucun storageKey ni URL HTTP exposé |
 | Knowledge et citations | PASS intégré local | Source APPROVED indexée localement, citation/version exacte, retrait après révocation |
 | Indicateurs cohérents | PASS intégré local | 11,5 h; ventes CAD 39 800,00; coût 828,00; marge 38 972,00; 3 mandats complets |
-| Multirôle et MFA | NOT_VERIFIED | Identités non créées |
+| Multirôle et MFA | PASS local QA / NOT_VERIFIED livré | Trois identités QA, connexion mot de passe + MFA locale normale; adresses livrables permanentes encore requises |
 | Reset ciblé | PASS local | 40 fixtures retirées, neutralisées ou désactivées; 2 projets Prémont synthétiques préexistants conservés; environnement PAUSED/BLOCK |
 | Activités/Planning | PASS données local | 3 activités et 4 tâches, rattachements projet et assignation vérifiés |
 | TimeLog/Rendement | PASS données local | 3 mandats et 4 saisies de temps; aucune validation financière officielle fabriquée |
 | Sortie de reset par `prepare` | PASS local | Reprovisionne 10 projets puis ACTIVE/SIMULATE, fournisseurs externes toujours désactivés |
 | Protection après nouveau reset | PASS local | PAUSED/BLOCK et fournisseurs externes désactivés |
 | Sentinelle/Incident/REX | PASS données local | 2 employés, 4 présences, 1 exercice sans jeton public, 2 actions liées |
-| Chrome 12/12 | NOT_VERIFIED | Aucun onglet CORO contrôlable observé |
+| Chrome 12/12 | PASS local QA | App + portail, 390/768/1440/2560, Classic/Glass Light/Glass Dark; captures inspectées, F5, clavier, zoom 200 %, aucune erreur console critique |
 | Absence d'impact hors tenant | PASS en lecture seule, NOT_VERIFIED en mutation | Comparaison avant/après requise |
 
-Verdict courant : `DEMO_PARTIAL`. Aucun provisionnement de production n'a été effectué.
+Verdict courant : `DEMO_PARTIAL`. La preuve multirôle locale ne vaut pas activation des comptes permanents dans l'environnement livré. Aucun provisionnement de production n'a été effectué.

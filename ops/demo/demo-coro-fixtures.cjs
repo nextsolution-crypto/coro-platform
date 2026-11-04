@@ -274,7 +274,7 @@ async function provision(prisma) {
           organizationId: manifest.target.organizationId,
           clientId: client.id,
           buildingId: building.id,
-          userId: identity.id,
+          userId: manifest.users[0].id,
           name: project.name,
           documentType: project.documentType,
           status: project.status,
@@ -282,7 +282,7 @@ async function provision(prisma) {
           progress: project.progress,
           configData: { demo: true, fixtureNamespace: manifest.fixtureNamespace },
         },
-        update: {},
+        update: { userId: manifest.users[0].id },
       });
       if (row.organizationId !== manifest.target.organizationId || row.buildingId !== building.id || row.name !== project.name) throw new Error('FIXTURE_COLLISION_PROJECT');
       await register(tx, project.key, 'Project', row.id, { name: project.name, status: project.status, progress: project.progress });
@@ -296,7 +296,7 @@ async function provision(prisma) {
           id: mandate.id,
           projectId: project.id,
           organizationId: manifest.target.organizationId,
-          ownerId: identity.id,
+          ownerId: manifest.users[0].id,
           description: mandate.description,
           montantVendu: mandate.soldAmount,
           soldAmountDecimal: mandate.soldAmount,
@@ -309,7 +309,7 @@ async function provision(prisma) {
           heuresBudgetees: mandate.budgetHours,
           typeMandat: 'DEMO',
         },
-        update: {},
+        update: { ownerId: manifest.users[0].id },
       });
       if (row.soldAmountDecimal === null) {
         row = await tx.projectMandate.update({

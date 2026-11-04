@@ -18,7 +18,7 @@
 | Résilience | Évaluation et résultats explicables | DEMONTRABLE après provisionnement | Fixtures et vérification des calculs |
 | Sentinelle Population | Scénarios et messages simulés | DEMONTRABLE_AVEC_SIMULATION_EXPLICITE | Transport externe interdit |
 | Paramètres et administration | Lecture et gestion limitée au tenant | DEMONTRABLE | Aucun SUPER_ADMIN |
-| Portail client | Corporate/manager et affectations | DEMONTRABLE après provisionnement | Identités secondaires et MFA normal |
+| Portail client | Corporate/manager et affectations | PASS local QA | Comptes permanents livrables et enrôlement MFA humain requis dans l'environnement livré |
 | PGC, PRA, PUE | Selon support réel seulement | NON_DISPONIBLE tant que non qualifié | Ne pas présenter comme livré |
 
 Cette matrice est évolutive. `DEMONTRABLE` ne devient `PASS` qu'après exécution du scénario sur le candidat exact.
