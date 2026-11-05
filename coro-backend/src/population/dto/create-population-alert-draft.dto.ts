@@ -1,10 +1,15 @@
 import {
+  IsBoolean,
   IsEnum,
   IsOptional,
   IsString,
   MaxLength,
 } from 'class-validator';
 import { PopulationAlertType } from '@prisma/client';
+import {
+  PopulationCompassDirection,
+  PopulationTargetingMode,
+} from './population-directional-targeting.dto';
 
 export class CreatePopulationAlertDraftDto {
   @IsString()
@@ -25,6 +30,19 @@ export class CreatePopulationAlertDraftDto {
 
   @IsEnum(PopulationAlertType)
   type: PopulationAlertType;
+
+  @IsOptional()
+  @IsEnum(PopulationTargetingMode)
+  targetingMode?: PopulationTargetingMode;
+
+  @IsOptional()
+  @IsEnum(PopulationCompassDirection)
+  propagationDirection?: PopulationCompassDirection;
+
+  /** Confirmation humaine explicite du périmètre affiché. */
+  @IsOptional()
+  @IsBoolean()
+  targetingConfirmed?: boolean;
 
   @IsString()
   @MaxLength(200)

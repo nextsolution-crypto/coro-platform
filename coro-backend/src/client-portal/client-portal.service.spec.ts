@@ -44,6 +44,10 @@ describe('ClientPortalService - Sentinelle Population', () => {
     suspendProgram: jest.fn(),
     archiveProgram: jest.fn(),
     getAvailableScenarios: jest.fn(),
+    updateDispersionBasis: jest.fn(),
+    reviewDispersionBasis: jest.fn(),
+    updateImpactZoneGovernance: jest.fn(),
+    setImpactZoneAlertingApproval: jest.fn(),
     getScenarioPopulationPreview: jest.fn(),
     createAlertDraft: jest.fn(),
     getAlert: jest.fn(),
@@ -561,6 +565,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
   });
   describe('Population command delegation', () => {
     const actor = {
+      sub: 'client-user-1',
       clientId: 'client-1',
       organizationId: 'org-1',
       role: 'CLIENT_MANAGER',
@@ -883,6 +888,58 @@ describe('ClientPortalService - Sentinelle Population', () => {
       ).rejects.toBeInstanceOf(ForbiddenException);
 
       expect(populationService.getAvailableScenarios).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('dispersion governance', () => {
+    const actor = {
+      sub: 'client-user-1',
+      clientId: 'client-1',
+      organizationId: 'org-1',
+      role: 'CLIENT_MANAGER',
+      buildingIds: ['building-1'],
+    };
+
+    beforeEach(() => {
+      prisma.building.findFirst.mockResolvedValue({
+        id: 'building-1',
+        clientId: 'client-1',
+      });
+    });
+
+    it('exige POPULATION_PREPARE avant de modifier la base scientifique', async () => {
+      prisma.clientUser.findFirst.mockResolvedValueOnce(null);
+
+      await expect(
+        service.updatePopulationDispersionBasis(
+          'building-1',
+          'scenario-1',
+          {} as any,
+          actor,
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      expect(populationService.updateDispersionBasis).not.toHaveBeenCalled();
+    });
+
+    it('délègue la revue avec l’acteur réel après POPULATION_APPROVE', async () => {
+      populationService.reviewDispersionBasis.mockResolvedValue({
+        id: 'scenario-1',
+      });
+
+      await service.reviewPopulationDispersionBasis(
+        'building-1',
+        'scenario-1',
+        { confirmed: true },
+        actor,
+      );
+
+      expect(populationService.reviewDispersionBasis).toHaveBeenCalledWith(
+        'building-1',
+        'scenario-1',
+        { confirmed: true },
+        { type: 'CLIENT_USER', id: 'client-user-1' },
+      );
     });
   });
 

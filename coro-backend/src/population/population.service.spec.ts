@@ -24,6 +24,10 @@ import {
 import { PopulationService } from './population.service';
 import { PopulationProviderError } from './population-delivery.service';
 import { PhoneNumberService } from '../common/phone/phone-number.service';
+import {
+  PopulationCompassDirection,
+  PopulationTargetingMode,
+} from './dto/population-directional-targeting.dto';
 
 describe('PopulationService', () => {
   let service: PopulationService;
@@ -104,6 +108,11 @@ describe('PopulationService', () => {
     distanceKm: jest.fn(),
     isPointInsideGeometry: jest.fn(),
     isPointInsideImpactZone: jest.fn(),
+    isPointInsideDirectionalSector: jest.fn(),
+    oppositeDirection: jest.fn(),
+    includedDirections: jest.fn(),
+    createSectorGeometry: jest.fn(),
+    createCompassSectorGrid: jest.fn(),
   };
 
   const populationDeliveryService = {
@@ -135,6 +144,18 @@ describe('PopulationService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    populationGeospatialService.oppositeDirection.mockReturnValue('S');
+    populationGeospatialService.includedDirections.mockReturnValue([
+      'NW',
+      'N',
+      'NE',
+    ]);
+    populationGeospatialService.createSectorGeometry.mockReturnValue({
+      type: 'Polygon',
+      coordinates: [],
+    });
+    populationGeospatialService.createCompassSectorGrid.mockReturnValue([]);
 
     populationDeliveryService.sendSms.mockResolvedValue({
       provider: 'BREVO',
@@ -3177,6 +3198,43 @@ describe('PopulationService', () => {
        * mais ne compte qu'une seule fois dans uniqueTargetCount.
        */
       expect(result.population.uniqueTargetCount).toBe(2);
+    });
+
+    it('applique la direction aux zones radiales sans découper une géométrie approuvée', async () => {
+      populationGeospatialService.isPointInsideDirectionalSector.mockImplementation(
+        ({ latitude }: { latitude: number }) => latitude === 45.51,
+      );
+      populationGeospatialService.oppositeDirection.mockReturnValue('SW');
+      populationGeospatialService.includedDirections.mockReturnValue([
+        'N',
+        'NE',
+        'E',
+      ]);
+
+      const result = await service.getScenarioPopulationPreview(
+        'building-1',
+        'scenario-1',
+        {
+          targetingMode: PopulationTargetingMode.DIRECTIONAL,
+          propagationDirection: PopulationCompassDirection.NE,
+          includeAdjacentSectors: true,
+        },
+      );
+
+      expect(result.zones[0].targetCount).toBe(1);
+      expect(result.zones[1].targetCount).toBe(1);
+      expect(
+        populationGeospatialService.isPointInsideDirectionalSector,
+      ).toHaveBeenCalledTimes(2);
+      expect(result.directionalPlanning).toEqual(
+        expect.objectContaining({
+          targetingMode: 'DIRECTIONAL',
+          propagationDirection: 'NE',
+          windFromDirection: 'SW',
+          includedDirections: ['N', 'NE', 'E'],
+          radialDistancesKm: [5],
+        }),
+      );
     });
 
     it('compte un abonne ACTIVE apres confirmation de sa localisation', async () => {

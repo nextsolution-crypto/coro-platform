@@ -4315,6 +4315,7 @@ model ProjectFile {
   expiryReminders                  ProjectFileExpiryReminder[]
   knowledgeIngestions              ProjectFileKnowledgeIngestion[]
   knowledgeCitations               ProjectFileKnowledgeCitation[]
+  dispersionScenarioSources        RueEmergencyScenario[]          @relation("DispersionStudySource")
 
   @@index([organizationId, projectId, lifecycleState])
   @@index([buildingId, lifecycleState])
@@ -5769,6 +5770,19 @@ enum RueProtectiveAction {
   OTHER
 }
 
+// Une empreinte calculee par un modele n'est jamais, a elle seule, une
+// autorisation de communiquer. Le but de la zone est conserve explicitement
+// afin de distinguer la science, la planification et la decision operationnelle.
+enum RueImpactZonePurpose {
+  MODELED_IMPACT
+  PUBLIC_NOTIFICATION
+  SHELTER_IN_PLACE
+  EVACUATION
+  EXCLUSION
+  RESPONDER_STAGING
+  OTHER
+}
+
 model RueRegulatedSubstance {
   id String @id @default(uuid())
 
@@ -5932,6 +5946,29 @@ model RueEmergencyScenario {
   // Ex. logiciel de modélisation, étude d'ingénierie, méthode reconnue.
   impactMethod String?
 
+  // Base scientifique versionnee de l'etude de consequences. Ces champs
+  // decrivent le resultat importe; CORO ne remplace pas le modele de
+  // dispersion et ne recalcule pas ses conclusions.
+  dispersionModelName              String?
+  dispersionModelVersion           String?
+  dispersionStudyTitle             String?
+  dispersionStudyReference         String?
+  dispersionStudyDate              DateTime?
+  toxicEndpointName                String?
+  toxicEndpointConcentrationPpm    Float?
+  toxicEndpointAveragingTimeSeconds Int?
+  windSpeedMetersPerSecond         Float?
+  atmosphericStabilityClass        String?
+  releaseDurationSeconds           Int?
+  receptorHeightMeters             Float?
+  dispersionAssumptions            String?
+  dispersionLimitations            String?
+  dispersionReviewedAt             DateTime?
+  dispersionReviewedByType         CoroActorType?
+  dispersionReviewedById           String?
+  dispersionSourceFileId           String?
+  dispersionSourceFile             ProjectFile? @relation("DispersionStudySource", fields: [dispersionSourceFileId], references: [id], onDelete: SetNull)
+
   // Action de protection normalement associée au scénario.
   defaultProtectiveAction RueProtectiveAction?
 
@@ -5966,6 +6003,7 @@ model RueEmergencyScenario {
   @@index([facilityProfileId])
   @@index([facilitySubstanceId])
   @@index([type])
+  @@index([dispersionSourceFileId])
 }
 
 model RueEmergencyMeasure {
@@ -6030,6 +6068,8 @@ model RueImpactZone {
 
   description String?
 
+  purpose RueImpactZonePurpose @default(OTHER)
+
   // Géométrie de la zone.
   //
   // Prévue pour recevoir du GeoJSON Polygon ou MultiPolygon.
@@ -6053,6 +6093,14 @@ model RueImpactZone {
   validatedAt     DateTime?
   validatedByType CoroActorType?
   validatedById   String?
+
+  // Approbation operationnelle distincte de la validation technique. Une zone
+  // modelisee peut etre validee scientifiquement sans etre autorisee comme
+  // perimetre d'alerte publique.
+  approvedForAlerting   Boolean        @default(false)
+  alertingApprovedAt    DateTime?
+  alertingApprovedByType CoroActorType?
+  alertingApprovedById  String?
 
   isActive Boolean @default(true)
 

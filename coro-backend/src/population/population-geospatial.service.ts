@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { PopulationCompassDirection } from './dto/population-directional-targeting.dto';
 
 type GeoJsonPosition = [number, number];
 
@@ -12,12 +13,26 @@ type GeoJsonMultiPolygon = {
   coordinates: GeoJsonPosition[][][];
 };
 
-type SupportedGeometry =
-  | GeoJsonPolygon
-  | GeoJsonMultiPolygon;
+type SupportedGeometry = GeoJsonPolygon | GeoJsonMultiPolygon;
 
 @Injectable()
 export class PopulationGeospatialService {
+  private readonly directionBearings: Record<
+    PopulationCompassDirection,
+    number
+  > = {
+    N: 0,
+    NE: 45,
+    E: 90,
+    SE: 135,
+    S: 180,
+    SW: 225,
+    W: 270,
+    NW: 315,
+  };
+
+  readonly compassDirections = Object.values(PopulationCompassDirection);
+
   /**
    * Distance géodésique entre deux coordonnées.
    *
@@ -32,34 +47,165 @@ export class PopulationGeospatialService {
   ) {
     const earthRadiusKm = 6371.0088;
 
-    const toRadians = (degrees: number) =>
-      (degrees * Math.PI) / 180;
+    const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
 
-    const deltaLatitude = toRadians(
-      latitude2 - latitude1,
-    );
+    const deltaLatitude = toRadians(latitude2 - latitude1);
 
-    const deltaLongitude = toRadians(
-      longitude2 - longitude1,
-    );
+    const deltaLongitude = toRadians(longitude2 - longitude1);
 
     const lat1 = toRadians(latitude1);
     const lat2 = toRadians(latitude2);
 
     const a =
       Math.sin(deltaLatitude / 2) ** 2 +
-      Math.cos(lat1) *
-        Math.cos(lat2) *
-        Math.sin(deltaLongitude / 2) ** 2;
+      Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLongitude / 2) ** 2;
 
-    const c =
-      2 *
-      Math.atan2(
-        Math.sqrt(a),
-        Math.sqrt(1 - a),
-      );
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return earthRadiusKm * c;
+  }
+
+  bearingDegrees(
+    latitude1: number,
+    longitude1: number,
+    latitude2: number,
+    longitude2: number,
+  ) {
+    const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+    const toDegrees = (radians: number) => (radians * 180) / Math.PI;
+    const latitude1Radians = toRadians(latitude1);
+    const latitude2Radians = toRadians(latitude2);
+    const longitudeDelta = toRadians(longitude2 - longitude1);
+    const y = Math.sin(longitudeDelta) * Math.cos(latitude2Radians);
+    const x =
+      Math.cos(latitude1Radians) * Math.sin(latitude2Radians) -
+      Math.sin(latitude1Radians) *
+        Math.cos(latitude2Radians) *
+        Math.cos(longitudeDelta);
+    return (toDegrees(Math.atan2(y, x)) + 360) % 360;
+  }
+
+  oppositeDirection(direction: PopulationCompassDirection) {
+    const index = this.compassDirections.indexOf(direction);
+    return this.compassDirections[(index + 4) % 8];
+  }
+
+  includedDirections(
+    direction: PopulationCompassDirection,
+    includeAdjacentSectors = true,
+  ) {
+    if (!includeAdjacentSectors) return [direction];
+    const index = this.compassDirections.indexOf(direction);
+    return [
+      this.compassDirections[(index + 7) % 8],
+      direction,
+      this.compassDirections[(index + 1) % 8],
+    ];
+  }
+
+  isPointInsideDirectionalSector(params: {
+    latitude: number;
+    longitude: number;
+    referenceLatitude: number;
+    referenceLongitude: number;
+    maxDistanceKm: number;
+    propagationDirection: PopulationCompassDirection;
+    includeAdjacentSectors?: boolean;
+  }) {
+    const distance = this.distanceKm(
+      params.referenceLatitude,
+      params.referenceLongitude,
+      params.latitude,
+      params.longitude,
+    );
+    if (distance > params.maxDistanceKm) return false;
+    const bearing = this.bearingDegrees(
+      params.referenceLatitude,
+      params.referenceLongitude,
+      params.latitude,
+      params.longitude,
+    );
+    const center = this.directionBearings[params.propagationDirection];
+    const angularDifference = Math.abs(((bearing - center + 540) % 360) - 180);
+    const halfWidth = params.includeAdjacentSectors === false ? 22.5 : 67.5;
+    return angularDifference <= halfWidth;
+  }
+
+  destinationPoint(
+    latitude: number,
+    longitude: number,
+    bearingDegrees: number,
+    distanceKm: number,
+  ): GeoJsonPosition {
+    const earthRadiusKm = 6371.0088;
+    const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+    const toDegrees = (radians: number) => (radians * 180) / Math.PI;
+    const angularDistance = distanceKm / earthRadiusKm;
+    const bearing = toRadians(bearingDegrees);
+    const latitudeRadians = toRadians(latitude);
+    const longitudeRadians = toRadians(longitude);
+    const destinationLatitude = Math.asin(
+      Math.sin(latitudeRadians) * Math.cos(angularDistance) +
+        Math.cos(latitudeRadians) *
+          Math.sin(angularDistance) *
+          Math.cos(bearing),
+    );
+    const destinationLongitude =
+      longitudeRadians +
+      Math.atan2(
+        Math.sin(bearing) *
+          Math.sin(angularDistance) *
+          Math.cos(latitudeRadians),
+        Math.cos(angularDistance) -
+          Math.sin(latitudeRadians) * Math.sin(destinationLatitude),
+      );
+    return [
+      ((toDegrees(destinationLongitude) + 540) % 360) - 180,
+      toDegrees(destinationLatitude),
+    ];
+  }
+
+  createSectorGeometry(params: {
+    referenceLatitude: number;
+    referenceLongitude: number;
+    maxDistanceKm: number;
+    propagationDirection: PopulationCompassDirection;
+    includeAdjacentSectors?: boolean;
+  }): GeoJsonPolygon {
+    const center = this.directionBearings[params.propagationDirection];
+    const halfWidth = params.includeAdjacentSectors === false ? 22.5 : 67.5;
+    const steps = Math.max(8, Math.ceil((halfWidth * 2) / 5));
+    const ring: GeoJsonPosition[] = [
+      [params.referenceLongitude, params.referenceLatitude],
+    ];
+    for (let index = 0; index <= steps; index += 1) {
+      const bearing = center - halfWidth + (index / steps) * halfWidth * 2;
+      ring.push(
+        this.destinationPoint(
+          params.referenceLatitude,
+          params.referenceLongitude,
+          bearing,
+          params.maxDistanceKm,
+        ),
+      );
+    }
+    ring.push([params.referenceLongitude, params.referenceLatitude]);
+    return { type: 'Polygon', coordinates: [ring] };
+  }
+
+  createCompassSectorGrid(params: {
+    referenceLatitude: number;
+    referenceLongitude: number;
+    maxDistanceKm: number;
+  }) {
+    return this.compassDirections.map((direction) => ({
+      direction,
+      geometry: this.createSectorGeometry({
+        ...params,
+        propagationDirection: direction,
+        includeAdjacentSectors: false,
+      }),
+    }));
   }
 
   /**
@@ -77,16 +223,10 @@ export class PopulationGeospatialService {
       return false;
     }
 
-    const point: GeoJsonPosition = [
-      longitude,
-      latitude,
-    ];
+    const point: GeoJsonPosition = [longitude, latitude];
 
     if (geometry.type === 'Polygon') {
-      return this.isPointInsidePolygon(
-        point,
-        geometry.coordinates,
-      );
+      return this.isPointInsidePolygon(point, geometry.coordinates);
     }
 
     return geometry.coordinates.some((polygon) =>
@@ -126,11 +266,7 @@ export class PopulationGeospatialService {
     } = params;
 
     if (geometry !== null && geometry !== undefined) {
-      return this.isPointInsideGeometry(
-        latitude,
-        longitude,
-        geometry,
-      );
+      return this.isPointInsideGeometry(latitude, longitude, geometry);
     }
 
     if (
@@ -155,20 +291,13 @@ export class PopulationGeospatialService {
   private isSupportedGeometry(
     geometry: unknown,
   ): geometry is SupportedGeometry {
-    if (
-      !geometry ||
-      typeof geometry !== 'object'
-    ) {
+    if (!geometry || typeof geometry !== 'object') {
       return false;
     }
 
-    const candidate =
-      geometry as Partial<SupportedGeometry>;
+    const candidate = geometry as Partial<SupportedGeometry>;
 
-    if (
-      candidate.type !== 'Polygon' &&
-      candidate.type !== 'MultiPolygon'
-    ) {
+    if (candidate.type !== 'Polygon' && candidate.type !== 'MultiPolygon') {
       return false;
     }
 
@@ -201,10 +330,7 @@ export class PopulationGeospatialService {
     return true;
   }
 
-  private isPointInsideRing(
-    point: GeoJsonPosition,
-    ring: GeoJsonPosition[],
-  ) {
+  private isPointInsideRing(point: GeoJsonPosition, ring: GeoJsonPosition[]) {
     if (!Array.isArray(ring) || ring.length < 3) {
       return false;
     }
@@ -228,18 +354,14 @@ export class PopulationGeospatialService {
         return false;
       }
 
-      const [currentX, currentY] =
-        currentPosition;
+      const [currentX, currentY] = currentPosition;
 
-      const [previousX, previousY] =
-        previousPosition;
+      const [previousX, previousY] = previousPosition;
 
       const intersects =
         currentY > y !== previousY > y &&
         x <
-          ((previousX - currentX) *
-            (y - currentY)) /
-            (previousY - currentY) +
+          ((previousX - currentX) * (y - currentY)) / (previousY - currentY) +
             currentX;
 
       if (intersects) {
@@ -250,9 +372,7 @@ export class PopulationGeospatialService {
     return inside;
   }
 
-  private isPosition(
-    position: unknown,
-  ): position is GeoJsonPosition {
+  private isPosition(position: unknown): position is GeoJsonPosition {
     return (
       Array.isArray(position) &&
       position.length >= 2 &&

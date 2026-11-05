@@ -19,6 +19,13 @@ import type { Response } from 'express';
 import { ClientPortalService } from './client-portal.service';
 import { ConfigurePopulationProgramDto } from '../population/dto/population-program.dto';
 import { CreatePopulationAlertDraftDto } from '../population/dto/create-population-alert-draft.dto';
+import { PopulationDirectionalPreviewQueryDto } from '../population/dto/population-directional-targeting.dto';
+import {
+  ReviewPopulationDispersionBasisDto,
+  SetPopulationImpactZoneApprovalDto,
+  UpdatePopulationDispersionBasisDto,
+  UpdatePopulationImpactZoneGovernanceDto,
+} from '../population/dto/population-dispersion-governance.dto';
 import { CreatePopulationFollowUpDto } from '../population/dto/create-population-follow-up.dto';
 import { UpdatePopulationAlertDraftDto } from '../population/dto/update-population-alert-draft.dto';
 import { ClosePopulationOperationalEventDto } from '../population/dto/close-population-operational-event.dto';
@@ -31,7 +38,12 @@ import {
 } from '../bookings/booking.dto';
 import { IncidentService } from '../occupancy/incident.service';
 import { IncidentHistoryQueryDto } from '../occupancy/incident-history.dto';
-import { AddIncidentLogDto, ContainIncidentDto, ResolveIncidentDto, UpdateIncidentRexDto } from '../occupancy/incident-detail.dto';
+import {
+  AddIncidentLogDto,
+  ContainIncidentDto,
+  ResolveIncidentDto,
+  UpdateIncidentRexDto,
+} from '../occupancy/incident-detail.dto';
 import { TriggerIncidentDto } from '../occupancy/incident-trigger.dto';
 import { OccupancyEmployeesService } from '../occupancy/occupancy-employees.service';
 import { OccupancyService } from '../occupancy/occupancy.service';
@@ -732,6 +744,70 @@ export class ClientPortalController {
     );
   }
 
+  @Put('buildings/:buildingId/population/scenarios/:scenarioId/dispersion-basis')
+  updatePopulationDispersionBasis(
+    @Param('buildingId') buildingId: string,
+    @Param('scenarioId') scenarioId: string,
+    @Body() dto: UpdatePopulationDispersionBasisDto,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.updatePopulationDispersionBasis(
+      buildingId,
+      scenarioId,
+      dto,
+      req.clientUser,
+    );
+  }
+
+  @Post('buildings/:buildingId/population/scenarios/:scenarioId/dispersion-review')
+  reviewPopulationDispersionBasis(
+    @Param('buildingId') buildingId: string,
+    @Param('scenarioId') scenarioId: string,
+    @Body() dto: ReviewPopulationDispersionBasisDto,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.reviewPopulationDispersionBasis(
+      buildingId,
+      scenarioId,
+      dto,
+      req.clientUser,
+    );
+  }
+
+  @Put('buildings/:buildingId/population/scenarios/:scenarioId/zones/:zoneId/governance')
+  updatePopulationImpactZoneGovernance(
+    @Param('buildingId') buildingId: string,
+    @Param('scenarioId') scenarioId: string,
+    @Param('zoneId') zoneId: string,
+    @Body() dto: UpdatePopulationImpactZoneGovernanceDto,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.updatePopulationImpactZoneGovernance(
+      buildingId,
+      scenarioId,
+      zoneId,
+      dto,
+      req.clientUser,
+    );
+  }
+
+  @Put('buildings/:buildingId/population/scenarios/:scenarioId/zones/:zoneId/alerting-approval')
+  setPopulationImpactZoneApproval(
+    @Param('buildingId') buildingId: string,
+    @Param('scenarioId') scenarioId: string,
+    @Param('zoneId') zoneId: string,
+    @Body() dto: SetPopulationImpactZoneApprovalDto,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.setPopulationImpactZoneApproval(
+      buildingId,
+      scenarioId,
+      zoneId,
+      dto,
+      req.clientUser,
+    );
+  }
+
   /**
    * Aperçu agrégé de la population ciblée par les zones d'impact
    * d'un scénario RUE.
@@ -742,12 +818,14 @@ export class ClientPortalController {
   async getPopulationScenarioPreview(
     @Param('buildingId') buildingId: string,
     @Param('scenarioId') scenarioId: string,
+    @Query() query: PopulationDirectionalPreviewQueryDto,
     @Request() req: any,
   ) {
     return this.clientPortalService.getPopulationScenarioPreview(
       buildingId,
       scenarioId,
       req.clientUser,
+      query,
     );
   }
 
@@ -1249,8 +1327,17 @@ export class ClientPortalController {
     @Body() body: any,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_COMMAND);
-    await this.incidentService.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId: req.clientUser.sub || req.clientUser.id, organizationId: req.clientUser.organizationId, buildingId, permission: IncidentPermission.INCIDENT_COMMAND });
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.INCIDENT_COMMAND,
+    );
+    await this.incidentService.requireIncidentAuthority({
+      actorType: 'CLIENT_USER',
+      actorId: req.clientUser.sub || req.clientUser.id,
+      organizationId: req.clientUser.organizationId,
+      buildingId,
+      permission: IncidentPermission.INCIDENT_COMMAND,
+    });
     await this.clientPortalService.assertBuildingAccess(
       buildingId,
       req.clientUser,
@@ -1264,19 +1351,40 @@ export class ClientPortalController {
 
   @Post('incidents/trigger')
   async triggerIncident(@Body() body: TriggerIncidentDto, @Request() req: any) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_COMMAND);
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.INCIDENT_COMMAND,
+    );
     const actorId = req.clientUser.sub || req.clientUser.id;
-    const assignment = await this.incidentService.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId, organizationId: req.clientUser.organizationId, buildingId: body.buildingId, permission: IncidentPermission.INCIDENT_COMMAND });
+    const assignment = await this.incidentService.requireIncidentAuthority({
+      actorType: 'CLIENT_USER',
+      actorId,
+      organizationId: req.clientUser.organizationId,
+      buildingId: body.buildingId,
+      permission: IncidentPermission.INCIDENT_COMMAND,
+    });
     await this.clientPortalService.assertBuildingAccess(
       body.buildingId,
       req.clientUser,
     );
-    const triggeredBy = [req.clientUser.firstName, req.clientUser.lastName].filter(Boolean).join(' ') || req.clientUser.email || actorId;
+    const triggeredBy =
+      [req.clientUser.firstName, req.clientUser.lastName]
+        .filter(Boolean)
+        .join(' ') ||
+      req.clientUser.email ||
+      actorId;
     return this.incidentService.triggerIncident(
       { ...body, triggeredBy },
       req.clientUser.organizationId,
       undefined,
-      { actorType: 'CLIENT_USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_COMMAND, reason: body.reason || 'Incident creation', requestId: req.id || req.headers?.['x-request-id'] },
+      {
+        actorType: 'CLIENT_USER',
+        actorId,
+        assignmentId: assignment.id,
+        permission: IncidentPermission.INCIDENT_COMMAND,
+        reason: body.reason || 'Incident creation',
+        requestId: req.id || req.headers?.['x-request-id'],
+      },
     );
   }
 
@@ -1285,7 +1393,10 @@ export class ClientPortalController {
     @Param('buildingId') buildingId: string,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_READ);
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.INCIDENT_READ,
+    );
     await this.incidentService.requireIncidentAuthority({
       actorType: 'CLIENT_USER',
       actorId: req.clientUser.sub || req.clientUser.id,
@@ -1308,7 +1419,10 @@ export class ClientPortalController {
     @Param('buildingId') buildingId: string,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_READ);
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.INCIDENT_READ,
+    );
     await this.incidentService.requireIncidentAuthority({
       actorType: 'CLIENT_USER',
       actorId: req.clientUser.sub || req.clientUser.id,
@@ -1362,9 +1476,7 @@ export class ClientPortalController {
 
   @Get('intelligence/overview')
   async getIntelligenceOverview(@Request() req: any) {
-    return this.occupancyService.getIntelligenceOverview(
-      req.clientUser,
-    );
+    return this.occupancyService.getIntelligenceOverview(req.clientUser);
   }
 
   @Get('corrective-actions')
@@ -1412,7 +1524,11 @@ export class ClientPortalController {
     @Body() body: MaterializeExerciseActionDto,
     @Request() req: CorrectiveActionRequest,
   ) {
-    return this.correctiveActionsService.materializeExerciseAction(id, body, req.clientUser);
+    return this.correctiveActionsService.materializeExerciseAction(
+      id,
+      body,
+      req.clientUser,
+    );
   }
 
   @Get('exercise-action-items/:id')
@@ -1420,7 +1536,10 @@ export class ClientPortalController {
     @Param('id') id: string,
     @Request() req: CorrectiveActionRequest,
   ) {
-    return this.correctiveActionsService.getExerciseActionMaterialization(id, req.clientUser);
+    return this.correctiveActionsService.getExerciseActionMaterialization(
+      id,
+      req.clientUser,
+    );
   }
 
   @Get('exercise-action-items/:id/corrective-action')
@@ -1428,7 +1547,10 @@ export class ClientPortalController {
     @Param('id') id: string,
     @Request() req: CorrectiveActionRequest,
   ) {
-    return this.correctiveActionsService.getForExerciseAction(id, req.clientUser);
+    return this.correctiveActionsService.getForExerciseAction(
+      id,
+      req.clientUser,
+    );
   }
 
   @Put('corrective-actions/:id')
@@ -1587,9 +1709,18 @@ export class ClientPortalController {
 
   @Put('incidents/tasks/:taskId/uncomplete')
   async uncompleteStep(@Param('taskId') taskId: string, @Request() req: any) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_SUPERVISE);
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.INCIDENT_SUPERVISE,
+    );
     const actorId = req.clientUser.sub || req.clientUser.id;
-    const assignment = await this.incidentService.requireTaskAuthority(taskId, 'CLIENT_USER', actorId, req.clientUser.organizationId, IncidentPermission.INCIDENT_SUPERVISE);
+    const assignment = await this.incidentService.requireTaskAuthority(
+      taskId,
+      'CLIENT_USER',
+      actorId,
+      req.clientUser.organizationId,
+      IncidentPermission.INCIDENT_SUPERVISE,
+    );
     await this.clientPortalService.assertIncidentTaskAccess(
       taskId,
       req.clientUser,
@@ -1597,15 +1728,31 @@ export class ClientPortalController {
     return this.incidentService.uncompleteStep(
       taskId,
       req.clientUser.organizationId,
-      { actorType: 'CLIENT_USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_SUPERVISE, reason: 'Task reopened', requestId: req.id || req.headers?.['x-request-id'] },
+      {
+        actorType: 'CLIENT_USER',
+        actorId,
+        assignmentId: assignment.id,
+        permission: IncidentPermission.INCIDENT_SUPERVISE,
+        reason: 'Task reopened',
+        requestId: req.id || req.headers?.['x-request-id'],
+      },
     );
   }
 
   @Put('incidents/tasks/:taskId/acknowledge')
   async acknowledgeTask(@Param('taskId') taskId: string, @Request() req: any) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_TASK_PARTICIPATE);
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.INCIDENT_TASK_PARTICIPATE,
+    );
     const actorId = req.clientUser.sub || req.clientUser.id;
-    const assignment = await this.incidentService.requireTaskAuthority(taskId, 'CLIENT_USER', actorId, req.clientUser.organizationId, IncidentPermission.INCIDENT_TASK_PARTICIPATE);
+    const assignment = await this.incidentService.requireTaskAuthority(
+      taskId,
+      'CLIENT_USER',
+      actorId,
+      req.clientUser.organizationId,
+      IncidentPermission.INCIDENT_TASK_PARTICIPATE,
+    );
     await this.clientPortalService.assertIncidentTaskAccess(
       taskId,
       req.clientUser,
@@ -1613,15 +1760,31 @@ export class ClientPortalController {
     return this.incidentService.acknowledgeTask(
       taskId,
       req.clientUser.organizationId,
-      { actorType: 'CLIENT_USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_TASK_PARTICIPATE, reason: 'Task acknowledgment', requestId: req.id || req.headers?.['x-request-id'] },
+      {
+        actorType: 'CLIENT_USER',
+        actorId,
+        assignmentId: assignment.id,
+        permission: IncidentPermission.INCIDENT_TASK_PARTICIPATE,
+        reason: 'Task acknowledgment',
+        requestId: req.id || req.headers?.['x-request-id'],
+      },
     );
   }
 
   @Put('incidents/tasks/:taskId/complete')
   async completeTask(@Param('taskId') taskId: string, @Request() req: any) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_TASK_PARTICIPATE);
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.INCIDENT_TASK_PARTICIPATE,
+    );
     const actorId = req.clientUser.sub || req.clientUser.id;
-    const assignment = await this.incidentService.requireTaskAuthority(taskId, 'CLIENT_USER', actorId, req.clientUser.organizationId, IncidentPermission.INCIDENT_TASK_PARTICIPATE);
+    const assignment = await this.incidentService.requireTaskAuthority(
+      taskId,
+      'CLIENT_USER',
+      actorId,
+      req.clientUser.organizationId,
+      IncidentPermission.INCIDENT_TASK_PARTICIPATE,
+    );
     await this.clientPortalService.assertIncidentTaskAccess(
       taskId,
       req.clientUser,
@@ -1629,59 +1792,211 @@ export class ClientPortalController {
     return this.incidentService.completeTask(
       taskId,
       req.clientUser.organizationId,
-      { actorType: 'CLIENT_USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_TASK_PARTICIPATE, reason: 'Task execution', requestId: req.id || req.headers?.['x-request-id'] },
+      {
+        actorType: 'CLIENT_USER',
+        actorId,
+        assignmentId: assignment.id,
+        permission: IncidentPermission.INCIDENT_TASK_PARTICIPATE,
+        reason: 'Task execution',
+        requestId: req.id || req.headers?.['x-request-id'],
+      },
     );
   }
 
   @Put('incidents/tasks/:taskId/reassign')
-  async reassignIncidentTask(@Param('taskId') taskId: string, @Body() body: { employeeId: string; lockVersion: number }, @Request() req: any) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_SUPERVISE);
+  async reassignIncidentTask(
+    @Param('taskId') taskId: string,
+    @Body() body: { employeeId: string; lockVersion: number },
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.INCIDENT_SUPERVISE,
+    );
     const actorId = req.clientUser.sub || req.clientUser.id;
-    const assignment = await this.incidentService.requireTaskAuthority(taskId, 'CLIENT_USER', actorId, req.clientUser.organizationId, IncidentPermission.INCIDENT_SUPERVISE);
-    await this.clientPortalService.assertIncidentTaskAccess(taskId, req.clientUser);
-    return this.incidentService.reassignTask(taskId, body.employeeId, body.lockVersion, req.clientUser.organizationId, actorId, { actorType: 'CLIENT_USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_SUPERVISE, reason: 'Task reassignment', requestId: req.id || req.headers?.['x-request-id'] });
+    const assignment = await this.incidentService.requireTaskAuthority(
+      taskId,
+      'CLIENT_USER',
+      actorId,
+      req.clientUser.organizationId,
+      IncidentPermission.INCIDENT_SUPERVISE,
+    );
+    await this.clientPortalService.assertIncidentTaskAccess(
+      taskId,
+      req.clientUser,
+    );
+    return this.incidentService.reassignTask(
+      taskId,
+      body.employeeId,
+      body.lockVersion,
+      req.clientUser.organizationId,
+      actorId,
+      {
+        actorType: 'CLIENT_USER',
+        actorId,
+        assignmentId: assignment.id,
+        permission: IncidentPermission.INCIDENT_SUPERVISE,
+        reason: 'Task reassignment',
+        requestId: req.id || req.headers?.['x-request-id'],
+      },
+    );
   }
 
   @Put('incidents/tasks/:taskId/escalation-policy')
-  async configureIncidentTaskEscalation(@Param('taskId') taskId: string, @Body() body: { severity: 'CRITICAL' | 'HIGH' | 'NORMAL' | 'LOW'; alternateEmployeeIds?: string[]; acknowledgmentSubjectType: 'USER' | 'CLIENT_USER'; acknowledgmentSubjectId: string; lockVersion: number; reason: string }, @Request() req: any) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_SUPERVISE);
+  async configureIncidentTaskEscalation(
+    @Param('taskId') taskId: string,
+    @Body()
+    body: {
+      severity: 'CRITICAL' | 'HIGH' | 'NORMAL' | 'LOW';
+      alternateEmployeeIds?: string[];
+      acknowledgmentSubjectType: 'USER' | 'CLIENT_USER';
+      acknowledgmentSubjectId: string;
+      lockVersion: number;
+      reason: string;
+    },
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.INCIDENT_SUPERVISE,
+    );
     const actorId = req.clientUser.sub || req.clientUser.id;
-    const assignment = await this.incidentService.requireTaskAuthority(taskId, 'CLIENT_USER', actorId, req.clientUser.organizationId, IncidentPermission.INCIDENT_SUPERVISE);
-    await this.clientPortalService.assertIncidentTaskAccess(taskId, req.clientUser);
-    return this.incidentService.configureTaskEscalation(taskId, body, req.clientUser.organizationId, { actorType: 'CLIENT_USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_SUPERVISE, reason: body.reason, requestId: req.id || req.headers?.['x-request-id'] });
+    const assignment = await this.incidentService.requireTaskAuthority(
+      taskId,
+      'CLIENT_USER',
+      actorId,
+      req.clientUser.organizationId,
+      IncidentPermission.INCIDENT_SUPERVISE,
+    );
+    await this.clientPortalService.assertIncidentTaskAccess(
+      taskId,
+      req.clientUser,
+    );
+    return this.incidentService.configureTaskEscalation(
+      taskId,
+      body,
+      req.clientUser.organizationId,
+      {
+        actorType: 'CLIENT_USER',
+        actorId,
+        assignmentId: assignment.id,
+        permission: IncidentPermission.INCIDENT_SUPERVISE,
+        reason: body.reason,
+        requestId: req.id || req.headers?.['x-request-id'],
+      },
+    );
   }
 
   @Get('incidents/buildings/:buildingId/escalations/operator-queue')
-  async incidentOperatorQueue(@Param('buildingId') buildingId: string, @Request() req: any) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_SUPERVISE);
+  async incidentOperatorQueue(
+    @Param('buildingId') buildingId: string,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.INCIDENT_SUPERVISE,
+    );
     const actorId = req.clientUser.sub || req.clientUser.id;
-    await this.incidentService.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId, organizationId: req.clientUser.organizationId, buildingId, permission: IncidentPermission.INCIDENT_SUPERVISE });
-    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
-    return (await this.incidentService.getOperatorEscalationQueue(req.clientUser.organizationId)).filter((task: any) => task.incidentEvent.buildingId === buildingId);
+    await this.incidentService.requireIncidentAuthority({
+      actorType: 'CLIENT_USER',
+      actorId,
+      organizationId: req.clientUser.organizationId,
+      buildingId,
+      permission: IncidentPermission.INCIDENT_SUPERVISE,
+    });
+    await this.clientPortalService.assertBuildingAccess(
+      buildingId,
+      req.clientUser,
+    );
+    return (
+      await this.incidentService.getOperatorEscalationQueue(
+        req.clientUser.organizationId,
+      )
+    ).filter((task: any) => task.incidentEvent.buildingId === buildingId);
   }
 
   @Post('incidents/pca/activate')
-  async activateIncidentPca(@Body() body: { buildingId: string; projectId: string; incidentEventId?: string; reason: string }, @Request() req: any) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.PCA_ACTIVATE);
+  async activateIncidentPca(
+    @Body()
+    body: {
+      buildingId: string;
+      projectId: string;
+      incidentEventId?: string;
+      reason: string;
+    },
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.PCA_ACTIVATE,
+    );
     const actorId = req.clientUser.sub || req.clientUser.id;
-    const assignment = await this.incidentService.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId, organizationId: req.clientUser.organizationId, buildingId: body.buildingId, incidentEventId: body.incidentEventId, permission: IncidentPermission.PCA_ACTIVATE });
-    await this.clientPortalService.assertBuildingAccess(body.buildingId, req.clientUser);
-    return this.incidentService.activatePca(body, req.clientUser.organizationId, actorId, 'CLIENT_USER', { actorType: 'CLIENT_USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.PCA_ACTIVATE, reason: body.reason, requestId: req.id || req.headers?.['x-request-id'] });
+    const assignment = await this.incidentService.requireIncidentAuthority({
+      actorType: 'CLIENT_USER',
+      actorId,
+      organizationId: req.clientUser.organizationId,
+      buildingId: body.buildingId,
+      incidentEventId: body.incidentEventId,
+      permission: IncidentPermission.PCA_ACTIVATE,
+    });
+    await this.clientPortalService.assertBuildingAccess(
+      body.buildingId,
+      req.clientUser,
+    );
+    return this.incidentService.activatePca(
+      body,
+      req.clientUser.organizationId,
+      actorId,
+      'CLIENT_USER',
+      {
+        actorType: 'CLIENT_USER',
+        actorId,
+        assignmentId: assignment.id,
+        permission: IncidentPermission.PCA_ACTIVATE,
+        reason: body.reason,
+        requestId: req.id || req.headers?.['x-request-id'],
+      },
+    );
   }
 
   @Post('incidents/authority/assign')
-  async assignIncidentAuthority(@Body() body: { buildingId: string; incidentEventId?: string; subjectId: string; operationalRole: string; permissions: IncidentPermission[]; reason: string }, @Request() req: any) {
+  async assignIncidentAuthority(
+    @Body()
+    body: {
+      buildingId: string;
+      incidentEventId?: string;
+      subjectId: string;
+      operationalRole: string;
+      permissions: IncidentPermission[];
+      reason: string;
+    },
+    @Request() req: any,
+  ) {
     void body;
     void req;
-    throw new ForbiddenException('L administration des autorisations Incident est reservee aux administrateurs habilites.');
+    throw new ForbiddenException(
+      'L administration des autorisations Incident est reservee aux administrateurs habilites.',
+    );
   }
 
   @Put('incidents/authority/:assignmentId/revoke')
-  async revokeIncidentAuthority(@Param('assignmentId') assignmentId: string, @Body() body: { reason: string; lockVersion: number; buildingId: string; incidentEventId?: string }, @Request() req: any) {
+  async revokeIncidentAuthority(
+    @Param('assignmentId') assignmentId: string,
+    @Body()
+    body: {
+      reason: string;
+      lockVersion: number;
+      buildingId: string;
+      incidentEventId?: string;
+    },
+    @Request() req: any,
+  ) {
     void assignmentId;
     void body;
     void req;
-    throw new ForbiddenException('L administration des autorisations Incident est reservee aux administrateurs habilites.');
+    throw new ForbiddenException(
+      'L administration des autorisations Incident est reservee aux administrateurs habilites.',
+    );
   }
 
   @Post('incidents/:incidentId/logs')
@@ -1690,8 +2005,17 @@ export class ClientPortalController {
     @Body() body: AddIncidentLogDto,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_SUPERVISE);
-    await this.incidentService.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId: req.clientUser.sub || req.clientUser.id, organizationId: req.clientUser.organizationId, incidentEventId: incidentId, permission: IncidentPermission.INCIDENT_SUPERVISE });
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.INCIDENT_SUPERVISE,
+    );
+    await this.incidentService.requireIncidentAuthority({
+      actorType: 'CLIENT_USER',
+      actorId: req.clientUser.sub || req.clientUser.id,
+      organizationId: req.clientUser.organizationId,
+      incidentEventId: incidentId,
+      permission: IncidentPermission.INCIDENT_SUPERVISE,
+    });
     await this.clientPortalService.assertIncidentAccess(
       incidentId,
       req.clientUser,
@@ -1709,9 +2033,18 @@ export class ClientPortalController {
     @Param('incidentId') incidentId: string,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_COMMAND);
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.INCIDENT_COMMAND,
+    );
     const actorId = req.clientUser.sub || req.clientUser.id;
-    const assignment = await this.incidentService.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId, organizationId: req.clientUser.organizationId, incidentEventId: incidentId, permission: IncidentPermission.INCIDENT_COMMAND });
+    const assignment = await this.incidentService.requireIncidentAuthority({
+      actorType: 'CLIENT_USER',
+      actorId,
+      organizationId: req.clientUser.organizationId,
+      incidentEventId: incidentId,
+      permission: IncidentPermission.INCIDENT_COMMAND,
+    });
     await this.clientPortalService.assertIncidentAccess(
       incidentId,
       req.clientUser,
@@ -1720,7 +2053,14 @@ export class ClientPortalController {
       incidentId,
       req.clientUser.organizationId,
       req.clientUser.email,
-      { actorType: 'CLIENT_USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_COMMAND, reason: 'Pre-alert confirmed', requestId: req.id || req.headers?.['x-request-id'] },
+      {
+        actorType: 'CLIENT_USER',
+        actorId,
+        assignmentId: assignment.id,
+        permission: IncidentPermission.INCIDENT_COMMAND,
+        reason: 'Pre-alert confirmed',
+        requestId: req.id || req.headers?.['x-request-id'],
+      },
     );
   }
 
@@ -1729,9 +2069,18 @@ export class ClientPortalController {
     @Param('incidentId') incidentId: string,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_COMMAND);
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.INCIDENT_COMMAND,
+    );
     const actorId = req.clientUser.sub || req.clientUser.id;
-    const assignment = await this.incidentService.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId, organizationId: req.clientUser.organizationId, incidentEventId: incidentId, permission: IncidentPermission.INCIDENT_COMMAND });
+    const assignment = await this.incidentService.requireIncidentAuthority({
+      actorType: 'CLIENT_USER',
+      actorId,
+      organizationId: req.clientUser.organizationId,
+      incidentEventId: incidentId,
+      permission: IncidentPermission.INCIDENT_COMMAND,
+    });
     await this.clientPortalService.assertIncidentAccess(
       incidentId,
       req.clientUser,
@@ -1740,7 +2089,14 @@ export class ClientPortalController {
       incidentId,
       req.clientUser.organizationId,
       req.clientUser.email,
-      { actorType: 'CLIENT_USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_COMMAND, reason: 'Pre-alert cancelled', requestId: req.id || req.headers?.['x-request-id'] },
+      {
+        actorType: 'CLIENT_USER',
+        actorId,
+        assignmentId: assignment.id,
+        permission: IncidentPermission.INCIDENT_COMMAND,
+        reason: 'Pre-alert cancelled',
+        requestId: req.id || req.headers?.['x-request-id'],
+      },
     );
   }
 
@@ -1750,9 +2106,18 @@ export class ClientPortalController {
     @Body() body: ContainIncidentDto,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_COMMAND);
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.INCIDENT_COMMAND,
+    );
     const actorId = req.clientUser.sub || req.clientUser.id;
-    const assignment = await this.incidentService.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId, organizationId: req.clientUser.organizationId, incidentEventId: incidentId, permission: IncidentPermission.INCIDENT_COMMAND });
+    const assignment = await this.incidentService.requireIncidentAuthority({
+      actorType: 'CLIENT_USER',
+      actorId,
+      organizationId: req.clientUser.organizationId,
+      incidentEventId: incidentId,
+      permission: IncidentPermission.INCIDENT_COMMAND,
+    });
     await this.clientPortalService.assertIncidentAccess(
       incidentId,
       req.clientUser,
@@ -1761,7 +2126,14 @@ export class ClientPortalController {
       incidentId,
       req.clientUser.organizationId,
       body,
-      { actorType: 'CLIENT_USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_COMMAND, reason: 'Incident command transition to contained', requestId: req.id || req.headers?.['x-request-id'] },
+      {
+        actorType: 'CLIENT_USER',
+        actorId,
+        assignmentId: assignment.id,
+        permission: IncidentPermission.INCIDENT_COMMAND,
+        reason: 'Incident command transition to contained',
+        requestId: req.id || req.headers?.['x-request-id'],
+      },
     );
   }
 
@@ -1771,9 +2143,19 @@ export class ClientPortalController {
     @Body() body: ResolveIncidentDto,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_COMMAND);
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.INCIDENT_COMMAND,
+    );
     const actorId = req.clientUser.sub || req.clientUser.id;
-    const assignment = await this.incidentService.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId, organizationId: req.clientUser.organizationId, incidentEventId: incidentId, permission: IncidentPermission.INCIDENT_COMMAND, allowResolvedReplay: true });
+    const assignment = await this.incidentService.requireIncidentAuthority({
+      actorType: 'CLIENT_USER',
+      actorId,
+      organizationId: req.clientUser.organizationId,
+      incidentEventId: incidentId,
+      permission: IncidentPermission.INCIDENT_COMMAND,
+      allowResolvedReplay: true,
+    });
     await this.clientPortalService.assertIncidentAccess(
       incidentId,
       req.clientUser,
@@ -1782,7 +2164,14 @@ export class ClientPortalController {
       incidentId,
       body,
       req.clientUser.organizationId,
-      { actorType: 'CLIENT_USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_COMMAND, reason: body.closingNotes || 'Incident resolution', requestId: req.id || req.headers?.['x-request-id'] },
+      {
+        actorType: 'CLIENT_USER',
+        actorId,
+        assignmentId: assignment.id,
+        permission: IncidentPermission.INCIDENT_COMMAND,
+        reason: body.closingNotes || 'Incident resolution',
+        requestId: req.id || req.headers?.['x-request-id'],
+      },
     );
   }
 
@@ -1792,8 +2181,17 @@ export class ClientPortalController {
     @Body() body: { emails: string[] },
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_SUPERVISE);
-    await this.incidentService.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId: req.clientUser.sub || req.clientUser.id, organizationId: req.clientUser.organizationId, incidentEventId: incidentId, permission: IncidentPermission.INCIDENT_SUPERVISE });
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.INCIDENT_SUPERVISE,
+    );
+    await this.incidentService.requireIncidentAuthority({
+      actorType: 'CLIENT_USER',
+      actorId: req.clientUser.sub || req.clientUser.id,
+      organizationId: req.clientUser.organizationId,
+      incidentEventId: incidentId,
+      permission: IncidentPermission.INCIDENT_SUPERVISE,
+    });
     await this.clientPortalService.assertIncidentAccess(
       incidentId,
       req.clientUser,
@@ -1811,7 +2209,10 @@ export class ClientPortalController {
     @Query() query: IncidentHistoryQueryDto,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_READ);
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.INCIDENT_READ,
+    );
     await this.incidentService.requireIncidentAuthority({
       actorType: 'CLIENT_USER',
       actorId: req.clientUser.sub || req.clientUser.id,
@@ -1852,7 +2253,10 @@ export class ClientPortalController {
     @Param('incidentId') incidentId: string,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_READ);
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.INCIDENT_READ,
+    );
     await this.incidentService.requireIncidentAuthority({
       actorType: 'CLIENT_USER',
       actorId: req.clientUser.sub || req.clientUser.id,
@@ -1885,8 +2289,17 @@ export class ClientPortalController {
     @Body() body: UpdateIncidentRexDto,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_SUPERVISE);
-    await this.incidentService.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId: req.clientUser.sub || req.clientUser.id, organizationId: req.clientUser.organizationId, incidentEventId: incidentId, permission: IncidentPermission.INCIDENT_SUPERVISE });
+    await this.clientPortalService.assertIncidentPermission(
+      req.clientUser,
+      IncidentPermission.INCIDENT_SUPERVISE,
+    );
+    await this.incidentService.requireIncidentAuthority({
+      actorType: 'CLIENT_USER',
+      actorId: req.clientUser.sub || req.clientUser.id,
+      organizationId: req.clientUser.organizationId,
+      incidentEventId: incidentId,
+      permission: IncidentPermission.INCIDENT_SUPERVISE,
+    });
     await this.clientPortalService.assertIncidentAccess(
       incidentId,
       req.clientUser,
