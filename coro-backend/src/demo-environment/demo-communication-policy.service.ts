@@ -3,6 +3,13 @@ import { createHash } from 'crypto';
 import {
   DemoCommunicationChannel,
   DemoCommunicationMode,
+  PopulationAlertType,
+  PopulationAlertStatus,
+  PopulationAlertChannel,
+  PopulationDeliveryMode,
+  PopulationDeliveryStatus,
+  PopulationGovernanceMode,
+  PopulationProgramStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -18,6 +25,11 @@ export type DemoCommunicationRequest = {
   recipient?: string;
   payload: unknown;
   idempotencyKey?: string;
+  controlledPopulationContext?: {
+    programId: string;
+    alertId: string;
+    deliveryId: string;
+  };
 };
 
 function digest(value: unknown): string {
@@ -82,6 +94,8 @@ export class DemoCommunicationPolicyService {
       environment.communicationMode === DemoCommunicationMode.BLOCK;
     const authenticationLiveException =
       !blocked && (await this.isAuthenticationLiveException(request));
+    const controlledPopulationLiveException =
+      !blocked && (await this.isControlledPopulationLiveException(request));
     const event = await this.prisma.demoCommunicationEvent.upsert({
       where: {
         organizationId_idempotencyKey: {
@@ -112,15 +126,161 @@ export class DemoCommunicationPolicyService {
             recipient: request.recipient,
             payload: request.payload,
           }),
-        simulated: !blocked && !authenticationLiveException,
+        simulated:
+          !blocked &&
+          !authenticationLiveException &&
+          !controlledPopulationLiveException,
         blocked,
       },
       update: {},
       select: { id: true },
     });
     if (blocked) return { disposition: 'BLOCKED', eventId: event.id };
-    if (authenticationLiveException) return { disposition: 'LIVE' };
+    if (authenticationLiveException || controlledPopulationLiveException)
+      return { disposition: 'LIVE' };
     return { disposition: 'SIMULATED', eventId: event.id };
+  }
+
+  private async isControlledPopulationLiveException(
+    request: DemoCommunicationRequest,
+  ): Promise<boolean> {
+    if (
+      process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED !== 'true' ||
+      process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP === 'true' ||
+      request.operation !== 'POPULATION_CONTROLLED_LIVE_TEST' ||
+      request.organizationId !==
+        process.env.POPULATION_CONTROLLED_LIVE_TEST_ORGANIZATION_ID ||
+      !request.recipient ||
+      !request.controlledPopulationContext
+    ) {
+      return false;
+    }
+    const variable =
+      request.channel === DemoCommunicationChannel.EMAIL
+        ? 'POPULATION_CONTROLLED_LIVE_TEST_EMAIL_SHA256'
+        : request.channel === DemoCommunicationChannel.SMS
+          ? 'POPULATION_CONTROLLED_LIVE_TEST_SMS_SHA256'
+          : null;
+    if (!variable) return false;
+    const configured = process.env[variable]?.trim().toLowerCase();
+    const normalized =
+      request.channel === DemoCommunicationChannel.EMAIL
+        ? request.recipient.trim().toLowerCase()
+        : request.recipient.replace(/[\s().-]/g, '');
+    if (
+      !configured ||
+      !/^[a-f0-9]{64}$/.test(configured) ||
+      configured !== digest(normalized)
+    ) {
+      return false;
+    }
+
+    /*
+     * L'appelant ne peut pas transformer le nom d'operation en autorisation.
+     * La preuve est reconstruite depuis la livraison canonique au plus pres
+     * du transport fournisseur. Elle lie tenant, programme, campagne,
+     * destination, canal et cle d'idempotence a un etat encore envoyable.
+     */
+    const context = request.controlledPopulationContext;
+    const delivery = await this.prisma.populationAlertDelivery.findUnique({
+      where: { id: context.deliveryId },
+      select: {
+        alertId: true,
+        idempotencyKey: true,
+        channel: true,
+        status: true,
+        suppressionReason: true,
+        destinationSnapshot: true,
+        alert: {
+          select: {
+            id: true,
+            programId: true,
+            type: true,
+            status: true,
+            titleFR: true,
+            titleEN: true,
+            deliveryModeSnapshot: true,
+            createdByType: true,
+            createdById: true,
+            approvedByType: true,
+            approvedById: true,
+            program: {
+              select: {
+                id: true,
+                status: true,
+                governanceMode: true,
+                rueFacilityProfile: {
+                  select: {
+                    building: { select: { organizationId: true } },
+                  },
+                },
+              },
+            },
+            deliveries: {
+              select: {
+                channel: true,
+                subscriberId: true,
+                destinationSnapshot: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!delivery) return false;
+
+    const program = delivery.alert.program;
+    const destination = delivery.destinationSnapshot
+      ? request.channel === DemoCommunicationChannel.EMAIL
+        ? delivery.destinationSnapshot.trim().toLowerCase()
+        : delivery.destinationSnapshot.replace(/[\s().-]/g, '')
+      : null;
+    const campaignDeliveries = delivery.alert.deliveries;
+    const campaignSubscribers = new Set(
+      campaignDeliveries
+        .map((candidate) => candidate.subscriberId)
+        .filter(Boolean),
+    );
+    const campaignRosterIsExact =
+      campaignDeliveries.length === 2 &&
+      campaignSubscribers.size === 1 &&
+      campaignDeliveries.filter(
+        (candidate) => candidate.channel === PopulationAlertChannel.EMAIL,
+      ).length === 1 &&
+      campaignDeliveries.filter(
+        (candidate) => candidate.channel === PopulationAlertChannel.SMS,
+      ).length === 1;
+    return (
+      context.alertId === delivery.alertId &&
+      context.alertId === delivery.alert.id &&
+      context.programId === delivery.alert.programId &&
+      context.programId === program.id &&
+      context.programId ===
+        process.env.POPULATION_CONTROLLED_LIVE_TEST_PROGRAM_ID &&
+      program.rueFacilityProfile.building.organizationId ===
+        request.organizationId &&
+      program.status === PopulationProgramStatus.ACTIVE &&
+      program.governanceMode === PopulationGovernanceMode.DUAL_CONTROL &&
+      delivery.alert.type === PopulationAlertType.TEST &&
+      delivery.alert.status === PopulationAlertStatus.SENDING &&
+      delivery.alert.deliveryModeSnapshot === PopulationDeliveryMode.LIVE &&
+      /^EXERCICE\s*\/\s*TEST\b/i.test(delivery.alert.titleFR.trim()) &&
+      (!delivery.alert.titleEN?.trim() ||
+        /^EXERCISE\s*\/\s*TEST\b/i.test(delivery.alert.titleEN.trim())) &&
+      campaignRosterIsExact &&
+      Boolean(delivery.alert.approvedById) &&
+      !(
+        delivery.alert.createdByType === delivery.alert.approvedByType &&
+        delivery.alert.createdById === delivery.alert.approvedById
+      ) &&
+      delivery.channel === request.channel &&
+      delivery.status === PopulationDeliveryStatus.SENDING &&
+      delivery.suppressionReason === null &&
+      destination === normalized &&
+      Boolean(request.idempotencyKey) &&
+      delivery.idempotencyKey === request.idempotencyKey &&
+      process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP !== 'true'
+    );
   }
 
   private async isAuthenticationLiveException(

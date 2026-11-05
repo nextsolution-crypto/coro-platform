@@ -470,6 +470,10 @@ type PopulationLivePreflight = {
   suppressed: number;
   retryPending: number;
   reconciliation: number;
+  controlledTest: {
+    enabled: boolean;
+    destinations: string[];
+  };
 };
 
 type PopulationDeliverySummary = {
@@ -7147,6 +7151,33 @@ function AlertDraftWorkspace({
                 </>
               )}
             </div>
+
+            {livePreflight?.controlledTest.enabled && (
+              <div
+                role="status"
+                aria-live="polite"
+                style={{
+                  marginTop: 14,
+                  padding: 12,
+                  border: "1px solid #F5CBA7",
+                  borderRadius: 9,
+                  backgroundColor: "#FEF9E7",
+                  color: "#7D6608",
+                  fontSize: 10,
+                  lineHeight: 1.55,
+                }}
+              >
+                <strong>Essai réel contrôlé</strong>
+                <div>
+                  Destinations autorisées :{" "}
+                  {livePreflight.controlledTest.destinations.join(" · ")}
+                </div>
+                <div>
+                  Un seul courriel et un seul SMS; double approbation et arrêt
+                  d’urgence actifs.
+                </div>
+              </div>
+            )}
 
             <div
               style={{

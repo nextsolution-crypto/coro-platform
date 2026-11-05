@@ -17,6 +17,12 @@ export type PopulationProviderOutcome =
   | 'RETRYABLE_CONFIRMED'
   | 'OUTCOME_UNKNOWN';
 
+export type PopulationControlledTransportContext = {
+  programId: string;
+  alertId: string;
+  deliveryId: string;
+};
+
 function classifyProviderCode(code: string): PopulationProviderOutcome {
   if (code === 'BREVO_NETWORK_ERROR' || code === 'BREVO_TIMEOUT') {
     return 'OUTCOME_UNKNOWN';
@@ -53,6 +59,7 @@ export class PopulationDeliveryService {
     recipient: string;
     payload: unknown;
     idempotencyKey?: string;
+    controlledPopulationContext?: PopulationControlledTransportContext;
   }): Promise<PopulationProviderResult | null> {
     if (!input.organizationId) return null;
     if (!this.demoCommunicationPolicy) {
@@ -68,6 +75,7 @@ export class PopulationDeliveryService {
       recipient: input.recipient,
       payload: input.payload,
       idempotencyKey: input.idempotencyKey,
+      controlledPopulationContext: input.controlledPopulationContext,
     });
     if (decision.disposition === 'LIVE') return null;
     if (decision.disposition === 'BLOCKED') {
@@ -141,6 +149,7 @@ export class PopulationDeliveryService {
     organizationId?: string,
     operation = 'POPULATION_SMS',
     idempotencyKey?: string,
+    controlledPopulationContext?: PopulationControlledTransportContext,
   ): Promise<PopulationProviderResult> {
     const simulated = await this.evaluateDemo({
       organizationId,
@@ -149,6 +158,7 @@ export class PopulationDeliveryService {
       recipient: destination,
       payload: { message },
       idempotencyKey,
+      controlledPopulationContext,
     });
     if (simulated) return simulated;
     const apiKey = this.getApiKey();
@@ -205,6 +215,7 @@ export class PopulationDeliveryService {
     providerIdempotencyKey?: string;
     organizationId?: string;
     operation?: string;
+    controlledPopulationContext?: PopulationControlledTransportContext;
   }): Promise<PopulationProviderResult> {
     const simulated = await this.evaluateDemo({
       organizationId: data.organizationId,
@@ -213,6 +224,7 @@ export class PopulationDeliveryService {
       recipient: data.destination,
       payload: { subject: data.subject },
       idempotencyKey: data.providerIdempotencyKey,
+      controlledPopulationContext: data.controlledPopulationContext,
     });
     if (simulated) return simulated;
     const apiKey = this.getApiKey();
