@@ -68,3 +68,11 @@ La politique reconstruit maintenant la preuve canonique depuis `PopulationAlertD
 Cas négatifs ajoutés : usurpation du nom d'opération sans contexte, contexte canonique absent, campagne modifiée avant transport, livraison déjà envoyée, destination/idempotence divergentes, tenant/programme non concordants et STOP/PAUSED prioritaires. Un échec retombe en SIMULATED ou BLOCKED et n'atteint jamais `fetch`.
 
 Validation locale du candidat SP-OPS-03C : 354/354 tests ciblés PASS, build backend PASS, audit de production 0 vulnérabilité et `git diff --check` PASS. La suite complète produit 2 499 PASS et 5 SKIPPED; 7 cas indépendants échouent localement parce que le sandbox Windows refuse les sous-processus Office/OCR et `credential_process` (`spawn EPERM`). Le lint ciblé expose uniquement la dette stricte déjà présente dans ces grands fichiers; aucune règle n'a été désactivée. La CI Linux du nouveau HEAD reste le gate terminal pour ces contrôles d'environnement.
+
+CI du HEAD produit `563e2ab963ccdf82d9da1b00347e2615854c2a80` :
+
+- Backend PR Checks `42130789036` : PASS;
+- Client Portal PR Checks `42130789061` : PASS;
+- Validate and Release Production `42130789007` : backend-tests, quatre typechecks et client-portal-build PASS;
+- build-images et production-release : SKIPPED comme attendu sur une PR;
+- aucun workflow fournisseur, LIVE ou production exécuté.

@@ -49,5 +49,5 @@ Le NO-GO réel sera levable uniquement après preuve du TFN, de l'expéditeur, d
 - priorité PAUSED/BLOCK/STOP : **PRÉSERVÉE**;
 - isolation des autres tenants et programmes : **PRÉSERVÉE**;
 - appel fournisseur, SMS, courriel, LIVE, secret, fusion ou déploiement : **NON EXÉCUTÉS**;
-- verdict pour revue de la PR #209 : **GO CONDITIONNEL À LA CI TERMINALE DU NOUVEAU HEAD**;
+- verdict pour revue de la PR #209 : **GO — CI DU HEAD PRODUIT ENTIÈREMENT RÉUSSIE**;
 - verdict pour l'essai réel : **NO-GO INCHANGÉ**.
