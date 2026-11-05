@@ -47,7 +47,7 @@ export class PopulationEvidenceReportService {
           evidenceRecordId: evidence.id, manifestId: manifest.id, version: 1, format: 'PDF', language: 'FR', status: PopulationEvidenceReportStatus.GENERATING,
           generationStartedAt: now, generationLeaseUntil: new Date(now.getTime() + LEASE_MS), generatedAt: now,
           generatedByType: actor.type, generatedById: actor.id, generatorVersion: POPULATION_EVIDENCE_REPORT_GENERATOR_VERSION,
-          storageKey: `population-evidence/${organizationId}/${evidence.id}/${id}/${evidence.reference}_v1_FR.pdf`,
+          storageKey: `tenant-${organizationId}/population-evidence/${evidence.id}/${id}/${evidence.reference}_v1_FR.pdf`,
         } });
         return { report, evidence, manifest, verification, owner: true };
       }

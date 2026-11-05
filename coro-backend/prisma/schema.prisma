@@ -5378,6 +5378,7 @@ model PopulationAlert {
 
   zones      PopulationAlertZone[]
   deliveries PopulationAlertDelivery[]
+  institutionTargets PopulationAlertInstitutionTarget[]
 
   @@unique([operationalEventId, cycleSequence])
   @@unique([operationalEventId, clientIntentId])
@@ -5445,6 +5446,9 @@ model PopulationAlertDelivery {
   subscriberId String?
   subscriber   PopulationSubscriber? @relation(fields: [subscriberId], references: [id], onDelete: SetNull)
 
+  institutionTargetId String?
+  institutionTarget   PopulationAlertInstitutionTarget? @relation(fields: [institutionTargetId], references: [id], onDelete: SetNull)
+
   channel           PopulationAlertChannel
   status            PopulationDeliveryStatus             @default(QUEUED)
   suppressionReason PopulationDeliverySuppressionReason?
@@ -5500,6 +5504,7 @@ model PopulationAlertDelivery {
 
   @@index([alertId])
   @@index([subscriberId])
+  @@index([institutionTargetId])
   @@index([status])
   @@index([providerMessageId])
   @@index([status, nextAttemptAt])
@@ -6161,6 +6166,7 @@ model RueSurroundingAsset {
   updatedAt DateTime @updatedAt
 
   contacts RueSurroundingAssetContact[]
+  populationAlertTargets PopulationAlertInstitutionTarget[]
 
   @@index([facilityProfileId])
   @@index([type])
@@ -6172,6 +6178,7 @@ model RueSurroundingAssetContact {
 
   surroundingAssetId String
   surroundingAsset   RueSurroundingAsset @relation(fields: [surroundingAssetId], references: [id], onDelete: Cascade)
+  populationAlertTargets PopulationAlertInstitutionTarget[]
 
   // Contact institutionnel ou opérationnel.
   firstName String?
@@ -6193,6 +6200,43 @@ model RueSurroundingAssetContact {
   updatedAt DateTime @updatedAt
 
   @@index([surroundingAssetId])
+}
+
+// Snapshot d'un contact institutionnel explicitement retenu pour une
+// communication Population. La présence géographique d'un établissement ne
+// crée jamais ce record automatiquement : l'opérateur doit sélectionner
+// l'établissement, et le serveur revalide son périmètre et son admissibilité.
+model PopulationAlertInstitutionTarget {
+  id String @id @default(uuid())
+
+  alertId String
+  alert   PopulationAlert @relation(fields: [alertId], references: [id], onDelete: Restrict)
+
+  surroundingAssetId String?
+  surroundingAsset   RueSurroundingAsset? @relation(fields: [surroundingAssetId], references: [id], onDelete: SetNull)
+
+  surroundingAssetContactId String?
+  surroundingAssetContact   RueSurroundingAssetContact? @relation(fields: [surroundingAssetContactId], references: [id], onDelete: SetNull)
+
+  assetNameSnapshot        String
+  assetTypeSnapshot        RueSurroundingAssetType
+  sourceSnapshot           RueDataSource
+  sourceReferenceSnapshot  String?
+  assetValidatedAtSnapshot DateTime
+  contactRoleSnapshot      String?
+  phoneSnapshot            String?
+  emailSnapshot            String?
+
+  selectedByType CoroActorType
+  selectedById   String
+  selectedAt     DateTime      @default(now())
+
+  deliveries PopulationAlertDelivery[]
+
+  @@unique([alertId, surroundingAssetContactId])
+  @@index([alertId])
+  @@index([surroundingAssetId])
+  @@index([surroundingAssetContactId])
 }
 
 model RueLocalAuthority {

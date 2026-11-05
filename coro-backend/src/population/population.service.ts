@@ -3192,7 +3192,9 @@ export class PopulationService {
   private async calculateScenarioPopulationTargeting(
     buildingId: string,
     scenarioId: string,
-    selection: PopulationDirectionalPreviewQueryDto = {},
+    selection: PopulationDirectionalPreviewQueryDto & {
+      selectedSensitiveAssetIds?: string[];
+    } = {},
   ) {
     const profile = await this.assertPopulationOperational(buildingId);
 
@@ -3365,6 +3367,41 @@ export class PopulationService {
     const uniqueSmsTargetIds = new Set<string>();
     const uniqueEmailTargetIds = new Set<string>();
 
+    const surroundingAssets = await this.prisma.rueSurroundingAsset.findMany({
+      where: {
+        facilityProfileId: profile.id,
+        isActive: true,
+      },
+      orderBy: [{ isSensitive: 'desc' }, { type: 'asc' }, { name: 'asc' }],
+      select: {
+        id: true,
+        type: true,
+        name: true,
+        latitude: true,
+        longitude: true,
+        geometry: true,
+        estimatedOccupancy: true,
+        isSensitive: true,
+        isCritical: true,
+        source: true,
+        sourceReference: true,
+        validatedAt: true,
+        updatedAt: true,
+        contacts: {
+          where: { isActive: true, isEmergency: true },
+          orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
+          select: {
+            id: true,
+            roleDescription: true,
+            phone: true,
+            email: true,
+            isPrimary: true,
+            is24x7: true,
+          },
+        },
+      },
+    });
+
     const targetingMode =
       selection.targetingMode ?? PopulationTargetingMode.GLOBAL;
     const propagationDirection = selection.propagationDirection ?? null;
@@ -3462,6 +3499,102 @@ export class PopulationService {
       };
     });
 
+    const requestedSensitiveAssetIds = new Set(
+      selection.selectedSensitiveAssetIds ?? [],
+    );
+    const sensitiveAssets = surroundingAssets.map((asset) => {
+      const hasCoordinates =
+        asset.latitude !== null &&
+        asset.longitude !== null &&
+        Number.isFinite(asset.latitude) &&
+        Number.isFinite(asset.longitude) &&
+        asset.latitude >= -90 &&
+        asset.latitude <= 90 &&
+        asset.longitude >= -180 &&
+        asset.longitude <= 180;
+      const matchingZoneIds: string[] = [];
+
+      if (hasCoordinates) {
+        for (const zone of targetingZones) {
+          let isInside =
+            this.populationGeospatialService.isPointInsideImpactZone({
+              latitude: asset.latitude!,
+              longitude: asset.longitude!,
+              geometry: zone.geometry,
+              maxDistanceKm: zone.maxDistanceKm,
+              referenceLatitude: building.latitude,
+              referenceLongitude: building.longitude,
+            });
+          if (
+            isInside &&
+            targetingMode === PopulationTargetingMode.DIRECTIONAL &&
+            propagationDirection &&
+            zone.geometry === null &&
+            zone.maxDistanceKm !== null &&
+            building.latitude !== null &&
+            building.longitude !== null
+          ) {
+            isInside =
+              this.populationGeospatialService.isPointInsideDirectionalSector({
+                latitude: asset.latitude!,
+                longitude: asset.longitude!,
+                referenceLatitude: building.latitude,
+                referenceLongitude: building.longitude,
+                maxDistanceKm: zone.maxDistanceKm,
+                propagationDirection,
+                includeAdjacentSectors,
+              });
+          }
+          if (isInside) matchingZoneIds.push(zone.id);
+        }
+      }
+
+      const eligibleContacts = asset.contacts.filter(
+        (contact) => Boolean(contact.phone?.trim() || contact.email?.trim()),
+      );
+      const geographicallyConcerned = matchingZoneIds.length > 0;
+      const notificationEligible = Boolean(
+        geographicallyConcerned &&
+          asset.validatedAt &&
+          eligibleContacts.length > 0,
+      );
+      return {
+        id: asset.id,
+        type: asset.type,
+        name: asset.name,
+        estimatedOccupancy: asset.estimatedOccupancy,
+        isSensitive: asset.isSensitive,
+        isCritical: asset.isCritical,
+        source: asset.source,
+        sourceReference: asset.sourceReference,
+        validatedAt: asset.validatedAt,
+        updatedAt: asset.updatedAt,
+        hasCoordinates,
+        hasGeometry: asset.geometry !== null,
+        geographicallyConcerned,
+        matchingZoneIds,
+        notificationEligible,
+        selectedForNotification:
+          notificationEligible && requestedSensitiveAssetIds.has(asset.id),
+        availableChannels: {
+          sms: eligibleContacts.some((contact) => Boolean(contact.phone?.trim())),
+          email: eligibleContacts.some((contact) => Boolean(contact.email?.trim())),
+        },
+        eligibleContacts,
+      };
+    });
+
+    const selectedSensitiveAssets = sensitiveAssets.filter(
+      (asset) => asset.selectedForNotification,
+    );
+    if (
+      selectedSensitiveAssets.length !== requestedSensitiveAssetIds.size
+    ) {
+      throw new BadRequestException(
+        "Un établissement sélectionné est hors périmètre, non validé ou sans contact d'urgence admissible",
+      );
+    }
+
     const radialDistancesKm = [
       ...new Set(
         targetingZones
@@ -3552,6 +3685,8 @@ export class PopulationService {
         uniqueEmailTargetCount: uniqueEmailTargetIds.size,
       },
       targetedSubscriberIds: [...uniqueTargetIds],
+      sensitiveAssets,
+      selectedSensitiveAssets,
       zones,
       directionalPlanning,
     };
@@ -3690,6 +3825,25 @@ export class PopulationService {
 
       scenario: targeting.scenario,
       population: targeting.population,
+      sensitiveAssets: targeting.sensitiveAssets.map((asset) => ({
+        id: asset.id,
+        type: asset.type,
+        name: asset.name,
+        estimatedOccupancy: asset.estimatedOccupancy,
+        isSensitive: asset.isSensitive,
+        isCritical: asset.isCritical,
+        source: asset.source,
+        sourceReference: asset.sourceReference,
+        validatedAt: asset.validatedAt,
+        updatedAt: asset.updatedAt,
+        hasCoordinates: asset.hasCoordinates,
+        hasGeometry: asset.hasGeometry,
+        geographicallyConcerned: asset.geographicallyConcerned,
+        matchingZoneIds: asset.matchingZoneIds,
+        notificationEligible: asset.notificationEligible,
+        selectedForNotification: asset.selectedForNotification,
+        availableChannels: asset.availableChannels,
+      })),
       directionalPlanning: targeting.directionalPlanning,
 
       zones: targeting.zones.map((zone) => ({
@@ -3742,6 +3896,7 @@ export class PopulationService {
         targetingMode,
         propagationDirection: dto.propagationDirection,
         includeAdjacentSectors: true,
+        selectedSensitiveAssetIds: dto.selectedSensitiveAssetIds,
       },
     );
 
@@ -3799,6 +3954,26 @@ export class PopulationService {
       },
 
       population: targeting.population,
+
+      sensitiveAssets: targeting.sensitiveAssets.map((asset) => ({
+        id: asset.id,
+        type: asset.type,
+        name: asset.name,
+        estimatedOccupancy: asset.estimatedOccupancy,
+        isSensitive: asset.isSensitive,
+        isCritical: asset.isCritical,
+        source: asset.source,
+        sourceReference: asset.sourceReference,
+        validatedAt: asset.validatedAt?.toISOString() ?? null,
+        updatedAt: asset.updatedAt.toISOString(),
+        hasCoordinates: asset.hasCoordinates,
+        hasGeometry: asset.hasGeometry,
+        geographicallyConcerned: asset.geographicallyConcerned,
+        matchingZoneIds: asset.matchingZoneIds,
+        notificationEligible: asset.notificationEligible,
+        selectedForNotification: asset.selectedForNotification,
+        availableChannels: asset.availableChannels,
+      })),
 
       targeting: {
         zoneCount: targeting.zones.length,
@@ -3892,6 +4067,32 @@ export class PopulationService {
         });
       }
 
+      const institutionTargets = targeting.selectedSensitiveAssets.flatMap(
+        (asset) =>
+          asset.eligibleContacts.map((contact) => ({
+            alertId: alert.id,
+            surroundingAssetId: asset.id,
+            surroundingAssetContactId: contact.id,
+            assetNameSnapshot: asset.name,
+            assetTypeSnapshot: asset.type,
+            sourceSnapshot: asset.source,
+            sourceReferenceSnapshot: asset.sourceReference,
+            assetValidatedAtSnapshot: asset.validatedAt!,
+            contactRoleSnapshot: contact.roleDescription,
+            phoneSnapshot: contact.phone?.trim() || null,
+            emailSnapshot: contact.email?.trim().toLowerCase() || null,
+            selectedByType: actor.type as CoroActorType,
+            selectedById: actor.id,
+            selectedAt: createdAt,
+          })),
+      );
+      if (institutionTargets.length > 0) {
+        await tx.populationAlertInstitutionTarget.createMany({
+          data: institutionTargets,
+          skipDuplicates: true,
+        });
+      }
+
       return tx.populationAlert.findUnique({
         where: {
           id: alert.id,
@@ -3901,6 +4102,9 @@ export class PopulationService {
             orderBy: {
               zoneCodeSnapshot: 'asc',
             },
+          },
+          institutionTargets: {
+            orderBy: [{ assetNameSnapshot: 'asc' }, { id: 'asc' }],
           },
         },
       });
@@ -3935,6 +4139,9 @@ export class PopulationService {
           orderBy: {
             zoneCodeSnapshot: 'asc',
           },
+        },
+        institutionTargets: {
+          orderBy: [{ assetNameSnapshot: 'asc' }, { id: 'asc' }],
         },
       },
     });
@@ -3997,6 +4204,9 @@ export class PopulationService {
           orderBy: {
             zoneCodeSnapshot: 'asc',
           },
+        },
+        institutionTargets: {
+          orderBy: [{ assetNameSnapshot: 'asc' }, { id: 'asc' }],
         },
       },
     });
@@ -5898,6 +6108,11 @@ export class PopulationService {
      * ni les zones pour recalculer le roster.
      */
     if (program.deliveryMode === PopulationDeliveryMode.LIVE) {
+      if ((alert.institutionTargets ?? []).length > 0) {
+        throw new BadRequestException(
+          'La diffusion LIVE vers des établissements exige une politique institutionnelle approuvée',
+        );
+      }
       const scientificBlockingReasons =
         await this.getLiveScientificGovernanceBlockingReasons(alert);
       if (scientificBlockingReasons.length > 0) {
@@ -6110,7 +6325,8 @@ export class PopulationService {
     const deliveries: Array<{
       idempotencyKey: string;
       alertId: string;
-      subscriberId: string;
+      subscriberId: string | null;
+      institutionTargetId: string | null;
       channel: PopulationAlertChannel;
       status: PopulationDeliveryStatus;
       suppressionReason: PopulationDeliverySuppressionReason | null;
@@ -6186,6 +6402,7 @@ export class PopulationService {
           idempotencyKey: `${alert.id}:${subscriber.id}:${channel}`,
           alertId: alert.id,
           subscriberId: subscriber.id,
+          institutionTargetId: null,
           channel,
           status: deliveryStatus,
           suppressionReason,
@@ -6200,6 +6417,41 @@ export class PopulationService {
             deliveryStatus === PopulationDeliveryStatus.QUEUED
               ? destination
               : null,
+        });
+      }
+    }
+
+    for (const target of alert.institutionTargets ?? []) {
+      const channels: Array<{
+        channel: PopulationAlertChannel;
+        destination: string;
+      }> = [];
+      if (target.phoneSnapshot?.trim()) {
+        channels.push({
+          channel: PopulationAlertChannel.SMS,
+          destination: target.phoneSnapshot.trim(),
+        });
+      }
+      if (target.emailSnapshot?.trim()) {
+        channels.push({
+          channel: PopulationAlertChannel.EMAIL,
+          destination: target.emailSnapshot.trim().toLowerCase(),
+        });
+      }
+
+      for (const { channel } of channels) {
+        deliveries.push({
+          idempotencyKey: `${alert.id}:institution:${target.id}:${channel}`,
+          alertId: alert.id,
+          subscriberId: null,
+          institutionTargetId: target.id,
+          channel,
+          status: PopulationDeliveryStatus.SUPPRESSED,
+          suppressionReason: PopulationDeliverySuppressionReason.SANDBOX_MODE,
+          providerIdempotencyKey: null,
+          language: PopulationPreferredLanguage.FR,
+          messageSnapshot: alert.messageFR.trim(),
+          destinationSnapshot: null,
         });
       }
     }

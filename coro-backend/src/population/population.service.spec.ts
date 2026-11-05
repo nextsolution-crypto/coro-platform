@@ -101,6 +101,12 @@ describe('PopulationService', () => {
       groupBy: jest.fn(),
       updateMany: jest.fn(),
     },
+    rueSurroundingAsset: {
+      findMany: jest.fn(),
+    },
+    populationAlertInstitutionTarget: {
+      createMany: jest.fn(),
+    },
     $transaction: jest.fn(),
     $executeRaw: jest.fn(),
   };
@@ -145,6 +151,10 @@ describe('PopulationService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    prisma.rueSurroundingAsset.findMany.mockResolvedValue([]);
+    prisma.populationAlertInstitutionTarget.createMany.mockResolvedValue({
+      count: 0,
+    });
 
     populationGeospatialService.oppositeDirection.mockReturnValue('S');
     populationGeospatialService.includedDirections.mockReturnValue([
@@ -4001,6 +4011,78 @@ describe('PopulationService', () => {
       expect(prisma.populationAlertDelivery.createMany).not.toHaveBeenCalled();
     });
 
+    it('snapshotte uniquement les contacts des établissements explicitement sélectionnés et admissibles', async () => {
+      prisma.rueSurroundingAsset.findMany.mockResolvedValue([
+        {
+          id: 'asset-hospital', type: 'HOSPITAL', name: 'Hôpital synthétique',
+          latitude: 45.5, longitude: -73.5, geometry: null,
+          estimatedOccupancy: 240, isSensitive: true, isCritical: true,
+          source: 'MANUAL', sourceReference: 'QA-SP-OPS-02',
+          validatedAt: new Date('2026-11-05T12:00:00.000Z'),
+          updatedAt: new Date('2026-11-05T12:00:00.000Z'),
+          contacts: [{
+            id: 'contact-hospital', roleDescription: 'Sécurité',
+            phone: '+15145550100', email: 'urgence@example.invalid',
+            isPrimary: true, is24x7: true,
+          }],
+        },
+      ]);
+      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(true);
+
+      await service.createAlertDraft(
+        'building-1',
+        { ...dto, selectedSensitiveAssetIds: ['asset-hospital'] },
+        actor,
+      );
+
+      expect(prisma.populationAlertInstitutionTarget.createMany).toHaveBeenCalledWith({
+        data: [expect.objectContaining({
+          alertId: 'alert-1',
+          surroundingAssetId: 'asset-hospital',
+          surroundingAssetContactId: 'contact-hospital',
+          assetNameSnapshot: 'Hôpital synthétique',
+          contactRoleSnapshot: 'Sécurité',
+          selectedById: actor.id,
+        })],
+        skipDuplicates: true,
+      });
+      const serializedSnapshot = JSON.stringify(
+        prisma.populationAlert.create.mock.calls[0][0].data.contextSnapshot,
+      );
+      expect(serializedSnapshot).toContain('Hôpital synthétique');
+      expect(serializedSnapshot).not.toContain('+15145550100');
+      expect(serializedSnapshot).not.toContain('urgence@example.invalid');
+    });
+
+    it('refuse un établissement sélectionné hors périmètre sans écrire le brouillon', async () => {
+      prisma.rueSurroundingAsset.findMany.mockResolvedValue([
+        {
+          id: 'asset-outside', type: 'SCHOOL', name: 'École hors zone',
+          latitude: 46.5, longitude: -72.5, geometry: null,
+          estimatedOccupancy: 300, isSensitive: true, isCritical: false,
+          source: 'MANUAL', sourceReference: 'QA-SP-OPS-02',
+          validatedAt: new Date('2026-11-05T12:00:00.000Z'),
+          updatedAt: new Date('2026-11-05T12:00:00.000Z'),
+          contacts: [{
+            id: 'contact-school', roleDescription: 'Direction', phone: null,
+            email: 'direction@example.invalid', isPrimary: true, is24x7: false,
+          }],
+        },
+      ]);
+      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(false);
+
+      await expect(
+        service.createAlertDraft(
+          'building-1',
+          { ...dto, selectedSensitiveAssetIds: ['asset-outside'] },
+          actor,
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(prisma.populationAlert.create).not.toHaveBeenCalled();
+      expect(prisma.populationAlertInstitutionTarget.createMany).not.toHaveBeenCalled();
+    });
+
     it('conserve dans contextSnapshot les agrégats dédupliqués calculés par le même moteur que le preview', async () => {
       await service.createAlertDraft('building-1', dto, actor);
 
@@ -4189,6 +4271,9 @@ describe('PopulationService', () => {
             orderBy: {
               zoneCodeSnapshot: 'asc',
             },
+          },
+          institutionTargets: {
+            orderBy: [{ assetNameSnapshot: 'asc' }, { id: 'asc' }],
           },
         },
       });
@@ -5688,6 +5773,9 @@ describe('PopulationService', () => {
               zoneCodeSnapshot: 'asc',
             },
           },
+          institutionTargets: {
+            orderBy: [{ assetNameSnapshot: 'asc' }, { id: 'asc' }],
+          },
         },
       });
 
@@ -5868,6 +5956,58 @@ describe('PopulationService', () => {
         }
       },
     );
+
+    it('fige une cible institutionnelle en SANDBOX sans destination ni appel fournisseur', async () => {
+      activeProfile.populationProgram.deliveryMode = PopulationDeliveryMode.SANDBOX;
+      prisma.populationAlert.findFirst.mockResolvedValue({
+        ...approvedAlert,
+        institutionTargets: [{
+          id: 'institution-target-1', assetNameSnapshot: 'Hôpital synthétique',
+          phoneSnapshot: '+15145550100', emailSnapshot: 'urgence@example.invalid',
+        }],
+      });
+
+      await service.freezeAlertRecipients('building-1', 'alert-1');
+
+      expect(prisma.populationAlertDelivery.createMany).toHaveBeenCalledWith({
+        data: expect.arrayContaining([
+          expect.objectContaining({
+            idempotencyKey: 'alert-1:institution:institution-target-1:SMS',
+            subscriberId: null,
+            institutionTargetId: 'institution-target-1',
+            status: PopulationDeliveryStatus.SUPPRESSED,
+            suppressionReason: PopulationDeliverySuppressionReason.SANDBOX_MODE,
+            destinationSnapshot: null,
+          }),
+          expect.objectContaining({
+            idempotencyKey: 'alert-1:institution:institution-target-1:EMAIL',
+            institutionTargetId: 'institution-target-1',
+            destinationSnapshot: null,
+          }),
+        ]),
+        skipDuplicates: true,
+      });
+      expect(populationDeliveryService.sendSms).not.toHaveBeenCalled();
+      expect(populationDeliveryService.sendEmail).not.toHaveBeenCalled();
+    });
+
+    it('refuse la diffusion institutionnelle LIVE avant toute matérialisation', async () => {
+      activeProfile.populationProgram.deliveryMode = PopulationDeliveryMode.LIVE;
+      prisma.populationAlert.findFirst.mockResolvedValue({
+        ...approvedAlert,
+        institutionTargets: [{
+          id: 'institution-target-1', assetNameSnapshot: 'Hôpital synthétique',
+          phoneSnapshot: null, emailSnapshot: 'urgence@example.invalid',
+        }],
+      });
+
+      await expect(
+        service.freezeAlertRecipients('building-1', 'alert-1'),
+      ).rejects.toThrow('politique institutionnelle approuvée');
+
+      expect(prisma.populationAlert.updateMany).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.createMany).not.toHaveBeenCalled();
+    });
 
     it('refuse de figer les destinataires avant approbation humaine', async () => {
       prisma.populationAlert.findFirst.mockResolvedValue({

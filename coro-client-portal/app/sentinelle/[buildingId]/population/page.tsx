@@ -216,6 +216,24 @@ type PopulationPreview = {
     selectedGeometry: unknown | null;
     method: "CONSERVATIVE_DIRECTIONAL_SECTOR";
   } | null;
+  sensitiveAssets: Array<{
+    id: string;
+    type: string;
+    name: string;
+    estimatedOccupancy: number | null;
+    isSensitive: boolean;
+    isCritical: boolean;
+    source: string;
+    sourceReference: string | null;
+    validatedAt: string | null;
+    hasCoordinates: boolean;
+    hasGeometry: boolean;
+    geographicallyConcerned: boolean;
+    matchingZoneIds: string[];
+    notificationEligible: boolean;
+    selectedForNotification: boolean;
+    availableChannels: { sms: boolean; email: boolean };
+  }>;
   zones: Array<{
     id: string;
     code: string;
@@ -581,6 +599,9 @@ export default function PopulationPage() {
   );
   const [propagationDirection, setPropagationDirection] = useState("N");
   const [targetingConfirmed, setTargetingConfirmed] = useState(false);
+  const [selectedSensitiveAssetIds, setSelectedSensitiveAssetIds] = useState<
+    string[]
+  >([]);
 
   const [alertComposerOpen, setAlertComposerOpen] = useState(false);
   const alertComposerRef = useRef<HTMLElement | null>(null);
@@ -1250,6 +1271,7 @@ export default function PopulationPage() {
     setPreviewLoading(true);
     setPreviewError(null);
     setPreview(null);
+    setSelectedSensitiveAssetIds([]);
 
     try {
       const query = new URLSearchParams({ targetingMode: mode });
@@ -1509,6 +1531,11 @@ export default function PopulationPage() {
           propagationDirection:
             targetingMode === "DIRECTIONAL" ? propagationDirection : undefined,
           targetingConfirmed,
+          selectedSensitiveAssetIds: selectedSensitiveAssetIds.filter((id) =>
+            preview.sensitiveAssets.some(
+              (asset) => asset.id === id && asset.notificationEligible,
+            ),
+          ),
           titleFR,
           titleEN: alertForm.titleEN.trim() || undefined,
           messageFR,
@@ -2464,6 +2491,7 @@ export default function PopulationPage() {
                     onClick={() => {
                       setSelectedScenarioId(scenario.id);
                       setPreview(null);
+                      setSelectedSensitiveAssetIds([]);
                       setPreviewError(null);
                       setAlertComposerOpen(false);
                       setAlertStep(1);
@@ -3761,7 +3789,13 @@ export default function PopulationPage() {
                 <AlertZoneStep scenario={selectedScenario} preview={preview} />
               )}
 
-              {alertStep === 3 && <AlertPopulationStep preview={preview} />}
+              {alertStep === 3 && (
+                <AlertPopulationStep
+                  preview={preview}
+                  selectedSensitiveAssetIds={selectedSensitiveAssetIds}
+                  onSelectionChange={setSelectedSensitiveAssetIds}
+                />
+              )}
 
               {alertStep === 4 && (
                 <AlertMessageStep
@@ -5967,7 +6001,27 @@ function AlertZoneStep({
   );
 }
 
-function AlertPopulationStep({ preview }: { preview: PopulationPreview }) {
+function AlertPopulationStep({
+  preview,
+  selectedSensitiveAssetIds,
+  onSelectionChange,
+}: {
+  preview: PopulationPreview;
+  selectedSensitiveAssetIds: string[];
+  onSelectionChange: (ids: string[]) => void;
+}) {
+  const concernedAssets = preview.sensitiveAssets.filter(
+    (asset) => asset.geographicallyConcerned,
+  );
+
+  const toggleAsset = (assetId: string, checked: boolean) => {
+    onSelectionChange(
+      checked
+        ? [...new Set([...selectedSensitiveAssetIds, assetId])]
+        : selectedSensitiveAssetIds.filter((id) => id !== assetId),
+    );
+  };
+
   return (
     <div>
       <StepTitle
@@ -6020,6 +6074,120 @@ function AlertPopulationStep({ preview }: { preview: PopulationPreview }) {
         Le nombre de SMS et de courriels représente les canaux disponibles. Une
         même personne peut disposer des deux canaux.
       </div>
+
+      <section
+        aria-labelledby="sensitive-assets-heading"
+        style={{
+          marginTop: 14,
+          padding: 14,
+          border: "1px solid #DDE7E4",
+          borderRadius: 10,
+          backgroundColor: "#F7FBFA",
+        }}
+      >
+        <h3
+          id="sensitive-assets-heading"
+          style={{ margin: "0 0 5px", color: "#2C3E50", fontSize: 12 }}
+        >
+          Établissements sensibles dans le périmètre
+        </h3>
+        <p
+          style={{
+            margin: "0 0 12px",
+            color: "#6C757D",
+            fontSize: 9,
+            lineHeight: 1.55,
+          }}
+        >
+          La présence géographique ne déclenche jamais une communication. Une
+          sélection humaine explicite est requise. Les établissements sans
+          coordonnées, validation ou contact d’urgence admissible restent
+          visibles, mais ne peuvent pas être sélectionnés.
+        </p>
+
+        {concernedAssets.length === 0 ? (
+          <p style={{ margin: 0, color: "#6C757D", fontSize: 10 }}>
+            Aucun établissement sensible ponctuel n’est confirmé dans les zones
+            opérationnelles calculées.
+          </p>
+        ) : (
+          <div style={{ display: "grid", gap: 8 }}>
+            {concernedAssets.map((asset) => {
+              const selected = selectedSensitiveAssetIds.includes(asset.id);
+              return (
+                <label
+                  key={asset.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 10,
+                    minHeight: 44,
+                    padding: 10,
+                    border: `1px solid ${selected ? "#167D6A" : "#E0E7E5"}`,
+                    borderRadius: 8,
+                    backgroundColor: selected ? "#E8F5F1" : "#FFFFFF",
+                    cursor: asset.notificationEligible
+                      ? "pointer"
+                      : "not-allowed",
+                    opacity: asset.notificationEligible ? 1 : 0.68,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    disabled={!asset.notificationEligible}
+                    onChange={(event) =>
+                      toggleAsset(asset.id, event.currentTarget.checked)
+                    }
+                    style={{ marginTop: 2, width: 18, height: 18 }}
+                  />
+                  <span style={{ minWidth: 0 }}>
+                    <strong
+                      style={{
+                        display: "block",
+                        color: "#2C3E50",
+                        fontSize: 10,
+                      }}
+                    >
+                      {asset.name}
+                    </strong>
+                    <span
+                      style={{
+                        display: "block",
+                        marginTop: 3,
+                        color: "#6C757D",
+                        fontSize: 9,
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      {asset.type} · {asset.matchingZoneIds.length} zone(s) ·{" "}
+                      {asset.availableChannels.sms ? "SMS" : "sans SMS"} ·{" "}
+                      {asset.availableChannels.email
+                        ? "courriel"
+                        : "sans courriel"}
+                    </span>
+                    {!asset.notificationEligible && (
+                      <span
+                        role="status"
+                        style={{
+                          display: "block",
+                          marginTop: 4,
+                          color: "#A45A16",
+                          fontSize: 9,
+                          fontWeight: 700,
+                        }}
+                      >
+                        Non admissible : validation ou contact d’urgence
+                        manquant.
+                      </span>
+                    )}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
