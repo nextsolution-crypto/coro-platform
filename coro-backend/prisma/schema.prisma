@@ -6144,6 +6144,12 @@ enum IncidentType {
   LITHIUM_BATTERY // P026 — Batterie lithium
   FLOODING // P024 — Inondations
   VIOLENT_WINDS // P022 — Vents violents
+  ELEVATOR_ENTRAPMENT // P012 — Personne coincée dans un ascenseur
+  FIRE_PROTECTION_IMPAIRMENT // P017 — Protection incendie compromise
+  HAZARDOUS_ATMOSPHERE // P029 — Atmosphère dangereuse / ventilation de sécurité indisponible
+  EMERGENCY_POWER_FAILURE // P030 — Perte de l'alimentation électrique d'urgence
+  SEVERE_ICE_CONDITIONS // P025 — Conditions dangereuses liées au verglas
+  CRITICAL_SAFETY_SYSTEM_LOSS // P031 — Perte d'un système essentiel à la sécurité
   OTHER // P001 — Directives générales
 }
 

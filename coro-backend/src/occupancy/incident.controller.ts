@@ -7,6 +7,7 @@ import { PlatformRolesGuard } from '../auth/platform-roles.guard';
 import { RequirePlatformPermission } from '../auth/platform-permission.decorator';
 import { IncidentHistoryQueryDto } from './incident-history.dto';
 import { AddIncidentLogDto, ContainIncidentDto, ResolveIncidentDto, UpdateIncidentRexDto } from './incident-detail.dto';
+import { TriggerIncidentDto } from './incident-trigger.dto';
 
 @Controller('incidents')
 @OperationalContinuityAccess()
@@ -17,10 +18,11 @@ export class IncidentController {
   @UseGuards(PlatformRolesGuard)
   @RequirePlatformPermission(PlatformPermission.INCIDENT_COMMAND)
   @Post('trigger')
-  async trigger(@Body() body: any, @Request() req: any) {
+  async trigger(@Body() body: TriggerIncidentDto, @Request() req: any) {
     const actorId = req.user.userId || req.user.sub;
     const assignment = await this.service.requireIncidentAuthority({ actorType: 'USER', actorId, organizationId: req.user.organizationId, buildingId: body.buildingId, permission: IncidentPermission.INCIDENT_COMMAND });
-    return this.service.triggerIncident(body, req.user.organizationId, undefined, { actorType: 'USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_COMMAND, reason: body.reason || 'Incident creation', requestId: req.id || req.headers?.['x-request-id'] });
+    const triggeredBy = [req.user.firstName, req.user.lastName].filter(Boolean).join(' ') || req.user.email || actorId;
+    return this.service.triggerIncident({ ...body, triggeredBy }, req.user.organizationId, undefined, { actorType: 'USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_COMMAND, reason: body.reason || 'Incident creation', requestId: req.id || req.headers?.['x-request-id'] });
   }
 
   @UseGuards(AuthGuard('jwt'))

@@ -13,6 +13,9 @@ const INCIDENT_LABELS: Record<string, string> = {
   POWER_OUTAGE: 'Coupure de courant', HAZMAT: 'Matières dangereuses',
   BOMB_THREAT: 'Alerte à la bombe', LITHIUM_BATTERY: 'Batterie lithium-ion',
   FLOODING: 'Inondations', VIOLENT_WINDS: 'Vents violents', OTHER: 'Incident',
+  ELEVATOR_ENTRAPMENT: 'Personne coincée dans un ascenseur', FIRE_PROTECTION_IMPAIRMENT: 'Protection incendie compromise',
+  HAZARDOUS_ATMOSPHERE: 'Atmosphère dangereuse / ventilation de sécurité indisponible', EMERGENCY_POWER_FAILURE: "Perte de l'alimentation électrique d'urgence",
+  SEVERE_ICE_CONDITIONS: 'Conditions dangereuses liées au verglas', CRITICAL_SAFETY_SYSTEM_LOSS: "Perte d'un système essentiel à la sécurité",
 };
 
 function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {

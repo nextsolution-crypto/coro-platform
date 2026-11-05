@@ -35,8 +35,23 @@ const INCIDENT_TYPES = [
   { value: 'LITHIUM_BATTERY',    label: '🔋 Batterie lithium-ion',          color: '#E67E22' },
   { value: 'FLOODING',           label: '🌊 Inondations',                  color: '#2980B9' },
   { value: 'VIOLENT_WINDS',      label: '🌪️ Vents violents',               color: '#2980B9' },
+  { value: 'ELEVATOR_ENTRAPMENT', label: '🛗 Personne coincée dans un ascenseur', color: '#008B8B' },
+  { value: 'FIRE_PROTECTION_IMPAIRMENT', label: '🧯 Protection incendie compromise', color: '#C0392B' },
+  { value: 'HAZARDOUS_ATMOSPHERE', label: '⚠️ Atmosphère dangereuse / ventilation de sécurité', color: '#8E44AD' },
+  { value: 'EMERGENCY_POWER_FAILURE', label: "⚡ Perte de l'alimentation d'urgence", color: '#353839' },
+  { value: 'SEVERE_ICE_CONDITIONS', label: '🧊 Conditions dangereuses liées au verglas', color: '#2980B9' },
+  { value: 'CRITICAL_SAFETY_SYSTEM_LOSS', label: "🛡️ Perte d'un système essentiel à la sécurité", color: '#607D8B' },
   { value: 'OTHER',              label: '⚠️ Autre incident',               color: '#6C757D' },
 ];
+
+const OPERATIONAL_EVENT_GUIDANCE: Record<string, string> = {
+  ELEVATOR_ENTRAPMENT: "À utiliser lorsqu'une personne est coincée ou qu'un ascenseur crée un risque immédiat. Une panne sans occupant relève de la maintenance.",
+  FIRE_PROTECTION_IMPAIRMENT: "À utiliser lorsque la défaillance compromet réellement la protection incendie et exige des mesures compensatoires, une surveillance ou une évacuation.",
+  HAZARDOUS_ATMOSPHERE: "À utiliser lorsqu'une atmosphère dangereuse est soupçonnée ou que la ventilation de sécurité indisponible expose des personnes.",
+  EMERGENCY_POWER_FAILURE: "À utiliser lorsque l'alimentation d'urgence ne soutient plus une fonction de sécurité. Une panne électrique ordinaire conserve son type distinct.",
+  SEVERE_ICE_CONDITIONS: "À utiliser lorsque le verglas rend des accès, déplacements ou opérations dangereux et impose des restrictions immédiates.",
+  CRITICAL_SAFETY_SYSTEM_LOSS: "À utiliser lorsque la perte d'un système essentiel compromet la sécurité des personnes ou la réponse d'urgence.",
+};
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
   PRE_ALERT: { label: 'PRÉ-ALERTE',     color: '#B9770E', bg: '#FEF9E7', border: '#F9E79F' },
@@ -188,7 +203,6 @@ export default function IncidentPage() {
     try {
       await clientFetch('/client-portal/incidents/trigger', 'POST', {
         buildingId, type: selectedType,
-        triggeredBy: `${user?.firstName} ${user?.lastName}`,
         description: description || null,
         isExercise,
       });
@@ -329,7 +343,7 @@ export default function IncidentPage() {
       {/* ── En-tête ── */}
       <header style={{ marginBottom: 24 }}>
         <button type="button" onClick={() => router.push(`/sentinelle/${buildingId}`)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#ADB5BD', padding: 0, marginBottom: 8 }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#ADB5BD', padding: '10px 0', minHeight: 44, marginBottom: 8 }}>
           ← Retour au registre
         </button>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
@@ -342,12 +356,12 @@ export default function IncidentPage() {
           <div style={{ display: 'flex', gap: 8 }}>
             {activeIncidents.length > 0 && (
               <button type="button" onClick={fetchIncidents} disabled={!isOnline}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#F8F9FA', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#2C3E50' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 6, minHeight: 44, padding: '8px 14px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#F8F9FA', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#2C3E50' }}>
                 <RefreshCw size={13} /> Actualiser
               </button>
             )}
             <button type="button" onClick={() => setShowTrigger(!showTrigger)} disabled={!isOnline}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, border: 'none', backgroundColor: '#C0392B', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 6, minHeight: 44, padding: '8px 16px', borderRadius: 8, border: 'none', backgroundColor: '#C0392B', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>
               <Plus size={14} /> Nouvel incident
             </button>
           </div>
@@ -361,7 +375,7 @@ export default function IncidentPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8, marginBottom: 16 }}>
             {INCIDENT_TYPES.map(t => (
               <button key={t.value} type="button" onClick={() => setSelectedType(t.value)}
-                style={{ padding: '10px 12px', borderRadius: 8, border: '2px solid', cursor: 'pointer', fontSize: 12, fontWeight: 600, textAlign: 'left',
+                style={{ minHeight: 44, padding: '10px 12px', borderRadius: 8, border: '2px solid', cursor: 'pointer', fontSize: 12, fontWeight: 600, textAlign: 'left',
                   borderColor: selectedType === t.value ? t.color : '#E9ECEF',
                   backgroundColor: selectedType === t.value ? '#FEF9E7' : '#F8F9FA',
                   color: selectedType === t.value ? t.color : '#6C757D' }}>
@@ -369,14 +383,20 @@ export default function IncidentPage() {
               </button>
             ))}
           </div>
+          {OPERATIONAL_EVENT_GUIDANCE[selectedType] && (
+            <div role="note" style={{ margin: '0 0 16px', padding: '12px 14px', borderRadius: 8, border: '1px solid #B8DAFF', backgroundColor: '#EAF4FF', color: '#24496B', fontSize: 13, lineHeight: 1.5 }}>
+              <strong>Seuil opérationnel — </strong>{OPERATIONAL_EVENT_GUIDANCE[selectedType]}
+              {' '}CORO coordonne la réponse; il ne remplace pas le diagnostic ni la réparation par un technicien qualifié.
+            </div>
+          )}
           <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
             placeholder="Description complémentaire (optionnel)..."
             style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #E9ECEF', fontSize: 14, resize: 'none', boxSizing: 'border-box', marginBottom: 12 }} />
           {/* Toggle mode exercice */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 8, backgroundColor: isExercise ? '#FEF9E7' : '#F8F9FA', border: `1px solid ${isExercise ? '#F59E0B' : '#E9ECEF'}`, marginBottom: 12 }}>
-            <button type="button" onClick={() => setIsExercise(!isExercise)}
-              style={{ width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', position: 'relative', backgroundColor: isExercise ? '#E67E22' : '#DEE2E6', transition: 'background 0.2s', flexShrink: 0 }}>
-              <span style={{ position: 'absolute', top: 2, left: isExercise ? 22 : 2, width: 20, height: 20, borderRadius: '50%', backgroundColor: '#FFFFFF', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+            <button type="button" onClick={() => setIsExercise(!isExercise)} aria-label="Activer ou désactiver le mode exercice" aria-pressed={isExercise}
+              style={{ width: 52, height: 44, borderRadius: 22, border: 'none', cursor: 'pointer', position: 'relative', backgroundColor: isExercise ? '#E67E22' : '#DEE2E6', transition: 'background 0.2s', flexShrink: 0 }}>
+              <span style={{ position: 'absolute', top: 12, left: isExercise ? 28 : 4, width: 20, height: 20, borderRadius: '50%', backgroundColor: '#FFFFFF', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
             </button>
             <div>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: isExercise ? '#E67E22' : '#6C757D' }}>
@@ -565,7 +585,7 @@ export default function IncidentPage() {
                       <button key={task.id} type="button"
                         onClick={() => incident.status !== 'RESOLVED' && handleToggleStep(task.id, task.status, incident.id)}
                         disabled={!isOnline || incident.status === 'RESOLVED'}
-                        style={{ display: 'flex', alignItems: 'flex-start', gap: 10, width: '100%', padding: '11px 20px',
+                    style={{ display: 'flex', alignItems: 'flex-start', gap: 10, width: '100%', minHeight: 44, padding: '11px 20px',
                           borderBottom: i < coordSteps.length - 1 ? '1px solid #F8F9FA' : 'none',
                           border: 'none', backgroundColor: done ? '#F8FFF8' : '#FFFFFF',
                           cursor: incident.status === 'RESOLVED' ? 'default' : 'pointer', textAlign: 'left' }}>
@@ -633,10 +653,10 @@ export default function IncidentPage() {
                     <input type="text" value={logText[incident.id] || ''} placeholder="Ajouter au journal..."
                       onChange={e => setLogText(prev => ({ ...prev, [incident.id]: e.target.value }))}
                       onKeyDown={e => e.key === 'Enter' && handleAddLog(incident.id)}
-                      style={{ flex: 1, padding: '7px 10px', borderRadius: 6, border: '1px solid #E9ECEF', fontSize: 13, outline: 'none' }} />
+                      style={{ flex: 1, minHeight: 44, padding: '7px 10px', borderRadius: 6, border: '1px solid #E9ECEF', fontSize: 13, outline: 'none' }} />
                     <button type="button" onClick={() => handleAddLog(incident.id)}
                       disabled={!isOnline || addingLog === incident.id || !logText[incident.id]?.trim()}
-                      style={{ padding: '7px 12px', borderRadius: 6, border: 'none', backgroundColor: '#2C3E50', color: '#FFFFFF', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: !logText[incident.id]?.trim() ? 0.4 : 1 }}>
+                      style={{ minWidth: 44, minHeight: 44, padding: '7px 12px', borderRadius: 6, border: 'none', backgroundColor: '#2C3E50', color: '#FFFFFF', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: !logText[incident.id]?.trim() ? 0.4 : 1 }}>
                       +
                     </button>
                   </div>

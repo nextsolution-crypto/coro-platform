@@ -42,14 +42,24 @@ import { P019_ALERTE_BOMBE } from '../generator/procedures/p019_alerte_bombe';
 import { P022_VENTS_VIOLENTS } from '../generator/procedures/p022_vents_violents';
 import { P024_INONDATIONS } from '../generator/procedures/p024_inondations';
 import { P026_BATTERIE_LITHIUM } from '../generator/procedures/p026_batterie_lithium';
+import { P012_ASCENSEUR } from '../generator/procedures/p012_ascenseur';
+import { P017_BRIS_GICLEURS } from '../generator/procedures/p017_bris_gicleurs';
+import { P025_VERGLAS } from '../generator/procedures/p025_verglas';
+import { P029_ATMOSPHERE_DANGEREUSE } from '../generator/procedures/p029_atmosphere_dangereuse';
+import { P030_PERTE_ALIMENTATION_URGENCE } from '../generator/procedures/p030_perte_alimentation_urgence';
+import { P031_PERTE_SYSTEME_SECURITE } from '../generator/procedures/p031_perte_systeme_securite';
+import { P032_INDISPONIBILITE_PROTECTION_INCENDIE } from '../generator/procedures/p032_indisponibilite_protection_incendie';
 import { ProcedureTemplate } from '../generator/procedures/types';
 
-const INCIDENT_PROCEDURE_MAP: Record<string, string> = {
+export const INCIDENT_PROCEDURE_MAP: Record<string, string> = {
   SMOKE_DISCOVERY: 'P002', FIRE_ALERT: 'P003', FIRE_ALARM: 'P004',
   GAS_LEAK: 'P005', ACTIVE_THREAT: 'P011', MEDICAL: 'P013',
   TOXIC_GAS: 'P014', SUSPICIOUS_PACKAGE: 'P015', POWER_OUTAGE: 'P016',
   HAZMAT: 'P018', BOMB_THREAT: 'P019', LITHIUM_BATTERY: 'P026',
   FLOODING: 'P024', VIOLENT_WINDS: 'P022', OTHER: 'P001',
+  ELEVATOR_ENTRAPMENT: 'P012', FIRE_PROTECTION_IMPAIRMENT: 'P032',
+  HAZARDOUS_ATMOSPHERE: 'P029', EMERGENCY_POWER_FAILURE: 'P030',
+  SEVERE_ICE_CONDITIONS: 'P025', CRITICAL_SAFETY_SYSTEM_LOSS: 'P031',
 };
 
 const INCIDENT_SEARCH_LABELS: Record<IncidentType, string> = {
@@ -67,6 +77,12 @@ const INCIDENT_SEARCH_LABELS: Record<IncidentType, string> = {
   LITHIUM_BATTERY: 'batterie lithium',
   FLOODING: 'inondations',
   VIOLENT_WINDS: 'vents violents',
+  ELEVATOR_ENTRAPMENT: 'personne coincee ascenseur',
+  FIRE_PROTECTION_IMPAIRMENT: 'protection incendie compromise',
+  HAZARDOUS_ATMOSPHERE: 'atmosphere dangereuse ventilation securite',
+  EMERGENCY_POWER_FAILURE: 'alimentation electrique urgence',
+  SEVERE_ICE_CONDITIONS: 'conditions dangereuses verglas',
+  CRITICAL_SAFETY_SYSTEM_LOSS: 'perte systeme essentiel securite',
   OTHER: 'autre',
 };
 
@@ -84,7 +100,7 @@ function normalizeIncidentSearch(value: string): string {
     .toLowerCase();
 }
 
-const PROCEDURE_MAP: Record<string, ProcedureTemplate> = {
+export const PROCEDURE_MAP: Record<string, ProcedureTemplate> = {
   P001: P001_DIRECTIVES_GENERALES, P002: P002_DECOUVERTE_FUMEE,
   P003: P003_ALERTE_INCENDIE,      P004: P004_ALARME_INCENDIE,
   P005: P005_FUITE_GAZ,            P011: P011_MENACE_ACTIVE,
@@ -93,9 +109,14 @@ const PROCEDURE_MAP: Record<string, ProcedureTemplate> = {
   P018: P018_MATIERES_DANGEREUSES, P019: P019_ALERTE_BOMBE,
   P022: P022_VENTS_VIOLENTS,       P024: P024_INONDATIONS,
   P026: P026_BATTERIE_LITHIUM,
+  P012: P012_ASCENSEUR,            P017: P017_BRIS_GICLEURS,
+  P025: P025_VERGLAS,              P029: P029_ATMOSPHERE_DANGEREUSE,
+  P030: P030_PERTE_ALIMENTATION_URGENCE,
+  P031: P031_PERTE_SYSTEME_SECURITE,
+  P032: P032_INDISPONIBILITE_PROTECTION_INCENDIE,
 };
 
-const INCIDENT_LABELS: Record<string, string> = {
+export const INCIDENT_LABELS: Record<string, string> = {
   SMOKE_DISCOVERY: 'Découverte de fumée', FIRE_ALERT: 'Alerte incendie',
   FIRE_ALARM: 'Alarme incendie', GAS_LEAK: 'Fuite de gaz',
   ACTIVE_THREAT: 'Menace active / Confinement', MEDICAL: 'Urgence médicale',
@@ -103,6 +124,12 @@ const INCIDENT_LABELS: Record<string, string> = {
   POWER_OUTAGE: 'Coupure de courant', HAZMAT: 'Matières dangereuses',
   BOMB_THREAT: 'Alerte à la bombe', LITHIUM_BATTERY: 'Batterie lithium-ion',
   FLOODING: 'Inondations', VIOLENT_WINDS: 'Vents violents', OTHER: 'Incident général',
+  ELEVATOR_ENTRAPMENT: 'Personne coincée dans un ascenseur',
+  FIRE_PROTECTION_IMPAIRMENT: 'Protection incendie compromise',
+  HAZARDOUS_ATMOSPHERE: 'Atmosphère dangereuse / ventilation de sécurité indisponible',
+  EMERGENCY_POWER_FAILURE: "Perte de l'alimentation électrique d'urgence",
+  SEVERE_ICE_CONDITIONS: 'Conditions dangereuses liées au verglas',
+  CRITICAL_SAFETY_SYSTEM_LOSS: "Perte d'un système essentiel à la sécurité",
 };
 
 // Fenêtre de confirmation avant qu'une pré-alerte (panneau d'alarme incendie)
@@ -145,6 +172,12 @@ const OCCUPANT_MESSAGES: Record<string, { alert: string; alarm: string }> = {
   MEDICAL:         { alert: 'Urgence médicale en cours. Dégagez les allées.', alarm: 'Gardez les allées dégagées pour les secours.' },
   HAZMAT:          { alert: 'Incident matières dangereuses. Restez à l\'écart de la zone identifiée.', alarm: 'Évacuez par les sorties éloignées de la zone à risque.' },
   POWER_OUTAGE:    { alert: 'Coupure de courant. L\'éclairage d\'urgence est actif.', alarm: 'Suivez l\'éclairage d\'urgence pour sortir.' },
+  ELEVATOR_ENTRAPMENT: { alert: 'Intervention en cours à un ascenseur. N\'utilisez pas l\'ascenseur touché.', alarm: 'Éloignez-vous de l\'ascenseur touché et suivez les directives du personnel.' },
+  FIRE_PROTECTION_IMPAIRMENT: { alert: 'Une fonction de protection incendie est compromise. Suivez les mesures compensatoires communiquées.', alarm: 'Suivez immédiatement les directives d\'évacuation du personnel autorisé.' },
+  HAZARDOUS_ATMOSPHERE: { alert: 'Une zone est sous restriction. Évitez la zone et attendez les directives.', alarm: 'Évacuez ou confinez-vous selon les directives du personnel autorisé.' },
+  EMERGENCY_POWER_FAILURE: { alert: 'Une fonction d\'alimentation d\'urgence est indisponible. Limitez vos déplacements.', alarm: 'Suivez les directives du personnel et l\'éclairage disponible pour sortir.' },
+  SEVERE_ICE_CONDITIONS: { alert: 'Des accès sont dangereux en raison du verglas. Utilisez uniquement les parcours indiqués.', alarm: 'Évitez les zones fermées et suivez les directives du personnel.' },
+  CRITICAL_SAFETY_SYSTEM_LOSS: { alert: 'Une fonction essentielle à la sécurité est indisponible. Attendez les directives.', alarm: 'Suivez immédiatement les directives du personnel autorisé.' },
   OTHER:           { alert: 'Incident en cours. Restez en place et attendez les instructions.', alarm: 'Suivez les instructions de l\'équipe d\'urgence.' },
 };
 
@@ -162,7 +195,20 @@ const PORTAL_URL = process.env.CLIENT_PORTAL_URL || 'https://client.getcoro.io';
 const API_URL    = process.env.API_URL            || 'https://api.getcoro.io/api';
 
 // ── Fiche d'intervention — construction du snapshot au déclenchement ────────
-function buildInterventionSheet(building: any, configData: any, contactsModule2: any) {
+function buildInterventionSheet(
+  building: any,
+  configData: any,
+  contactsModule2: any,
+  source: {
+    projectId: string;
+    documentType: string;
+    projectStatus: string;
+    projectUpdatedAt: Date;
+    documentId: string | null;
+    documentVersion: number | null;
+    documentUpdatedAt: Date | null;
+  } | null,
+) {
   const cfg = configData || {};
   return {
     building: {
@@ -218,6 +264,20 @@ function buildInterventionSheet(building: any, configData: any, contactsModule2:
       avertissement: 'Donnée déclarative issue du PMU — peut être incomplète. Vérifier sur place.',
     } : { present: false },
     contacts: contactsModule2 || null,
+    provenance: source ? {
+      authority: 'APPROVED_PROJECT_DOCUMENT',
+      projectId: source.projectId,
+      documentType: source.documentType,
+      projectStatus: source.projectStatus,
+      projectUpdatedAt: source.projectUpdatedAt.toISOString(),
+      documentId: source.documentId,
+      documentVersion: source.documentVersion,
+      documentUpdatedAt: source.documentUpdatedAt?.toISOString() || null,
+      capturedAt: new Date().toISOString(),
+    } : {
+      authority: 'NO_APPROVED_PROJECT_DOCUMENT',
+      capturedAt: new Date().toISOString(),
+    },
   };
 }
 
@@ -749,23 +809,39 @@ export class IncidentService {
     // PMU actif
     const activePmu = await this.prisma.project.findFirst({
       where: { buildingId: body.buildingId, documentType: { in: ['PMU', 'PSI'] }, status: { in: ['VALIDATED', 'EXPORTED'] }, isActive: true },
-      orderBy: { updatedAt: 'desc' },
-      select: { id: true, configData: true },
+      orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+      select: { id: true, documentType: true, status: true, updatedAt: true, configData: true },
     });
     const configData    = activePmu?.configData as any;
     const assemblyPoint = configData?.pointRassemblement || null;
 
     // Contacts d'urgence (Module 2 — stockés dans Document.content, pas configData)
     let contactsModule2: any = null;
+    let sourceDocument: { id: string; version: number; updatedAt: Date } | null = null;
     if (activePmu?.id) {
       const pmuDocument = await this.prisma.document.findFirst({
-        where: { projectId: activePmu.id },
-        select: { content: true },
+        where: { projectId: activePmu.id, status: { in: ['VALIDATED', 'EXPORTED'] } },
+        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }, { id: 'desc' }],
+        select: { id: true, version: true, updatedAt: true, content: true },
       });
       contactsModule2 = (pmuDocument?.content as any)?.module2 || null;
+      sourceDocument = pmuDocument || null;
     }
 
-    const interventionSheet = buildInterventionSheet(building, configData, contactsModule2);
+    const interventionSheet = buildInterventionSheet(
+      building,
+      configData,
+      contactsModule2,
+      activePmu ? {
+        projectId: activePmu.id,
+        documentType: activePmu.documentType,
+        projectStatus: activePmu.status,
+        projectUpdatedAt: activePmu.updatedAt,
+        documentId: sourceDocument?.id || null,
+        documentVersion: sourceDocument?.version || null,
+        documentUpdatedAt: sourceDocument?.updatedAt || null,
+      } : null,
+    );
     const publicAccessToken = randomUUID();
     const publicAccessExpiresAt = new Date(Date.now() + PUBLIC_CAPABILITY_TTL_MS);
 

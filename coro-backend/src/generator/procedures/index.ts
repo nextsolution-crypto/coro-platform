@@ -29,6 +29,10 @@ import { P025_VERGLAS } from './p025_verglas';
 import { P026_BATTERIE_LITHIUM } from './p026_batterie_lithium';
 import { P027_NOYADE } from './p027_noyade';
 import { P028_INCENDIE_CUISINE } from './p028_incendie_cuisine';
+import { P029_ATMOSPHERE_DANGEREUSE } from './p029_atmosphere_dangereuse';
+import { P030_PERTE_ALIMENTATION_URGENCE } from './p030_perte_alimentation_urgence';
+import { P031_PERTE_SYSTEME_SECURITE } from './p031_perte_systeme_securite';
+import { P032_INDISPONIBILITE_PROTECTION_INCENDIE } from './p032_indisponibilite_protection_incendie';
 
 import { P101_ALERTE_INCENDIE_IND } from './p101_alerte_incendie_ind';
 import { P102_ALARME_INCENDIE_IND } from './p102_alarme_incendie_ind';
@@ -83,6 +87,10 @@ export const PROCEDURES_REGISTRY: ProcedureTemplate[] = [
   P026_BATTERIE_LITHIUM,
   P027_NOYADE,
   P028_INCENDIE_CUISINE,
+  P029_ATMOSPHERE_DANGEREUSE,
+  P030_PERTE_ALIMENTATION_URGENCE,
+  P031_PERTE_SYSTEME_SECURITE,
+  P032_INDISPONIBILITE_PROTECTION_INCENDIE,
 
   // ── Procédures industrielles ──────────────────────────────
   P101_ALERTE_INCENDIE_IND,
