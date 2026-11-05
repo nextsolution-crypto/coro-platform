@@ -24,4 +24,13 @@ Les six livrables sont produits. Le mode contrôlé est implémenté sur la bran
 - Implémentation SP-OPS-03 : **READY_FOR_REVIEW**.
 - Premier envoi réel : **NO-GO**.
 
+## Verdict SP-OPS-03B avant PR
+
+- baseline SP-OPS-02 déployée : `c255fd6650ae38465f2f28c1e240035287a9e3c9`;
+- candidat SP-OPS-03 réconcilié : prêt pour publication et CI;
+- fusion et déploiement SP-OPS-03 : **NON AUTORISÉS** dans ce lot;
+- communication réelle, activation LIVE, secrets et allowlist de production : **INCHANGÉS / NON EXÉCUTÉS**;
+- verdict de préparation : **GO POUR PR ET REVUE**;
+- verdict d'essai réel : **NO-GO** jusqu'à levée des conditions Brevo et autorisation distincte.
+
 Le NO-GO réel sera levable uniquement après preuve du TFN, de l'expéditeur, des webhooks, du tarif, de la configuration hors Git et après une autorisation finale distincte portant sur le message et le destinataire masqué.

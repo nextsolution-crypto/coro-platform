@@ -31,3 +31,16 @@ La migration est additive. Un ancien backend pourrait néanmoins réintroduire l
 - Fusion de #208 : **GO**, sous autorisation explicite de Mathieu.
 - Déploiement immédiat : **NO-GO tant que les gates du candidat fusionné ne sont pas exécutés**.
 - Fusion/déploiement exécutés pendant SP-OPS-03 : **NON**.
+
+## Mise à jour après clôture de SP-OPS-02
+
+- PR #208 fusionnée le 2026-11-05.
+- SHA fusionné, déployé et inspecté : `c255fd6650ae38465f2f28c1e240035287a9e3c9`.
+- CI `42118246809` : SUCCESS.
+- release gouvernée `42119192234` : SUCCESS et réconciliation réussie.
+- inspection lecture seule `42121475894` : PASS / GO.
+- migration active : `20261126010000_population_sensitive_asset_targeting`.
+- sauvegarde distante et restauration : vérifiées; quatre images de rollback disponibles.
+- SP-OPS-03 n'était pas inclus dans cette release.
+
+La branche SP-OPS-03 a ensuite été réconciliée avec cette baseline de production. Cette mise à jour documentaire ne vaut pas autorisation de fusion, de déploiement ou d'envoi réel pour SP-OPS-03.

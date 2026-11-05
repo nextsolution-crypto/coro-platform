@@ -25,3 +25,17 @@
 ## Limites
 
 Les preuves sont locales et utilisent le fournisseur simulé. Aucun appel Brevo, aucun SMS, aucun courriel réel et aucun test de webhook public n'ont été exécutés. Une recette navigateur complète du futur essai réel reste conditionnée par l'autorisation d'envoi distincte.
+
+## Revalidation SP-OPS-03B
+
+Baseline réconciliée : `c255fd6650ae38465f2f28c1e240035287a9e3c9`.
+
+- tests ciblés : 350/350 PASS;
+- TypeScript backend et portail : PASS;
+- build backend et build Next.js portail : PASS;
+- contrats Population du portail : 9/9 PASS;
+- audits de dépendances de production : 0 vulnérabilité rapportée;
+- `git diff --check` : PASS;
+- recherche de secrets et destinations : seules les valeurs synthétiques `.test` des tests sont présentes.
+
+La suite backend complète locale a produit 2 503 PASS, 5 SKIPPED et 1 échec d'environnement indépendant du lot : `pdftoppm` absent sur le poste Windows pour un test OCR Knowledge. La CI Linux installe ce runtime avant la suite; son résultat terminal sur le HEAD publié constitue le gate de non-régression.
