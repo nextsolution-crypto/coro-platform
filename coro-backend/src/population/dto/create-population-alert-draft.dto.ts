@@ -1,8 +1,11 @@
 import {
+  ArrayUnique,
+  IsArray,
   IsBoolean,
   IsEnum,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
 } from 'class-validator';
 import { PopulationAlertType } from '@prisma/client';
@@ -43,6 +46,13 @@ export class CreatePopulationAlertDraftDto {
   @IsOptional()
   @IsBoolean()
   targetingConfirmed?: boolean;
+
+  /** Établissements sensibles explicitement retenus après l'aperçu serveur. */
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsUUID('4', { each: true })
+  selectedSensitiveAssetIds?: string[];
 
   @IsString()
   @MaxLength(200)

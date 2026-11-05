@@ -1,15 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  AlertTriangle,
-  CheckCircle2,
-  ExternalLink,
-  FileText,
-  Gauge,
-  ShieldAlert,
-  Wind,
-} from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ExternalLink, FileText, Gauge, ShieldAlert, Wind } from 'lucide-react';
 
 type CriticalZone = {
   id: string;
@@ -92,11 +84,20 @@ function actionLabel(value: string | null) {
   return value ? labels[value] || value.replaceAll('_', ' ') : 'À confirmer';
 }
 
-export default function DispersionCriticalSummary({
-  scenario,
-}: {
-  scenario: DispersionCriticalScenario;
-}) {
+function purposeLabel(value: string | undefined) {
+  const labels: Record<string, string> = {
+    MODELED_IMPACT: 'Zone scientifique modélisée',
+    PUBLIC_NOTIFICATION: 'Zone opérationnelle de notification',
+    SHELTER_IN_PLACE: 'Zone de protection - mise à l’abri',
+    EVACUATION: 'Zone de protection - évacuation',
+    EXCLUSION: 'Zone de protection - exclusion',
+    RESPONDER_STAGING: 'Zone opérationnelle des intervenants',
+    OTHER: 'Usage à qualifier',
+  };
+  return value ? labels[value] || value.replaceAll('_', ' ') : 'À qualifier';
+}
+
+export default function DispersionCriticalSummary({ scenario }: { scenario: DispersionCriticalScenario }) {
   const [sourceStatus, setSourceStatus] = useState<string | null>(null);
   const [sourceLoading, setSourceLoading] = useState(false);
   const basis = scenario.dispersionBasis;
@@ -112,10 +113,7 @@ export default function DispersionCriticalSummary({
     setSourceStatus(null);
     try {
       const token = localStorage.getItem('coro_client_token');
-      const response = await fetch(
-        `${API_URL}/project-files/client/file/${basis.sourceDocument.id}/content`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      const response = await fetch(`${API_URL}/project-files/client/file/${basis.sourceDocument.id}/content`, { headers: { Authorization: `Bearer ${token}` } });
       if (!response.ok) throw new Error('SOURCE_UNAVAILABLE');
       const blobUrl = URL.createObjectURL(await response.blob());
       const link = document.createElement('a');
@@ -126,9 +124,7 @@ export default function DispersionCriticalSummary({
       window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
       setSourceStatus('Rapport ouvert dans un nouvel onglet.');
     } catch {
-      setSourceStatus(
-        'Le rapport source n’a pas pu être ouvert. Vérifiez vos droits documentaires.',
-      );
+      setSourceStatus('Le rapport source n’a pas pu être ouvert. Vérifiez vos droits documentaires.');
     } finally {
       setSourceLoading(false);
     }
@@ -173,11 +169,7 @@ export default function DispersionCriticalSummary({
           <h2 id="dispersion-critical-title" style={{ margin: 0, fontSize: 18 }}>
             {basis?.studyTitle || scenario.nameFR}
           </h2>
-          <p style={{ margin: '7px 0 0', color: '#B9C8D4', lineHeight: 1.55 }}>
-            Accès rapide aux hypothèses et seuils qui encadrent la décision.
-            Cette fiche ne remplace ni le rapport d’ingénierie ni la validation
-            humaine du périmètre d’alerte.
-          </p>
+          <p style={{ margin: '7px 0 0', color: '#B9C8D4', lineHeight: 1.55 }}>Accès rapide aux hypothèses et seuils qui encadrent la décision. Cette fiche ne remplace ni le rapport d’ingénierie ni la validation humaine du périmètre d’alerte.</p>
         </div>
 
         <div
@@ -231,10 +223,8 @@ export default function DispersionCriticalSummary({
             lineHeight: 1.45,
           }}
         >
-          <strong>Fiche scientifique incomplète.</strong>{' '}
-          {basis.missingFields.length} élément
-          {basis.missingFields.length > 1 ? 's sont' : ' est'} encore à confirmer avant
-          une diffusion réelle.
+          <strong>Fiche scientifique incomplète.</strong> {basis.missingFields.length} élément
+          {basis.missingFields.length > 1 ? 's sont' : ' est'} encore à confirmer avant une diffusion réelle.
         </div>
       ) : null}
 
@@ -250,38 +240,25 @@ export default function DispersionCriticalSummary({
           {
             icon: <ShieldAlert size={17} />,
             label: 'Substance et danger',
-            value: scenario.substance
-              ? `${scenario.substance.nameFR} · CAS ${scenario.substance.casNumber}`
-              : 'À confirmer',
-            detail: scenario.substance?.maximumQuantityTonnes
-              ? `${scenario.substance.maximumQuantityTonnes.toLocaleString('fr-CA')} t max. sur le site`
-              : scenario.substance?.hazardCategory || 'Quantité à confirmer',
+            value: scenario.substance ? `${scenario.substance.nameFR} · CAS ${scenario.substance.casNumber}` : 'À confirmer',
+            detail: scenario.substance?.maximumQuantityTonnes ? `${scenario.substance.maximumQuantityTonnes.toLocaleString('fr-CA')} t max. sur le site` : scenario.substance?.hazardCategory || 'Quantité à confirmer',
           },
           {
             icon: <Gauge size={17} />,
             label: 'Seuil de planification',
-            value:
-              basis?.endpointName && basis.endpointConcentrationPpm
-                ? `${basis.endpointName} · ${basis.endpointConcentrationPpm.toLocaleString('fr-CA')} ppm`
-                : 'À confirmer',
+            value: basis?.endpointName && basis.endpointConcentrationPpm ? `${basis.endpointName} · ${basis.endpointConcentrationPpm.toLocaleString('fr-CA')} ppm` : 'À confirmer',
             detail: `Moyenne ${formatDuration(basis?.endpointAveragingTimeSeconds)}`,
           },
           {
             icon: <Wind size={17} />,
             label: 'Météo de référence',
-            value:
-              basis?.windSpeedMetersPerSecond != null
-                ? `${basis.windSpeedMetersPerSecond.toLocaleString('fr-CA')} m/s · stabilité ${basis.atmosphericStabilityClass || 'à confirmer'}`
-                : 'À confirmer',
+            value: basis?.windSpeedMetersPerSecond != null ? `${basis.windSpeedMetersPerSecond.toLocaleString('fr-CA')} m/s · stabilité ${basis.atmosphericStabilityClass || 'à confirmer'}` : 'À confirmer',
             detail: 'Condition modélisée, pas la météo en temps réel',
           },
           {
             icon: <AlertTriangle size={17} />,
             label: 'Portée maximale',
-            value:
-              maximumDistance != null
-                ? `${maximumDistance.toLocaleString('fr-CA')} km`
-                : 'À confirmer',
+            value: maximumDistance != null ? `${maximumDistance.toLocaleString('fr-CA')} km` : 'À confirmer',
             detail: `${formatDuration(basis?.releaseDurationSeconds)} de rejet · récepteur ${basis?.receptorHeightMeters ?? '—'} m`,
           },
         ].map((item) => (
@@ -296,14 +273,25 @@ export default function DispersionCriticalSummary({
           >
             <div style={{ display: 'flex', gap: 7, color: '#4DE1B5' }}>
               {item.icon}
-              <span style={{ fontSize: 9, fontWeight: 900, textTransform: 'uppercase' }}>
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 900,
+                  textTransform: 'uppercase',
+                }}
+              >
                 {item.label}
               </span>
             </div>
-            <strong style={{ display: 'block', marginTop: 9, fontSize: 13 }}>
-              {item.value}
-            </strong>
-            <span style={{ display: 'block', marginTop: 5, color: '#AABBC8', fontSize: 10 }}>
+            <strong style={{ display: 'block', marginTop: 9, fontSize: 13 }}>{item.value}</strong>
+            <span
+              style={{
+                display: 'block',
+                marginTop: 5,
+                color: '#AABBC8',
+                fontSize: 10,
+              }}
+            >
               {item.detail}
             </span>
           </article>
@@ -311,12 +299,31 @@ export default function DispersionCriticalSummary({
       </div>
 
       <div style={{ padding: '0 20px 18px' }}>
-        <div style={{ overflowX: 'auto', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10 }}>
-          <table style={{ width: '100%', minWidth: 620, borderCollapse: 'collapse', fontSize: 10 }}>
+        <div
+          style={{
+            overflowX: 'auto',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 10,
+          }}
+        >
+          <table
+            style={{
+              width: '100%',
+              minWidth: 620,
+              borderCollapse: 'collapse',
+              fontSize: 10,
+            }}
+          >
             <thead>
               <tr style={{ color: '#AFC0CC', textAlign: 'left' }}>
                 {['Zone', 'Distance', 'Mesure', 'Usage', 'Alerte publique'].map((heading) => (
-                  <th key={heading} style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                  <th
+                    key={heading}
+                    style={{
+                      padding: '10px 12px',
+                      borderBottom: '1px solid rgba(255,255,255,0.1)',
+                    }}
+                  >
                     {heading}
                   </th>
                 ))}
@@ -325,11 +332,18 @@ export default function DispersionCriticalSummary({
             <tbody>
               {scenario.impactZones.map((zone) => (
                 <tr key={zone.id}>
-                  <td style={{ padding: '10px 12px' }}><strong>{zone.code}</strong> · {zone.nameFR}</td>
+                  <td style={{ padding: '10px 12px' }}>
+                    <strong>{zone.code}</strong> · {zone.nameFR}
+                  </td>
                   <td style={{ padding: '10px 12px' }}>{zone.maxDistanceKm != null ? `${zone.maxDistanceKm.toLocaleString('fr-CA')} km` : '—'}</td>
                   <td style={{ padding: '10px 12px' }}>{actionLabel(zone.protectiveAction)}</td>
-                  <td style={{ padding: '10px 12px' }}>{zone.purpose?.replaceAll('_', ' ') || 'À qualifier'}</td>
-                  <td style={{ padding: '10px 12px', color: zone.approvedForAlerting ? '#4DE1B5' : '#F6C76A' }}>
+                  <td style={{ padding: '10px 12px' }}>{purposeLabel(zone.purpose)}</td>
+                  <td
+                    style={{
+                      padding: '10px 12px',
+                      color: zone.approvedForAlerting ? '#4DE1B5' : '#F6C76A',
+                    }}
+                  >
                     {zone.approvedForAlerting ? 'Approuvée' : 'Non approuvée'}
                   </td>
                 </tr>
@@ -338,25 +352,78 @@ export default function DispersionCriticalSummary({
           </table>
         </div>
 
+        {maximumDistance != null ? (
+          <p
+            role="note"
+            style={{
+              margin: '10px 0 0',
+              color: '#F6C76A',
+              fontSize: 10,
+              lineHeight: 1.5,
+            }}
+          >
+            La portée maximale est une distance issue de la source. Elle ne constitue pas, à elle seule, une empreinte scientifique circulaire ni une décision de protection.
+          </p>
+        ) : null}
+
         {(scenario.releaseDescription || scenario.potentialEffects || scenario.publicInstructionFR) && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: 10, marginTop: 12 }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))',
+              gap: 10,
+              marginTop: 12,
+            }}
+          >
             {scenario.releaseDescription && <InfoBlock title="Scénario de rejet" text={scenario.releaseDescription} />}
             {scenario.potentialEffects && <InfoBlock title="Effets potentiels" text={scenario.potentialEffects} />}
             {scenario.publicInstructionFR && <InfoBlock title="Consigne préparée" text={scenario.publicInstructionFR} />}
           </div>
         )}
 
-        <details style={{ marginTop: 12, padding: '12px 14px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10 }}>
+        <details
+          style={{
+            marginTop: 12,
+            padding: '12px 14px',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 10,
+          }}
+        >
           <summary style={{ cursor: 'pointer', fontWeight: 900 }}>Hypothèses, limites et traçabilité</summary>
-          <div style={{ display: 'grid', gap: 10, marginTop: 12, color: '#C5D1DA', lineHeight: 1.55, fontSize: 10 }}>
-            <p style={{ margin: 0 }}><strong>Hypothèses :</strong> {basis?.assumptions || 'À documenter.'}</p>
-            <p style={{ margin: 0 }}><strong>Limites :</strong> {basis?.limitations || 'À documenter.'}</p>
-            <p style={{ margin: 0 }}><strong>Modèle :</strong> {basis?.modelName || '—'} {basis?.modelVersion ? `v${basis.modelVersion}` : ''} · <strong>Référence :</strong> {basis?.studyReference || '—'} · <strong>Date :</strong> {formatDate(basis?.studyDate)}</p>
-            <p style={{ margin: 0 }}><strong>Dernière révision :</strong> {formatDate(basis?.reviewedAt)}</p>
+          <div
+            style={{
+              display: 'grid',
+              gap: 10,
+              marginTop: 12,
+              color: '#C5D1DA',
+              lineHeight: 1.55,
+              fontSize: 10,
+            }}
+          >
+            <p style={{ margin: 0 }}>
+              <strong>Hypothèses :</strong> {basis?.assumptions || 'À documenter.'}
+            </p>
+            <p style={{ margin: 0 }}>
+              <strong>Limites :</strong> {basis?.limitations || 'À documenter.'}
+            </p>
+            <p style={{ margin: 0 }}>
+              <strong>Modèle :</strong> {basis?.modelName || '—'} {basis?.modelVersion ? `v${basis.modelVersion}` : ''} · <strong>Référence :</strong> {basis?.studyReference || '—'} · <strong>Date :</strong> {formatDate(basis?.studyDate)}
+            </p>
+            <p style={{ margin: 0 }}>
+              <strong>Dernière révision :</strong> {formatDate(basis?.reviewedAt)}
+            </p>
           </div>
         </details>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 13 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            flexWrap: 'wrap',
+            marginTop: 13,
+          }}
+        >
           {basis?.sourceDocument ? (
             <button
               type="button"
@@ -381,12 +448,12 @@ export default function DispersionCriticalSummary({
               <ExternalLink size={14} />
             </button>
           ) : (
-            <span style={{ color: '#F6C76A', fontSize: 10 }}>
-              Aucun document canonique n’est encore rattaché à cette fiche.
-            </span>
+            <span style={{ color: '#F6C76A', fontSize: 10 }}>Aucun document canonique n’est encore rattaché à cette fiche.</span>
           )}
           {basis?.sourceDocument && <span style={{ color: '#AABBC8', fontSize: 10 }}>{basis.sourceDocument.name}</span>}
-          <span aria-live="polite" style={{ color: '#C5D1DA', fontSize: 10 }}>{sourceStatus}</span>
+          <span aria-live="polite" style={{ color: '#C5D1DA', fontSize: 10 }}>
+            {sourceStatus}
+          </span>
         </div>
       </div>
     </section>
@@ -395,7 +462,13 @@ export default function DispersionCriticalSummary({
 
 function InfoBlock({ title, text }: { title: string; text: string }) {
   return (
-    <div style={{ padding: 12, borderLeft: '3px solid #00A982', background: 'rgba(255,255,255,0.035)' }}>
+    <div
+      style={{
+        padding: 12,
+        borderLeft: '3px solid #00A982',
+        background: 'rgba(255,255,255,0.035)',
+      }}
+    >
       <strong style={{ display: 'block', marginBottom: 5, fontSize: 10 }}>{title}</strong>
       <p style={{ margin: 0, color: '#B9C8D4', fontSize: 10, lineHeight: 1.5 }}>{text}</p>
     </div>
