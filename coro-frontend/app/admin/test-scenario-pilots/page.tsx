@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
 import api from "@/lib/api";
 import styles from "./pilot.module.css";
@@ -65,12 +66,58 @@ const PHASE_LABELS: Record<string, string> = {
 };
 
 const CHECK_STATUS_LABELS: Record<CheckStatus, string> = {
-  NOT_RUN: "À exécuter",
+  NOT_RUN: "Non exécuté",
   PASS: "PASS",
   FAIL: "FAIL",
   BLOCKED: "Bloqué",
   NOT_APPLICABLE: "Non applicable",
 };
+
+function checkAction(
+  scenario: PilotScenario,
+  check: PilotCheck,
+): { href: string; label: string } | null {
+  if (check.phase === "CONFIGURATION") {
+    return {
+      href: `/configurator/${scenario.project.id}`,
+      label: "Ouvrir le configurateur",
+    };
+  }
+  if (
+    ["DOCUMENT_GENERATION", "INTERNAL_REVIEW", "CLIENT_APPROVAL"].includes(
+      check.phase,
+    )
+  ) {
+    return {
+      href: `/projects/${scenario.project.id}`,
+      label: "Ouvrir le projet",
+    };
+  }
+  if (check.phase === "KNOWLEDGE_AI") {
+    return {
+      href: `/buildings/${scenario.building.id}`,
+      label: "Ouvrir les documents du bâtiment",
+    };
+  }
+  if (check.phase === "FINANCIAL") {
+    return {
+      href: `/projects/${scenario.project.id}/mandate`,
+      label: "Ouvrir le mandat",
+    };
+  }
+  if (check.phase === "FOUNDATION") {
+    return check.checkKey === "foundation.building"
+      ? {
+          href: `/buildings/${scenario.building.id}`,
+          label: "Ouvrir le bâtiment",
+        }
+      : {
+          href: `/projects/${scenario.project.id}`,
+          label: "Ouvrir le projet",
+        };
+  }
+  return null;
+}
 
 function statusClass(status: CheckStatus | RunStatus) {
   if (status === "PASS" || status === "PASSED")
@@ -466,6 +513,14 @@ function ScenarioCard(props: {
                         {check.notes ? ` · ${check.notes}` : ""}
                       </small>
                     </div>
+                    {checkAction(props.scenario, check) && (
+                      <Link
+                        className={styles.actionLink}
+                        href={checkAction(props.scenario, check)!.href}
+                      >
+                        {checkAction(props.scenario, check)!.label}
+                      </Link>
+                    )}
                     <select
                       className={styles.select}
                       aria-label={`Résultat : ${check.label}`}
