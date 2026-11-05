@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from 'react';
 
 type PopulationMapBuilding = {
   id: string;
@@ -34,29 +34,29 @@ type Props = {
 };
 
 type PopulationDirectionalPlanning = {
-  targetingMode: "GLOBAL" | "DIRECTIONAL";
+  targetingMode: 'GLOBAL' | 'DIRECTIONAL';
   propagationDirection: string | null;
   windFromDirection: string | null;
   includedDirections: string[];
   radialDistancesKm: number[];
   sectorGrid: Array<{ direction: string; geometry: unknown }>;
   selectedGeometry: unknown | null;
-  method: "CONSERVATIVE_DIRECTIONAL_SECTOR";
+  method: 'CONSERVATIVE_DIRECTIONAL_SECTOR';
 };
 
 type GeoJsonGeometry = {
-  type: "Polygon" | "MultiPolygon";
+  type: 'Polygon' | 'MultiPolygon';
   coordinates: unknown;
 };
 
-const LEAFLET_MAP_STYLE_ID = "coro-population-leaflet-map-style";
+const LEAFLET_MAP_STYLE_ID = 'coro-population-leaflet-map-style';
 
 function isValidCoordinate(value: number | null): value is number {
-  return typeof value === "number" && Number.isFinite(value);
+  return typeof value === 'number' && Number.isFinite(value);
 }
 
 function isSupportedGeometry(value: unknown): value is GeoJsonGeometry {
-  if (!value || typeof value !== "object") {
+  if (!value || typeof value !== 'object') {
     return false;
   }
 
@@ -65,19 +65,16 @@ function isSupportedGeometry(value: unknown): value is GeoJsonGeometry {
     coordinates?: unknown;
   };
 
-  return (
-    (candidate.type === "Polygon" || candidate.type === "MultiPolygon") &&
-    Array.isArray(candidate.coordinates)
-  );
+  return (candidate.type === 'Polygon' || candidate.type === 'MultiPolygon') && Array.isArray(candidate.coordinates);
 }
 
-async function loadLeaflet(): Promise<typeof import("leaflet")> {
-  if (typeof window === "undefined") {
-    throw new Error("Leaflet requires a browser.");
+async function loadLeaflet(): Promise<typeof import('leaflet')> {
+  if (typeof window === 'undefined') {
+    throw new Error('Leaflet requires a browser.');
   }
 
   if (!document.getElementById(LEAFLET_MAP_STYLE_ID)) {
-    const style = document.createElement("style");
+    const style = document.createElement('style');
 
     style.id = LEAFLET_MAP_STYLE_ID;
     style.textContent = `
@@ -130,31 +127,27 @@ async function loadLeaflet(): Promise<typeof import("leaflet")> {
     document.head.appendChild(style);
   }
 
-  const leaflet = await import("leaflet");
+  const leaflet = await import('leaflet');
   return leaflet.default;
 }
 
 function formatProtectiveAction(action: string | null) {
   if (!action) {
-    return "Mesure à confirmer";
+    return 'Mesure à confirmer';
   }
 
   const labels: Record<string, string> = {
-    SHELTER_IN_PLACE: "Mise à l’abri",
-    EVACUATE: "Évacuation",
-    AVOID_AREA: "Éviter le secteur",
-    MONITOR: "Surveillance",
-    OTHER: "Autre mesure",
+    SHELTER_IN_PLACE: 'Mise à l’abri',
+    EVACUATE: 'Évacuation',
+    AVOID_AREA: 'Éviter le secteur',
+    MONITOR: 'Surveillance',
+    OTHER: 'Autre mesure',
   };
 
-  return labels[action] || action.replaceAll("_", " ");
+  return labels[action] || action.replaceAll('_', ' ');
 }
 
-export default function PopulationOperationalMap({
-  building,
-  zones,
-  directionalPlanning,
-}: Props) {
+export default function PopulationOperationalMap({ building, zones, directionalPlanning }: Props) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
 
@@ -168,13 +161,8 @@ export default function PopulationOperationalMap({
         return;
       }
 
-      if (
-        !isValidCoordinate(building.latitude) ||
-        !isValidCoordinate(building.longitude)
-      ) {
-        setMapError(
-          "Les coordonnées du site sont requises pour afficher la carte opérationnelle.",
-        );
+      if (!isValidCoordinate(building.latitude) || !isValidCoordinate(building.longitude)) {
+        setMapError('Les coordonnées du site sont requises pour afficher la carte opérationnelle.');
         return;
       }
 
@@ -192,10 +180,7 @@ export default function PopulationOperationalMap({
           mapInstanceRef.current = null;
         }
 
-        const sitePosition: [number, number] = [
-          building.latitude,
-          building.longitude,
-        ];
+        const sitePosition: [number, number] = [building.latitude, building.longitude];
 
         const map = L.map(mapContainerRef.current, {
           center: sitePosition,
@@ -206,27 +191,27 @@ export default function PopulationOperationalMap({
 
         mapInstanceRef.current = map;
 
-        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: "© OpenStreetMap contributors",
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors',
           maxZoom: 19,
         }).addTo(map);
 
         L.control
           .zoom({
-            position: "bottomright",
+            position: 'bottomright',
           })
           .addTo(map);
 
         L.control
           .attribution({
-            position: "bottomleft",
+            position: 'bottomleft',
             prefix: false,
           })
-          .addAttribution("© OpenStreetMap contributors")
+          .addAttribution('© OpenStreetMap contributors')
           .addTo(map);
 
         const siteIcon = L.divIcon({
-          className: "",
+          className: '',
           html: '<div class="coro-population-site-marker"></div>',
           iconSize: [24, 24],
           iconAnchor: [12, 12],
@@ -237,22 +222,18 @@ export default function PopulationOperationalMap({
           zIndexOffset: 1000,
         }).addTo(map);
 
-        const siteDetails = document.createElement("div");
+        const siteDetails = document.createElement('div');
 
-        const siteTitle = document.createElement("strong");
+        const siteTitle = document.createElement('strong');
         siteTitle.textContent = building.name;
         siteDetails.appendChild(siteTitle);
 
-        const addressParts = [
-          building.address,
-          building.city,
-          building.province,
-        ].filter(Boolean);
+        const addressParts = [building.address, building.city, building.province].filter(Boolean);
 
         if (addressParts.length > 0) {
-          const address = document.createElement("div");
-          address.textContent = addressParts.join(", ");
-          address.style.marginTop = "3px";
+          const address = document.createElement('div');
+          address.textContent = addressParts.join(', ');
+          address.style.marginTop = '3px';
           siteDetails.appendChild(address);
         }
 
@@ -263,13 +244,13 @@ export default function PopulationOperationalMap({
         directionalPlanning?.radialDistancesKm.forEach((distanceKm) => {
           const ring = L.circle(sitePosition, {
             radius: distanceKm * 1000,
-            color: "#F4D03F",
+            color: '#F4D03F',
             weight: 1,
             opacity: 0.75,
             fillOpacity: 0,
-            dashArray: "5 6",
+            dashArray: '5 6',
           }).addTo(map);
-          ring.bindTooltip(`${distanceKm.toLocaleString("fr-CA")} km`, {
+          ring.bindTooltip(`${distanceKm.toLocaleString('fr-CA')} km`, {
             sticky: true,
           });
           displayLayers.push(ring);
@@ -277,31 +258,24 @@ export default function PopulationOperationalMap({
 
         directionalPlanning?.sectorGrid.forEach((sector) => {
           if (!isSupportedGeometry(sector.geometry)) return;
-          const selected = directionalPlanning.includedDirections.includes(
-            sector.direction,
-          );
+          const selected = directionalPlanning.includedDirections.includes(sector.direction);
           const layer = L.geoJSON(
             {
-              type: "Feature",
+              type: 'Feature',
               properties: {},
               geometry: sector.geometry,
             } as any,
             {
               style: {
-                color: selected ? "#00D6A3" : "#FFFFFF",
+                color: selected ? '#00D6A3' : '#FFFFFF',
                 weight: selected ? 2.5 : 1,
                 opacity: selected ? 1 : 0.48,
-                fillColor: selected ? "#00A982" : "#FFFFFF",
+                fillColor: selected ? '#00A982' : '#FFFFFF',
                 fillOpacity: selected ? 0.2 : 0.015,
               },
             },
           ).addTo(map);
-          layer.bindTooltip(
-            selected
-              ? `${sector.direction} · secteur retenu`
-              : sector.direction,
-            { sticky: true },
-          );
+          layer.bindTooltip(selected ? `${sector.direction} · secteur retenu` : sector.direction, { sticky: true });
           displayLayers.push(layer);
 
           const bounds = layer.getBounds?.();
@@ -309,8 +283,8 @@ export default function PopulationOperationalMap({
             const directionLabel = L.marker(bounds.getCenter(), {
               interactive: false,
               icon: L.divIcon({
-                className: "",
-                html: `<span class="coro-population-direction-label${selected ? " is-selected" : ""}">${sector.direction}</span>`,
+                className: '',
+                html: `<span class="coro-population-direction-label${selected ? ' is-selected' : ''}">${sector.direction}</span>`,
                 iconSize: [28, 28],
                 iconAnchor: [14, 14],
               }),
@@ -321,12 +295,7 @@ export default function PopulationOperationalMap({
 
         zones.forEach((zone, index) => {
           const zoneStyle = {
-            color:
-              index % 3 === 0
-                ? "#C0392B"
-                : index % 3 === 1
-                  ? "#E67E22"
-                  : "#2980B9",
+            color: index % 3 === 0 ? '#C0392B' : index % 3 === 1 ? '#E67E22' : '#2980B9',
             weight: 2,
             opacity: 0.95,
             fillOpacity: 0.18,
@@ -338,7 +307,7 @@ export default function PopulationOperationalMap({
             try {
               layer = L.geoJSON(
                 {
-                  type: "Feature",
+                  type: 'Feature',
                   properties: {},
                   geometry: zone.geometry,
                 } as any,
@@ -349,12 +318,7 @@ export default function PopulationOperationalMap({
             } catch {
               layer = null;
             }
-          } else if (
-            zone.geometry === null &&
-            typeof zone.maxDistanceKm === "number" &&
-            Number.isFinite(zone.maxDistanceKm) &&
-            zone.maxDistanceKm > 0
-          ) {
+          } else if (zone.geometry === null && typeof zone.maxDistanceKm === 'number' && Number.isFinite(zone.maxDistanceKm) && zone.maxDistanceKm > 0) {
             layer = L.circle(sitePosition, {
               radius: zone.maxDistanceKm * 1000,
               ...zoneStyle,
@@ -365,36 +329,32 @@ export default function PopulationOperationalMap({
             return;
           }
 
-          const tooltip = document.createElement("div");
+          const tooltip = document.createElement('div');
 
-          const title = document.createElement("strong");
+          const title = document.createElement('strong');
           title.textContent = `Zone ${zone.code} · ${zone.nameFR}`;
           tooltip.appendChild(title);
 
-          const population = document.createElement("div");
-          population.textContent = `${zone.targetCount.toLocaleString("fr-CA")} personne${
-            zone.targetCount > 1 ? "s" : ""
-          } ciblée${zone.targetCount > 1 ? "s" : ""}`;
-          population.style.marginTop = "4px";
+          const population = document.createElement('div');
+          population.textContent = `${zone.targetCount.toLocaleString('fr-CA')} personne${zone.targetCount > 1 ? 's' : ''} ciblée${zone.targetCount > 1 ? 's' : ''}`;
+          population.style.marginTop = '4px';
           tooltip.appendChild(population);
 
-          const channels = document.createElement("div");
-          channels.textContent =
-            `${zone.smsTargetCount.toLocaleString("fr-CA")} SMS · ` +
-            `${zone.emailTargetCount.toLocaleString("fr-CA")} courriels`;
-          channels.style.marginTop = "2px";
+          const channels = document.createElement('div');
+          channels.textContent = `${zone.smsTargetCount.toLocaleString('fr-CA')} SMS · ` + `${zone.emailTargetCount.toLocaleString('fr-CA')} courriels`;
+          channels.style.marginTop = '2px';
           tooltip.appendChild(channels);
 
-          const action = document.createElement("div");
+          const action = document.createElement('div');
           action.textContent = formatProtectiveAction(zone.protectiveAction);
-          action.style.marginTop = "4px";
-          action.style.fontWeight = "700";
+          action.style.marginTop = '4px';
+          action.style.fontWeight = '700';
           tooltip.appendChild(action);
 
           if (zone.instructionFR) {
-            const instruction = document.createElement("div");
+            const instruction = document.createElement('div');
             instruction.textContent = zone.instructionFR;
-            instruction.style.marginTop = "4px";
+            instruction.style.marginTop = '4px';
             tooltip.appendChild(instruction);
           }
 
@@ -420,7 +380,7 @@ export default function PopulationOperationalMap({
         }, 0);
       } catch {
         if (!cancelled) {
-          setMapError("La carte opérationnelle n’a pas pu être chargée.");
+          setMapError('La carte opérationnelle n’a pas pu être chargée.');
         }
       }
     };
@@ -440,7 +400,7 @@ export default function PopulationOperationalMap({
   useEffect(() => {
     const container = mapContainerRef.current;
 
-    if (!container || typeof ResizeObserver === "undefined") {
+    if (!container || typeof ResizeObserver === 'undefined') {
       return;
     }
 
@@ -466,44 +426,37 @@ export default function PopulationOperationalMap({
     };
   }, [mapError]);
 
-  const mappedZoneCount = zones.filter(
-    (zone) =>
-      isSupportedGeometry(zone.geometry) ||
-      (zone.geometry === null &&
-        typeof zone.maxDistanceKm === "number" &&
-        Number.isFinite(zone.maxDistanceKm) &&
-        zone.maxDistanceKm > 0),
-  ).length;
+  const mappedZoneCount = zones.filter((zone) => isSupportedGeometry(zone.geometry) || (zone.geometry === null && typeof zone.maxDistanceKm === 'number' && Number.isFinite(zone.maxDistanceKm) && zone.maxDistanceKm > 0)).length;
 
   return (
     <div
       style={{
-        overflow: "hidden",
-        border: "1px solid #DDE3E8",
+        overflow: 'hidden',
+        border: '1px solid #DDE3E8',
         borderRadius: 12,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: '#FFFFFF',
       }}
     >
       <div
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
           gap: 14,
-          padding: "14px 16px",
-          borderBottom: "1px solid #E9ECEF",
-          flexWrap: "wrap",
+          padding: '14px 16px',
+          borderBottom: '1px solid #E9ECEF',
+          flexWrap: 'wrap',
         }}
       >
         <div>
           <p
             style={{
-              margin: "0 0 3px",
-              color: "#167D6A",
+              margin: '0 0 3px',
+              color: '#167D6A',
               fontSize: 8,
               fontWeight: 900,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
             }}
           >
             Territoire opérationnel
@@ -511,8 +464,8 @@ export default function PopulationOperationalMap({
 
           <strong
             style={{
-              display: "block",
-              color: "#2C3E50",
+              display: 'block',
+              color: '#2C3E50',
               fontSize: 12,
             }}
           >
@@ -521,9 +474,9 @@ export default function PopulationOperationalMap({
 
           <span
             style={{
-              display: "block",
+              display: 'block',
               marginTop: 3,
-              color: "#ADB5BD",
+              color: '#ADB5BD',
               fontSize: 9,
             }}
           >
@@ -533,17 +486,17 @@ export default function PopulationOperationalMap({
 
         <div
           style={{
-            padding: "5px 9px",
+            padding: '5px 9px',
             borderRadius: 20,
-            backgroundColor: "#F1F3F5",
-            color: "#6C757D",
+            backgroundColor: '#F1F3F5',
+            color: '#6C757D',
             fontSize: 8,
             fontWeight: 800,
           }}
         >
           {mappedZoneCount}/{zones.length} zone
-          {zones.length > 1 ? "s" : ""} cartographiée
-          {mappedZoneCount > 1 ? "s" : ""}
+          {zones.length > 1 ? 's' : ''} cartographiée
+          {mappedZoneCount > 1 ? 's' : ''}
         </div>
       </div>
 
@@ -551,8 +504,8 @@ export default function PopulationOperationalMap({
         <div
           style={{
             padding: 18,
-            backgroundColor: "#FDEDEC",
-            color: "#922B21",
+            backgroundColor: '#FDEDEC',
+            color: '#922B21',
             fontSize: 10,
             lineHeight: 1.5,
           }}
@@ -563,39 +516,39 @@ export default function PopulationOperationalMap({
         <div
           className="coro-population-map"
           style={{
-            position: "relative",
+            position: 'relative',
             height: 430,
-            backgroundColor: "#1F2D3A",
+            backgroundColor: '#1F2D3A',
           }}
         >
           <div
             ref={mapContainerRef}
             style={{
-              position: "absolute",
+              position: 'absolute',
               inset: 0,
-              width: "100%",
-              height: "100%",
+              width: '100%',
+              height: '100%',
             }}
           />
 
           <div
             style={{
-              position: "absolute",
+              position: 'absolute',
               zIndex: 500,
               top: 12,
               right: 12,
               maxWidth: 210,
-              padding: "9px 11px",
-              border: "1px solid rgba(255,255,255,0.18)",
+              padding: '9px 11px',
+              border: '1px solid rgba(255,255,255,0.18)',
               borderRadius: 9,
-              backgroundColor: "rgba(31,45,58,0.92)",
-              color: "#FFFFFF",
-              pointerEvents: "none",
+              backgroundColor: 'rgba(31,45,58,0.92)',
+              color: '#FFFFFF',
+              pointerEvents: 'none',
             }}
           >
             <strong
               style={{
-                display: "block",
+                display: 'block',
                 marginBottom: 3,
                 fontSize: 9,
               }}
@@ -605,8 +558,8 @@ export default function PopulationOperationalMap({
 
             <span
               style={{
-                display: "block",
-                color: "#D5DDE3",
+                display: 'block',
+                color: '#D5DDE3',
                 fontSize: 8,
                 lineHeight: 1.45,
               }}
@@ -621,38 +574,21 @@ export default function PopulationOperationalMap({
         <div
           aria-label="Légende du ciblage directionnel"
           style={{
-            display: "flex",
-            alignItems: "center",
+            display: 'flex',
+            alignItems: 'center',
             gap: 12,
-            flexWrap: "wrap",
-            padding: "11px 16px",
-            borderTop: "1px solid #E9ECEF",
-            color: "#495057",
+            flexWrap: 'wrap',
+            padding: '11px 16px',
+            borderTop: '1px solid #E9ECEF',
+            color: '#495057',
             fontSize: 10,
           }}
         >
-          <strong style={{ color: "#2C3E50" }}>
-            {directionalPlanning.targetingMode === "DIRECTIONAL"
-              ? `Propagation vers ${directionalPlanning.propagationDirection}`
-              : "Périmètre global"}
-          </strong>
-          {directionalPlanning.windFromDirection && (
-            <span>
-              Vent provenant de {directionalPlanning.windFromDirection}
-            </span>
-          )}
-          {directionalPlanning.includedDirections.length > 0 && (
-            <span>
-              Secteurs retenus :{" "}
-              {directionalPlanning.includedDirections.join(", ")}
-            </span>
-          )}
-          <span>
-            Distances :{" "}
-            {directionalPlanning.radialDistancesKm
-              .map((distance) => `${distance.toLocaleString("fr-CA")} km`)
-              .join(" · ")}
-          </span>
+          <strong style={{ color: '#2C3E50' }}>{directionalPlanning.targetingMode === 'DIRECTIONAL' ? `Propagation vers ${directionalPlanning.propagationDirection}` : 'Périmètre global'}</strong>
+          {directionalPlanning.windFromDirection && <span>Vent provenant de {directionalPlanning.windFromDirection}</span>}
+          {directionalPlanning.includedDirections.length > 0 && <span>Secteurs retenus : {directionalPlanning.includedDirections.join(', ')}</span>}
+          <span>Distances : {directionalPlanning.radialDistancesKm.map((distance) => `${distance.toLocaleString('fr-CA')} km`).join(' · ')}</span>
+          <span style={{ flexBasis: '100%', color: '#7C5A10' }}>Anneaux et secteurs indicatifs de planification. Ils ne remplacent pas la géométrie du rapport de dispersion ni la zone de protection approuvée par l’autorité compétente.</span>
         </div>
       )}
     </div>

@@ -113,6 +113,7 @@ const POPULATION_DELIVERY_MAX_ATTEMPTS = 3;
 const POPULATION_DELIVERY_BACKOFF_MS = [60_000, 5 * 60_000, 15 * 60_000];
 
 const DISPERSION_REQUIRED_FIELDS = [
+  'dispersionSourceFileId',
   'dispersionModelName',
   'dispersionStudyTitle',
   'dispersionStudyReference',
@@ -127,6 +128,15 @@ const DISPERSION_REQUIRED_FIELDS = [
   'dispersionAssumptions',
   'dispersionLimitations',
 ] as const;
+
+type DispersionSourceDocumentState = {
+  visibility: string;
+  status: string;
+  lifecycleState: string | null;
+  revokedAt: Date | null;
+  expiresAt: Date | null;
+  supersededEffectiveAt: Date | null;
+};
 // PHONE-01A: existing Population programs are Canadian. Keeping the context
 // explicit allows a later program -> site -> organization resolver.
 const POPULATION_PHONE_CONTEXT = {
@@ -428,6 +438,16 @@ export class PopulationService {
         isActive: true,
       },
       include: {
+        dispersionSourceFile: {
+          select: {
+            visibility: true,
+            status: true,
+            lifecycleState: true,
+            revokedAt: true,
+            expiresAt: true,
+            supersededEffectiveAt: true,
+          },
+        },
         impactZones: {
           where: {
             isActive: true,
@@ -2725,6 +2745,8 @@ export class PopulationService {
             status: true,
             lifecycleState: true,
             revokedAt: true,
+            expiresAt: true,
+            supersededEffectiveAt: true,
           },
         },
         facilitySubstance: {
@@ -2810,11 +2832,9 @@ export class PopulationService {
                 id: scenario.dispersionSourceFile.id,
                 name: scenario.dispersionSourceFile.name,
                 version: scenario.dispersionSourceFile.version,
-                downloadable:
-                  scenario.dispersionSourceFile.visibility === 'shared' &&
-                  scenario.dispersionSourceFile.status === 'valide' &&
-                  scenario.dispersionSourceFile.lifecycleState === 'APPROVED' &&
-                  scenario.dispersionSourceFile.revokedAt === null,
+                downloadable: this.isDispersionSourceDocumentAdmissible(
+                  scenario.dispersionSourceFile,
+                ),
               }
             : null,
           complete: this.getDispersionBasisMissingFields(scenario).length === 0,
@@ -2902,6 +2922,7 @@ export class PopulationService {
 
     return this.prisma.$transaction(async (tx) => {
       if (dto.sourceProjectFileId) {
+        const now = new Date();
         const sourceDocument = await tx.projectFile.findFirst({
           where: {
             id: dto.sourceProjectFileId,
@@ -2910,6 +2931,15 @@ export class PopulationService {
             status: 'valide',
             lifecycleState: 'APPROVED',
             revokedAt: null,
+            OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+            AND: [
+              {
+                OR: [
+                  { supersededEffectiveAt: null },
+                  { supersededEffectiveAt: { gt: now } },
+                ],
+              },
+            ],
           },
           select: { id: true },
         });
@@ -2971,6 +3001,18 @@ export class PopulationService {
     const profile = await this.assertPopulationEligible(buildingId);
     const scenario = await this.prisma.rueEmergencyScenario.findFirst({
       where: { id: scenarioId, facilityProfileId: profile.id, isActive: true },
+      include: {
+        dispersionSourceFile: {
+          select: {
+            visibility: true,
+            status: true,
+            lifecycleState: true,
+            revokedAt: true,
+            expiresAt: true,
+            supersededEffectiveAt: true,
+          },
+        },
+      },
     });
     if (!scenario) throw new NotFoundException('Scenario RUE introuvable');
     const missing = this.getDispersionBasisMissingFields(scenario);
@@ -3043,6 +3085,16 @@ export class PopulationService {
         "La base scientifique doit etre revue avant d'approuver le perimetre",
       );
     }
+    const missingScientificFields = this.getDispersionBasisMissingFields(
+      zone.scenario,
+    );
+    if (missingScientificFields.length > 0) {
+      throw new BadRequestException({
+        message:
+          "La source scientifique courante n'est plus admissible pour approuver le perimetre",
+        missingFields: missingScientificFields,
+      });
+    }
     if (
       zone.purpose === RueImpactZonePurpose.MODELED_IMPACT ||
       !zone.validatedAt ||
@@ -3065,11 +3117,35 @@ export class PopulationService {
     });
   }
 
-  private getDispersionBasisMissingFields(scenario: Record<string, any>) {
-    return DISPERSION_REQUIRED_FIELDS.filter((field) => {
-      const value = scenario[field];
+  private getDispersionBasisMissingFields(scenario: Record<string, unknown>) {
+    const missing: string[] = DISPERSION_REQUIRED_FIELDS.filter((field) => {
+      const value: unknown = scenario[field];
       return value === null || value === undefined || value === '';
     });
+    if (
+      Object.prototype.hasOwnProperty.call(scenario, 'dispersionSourceFile') &&
+      !this.isDispersionSourceDocumentAdmissible(
+        scenario.dispersionSourceFile as DispersionSourceDocumentState | null,
+      )
+    ) {
+      missing.push('dispersionSourceDocumentAdmissible');
+    }
+    return missing;
+  }
+
+  private isDispersionSourceDocumentAdmissible(
+    source: DispersionSourceDocumentState | null | undefined,
+    now = new Date(),
+  ) {
+    return Boolean(
+      source &&
+      source.visibility === 'shared' &&
+      source.status === 'valide' &&
+      source.lifecycleState === 'APPROVED' &&
+      source.revokedAt === null &&
+      (!source.expiresAt || source.expiresAt > now) &&
+      (!source.supersededEffectiveAt || source.supersededEffectiveAt > now),
+    );
   }
 
   private async assertImpactZoneScope(
@@ -3084,7 +3160,22 @@ export class PopulationService {
         scenarioId,
         scenario: { facilityProfileId: profile.id, isActive: true },
       },
-      include: { scenario: true },
+      include: {
+        scenario: {
+          include: {
+            dispersionSourceFile: {
+              select: {
+                visibility: true,
+                status: true,
+                lifecycleState: true,
+                revokedAt: true,
+                expiresAt: true,
+                supersededEffectiveAt: true,
+              },
+            },
+          },
+        },
+      },
     });
     if (!zone) throw new NotFoundException("Zone d'impact introuvable");
     return zone;
@@ -3146,6 +3237,34 @@ export class PopulationService {
         id: true,
         nameFR: true,
         nameEN: true,
+        updatedAt: true,
+        dispersionModelName: true,
+        dispersionStudyTitle: true,
+        dispersionStudyReference: true,
+        dispersionStudyDate: true,
+        toxicEndpointName: true,
+        toxicEndpointConcentrationPpm: true,
+        toxicEndpointAveragingTimeSeconds: true,
+        windSpeedMetersPerSecond: true,
+        atmosphericStabilityClass: true,
+        releaseDurationSeconds: true,
+        receptorHeightMeters: true,
+        dispersionAssumptions: true,
+        dispersionLimitations: true,
+        dispersionReviewedAt: true,
+        dispersionSourceFileId: true,
+        dispersionSourceFile: {
+          select: {
+            id: true,
+            version: true,
+            visibility: true,
+            status: true,
+            lifecycleState: true,
+            revokedAt: true,
+            expiresAt: true,
+            supersededEffectiveAt: true,
+          },
+        },
 
         impactZones: {
           where: {
@@ -3167,6 +3286,9 @@ export class PopulationService {
             protectiveAction: true,
             instructionFR: true,
             instructionEN: true,
+            purpose: true,
+            approvedForAlerting: true,
+            updatedAt: true,
           },
         },
       },
@@ -3174,6 +3296,35 @@ export class PopulationService {
 
     if (!scenario) {
       throw new NotFoundException('Scénario RUE actif et validé introuvable');
+    }
+
+    if (
+      program.deliveryMode === PopulationDeliveryMode.LIVE &&
+      (this.getDispersionBasisMissingFields(scenario).length > 0 ||
+        !scenario.dispersionReviewedAt)
+    ) {
+      throw new BadRequestException(
+        'La base scientifique et sa source canonique doivent etre courantes et revisees avant un ciblage LIVE',
+      );
+    }
+
+    const targetingZones = scenario.impactZones.filter(
+      (zone) =>
+        zone.purpose !== RueImpactZonePurpose.MODELED_IMPACT &&
+        (zone.geometry !== null ||
+          (zone.maxDistanceKm !== null && zone.maxDistanceKm > 0)) &&
+        Boolean(zone.protectiveAction) &&
+        Boolean(zone.instructionFR?.trim()) &&
+        (program.deliveryMode !== PopulationDeliveryMode.LIVE ||
+          zone.approvedForAlerting),
+    );
+
+    if (targetingZones.length === 0) {
+      throw new BadRequestException(
+        program.deliveryMode === PopulationDeliveryMode.LIVE
+          ? "Aucune zone operationnelle approuvee n'est admissible au ciblage LIVE"
+          : "Aucune zone operationnelle n'est admissible au ciblage simule",
+      );
     }
 
     const subscribers = await this.prisma.populationSubscriber.findMany({
@@ -3237,7 +3388,7 @@ export class PopulationService {
       );
     }
 
-    const zones = scenario.impactZones.map((zone) => {
+    const zones = targetingZones.map((zone) => {
       let targetCount = 0;
       let smsTargetCount = 0;
       let emailTargetCount = 0;
@@ -3313,7 +3464,7 @@ export class PopulationService {
 
     const radialDistancesKm = [
       ...new Set(
-        scenario.impactZones
+        targetingZones
           .filter((zone) => zone.geometry === null)
           .map((zone) => zone.maxDistanceKm)
           .filter(
@@ -3374,6 +3525,22 @@ export class PopulationService {
         id: scenario.id,
         nameFR: scenario.nameFR,
         nameEN: scenario.nameEN,
+        scientificGovernance: {
+          scenarioUpdatedAt: scenario.updatedAt?.toISOString?.() ?? null,
+          dispersionReviewedAt:
+            scenario.dispersionReviewedAt?.toISOString() ?? null,
+          sourceDocumentId: scenario.dispersionSourceFile?.id ?? null,
+          sourceDocumentVersion: scenario.dispersionSourceFile?.version ?? null,
+          sourceDocumentAdmissible: this.isDispersionSourceDocumentAdmissible(
+            scenario.dispersionSourceFile,
+          ),
+          zones: targetingZones.map((zone) => ({
+            id: zone.id,
+            updatedAt: zone.updatedAt?.toISOString?.() ?? null,
+            purpose: zone.purpose,
+            approvedForAlerting: zone.approvedForAlerting,
+          })),
+        },
       },
       population: {
         activeSubscriberCount: subscribers.length,
@@ -3628,6 +3795,7 @@ export class PopulationService {
         id: targeting.scenario.id,
         nameFR: targeting.scenario.nameFR,
         nameEN: targeting.scenario.nameEN,
+        scientificGovernance: targeting.scenario.scientificGovernance,
       },
 
       population: targeting.population,
@@ -4404,6 +4572,7 @@ export class PopulationService {
         id: targeting.scenario.id,
         nameFR: targeting.scenario.nameFR,
         nameEN: targeting.scenario.nameEN,
+        scientificGovernance: targeting.scenario.scientificGovernance,
       },
 
       population: targeting.population,
@@ -5728,6 +5897,18 @@ export class PopulationService {
      * On ne relit ni les abonnés, ni leur localisation,
      * ni les zones pour recalculer le roster.
      */
+    if (program.deliveryMode === PopulationDeliveryMode.LIVE) {
+      const scientificBlockingReasons =
+        await this.getLiveScientificGovernanceBlockingReasons(alert);
+      if (scientificBlockingReasons.length > 0) {
+        throw new BadRequestException({
+          message:
+            'La gouvernance scientifique courante ne permet pas de figer les destinataires LIVE',
+          blockingReasons: scientificBlockingReasons,
+        });
+      }
+    }
+
     if (alert.recipientsFrozenAt) {
       const frozenDeliveries =
         await this.prisma.populationAlertDelivery.findMany({
@@ -5858,6 +6039,9 @@ export class PopulationService {
         ? buildingSnapshot.longitude
         : null;
 
+    const directionalSelection =
+      this.directionalSelectionFromSnapshot(contextSnapshot);
+
     const currentZoneSubscriberIds = new Set<string>();
 
     for (const subscriber of subscribers) {
@@ -5872,16 +6056,42 @@ export class PopulationService {
         continue;
       }
 
-      const isTargeted = alert.zones.some((zone) =>
-        this.populationGeospatialService.isPointInsideImpactZone({
+      const isTargeted = alert.zones.some((zone) => {
+        const insideZone =
+          this.populationGeospatialService.isPointInsideImpactZone({
+            latitude: subscriber.latitude!,
+            longitude: subscriber.longitude!,
+            geometry: zone.geometrySnapshot,
+            maxDistanceKm: zone.maxDistanceKmSnapshot,
+            referenceLatitude,
+            referenceLongitude,
+          });
+
+        if (!insideZone) return false;
+
+        if (
+          directionalSelection.targetingMode !==
+            PopulationTargetingMode.DIRECTIONAL ||
+          !directionalSelection.propagationDirection ||
+          zone.geometrySnapshot !== null ||
+          zone.maxDistanceKmSnapshot === null ||
+          referenceLatitude === null ||
+          referenceLongitude === null
+        ) {
+          return true;
+        }
+
+        return this.populationGeospatialService.isPointInsideDirectionalSector({
           latitude: subscriber.latitude!,
           longitude: subscriber.longitude!,
-          geometry: zone.geometrySnapshot,
-          maxDistanceKm: zone.maxDistanceKmSnapshot,
           referenceLatitude,
           referenceLongitude,
-        }),
-      );
+          maxDistanceKm: zone.maxDistanceKmSnapshot,
+          propagationDirection: directionalSelection.propagationDirection,
+          includeAdjacentSectors:
+            directionalSelection.includeAdjacentSectors !== false,
+        });
+      });
 
       if (isTargeted) {
         currentZoneSubscriberIds.add(subscriber.id);
@@ -6506,6 +6716,9 @@ export class PopulationService {
     if (!alert.recipientsFrozenAt) blockingReasons.push('ROSTER_NOT_FROZEN');
     if (alert.deliveryModeSnapshot !== PopulationDeliveryMode.LIVE)
       blockingReasons.push('NOT_LIVE');
+    blockingReasons.push(
+      ...(await this.getLiveScientificGovernanceBlockingReasons(alert)),
+    );
     if (deliverable.length === 0)
       blockingReasons.push('NO_DELIVERABLE_COMMUNICATION');
 
@@ -6573,6 +6786,117 @@ export class PopulationService {
       retryPending,
       reconciliation,
     };
+  }
+
+  private async getLiveScientificGovernanceBlockingReasons(alert: {
+    emergencyScenarioId: string | null;
+    contextSnapshot: unknown;
+    zones: Array<{ impactZoneId: string | null }>;
+  }) {
+    if (!alert.emergencyScenarioId) return ['SCIENTIFIC_SCENARIO_MISSING'];
+
+    const context: Record<string, unknown> | null =
+      alert.contextSnapshot &&
+      typeof alert.contextSnapshot === 'object' &&
+      !Array.isArray(alert.contextSnapshot)
+        ? (alert.contextSnapshot as Record<string, unknown>)
+        : null;
+    const scenarioContext =
+      context?.scenario &&
+      typeof context.scenario === 'object' &&
+      !Array.isArray(context.scenario)
+        ? (context.scenario as Record<string, unknown>)
+        : null;
+    const snapshot =
+      scenarioContext?.scientificGovernance &&
+      typeof scenarioContext.scientificGovernance === 'object' &&
+      !Array.isArray(scenarioContext.scientificGovernance)
+        ? (scenarioContext.scientificGovernance as Record<string, unknown>)
+        : null;
+    if (!snapshot || typeof snapshot !== 'object') {
+      return ['SCIENTIFIC_SNAPSHOT_MISSING'];
+    }
+
+    const scenario = await this.prisma.rueEmergencyScenario.findFirst({
+      where: { id: alert.emergencyScenarioId, isActive: true },
+      include: {
+        dispersionSourceFile: {
+          select: {
+            id: true,
+            version: true,
+            visibility: true,
+            status: true,
+            lifecycleState: true,
+            revokedAt: true,
+            expiresAt: true,
+            supersededEffectiveAt: true,
+          },
+        },
+        impactZones: {
+          where: {
+            id: {
+              in: alert.zones
+                .map((zone) => zone.impactZoneId)
+                .filter((id): id is string => Boolean(id)),
+            },
+          },
+          select: {
+            id: true,
+            purpose: true,
+            approvedForAlerting: true,
+            updatedAt: true,
+          },
+        },
+      },
+    });
+    if (!scenario) return ['SCIENTIFIC_SCENARIO_UNAVAILABLE'];
+
+    const reasons: string[] = [];
+    if (
+      this.getDispersionBasisMissingFields(scenario).length > 0 ||
+      !scenario.dispersionReviewedAt
+    ) {
+      reasons.push('SCIENTIFIC_BASIS_NOT_CURRENT');
+    }
+    if (
+      snapshot.scenarioUpdatedAt !== scenario.updatedAt.toISOString() ||
+      snapshot.dispersionReviewedAt !==
+        scenario.dispersionReviewedAt?.toISOString() ||
+      snapshot.sourceDocumentId !== scenario.dispersionSourceFile?.id ||
+      snapshot.sourceDocumentVersion !== scenario.dispersionSourceFile?.version
+    ) {
+      reasons.push('SCIENTIFIC_SNAPSHOT_STALE');
+    }
+
+    const zoneSnapshots: unknown[] = Array.isArray(snapshot.zones)
+      ? snapshot.zones
+      : [];
+    const currentZones = new Map(
+      scenario.impactZones.map((zone) => [zone.id, zone]),
+    );
+    if (
+      zoneSnapshots.length !== alert.zones.length ||
+      zoneSnapshots.some((candidate) => {
+        if (
+          !candidate ||
+          typeof candidate !== 'object' ||
+          Array.isArray(candidate)
+        ) {
+          return true;
+        }
+        const zoneSnapshot = candidate as Record<string, unknown>;
+        const current = currentZones.get(String(zoneSnapshot.id));
+        return (
+          !current ||
+          current.purpose === RueImpactZonePurpose.MODELED_IMPACT ||
+          !current.approvedForAlerting ||
+          zoneSnapshot.updatedAt !== current.updatedAt.toISOString()
+        );
+      })
+    ) {
+      reasons.push('ALERTING_ZONE_GOVERNANCE_STALE');
+    }
+    return reasons;
   }
 
   private async suppressInvalidFrozenDeliveries(alertId: string) {

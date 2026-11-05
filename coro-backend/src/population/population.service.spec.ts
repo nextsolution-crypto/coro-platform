@@ -18,6 +18,7 @@ import {
   PopulationDeliverySuppressionReason,
   PopulationGovernanceMode,
   PopulationOperationalEventStatus,
+  RueImpactZonePurpose,
   CoroActorType,
   Prisma,
 } from '@prisma/client';
@@ -3036,6 +3037,32 @@ describe('PopulationService', () => {
 
     const scenario = {
       id: 'scenario-1',
+      updatedAt: new Date('2026-09-17T12:00:00.000Z'),
+      dispersionSourceFileId: 'project-file-1',
+      dispersionModelName: 'PHAST',
+      dispersionStudyTitle: 'Etude de dispersion synthetique',
+      dispersionStudyReference: 'QA-SP-OPS-01',
+      dispersionStudyDate: new Date('2026-09-01T00:00:00.000Z'),
+      toxicEndpointName: 'AEGL-2',
+      toxicEndpointConcentrationPpm: 160,
+      toxicEndpointAveragingTimeSeconds: 3600,
+      windSpeedMetersPerSecond: 1.5,
+      atmosphericStabilityClass: 'F',
+      releaseDurationSeconds: 600,
+      receptorHeightMeters: 1.5,
+      dispersionAssumptions: 'Fixture scientifique controlee',
+      dispersionLimitations: 'Aucune extrapolation hors fixture',
+      dispersionReviewedAt: new Date('2026-09-17T12:00:00.000Z'),
+      dispersionSourceFile: {
+        id: 'project-file-1',
+        version: 1,
+        visibility: 'shared',
+        status: 'valide',
+        lifecycleState: 'APPROVED',
+        revokedAt: null,
+        expiresAt: null,
+        supersededEffectiveAt: null,
+      },
       nameFR: 'Rejet accidentel d’ammoniac',
       nameEN: 'Accidental ammonia release',
       impactZones: [
@@ -3052,6 +3079,9 @@ describe('PopulationService', () => {
           protectiveAction: 'SHELTER_IN_PLACE',
           instructionFR: 'Mettez-vous à l’abri.',
           instructionEN: 'Shelter in place.',
+          purpose: RueImpactZonePurpose.PUBLIC_NOTIFICATION,
+          approvedForAlerting: true,
+          updatedAt: new Date('2026-09-17T12:00:00.000Z'),
         },
         {
           id: 'zone-b',
@@ -3063,6 +3093,9 @@ describe('PopulationService', () => {
           protectiveAction: 'SHELTER_IN_PLACE',
           instructionFR: 'Mettez-vous à l’abri.',
           instructionEN: 'Shelter in place.',
+          purpose: RueImpactZonePurpose.PUBLIC_NOTIFICATION,
+          approvedForAlerting: true,
+          updatedAt: new Date('2026-09-17T12:00:00.000Z'),
         },
       ],
     };
@@ -3235,6 +3268,51 @@ describe('PopulationService', () => {
           radialDistancesKm: [5],
         }),
       );
+    });
+
+    it('exclut une empreinte scientifique MODELED_IMPACT du ciblage des destinataires', async () => {
+      prisma.rueEmergencyScenario.findFirst.mockResolvedValue({
+        ...scenario,
+        impactZones: [
+          {
+            ...scenario.impactZones[0],
+            id: 'modeled-footprint',
+            purpose: RueImpactZonePurpose.MODELED_IMPACT,
+          },
+          scenario.impactZones[1],
+        ],
+      });
+
+      const result = await service.getScenarioPopulationPreview(
+        'building-1',
+        'scenario-1',
+      );
+
+      expect(result.zones.map((zone) => zone.id)).toEqual(['zone-b']);
+      expect(result.scenario.scientificGovernance.zones).toEqual([
+        expect.objectContaining({
+          id: 'zone-b',
+          purpose: RueImpactZonePurpose.PUBLIC_NOTIFICATION,
+          approvedForAlerting: true,
+        }),
+      ]);
+    });
+
+    it('refuse un ciblage LIVE lorsque la source scientifique canonique est expiree', async () => {
+      prisma.rueEmergencyScenario.findFirst.mockResolvedValue({
+        ...scenario,
+        dispersionSourceFile: {
+          ...scenario.dispersionSourceFile,
+          expiresAt: new Date('2025-01-01T00:00:00.000Z'),
+        },
+      });
+
+      await expect(
+        service.getScenarioPopulationPreview('building-1', 'scenario-1'),
+      ).rejects.toThrow(
+        'La base scientifique et sa source canonique doivent etre courantes et revisees avant un ciblage LIVE',
+      );
+      expect(prisma.populationSubscriber.findMany).not.toHaveBeenCalled();
     });
 
     it('compte un abonne ACTIVE apres confirmation de sa localisation', async () => {
@@ -5696,6 +5774,9 @@ describe('PopulationService', () => {
     };
 
     beforeEach(() => {
+      jest
+        .spyOn(service as any, 'getLiveScientificGovernanceBlockingReasons')
+        .mockResolvedValue([]);
       activeProfile.populationProgram.deliveryMode =
         PopulationDeliveryMode.LIVE;
       prisma.rueFacilityProfile.findUnique.mockResolvedValue(activeProfile);
@@ -6030,6 +6111,85 @@ describe('PopulationService', () => {
           destinationSnapshot: 'citoyen@example.com',
         }),
       );
+    });
+
+    it('refuse une gouvernance scientifique LIVE devenue obsolete sans effet secondaire', async () => {
+      jest
+        .spyOn(service as any, 'getLiveScientificGovernanceBlockingReasons')
+        .mockResolvedValue([
+          'SCIENTIFIC_SNAPSHOT_STALE',
+          'ALERTING_ZONE_GOVERNANCE_STALE',
+        ]);
+
+      await expect(
+        service.freezeAlertRecipients('building-1', 'alert-1'),
+      ).rejects.toMatchObject({
+        response: expect.objectContaining({
+          blockingReasons: [
+            'SCIENTIFIC_SNAPSHOT_STALE',
+            'ALERTING_ZONE_GOVERNANCE_STALE',
+          ],
+        }),
+      });
+      expect(prisma.populationSubscriber.findMany).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.updateMany).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.createMany).not.toHaveBeenCalled();
+    });
+
+    it('fige le meme secteur directionnel radial que celui confirme dans la previsualisation', async () => {
+      prisma.populationAlert.findFirst.mockResolvedValue({
+        ...approvedAlert,
+        contextSnapshot: {
+          ...approvedAlert.contextSnapshot,
+          directionalTargeting: {
+            targetingMode: PopulationTargetingMode.DIRECTIONAL,
+            propagationDirection: PopulationCompassDirection.NE,
+            includeAdjacentSectors: true,
+          },
+        },
+        zones: [approvedAlert.zones[1]],
+      });
+      prisma.populationSubscriber.findMany.mockResolvedValue([
+        {
+          id: 'subscriber-inside-sector',
+          status: PopulationSubscriberStatus.ACTIVE,
+          preferredLanguage: PopulationPreferredLanguage.FR,
+          phone: null,
+          email: 'inside@example.com',
+          smsEnabled: false,
+          emailEnabled: true,
+          latitude: 45.51,
+          longitude: -73.51,
+          isSynthetic: false,
+        },
+        {
+          id: 'subscriber-outside-sector',
+          status: PopulationSubscriberStatus.ACTIVE,
+          preferredLanguage: PopulationPreferredLanguage.FR,
+          phone: null,
+          email: 'outside@example.com',
+          smsEnabled: false,
+          emailEnabled: true,
+          latitude: 45.52,
+          longitude: -73.52,
+          isSynthetic: false,
+        },
+      ]);
+      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(true);
+      populationGeospatialService.isPointInsideDirectionalSector.mockImplementation(
+        ({ latitude }: { latitude: number }) => latitude === 45.51,
+      );
+
+      await service.freezeAlertRecipients('building-1', 'alert-1');
+
+      expect(
+        populationGeospatialService.isPointInsideDirectionalSector,
+      ).toHaveBeenCalledTimes(2);
+      expect(
+        prisma.populationAlertDelivery.createMany.mock.calls[0][0].data.map(
+          (delivery: any) => delivery.subscriberId,
+        ),
+      ).toEqual(['subscriber-inside-sector']);
     });
 
     it('utilise exclusivement les snapshots de zones approuvés pour le calcul géospatial', async () => {
@@ -6663,6 +6823,10 @@ describe('PopulationService', () => {
 
     populationGeospatialService.isPointInsideImpactZone.mockReturnValue(true);
 
+    jest
+      .spyOn(service as any, 'getLiveScientificGovernanceBlockingReasons')
+      .mockResolvedValue([]);
+
     prisma.populationAlertDelivery.createMany.mockRejectedValue(
       new Error('database write failed'),
     );
@@ -6690,6 +6854,11 @@ describe('PopulationService', () => {
   });
 
   describe('sendAlert', () => {
+    beforeEach(() => {
+      jest
+        .spyOn(service as any, 'getLiveScientificGovernanceBlockingReasons')
+        .mockResolvedValue([]);
+    });
     it('rejects an unavailable transport before claiming the alert', async () => {
       prisma.populationAlertDelivery.findMany.mockResolvedValueOnce([
         {
