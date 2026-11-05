@@ -78,6 +78,7 @@ import { CommercialBillingModule } from './commercial-billing/commercial-billing
 import { KnowledgeModule } from './knowledge/knowledge.module';
 import { UserManualModule } from './user-manual/user-manual.module';
 import { PublicKnowledgeModule } from './public-knowledge/public-knowledge.module';
+import { PilotScenariosModule } from './pilot-scenarios/pilot-scenarios.module';
 
 @Module({
   imports: [
@@ -106,6 +107,7 @@ import { PublicKnowledgeModule } from './public-knowledge/public-knowledge.modul
     KnowledgeModule,
     UserManualModule,
     PublicKnowledgeModule,
+    PilotScenariosModule,
     AuthModule,
     UsersModule,
     ClientsModule,
