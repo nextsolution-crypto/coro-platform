@@ -1,4 +1,5 @@
 import { PopulationGeospatialService } from './population-geospatial.service';
+import { PopulationCompassDirection } from './dto/population-directional-targeting.dto';
 
 describe('PopulationGeospatialService', () => {
   let service: PopulationGeospatialService;
@@ -10,22 +11,12 @@ describe('PopulationGeospatialService', () => {
   describe('distanceKm', () => {
     it('retourne zéro pour le même point', () => {
       expect(
-        service.distanceKm(
-          45.5017,
-          -73.5673,
-          45.5017,
-          -73.5673,
-        ),
+        service.distanceKm(45.5017, -73.5673, 45.5017, -73.5673),
       ).toBeCloseTo(0, 6);
     });
 
     it('calcule une distance géographique plausible', () => {
-      const distance = service.distanceKm(
-        45.5017,
-        -73.5673,
-        45.5088,
-        -73.554,
-      );
+      const distance = service.distanceKm(45.5017, -73.5673, 45.5088, -73.554);
 
       expect(distance).toBeGreaterThan(1);
       expect(distance).toBeLessThan(2);
@@ -47,23 +38,11 @@ describe('PopulationGeospatialService', () => {
     };
 
     it('détecte un point dans un Polygon', () => {
-      expect(
-        service.isPointInsideGeometry(
-          45.5,
-          -73.5,
-          polygon,
-        ),
-      ).toBe(true);
+      expect(service.isPointInsideGeometry(45.5, -73.5, polygon)).toBe(true);
     });
 
     it('rejette un point hors du Polygon', () => {
-      expect(
-        service.isPointInsideGeometry(
-          46,
-          -73.5,
-          polygon,
-        ),
-      ).toBe(false);
+      expect(service.isPointInsideGeometry(46, -73.5, polygon)).toBe(false);
     });
   });
 
@@ -89,13 +68,9 @@ describe('PopulationGeospatialService', () => {
     };
 
     it('exclut un point situé dans un trou', () => {
-      expect(
-        service.isPointInsideGeometry(
-          45.5,
-          -73.5,
-          polygonWithHole,
-        ),
-      ).toBe(false);
+      expect(service.isPointInsideGeometry(45.5, -73.5, polygonWithHole)).toBe(
+        false,
+      );
     });
   });
 
@@ -125,13 +100,9 @@ describe('PopulationGeospatialService', () => {
     };
 
     it('détecte un point dans le deuxième Polygon', () => {
-      expect(
-        service.isPointInsideGeometry(
-          45.65,
-          -73.35,
-          multiPolygon,
-        ),
-      ).toBe(true);
+      expect(service.isPointInsideGeometry(45.65, -73.35, multiPolygon)).toBe(
+        true,
+      );
     });
   });
 
@@ -215,6 +186,57 @@ describe('PopulationGeospatialService', () => {
           referenceLongitude: -73.5,
         }),
       ).toBe(false);
+    });
+  });
+
+  describe('ciblage directionnel', () => {
+    it('inclut le secteur principal et les deux secteurs adjacents', () => {
+      expect(service.includedDirections(PopulationCompassDirection.NE)).toEqual(
+        [
+          PopulationCompassDirection.N,
+          PopulationCompassDirection.NE,
+          PopulationCompassDirection.E,
+        ],
+      );
+      expect(service.oppositeDirection(PopulationCompassDirection.NE)).toBe(
+        PopulationCompassDirection.SW,
+      );
+    });
+
+    it('cible un point dans le panache et rejette la direction opposée', () => {
+      expect(
+        service.isPointInsideDirectionalSector({
+          latitude: 45.525,
+          longitude: -73.46,
+          referenceLatitude: 45.5,
+          referenceLongitude: -73.5,
+          maxDistanceKm: 6,
+          propagationDirection: PopulationCompassDirection.NE,
+        }),
+      ).toBe(true);
+      expect(
+        service.isPointInsideDirectionalSector({
+          latitude: 45.475,
+          longitude: -73.54,
+          referenceLatitude: 45.5,
+          referenceLongitude: -73.5,
+          maxDistanceKm: 6,
+          propagationDirection: PopulationCompassDirection.NE,
+        }),
+      ).toBe(false);
+    });
+
+    it('produit huit géométries fermées pour la carte', () => {
+      const grid = service.createCompassSectorGrid({
+        referenceLatitude: 45.5,
+        referenceLongitude: -73.5,
+        maxDistanceKm: 5,
+      });
+      expect(grid).toHaveLength(8);
+      for (const sector of grid) {
+        const ring = sector.geometry.coordinates[0];
+        expect(ring[0]).toEqual(ring.at(-1));
+      }
     });
   });
 });

@@ -23,6 +23,7 @@ import { apiGet, apiPost, apiPut, getUser } from "../../../store/auth";
 import PortalLayout from "../../../components/PortalLayout";
 import { formatMoment, plural } from "../../presentation.mjs";
 import PopulationOperationalMap from "./PopulationOperationalMap";
+import DispersionCriticalSummary from "./DispersionCriticalSummary";
 import PopulationEvidenceEntry from "./evidence/PopulationEvidenceEntry";
 import PublicPortalSharing from "./PublicPortalSharing";
 import {
@@ -119,6 +120,8 @@ type PopulationImpactZone = {
   hasGeometry: boolean;
   maxDistanceKm: number | null;
   operational: boolean;
+  purpose?: string;
+  approvedForAlerting?: boolean;
 };
 
 type PopulationScenario = {
@@ -128,6 +131,8 @@ type PopulationScenario = {
   description: string | null;
   type: string;
   eventType: string | null;
+  releaseDescription: string | null;
+  potentialEffects: string | null;
   impactDistanceKm: number | null;
   impactMethod: string | null;
   defaultProtectiveAction: string | null;
@@ -135,6 +140,41 @@ type PopulationScenario = {
   publicInstructionEN: string | null;
   validatedAt: string | null;
   operational: boolean;
+  liveReady?: boolean;
+  substance?: {
+    nameFR: string;
+    nameEN: string | null;
+    casNumber: string;
+    unNumbers: string[];
+    hazardCategory: string;
+    maximumQuantityTonnes: number | null;
+    regulatoryThresholdTonnes: number;
+  } | null;
+  dispersionBasis?: {
+    modelName: string | null;
+    modelVersion: string | null;
+    studyTitle: string | null;
+    studyReference: string | null;
+    studyDate: string | null;
+    endpointName: string | null;
+    endpointConcentrationPpm: number | null;
+    endpointAveragingTimeSeconds: number | null;
+    windSpeedMetersPerSecond: number | null;
+    atmosphericStabilityClass: string | null;
+    releaseDurationSeconds: number | null;
+    receptorHeightMeters: number | null;
+    assumptions: string | null;
+    limitations: string | null;
+    reviewedAt: string | null;
+    complete: boolean;
+    missingFields: string[];
+    sourceDocument: {
+      id: string;
+      name: string;
+      version: number;
+      downloadable: boolean;
+    } | null;
+  } | null;
   impactZones: PopulationImpactZone[];
 };
 
@@ -165,6 +205,17 @@ type PopulationPreview = {
     uniqueSmsTargetCount: number;
     uniqueEmailTargetCount: number;
   };
+  directionalPlanning: {
+    targetingMode: "GLOBAL" | "DIRECTIONAL";
+    propagationDirection: string | null;
+    windFromDirection: string | null;
+    includeAdjacentSectors: boolean;
+    includedDirections: string[];
+    radialDistancesKm: number[];
+    sectorGrid: Array<{ direction: string; geometry: unknown }>;
+    selectedGeometry: unknown | null;
+    method: "CONSERVATIVE_DIRECTIONAL_SECTOR";
+  } | null;
   zones: Array<{
     id: string;
     code: string;
@@ -525,6 +576,11 @@ export default function PopulationPage() {
   const [preview, setPreview] = useState<PopulationPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [targetingMode, setTargetingMode] = useState<"GLOBAL" | "DIRECTIONAL">(
+    "GLOBAL",
+  );
+  const [propagationDirection, setPropagationDirection] = useState("N");
+  const [targetingConfirmed, setTargetingConfirmed] = useState(false);
 
   const [alertComposerOpen, setAlertComposerOpen] = useState(false);
   const alertComposerRef = useRef<HTMLElement | null>(null);
@@ -732,9 +788,7 @@ export default function PopulationPage() {
     setPendingResumeAlertId(alert.id);
     setAlertComposerOpen(true);
 
-    if (
-      derivePopulationWorkflowState({ event, alert }) === "SEND_READY"
-    ) {
+    if (derivePopulationWorkflowState({ event, alert }) === "SEND_READY") {
       const deliveryCount = Object.values(alert.deliveryCounts ?? {}).reduce(
         (sum, count) => sum + count,
         0,
@@ -762,12 +816,12 @@ export default function PopulationPage() {
         await loadLivePreflight(alert.id);
       }
     }
-
   };
 
   useEffect(() => {
     const target = alertComposerRef.current;
-    if (!canCompletePopulationResumeMount({
+    if (
+      !canCompletePopulationResumeMount({
         pendingAlertId: pendingResumeAlertId,
         composerOpen: alertComposerOpen,
         scenarioReady: Boolean(
@@ -777,7 +831,8 @@ export default function PopulationPage() {
         previewReady: Boolean(preview),
         createdAlertId: createdAlert?.id,
         targetMounted: Boolean(target),
-    })) {
+      })
+    ) {
       return;
     }
     target!.scrollIntoView({
@@ -831,9 +886,11 @@ export default function PopulationPage() {
       );
 
       const receivedHistory: PopulationIncident[] =
-        typeof result === "object" && result !== null && "items" in result &&
+        typeof result === "object" &&
+        result !== null &&
+        "items" in result &&
         Array.isArray((result as { items: unknown[] }).items)
-          ? ((result as { items: PopulationIncident[] }).items)
+          ? (result as { items: PopulationIncident[] }).items
           : [];
 
       setIncidentHistory(receivedHistory);
@@ -943,9 +1000,7 @@ export default function PopulationPage() {
         setLastClosedEvent(null);
         const resumable = [...result.alerts]
           .reverse()
-          .find((alert) =>
-            ["DRAFT", "READY"].includes(alert.status),
-          );
+          .find((alert) => ["DRAFT", "READY"].includes(alert.status));
         if (resumable && createdAlert?.id !== resumable.id) {
           await resumeOperationalCommunication(result, resumable);
         }
@@ -1178,7 +1233,11 @@ export default function PopulationPage() {
     }
   };
 
-  const loadScenarioPreview = async (scenarioId: string) => {
+  const loadScenarioPreview = async (
+    scenarioId: string,
+    mode = targetingMode,
+    direction = propagationDirection,
+  ) => {
     if (!status?.populationEnabled || status.programStatus !== "ACTIVE") {
       setPreview(null);
       setPreviewError(
@@ -1193,11 +1252,17 @@ export default function PopulationPage() {
     setPreview(null);
 
     try {
+      const query = new URLSearchParams({ targetingMode: mode });
+      if (mode === "DIRECTIONAL") {
+        query.set("propagationDirection", direction);
+        query.set("includeAdjacentSectors", "true");
+      }
       const result = (await apiGet(
-        `/client-portal/buildings/${buildingId}/population/scenarios/${scenarioId}/preview`,
+        `/client-portal/buildings/${buildingId}/population/scenarios/${scenarioId}/preview?${query.toString()}`,
       )) as PopulationPreview;
 
       setPreview(result);
+      setTargetingConfirmed(false);
     } catch (error: any) {
       setPreviewError(
         typeof error?.message === "string"
@@ -1412,6 +1477,13 @@ export default function PopulationPage() {
       return;
     }
 
+    if (!targetingConfirmed) {
+      setAlertError(
+        "Confirmez le périmètre affiché et la direction avant de créer le brouillon.",
+      );
+      return;
+    }
+
     const titleFR = alertForm.titleFR.trim();
     const messageFR = alertForm.messageFR.trim();
 
@@ -1433,6 +1505,10 @@ export default function PopulationPage() {
               ? selectedIncidentId
               : undefined,
           type: alertForm.type,
+          targetingMode,
+          propagationDirection:
+            targetingMode === "DIRECTIONAL" ? propagationDirection : undefined,
+          targetingConfirmed,
           titleFR,
           titleEN: alertForm.titleEN.trim() || undefined,
           messageFR,
@@ -1935,9 +2011,9 @@ export default function PopulationPage() {
   const selectedScenario =
     scenarios.find((scenario) => scenario.id === selectedScenarioId) ?? null;
   const resumableCommunication = activeEvent
-    ? [...activeEvent.alerts]
+    ? ([...activeEvent.alerts]
         .reverse()
-        .find((alert) => ["DRAFT", "READY"].includes(alert.status)) ?? null
+        .find((alert) => ["DRAFT", "READY"].includes(alert.status)) ?? null)
     : null;
   const resumeAction = getPopulationResumeAction(
     activeEvent,
@@ -2475,6 +2551,10 @@ export default function PopulationPage() {
           )}
         </section>
 
+        {selectedScenario && (
+          <DispersionCriticalSummary scenario={selectedScenario} />
+        )}
+
         {/* Poste de commandement */}
         <section
           className={styles.commandGrid}
@@ -2543,10 +2623,109 @@ export default function PopulationPage() {
             </div>
 
             {preview ? (
-              <PopulationOperationalMap
-                building={preview.building}
-                zones={preview.zones}
-              />
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-end",
+                    gap: 12,
+                    flexWrap: "wrap",
+                    padding: "14px 16px",
+                    borderBottom: "1px solid #E9ECEF",
+                    background: "#F8FAFB",
+                  }}
+                >
+                  <label style={{ display: "grid", gap: 5, fontSize: 10 }}>
+                    <strong>Mode de ciblage</strong>
+                    <select
+                      value={targetingMode}
+                      onChange={(event) => {
+                        const nextMode = event.target.value as
+                          | "GLOBAL"
+                          | "DIRECTIONAL";
+                        setTargetingMode(nextMode);
+                        if (selectedScenarioId) {
+                          void loadScenarioPreview(
+                            selectedScenarioId,
+                            nextMode,
+                            propagationDirection,
+                          );
+                        }
+                      }}
+                      style={{ minHeight: 42, padding: "0 10px" }}
+                    >
+                      <option value="GLOBAL">Périmètre global</option>
+                      <option value="DIRECTIONAL">
+                        Secteurs selon la propagation
+                      </option>
+                    </select>
+                  </label>
+
+                  {targetingMode === "DIRECTIONAL" && (
+                    <label style={{ display: "grid", gap: 5, fontSize: 10 }}>
+                      <strong>Propagation vers</strong>
+                      <select
+                        value={propagationDirection}
+                        onChange={(event) => {
+                          const direction = event.target.value;
+                          setPropagationDirection(direction);
+                          if (selectedScenarioId) {
+                            void loadScenarioPreview(
+                              selectedScenarioId,
+                              "DIRECTIONAL",
+                              direction,
+                            );
+                          }
+                        }}
+                        style={{ minHeight: 42, padding: "0 10px" }}
+                      >
+                        {[
+                          ["N", "Nord"],
+                          ["NE", "Nord-Est"],
+                          ["E", "Est"],
+                          ["SE", "Sud-Est"],
+                          ["S", "Sud"],
+                          ["SW", "Sud-Ouest"],
+                          ["W", "Ouest"],
+                          ["NW", "Nord-Ouest"],
+                        ].map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      minHeight: 42,
+                      maxWidth: 440,
+                      fontSize: 10,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={targetingConfirmed}
+                      onChange={(event) =>
+                        setTargetingConfirmed(event.target.checked)
+                      }
+                    />
+                    Je confirme le périmètre affiché et, le cas échéant, la
+                    direction de propagation avant de préparer l&apos;alerte.
+                  </label>
+                </div>
+
+                <PopulationOperationalMap
+                  building={preview.building}
+                  zones={preview.zones}
+                  directionalPlanning={preview.directionalPlanning}
+                />
+              </div>
             ) : (
               <div
                 style={{
@@ -3120,7 +3299,8 @@ export default function PopulationPage() {
                   }}
                 >
                   <span>
-                    {incidentHistory.length} incidents récents sur {incidentHistoryTotal}
+                    {incidentHistory.length} incidents récents sur{" "}
+                    {incidentHistoryTotal}
                   </span>
                   <button
                     type="button"
@@ -3377,6 +3557,7 @@ export default function PopulationPage() {
                   <PopulationOperationalMap
                     building={preview.building}
                     zones={preview.zones}
+                    directionalPlanning={preview.directionalPlanning}
                   />
                 </div>
 
@@ -3718,7 +3899,7 @@ export default function PopulationPage() {
                   ) : (
                     <button
                       type="button"
-                      disabled={alertCreating}
+                      disabled={alertCreating || !targetingConfirmed}
                       onClick={createPopulationAlertDraft}
                       style={{
                         padding: "9px 15px",
@@ -3727,7 +3908,7 @@ export default function PopulationPage() {
                         backgroundColor: "#C0392B",
                         color: "#FFFFFF",
                         cursor: alertCreating ? "not-allowed" : "pointer",
-                        opacity: alertCreating ? 0.65 : 1,
+                        opacity: alertCreating || !targetingConfirmed ? 0.5 : 1,
                         fontSize: 10,
                         fontWeight: 900,
                       }}
@@ -4212,13 +4393,16 @@ function PopulationUnifiedRegistry({
         <div className={styles.registryList}>
           {entries.map(({ kind, item }) => {
             const communications =
-              kind === "OPERATIONAL_EVENT" ? item.alerts ?? [] : [item];
+              kind === "OPERATIONAL_EVENT" ? (item.alerts ?? []) : [item];
             const title =
               kind === "OPERATIONAL_EVENT"
                 ? item.emergencyScenario?.nameFR || "Événement Population"
                 : item.titleFR;
             return (
-              <details key={`${kind}-${item.id}`} className={styles.registryItem}>
+              <details
+                key={`${kind}-${item.id}`}
+                className={styles.registryItem}
+              >
                 <summary>
                   <span>
                     <strong>{title}</strong>
@@ -4226,15 +4410,29 @@ function PopulationUnifiedRegistry({
                       {kind === "OPERATIONAL_EVENT"
                         ? "ÉVÉNEMENT POPULATION"
                         : "COMMUNICATION HISTORIQUE"}{" "}
-                      · {item.status === "ENDED" ? "Terminé" : item.status === "ACTIVE" ? "En cours" : item.status}
+                      ·{" "}
+                      {item.status === "ENDED"
+                        ? "Terminé"
+                        : item.status === "ACTIVE"
+                          ? "En cours"
+                          : item.status}
                     </small>
                   </span>
-                  <span>{plural(communications.length, "communication", "communications")} · CONSULTER</span>
+                  <span>
+                    {plural(
+                      communications.length,
+                      "communication",
+                      "communications",
+                    )}{" "}
+                    · CONSULTER
+                  </span>
                 </summary>
                 <div className={styles.registryDetail}>
                   <p>
                     Début/diffusion :{" "}
-                    {formatMoment(item.startedAt || item.activatedAt || item.createdAt)}
+                    {formatMoment(
+                      item.startedAt || item.activatedAt || item.createdAt,
+                    )}
                     {item.endedAt
                       ? ` · Fin : ${formatMoment(item.endedAt)}`
                       : ""}
@@ -4242,9 +4440,13 @@ function PopulationUnifiedRegistry({
                   {item.incidentEventId && <p>Lié à un incident CORO</p>}
                   {item.closeReason && <p>Motif : {item.closeReason}</p>}
                   {communications.map((communication: any, index: number) => {
-                    const counts = communication.deliveryCounts ?? communication;
+                    const counts =
+                      communication.deliveryCounts ?? communication;
                     return (
-                      <div key={communication.id} className={styles.registryCommunication}>
+                      <div
+                        key={communication.id}
+                        className={styles.registryCommunication}
+                      >
                         <strong>
                           #{communication.cycleSequence ?? index + 1} ·{" "}
                           {formatPopulationCommunicationType(
@@ -4256,8 +4458,8 @@ function PopulationUnifiedRegistry({
                           {getPopulationDeliveryModeLabel(
                             communication.deliveryModeSnapshot,
                           )}{" "}
-                          · Livrées {counts.DELIVERED ?? counts.delivered ?? 0} ·
-                          Échecs {counts.FAILED ?? counts.failed ?? 0}
+                          · Livrées {counts.DELIVERED ?? counts.delivered ?? 0}{" "}
+                          · Échecs {counts.FAILED ?? counts.failed ?? 0}
                         </span>
                       </div>
                     );
@@ -4327,7 +4529,9 @@ function EventCockpit({
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const closeDialogRef = useRef<HTMLDivElement>(null);
   const closeState = derivePopulationCloseState(event, canPrepare);
-  const allClear = closeState.allClear as PopulationOperationalEventAlert | undefined;
+  const allClear = closeState.allClear as
+    | PopulationOperationalEventAlert
+    | undefined;
   const canFollowUp = Boolean(event && !allClear && canPrepare);
   const initialType = event?.alerts[0]?.type === "TEST" ? "TEST" : "URGENCE";
   const presentation = derivePopulationEventPresentation({
@@ -4544,22 +4748,38 @@ function EventCockpit({
                 tabIndex={-1}
               >
                 <h3 id="population-close-title">Clore l’événement?</h3>
-              <p><strong>La FIN D’ALERTE a été diffusée.</strong></p>
+                <p>
+                  <strong>La FIN D’ALERTE a été diffusée.</strong>
+                </p>
                 <p>
                   Cette action clôture le dossier opérationnel dans CORO. Aucune
                   nouvelle communication ne sera envoyée à la population.
                 </p>
                 <dl className={styles.closeMetrics}>
-                <div><dt>Communications</dt><dd>{closeState.summary.communications}</dd></div>
-                <div><dt>Livrées</dt><dd>{closeState.summary.delivered}</dd></div>
-                <div><dt>Échecs</dt><dd>{closeState.summary.failed}</dd></div>
-                <div><dt>Réconciliation</dt><dd>{closeState.summary.reconciliation}</dd></div>
+                  <div>
+                    <dt>Communications</dt>
+                    <dd>{closeState.summary.communications}</dd>
+                  </div>
+                  <div>
+                    <dt>Livrées</dt>
+                    <dd>{closeState.summary.delivered}</dd>
+                  </div>
+                  <div>
+                    <dt>Échecs</dt>
+                    <dd>{closeState.summary.failed}</dd>
+                  </div>
+                  <div>
+                    <dt>Réconciliation</dt>
+                    <dd>{closeState.summary.reconciliation}</dd>
+                  </div>
                 </dl>
                 <label className={styles.checkboxRow}>
                   <input
                     type="checkbox"
                     checked={confirmIncomplete}
-                  onChange={(e) => onConfirmIncompleteChange(e.target.checked)}
+                    onChange={(e) =>
+                      onConfirmIncompleteChange(e.target.checked)
+                    }
                   />
                   Confirmer une diffusion incomplète, le cas échéant
                 </label>
@@ -6893,39 +7113,52 @@ function AlertDraftWorkspace({
                       "fr-CA",
                     )}
                   </strong>{" "}
-                  {freezeResult.targeting.subscriberCount === 1 ? "abonné ciblé" : "abonnés ciblés"}
+                  {freezeResult.targeting.subscriberCount === 1
+                    ? "abonné ciblé"
+                    : "abonnés ciblés"}
                   <br />
                   <strong>
                     {freezeResult.targeting.deliveryCount.toLocaleString(
                       "fr-CA",
                     )}
                   </strong>{" "}
-                  {freezeResult.targeting.deliveryCount === 1 ? "communication matérialisée" : "communications matérialisées"}
+                  {freezeResult.targeting.deliveryCount === 1
+                    ? "communication matérialisée"
+                    : "communications matérialisées"}
                   <br />
                   <strong>
                     {freezeResult.targeting.deliverableCount.toLocaleString(
                       "fr-CA",
                     )}
                   </strong>{" "}
-                  {freezeResult.targeting.deliverableCount === 1 ? "délivrable" : "délivrables"}
+                  {freezeResult.targeting.deliverableCount === 1
+                    ? "délivrable"
+                    : "délivrables"}
                   <br />
                   <strong>
                     {freezeResult.targeting.suppressedCount.toLocaleString(
                       "fr-CA",
                     )}
                   </strong>{" "}
-                  {freezeResult.targeting.suppressedCount === 1 ? "communication supprimée" : "communications supprimées"}
+                  {freezeResult.targeting.suppressedCount === 1
+                    ? "communication supprimée"
+                    : "communications supprimées"}
                   {deliveryMode === "LIVE" && (
                     <>
                       <br />
-                      <strong>{livePreflight?.email ?? 0}</strong> {(livePreflight?.email ?? 0) === 1 ? "courriel" : "courriels"}
+                      <strong>{livePreflight?.email ?? 0}</strong>{" "}
+                      {(livePreflight?.email ?? 0) === 1
+                        ? "courriel"
+                        : "courriels"}
                       {" · "}
                       <strong>{livePreflight?.sms ?? 0}</strong> SMS
                       <br />
                       <strong>{livePreflight?.retryPending ?? 0}</strong> retry
                       pending {" · "}
                       <strong>{livePreflight?.reconciliation ?? 0}</strong>{" "}
-                      {(livePreflight?.reconciliation ?? 0) === 1 ? "réconciliation" : "réconciliations"}
+                      {(livePreflight?.reconciliation ?? 0) === 1
+                        ? "réconciliation"
+                        : "réconciliations"}
                       <br />
                       <br />
                       Cette confirmation déclenche la diffusion réelle. Elle ne
@@ -7149,9 +7382,15 @@ function PopulationDiffusionResult({
                 lineHeight: 1.5,
               }}
             >
-              {plural(sandboxSuppressedCount, "communication", "communications")}
-              {sandboxSuppressedCount === 1 ? " a été supprimée" : " ont été supprimées"} du transport externe conformément au mode
-              SANDBOX.
+              {plural(
+                sandboxSuppressedCount,
+                "communication",
+                "communications",
+              )}
+              {sandboxSuppressedCount === 1
+                ? " a été supprimée"
+                : " ont été supprimées"}{" "}
+              du transport externe conformément au mode SANDBOX.
             </div>
           )}
 
@@ -7393,9 +7632,8 @@ function FrozenRecipientsPanel({ result }: { result: PopulationFreezeResult }) {
                   placée en file de diffusion externe.
                   <br />
                   Communications matérialisées :{" "}
-                  {result.targeting.deliveryCount.toLocaleString(
-                    "fr-CA",
-                  )} · Délivrables :{" "}
+                  {result.targeting.deliveryCount.toLocaleString("fr-CA")} ·
+                  Délivrables :{" "}
                   {result.targeting.deliverableCount.toLocaleString("fr-CA")} ·{" "}
                   Supprimées SANDBOX :{" "}
                   {result.targeting.suppressedCount.toLocaleString("fr-CA")}

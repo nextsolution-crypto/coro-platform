@@ -22,6 +22,13 @@ import { PopulationService } from '../population/population.service';
 import { CreatePopulationFollowUpDto } from '../population/dto/create-population-follow-up.dto';
 import { ConfigurePopulationProgramDto } from '../population/dto/population-program.dto';
 import { CreatePopulationAlertDraftDto } from '../population/dto/create-population-alert-draft.dto';
+import type { PopulationDirectionalPreviewQueryDto } from '../population/dto/population-directional-targeting.dto';
+import {
+  ReviewPopulationDispersionBasisDto,
+  SetPopulationImpactZoneApprovalDto,
+  UpdatePopulationDispersionBasisDto,
+  UpdatePopulationImpactZoneGovernanceDto,
+} from '../population/dto/population-dispersion-governance.dto';
 import { UpdatePopulationAlertDraftDto } from '../population/dto/update-population-alert-draft.dto';
 import { ClosePopulationOperationalEventDto } from '../population/dto/close-population-operational-event.dto';
 import { PopulationEvidenceService } from '../population/population-evidence.service';
@@ -99,6 +106,7 @@ export class ClientPortalService {
     buildingId: string,
     eventId: string,
     actor: {
+      sub?: string;
       clientId: string;
       organizationId: string;
       role: string;
@@ -360,7 +368,9 @@ export class ClientPortalService {
       select: { id: true },
     });
     if (!authorized) {
-      throw new ForbiddenException(`Permission incident requise: ${permission}.`);
+      throw new ForbiddenException(
+        `Permission incident requise: ${permission}.`,
+      );
     }
   }
 
@@ -505,12 +515,17 @@ export class ClientPortalService {
     },
   ) {
     await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_PREPARE,
+    );
     return this.populationService.configureProgram(buildingId, dto);
   }
 
   async markPopulationReady(
     buildingId: string,
     actor: {
+      sub?: string;
       clientId: string;
       organizationId: string;
       role: string;
@@ -518,12 +533,17 @@ export class ClientPortalService {
     },
   ) {
     await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_PREPARE,
+    );
     return this.populationService.markReady(buildingId);
   }
 
   async activatePopulationProgram(
     buildingId: string,
     actor: {
+      sub?: string;
       clientId: string;
       organizationId: string;
       role: string;
@@ -531,12 +551,17 @@ export class ClientPortalService {
     },
   ) {
     await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_APPROVE,
+    );
     return this.populationService.activateProgram(buildingId);
   }
 
   async suspendPopulationProgram(
     buildingId: string,
     actor: {
+      sub?: string;
       clientId: string;
       organizationId: string;
       role: string;
@@ -544,12 +569,17 @@ export class ClientPortalService {
     },
   ) {
     await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_APPROVE,
+    );
     return this.populationService.suspendProgram(buildingId);
   }
 
   async archivePopulationProgram(
     buildingId: string,
     actor: {
+      sub?: string;
       clientId: string;
       organizationId: string;
       role: string;
@@ -557,6 +587,10 @@ export class ClientPortalService {
     },
   ) {
     await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_APPROVE,
+    );
     return this.populationService.archiveProgram(buildingId);
   }
 
@@ -582,6 +616,108 @@ export class ClientPortalService {
     return this.populationService.getAvailableScenarios(buildingId);
   }
 
+  async updatePopulationDispersionBasis(
+    buildingId: string,
+    scenarioId: string,
+    dto: UpdatePopulationDispersionBasisDto,
+    actor: {
+      sub?: string;
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_PREPARE,
+    );
+    return this.populationService.updateDispersionBasis(
+      buildingId,
+      scenarioId,
+      dto,
+    );
+  }
+
+  async reviewPopulationDispersionBasis(
+    buildingId: string,
+    scenarioId: string,
+    dto: ReviewPopulationDispersionBasisDto,
+    actor: {
+      sub?: string;
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_APPROVE,
+    );
+    return this.populationService.reviewDispersionBasis(
+      buildingId,
+      scenarioId,
+      dto,
+      { type: CoroActorType.CLIENT_USER, id: actor.sub! },
+    );
+  }
+
+  async updatePopulationImpactZoneGovernance(
+    buildingId: string,
+    scenarioId: string,
+    zoneId: string,
+    dto: UpdatePopulationImpactZoneGovernanceDto,
+    actor: {
+      sub?: string;
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_PREPARE,
+    );
+    return this.populationService.updateImpactZoneGovernance(
+      buildingId,
+      scenarioId,
+      zoneId,
+      dto,
+    );
+  }
+
+  async setPopulationImpactZoneApproval(
+    buildingId: string,
+    scenarioId: string,
+    zoneId: string,
+    dto: SetPopulationImpactZoneApprovalDto,
+    actor: {
+      sub?: string;
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_APPROVE,
+    );
+    return this.populationService.setImpactZoneAlertingApproval(
+      buildingId,
+      scenarioId,
+      zoneId,
+      dto,
+      { type: CoroActorType.CLIENT_USER, id: actor.sub! },
+    );
+  }
+
   /**
    * Retourne l'aperçu agrégé de la population ciblée
    * par les zones d'impact d'un scénario RUE.
@@ -600,13 +736,20 @@ export class ClientPortalService {
       role: string;
       buildingIds?: string[];
     },
+    query: PopulationDirectionalPreviewQueryDto = {},
   ) {
     await this.assertBuildingAccess(buildingId, actor);
 
-    return this.populationService.getScenarioPopulationPreview(
-      buildingId,
-      scenarioId,
-    );
+    return Object.values(query).some((value) => value !== undefined)
+      ? this.populationService.getScenarioPopulationPreview(
+          buildingId,
+          scenarioId,
+          query,
+        )
+      : this.populationService.getScenarioPopulationPreview(
+          buildingId,
+          scenarioId,
+        );
   }
 
   async createPopulationAlertDraft(
@@ -1311,7 +1454,10 @@ export class ClientPortalService {
     clientUser: any,
     data: { fullName: string; comment?: string; ipAddress?: string },
   ) {
-    const accessibleProject = await this.assertProjectAccess(projectId, clientUser);
+    const accessibleProject = await this.assertProjectAccess(
+      projectId,
+      clientUser,
+    );
     this.pilotPolicy.assertAllowed(
       clientUser.organizationId,
       'DOCUMENT_SIGNATURE',
@@ -1483,7 +1629,10 @@ export class ClientPortalService {
   }
 
   async retryOfficialPdfGeneration(projectId: string, clientUser: any) {
-    const accessibleProject = await this.assertProjectAccess(projectId, clientUser);
+    const accessibleProject = await this.assertProjectAccess(
+      projectId,
+      clientUser,
+    );
     this.pilotPolicy.assertAllowed(clientUser.organizationId, 'OFFICIAL_PDF');
     this.assertKnownProjectMutationAllowed(accessibleProject, clientUser);
     const latestVersion = await this.prisma.projectVersion.findFirst({
@@ -1645,7 +1794,10 @@ export class ClientPortalService {
       throw new BadRequestException('Un motif de refus est requis');
     }
 
-    const accessibleProject = await this.assertProjectAccess(projectId, clientUser);
+    const accessibleProject = await this.assertProjectAccess(
+      projectId,
+      clientUser,
+    );
     this.assertKnownProjectMutationAllowed(accessibleProject, clientUser);
     const project = await this.prisma.project.findFirst({
       where: {
@@ -1727,12 +1879,11 @@ export class ClientPortalService {
     return { success: true, alreadyRefused: false };
   }
 
-  async addComment(
-    projectId: string,
-    clientUser: any,
-    contenu: string,
-  ) {
-    const accessibleProject = await this.assertProjectAccess(projectId, clientUser);
+  async addComment(projectId: string, clientUser: any, contenu: string) {
+    const accessibleProject = await this.assertProjectAccess(
+      projectId,
+      clientUser,
+    );
     this.assertKnownProjectMutationAllowed(accessibleProject, clientUser);
     return this.prisma.projectComment.create({
       data: {
@@ -1837,13 +1988,16 @@ export class ClientPortalService {
     };
   }
 
-  async trackEngagement(data: {
-    projectId: string;
-    clientUserId: string;
-    event: string;
-    device?: string;
-    duration?: number;
-  }, clientUser: any) {
+  async trackEngagement(
+    data: {
+      projectId: string;
+      clientUserId: string;
+      event: string;
+      device?: string;
+      duration?: number;
+    },
+    clientUser: any,
+  ) {
     await this.assertProjectAccess(data.projectId, clientUser);
     return this.prisma.documentEngagement.create({
       data: {
