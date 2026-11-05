@@ -33,4 +33,11 @@ Les six livrables sont produits. Le mode contrôlé est implémenté sur la bran
 - verdict de préparation : **GO POUR PR ET REVUE**;
 - verdict d'essai réel : **NO-GO** jusqu'à levée des conditions Brevo et autorisation distincte.
 
+## Publication pour revue
+
+- PR : #209;
+- base : `c255fd6650ae38465f2f28c1e240035287a9e3c9`;
+- contrôles CI du premier HEAD publié : PASS;
+- état autorisé : PR ouverte pour revue, sans fusion et sans déploiement.
+
 Le NO-GO réel sera levable uniquement après preuve du TFN, de l'expéditeur, des webhooks, du tarif, de la configuration hors Git et après une autorisation finale distincte portant sur le message et le destinataire masqué.

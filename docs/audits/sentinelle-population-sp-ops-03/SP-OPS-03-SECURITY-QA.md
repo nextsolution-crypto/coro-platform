@@ -39,3 +39,13 @@ Baseline réconciliée : `c255fd6650ae38465f2f28c1e240035287a9e3c9`.
 - recherche de secrets et destinations : seules les valeurs synthétiques `.test` des tests sont présentes.
 
 La suite backend complète locale a produit 2 503 PASS, 5 SKIPPED et 1 échec d'environnement indépendant du lot : `pdftoppm` absent sur le poste Windows pour un test OCR Knowledge. La CI Linux installe ce runtime avant la suite; son résultat terminal sur le HEAD publié constitue le gate de non-régression.
+
+## CI de la PR
+
+PR : #209.
+
+- Backend security checks `42125114269` : PASS;
+- Client Portal checks `42125114389` : PASS;
+- validation principale `42125114625` : backend-tests, quatre typechecks et client-portal-build PASS;
+- build-images et production-release : SKIPPED comme attendu sur une PR;
+- aucun appel fournisseur, secret de production ou envoi réel pendant la CI.
