@@ -1,6 +1,13 @@
 import {
   DemoCommunicationChannel,
   DemoCommunicationMode,
+  PopulationAlertChannel,
+  PopulationAlertStatus,
+  PopulationAlertType,
+  PopulationDeliveryMode,
+  PopulationDeliveryStatus,
+  PopulationGovernanceMode,
+  PopulationProgramStatus,
 } from '@prisma/client';
 import { createHash } from 'crypto';
 import { DemoCommunicationPolicyService } from './demo-communication-policy.service';
@@ -21,6 +28,7 @@ function harness(environment: any) {
         return { id: events.get(key).id };
       }),
     },
+    populationAlertDelivery: { findUnique: jest.fn() },
   };
   return {
     prisma,
@@ -44,6 +52,7 @@ describe('DemoCommunicationPolicyService', () => {
     delete process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED;
     delete process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP;
     delete process.env.POPULATION_CONTROLLED_LIVE_TEST_ORGANIZATION_ID;
+    delete process.env.POPULATION_CONTROLLED_LIVE_TEST_PROGRAM_ID;
     delete process.env.POPULATION_CONTROLLED_LIVE_TEST_EMAIL_SHA256;
     delete process.env.POPULATION_CONTROLLED_LIVE_TEST_SMS_SHA256;
   });
@@ -254,6 +263,111 @@ describe('DemoCommunicationPolicyService', () => {
     process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP = 'false';
     process.env.POPULATION_CONTROLLED_LIVE_TEST_ORGANIZATION_ID =
       demoOrganizationId;
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_PROGRAM_ID = 'program-approved';
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_EMAIL_SHA256 = createHash(
+      'sha256',
+    )
+      .update(recipient)
+      .digest('hex');
+    const h = harness({
+      status: 'ACTIVE',
+      communicationMode: DemoCommunicationMode.SIMULATE,
+      externalProvidersDisabled: true,
+    });
+    h.prisma.populationAlertDelivery.findUnique.mockResolvedValue({
+      alertId: 'alert-approved',
+      idempotencyKey: 'delivery-idempotency',
+      channel: PopulationAlertChannel.EMAIL,
+      status: PopulationDeliveryStatus.SENDING,
+      suppressionReason: null,
+      destinationSnapshot: recipient,
+      alert: {
+        id: 'alert-approved',
+        programId: 'program-approved',
+        type: PopulationAlertType.TEST,
+        status: PopulationAlertStatus.SENDING,
+        titleFR: 'EXERCICE / TEST - Ammoniac',
+        titleEN: 'EXERCISE / TEST - Ammonia',
+        deliveryModeSnapshot: PopulationDeliveryMode.LIVE,
+        createdByType: 'USER',
+        createdById: 'creator',
+        approvedByType: 'USER',
+        approvedById: 'approver',
+        program: {
+          id: 'program-approved',
+          status: PopulationProgramStatus.ACTIVE,
+          governanceMode: PopulationGovernanceMode.DUAL_CONTROL,
+          rueFacilityProfile: {
+            building: { organizationId: demoOrganizationId },
+          },
+        },
+        deliveries: [
+          {
+            channel: PopulationAlertChannel.EMAIL,
+            subscriberId: 'subscriber-only',
+            destinationSnapshot: recipient,
+          },
+          {
+            channel: PopulationAlertChannel.SMS,
+            subscriberId: 'subscriber-only',
+            destinationSnapshot: '+15145550101',
+          },
+        ],
+      },
+    });
+    await expect(
+      h.service.evaluate({
+        organizationId: demoOrganizationId,
+        channel: DemoCommunicationChannel.EMAIL,
+        operation: 'POPULATION_CONTROLLED_LIVE_TEST',
+        recipient,
+        payload: { subject: 'EXERCICE / TEST' },
+        idempotencyKey: 'delivery-idempotency',
+        controlledPopulationContext: {
+          programId: 'program-approved',
+          alertId: 'alert-approved',
+          deliveryId: 'delivery-approved',
+        },
+      }),
+    ).resolves.toEqual({ disposition: 'LIVE' });
+    await expect(
+      h.service.evaluate({
+        organizationId: demoOrganizationId,
+        channel: DemoCommunicationChannel.EMAIL,
+        operation: 'POPULATION_CONTROLLED_LIVE_TEST',
+        recipient,
+        payload: { subject: 'EXERCICE / TEST' },
+        idempotencyKey: 'forged-idempotency',
+        controlledPopulationContext: {
+          programId: 'program-approved',
+          alertId: 'alert-approved',
+          deliveryId: 'delivery-approved',
+        },
+      }),
+    ).resolves.toEqual({ disposition: 'SIMULATED', eventId: 'event-2' });
+    await expect(
+      h.service.evaluate({
+        organizationId: demoOrganizationId,
+        channel: DemoCommunicationChannel.EMAIL,
+        operation: 'POPULATION_CONTROLLED_LIVE_TEST',
+        recipient,
+        payload: { subject: 'EXERCICE / TEST' },
+        idempotencyKey: 'other-program-attempt',
+        controlledPopulationContext: {
+          programId: 'other-program',
+          alertId: 'alert-approved',
+          deliveryId: 'delivery-approved',
+        },
+      }),
+    ).resolves.toEqual({ disposition: 'SIMULATED', eventId: 'event-3' });
+  });
+
+  it('ne transforme jamais le nom d operation usurpe en autorisation LIVE', async () => {
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED = 'true';
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP = 'false';
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_ORGANIZATION_ID =
+      demoOrganizationId;
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_PROGRAM_ID = 'program-approved';
     process.env.POPULATION_CONTROLLED_LIVE_TEST_EMAIL_SHA256 = createHash(
       'sha256',
     )
@@ -271,8 +385,84 @@ describe('DemoCommunicationPolicyService', () => {
         operation: 'POPULATION_CONTROLLED_LIVE_TEST',
         recipient,
         payload: { subject: 'EXERCICE / TEST' },
+        idempotencyKey: 'spoofed-operation-name',
       }),
-    ).resolves.toEqual({ disposition: 'LIVE' });
+    ).resolves.toEqual({ disposition: 'SIMULATED', eventId: 'event-1' });
+    expect(h.prisma.populationAlertDelivery.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('refuse une campagne canonique qui change juste avant le transport', async () => {
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED = 'true';
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP = 'false';
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_ORGANIZATION_ID =
+      demoOrganizationId;
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_PROGRAM_ID = 'program-approved';
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_EMAIL_SHA256 = createHash(
+      'sha256',
+    )
+      .update(recipient)
+      .digest('hex');
+    const h = harness({
+      status: 'ACTIVE',
+      communicationMode: DemoCommunicationMode.SIMULATE,
+      externalProvidersDisabled: true,
+    });
+    h.prisma.populationAlertDelivery.findUnique.mockResolvedValue({
+      alertId: 'alert-approved',
+      idempotencyKey: 'delivery-idempotency',
+      channel: PopulationAlertChannel.EMAIL,
+      status: PopulationDeliveryStatus.SENT,
+      suppressionReason: null,
+      destinationSnapshot: recipient,
+      alert: {
+        id: 'alert-approved',
+        programId: 'program-approved',
+        type: PopulationAlertType.TEST,
+        status: PopulationAlertStatus.SENDING,
+        titleFR: 'EXERCICE / TEST',
+        titleEN: 'EXERCISE / TEST',
+        deliveryModeSnapshot: PopulationDeliveryMode.LIVE,
+        createdByType: 'USER',
+        createdById: 'creator',
+        approvedByType: 'USER',
+        approvedById: 'approver',
+        program: {
+          id: 'program-approved',
+          status: PopulationProgramStatus.ACTIVE,
+          governanceMode: PopulationGovernanceMode.DUAL_CONTROL,
+          rueFacilityProfile: {
+            building: { organizationId: demoOrganizationId },
+          },
+        },
+        deliveries: [
+          {
+            channel: PopulationAlertChannel.EMAIL,
+            subscriberId: 'subscriber-only',
+            destinationSnapshot: recipient,
+          },
+          {
+            channel: PopulationAlertChannel.SMS,
+            subscriberId: 'subscriber-only',
+            destinationSnapshot: '+15145550101',
+          },
+        ],
+      },
+    });
+    await expect(
+      h.service.evaluate({
+        organizationId: demoOrganizationId,
+        channel: DemoCommunicationChannel.EMAIL,
+        operation: 'POPULATION_CONTROLLED_LIVE_TEST',
+        recipient,
+        payload: { subject: 'EXERCICE / TEST' },
+        idempotencyKey: 'delivery-idempotency',
+        controlledPopulationContext: {
+          programId: 'program-approved',
+          alertId: 'alert-approved',
+          deliveryId: 'delivery-approved',
+        },
+      }),
+    ).resolves.toEqual({ disposition: 'SIMULATED', eventId: 'event-1' });
   });
 
   it('maintient PAUSED/BLOCK prioritaire au test Population contrôlé', async () => {

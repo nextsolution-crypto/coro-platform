@@ -43,3 +43,9 @@ Les secrets Brevo et webhooks existants restent gouvernés par le mécanisme de 
 ## Arrêt
 
 Le premier arrêt est `POPULATION_CONTROLLED_LIVE_TEST_STOP=true`. La suspension du programme reste disponible et PAUSED/BLOCK reste prioritaire dans la politique Démo. Une alerte déjà acceptée par un fournisseur n'est pas rappelable; les webhooks et la réconciliation conservent alors la preuve de son résultat.
+
+## Renforcement SP-OPS-03C
+
+L'opération `POPULATION_CONTROLLED_LIVE_TEST` est désormais un libellé de transport, jamais une capacité autonome. Le worker transmet les identifiants du programme, de l'alerte et de la livraison seulement après les gardes Population. La politique Démo relit ensuite ces objets et leurs relations canoniques depuis PostgreSQL au seuil du transport.
+
+Un autre appelant qui copie le nom d'opération, la destination ou même un identifiant isolé ne peut obtenir LIVE : tenant, programme, campagne, double approbation, roster, état de livraison, canal, destination et idempotence doivent tous concorder dans la même preuve serveur. Aucun jeton d'autorisation transmissible au navigateur et aucun nouveau secret n'ont été introduits.

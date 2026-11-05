@@ -49,3 +49,22 @@ PR : #209.
 - validation principale `42125114625` : backend-tests, quatre typechecks et client-portal-build PASS;
 - build-images et production-release : SKIPPED comme attendu sur une PR;
 - aucun appel fournisseur, secret de production ou envoi réel pendant la CI.
+
+## Revue SP-OPS-03C — défense au niveau du transport
+
+L'inventaire exhaustif des appels à `DemoCommunicationPolicyService.evaluate()` couvre l'authentification, les invitations, le portail client, les réservations, les imports, les procédures, les rappels, l'occupation, les organisations et Population. Le transport Brevo Population est partagé : le nom d'opération ne constitue donc plus une autorisation.
+
+La politique reconstruit maintenant la preuve canonique depuis `PopulationAlertDelivery` immédiatement avant l'appel fournisseur. La décision LIVE exige simultanément :
+
+- le tenant et le programme configurés hors Git;
+- l'alerte et la livraison exactes fournies par le worker Population;
+- un programme ACTIVE en `DUAL_CONTROL`;
+- une alerte `TEST`, `SENDING`, figée en LIVE et correctement étiquetée;
+- un approbateur distinct du créateur;
+- exactement un abonné, un courriel et un SMS;
+- la livraison `SENDING`, non supprimée, avec canal, destination et clé d'idempotence identiques à la base;
+- PAUSED/BLOCK non actif et le bouton STOP toujours désactivé.
+
+Cas négatifs ajoutés : usurpation du nom d'opération sans contexte, contexte canonique absent, campagne modifiée avant transport, livraison déjà envoyée, destination/idempotence divergentes, tenant/programme non concordants et STOP/PAUSED prioritaires. Un échec retombe en SIMULATED ou BLOCKED et n'atteint jamais `fetch`.
+
+Validation locale du candidat SP-OPS-03C : 354/354 tests ciblés PASS, build backend PASS, audit de production 0 vulnérabilité et `git diff --check` PASS. La suite complète produit 2 499 PASS et 5 SKIPPED; 7 cas indépendants échouent localement parce que le sandbox Windows refuse les sous-processus Office/OCR et `credential_process` (`spawn EPERM`). Le lint ciblé expose uniquement la dette stricte déjà présente dans ces grands fichiers; aucune règle n'a été désactivée. La CI Linux du nouveau HEAD reste le gate terminal pour ces contrôles d'environnement.

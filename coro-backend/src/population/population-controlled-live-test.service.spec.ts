@@ -65,6 +65,15 @@ describe('PopulationControlledLiveTestService', () => {
     expect(service.assertCampaign(valid())).toBe(true);
   });
 
+  it('ne s active jamais pour un autre tenant ou programme', () => {
+    expect(
+      service.assertCampaign({ ...valid(), organizationId: 'other-org' }),
+    ).toBe(false);
+    expect(
+      service.assertCampaign({ ...valid(), programId: 'other-program' }),
+    ).toBe(false);
+  });
+
   it.each([
     [
       'arrêt',

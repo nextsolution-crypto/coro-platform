@@ -41,3 +41,13 @@ Les six livrables sont produits. Le mode contrôlé est implémenté sur la bran
 - état autorisé : PR ouverte pour revue, sans fusion et sans déploiement.
 
 Le NO-GO réel sera levable uniquement après preuve du TFN, de l'expéditeur, des webhooks, du tarif, de la configuration hors Git et après une autorisation finale distincte portant sur le message et le destinataire masqué.
+
+## Verdict de sécurité SP-OPS-03C
+
+- réserve de l'opération usurpable : **CORRIGÉE ET TESTÉE LOCALEMENT**;
+- preuve canonique programme/campagne/livraison au transport : **IMPLÉMENTÉE**;
+- priorité PAUSED/BLOCK/STOP : **PRÉSERVÉE**;
+- isolation des autres tenants et programmes : **PRÉSERVÉE**;
+- appel fournisseur, SMS, courriel, LIVE, secret, fusion ou déploiement : **NON EXÉCUTÉS**;
+- verdict pour revue de la PR #209 : **GO CONDITIONNEL À LA CI TERMINALE DU NOUVEAU HEAD**;
+- verdict pour l'essai réel : **NO-GO INCHANGÉ**.

@@ -7891,15 +7891,26 @@ export class PopulationService {
       let providerResult;
 
       if (delivery.channel === PopulationAlertChannel.SMS) {
-        providerResult = await this.populationDeliveryService.sendSms(
-          delivery.destinationSnapshot,
-          delivery.messageSnapshot,
-          deliveryBuilding.organizationId,
-          controlledTest.enabled
-            ? 'POPULATION_CONTROLLED_LIVE_TEST'
-            : 'POPULATION_ALERT',
-          delivery.idempotencyKey,
-        );
+        providerResult = controlledTest.enabled
+          ? await this.populationDeliveryService.sendSms(
+              delivery.destinationSnapshot,
+              delivery.messageSnapshot,
+              deliveryBuilding.organizationId,
+              'POPULATION_CONTROLLED_LIVE_TEST',
+              delivery.idempotencyKey,
+              {
+                programId: program.id,
+                alertId: alert.id,
+                deliveryId: delivery.id,
+              },
+            )
+          : await this.populationDeliveryService.sendSms(
+              delivery.destinationSnapshot,
+              delivery.messageSnapshot,
+              deliveryBuilding.organizationId,
+              'POPULATION_ALERT',
+              delivery.idempotencyKey,
+            );
       } else if (delivery.channel === PopulationAlertChannel.EMAIL) {
         const subject =
           delivery.language === PopulationPreferredLanguage.EN &&
@@ -7932,6 +7943,13 @@ export class PopulationService {
           operation: controlledTest.enabled
             ? 'POPULATION_CONTROLLED_LIVE_TEST'
             : 'POPULATION_ALERT',
+          controlledPopulationContext: controlledTest.enabled
+            ? {
+                programId: program.id,
+                alertId: alert.id,
+                deliveryId: delivery.id,
+              }
+            : undefined,
         });
       } else {
         throw new PopulationProviderError(
