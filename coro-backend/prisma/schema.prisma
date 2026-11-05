@@ -85,6 +85,7 @@ model Organization {
   demoEnvironment                  DemoEnvironment?
   demoFixtures                     DemoFixtureRecord[]
   demoCommunicationEvents          DemoCommunicationEvent[]
+  pilotScenarios                   PilotScenario[]
 }
 
 enum DemoEnvironmentStatus {
@@ -161,6 +162,109 @@ model DemoCommunicationEvent {
 
   @@unique([organizationId, idempotencyKey])
   @@index([organizationId, channel, createdAt])
+}
+
+enum PilotScenarioStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum PilotRunEnvironment {
+  QA
+  PRODUCTION_DEMO
+}
+
+enum PilotRunStatus {
+  PLANNED
+  RUNNING
+  PASSED
+  FAILED
+  PARTIAL
+}
+
+enum PilotCheckStatus {
+  NOT_RUN
+  PASS
+  FAIL
+  BLOCKED
+  NOT_APPLICABLE
+}
+
+enum PilotPhase {
+  FOUNDATION
+  CONFIGURATION
+  DOCUMENT_GENERATION
+  INTERNAL_REVIEW
+  CLIENT_APPROVAL
+  KNOWLEDGE_AI
+  INCIDENT_SENTINELLE
+  EXERCISE_REX
+  RESILIENCE
+  NETWORK
+  FINANCIAL
+  SECURITY_RECOVERY
+}
+
+model PilotScenario {
+  id             String              @id @default(uuid())
+  scenarioKey    String              @unique
+  name           String
+  description    String?
+  status         PilotScenarioStatus @default(ACTIVE)
+  organizationId String
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  buildingId     String
+  building       Building            @relation(fields: [buildingId], references: [id], onDelete: Restrict)
+  projectId      String
+  project        Project             @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  createdById    String
+  createdBy      User                @relation("PilotScenarioCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  runs           PilotScenarioRun[]
+
+  @@index([organizationId, status])
+  @@index([buildingId])
+  @@index([projectId])
+}
+
+model PilotScenarioRun {
+  id           String              @id @default(uuid())
+  scenarioId   String
+  scenario     PilotScenario       @relation(fields: [scenarioId], references: [id], onDelete: Restrict)
+  sequence     Int
+  environment  PilotRunEnvironment
+  status       PilotRunStatus      @default(PLANNED)
+  sourceCommit String?
+  createdById  String
+  createdBy    User                @relation("PilotScenarioRunCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  checks       PilotScenarioCheck[]
+
+  @@unique([scenarioId, sequence])
+  @@index([scenarioId, status])
+}
+
+model PilotScenarioCheck {
+  id           String           @id @default(uuid())
+  runId        String
+  run          PilotScenarioRun @relation(fields: [runId], references: [id], onDelete: Restrict)
+  phase        PilotPhase
+  checkKey     String
+  label        String
+  status       PilotCheckStatus @default(NOT_RUN)
+  notes        String?
+  evidence     Json?
+  observedAt   DateTime?
+  observedById String?
+  observedBy   User?            @relation("PilotScenarioCheckObserver", fields: [observedById], references: [id], onDelete: Restrict)
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([runId, checkKey])
+  @@index([runId, phase, status])
 }
 
 model User {
@@ -256,6 +360,9 @@ model User {
   trustedDevices               TrustedDevice[]
   mfaChallenge                 PlatformMfaChallenge?
   adminAuditEvents             AdminAuditEvent[]              @relation("AdminAuditInternalActor")
+  pilotScenariosCreated        PilotScenario[]                 @relation("PilotScenarioCreator")
+  pilotScenarioRunsCreated     PilotScenarioRun[]              @relation("PilotScenarioRunCreator")
+  pilotScenarioChecksObserved  PilotScenarioCheck[]            @relation("PilotScenarioCheckObserver")
   networkAssignmentsGranted    CustomerPortfolioAssignment[]  @relation("NetworkAssignmentGrantedByUser")
   networkAssignmentsRevoked    CustomerPortfolioAssignment[]  @relation("NetworkAssignmentRevokedByUser")
   priceBookVersionsCreated     PriceBookVersion[]             @relation("PriceBookVersionCreator")
@@ -2712,6 +2819,7 @@ model Building {
   correctiveActions      CorrectiveAction[]
   capabilityEntitlements CapabilityEntitlement[]
   meteringResults        MeteringResult[]
+  pilotScenarios         PilotScenario[]
 
   // CORO RUE / PUE / Sentinelle Population
   // Profil réglementaire et opérationnel de l'installation.
@@ -2787,6 +2895,7 @@ model Project {
   files                ProjectFile[]
   pcaConfig            PcaConfig?
   exerciseReports      ExerciseReport[]
+  pilotScenarios       PilotScenario[]
 }
 
 model RevisionHistory {

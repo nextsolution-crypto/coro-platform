@@ -84,6 +84,7 @@ const ADMIN_GROUP = {
 const SUPER_ADMIN_PLATFORM_GROUP = {
   label: 'Super Admin',
   items: [
+    { label: 'Test Scenario Pilot', path: '/admin/test-scenario-pilots', icon: '✓' },
     { label: 'Codes QR', path: '/admin/qr-codes', icon: 'QR' },
     { label: 'Control Center', path: '/admin/control-center', icon: '◉' },
     { label: 'Metering', path: '/admin/metering', icon: '∑' },
