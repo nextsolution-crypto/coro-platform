@@ -15,6 +15,10 @@ assert.match(page, /PASS/);
 assert.match(page, /FAIL/);
 assert.match(page, /BLOCKED/);
 assert.match(page, /PRODUCTION_DEMO/);
+assert.match(page, /Non exécuté/);
+assert.match(page, /Ouvrir le configurateur/);
+assert.match(page, /Ouvrir le projet/);
+assert.match(page, /Ouvrir les documents du bâtiment/);
 assert.match(page, /Une coche\s+représente une preuve exécutée/u);
 assert.doesNotMatch(page, /localStorage|sessionStorage/);
 
