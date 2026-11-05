@@ -86,6 +86,7 @@ import {
   PopulationTargetingMode,
   type PopulationDirectionalPreviewQueryDto,
 } from './dto/population-directional-targeting.dto';
+import { PopulationControlledLiveTestService } from './population-controlled-live-test.service';
 
 const POPULATION_LOCATION_RESOLUTION_PURPOSE = 'POPULATION_LOCATION_RESOLUTION';
 const POPULATION_LOCATION_RESOLUTION_TTL_MS = 10 * 60 * 1000;
@@ -192,6 +193,8 @@ export class PopulationService {
     private readonly smsSuppressions?: PopulationSmsSuppressionService,
     @Optional()
     private readonly contactCrypto?: PopulationContactCryptoService,
+    @Optional()
+    private readonly controlledLiveTest?: PopulationControlledLiveTestService,
   ) {}
 
   private async isSmsGloballySuppressed(phoneCanonical: string) {
@@ -6710,6 +6713,78 @@ export class PopulationService {
    * Un seul orchestrateur concurrent peut effectuer
    * READY -> SENDING.
    */
+  private async controlledLiveTestGuard(input: {
+    buildingId: string;
+    program: { id: string; governanceMode: PopulationGovernanceMode };
+    alert: {
+      id: string;
+      type: PopulationAlertType;
+      titleFR: string;
+      titleEN: string | null;
+      createdByType: CoroActorType;
+      createdById: string;
+      approvedByType: CoroActorType | null;
+      approvedById: string | null;
+    };
+  }) {
+    const building = await this.prisma.building.findUnique({
+      where: { id: input.buildingId },
+      select: { organizationId: true },
+    });
+    if (!building) throw new NotFoundException('Bâtiment introuvable');
+    if (
+      process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED === 'true' &&
+      !this.controlledLiveTest
+    ) {
+      throw new ServiceUnavailableException(
+        'POPULATION_CONTROLLED_LIVE_TEST_GUARD_UNAVAILABLE',
+      );
+    }
+    if (
+      !this.controlledLiveTest?.isEnabledFor(
+        building.organizationId,
+        input.program.id,
+      )
+    ) {
+      return { enabled: false, destinations: [] as string[] };
+    }
+    const deliveries = await this.prisma.populationAlertDelivery.findMany({
+      where: {
+        alertId: input.alert.id,
+        suppressionReason: null,
+        status: {
+          in: [
+            PopulationDeliveryStatus.QUEUED,
+            PopulationDeliveryStatus.SENDING,
+            PopulationDeliveryStatus.SENT,
+            PopulationDeliveryStatus.DELIVERED,
+          ],
+        },
+      },
+      select: {
+        channel: true,
+        destinationSnapshot: true,
+        subscriberId: true,
+      },
+    });
+    this.controlledLiveTest.assertCampaign({
+      organizationId: building.organizationId,
+      programId: input.program.id,
+      governanceMode: input.program.governanceMode,
+      alert: input.alert,
+      deliveries,
+    });
+    return {
+      enabled: true,
+      destinations: deliveries.map((delivery) =>
+        this.controlledLiveTest!.mask(
+          delivery.channel,
+          delivery.destinationSnapshot!,
+        ),
+      ),
+    };
+  }
+
   async sendAlert(
     buildingId: string,
     alertId: string,
@@ -6764,6 +6839,7 @@ export class PopulationService {
           preflight,
         });
       }
+      await this.controlledLiveTestGuard({ buildingId, program, alert });
     }
 
     if (
@@ -7012,6 +7088,31 @@ export class PopulationService {
     if (retryPending > 0) blockingReasons.push('RETRY_PENDING');
     if (reconciliation > 0) blockingReasons.push('RECONCILIATION_REQUIRED');
 
+    let controlledTest = { enabled: false, destinations: [] as string[] };
+    try {
+      controlledTest = await this.controlledLiveTestGuard({
+        buildingId,
+        program,
+        alert,
+      });
+    } catch (error) {
+      if (
+        this.controlledLiveTest?.isEnabledFor(
+          (
+            await this.prisma.building.findUnique({
+              where: { id: buildingId },
+              select: { organizationId: true },
+            })
+          )?.organizationId ?? '',
+          program.id,
+        )
+      ) {
+        blockingReasons.push(
+          error instanceof Error ? error.message : 'CONTROLLED_TEST_INVALID',
+        );
+      }
+    }
+
     return {
       ready: blockingReasons.length === 0,
       blockingReasons: [...new Set(blockingReasons)],
@@ -7037,6 +7138,7 @@ export class PopulationService {
       ).length,
       retryPending,
       reconciliation,
+      controlledTest,
     };
   }
 
@@ -7223,6 +7325,13 @@ export class PopulationService {
     alertId: string,
     programId: string,
   ) {
+    const { alert, program } = await this.getPopulationAlertForBuilding(
+      buildingId,
+      alertId,
+    );
+    if (alert.deliveryModeSnapshot === PopulationDeliveryMode.LIVE) {
+      await this.controlledLiveTestGuard({ buildingId, program, alert });
+    }
     const pendingChannels = await this.prisma.populationAlertDelivery.findMany({
       where: {
         alertId,
@@ -7526,7 +7635,7 @@ export class PopulationService {
       select: { organizationId: true },
     });
     if (!deliveryBuilding) throw new NotFoundException('Bâtiment introuvable');
-    const { alert } = await this.getPopulationAlertForBuilding(
+    const { alert, program } = await this.getPopulationAlertForBuilding(
       buildingId,
       alertId,
     );
@@ -7741,6 +7850,18 @@ export class PopulationService {
       }
     }
 
+    const controlledTest = await this.controlledLiveTestGuard({
+      buildingId,
+      program,
+      alert,
+    });
+    if (controlledTest.enabled) {
+      this.controlledLiveTest!.assertDestination(
+        delivery.channel,
+        delivery.destinationSnapshot,
+      );
+    }
+
     const attemptNumber = delivery.attemptCount + 1;
     const lastAttemptAt = new Date();
     const attemptStarted = await this.prisma.populationAlertDelivery.updateMany(
@@ -7774,7 +7895,9 @@ export class PopulationService {
           delivery.destinationSnapshot,
           delivery.messageSnapshot,
           deliveryBuilding.organizationId,
-          'POPULATION_ALERT',
+          controlledTest.enabled
+            ? 'POPULATION_CONTROLLED_LIVE_TEST'
+            : 'POPULATION_ALERT',
           delivery.idempotencyKey,
         );
       } else if (delivery.channel === PopulationAlertChannel.EMAIL) {
@@ -7806,7 +7929,9 @@ export class PopulationService {
           html: `<p>${escapedMessage}</p>`,
           providerIdempotencyKey: providerIdempotencyKey!,
           organizationId: deliveryBuilding.organizationId,
-          operation: 'POPULATION_ALERT',
+          operation: controlledTest.enabled
+            ? 'POPULATION_CONTROLLED_LIVE_TEST'
+            : 'POPULATION_ALERT',
         });
       } else {
         throw new PopulationProviderError(

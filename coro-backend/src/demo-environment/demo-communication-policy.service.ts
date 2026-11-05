@@ -82,6 +82,8 @@ export class DemoCommunicationPolicyService {
       environment.communicationMode === DemoCommunicationMode.BLOCK;
     const authenticationLiveException =
       !blocked && (await this.isAuthenticationLiveException(request));
+    const controlledPopulationLiveException =
+      !blocked && this.isControlledPopulationLiveException(request);
     const event = await this.prisma.demoCommunicationEvent.upsert({
       where: {
         organizationId_idempotencyKey: {
@@ -112,15 +114,50 @@ export class DemoCommunicationPolicyService {
             recipient: request.recipient,
             payload: request.payload,
           }),
-        simulated: !blocked && !authenticationLiveException,
+        simulated:
+          !blocked &&
+          !authenticationLiveException &&
+          !controlledPopulationLiveException,
         blocked,
       },
       update: {},
       select: { id: true },
     });
     if (blocked) return { disposition: 'BLOCKED', eventId: event.id };
-    if (authenticationLiveException) return { disposition: 'LIVE' };
+    if (authenticationLiveException || controlledPopulationLiveException)
+      return { disposition: 'LIVE' };
     return { disposition: 'SIMULATED', eventId: event.id };
+  }
+
+  private isControlledPopulationLiveException(
+    request: DemoCommunicationRequest,
+  ): boolean {
+    if (
+      process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED !== 'true' ||
+      process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP === 'true' ||
+      request.operation !== 'POPULATION_CONTROLLED_LIVE_TEST' ||
+      request.organizationId !==
+        process.env.POPULATION_CONTROLLED_LIVE_TEST_ORGANIZATION_ID ||
+      !request.recipient
+    ) {
+      return false;
+    }
+    const variable =
+      request.channel === DemoCommunicationChannel.EMAIL
+        ? 'POPULATION_CONTROLLED_LIVE_TEST_EMAIL_SHA256'
+        : request.channel === DemoCommunicationChannel.SMS
+          ? 'POPULATION_CONTROLLED_LIVE_TEST_SMS_SHA256'
+          : null;
+    if (!variable) return false;
+    const configured = process.env[variable]?.trim().toLowerCase();
+    const normalized =
+      request.channel === DemoCommunicationChannel.EMAIL
+        ? request.recipient.trim().toLowerCase()
+        : request.recipient.replace(/[\s().-]/g, '');
+    return (
+      Boolean(configured && /^[a-f0-9]{64}$/.test(configured)) &&
+      configured === digest(normalized)
+    );
   }
 
   private async isAuthenticationLiveException(

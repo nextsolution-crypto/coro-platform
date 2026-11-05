@@ -41,6 +41,11 @@ describe('DemoCommunicationPolicyService', () => {
     else
       process.env.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST =
         previousAllowlist;
+    delete process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED;
+    delete process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP;
+    delete process.env.POPULATION_CONTROLLED_LIVE_TEST_ORGANIZATION_ID;
+    delete process.env.POPULATION_CONTROLLED_LIVE_TEST_EMAIL_SHA256;
+    delete process.env.POPULATION_CONTROLLED_LIVE_TEST_SMS_SHA256;
   });
 
   it('laisse les tenants ordinaires utiliser leur transport existant', async () => {
@@ -238,6 +243,56 @@ describe('DemoCommunicationPolicyService', () => {
       organizationId: demoOrganizationId,
       channel: DemoCommunicationChannel.EMAIL,
       operation: 'PLATFORM_MFA',
+      recipient,
+      payload: {},
+    });
+    expect(decision.disposition).toBe('BLOCKED');
+  });
+
+  it('autorise seulement la destination hachée du test Population contrôlé', async () => {
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED = 'true';
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP = 'false';
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_ORGANIZATION_ID =
+      demoOrganizationId;
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_EMAIL_SHA256 = createHash(
+      'sha256',
+    )
+      .update(recipient)
+      .digest('hex');
+    const h = harness({
+      status: 'ACTIVE',
+      communicationMode: DemoCommunicationMode.SIMULATE,
+      externalProvidersDisabled: true,
+    });
+    await expect(
+      h.service.evaluate({
+        organizationId: demoOrganizationId,
+        channel: DemoCommunicationChannel.EMAIL,
+        operation: 'POPULATION_CONTROLLED_LIVE_TEST',
+        recipient,
+        payload: { subject: 'EXERCICE / TEST' },
+      }),
+    ).resolves.toEqual({ disposition: 'LIVE' });
+  });
+
+  it('maintient PAUSED/BLOCK prioritaire au test Population contrôlé', async () => {
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED = 'true';
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_ORGANIZATION_ID =
+      demoOrganizationId;
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_EMAIL_SHA256 = createHash(
+      'sha256',
+    )
+      .update(recipient)
+      .digest('hex');
+    const h = harness({
+      status: 'PAUSED',
+      communicationMode: DemoCommunicationMode.BLOCK,
+      externalProvidersDisabled: true,
+    });
+    const decision = await h.service.evaluate({
+      organizationId: demoOrganizationId,
+      channel: DemoCommunicationChannel.EMAIL,
+      operation: 'POPULATION_CONTROLLED_LIVE_TEST',
       recipient,
       payload: {},
     });
