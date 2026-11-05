@@ -32,6 +32,7 @@ import {
 import { IncidentService } from '../occupancy/incident.service';
 import { IncidentHistoryQueryDto } from '../occupancy/incident-history.dto';
 import { AddIncidentLogDto, ContainIncidentDto, ResolveIncidentDto, UpdateIncidentRexDto } from '../occupancy/incident-detail.dto';
+import { TriggerIncidentDto } from '../occupancy/incident-trigger.dto';
 import { OccupancyEmployeesService } from '../occupancy/occupancy-employees.service';
 import { OccupancyService } from '../occupancy/occupancy.service';
 import {
@@ -1262,7 +1263,7 @@ export class ClientPortalController {
   }
 
   @Post('incidents/trigger')
-  async triggerIncident(@Body() body: any, @Request() req: any) {
+  async triggerIncident(@Body() body: TriggerIncidentDto, @Request() req: any) {
     await this.clientPortalService.assertIncidentPermission(req.clientUser, IncidentPermission.INCIDENT_COMMAND);
     const actorId = req.clientUser.sub || req.clientUser.id;
     const assignment = await this.incidentService.requireIncidentAuthority({ actorType: 'CLIENT_USER', actorId, organizationId: req.clientUser.organizationId, buildingId: body.buildingId, permission: IncidentPermission.INCIDENT_COMMAND });
@@ -1270,8 +1271,9 @@ export class ClientPortalController {
       body.buildingId,
       req.clientUser,
     );
+    const triggeredBy = [req.clientUser.firstName, req.clientUser.lastName].filter(Boolean).join(' ') || req.clientUser.email || actorId;
     return this.incidentService.triggerIncident(
-      body,
+      { ...body, triggeredBy },
       req.clientUser.organizationId,
       undefined,
       { actorType: 'CLIENT_USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_COMMAND, reason: body.reason || 'Incident creation', requestId: req.id || req.headers?.['x-request-id'] },

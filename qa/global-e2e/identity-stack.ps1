@@ -8,6 +8,7 @@ param(
   [ValidateRange(1024, 65535)][int]$PortalPort = 3167,
   [ValidateRange(1024, 65535)][int]$FrontendPort = 3168,
   [ValidateRange(1024, 65535)][int]$ProviderPort = 34641,
+  [string]$MfaCaptureRoot = '',
   [string]$BackendImage = 'coro-p61-backend:local',
   [string]$PortalImage = 'coro-p61-portal:local',
   [string]$FrontendImage = 'coro-p61-frontend:local',
@@ -19,6 +20,7 @@ $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $compose = Join-Path $PSScriptRoot 'docker-compose.qa.yml'
 $qaRoot = "D:\CORO-QA\runs\$StackId"
+$mfaRoot = if ($MfaCaptureRoot) { [IO.Path]::GetFullPath($MfaCaptureRoot) } else { Join-Path $qaRoot 'mfa' }
 $secretFile = 'D:\CORO-QA\secrets\identity-lab.json'
 $project = "coro-$StackId"
 $prefix = $project
@@ -81,7 +83,7 @@ $secrets = Get-Content -LiteralPath $secretFile -Raw | ConvertFrom-Json
 if (-not $secrets.databasePassword -or -not $secrets.syntheticPassword) {
   throw 'QA Identity Lab secret store is incomplete.'
 }
-New-Item -ItemType Directory -Force -Path (Join-Path $qaRoot 'pg'), (Join-Path $qaRoot 'mfa') | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $qaRoot 'pg'), $mfaRoot | Out-Null
 $env:CORO_QA_DB_PASSWORD = $secrets.databasePassword
 $env:CORO_QA_POSTGRES_DATA = Join-Path $qaRoot 'pg'
 $env:CORO_QA_POSTGRES_PORT = "$DatabasePort"
@@ -137,7 +139,7 @@ Invoke-Docker @('run', '-d', '--name', "$prefix-backend", '--network', $internal
   '-e', 'PRIVATE_STORAGE_QA_MODE=true', '-e', 'PRIVATE_STORAGE_QA_ENDPOINT=http://private-storage-qa:34642',
   '-e', 'PRIVATE_STORAGE_QA_ACCESS_KEY=qa-storage-access', '-e', 'PRIVATE_STORAGE_QA_SECRET_KEY=qa-storage-secret',
   '-e', 'PRIVATE_STORAGE_QA_BUCKET=coro-private-qa',
-  '-v', "$(Join-Path $qaRoot 'mfa'):/tmp/coro-mfa", $BackendImage)
+  '-v', "${mfaRoot}:/tmp/coro-mfa", $BackendImage)
 
 $storageProbeArgs = @(
   'run', '--rm', '--network', $internalNetwork,

@@ -45,8 +45,8 @@ export const P012_ASCENSEUR: ProcedureTemplate = {
         },
         {
           id: sid(CODE, 4),
-          textFR: '« Bonjour, ici la sécurité. Vous êtes en sécurité. Nous allons vous faire sortir dès que possible. Restez calme et ne tentez pas de forcer les portes. »',
-          textEN: '"Hello, this is security. You are safe. We will get you out as soon as possible. Please stay calm and do not try to force the doors."',
+          textFR: '« Bonjour, ici la sécurité. Nous vous entendons et l’aide est en route. Restez calme et ne tentez pas de forcer les portes. »',
+          textEN: '"Hello, this is security. We can hear you and help is on the way. Please stay calm and do not try to force the doors."',
           isBold: false,
           isRed: true,
         },
@@ -183,8 +183,8 @@ export const P012_ASCENSEUR: ProcedureTemplate = {
             },
             {
               id: sid(CODE, 25),
-              textFR: 'Délai d\'attente de la compagnie d\'entretien jugé critique (> 30 min sans nouvelle)',
-              textEN: 'Maintenance company wait time deemed critical (> 30 min with no update)',
+              textFR: 'Délai ou condition dépassant les critères du plan de secours local ou l\'évaluation du personnel qualifié',
+              textEN: 'Delay or condition exceeding the local rescue plan criteria or qualified personnel assessment',
               isList: true,
             },
           ],
@@ -230,8 +230,8 @@ export const P012_ASCENSEUR: ProcedureTemplate = {
         },
         {
           id: sid(CODE, 32),
-          textFR: 'Accueillir les techniciens ou pompiers à l\'entrée principale et les guider vers la cage d\'ascenseur',
-          textEN: 'Welcome technicians or firefighters at the main entrance and guide them to the elevator shaft',
+          textFR: 'Accueillir les techniciens ou pompiers à l\'entrée principale et les guider vers le palier de l\'ascenseur; ne jamais entrer dans la gaine sans formation et autorisation spécialisées',
+          textEN: 'Meet technicians or firefighters at the main entrance and guide them to the elevator landing; never enter the hoistway without specialized training and authorization',
           isBold: false,
         },
         {

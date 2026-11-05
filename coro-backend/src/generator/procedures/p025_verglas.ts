@@ -376,15 +376,15 @@ export const P025_VERGLAS: ProcedureTemplate = {
         // ── Messages types ──────────────────────────────────
         {
           id: sid(CODE, 53),
-          textFR: '**Messages types à diffuser aux occupants** *(Les messages doivent être mentionnés 2 fois de suite)*',
-          textEN: '**Standard messages to broadcast to occupants** *(Messages must be repeated twice consecutively)*',
+          textFR: '**Messages types à diffuser aux occupants** *(Répéter ou adapter selon le plan de communication approuvé et les besoins observés)*',
+          textEN: '**Standard messages to broadcast to occupants** *(Repeat or adapt according to the approved communication plan and observed needs)*',
           isBold: true,
           isRed: true,
         },
         {
           id: sid(CODE, 54),
-          textFR: 'Cadence recommandée : au minimum toutes les 30 minutes durant un épisode actif, immédiatement lors de toute modification des accès ou des conditions, à la levée des mesures',
-          textEN: 'Recommended cadence: at least every 30 minutes during an active episode, immediately upon any change in access or conditions, when measures are lifted',
+          textFR: 'Cadence : selon le plan approuvé et le niveau de risque; communiquer immédiatement toute modification des accès ou des conditions ainsi que la levée des mesures',
+          textEN: 'Cadence: according to the approved plan and risk level; immediately communicate any change in access or conditions and when measures are lifted',
           isBold: false,
         },
         {

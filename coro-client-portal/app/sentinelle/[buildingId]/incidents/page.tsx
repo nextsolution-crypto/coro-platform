@@ -12,6 +12,9 @@ const INCIDENT_LABELS: Record<string, string> = {
   TOXIC_GAS: 'Gaz toxique', SUSPICIOUS_PACKAGE: 'Colis suspect', POWER_OUTAGE: 'Coupure de courant',
   HAZMAT: 'Matières dangereuses', BOMB_THREAT: 'Alerte à la bombe', LITHIUM_BATTERY: 'Batterie lithium',
   FLOODING: 'Inondations', VIOLENT_WINDS: 'Vents violents', OTHER: 'Autre',
+  ELEVATOR_ENTRAPMENT: 'Personne coincée dans un ascenseur', FIRE_PROTECTION_IMPAIRMENT: 'Protection incendie compromise',
+  HAZARDOUS_ATMOSPHERE: 'Atmosphère dangereuse / ventilation de sécurité indisponible', EMERGENCY_POWER_FAILURE: "Perte de l'alimentation électrique d'urgence",
+  SEVERE_ICE_CONDITIONS: 'Conditions dangereuses liées au verglas', CRITICAL_SAFETY_SYSTEM_LOSS: "Perte d'un système essentiel à la sécurité",
 };
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   PRE_ALERT: { label: 'Préalerte', color: '#8E44AD', bg: '#F4ECF7' },
