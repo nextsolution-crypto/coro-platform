@@ -17,9 +17,10 @@
 Le candidat est prêt à être publié pour revue. Le verdict final devient
 `PR_READY` uniquement après :
 
-1. commit et publication de la branche;
-2. création de la PR dédiée;
-3. succès terminal de tous les contrôles obligatoires du HEAD exact.
+1. commit et publication de la branche — réalisé;
+2. création de la PR dédiée `#212` — réalisée;
+3. succès terminal de tous les contrôles obligatoires — réalisé sur le HEAD
+   `c51584c5e85e665cb80ae960b914811170c928e0`.
 
 ## Conditions avant SP-OPS-04B réel
 
@@ -29,4 +30,4 @@ Le candidat est prêt à être publié pour revue. Le verdict final devient
 - Essai réel explicitement autorisé, limité et réconcilié.
 - PAUSED/BLOCK/STOP et toutes les restrictions SP-OPS existantes maintenus.
 
-**Verdict courant : CODE_READY_FOR_PR — aucun envoi réel, aucune activation LIVE.**
+**Verdict courant : PR_READY — aucun envoi réel, aucune activation LIVE.**

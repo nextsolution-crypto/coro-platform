@@ -48,4 +48,17 @@ sera départagé par la CI du dépôt, qui constitue le gate terminal.
 
 - Aucun webhook Brevo réel n'a été reçu dans ce chantier.
 - Aucun SMS n'a été envoyé.
-- La preuve finale de non-régression complète dépend de la CI terminale de la PR.
+- La limite OCR locale a été départagée par la CI terminale équipée du runtime.
+
+## CI de la PR
+
+- PR : `#212`
+- HEAD produit validé : `c51584c5e85e665cb80ae960b914811170c928e0`
+- Backend security checks : PASS
+- Backend tests et PostgreSQL : PASS
+- TypeScript des quatre applications : PASS
+- Build portail client : PASS
+- Jobs de release : SKIPPED, conformément au point d'arrêt
+
+La CI fournit le runtime OCR absent du poste local; la suite backend y est
+entièrement réussie.
