@@ -68,6 +68,8 @@ jobs:
           POPULATION_CONTROLLED_LIVE_TEST_EMAIL_SHA256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
           POPULATION_CONTROLLED_LIVE_TEST_SMS_SHA256: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
           POPULATION_CONTROLLED_LIVE_TEST_MAX_CAMPAIGN_CAD_CENTS: "100"
+          POPULATION_CONTROLLED_LIVE_TEST_SMS_CANADA_CAD_MICROS_PER_SEGMENT: "75000"
+          POPULATION_CONTROLLED_LIVE_TEST_EMAIL_CAD_MICROS_PER_MESSAGE: "1000"
           POPULATION_BREVO_EMAIL_SENDER_VERIFIED: "true"
           POPULATION_SMS_TFN_APPROVED: "true"
         run: docker compose config --format json | node ops/sms-validation/verify-controlled-live-compose.mjs --configured

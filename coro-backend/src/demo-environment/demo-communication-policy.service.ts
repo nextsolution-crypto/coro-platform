@@ -11,6 +11,7 @@ import {
   PopulationGovernanceMode,
   PopulationProgramStatus,
 } from '@prisma/client';
+import { estimateControlledCampaignCost } from '../population/population-controlled-test-cost';
 import { PrismaService } from '../prisma/prisma.service';
 
 export type DemoCommunicationDecision =
@@ -221,6 +222,7 @@ export class DemoCommunicationPolicyService {
                 channel: true,
                 subscriberId: true,
                 destinationSnapshot: true,
+                messageSnapshot: true,
               },
             },
           },
@@ -250,6 +252,13 @@ export class DemoCommunicationPolicyService {
       campaignDeliveries.filter(
         (candidate) => candidate.channel === PopulationAlertChannel.SMS,
       ).length === 1;
+    if (campaignRosterIsExact) {
+      try {
+        estimateControlledCampaignCost(campaignDeliveries);
+      } catch {
+        return false;
+      }
+    }
     return (
       context.alertId === delivery.alertId &&
       context.alertId === delivery.alert.id &&
