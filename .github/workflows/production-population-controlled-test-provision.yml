@@ -1,0 +1,57 @@
+name: Production Population Controlled Test Provision
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: node --test ops/population/population-controlled-test-readiness.test.cjs ops/population/population-controlled-test-provision.test.cjs
+
+  provision:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Validate pinned host identity
+        env:
+          HOST_FINGERPRINT: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+        run: '[[ "$HOST_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]'
+      - name: Provision fixed inactive controlled-test resources
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            script_path="$(mktemp /tmp/coro-population-provision.XXXXXX.cjs)"
+            evidence_path="$(mktemp /tmp/coro-population-provision.XXXXXX.json)"
+            trap 'rm -f -- "$script_path" "$evidence_path"' EXIT
+            exec 9>/run/lock/coro-production-deployment.lock
+            flock -n 9
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
+            git -C "$repo" show "$SOURCE_SHA:ops/population/population-controlled-test-provision.cjs" >"$script_path"
+            cd "$repo"
+            docker compose exec -T \
+              -e CORO_POPULATION_CONTROLLED_TEST_PROVISION_RUN=true \
+              backend node - <"$script_path" >"$evidence_path"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||r.provisioned!==true||r.status!=="CONFIGURING"||r.deliveryMode!=="SANDBOX"||r.governanceMode!=="DUAL_CONTROL"||r.registrationEnabled||r.smsEnabled||r.emailEnabled||r.subscriberCount!==0||r.controlledLiveEnabled||!r.stopActive)process.exit(1);const s=JSON.stringify(r);if(/@getcoro\.io|password|secret|token|access[_-]?key|private[_-]?key|actor-private-id/i.test(s))process.exit(1);' "$evidence_path"
+            cat "$evidence_path"
