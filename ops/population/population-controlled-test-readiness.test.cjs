@@ -8,6 +8,7 @@ const {
   TARGET_BUILDING_ID,
   TARGET_CLIENT_ID,
   TARGET_ORGANIZATION_ID,
+  isGovernanceReady,
   runReadOnly,
   runtimeBudgetStatus,
   runtimeSafetyStatus,
@@ -110,6 +111,35 @@ test('executes the real setup dry-run inside a read-only transaction', async () 
   assert.equal(result.budget.smsEncoding, 'UCS_2');
   assert.equal(JSON.stringify(result).includes('actor-private-id'), false);
   assert.equal(JSON.stringify(result).includes('@getcoro.io'), false);
+});
+
+test('governance readiness requires two eligible and assigned actors', () => {
+  const base = [
+    {
+      label: 'PREPARER_A',
+      eligible: true,
+      targetBuildingAssigned: true,
+      populationPermissions: ['POPULATION_PREPARE'],
+    },
+    {
+      label: 'APPROVER_B',
+      eligible: true,
+      targetBuildingAssigned: true,
+      populationPermissions: ['POPULATION_APPROVE'],
+    },
+  ];
+  assert.equal(isGovernanceReady(base), true);
+  assert.equal(
+    isGovernanceReady(base.map((candidate) => ({ ...candidate, eligible: false }))),
+    false,
+  );
+  assert.equal(
+    isGovernanceReady([
+      { ...base[0], populationPermissions: ['POPULATION_PREPARE', 'POPULATION_APPROVE'] },
+      { ...base[1], populationPermissions: [] },
+    ]),
+    false,
+  );
 });
 
 test('reports safe runtime state without returning configured values', () => {

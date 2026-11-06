@@ -58,6 +58,19 @@ function summarizeCandidate(candidate, user) {
   };
 }
 
+function isGovernanceReady(candidates) {
+  const preparer = candidates.find((candidate) => candidate.label === 'PREPARER_A');
+  const approver = candidates.find((candidate) => candidate.label === 'APPROVER_B');
+  return Boolean(
+    preparer?.eligible &&
+      preparer.targetBuildingAssigned &&
+      preparer.populationPermissions?.includes('POPULATION_PREPARE') &&
+      approver?.eligible &&
+      approver.targetBuildingAssigned &&
+      approver.populationPermissions?.includes('POPULATION_APPROVE'),
+  );
+}
+
 function runtimeBudgetStatus(environment) {
   const required = [
     'POPULATION_CONTROLLED_LIVE_TEST_MAX_CAMPAIGN_CAD_CENTS',
@@ -255,13 +268,7 @@ async function runReadOnly(
         },
         collisionCheck: 'PASS',
         candidates: candidateAccounts,
-        governanceReady:
-          candidateAccounts.some((candidate) =>
-            candidate.populationPermissions?.includes('POPULATION_PREPARE'),
-          ) &&
-          candidateAccounts.some((candidate) =>
-            candidate.populationPermissions?.includes('POPULATION_APPROVE'),
-          ),
+        governanceReady: isGovernanceReady(candidateAccounts),
         runtimeSafety: runtimeSafetyStatus(environment),
         budget,
         proposedMessages: {
@@ -307,6 +314,7 @@ module.exports = {
   calculateMessageBudget,
   exactMatch,
   fingerprint,
+  isGovernanceReady,
   runReadOnly,
   runtimeBudgetStatus,
   runtimeSafetyStatus,
