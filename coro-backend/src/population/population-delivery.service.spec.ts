@@ -2,6 +2,10 @@ import {
   PopulationDeliveryService,
   PopulationProviderError,
 } from './population-delivery.service';
+import {
+  POPULATION_CONTROLLED_LIVE_TEST_OPERATION,
+  POPULATION_CONTROLLED_LIVE_TEST_SMS_SENDER_E164,
+} from './population-controlled-live-test.constants';
 
 describe('PopulationDeliveryService', () => {
   let service: PopulationDeliveryService;
@@ -86,6 +90,52 @@ describe('PopulationDeliveryService', () => {
       providerMessageId: 'sms-brevo-123',
     });
   });
+
+  it('transmet le TFN E.164 exact pour le test contrôlé', async () => {
+    process.env.BREVO_SMS_SENDER =
+      POPULATION_CONTROLLED_LIVE_TEST_SMS_SENDER_E164;
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 201,
+      text: jest.fn().mockResolvedValue(JSON.stringify({ messageId: 'sms-1' })),
+    });
+
+    await service.sendSms(
+      '+15145550101',
+      'EXERCICE / TEST CORO',
+      undefined,
+      POPULATION_CONTROLLED_LIVE_TEST_OPERATION,
+    );
+
+    expect(
+      JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body).sender,
+    ).toBe(POPULATION_CONTROLLED_LIVE_TEST_SMS_SENDER_E164);
+  });
+
+  it.each([
+    ['absent', undefined],
+    ['fallback historique', 'CORO'],
+    ['différent', '+18335550123'],
+  ])(
+    'refuse le sender contrôlé %s avant tout appel fournisseur',
+    async (_label, sender) => {
+      if (sender === undefined) delete process.env.BREVO_SMS_SENDER;
+      else process.env.BREVO_SMS_SENDER = sender;
+
+      await expect(
+        service.sendSms(
+          '+15145550101',
+          'EXERCICE / TEST CORO',
+          undefined,
+          POPULATION_CONTROLLED_LIVE_TEST_OPERATION,
+        ),
+      ).rejects.toMatchObject({
+        code: 'CONTROLLED_TEST_SMS_SENDER_INVALID',
+        outcome: 'NON_RETRYABLE',
+      });
+      expect(global.fetch).not.toHaveBeenCalled();
+    },
+  );
 
   it('envoie un courriel transactionnel via Brevo', async () => {
     (global.fetch as jest.Mock).mockResolvedValue({

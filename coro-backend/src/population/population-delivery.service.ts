@@ -6,6 +6,10 @@ import {
   POPULATION_EMAIL_TIMEOUT_DEFAULT_MS,
   POPULATION_EMAIL_TIMEOUT_MAX_MS,
 } from './population-delivery.constants';
+import {
+  POPULATION_CONTROLLED_LIVE_TEST_OPERATION,
+  POPULATION_CONTROLLED_LIVE_TEST_SMS_SENDER_E164,
+} from './population-controlled-live-test.constants';
 
 export type PopulationProviderResult = {
   provider: 'BREVO' | 'DEMO_SIMULATED';
@@ -49,7 +53,8 @@ export class PopulationProviderError extends Error {
 @Injectable()
 export class PopulationDeliveryService {
   constructor(
-    @Optional() private readonly demoCommunicationPolicy?: DemoCommunicationPolicyService,
+    @Optional()
+    private readonly demoCommunicationPolicy?: DemoCommunicationPolicyService,
   ) {}
 
   private async evaluateDemo(input: {
@@ -64,7 +69,11 @@ export class PopulationDeliveryService {
     if (!input.organizationId) return null;
     if (!this.demoCommunicationPolicy) {
       if (process.env.NODE_ENV === 'production') {
-        throw new PopulationProviderError('DEMO_COMMUNICATION_POLICY_REQUIRED', 'Politique de communication Démo indisponible', 'NON_RETRYABLE');
+        throw new PopulationProviderError(
+          'DEMO_COMMUNICATION_POLICY_REQUIRED',
+          'Politique de communication Démo indisponible',
+          'NON_RETRYABLE',
+        );
       }
       return null;
     }
@@ -79,9 +88,16 @@ export class PopulationDeliveryService {
     });
     if (decision.disposition === 'LIVE') return null;
     if (decision.disposition === 'BLOCKED') {
-      throw new PopulationProviderError('DEMO_COMMUNICATION_BLOCKED', 'Communication externe bloquée pour cet environnement', 'NON_RETRYABLE');
+      throw new PopulationProviderError(
+        'DEMO_COMMUNICATION_BLOCKED',
+        'Communication externe bloquée pour cet environnement',
+        'NON_RETRYABLE',
+      );
     }
-    return { provider: 'DEMO_SIMULATED', providerMessageId: `demo-simulated:${decision.eventId}` };
+    return {
+      provider: 'DEMO_SIMULATED',
+      providerMessageId: `demo-simulated:${decision.eventId}`,
+    };
   }
 
   private getEmailTimeoutMs(): number {
@@ -162,6 +178,18 @@ export class PopulationDeliveryService {
     });
     if (simulated) return simulated;
     const apiKey = this.getApiKey();
+    const sender = process.env.BREVO_SMS_SENDER?.trim();
+
+    if (
+      operation === POPULATION_CONTROLLED_LIVE_TEST_OPERATION &&
+      sender !== POPULATION_CONTROLLED_LIVE_TEST_SMS_SENDER_E164
+    ) {
+      throw new PopulationProviderError(
+        'CONTROLLED_TEST_SMS_SENDER_INVALID',
+        'L’expéditeur SMS approuvé du test contrôlé est indisponible',
+        'NON_RETRYABLE',
+      );
+    }
 
     let response: Response;
 
@@ -173,7 +201,7 @@ export class PopulationDeliveryService {
           'api-key': apiKey,
         },
         body: JSON.stringify({
-          sender: process.env.BREVO_SMS_SENDER || 'CORO',
+          sender: sender || 'CORO',
           recipient: destination,
           content: message,
           type: 'transactional',

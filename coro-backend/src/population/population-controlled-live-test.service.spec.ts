@@ -5,6 +5,7 @@ import {
 } from '@prisma/client';
 import { createHash } from 'crypto';
 import { PopulationControlledLiveTestService } from './population-controlled-live-test.service';
+import { POPULATION_CONTROLLED_LIVE_TEST_SMS_SENDER_E164 } from './population-controlled-live-test.constants';
 
 const digest = (value: string) =>
   createHash('sha256').update(value).digest('hex');
@@ -26,6 +27,8 @@ describe('PopulationControlledLiveTestService', () => {
     process.env.POPULATION_BREVO_EMAIL_SENDER_VERIFIED = 'true';
     process.env.POPULATION_SMS_TFN_APPROVED = 'true';
     process.env.POPULATION_SMS_PRODUCTION_VALIDATED = 'true';
+    process.env.BREVO_SMS_SENDER =
+      POPULATION_CONTROLLED_LIVE_TEST_SMS_SENDER_E164;
     process.env.POPULATION_BREVO_WEBHOOK_SECRET = 'e'.repeat(32);
     process.env.POPULATION_BREVO_SMS_WEBHOOK_SECRET = 's'.repeat(32);
   });
@@ -107,6 +110,19 @@ describe('PopulationControlledLiveTestService', () => {
     process.env.POPULATION_SMS_TFN_APPROVED = 'false';
     expect(() => service.assertCampaign(valid())).toThrow(
       'CONTROLLED_TEST_TFN_NOT_APPROVED',
+    );
+  });
+
+  it.each([
+    ['absent', undefined],
+    ['libellé alphanumérique', 'CORO'],
+    ['autre numéro', '+18335550123'],
+  ])('refuse l’expéditeur SMS %s avant la campagne', (_label, sender) => {
+    if (sender === undefined) delete process.env.BREVO_SMS_SENDER;
+    else process.env.BREVO_SMS_SENDER = sender;
+
+    expect(() => service.assertCampaign(valid())).toThrow(
+      'CONTROLLED_TEST_SMS_SENDER_INVALID',
     );
   });
 

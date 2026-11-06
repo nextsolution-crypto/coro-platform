@@ -9,6 +9,7 @@ import {
   PopulationGovernanceMode,
 } from '@prisma/client';
 import { createHash } from 'crypto';
+import { POPULATION_CONTROLLED_LIVE_TEST_SMS_SENDER_E164 } from './population-controlled-live-test.constants';
 
 type ControlledDelivery = {
   channel: PopulationAlertChannel;
@@ -84,6 +85,14 @@ export class PopulationControlledLiveTestService {
       process.env.POPULATION_SMS_PRODUCTION_VALIDATED !== 'true'
     ) {
       throw new ServiceUnavailableException('CONTROLLED_TEST_TFN_NOT_APPROVED');
+    }
+    if (
+      process.env.BREVO_SMS_SENDER?.trim() !==
+      POPULATION_CONTROLLED_LIVE_TEST_SMS_SENDER_E164
+    ) {
+      throw new ServiceUnavailableException(
+        'CONTROLLED_TEST_SMS_SENDER_INVALID',
+      );
     }
     for (const name of [
       'POPULATION_BREVO_WEBHOOK_SECRET',
