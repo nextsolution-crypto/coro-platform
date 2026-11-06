@@ -6765,6 +6765,7 @@ export class PopulationService {
         channel: true,
         destinationSnapshot: true,
         subscriberId: true,
+        messageSnapshot: true,
       },
     });
     this.controlledLiveTest.assertCampaign({

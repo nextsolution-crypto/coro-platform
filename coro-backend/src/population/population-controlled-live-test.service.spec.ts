@@ -24,6 +24,10 @@ describe('PopulationControlledLiveTestService', () => {
     process.env.POPULATION_CONTROLLED_LIVE_TEST_EMAIL_SHA256 = digest(email);
     process.env.POPULATION_CONTROLLED_LIVE_TEST_SMS_SHA256 = digest(phone);
     process.env.POPULATION_CONTROLLED_LIVE_TEST_MAX_CAMPAIGN_CAD_CENTS = '100';
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_SMS_CANADA_CAD_MICROS_PER_SEGMENT =
+      '75000';
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_EMAIL_CAD_MICROS_PER_MESSAGE =
+      '1000';
     process.env.POPULATION_BREVO_EMAIL_SENDER_VERIFIED = 'true';
     process.env.POPULATION_SMS_TFN_APPROVED = 'true';
     process.env.POPULATION_SMS_PRODUCTION_VALIDATED = 'true';
@@ -55,11 +59,13 @@ describe('PopulationControlledLiveTestService', () => {
         channel: PopulationAlertChannel.EMAIL,
         destinationSnapshot: email,
         subscriberId: 'owner',
+        messageSnapshot: 'EXERCICE / TEST CORO - AUCUNE URGENCE REELLE',
       },
       {
         channel: PopulationAlertChannel.SMS,
         destinationSnapshot: phone,
         subscriberId: 'owner',
+        messageSnapshot: 'EXERCICE / TEST CORO - AUCUNE URGENCE REELLE',
       },
     ],
   });

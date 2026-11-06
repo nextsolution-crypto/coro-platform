@@ -10,11 +10,13 @@ import {
 } from '@prisma/client';
 import { createHash } from 'crypto';
 import { POPULATION_CONTROLLED_LIVE_TEST_SMS_SENDER_E164 } from './population-controlled-live-test.constants';
+import { estimateControlledCampaignCost } from './population-controlled-test-cost';
 
 type ControlledDelivery = {
   channel: PopulationAlertChannel;
   destinationSnapshot: string | null;
   subscriberId: string | null;
+  messageSnapshot: string;
 };
 
 type ControlledAlert = {
@@ -72,7 +74,7 @@ export class PopulationControlledLiveTestService {
     const budget = Number(
       process.env.POPULATION_CONTROLLED_LIVE_TEST_MAX_CAMPAIGN_CAD_CENTS,
     );
-    if (!Number.isInteger(budget) || budget < 1 || budget > 500) {
+    if (!Number.isInteger(budget) || budget < 1 || budget > 100) {
       throw new ServiceUnavailableException('CONTROLLED_TEST_BUDGET_INVALID');
     }
     if (process.env.POPULATION_BREVO_EMAIL_SENDER_VERIFIED !== 'true') {
@@ -170,6 +172,7 @@ export class PopulationControlledLiveTestService {
         );
       }
     }
+    estimateControlledCampaignCost(input.deliveries);
     return true;
   }
 
