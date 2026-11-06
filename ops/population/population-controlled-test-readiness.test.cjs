@@ -130,6 +130,26 @@ test('reports safe runtime state without returning configured values', () => {
   assert.equal(status.controlledLiveEnabled, false);
   assert.equal(status.stopActive, true);
   assert.equal(JSON.stringify(status).includes('private'), false);
+
+  const forbiddenEvidence =
+    /@getcoro\.io|password|secret|token|access[_-]?key|private[_-]?key|actor-private-id/i;
+  const sanitizedEvidence = JSON.stringify({
+    schemaVersion: 1,
+    execution: 'PASS',
+    readOnly: true,
+    collisionCheck: 'PASS',
+    runtimeSafety: status,
+  });
+
+  assert.equal(status.emailWebhookCredentialPresence, 'SET');
+  assert.equal(status.smsWebhookCredentialPresence, 'SET');
+  assert.equal(forbiddenEvidence.test(sanitizedEvidence), false);
+  assert.equal(
+    forbiddenEvidence.test(
+      JSON.stringify({ runtimeSafety: status, leakedValue: 'private-secret' }),
+    ),
+    true,
+  );
 });
 
 test('reports incomplete budget configuration without exposing values', () => {
