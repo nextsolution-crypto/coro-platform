@@ -43,6 +43,14 @@ describe('DemoCommunicationPolicyService', () => {
   const previousAllowlist =
     process.env.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST;
 
+  beforeEach(() => {
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_MAX_CAMPAIGN_CAD_CENTS = '100';
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_SMS_CANADA_CAD_MICROS_PER_SEGMENT =
+      '75000';
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_EMAIL_CAD_MICROS_PER_MESSAGE =
+      '1000';
+  });
+
   afterEach(() => {
     if (previousAllowlist === undefined)
       delete process.env.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST;
@@ -55,6 +63,11 @@ describe('DemoCommunicationPolicyService', () => {
     delete process.env.POPULATION_CONTROLLED_LIVE_TEST_PROGRAM_ID;
     delete process.env.POPULATION_CONTROLLED_LIVE_TEST_EMAIL_SHA256;
     delete process.env.POPULATION_CONTROLLED_LIVE_TEST_SMS_SHA256;
+    delete process.env.POPULATION_CONTROLLED_LIVE_TEST_MAX_CAMPAIGN_CAD_CENTS;
+    delete process.env
+      .POPULATION_CONTROLLED_LIVE_TEST_SMS_CANADA_CAD_MICROS_PER_SEGMENT;
+    delete process.env
+      .POPULATION_CONTROLLED_LIVE_TEST_EMAIL_CAD_MICROS_PER_MESSAGE;
   });
 
   it('laisse les tenants ordinaires utiliser leur transport existant', async () => {
@@ -306,11 +319,13 @@ describe('DemoCommunicationPolicyService', () => {
             channel: PopulationAlertChannel.EMAIL,
             subscriberId: 'subscriber-only',
             destinationSnapshot: recipient,
+            messageSnapshot: 'EXERCICE / TEST CORO - AUCUNE URGENCE REELLE',
           },
           {
             channel: PopulationAlertChannel.SMS,
             subscriberId: 'subscriber-only',
             destinationSnapshot: '+15145550101',
+            messageSnapshot: 'EXERCICE / TEST CORO - AUCUNE URGENCE REELLE',
           },
         ],
       },
@@ -439,11 +454,13 @@ describe('DemoCommunicationPolicyService', () => {
             channel: PopulationAlertChannel.EMAIL,
             subscriberId: 'subscriber-only',
             destinationSnapshot: recipient,
+            messageSnapshot: 'EXERCICE / TEST CORO - AUCUNE URGENCE REELLE',
           },
           {
             channel: PopulationAlertChannel.SMS,
             subscriberId: 'subscriber-only',
             destinationSnapshot: '+15145550101',
+            messageSnapshot: 'EXERCICE / TEST CORO - AUCUNE URGENCE REELLE',
           },
         ],
       },
