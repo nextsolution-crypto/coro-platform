@@ -97,6 +97,7 @@ describe('PopulationService', () => {
       createMany: jest.fn(),
       findMany: jest.fn(),
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
       count: jest.fn(),
       groupBy: jest.fn(),
       updateMany: jest.fn(),
@@ -7765,6 +7766,37 @@ describe('PopulationService', () => {
           deliveryId: 'delivery-1',
           status: PopulationDeliveryStatus.SENT,
           provider: 'BREVO',
+          providerMessageId: 'brevo-sms-123',
+        }),
+      );
+    });
+
+    it('accepte une réconciliation webhook gagnant la course au retour fournisseur', async () => {
+      prisma.populationAlertDelivery.updateMany.mockImplementation(
+        ({ data }: { data?: { status?: PopulationDeliveryStatus } }) =>
+          Promise.resolve({
+            count: data?.status === PopulationDeliveryStatus.SENT ? 0 : 1,
+          }),
+      );
+      prisma.populationAlertDelivery.findUnique.mockResolvedValue({
+        status: PopulationDeliveryStatus.DELIVERED,
+        provider: 'BREVO',
+        providerMessageId: 'brevo-sms-123',
+        sentAt: new Date('2026-09-17T16:01:30.000Z'),
+        deliveredAt: new Date('2026-09-17T16:01:31.000Z'),
+        failedAt: null,
+        errorCode: null,
+      });
+
+      const result = await service.dispatchAlertDelivery(
+        'building-1',
+        'alert-1',
+        'delivery-1',
+      );
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          status: PopulationDeliveryStatus.DELIVERED,
           providerMessageId: 'brevo-sms-123',
         }),
       );

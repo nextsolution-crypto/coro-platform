@@ -205,6 +205,7 @@ export class PopulationDeliveryService {
           recipient: destination,
           content: message,
           type: 'transactional',
+          ...(idempotencyKey ? { tag: idempotencyKey } : {}),
         }),
       });
     } catch {

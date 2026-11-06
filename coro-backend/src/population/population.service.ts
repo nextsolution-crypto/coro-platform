@@ -7986,6 +7986,38 @@ export class PopulationService {
       });
 
       if (updated.count !== 1) {
+        const reconciled = await this.prisma.populationAlertDelivery.findUnique(
+          {
+            where: { id: delivery.id },
+            select: {
+              status: true,
+              provider: true,
+              providerMessageId: true,
+              sentAt: true,
+              deliveredAt: true,
+              failedAt: true,
+              errorCode: true,
+            },
+          },
+        );
+        if (
+          reconciled &&
+          reconciled.provider === providerResult.provider &&
+          reconciled.providerMessageId === providerResult.providerMessageId &&
+          (reconciled.status === PopulationDeliveryStatus.SENT ||
+            reconciled.status === PopulationDeliveryStatus.DELIVERED)
+        ) {
+          return {
+            deliveryId: delivery.id,
+            status: reconciled.status,
+            provider: reconciled.provider,
+            providerMessageId: reconciled.providerMessageId,
+            sentAt: reconciled.sentAt ?? sentAt,
+            deliveredAt: reconciled.deliveredAt,
+            failedAt: reconciled.failedAt,
+            errorCode: reconciled.errorCode,
+          };
+        }
         throw new Error('État de livraison modifié pendant la diffusion');
       }
 

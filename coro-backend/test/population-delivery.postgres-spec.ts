@@ -14,6 +14,9 @@ import {
   RueAssessmentStatus,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { PrismaService } from '../src/prisma/prisma.service';
+import { PopulationBrevoSmsWebhookService } from '../src/population/population-brevo-sms-webhook.service';
+import { PopulationSmsSuppressionService } from '../src/population/population-sms-suppression.service';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 const describePostgres = databaseUrl ? describe : describe.skip;
@@ -22,6 +25,11 @@ describePostgres('Population delivery PostgreSQL invariants', () => {
   const prisma = databaseUrl
     ? new PrismaClient({ datasources: { db: { url: databaseUrl } } })
     : new PrismaClient();
+  const smsWebhook = new PopulationBrevoSmsWebhookService(
+    prisma as unknown as PrismaService,
+    {} as PopulationSmsSuppressionService,
+    { POPULATION_BREVO_SMS_WEBHOOK_SECRET: 'postgres-webhook-secret' },
+  );
   const suffix = randomUUID();
   const ids = {
     organization: `pg-org-${suffix}`,
@@ -329,5 +337,115 @@ describePostgres('Population delivery PostgreSQL invariants', () => {
     await expect(
       prisma.populationAlertDelivery.findUnique({ where: { id: delivery.id } }),
     ).resolves.toMatchObject({ status: PopulationDeliveryStatus.DELIVERED });
+  });
+
+  it('I: reconciles out-of-order concurrent SMS webhooks without regression', async () => {
+    await prisma.populationAlert.update({
+      where: { id: ids.alert },
+      data: { status: PopulationAlertStatus.SENDING },
+    });
+    const providerMessageId = `postgres-sms-${randomUUID()}`;
+    const delivery = await createDelivery({
+      channel: PopulationAlertChannel.SMS,
+      status: PopulationDeliveryStatus.SENT,
+      provider: 'BREVO',
+      providerMessageId,
+    });
+    const receive = (event: string, timestamp: number) =>
+      smsWebhook.receive('Bearer postgres-webhook-secret', {
+        event,
+        messageId: providerMessageId,
+        ts_event: timestamp,
+        reference: 'synthetic-postgres-test',
+      });
+
+    await Promise.all([
+      receive('delivered', 1_800_000_020),
+      receive('sent', 1_800_000_010),
+      receive('accepted', 1_800_000_000),
+    ]);
+
+    await expect(
+      prisma.populationAlertDelivery.findUnique({ where: { id: delivery.id } }),
+    ).resolves.toMatchObject({ status: PopulationDeliveryStatus.DELIVERED });
+    expect(
+      await prisma.populationDeliveryProviderEvent.count({
+        where: { deliveryId: delivery.id },
+      }),
+    ).toBe(3);
+
+    await receive('sent', 1_800_000_010);
+    expect(
+      await prisma.populationDeliveryProviderEvent.count({
+        where: { deliveryId: delivery.id },
+      }),
+    ).toBe(3);
+    await expect(
+      prisma.populationAlertDelivery.findUnique({ where: { id: delivery.id } }),
+    ).resolves.toMatchObject({ status: PopulationDeliveryStatus.DELIVERED });
+  });
+
+  it('J: rejects ambiguous SMS correlation without mutating deliveries', async () => {
+    const duplicateProviderMessageId = `ambiguous-sms-${randomUUID()}`;
+    const first = await createDelivery({
+      channel: PopulationAlertChannel.SMS,
+      status: PopulationDeliveryStatus.SENT,
+      provider: 'BREVO',
+      providerMessageId: duplicateProviderMessageId,
+    });
+    const second = await createDelivery({
+      channel: PopulationAlertChannel.SMS,
+      status: PopulationDeliveryStatus.SENT,
+      provider: 'BREVO',
+      providerMessageId: duplicateProviderMessageId,
+    });
+
+    await smsWebhook.receive('Bearer postgres-webhook-secret', {
+      event: 'delivered',
+      messageId: duplicateProviderMessageId,
+      ts_event: 1_800_000_030,
+    });
+
+    const deliveries = await prisma.populationAlertDelivery.findMany({
+      where: { id: { in: [first.id, second.id] } },
+      orderBy: { id: 'asc' },
+      select: { status: true },
+    });
+    expect(deliveries).toEqual([
+      { status: PopulationDeliveryStatus.SENT },
+      { status: PopulationDeliveryStatus.SENT },
+    ]);
+    expect(
+      await prisma.populationDeliveryProviderEvent.count({
+        where: { deliveryId: { in: [first.id, second.id] } },
+      }),
+    ).toBe(0);
+  });
+
+  it('K: correlates by tag while the sender is still persisting the provider id', async () => {
+    const idempotencyKey = randomUUID();
+    const providerMessageId = `early-sms-${randomUUID()}`;
+    const delivery = await createDelivery({
+      idempotencyKey,
+      channel: PopulationAlertChannel.SMS,
+      status: PopulationDeliveryStatus.SENDING,
+      provider: null,
+      providerMessageId: null,
+    });
+
+    await smsWebhook.receive('Bearer postgres-webhook-secret', {
+      msg_status: 'delivered',
+      messageId: providerMessageId,
+      tag: [idempotencyKey],
+      ts_event: 1_800_000_040,
+    });
+
+    await expect(
+      prisma.populationAlertDelivery.findUnique({ where: { id: delivery.id } }),
+    ).resolves.toMatchObject({
+      status: PopulationDeliveryStatus.DELIVERED,
+      provider: 'BREVO',
+      providerMessageId,
+    });
   });
 });

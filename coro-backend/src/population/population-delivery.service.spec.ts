@@ -112,6 +112,26 @@ describe('PopulationDeliveryService', () => {
     ).toBe(POPULATION_CONTROLLED_LIVE_TEST_SMS_SENDER_E164);
   });
 
+  it('forwards the idempotency key as the SMS correlation tag', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 201,
+      text: jest.fn().mockResolvedValue(JSON.stringify({ messageId: 'sms-2' })),
+    });
+
+    await service.sendSms(
+      '+15145550101',
+      'Alerte CORO',
+      undefined,
+      'POPULATION_ALERT',
+      '11111111-1111-4111-8111-111111111111',
+    );
+
+    expect(
+      JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body).tag,
+    ).toBe('11111111-1111-4111-8111-111111111111');
+  });
+
   it.each([
     ['absent', undefined],
     ['fallback historique', 'CORO'],

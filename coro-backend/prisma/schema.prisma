@@ -5536,6 +5536,7 @@ model PopulationDeliveryProviderEvent {
 
 enum PopulationDeliveryProviderEventType {
   ACCEPTED
+  SENT
   DELIVERED
   DEFERRED
   SOFT_BOUNCE
@@ -5545,6 +5546,8 @@ enum PopulationDeliveryProviderEventType {
   ERROR
   SPAM
   UNSUBSCRIBED
+  REJECTED
+  SKIPPED
 }
 
 enum RueAuthorityType {
