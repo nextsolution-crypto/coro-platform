@@ -20,8 +20,9 @@ Référence production examinée : `98a7de977935c9cfea41fc3333998df02ceb341b`
 | Clé API présente et valide en production | NOT_VERIFIED | GitHub ne contient pas cette clé; validation serveur/fournisseur non exécutée |
 | Expéditeur `info@getcoro.io` autorisé | NOT_VERIFIED | DNS favorable, mais statut du sender Brevo non observé |
 | Domaine `getcoro.io` | CONFIRMÉ PAR CONFIGURATION | Brevo code, deux CNAME DKIM et DMARC publiés publiquement |
-| TFN `+1 833 588-6812` approuvé | NOT_VERIFIED | l'ancien rejet `30527` n'est pas réputé actif, mais aucune preuve actuelle positive n'est disponible |
-| SMS transactionnel vers le Canada | NOT_VERIFIED | dépend du TFN, du compte et des crédits Brevo |
+| TFN `+18335886812` approuvé | CONFIRMÉ PAR LE FOURNISSEUR | approbation Twilio du 20 octobre 2026, reflétée dans Brevo; nom légal `MONTAROUX, MATHIEU` |
+| SMS transactionnel Canada/États-Unis | CONFIRMÉ PAR LE FOURNISSEUR | support Brevo : TFN autorisé, sender E.164 obligatoire |
+| SMS bidirectionnel et événements de réponse/désabonnement | CONFIRMÉ PAR LE FOURNISSEUR | support Brevo; connectivité CORO réelle encore non testée |
 | Coût de la campagne inférieur à 1,00 CAD | NOT_VERIFIED | plafond CORO vérifié; tarif et crédits du compte non observés |
 | Webhooks Bearer | VÉRIFIÉ TECHNIQUEMENT | schéma Brevo officiel compatible et contrôleurs CORO testés |
 | Webhooks réellement enregistrés dans Brevo | NOT_VERIFIED | configuration du compte non accessible |
@@ -48,12 +49,14 @@ Brevo précise que l'authentification de domaine repose sur le code Brevo, DKIM 
 - capacité lecture seule : `42135872060`, **SUCCESS**, releaseReady=true.
 - aucun appel Brevo, aucun SMS et aucun courriel réel.
 
-## Défaut de raccordement découvert
+## Défauts de raccordement découverts
 
 Les variables `POPULATION_CONTROLLED_LIVE_TEST_*`, `POPULATION_BREVO_EMAIL_SENDER_VERIFIED` et `POPULATION_SMS_TFN_APPROVED` sont consommées par le code, mais ne figurent ni dans le bloc `backend.environment` de `docker-compose.yml`, ni dans `.env.example`. Une valeur placée dans le `.env` hôte ne serait donc pas transmise au conteneur.
 
 Conséquence : le mode reste correctement désactivé, mais **SP-OPS-04B ne peut pas être activé gouvernément** sur cette composition. Un correctif de raccordement, avec valeurs par défaut fail-closed, revue, CI et release distincte est requis.
 
+Le transport SMS utilise `BREVO_SMS_SENDER || 'CORO'`. La garde contrôlée vérifie les attestations TFN, mais pas que le sender effectif vaut exactement `+18335886812`. La configuration de production demeure **NOT_VERIFIED** et le fallback `CORO` est incompatible avec l'instruction Brevo pour ce test. Avant SP-OPS-04B, le contrôle au seuil du transport doit refuser toute autre valeur, sans modifier silencieusement la configuration de production.
+
 ## Verdict Brevo
 
-**NO-GO POUR UN ENVOI RÉEL.** L'intégration est techniquement prête en simulation, mais les états fournisseur, la configuration runtime et le raccordement Compose ne sont pas tous démontrés.
+**NO-GO POUR UN ENVOI RÉEL.** Le TFN et son admissibilité Canada/États-Unis sont maintenant confirmés par le fournisseur. La connectivité, le sender runtime exact, les crédits, les webhooks et le raccordement Compose ne sont pas tous démontrés.

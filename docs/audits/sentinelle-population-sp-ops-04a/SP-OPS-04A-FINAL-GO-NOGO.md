@@ -11,7 +11,9 @@ SHA production : `98a7de977935c9cfea41fc3333998df02ceb341b`
 | Courriel — implémentation | PASS | VÉRIFIÉ TECHNIQUEMENT |
 | Courriel — sender/compte Brevo | NOT_VERIFIED | fournisseur non accessible |
 | SMS — implémentation | PASS | VÉRIFIÉ TECHNIQUEMENT |
-| SMS — TFN Canada | NOT_VERIFIED | fournisseur non accessible |
+| SMS — TFN Canada/États-Unis | PASS | CONFIRMÉ PAR LE FOURNISSEUR, 20 octobre 2026 |
+| SMS — bidirectionnel/réponses/désabonnements | PASS fournisseur | connectivité CORO NOT_VERIFIED |
+| SMS — sender runtime `+18335886812` | NOT_VERIFIED | fallback code `CORO` identifié |
 | SMS — crédits/coût | NOT_VERIFIED | fournisseur non accessible |
 | Webhooks — contrat/authentification | PASS | VÉRIFIÉ TECHNIQUEMENT |
 | Webhooks — enregistrement réel | NOT_VERIFIED | fournisseur non accessible |
@@ -26,16 +28,17 @@ SHA production : `98a7de977935c9cfea41fc3333998df02ceb341b`
 
 **NO-GO POUR SP-OPS-04B À CETTE DATE.**
 
-L'architecture de sécurité et les adaptateurs sont prêts en simulation. Le mode réel demeure désactivé et PAUSED/BLOCK/STOP n'ont pas été contournés. Il reste quatre familles de conditions :
+L'architecture de sécurité et les adaptateurs sont prêts en simulation. Le mode réel demeure désactivé et PAUSED/BLOCK/STOP n'ont pas été contournés. Il reste cinq familles de conditions :
 
 1. corriger et livrer le raccordement fail-closed des variables SP-OPS-03 dans Compose;
-2. obtenir les preuves Brevo actuelles (TFN, sender, API, webhooks, crédits/coût);
-3. enregistrer hors Git le destinataire et son consentement;
-4. obtenir une autorisation distincte du message exact et de la destination masquée.
+2. imposer au parcours contrôlé le sender `+18335886812` et refuser le fallback `CORO`;
+3. obtenir les preuves Brevo encore ouvertes (sender courriel, API, webhooks, crédits/coût);
+4. enregistrer hors Git le destinataire et son consentement;
+5. obtenir une autorisation distincte du message exact et de la destination masquée.
 
 ## Checklist manuelle Brevo — parcours exact
 
-1. **TFN** — `Brevo > Settings > Senders, Domains & Dedicated IPs > SMS senders / Sender registration` : relever le statut exact de `+1 833 588-6812` et la capacité Canada transactionnelle.
+1. **TFN** — aucune nouvelle preuve requise pour l'approbation; conserver la confirmation datée du 20 octobre 2026. Dans `Settings > Senders, Domains & Dedicated IPs > SMS senders / Sender registration`, vérifier seulement que le compte affiche toujours `+18335886812` sans nouvelle restriction.
 2. **Courriel** — `Settings > Senders, Domains & Dedicated IPs > Senders` : confirmer `info@getcoro.io` actif; puis `Domains` : confirmer `getcoro.io` **Authenticated**.
 3. **API** — `Settings > SMTP & API > API Keys` : confirmer la clé CORO **Active**, sa dernière utilisation récente, ses permissions et l'absence de blocage IP. Ne jamais copier la clé.
 4. **Webhooks** — `Transactional > Settings > Webhooks` : confirmer deux webhooks actifs vers les routes CORO, canal email/SMS, auth Bearer, non batché pour le courriel et événements attendus.
@@ -97,3 +100,28 @@ NODE
 ```
 
 Résultats attendus avant SP-OPS-04B : compte HTTP 200; deux webhooks minimisés conformes; toutes les valeurs nécessaires `CONFIGURED`; `ENABLED=FALSE` et `STOP=TRUE` jusqu'à l'autorisation finale.
+
+Vérification supplémentaire du sender, sans imprimer sa valeur :
+
+```bash
+cd /opt/coro-platform
+docker compose exec -T backend node - <<'NODE'
+const expected = '+18335886812';
+const actual = process.env.BREVO_SMS_SENDER?.trim();
+console.log(`BREVO_SMS_SENDER_MATCH=${!actual ? 'UNSET' : actual === expected ? 'YES' : 'NO'}`);
+NODE
+```
+
+Résultat obligatoire : `BREVO_SMS_SENDER_MATCH=YES`.
+
+## Conditions d'autorisation SP-OPS-04B
+
+- TFN : **satisfaite**.
+- Canada/États-Unis et bidirectionnel : **satisfaite côté fournisseur**.
+- sender runtime E.164 exact : **ouverte**.
+- clé API et expéditeur courriel : **ouverts**.
+- webhooks enregistrés, authentifiés et joignables : **ouverts**.
+- coût/crédits sous le plafond : **ouvert**.
+- destinataire unique et consentement hors Git : **ouverts**.
+- raccordement Compose et refus du fallback : **ouverts**.
+- autorisation humaine finale du message et de la destination masquée : **ouverte**.

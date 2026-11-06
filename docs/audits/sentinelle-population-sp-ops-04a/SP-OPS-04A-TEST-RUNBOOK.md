@@ -25,7 +25,7 @@ Corps :
 ## Conditions préalables obligatoires
 
 1. correctif Compose livré pour transmettre les variables SP-OPS-03;
-2. TFN et sender courriel confirmés par Brevo;
+2. TFN `+18335886812`, sender SMS runtime exact et sender courriel confirmés;
 3. webhooks enregistrés et testés avec HTTP 200;
 4. crédits et coût total démontrés, maximum 1,00 CAD;
 5. destinataire et consentement stockés hors Git;
@@ -47,6 +47,8 @@ Corps :
 9. ne jamais relancer automatiquement un résultat ambigu;
 10. réconcilier acceptation, livraison et réception humaine;
 11. remettre `STOP=true`, désactiver le mode contrôlé et vérifier l'absence de campagne réutilisable.
+
+Au seuil du transport SMS, vérifier de nouveau que `BREVO_SMS_SENDER` correspond exactement à `+18335886812`. Toute valeur manquante, `CORO` ou autre sender doit produire un refus sans appel fournisseur.
 
 ## Arrêt
 

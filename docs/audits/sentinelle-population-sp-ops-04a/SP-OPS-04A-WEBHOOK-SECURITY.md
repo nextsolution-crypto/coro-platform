@@ -46,6 +46,8 @@ Résultat ciblé inclus dans les **76 tests réussis**.
 | Webhook courriel créé, actif, non batché et correctement filtré | NOT_VERIFIED |
 | Webhook SMS créé et actif | NOT_VERIFIED |
 | Test webhook Brevo reçu avec HTTP 200 | NOT_VERIFIED |
+| Capacité fournisseur réponse/désabonnement SMS | CONFIRMÉ PAR LE FOURNISSEUR |
+| Réception réelle de ces événements par CORO | NOT_VERIFIED |
 
 ## Verdict
 
