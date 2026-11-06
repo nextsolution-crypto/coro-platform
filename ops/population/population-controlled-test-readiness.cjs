@@ -91,8 +91,11 @@ function runtimeSafetyStatus(environment) {
       'BREVO_SENDER_EMAIL',
       APPROVED_EMAIL_SENDER,
     ),
-    emailWebhookSecret: presence(environment, 'POPULATION_BREVO_WEBHOOK_SECRET'),
-    smsWebhookSecret: presence(
+    emailWebhookCredentialPresence: presence(
+      environment,
+      'POPULATION_BREVO_WEBHOOK_SECRET',
+    ),
+    smsWebhookCredentialPresence: presence(
       environment,
       'POPULATION_BREVO_SMS_WEBHOOK_SECRET',
     ),
