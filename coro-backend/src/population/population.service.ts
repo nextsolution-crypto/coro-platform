@@ -112,6 +112,8 @@ const POPULATION_ACCESS_REQUEST_TOKEN_AAD = Buffer.from(
 
 const POPULATION_DELIVERY_MAX_ATTEMPTS = 3;
 const POPULATION_DELIVERY_BACKOFF_MS = [60_000, 5 * 60_000, 15 * 60_000];
+export const POPULATION_DELIVERY_DEFAULT_BATCH_SIZE = 25;
+export const POPULATION_DELIVERY_MAX_BATCH_SIZE = 100;
 
 const DISPERSION_REQUIRED_FIELDS = [
   'dispersionSourceFileId',
@@ -6966,6 +6968,7 @@ export class PopulationService {
         orderBy: {
           queuedAt: 'asc',
         },
+        take: POPULATION_DELIVERY_DEFAULT_BATCH_SIZE,
       },
     );
 
@@ -7321,11 +7324,16 @@ export class PopulationService {
     }
   }
 
-  private async resumeSendingAlert(
+  async processSendingAlertBatch(
     buildingId: string,
     alertId: string,
     programId: string,
+    requestedBatchSize = POPULATION_DELIVERY_DEFAULT_BATCH_SIZE,
   ) {
+    const batchSize = Math.min(
+      Math.max(Math.trunc(requestedBatchSize), 1),
+      POPULATION_DELIVERY_MAX_BATCH_SIZE,
+    );
     const { alert, program } = await this.getPopulationAlertForBuilding(
       buildingId,
       alertId,
@@ -7370,6 +7378,7 @@ export class PopulationService {
           subscriber: { select: { isSynthetic: true } },
         },
         orderBy: { queuedAt: 'asc' },
+        take: batchSize,
       },
     );
 
@@ -7403,6 +7412,14 @@ export class PopulationService {
     }
 
     return this.finalizeSendingAlert(buildingId, alertId, programId);
+  }
+
+  private async resumeSendingAlert(
+    buildingId: string,
+    alertId: string,
+    programId: string,
+  ) {
+    return this.processSendingAlertBatch(buildingId, alertId, programId);
   }
 
   private async recoverExpiredDeliveryLeases(alertId: string) {

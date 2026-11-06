@@ -20,6 +20,7 @@ import { PopulationBrevoSmsWebhookService } from './population-brevo-sms-webhook
 import { PopulationSmsSuppressionService } from './population-sms-suppression.service';
 import { PopulationContactChangeService } from './population-contact-change.service';
 import { PopulationControlledLiveTestService } from './population-controlled-live-test.service';
+import { PopulationDeliveryWorkerService } from './population-delivery-worker.service';
 
 @Module({
   imports: [GeocodingModule, StorageModule],
@@ -48,6 +49,7 @@ import { PopulationControlledLiveTestService } from './population-controlled-liv
     PopulationOperationalEventsService,
     PopulationEvidenceService,
     PopulationEvidenceReportService,
+    PopulationDeliveryWorkerService,
   ],
   exports: [
     PopulationService,
