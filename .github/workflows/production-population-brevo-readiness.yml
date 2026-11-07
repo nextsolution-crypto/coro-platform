@@ -53,8 +53,9 @@ jobs:
             docker compose exec -T \
               -e CORO_POPULATION_BREVO_READINESS_RUN=true \
               backend node - <"$script_path" >"$evidence_path"
-            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||r.nonTransactional!==true||r.accountHttp!==200||r.webhooksHttp!==200)process.exit(1);const s=JSON.stringify(r);if(/password|secret|token|access[_-]?key|private[_-]?key|@/i.test(s))process.exit(1);' "$evidence_path"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));const s=JSON.stringify(r);if(r.schemaVersion!==1||r.nonTransactional!==true||/password|secret|token|access[_-]?key|private[_-]?key|@/i.test(s))process.exit(1);' "$evidence_path"
             cat "$evidence_path"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.execution!=="PASS"||r.accountHttp!==200||r.webhooksHttp!==200)process.exit(1);' "$evidence_path"
       - name: Record evidence boundary
         if: always()
         run: echo 'Only HTTP status, aggregate SMS credit availability, and minimized webhook configuration are emitted. Account identity, API keys, webhook tokens, destinations, and personal data are never emitted.'
