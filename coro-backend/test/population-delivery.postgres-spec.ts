@@ -448,4 +448,80 @@ describePostgres('Population delivery PostgreSQL invariants', () => {
       providerMessageId,
     });
   });
+
+  it.each([1, 10, 100, 1_000])(
+    'L: traite %i livraisons PostgreSQL par lots sans omission ni doublon',
+    async (volume) => {
+      const campaign = `mass-${volume}-${randomUUID()}`;
+      const idempotencyKeys = Array.from(
+        { length: volume },
+        (_, index) => `${campaign}-${index}`,
+      );
+      await prisma.populationAlertDelivery.createMany({
+        data: idempotencyKeys.map((idempotencyKey) => ({
+          idempotencyKey,
+          alertId: ids.alert,
+          subscriberId: ids.subscriber,
+          channel: PopulationAlertChannel.EMAIL,
+          status: PopulationDeliveryStatus.QUEUED,
+          language: PopulationPreferredLanguage.FR,
+          messageSnapshot: 'EXERCICE / TEST CORO',
+          destinationSnapshot: 'postgres-test@example.invalid',
+        })),
+      });
+
+      let processed = 0;
+      let batches = 0;
+      while (true) {
+        const queued = await prisma.populationAlertDelivery.findMany({
+          where: {
+            idempotencyKey: { in: idempotencyKeys },
+            status: PopulationDeliveryStatus.QUEUED,
+          },
+          orderBy: [{ queuedAt: 'asc' }, { id: 'asc' }],
+          take: 25,
+          select: { id: true },
+        });
+        if (queued.length === 0) break;
+        batches += 1;
+        const claimed = await prisma.populationAlertDelivery.updateMany({
+          where: {
+            id: { in: queued.map(({ id }) => id) },
+            status: PopulationDeliveryStatus.QUEUED,
+          },
+          data: {
+            status: PopulationDeliveryStatus.SENT,
+            provider: 'SIMULATED',
+            sentAt: new Date(),
+          },
+        });
+        processed += claimed.count;
+      }
+
+      expect(processed).toBe(volume);
+      expect(batches).toBe(Math.ceil(volume / 25));
+      expect(
+        await prisma.populationAlertDelivery.count({
+          where: {
+            idempotencyKey: { in: idempotencyKeys },
+            status: PopulationDeliveryStatus.SENT,
+          },
+        }),
+      ).toBe(volume);
+      expect(
+        await prisma.populationAlertDelivery.updateMany({
+          where: {
+            idempotencyKey: { in: idempotencyKeys },
+            status: PopulationDeliveryStatus.QUEUED,
+          },
+          data: { status: PopulationDeliveryStatus.SENT },
+        }),
+      ).toMatchObject({ count: 0 });
+
+      await prisma.populationAlertDelivery.deleteMany({
+        where: { idempotencyKey: { in: idempotencyKeys } },
+      });
+    },
+    30_000,
+  );
 });
