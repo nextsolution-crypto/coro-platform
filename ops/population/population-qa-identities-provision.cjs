@@ -36,6 +36,24 @@ const IDENTITIES = Object.freeze([
 const APPROVAL = 'SP_OPS_04B_QA_IDENTITIES_2026_11_07';
 const digest = (value) => createHash('sha256').update(value.trim().toLowerCase()).digest('hex');
 
+function resolveCompiledModule(root, basename) {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const absoluteRoot = path.resolve(root);
+  const matches = [];
+  const visit = (directory) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const candidate = path.join(directory, entry.name);
+      if (entry.isSymbolicLink()) continue;
+      if (entry.isDirectory()) visit(candidate);
+      else if (entry.isFile() && entry.name === basename) matches.push(candidate);
+    }
+  };
+  visit(absoluteRoot);
+  if (matches.length !== 1 || !matches[0].startsWith(`${absoluteRoot}${path.sep}`)) throw new Error(`QA_RUNTIME_MODULE_${matches.length ? 'AMBIGUOUS' : 'MISSING'}:${basename}`);
+  return matches[0];
+}
+
 function assertAuthority(env) {
   if (env.CORO_POPULATION_QA_IDENTITIES_RUN !== 'true' || env.CORO_POPULATION_QA_IDENTITIES_APPROVAL !== APPROVAL) {
     throw new Error('EXACT_QA_IDENTITY_APPROVAL_REQUIRED');
@@ -70,12 +88,12 @@ function exactExisting(existingUsers, existingInternal, existingEvents) {
 
 async function execute(env = process.env) {
   assertAuthority(env);
-  const path = require('node:path');
   const bcrypt = require('bcrypt');
   const { PrismaClient } = require('@prisma/client');
-  const { ClientInvitationOutboxService } = require(path.join(process.cwd(), 'dist/src/clients/client-invitation-outbox.service'));
-  const { DemoCommunicationPolicyService } = require(path.join(process.cwd(), 'dist/src/demo-environment/demo-communication-policy.service'));
-  const { EmailService } = require(path.join(process.cwd(), 'dist/src/client-portal/email.service'));
+  const runtimeRoot = '/app/dist';
+  const { ClientInvitationOutboxService } = require(resolveCompiledModule(runtimeRoot, 'client-invitation-outbox.service.js'));
+  const { DemoCommunicationPolicyService } = require(resolveCompiledModule(runtimeRoot, 'demo-communication-policy.service.js'));
+  const { EmailService } = require(resolveCompiledModule(runtimeRoot, 'email.service.js'));
   const prisma = new PrismaClient();
   try {
     const [organization, client, building, actor, existingUsers, existingInternal, existingEvents] = await Promise.all([
@@ -171,4 +189,4 @@ async function execute(env = process.env) {
 }
 
 if (!module.parent) execute().then((result) => process.stdout.write(`${JSON.stringify(result)}\n`)).catch((error) => { process.stderr.write(`${error.message}\n`); process.exitCode = 1; });
-module.exports = { APPROVAL, IDENTITIES, TARGET, assertAuthority, assertFoundation, exactExisting, execute };
+module.exports = { APPROVAL, IDENTITIES, TARGET, assertAuthority, assertFoundation, exactExisting, resolveCompiledModule, execute };
