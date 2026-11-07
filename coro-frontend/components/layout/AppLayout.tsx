@@ -78,6 +78,7 @@ const ADMIN_GROUP = {
     { label: 'Types d’activités',     path: '/settings/activity-types',      icon: '◆' },
     { label: 'Catégories timelog',   path: '/settings/timelog-categories',  icon: '🏷' },
     { label: 'Nous écrire',          path: '/settings/feedback',            icon: '💬' },
+    { label: 'Mes recettes pilotes', path: '/pilot-scenarios',              icon: '✓' },
   ],
 };
 
@@ -847,7 +848,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   {ADMIN_GROUP.label}
                 </p>
                 <div className="space-y-0.5">
-                  {ADMIN_GROUP.items.map(item => renderNavItem(item))}
+                  {ADMIN_GROUP.items
+                    .filter(item => item.path !== '/pilot-scenarios' || user.role === 'ADMIN')
+                    .map(item => renderNavItem(item))}
                 </div>
               </div>
             )}
