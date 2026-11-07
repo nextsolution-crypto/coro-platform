@@ -60,4 +60,8 @@ test('source contains no transactional endpoint or mutation method', () => {
   );
   assert.doesNotMatch(source, /transactionalSMS\/send|smtp\/email/);
   assert.doesNotMatch(source, /method:\s*['"](?:POST|PUT|PATCH|DELETE)['"]/);
+  assert.match(
+    source,
+    /process\.env\.CORO_POPULATION_BREVO_READINESS_RUN === 'true'/,
+  );
 });

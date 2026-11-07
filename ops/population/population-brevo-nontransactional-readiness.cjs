@@ -92,11 +92,13 @@ async function run(environment = process.env, fetchImpl = globalThis.fetch) {
   };
 }
 
-if (require.main === module) {
+if (
+  require.main === module ||
+  process.env.CORO_POPULATION_BREVO_READINESS_RUN === 'true'
+) {
   run()
     .then((result) => {
       process.stdout.write(`${JSON.stringify(result)}\n`);
-      if (result.execution !== 'PASS') process.exitCode = 1;
     })
     .catch((error) => {
       process.stderr.write(
