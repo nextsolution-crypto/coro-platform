@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { createHash } = require('node:crypto');
-const { APPROVAL, IDENTITIES, TARGET, assertAuthority, assertFoundation, exactExisting } = require('./population-qa-identities-provision.cjs');
+const { APPROVAL, IDENTITIES, TARGET, assertAuthority, assertFoundation, exactExisting, resolveCompiledModule } = require('./population-qa-identities-provision.cjs');
 
 const hashes = IDENTITIES.map(({ email }) => createHash('sha256').update(email).digest('hex')).join(',');
 const env = { CORO_POPULATION_QA_IDENTITIES_RUN: 'true', CORO_POPULATION_QA_IDENTITIES_APPROVAL: APPROVAL, POPULATION_CONTROLLED_LIVE_TEST_ENABLED: 'false', POPULATION_CONTROLLED_LIVE_TEST_STOP: 'true', DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST: hashes };
@@ -33,4 +33,21 @@ test('source has fixed recipients and no alert transport', () => {
   assert.equal((source.match(/demo-sp-preparer@getcoro\.io/g) || []).length, 1);
   assert.equal((source.match(/demo-sp-approver@getcoro\.io/g) || []).length, 1);
   assert.doesNotMatch(source, /sendSms|POPULATION_CONTROLLED_LIVE_TEST_ENABLED\s*=\s*['"]true|smtp\/email/);
+});
+
+test('resolves exactly one compiled runtime module and rejects ambiguity', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'coro-qa-module-'));
+  try {
+    fs.mkdirSync(path.join(root, 'nested'));
+    fs.writeFileSync(path.join(root, 'nested', 'service.js'), 'module.exports={}');
+    assert.equal(resolveCompiledModule(root, 'service.js'), path.join(root, 'nested', 'service.js'));
+    fs.writeFileSync(path.join(root, 'service.js'), 'module.exports={}');
+    assert.throws(() => resolveCompiledModule(root, 'service.js'), /AMBIGUOUS/);
+    assert.throws(() => resolveCompiledModule(root, 'missing.js'), /MISSING/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
