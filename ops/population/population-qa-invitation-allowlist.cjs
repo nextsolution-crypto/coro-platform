@@ -17,7 +17,13 @@ function assertAuthority(env) {
   }
 }
 
-function updateContent(content) {
+function parseValues(raw, errorCode) {
+  const values = (raw || '').split(',').map((v) => v.trim().toLowerCase()).filter(Boolean);
+  if (values.some((v) => !HASH_RE.test(v)) || new Set(values).size !== values.length) throw new Error(errorCode);
+  return values;
+}
+
+function updateContent(content, runtimeValue = '') {
   const eol = content.includes('\r\n') ? '\r\n' : '\n';
   const lines = content.split(/\r?\n/);
   const indexes = [];
@@ -25,16 +31,14 @@ function updateContent(content) {
     if (lines[i].startsWith(`${KEY}=`)) indexes.push(i);
   }
   if (indexes.length > 1) throw new Error('QA_INVITATION_ALLOWLIST_DUPLICATE_KEY');
-  const existing = indexes.length === 1
-    ? lines[indexes[0]].slice(KEY.length + 1).split(',').map((v) => v.trim().toLowerCase()).filter(Boolean)
-    : [];
-  if (existing.some((v) => !HASH_RE.test(v)) || new Set(existing).size !== existing.length) {
-    throw new Error('QA_INVITATION_ALLOWLIST_EXISTING_VALUE_INVALID');
-  }
+  const persisted = indexes.length === 1 ? parseValues(lines[indexes[0]].slice(KEY.length + 1), 'QA_INVITATION_ALLOWLIST_EXISTING_VALUE_INVALID') : [];
+  const runtime = parseValues(runtimeValue, 'QA_INVITATION_ALLOWLIST_RUNTIME_VALUE_INVALID');
+  const existing = [...persisted];
+  for (const value of runtime) if (!existing.includes(value)) existing.push(value);
   const required = TARGETS.map(hash);
   const finalValues = [...existing];
   for (const value of required) if (!finalValues.includes(value)) finalValues.push(value);
-  if (finalValues.length !== 4) throw new Error('QA_INVITATION_ALLOWLIST_FINAL_CARDINALITY_INVALID');
+  if (finalValues.length !== 6) throw new Error('QA_INVITATION_ALLOWLIST_FINAL_CARDINALITY_INVALID');
   const replacement = `${KEY}=${finalValues.join(',')}`;
   if (indexes.length === 1) lines[indexes[0]] = replacement;
   else {
@@ -70,7 +74,7 @@ function main() {
   assertAuthority(process.env);
   const file = process.argv[2];
   if (!file || !path.isAbsolute(file)) throw new Error('QA_INVITATION_ALLOWLIST_ENV_PATH_INVALID');
-  const result = updateContent(fs.readFileSync(file, 'utf8'));
+  const result = updateContent(fs.readFileSync(file, 'utf8'), process.env.CORO_POPULATION_QA_ALLOWLIST_RUNTIME || '');
   writeAtomic(file, result.content);
   process.stdout.write(`${JSON.stringify(result.evidence)}\n`);
 }

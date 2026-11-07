@@ -71,9 +71,12 @@ jobs:
             cd "$repo"
             [[ "$(docker inspect --format '{{.State.Running}}' coro_backend)" == true ]]
             docker exec coro_backend node -e 'if(process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED!=="false"||process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP!=="true")process.exit(1)'
+            runtime_allowlist="$(docker exec coro_backend printenv DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST)"
             CORO_POPULATION_QA_ALLOWLIST_RUN=true \
               CORO_POPULATION_QA_ALLOWLIST_APPROVAL=SP_OPS_04B_QA_INVITATION_ALLOWLIST_2026_11_07 \
+              CORO_POPULATION_QA_ALLOWLIST_RUNTIME="$runtime_allowlist" \
               node "$updater" "$env_file" >"$evidence"
+            unset runtime_allowlist
             changed=true
             docker compose config --quiet
             docker compose up -d --no-deps --force-recreate backend >/dev/null
@@ -89,9 +92,9 @@ jobs:
             const crypto=require('crypto');
             const values=(process.env.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST||'').split(',').map(v=>v.trim()).filter(Boolean);
             const required=['demo-sp-preparer@getcoro.io','demo-sp-approver@getcoro.io'].map(v=>crypto.createHash('sha256').update(v).digest('hex'));
-            if(values.length!==4||new Set(values).size!==4||values.some(v=>!/[a-f0-9]{64}/.test(v))||required.some(v=>!values.includes(v)))process.exit(1);
+            if(values.length!==6||new Set(values).size!==6||values.some(v=>!/[a-f0-9]{64}/.test(v))||required.some(v=>!values.includes(v)))process.exit(1);
             if(process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED!=='false'||process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP!=='true')process.exit(1);
             NODE
-            node -e 'const r=require(process.argv[1]);if(r.schemaVersion!==1||r.execution!=="PASS"||r.finalCount!==4||r.exactTargetsPresent!==true)process.exit(1);const s=JSON.stringify(r);if(/@|[a-f0-9]{64}/i.test(s))process.exit(1)' "$evidence"
+            node -e 'const r=require(process.argv[1]);if(r.schemaVersion!==1||r.execution!=="PASS"||r.finalCount!==6||r.exactTargetsPresent!==true)process.exit(1);const s=JSON.stringify(r);if(/@|[a-f0-9]{64}/i.test(s))process.exit(1)' "$evidence"
             cat "$evidence"
             changed=false
