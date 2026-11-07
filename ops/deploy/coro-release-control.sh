@@ -32,10 +32,18 @@ let parsed; try { parsed=JSON.parse(process.env.CLIENT_INVITATION_OUTBOX_PREVIOU
 if (!parsed || Array.isArray(parsed) || typeof parsed!=="object") process.exit(1);
 for (const [id,value] of Object.entries(parsed)) { if (!/^[A-Za-z0-9_.-]{1,64}$/.test(id) || typeof value!=="string" || Buffer.from(value,"base64").length!==32 || Buffer.from(value,"base64").toString("base64")!==value) process.exit(1); }
 ' || { echo 'RELEASE_CONTROL_FAILED code=CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_INVALID' >&2; exit 1; }
-DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST="${DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST:-}" node -e '
-const values=(process.env.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST||"").split(",").map(v=>v.trim()).filter(Boolean);
-if (values.length !== 4 || new Set(values).size !== 4 || values.some(v=>!/[a-f0-9]{64}/.test(v))) process.exit(1);
-' || { echo 'RELEASE_CONTROL_FAILED code=DEMO_AUTH_EMAIL_ALLOWLIST_INVALID' >&2; exit 1; }
+persisted_allowlist="$(node -e '
+const fs=require("fs"); const file="/opt/coro-platform/.env";
+if(!fs.existsSync(file)) process.exit(0);
+const lines=fs.readFileSync(file,"utf8").split(/\r?\n/).filter(v=>v.startsWith("DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST="));
+if(lines.length>1) process.exit(1); process.stdout.write(lines[0]?.slice(lines[0].indexOf("=")+1)||"");
+')" || { echo 'RELEASE_CONTROL_FAILED code=DEMO_AUTH_EMAIL_ALLOWLIST_PERSISTED_INVALID' >&2; exit 1; }
+DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST="$(INCOMING="${DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST:-}" PERSISTED="$persisted_allowlist" node -e '
+const parse=v=>(v||"").split(",").map(x=>x.trim().toLowerCase()).filter(Boolean);const values=[];
+for(const v of [...parse(process.env.INCOMING),...parse(process.env.PERSISTED)])if(!values.includes(v))values.push(v);
+if(values.length!==6||values.some(v=>!/[a-f0-9]{64}/.test(v)))process.exit(1);process.stdout.write(values.join(","));
+')" || { echo 'RELEASE_CONTROL_FAILED code=DEMO_AUTH_EMAIL_ALLOWLIST_INVALID' >&2; exit 1; }
+unset persisted_allowlist
 
 release_id="production-${RELEASE_COMMIT}"
 unit="coro-release-${RELEASE_COMMIT:0:16}"

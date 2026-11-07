@@ -85,6 +85,13 @@ test('governed release injects and verifies the Client invitation outbox key wit
   assert.match(reconcile, /OUTBOX_CONFIGURATION_MISMATCH/);
   assert.doesNotMatch(control, /echo .*CLIENT_INVITATION_OUTBOX_KEY_BASE64/);
 });
+test('governed release preserves the bounded six-recipient authentication allowlist', () => {
+  assert.match(control, /persisted_allowlist/);
+  assert.match(control, /values\.length!==6/);
+  assert.match(release, /v\.length!==6/);
+  assert.match(release, /DEMO_AUTH_EMAIL_ALLOWLIST_CONFIGURATION_INVALID/);
+  assert.doesNotMatch(control, /cat .*\.env|echo .*DEMO_AUTH_EMAIL_LIVE_RECIPIENT/);
+});
 test('durable Knowledge policy and real synthetic provider smoke gate release success', () => {
   assert.match(release, /runtime-policy\.mjs overlay/);
   assert.match(release, /knowledge-provider-smoke\.js/);
