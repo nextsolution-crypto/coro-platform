@@ -1,3 +1,4 @@
+import { reconcileSentinelleProviderEvent } from './sentinelle-provider-reconciliation';
 import {
   BadRequestException,
   Inject,
@@ -212,6 +213,8 @@ export class PopulationBrevoSmsWebhookService {
       take: 2,
     });
     if (candidates.length !== 1) {
+      if (candidates.length === 0)
+        await reconcileSentinelleProviderEvent(this.prisma, 'SMS', parsed);
       this.logger.log(
         `provider=BREVO channel=SMS eventType=${parsed.eventType} matched=false correlation=${candidates.length === 0 ? 'NONE' : 'AMBIGUOUS'}`,
       );
