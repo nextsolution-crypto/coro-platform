@@ -134,6 +134,13 @@ describe('Controlled Population OTP commissioning', () => {
     expect(
       JSON.stringify(h.tx.demoCommunicationEvent.create.mock.calls),
     ).not.toContain('private OTP');
+    expect(
+      JSON.stringify(h.tx.demoCommunicationEvent.create.mock.calls),
+    ).not.toContain(
+      createHash('sha256')
+        .update(JSON.stringify(request.payload))
+        .digest('hex'),
+    );
     expect(h.tx.$executeRaw).toHaveBeenCalled();
   });
   it.each([
