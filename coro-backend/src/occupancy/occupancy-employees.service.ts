@@ -108,6 +108,7 @@ export class OccupancyEmployeesService {
           pin,
           isEmergencyMember: body.isEmergencyMember === true,
           smsConsent: body.smsConsent === true,
+          pinEmailStatus: 'NOT_REQUESTED',
         },
       });
       if (body.isEmergencyMember && body.emergencyRole) {
@@ -303,21 +304,20 @@ export class OccupancyEmployeesService {
     });
     if (!kiosk) throw new NotFoundException('Token borne invalide');
 
-    // Vérifier pas déjà checké in aujourd'hui
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const existing = await this.prisma.occupancyRecord.findFirst({
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${employee.id}))`;
+      // Une présence ouverte reste ouverte après minuit, quel que soit le QR utilisé.
+    const existing = await tx.occupancyRecord.findFirst({
       where: {
         employeeId: employee.id,
         status: 'IN',
-        checkedInAt: { gte: startOfDay },
       },
     });
     if (existing) {
       return { alreadyIn: true, record: existing, employee };
     }
 
-    const record = await this.prisma.occupancyRecord.create({
+    const record = await tx.occupancyRecord.create({
       data: {
         buildingId: employee.buildingId,
         organizationId: employee.organizationId,
@@ -330,6 +330,7 @@ export class OccupancyEmployeesService {
     });
 
     return { alreadyIn: false, record, employee };
+    });
   }
 
   // ── Invitations visiteurs ─────────────────────────────────────────────────
