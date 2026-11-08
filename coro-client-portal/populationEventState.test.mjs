@@ -10,6 +10,7 @@ import {
   derivePopulationWorkflowState,
   getPopulationResumeAction,
   buildPopulationResumePlan,
+  hydratePopulationResumeAlert,
   canCompletePopulationResumeMount,
   derivePopulationCloseState,
   openPopulationCloseConfirmation,
@@ -177,12 +178,27 @@ test("conserve une intention tant que la réponse serveur manque puis la libère
   };
   let generated = 0;
   const create = () => `00000000-0000-4000-8000-00000000000${++generated}`;
-  const first = getOrCreatePopulationIntent(storage, "event-1", "UPDATE", create);
-  const retry = getOrCreatePopulationIntent(storage, "event-1", "UPDATE", create);
+  const first = getOrCreatePopulationIntent(
+    storage,
+    "event-1",
+    "UPDATE",
+    create,
+  );
+  const retry = getOrCreatePopulationIntent(
+    storage,
+    "event-1",
+    "UPDATE",
+    create,
+  );
   assert.equal(retry.clientIntentId, first.clientIntentId);
   assert.equal(generated, 1);
   clearPopulationIntent(storage, first.key);
-  const next = getOrCreatePopulationIntent(storage, "event-1", "UPDATE", create);
+  const next = getOrCreatePopulationIntent(
+    storage,
+    "event-1",
+    "UPDATE",
+    create,
+  );
   assert.notEqual(next.clientIntentId, first.clientIntentId);
   assert.equal(generated, 2);
 });
@@ -226,7 +242,12 @@ test("construit une reprise vierge avec scenario, preview et meme alerte", () =>
   });
   assert.equal(buildPopulationResumePlan(event, alert, [], preview), null);
   assert.equal(
-    buildPopulationResumePlan(event, alert, [{ id: event.emergencyScenarioId }], null),
+    buildPopulationResumePlan(
+      event,
+      alert,
+      [{ id: event.emergencyScenarioId }],
+      null,
+    ),
     null,
   );
 });
@@ -267,7 +288,13 @@ test("propose une reprise contextuelle avec la permission de la prochaine etape"
       "POPULATION_SEND",
     ],
   ];
-  for (const [status, approvedAt, recipientsFrozenAt, state, permission] of cases) {
+  for (const [
+    status,
+    approvedAt,
+    recipientsFrozenAt,
+    state,
+    permission,
+  ] of cases) {
     const alert = {
       id: "same-alert-id",
       type: "ALL_CLEAR",
@@ -368,11 +395,11 @@ test("reconstruit READY approuve non fige comme freeze requis", () => {
     recipientsFrozenAt: null,
     deliveryModeSnapshot: null,
   };
+  assert.equal(getPopulationAlertWorkflowStage(alert), "APPROVED_NEEDS_FREEZE");
   assert.equal(
-    getPopulationAlertWorkflowStage(alert),
+    getPopulationAlertWorkflowStage({ ...alert }),
     "APPROVED_NEEDS_FREEZE",
   );
-  assert.equal(getPopulationAlertWorkflowStage({ ...alert }), "APPROVED_NEEDS_FREEZE");
 });
 
 test("reconstruit un roster fige LIVE comme pret au preflight", () => {
@@ -420,7 +447,11 @@ test("fusionne events et legacy par date descendante et normalise les collection
     [{ id: "event-ended", status: "ENDED", endedAt: "2026-09-19T12:00:00Z" }],
     [
       { id: "legacy-ended", status: "ENDED", endedAt: "2026-09-20T12:00:00Z" },
-      { id: "legacy-active", status: "ACTIVE", activatedAt: "2026-09-18T12:00:00Z" },
+      {
+        id: "legacy-active",
+        status: "ACTIVE",
+        activatedAt: "2026-09-18T12:00:00Z",
+      },
     ],
   );
   assert.deepEqual(
@@ -510,4 +541,82 @@ test("un refresh sans legacy retire la communication terminee", () => {
   const after = normalizeLegacyActiveAlerts([]);
   assert.equal(before.length, 1);
   assert.deepEqual(after, []);
+});
+
+test("restaure le corps canonique absent du résumé et conserve ses compteurs", () => {
+  const event = { id: "event", emergencyScenarioId: "scenario" };
+  const summary = { id: "alert", type: "TEST", deliveryCounts: { QUEUED: 2 } };
+  const detail = {
+    id: "alert",
+    operationalEventId: "event",
+    emergencyScenarioId: "scenario",
+    type: "TEST",
+    titleFR: "Exercice",
+    messageFR: "Corps canonique",
+  };
+  const result = hydratePopulationResumeAlert(event, summary, detail);
+  assert.equal(result.messageFR, "Corps canonique");
+  assert.deepEqual(result.deliveryCounts, { QUEUED: 2 });
+  for (const patch of [
+    { id: "autre" },
+    { operationalEventId: "autre" },
+    { emergencyScenarioId: "autre" },
+    { type: "EMERGENCY" },
+    { messageFR: "" },
+  ])
+    assert.equal(
+      hydratePopulationResumeAlert(event, summary, { ...detail, ...patch }),
+      null,
+    );
+});
+
+test("le détail READY figé prime sur un résumé DRAFT périmé lors de la reprise", () => {
+  const event = {
+    id: "event",
+    status: "ACTIVE",
+    emergencyScenarioId: "scenario",
+  };
+  const summary = {
+    id: "alert",
+    type: "TEST",
+    status: "DRAFT",
+    approvedAt: null,
+    recipientsFrozenAt: null,
+    deliveryCounts: { QUEUED: 2 },
+    deliverableDeliveryCount: 2,
+  };
+  const detail = {
+    id: "alert",
+    operationalEventId: "event",
+    emergencyScenarioId: "scenario",
+    type: "TEST",
+    status: "READY",
+    titleFR: "Exercice",
+    messageFR: "Corps canonique",
+    approvedAt: "2026-11-08T10:00:00Z",
+    recipientsFrozenAt: "2026-11-08T10:01:00Z",
+    deliveryModeSnapshot: "LIVE",
+  };
+  const restored = hydratePopulationResumeAlert(event, summary, detail);
+  const plan = buildPopulationResumePlan(
+    event,
+    restored,
+    [{ id: "scenario" }],
+    {},
+  );
+  assert.equal(restored.status, "READY");
+  assert.equal(restored.recipientsFrozenAt, detail.recipientsFrozenAt);
+  assert.deepEqual(restored.deliveryCounts, { QUEUED: 2 });
+  assert.equal(plan.workflowState, "SEND_READY");
+  assert.deepEqual(
+    hydratePopulationResumeAlert(event, summary, {
+      ...detail,
+      deliveryCounts: { SENT: 2 },
+    }).deliveryCounts,
+    { SENT: 2 },
+  );
+  assert.equal(
+    derivePopulationWorkflowState({ event, alert: restored }),
+    plan.workflowState,
+  );
 });
