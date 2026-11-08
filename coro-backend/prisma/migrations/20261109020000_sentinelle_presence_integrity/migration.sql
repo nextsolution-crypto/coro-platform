@@ -1,6 +1,6 @@
 BEGIN;
 -- Abort safely if historical active PIN collisions exist; never rewrite identities.
-ALTER TABLE "BuildingEmployee" ADD COLUMN "pinEmailStatus" TEXT NOT NULL DEFAULT 'NOT_REQUESTED',
+ALTER TABLE "BuildingEmployee" ADD COLUMN "pinEmailStatus" TEXT NOT NULL DEFAULT 'NOT_VERIFIED',
  ADD COLUMN "pinEmailMessageId" TEXT, ADD COLUMN "pinEmailAttemptedAt" TIMESTAMP(3), ADD COLUMN "pinEmailDeliveredAt" TIMESTAMP(3);
 ALTER TABLE "OccupancyRecord" ADD COLUMN "checkoutSource" TEXT;
 CREATE UNIQUE INDEX "BuildingEmployee_one_active_pin_idx" ON "BuildingEmployee"("buildingId", "pin")
