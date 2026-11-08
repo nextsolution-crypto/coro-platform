@@ -7,6 +7,7 @@ const TARGET = Object.freeze({
   buildingId: '6a1b6f2e-38b2-5f41-a740-48252fd11224',
   publicSlug: 'coro-sp-ops-04b-test',
   syntheticSubscriberId: '52387b91-139b-5e48-9eca-50e1b54735d1',
+  operatorEmail: 'demo@getcoro.io',
 });
 
 function assertAuthority(mode, env) {
@@ -31,16 +32,34 @@ function assertFoundation(environment, program) {
   }
 }
 
+function assertOperator(operator) {
+  if (
+    !operator ||
+    typeof operator.email !== 'string' ||
+    operator.email.toLowerCase() !== TARGET.operatorEmail ||
+    operator.organizationId !== TARGET.organizationId ||
+    operator.isActive !== true ||
+    !['ADMIN', 'SUPER_ADMIN'].includes(operator.role)
+  ) {
+    throw new Error('QA_ENROLLMENT_OPERATOR_INVALID');
+  }
+}
+
 async function execute(prisma, mode, env = process.env) {
   assertAuthority(mode, env);
-  const [environment, program] = await Promise.all([
+  const [environment, program, operator] = await Promise.all([
     prisma.demoEnvironment.findUnique({ where: { organizationId: TARGET.organizationId } }),
     prisma.populationProgram.findUnique({
       where: { publicSlug: TARGET.publicSlug },
       include: { rueFacilityProfile: { include: { building: true } }, subscribers: { select: { id: true, isSynthetic: true, status: true } } },
     }),
+    prisma.user.findUnique({
+      where: { email: TARGET.operatorEmail },
+      select: { id: true, email: true, organizationId: true, isActive: true, role: true },
+    }),
   ]);
   assertFoundation(environment, program);
+  assertOperator(operator);
 
   const nonSyntheticCount = program.subscribers.filter((item) => !item.isSynthetic).length;
   if (nonSyntheticCount > 1) throw new Error('QA_RECIPIENT_CARDINALITY_INVALID');
@@ -49,8 +68,16 @@ async function execute(prisma, mode, env = process.env) {
   if (mode !== 'STATUS') {
     await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${'sp-ops-04b-recipient-enrollment'}, 0))`;
-      const current = await tx.populationProgram.findUnique({ where: { id: program.id }, include: { rueFacilityProfile: true, subscribers: { select: { id: true, isSynthetic: true } } } });
+      const [current, currentOperator] = await Promise.all([
+        tx.populationProgram.findUnique({ where: { id: program.id }, include: { rueFacilityProfile: true, subscribers: { select: { id: true, isSynthetic: true } } } }),
+        tx.user.findUnique({
+          where: { email: TARGET.operatorEmail },
+          select: { id: true, email: true, organizationId: true, isActive: true, role: true },
+        }),
+      ]);
       if (!current || current.deliveryMode !== 'SANDBOX' || current.governanceMode !== 'DUAL_CONTROL') throw new Error('QA_PROGRAM_CHANGED_CONCURRENTLY');
+      assertOperator(currentOperator);
+      if (currentOperator.id !== operator.id) throw new Error('QA_ENROLLMENT_OPERATOR_CHANGED_CONCURRENTLY');
       if (mode === 'OPEN') {
         if (current.status !== 'CONFIGURING' || current.subscribers.some((item) => !item.isSynthetic)) throw new Error('QA_ENROLLMENT_OPEN_PRECONDITION_FAILED');
         await tx.populationSubscriber.updateMany({ where: { programId: current.id, isSynthetic: true }, data: { status: 'UNSUBSCRIBED', smsEnabled: false, emailEnabled: false } });
@@ -70,6 +97,7 @@ async function execute(prisma, mode, env = process.env) {
       await tx.auditLog.create({ data: {
         action: mode === 'OPEN' ? 'POPULATION_CONTROLLED_RECIPIENT_ENROLLMENT_OPENED' : 'POPULATION_CONTROLLED_RECIPIENT_ENROLLMENT_CLOSED',
         entityType: 'PopulationProgram', entityId: current.id, organizationId: TARGET.organizationId,
+        userId: currentOperator.id, clientUserId: null,
         description: 'SP-OPS-04B governed recipient enrollment window.',
         metadata: { approval: APPROVAL, buildingId: TARGET.buildingId, mode, liveEnabled: false, stopActive: true, providerCalls: 0 },
       } });
@@ -97,6 +125,7 @@ async function main() {
 const SAFE_ERROR_CODES = new Set([
   'ENROLLMENT_MODE_INVALID', 'EXACT_ENROLLMENT_APPROVAL_REQUIRED', 'CONTROLLED_LIVE_SAFETY_STATE_INVALID',
   'DEMO_SIMULATION_POLICY_INVALID', 'QA_PROGRAM_GOVERNANCE_INVALID', 'QA_PROGRAM_SCOPE_INVALID',
+  'QA_ENROLLMENT_OPERATOR_INVALID', 'QA_ENROLLMENT_OPERATOR_CHANGED_CONCURRENTLY',
   'QA_RECIPIENT_CARDINALITY_INVALID', 'QA_RECIPIENT_ALREADY_EXISTS_RECONCILE_FIRST',
   'QA_PROGRAM_CHANGED_CONCURRENTLY', 'QA_ENROLLMENT_OPEN_PRECONDITION_FAILED',
 ]);
@@ -109,4 +138,4 @@ if (!module.parent) main().catch((error) => {
   process.stdout.write(`${JSON.stringify({ schemaVersion: 1, execution: 'FAILED', errorCode: safeErrorCode(error) })}\n`);
   process.exitCode = 1;
 });
-module.exports = { APPROVAL, TARGET, assertAuthority, assertFoundation, execute, safeErrorCode };
+module.exports = { APPROVAL, TARGET, assertAuthority, assertFoundation, assertOperator, execute, safeErrorCode };
