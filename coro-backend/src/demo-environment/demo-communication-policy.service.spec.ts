@@ -45,6 +45,10 @@ describe('DemoCommunicationPolicyService', () => {
 
   beforeEach(() => {
     process.env.POPULATION_CONTROLLED_LIVE_TEST_MAX_CAMPAIGN_CAD_CENTS = '100';
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_ALERT_ID = 'alert-approved';
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_EXPIRES_AT = new Date(
+      Date.now() + 1800000,
+    ).toISOString();
     process.env.POPULATION_CONTROLLED_LIVE_TEST_SMS_CANADA_CAD_MICROS_PER_SEGMENT =
       '75000';
     process.env.POPULATION_CONTROLLED_LIVE_TEST_EMAIL_CAD_MICROS_PER_MESSAGE =
@@ -57,6 +61,8 @@ describe('DemoCommunicationPolicyService', () => {
     else
       process.env.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST =
         previousAllowlist;
+    delete process.env.POPULATION_CONTROLLED_LIVE_TEST_ALERT_ID;
+    delete process.env.POPULATION_CONTROLLED_LIVE_TEST_EXPIRES_AT;
     delete process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED;
     delete process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP;
     delete process.env.POPULATION_CONTROLLED_LIVE_TEST_ORGANIZATION_ID;
@@ -359,7 +365,7 @@ describe('DemoCommunicationPolicyService', () => {
           deliveryId: 'delivery-approved',
         },
       }),
-    ).resolves.toEqual({ disposition: 'SIMULATED', eventId: 'event-2' });
+    ).resolves.toEqual({ disposition: 'BLOCKED', eventId: 'event-2' });
     await expect(
       h.service.evaluate({
         organizationId: demoOrganizationId,
@@ -374,7 +380,7 @@ describe('DemoCommunicationPolicyService', () => {
           deliveryId: 'delivery-approved',
         },
       }),
-    ).resolves.toEqual({ disposition: 'SIMULATED', eventId: 'event-3' });
+    ).resolves.toEqual({ disposition: 'BLOCKED', eventId: 'event-3' });
   });
 
   it('ne transforme jamais le nom d operation usurpe en autorisation LIVE', async () => {
@@ -402,7 +408,7 @@ describe('DemoCommunicationPolicyService', () => {
         payload: { subject: 'EXERCICE / TEST' },
         idempotencyKey: 'spoofed-operation-name',
       }),
-    ).resolves.toEqual({ disposition: 'SIMULATED', eventId: 'event-1' });
+    ).resolves.toEqual({ disposition: 'BLOCKED', eventId: 'event-1' });
     expect(h.prisma.populationAlertDelivery.findUnique).not.toHaveBeenCalled();
   });
 
@@ -479,7 +485,7 @@ describe('DemoCommunicationPolicyService', () => {
           deliveryId: 'delivery-approved',
         },
       }),
-    ).resolves.toEqual({ disposition: 'SIMULATED', eventId: 'event-1' });
+    ).resolves.toEqual({ disposition: 'BLOCKED', eventId: 'event-1' });
   });
 
   it('maintient PAUSED/BLOCK prioritaire au test Population contrôlé', async () => {
