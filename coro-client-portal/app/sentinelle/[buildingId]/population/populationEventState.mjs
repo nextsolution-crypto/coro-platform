@@ -177,6 +177,32 @@ export function canCompletePopulationResumeMount(state) {
   );
 }
 
+// A completed TEST may be closed through the existing exceptional-close API
+// without creating an ALL_CLEAR (which would be another real communication).
+export function canClosePopulationTestFromHistory(event, canPrepare) {
+  return Boolean(
+    canPrepare &&
+    event?.status === "ACTIVE" &&
+    Array.isArray(event.alerts) &&
+    event.alerts.length > 0 &&
+    event.alerts.every((alert) => {
+      if (!alert || typeof alert !== "object") return false;
+      const counts = alert.deliveryCounts;
+      return (
+        alert.type === "TEST" &&
+        ["ACTIVE", "ENDED"].includes(alert.status) &&
+        counts &&
+        Number.isInteger(counts.DELIVERED) &&
+        counts.DELIVERED > 0 &&
+        counts.DELIVERED === alert.deliverableDeliveryCount &&
+        Object.entries(counts).every(
+          ([status, count]) => status === "DELIVERED" || count === 0,
+        )
+      );
+    }),
+  );
+}
+
 export function derivePopulationCloseState(event, canPrepare) {
   const allClear = [...(event?.alerts ?? [])]
     .reverse()

@@ -19,6 +19,7 @@ import {
   isPopulationConcurrencyConflict,
   getOrCreatePopulationIntent,
   clearPopulationIntent,
+  canClosePopulationTestFromHistory,
 } from "./app/sentinelle/[buildingId]/population/populationEventState.mjs";
 
 const closeEvent = (overrides = {}) => ({
@@ -619,4 +620,60 @@ test("le détail READY figé prime sur un résumé DRAFT périmé lors de la rep
     derivePopulationWorkflowState({ event, alert: restored }),
     plan.workflowState,
   );
+});
+
+test("cloture administrative sans nouvel envoi limitee aux exercices entierement livres", () => {
+  const fixture = {
+    status: "ACTIVE",
+    alerts: [
+      {
+        type: "TEST",
+        status: "ACTIVE",
+        deliverableDeliveryCount: 2,
+        deliveryCounts: { DELIVERED: 2 },
+      },
+    ],
+  };
+  assert.equal(canClosePopulationTestFromHistory(fixture, true), true);
+  assert.equal(canClosePopulationTestFromHistory(fixture, false), false);
+  assert.equal(
+    canClosePopulationTestFromHistory({ ...fixture, status: "ENDED" }, true),
+    false,
+  );
+  for (const overrides of [
+    { type: "INITIAL" },
+    { type: "ALL_CLEAR" },
+    { status: "READY" },
+    { deliverableDeliveryCount: 3 },
+    { deliveryCounts: {} },
+    { deliveryCounts: { DELIVERED: 1, SENT: 1 } },
+    { deliveryCounts: { DELIVERED: 2, SENDING: 1 } },
+    { deliveryCounts: { DELIVERED: 2, QUEUED: 1 } },
+    { deliveryCounts: { DELIVERED: 2, FAILED: 1 } },
+    { deliveryCounts: { DELIVERED: "2" } },
+  ])
+    assert.equal(
+      canClosePopulationTestFromHistory(
+        { ...fixture, alerts: [{ ...fixture.alerts[0], ...overrides }] },
+        true,
+      ),
+      false,
+    );
+  assert.equal(
+    canClosePopulationTestFromHistory(
+      {
+        ...fixture,
+        alerts: [...fixture.alerts, { ...fixture.alerts[0], type: "UPDATE" }],
+      },
+      true,
+    ),
+    false,
+  );
+  for (const value of [
+    null,
+    {},
+    { status: "ACTIVE", alerts: [] },
+    { status: "ACTIVE", alerts: "bad" },
+  ])
+    assert.equal(canClosePopulationTestFromHistory(value, true), false);
 });

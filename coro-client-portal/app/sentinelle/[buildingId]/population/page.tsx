@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { Inter } from "next/font/google";
 import {
   AlertTriangle,
@@ -45,6 +46,7 @@ import {
   isPopulationConcurrencyConflict,
   getOrCreatePopulationIntent,
   clearPopulationIntent,
+  canClosePopulationTestFromHistory,
 } from "./populationEventState.mjs";
 import styles from "./population.module.css";
 
@@ -1204,6 +1206,10 @@ export default function PopulationPage() {
 
         setConfiguration(configurationRes);
 
+        // Retained evidence is readable even when transport is suspended.
+        if (configurationRes.program) await loadPopulationRegistry();
+        else setPopulationRegistry([]);
+
         if (
           statusRes.populationEnabled &&
           statusRes.programStatus === "ACTIVE"
@@ -1213,7 +1219,6 @@ export default function PopulationPage() {
             loadIncidentHistory(),
             loadActiveOperationalEvent(),
             loadLegacyActiveAlerts(),
-            loadPopulationRegistry(),
           ]);
         } else {
           setIncidents([]);
@@ -1225,7 +1230,6 @@ export default function PopulationPage() {
           setIncidentAlertsError(null);
           setActiveEvent(null);
           setLegacyActiveAlerts([]);
-          setPopulationRegistry([]);
         }
 
         const program = configurationRes.program;
@@ -2021,6 +2025,8 @@ export default function PopulationPage() {
             Ce module n&apos;est pas disponible pour ce site.
           </p>
 
+          <Link href="/manual#population">Manuel Sentinelle Population</Link>
+
           {status?.rueStatus && (
             <span
               style={{
@@ -2189,6 +2195,26 @@ export default function PopulationPage() {
           </div>
         </header>
 
+        <nav
+          aria-label="Manuel Sentinelle Population"
+          className={styles.operatorManual}
+        >
+          <strong>
+            <Link href="/manual#population">Manuel Sentinelle Population</Link>
+          </strong>
+          <span>Un guide pas à pas et les contrôles à chaque utilisation.</span>
+          <Link href="/manual#population-avant">Avant : paramétrer</Link>
+          <Link href="/manual#population-pendant">
+            Pendant : préparer et diffuser
+          </Link>
+          <Link href="/manual#population-apres">
+            Après : vérifier et clôturer
+          </Link>
+          <Link href="/manual#population-verifications">
+            Vérifications et blocages
+          </Link>
+        </nav>
+
         {/* Bandeau de commandement */}
         <section
           className={styles.situation}
@@ -2305,19 +2331,27 @@ export default function PopulationPage() {
           <StatusCard
             icon={<MessageSquareText size={18} />}
             label="Communication"
-            value={activeEvent ? "Événement en cours" : "Aucun événement"}
+            value={
+              !isActive && program
+                ? "Historique accessible"
+                : activeEvent
+                  ? "Événement en cours"
+                  : "Aucun événement"
+            }
             detail={
-              activeEvent?.latestCommunication
-                ? formatPopulationCommunicationType(
-                    activeEvent.latestCommunication.type,
-                    activeEvent.latestCommunication.cycleSequence,
-                  )
-                : "SMS · Courriel"
+              !isActive && program
+                ? "Consultez le registre ci-dessous; diffusion inactive."
+                : activeEvent?.latestCommunication
+                  ? formatPopulationCommunicationType(
+                      activeEvent.latestCommunication.type,
+                      activeEvent.latestCommunication.cycleSequence,
+                    )
+                  : "SMS · Courriel"
             }
           />
         </section>
 
-        {isActive && (
+        {program && (
           <PopulationUnifiedRegistry
             entries={populationRegistry}
             loading={populationRegistryLoading}
@@ -2717,7 +2751,8 @@ export default function PopulationPage() {
                       value={targetingMode}
                       onChange={(event) => {
                         const nextMode = event.target.value as
-                          "GLOBAL" | "DIRECTIONAL";
+                          | "GLOBAL"
+                          | "DIRECTIONAL";
                         setTargetingMode(nextMode);
                         if (selectedScenarioId) {
                           void loadScenarioPreview(
@@ -4449,6 +4484,40 @@ function PopulationUnifiedRegistry({
   canGenerateEvidence: boolean;
   onRefresh: () => void;
 }) {
+  const [closingTestId, setClosingTestId] = useState<string | null>(null);
+  const [closeReason, setCloseReason] = useState("");
+  const [closing, setClosing] = useState(false);
+  const [closeError, setCloseError] = useState<string | null>(null);
+  const closeTest = async (event: any) => {
+    if (
+      closing ||
+      !closeReason.trim() ||
+      !canClosePopulationTestFromHistory(event, canGenerateEvidence)
+    )
+      return;
+    setClosing(true);
+    setCloseError(null);
+    try {
+      await apiPost(
+        `/client-portal/buildings/${buildingId}/population/operational-events/${event.id}/close`,
+        {
+          forceClose: true,
+          closeReason: closeReason.trim(),
+        },
+      );
+      setClosingTestId(null);
+      setCloseReason("");
+      onRefresh();
+    } catch (error: any) {
+      setCloseError(
+        typeof error?.message === "string"
+          ? error.message
+          : "La clôture n’a pas été confirmée. Actualisez le registre avant de réessayer.",
+      );
+    } finally {
+      setClosing(false);
+    }
+  };
   return (
     <section className={styles.incidentRegistry} style={{ marginBottom: 18 }}>
       <div className={styles.registryHeader}>
@@ -4545,6 +4614,71 @@ function PopulationUnifiedRegistry({
                       </div>
                     );
                   })}
+                  {kind === "OPERATIONAL_EVENT" &&
+                    canClosePopulationTestFromHistory(
+                      item,
+                      canGenerateEvidence,
+                    ) &&
+                    (closingTestId === item.id ? (
+                      <section
+                        aria-label="Clôture administrative de l’exercice"
+                        className={styles.testClosure}
+                      >
+                        <strong>
+                          Clore cet exercice sans nouveau message ?
+                        </strong>
+                        <p>
+                          Cette clôture exceptionnelle conserve les preuves et
+                          n’envoie aucun SMS ni courriel. Elle ne remplace pas
+                          une fin d’alerte publique. Le dossier de preuve
+                          signalera l’absence de communication ALL_CLEAR.
+                        </p>
+                        <label htmlFor={`test-close-${item.id}`}>
+                          Motif de clôture obligatoire
+                        </label>
+                        <textarea
+                          id={`test-close-${item.id}`}
+                          value={closeReason}
+                          maxLength={1000}
+                          rows={3}
+                          onChange={(event) =>
+                            setCloseReason(event.target.value)
+                          }
+                          disabled={closing}
+                        />
+                        {closeError && <p role="alert">{closeError}</p>}
+                        <button
+                          type="button"
+                          disabled={closing}
+                          onClick={() => {
+                            setClosingTestId(null);
+                            setCloseError(null);
+                          }}
+                        >
+                          Annuler
+                        </button>
+                        <button
+                          type="button"
+                          disabled={closing || !closeReason.trim()}
+                          onClick={() => void closeTest(item)}
+                        >
+                          {closing
+                            ? "Clôture..."
+                            : "Confirmer la clôture sans envoi"}
+                        </button>
+                      </section>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setClosingTestId(item.id);
+                          setCloseReason("");
+                          setCloseError(null);
+                        }}
+                      >
+                        Clore cet exercice sans nouveau message
+                      </button>
+                    ))}
                   {kind === "OPERATIONAL_EVENT" && item.status === "ENDED" && (
                     <PopulationEvidenceEntry
                       buildingId={buildingId}
@@ -4611,7 +4745,8 @@ function EventCockpit({
   const closeDialogRef = useRef<HTMLDivElement>(null);
   const closeState = derivePopulationCloseState(event, canPrepare);
   const allClear = closeState.allClear as
-    PopulationOperationalEventAlert | undefined;
+    | PopulationOperationalEventAlert
+    | undefined;
   const canFollowUp = Boolean(event && !allClear && canPrepare);
   const initialType = event?.alerts[0]?.type === "TEST" ? "TEST" : "URGENCE";
   const presentation = derivePopulationEventPresentation({
