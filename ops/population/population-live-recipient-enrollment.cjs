@@ -94,5 +94,5 @@ async function main() {
   finally { await prisma.$disconnect(); }
 }
 
-if (require.main === module) main().catch(() => { process.stdout.write('{"schemaVersion":1,"execution":"FAILED"}\n'); process.exitCode = 1; });
+if (!module.parent) main().catch(() => { process.stdout.write('{"schemaVersion":1,"execution":"FAILED"}\n'); process.exitCode = 1; });
 module.exports = { APPROVAL, TARGET, assertAuthority, assertFoundation, execute };
