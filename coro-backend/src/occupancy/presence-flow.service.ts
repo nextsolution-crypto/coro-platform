@@ -12,7 +12,8 @@ const CHALLENGE_TTL_MS = 45_000;
 const TRANSACTION_TTL_MS = 5 * 60_000;
 const DEVICE_TTL_MS = 30 * 24 * 60 * 60_000;
 
-const digest = (value: string) => createHash('sha256').update(value).digest('hex');
+const digest = (value: string) =>
+  createHash('sha256').update(value).digest('hex');
 
 @Injectable()
 export class PresenceFlowService {
@@ -178,16 +179,25 @@ export class PresenceFlowService {
     };
   }
 
-  async confirm(sessionId: string, action: 'CHECK_IN' | 'CHECK_OUT', idempotencyKey: string, rememberDevice: boolean) {
+  async confirm(
+    sessionId: string,
+    action: 'CHECK_IN' | 'CHECK_OUT',
+    idempotencyKey: string,
+    rememberDevice: boolean,
+  ) {
     if (!/^[A-Za-z0-9_-]{16,100}$/.test(idempotencyKey || '')) {
       throw new BadRequestException('Clé de répétition invalide');
     }
-    if (action !== 'CHECK_IN' && action !== 'CHECK_OUT') throw new BadRequestException('Action invalide');
+    if (action !== 'CHECK_IN' && action !== 'CHECK_OUT')
+      throw new BadRequestException('Action invalide');
     const prior = await this.prisma.presenceSession.findFirst({
       where: { id: sessionId, idempotencyKey },
       include: { employee: true },
     });
-    if (prior?.status === 'COMPLETED' && prior.idempotencyKey === idempotencyKey) {
+    if (
+      prior?.status === 'COMPLETED' &&
+      prior.idempotencyKey === idempotencyKey
+    ) {
       return this.completedResponse(prior, undefined);
     }
 
@@ -197,12 +207,15 @@ export class PresenceFlowService {
         where: {
           id: sessionId,
           status: 'IDENTIFIED',
+          employee: { isActive: true },
           transactionExpiresAt: { gt: new Date() },
         },
         include: { employee: true, building: { select: { name: true } } },
       });
       if (!session?.employee || session.intendedAction !== action) {
-        throw new ConflictException('L’action ne correspond plus à l’état confirmé');
+        throw new ConflictException(
+          'L’action ne correspond plus à l’état confirmé',
+        );
       }
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${session.employeeId}))`;
       const open = await tx.occupancyRecord.findFirst({
@@ -226,10 +239,17 @@ export class PresenceFlowService {
           occupancyRecordId = created.id;
         }
       } else {
-        if (!open) throw new ConflictException('La personne est déjà enregistrée comme sortie');
+        if (!open)
+          throw new ConflictException(
+            'La personne est déjà enregistrée comme sortie',
+          );
         await tx.occupancyRecord.update({
           where: { id: open.id },
-          data: { status: 'OUT', checkedOutAt: new Date() },
+          data: {
+            status: 'OUT',
+            checkedOutAt: new Date(),
+            checkoutSource: 'MANUAL',
+          },
         });
       }
       const completed = await tx.presenceSession.update({
