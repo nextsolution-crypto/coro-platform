@@ -7,6 +7,7 @@ import {
   POPULATION_EMAIL_TIMEOUT_MAX_MS,
 } from './population-delivery.constants';
 import {
+  controlledPopulationCampaignPinned,
   POPULATION_CONTROLLED_LIVE_TEST_OPERATION,
   POPULATION_CONTROLLED_LIVE_TEST_SMS_SENDER_E164,
 } from './population-controlled-live-test.constants';
@@ -57,6 +58,32 @@ export class PopulationDeliveryService {
     private readonly demoCommunicationPolicy?: DemoCommunicationPolicyService,
   ) {}
 
+  private assertControlledProviderAuthority(input: {
+    operation: string;
+    organizationId?: string;
+    controlledPopulationContext?: PopulationControlledTransportContext;
+  }) {
+    if (input.operation !== POPULATION_CONTROLLED_LIVE_TEST_OPERATION) return;
+    const scope = input.controlledPopulationContext;
+    if (
+      !this.demoCommunicationPolicy ||
+      !input.organizationId ||
+      !scope ||
+      process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED !== 'true' ||
+      process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP !== 'false' ||
+      !controlledPopulationCampaignPinned(process.env, {
+        organizationId: input.organizationId,
+        programId: scope.programId,
+        alertId: scope.alertId,
+      })
+    )
+      throw new PopulationProviderError(
+        'CONTROLLED_TEST_PROVIDER_AUTHORITY_INVALID',
+        'Autorisation du transport contrôlé indisponible',
+        'NON_RETRYABLE',
+      );
+  }
+
   private async evaluateDemo(input: {
     organizationId?: string;
     channel: DemoCommunicationChannel;
@@ -67,6 +94,7 @@ export class PopulationDeliveryService {
     controlledPopulationContext?: PopulationControlledTransportContext;
     populationOtpProgramId?: string;
   }): Promise<PopulationProviderResult | null> {
+    this.assertControlledProviderAuthority(input);
     if (!input.organizationId) return null;
     if (!this.demoCommunicationPolicy) {
       if (process.env.NODE_ENV === 'production') {
@@ -89,7 +117,10 @@ export class PopulationDeliveryService {
       populationOtpProgramId: input.populationOtpProgramId,
     });
     if (decision.disposition === 'LIVE') return null;
-    if (decision.disposition === 'BLOCKED') {
+    if (
+      decision.disposition === 'BLOCKED' ||
+      input.operation === POPULATION_CONTROLLED_LIVE_TEST_OPERATION
+    ) {
       throw new PopulationProviderError(
         'DEMO_COMMUNICATION_BLOCKED',
         'Communication externe bloquée pour cet environnement',
@@ -195,6 +226,11 @@ export class PopulationDeliveryService {
       );
     }
 
+    this.assertControlledProviderAuthority({
+      operation,
+      organizationId,
+      controlledPopulationContext,
+    });
     let response: Response;
 
     try {
@@ -216,7 +252,9 @@ export class PopulationDeliveryService {
       throw new PopulationProviderError(
         'BREVO_NETWORK_ERROR',
         'Le fournisseur SMS est temporairement inaccessible',
-        'NON_RETRYABLE',
+        operation === POPULATION_CONTROLLED_LIVE_TEST_OPERATION
+          ? 'OUTCOME_UNKNOWN'
+          : 'NON_RETRYABLE',
       );
     }
 
@@ -229,11 +267,24 @@ export class PopulationDeliveryService {
       throw new PopulationProviderError(
         `BREVO_HTTP_${response.status}`,
         this.sanitizeProviderError(String(providerMessage)),
-        'NON_RETRYABLE',
+        operation === POPULATION_CONTROLLED_LIVE_TEST_OPERATION &&
+          response.status >= 500
+          ? 'OUTCOME_UNKNOWN'
+          : 'NON_RETRYABLE',
       );
     }
 
     const messageId = body?.messageId ?? body?.message_id ?? body?.id ?? null;
+    if (
+      operation === POPULATION_CONTROLLED_LIVE_TEST_OPERATION &&
+      messageId === null
+    ) {
+      throw new PopulationProviderError(
+        'BREVO_MESSAGE_ID_MISSING',
+        'Le résultat du SMS contrôlé doit être réconcilié',
+        'OUTCOME_UNKNOWN',
+      );
+    }
 
     return {
       provider: 'BREVO',
@@ -284,6 +335,11 @@ export class PopulationDeliveryService {
             }
           : {}),
       },
+    });
+    this.assertControlledProviderAuthority({
+      operation: data.operation ?? 'POPULATION_EMAIL',
+      organizationId: data.organizationId,
+      controlledPopulationContext: data.controlledPopulationContext,
     });
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
