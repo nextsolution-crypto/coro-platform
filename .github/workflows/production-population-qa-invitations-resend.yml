@@ -1,0 +1,58 @@
+name: Production Population QA Invitation Resend Once
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: node --test ops/population/population-qa-identities-provision.test.cjs ops/population/population-qa-invitations-resend.test.cjs
+
+  resend:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Validate pinned host identity
+        env:
+          HOST_FINGERPRINT: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+        run: '[[ "$HOST_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]'
+      - name: Reconcile and resend exactly two QA invitations once
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            script_path="$(mktemp /tmp/coro-population-qa-resend.XXXXXX.cjs)"
+            evidence_path="$(mktemp /tmp/coro-population-qa-resend.XXXXXX.json)"
+            trap 'rm -f -- "$script_path" "$evidence_path"' EXIT
+            exec 9>/run/lock/coro-production-deployment.lock
+            flock -n 9
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
+            git -C "$repo" show "$SOURCE_SHA:ops/population/population-qa-invitations-resend.cjs" >"$script_path"
+            cd "$repo"
+            docker compose exec -T \
+              -e CORO_POPULATION_QA_INVITATIONS_RESEND=true \
+              -e CORO_POPULATION_QA_INVITATIONS_RESEND_APPROVAL=SP_OPS_04B_QA_INVITATIONS_RESEND_ONCE_2026_11_08 \
+              backend node - <"$script_path" >"$evidence_path"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||r.invitationVersion!==2||r.identityCount!==2||r.previousInvitationsReconciled!==2||r.externalMessageCount!==2||r.sessionsRevoked!==true||r.priorLinksInvalidated!==true||r.liveAlertSent!==false||r.invitations.some(v=>v!=="DELIVERED"))process.exit(1);const s=JSON.stringify(r);if(/@|password|secret|token|destination|providerMessage/i.test(s))process.exit(1);' "$evidence_path"
+            cat "$evidence_path"
