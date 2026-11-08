@@ -30,7 +30,13 @@ describe('PopulationControlledLiveTestService', () => {
       '1000';
     process.env.POPULATION_BREVO_EMAIL_SENDER_VERIFIED = 'true';
     process.env.POPULATION_SMS_TFN_APPROVED = 'true';
-    process.env.POPULATION_SMS_PRODUCTION_VALIDATED = 'true';
+    process.env.POPULATION_SMS_PRODUCTION_VALIDATED = 'false';
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_ALERT_ID = 'alert-test';
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_EXPIRES_AT = new Date(
+      Date.now() + 1800000,
+    ).toISOString();
+    process.env.BREVO_API_KEY = 'synthetic-only';
+    process.env.BREVO_SENDER_EMAIL = 'sender@example.invalid';
     process.env.BREVO_SMS_SENDER =
       POPULATION_CONTROLLED_LIVE_TEST_SMS_SENDER_E164;
     process.env.POPULATION_BREVO_WEBHOOK_SECRET = 'e'.repeat(32);
@@ -46,6 +52,7 @@ describe('PopulationControlledLiveTestService', () => {
     programId: 'program-test',
     governanceMode: PopulationGovernanceMode.DUAL_CONTROL,
     alert: {
+      id: 'alert-test',
       type: PopulationAlertType.TEST as PopulationAlertType,
       titleFR: 'EXERCICE / TEST — rejet fictif',
       titleEN: 'EXERCISE / TEST — fictional release',
@@ -74,12 +81,21 @@ describe('PopulationControlledLiveTestService', () => {
     expect(service.assertCampaign(valid())).toBe(true);
   });
 
-  it('ne s active jamais pour un autre tenant ou programme', () => {
-    expect(
+  it('fails closed for a pinned alert with scope drift; unrelated scopes remain ordinary', () => {
+    expect(() =>
       service.assertCampaign({ ...valid(), organizationId: 'other-org' }),
-    ).toBe(false);
-    expect(
+    ).toThrow('CONTROLLED_TEST_CAMPAIGN_AUTHORITY_INVALID');
+    expect(() =>
       service.assertCampaign({ ...valid(), programId: 'other-program' }),
+    ).toThrow('CONTROLLED_TEST_CAMPAIGN_AUTHORITY_INVALID');
+    const unrelated = valid();
+    unrelated.alert.id = 'unrelated-alert';
+    expect(
+      service.assertCampaign({
+        ...unrelated,
+        organizationId: 'other-org',
+        programId: 'other-program',
+      }),
     ).toBe(false);
   });
 
@@ -143,4 +159,51 @@ describe('PopulationControlledLiveTestService', () => {
     );
     expect(service.mask(PopulationAlertChannel.SMS, phone)).toBe('+1***23');
   });
+  it('prepares under STOP without permitting transport or changing global validation', () => {
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED = 'false';
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP = 'true';
+    expect(service.assertCampaign(valid(), 'PREPARE')).toBe(true);
+    expect(() => service.assertCampaign(valid(), 'TRANSPORT')).toThrow(
+      'CONTROLLED_TEST_TRANSPORT_DISABLED',
+    );
+    expect(process.env.POPULATION_SMS_PRODUCTION_VALIDATED).toBe('false');
+  });
+
+  it.each([
+    [
+      'missing pin',
+      () => delete process.env.POPULATION_CONTROLLED_LIVE_TEST_ALERT_ID,
+    ],
+    [
+      'other campaign',
+      () => (process.env.POPULATION_CONTROLLED_LIVE_TEST_ALERT_ID = 'other'),
+    ],
+    [
+      'expired',
+      () =>
+        (process.env.POPULATION_CONTROLLED_LIVE_TEST_EXPIRES_AT = new Date(
+          Date.now() - 1,
+        ).toISOString()),
+    ],
+    [
+      'unbounded',
+      () =>
+        (process.env.POPULATION_CONTROLLED_LIVE_TEST_EXPIRES_AT = new Date(
+          Date.now() + 3700000,
+        ).toISOString()),
+    ],
+  ])(
+    'never falls through for %s, even after global validation',
+    (_label, mutate) => {
+      mutate();
+      process.env.POPULATION_SMS_PRODUCTION_VALIDATED = 'true';
+      expect(service.isConfiguredFor('org-test', 'program-test')).toBe(true);
+      expect(() => service.assertCampaign(valid(), 'PREPARE')).toThrow(
+        'CONTROLLED_TEST_CAMPAIGN_AUTHORITY_INVALID',
+      );
+      expect(() => service.assertCampaign(valid(), 'TRANSPORT')).toThrow(
+        'CONTROLLED_TEST_CAMPAIGN_AUTHORITY_INVALID',
+      );
+    },
+  );
 });

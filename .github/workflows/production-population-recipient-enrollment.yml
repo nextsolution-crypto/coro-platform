@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: OPEN, CLOSE or STATUS
+        description: Enrollment OPEN/CLOSE/STATUS, or pinned transport ARM/DISARM (no sending)
         required: true
         type: choice
-        options: [STATUS, OPEN, CLOSE]
+        options: [STATUS, OPEN, CLOSE, ARM, DISARM]
 
 permissions:
   contents: read
@@ -59,7 +59,8 @@ jobs:
             docker compose exec -T \
               -e CORO_POPULATION_RECIPIENT_ENROLLMENT=true \
               -e CORO_POPULATION_RECIPIENT_ENROLLMENT_APPROVAL=SP_OPS_04B_RECIPIENT_ENROLLMENT_2026_11_08 \
+              -e CORO_POPULATION_CONTROLLED_TRANSPORT_APPROVAL=SP_OPS_04B_PINNED_TRANSPORT_2026_11_08 \
               -e ENROLLMENT_MODE="$ENROLLMENT_MODE" \
               backend node - <"$script_path" >"$evidence_path"
             cat "$evidence_path"
-            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||r.controlledLiveEnabled||!r.stopActive||r.providerCalls!==0||r.deliveryMode!=="SANDBOX"||r.governanceMode!=="DUAL_CONTROL")process.exit(1);if(r.mode==="OPEN"&&(!r.registrationEnabled||r.status!=="ACTIVE"))process.exit(1);if(r.mode==="CLOSE"&&(r.registrationEnabled||r.status!=="CONFIGURING"))process.exit(1);const s=JSON.stringify(r);if(/@|password|secret|token|destination/i.test(s))process.exit(1);' "$evidence_path"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||r.providerCalls!==0||r.governanceMode!=="DUAL_CONTROL")process.exit(1);if(r.mode==="ARM"){if(r.controlledLiveEnabled||!r.stopActive||r.globalSmsValidated||r.deliveryMode!=="LIVE"||r.status!=="ACTIVE"||r.registrationEnabled)process.exit(1);}else if(r.mode==="DISARM"){if(r.deliveryMode!=="SANDBOX"||r.status!=="SUSPENDED"||r.registrationEnabled||r.smsEnabled||r.emailEnabled||!r.programTransportBlocked)process.exit(1);}else if(r.controlledLiveEnabled||!r.stopActive||r.deliveryMode!=="SANDBOX")process.exit(1);if(r.mode==="OPEN"&&(!r.registrationEnabled||r.status!=="ACTIVE"))process.exit(1);if(r.mode==="CLOSE"&&(r.registrationEnabled||r.status!=="CONFIGURING"))process.exit(1);const s=JSON.stringify(r);if(/@|password|secret|token|destination/i.test(s))process.exit(1);' "$evidence_path"

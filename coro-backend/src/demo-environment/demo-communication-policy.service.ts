@@ -1,4 +1,5 @@
 import { controlledOtpAllowed } from '../population/population-controlled-otp';
+import { controlledPopulationCampaignPinned } from '../population/population-controlled-live-test.constants';
 import { Injectable } from '@nestjs/common';
 import { createHash } from 'crypto';
 import {
@@ -86,7 +87,11 @@ export class DemoCommunicationPolicyService {
         externalProvidersDisabled: true,
       },
     });
-    if (!environment) return { disposition: 'LIVE' };
+    if (!environment) {
+      if (request.operation === 'POPULATION_CONTROLLED_LIVE_TEST')
+        throw new Error('CONTROLLED_POPULATION_ENVIRONMENT_MISSING');
+      return { disposition: 'LIVE' };
+    }
     if (
       request.operation === 'POPULATION_SUBSCRIBER_OTP' &&
       request.populationOtpProgramId &&
@@ -104,13 +109,19 @@ export class DemoCommunicationPolicyService {
       throw new Error('DEMO_EXTERNAL_PROVIDER_POLICY_INVALID');
     }
 
-    const blocked =
+    const foundationBlocked =
       environment.status !== 'ACTIVE' ||
       environment.communicationMode === DemoCommunicationMode.BLOCK;
     const authenticationLiveException =
-      !blocked && (await this.isAuthenticationLiveException(request));
+      !foundationBlocked && (await this.isAuthenticationLiveException(request));
     const controlledPopulationLiveException =
-      !blocked && (await this.isControlledPopulationLiveException(request));
+      !foundationBlocked &&
+      (await this.isControlledPopulationLiveException(request));
+    // A rejected real-test request is never converted into a simulated success.
+    const blocked =
+      foundationBlocked ||
+      (request.operation === 'POPULATION_CONTROLLED_LIVE_TEST' &&
+        !controlledPopulationLiveException);
     const event = await this.prisma.demoCommunicationEvent.upsert({
       where: {
         organizationId_idempotencyKey: {
@@ -255,7 +266,7 @@ export class DemoCommunicationPolicyService {
   ): Promise<boolean> {
     if (
       process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED !== 'true' ||
-      process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP === 'true' ||
+      process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP !== 'false' ||
       request.operation !== 'POPULATION_CONTROLLED_LIVE_TEST' ||
       request.organizationId !==
         process.env.POPULATION_CONTROLLED_LIVE_TEST_ORGANIZATION_ID ||
@@ -291,11 +302,20 @@ export class DemoCommunicationPolicyService {
      * destination, canal et cle d'idempotence a un etat encore envoyable.
      */
     const context = request.controlledPopulationContext;
+    if (
+      !controlledPopulationCampaignPinned(process.env, {
+        organizationId: request.organizationId,
+        programId: context.programId,
+        alertId: context.alertId,
+      })
+    )
+      return false;
     const delivery = await this.prisma.populationAlertDelivery.findUnique({
       where: { id: context.deliveryId },
       select: {
         alertId: true,
         idempotencyKey: true,
+        providerIdempotencyKey: true,
         channel: true,
         status: true,
         suppressionReason: true,
@@ -395,8 +415,17 @@ export class DemoCommunicationPolicyService {
       delivery.suppressionReason === null &&
       destination === normalized &&
       Boolean(request.idempotencyKey) &&
-      delivery.idempotencyKey === request.idempotencyKey &&
-      process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP !== 'true'
+      (request.channel === DemoCommunicationChannel.EMAIL
+        ? Boolean(delivery.providerIdempotencyKey) &&
+          delivery.providerIdempotencyKey === request.idempotencyKey
+        : delivery.idempotencyKey === request.idempotencyKey) &&
+      process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP === 'false' &&
+      process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED === 'true' &&
+      controlledPopulationCampaignPinned(process.env, {
+        organizationId: request.organizationId,
+        programId: context.programId,
+        alertId: context.alertId,
+      })
     );
   }
 

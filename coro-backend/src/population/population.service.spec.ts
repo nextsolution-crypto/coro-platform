@@ -204,6 +204,40 @@ describe('PopulationService', () => {
     );
   });
 
+  it('refuses the fixed QA program when the controlled guard dependency is absent', async () => {
+    prisma.building.findUnique.mockResolvedValueOnce({ organizationId: 'org' });
+    await expect(
+      (service as any).controlledLiveTestGuard({
+        buildingId: 'building',
+        program: {
+          id: '915d3ef5-8e6b-5cb3-94d5-c038ddbe06d7',
+          status: 'ACTIVE',
+          deliveryMode: 'LIVE',
+        },
+        alert: { id: 'alert' },
+      }),
+    ).rejects.toThrow('POPULATION_CONTROLLED_LIVE_TEST_GUARD_UNAVAILABLE');
+  });
+
+  it('never grants prepared authority when the campaign guard returns false', async () => {
+    prisma.building.findUnique.mockResolvedValueOnce({ organizationId: 'org' });
+    (service as any).controlledLiveTest = {
+      isConfiguredFor: jest.fn().mockReturnValue(true),
+      assertCampaign: jest.fn().mockReturnValue(false),
+    };
+    await expect(
+      (service as any).controlledLiveTestGuard(
+        {
+          buildingId: 'building',
+          program: { id: 'program', status: 'ACTIVE', deliveryMode: 'LIVE' },
+          alert: { id: 'alert' },
+        },
+        'PREPARE',
+        [],
+      ),
+    ).rejects.toThrow('CONTROLLED_TEST_CAMPAIGN_AUTHORITY_INVALID');
+  });
+
   it('keeps a PENDING subscriber unchanged when the access secret is unavailable', async () => {
     readiness.assertAccessReady.mockImplementationOnce(() => {
       throw new ServiceUnavailableException(
@@ -5493,6 +5527,23 @@ describe('PopulationService', () => {
 
     it('remplace atomiquement les anciens snapshots par le ciblage recalculé', async () => {
       await service.refreshAlertDraftTargeting('building-1', 'alert-1');
+
+      expect(prisma.populationAlert.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: {
+            contextSnapshot: expect.objectContaining({
+              scenario: expect.objectContaining({
+                scientificGovernance: expect.objectContaining({
+                  scenarioUpdatedAt: null,
+                  dispersionReviewedAt: null,
+                  sourceDocumentId: null,
+                  zones: [expect.objectContaining({ id: 'zone-a' })],
+                }),
+              }),
+            }),
+          },
+        }),
+      );
 
       expect(prisma.populationAlertZone.deleteMany).toHaveBeenCalledWith({
         where: {

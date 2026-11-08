@@ -9,7 +9,11 @@ import {
   PopulationGovernanceMode,
 } from '@prisma/client';
 import { createHash } from 'crypto';
-import { POPULATION_CONTROLLED_LIVE_TEST_SMS_SENDER_E164 } from './population-controlled-live-test.constants';
+import {
+  controlledPopulationCampaignPinned,
+  POPULATION_CONTROLLED_LIVE_TEST_QA_PROGRAM_ID,
+  POPULATION_CONTROLLED_LIVE_TEST_SMS_SENDER_E164,
+} from './population-controlled-live-test.constants';
 import { estimateControlledCampaignCost } from './population-controlled-test-cost';
 
 type ControlledDelivery = {
@@ -20,6 +24,7 @@ type ControlledDelivery = {
 };
 
 type ControlledAlert = {
+  id: string;
   type: PopulationAlertType;
   titleFR: string;
   titleEN: string | null;
@@ -62,8 +67,33 @@ export class PopulationControlledLiveTestService {
     );
   }
 
+  isConfiguredFor(organizationId: string, programId: string, alertId?: string) {
+    return Boolean(
+      programId === POPULATION_CONTROLLED_LIVE_TEST_QA_PROGRAM_ID ||
+      (alertId &&
+        process.env.POPULATION_CONTROLLED_LIVE_TEST_ALERT_ID === alertId) ||
+      (organizationId &&
+        programId &&
+        process.env.POPULATION_CONTROLLED_LIVE_TEST_ORGANIZATION_ID ===
+          organizationId &&
+        process.env.POPULATION_CONTROLLED_LIVE_TEST_PROGRAM_ID === programId),
+    );
+  }
+
+  assertPinned(input: {
+    organizationId: string;
+    programId: string;
+    alertId: string;
+  }) {
+    if (!controlledPopulationCampaignPinned(process.env, input)) {
+      throw new ServiceUnavailableException(
+        'CONTROLLED_TEST_CAMPAIGN_AUTHORITY_INVALID',
+      );
+    }
+  }
+
   assertNotStopped() {
-    if (process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP === 'true') {
+    if (process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP !== 'false') {
       throw new ServiceUnavailableException(
         'POPULATION_CONTROLLED_LIVE_TEST_STOPPED',
       );
@@ -71,6 +101,14 @@ export class PopulationControlledLiveTestService {
   }
 
   private assertProviderGovernance() {
+    if (
+      !process.env.BREVO_API_KEY?.trim() ||
+      !process.env.BREVO_SENDER_EMAIL?.trim()
+    ) {
+      throw new ServiceUnavailableException(
+        'CONTROLLED_TEST_PROVIDER_NOT_CONFIGURED',
+      );
+    }
     const budget = Number(
       process.env.POPULATION_CONTROLLED_LIVE_TEST_MAX_CAMPAIGN_CAD_CENTS,
     );
@@ -82,11 +120,19 @@ export class PopulationControlledLiveTestService {
         'CONTROLLED_TEST_EMAIL_SENDER_NOT_VERIFIED',
       );
     }
-    if (
-      process.env.POPULATION_SMS_TFN_APPROVED !== 'true' ||
-      process.env.POPULATION_SMS_PRODUCTION_VALIDATED !== 'true'
-    ) {
+    if (process.env.POPULATION_SMS_TFN_APPROVED !== 'true') {
       throw new ServiceUnavailableException('CONTROLLED_TEST_TFN_NOT_APPROVED');
+    }
+    // Commissioning is narrower than production validation. It is possible only
+    // after assertPinned and the complete canonical campaign checks below.
+    if (
+      !['false', 'true'].includes(
+        process.env.POPULATION_SMS_PRODUCTION_VALIDATED ?? '',
+      )
+    ) {
+      throw new ServiceUnavailableException(
+        'CONTROLLED_TEST_SMS_GLOBAL_STATE_INVALID',
+      );
     }
     if (
       process.env.BREVO_SMS_SENDER?.trim() !==
@@ -108,15 +154,48 @@ export class PopulationControlledLiveTestService {
     }
   }
 
-  assertCampaign(input: {
-    organizationId: string;
-    programId: string;
-    governanceMode: PopulationGovernanceMode;
-    alert: ControlledAlert;
-    deliveries: ControlledDelivery[];
-  }) {
-    if (!this.isEnabledFor(input.organizationId, input.programId)) return false;
-    this.assertNotStopped();
+  assertCampaign(
+    input: {
+      organizationId: string;
+      programId: string;
+      governanceMode: PopulationGovernanceMode;
+      alert: ControlledAlert;
+      deliveries: ControlledDelivery[];
+    },
+    stage: 'PREPARE' | 'TRANSPORT' = 'TRANSPORT',
+  ) {
+    if (
+      !this.isConfiguredFor(
+        input.organizationId,
+        input.programId,
+        input.alert.id,
+      )
+    )
+      return false;
+    this.assertPinned({
+      organizationId: input.organizationId,
+      programId: input.programId,
+      alertId: input.alert.id,
+    });
+    if (stage === 'TRANSPORT') {
+      if (!this.isEnabledFor(input.organizationId, input.programId)) {
+        throw new ServiceUnavailableException(
+          'CONTROLLED_TEST_TRANSPORT_DISABLED',
+        );
+      }
+      this.assertNotStopped();
+    } else if (
+      !['true', 'false'].includes(
+        process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED ?? '',
+      ) ||
+      !['true', 'false'].includes(
+        process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP ?? '',
+      )
+    ) {
+      throw new ServiceUnavailableException(
+        'CONTROLLED_TEST_SAFETY_STATE_INVALID',
+      );
+    }
     this.assertProviderGovernance();
     if (input.governanceMode !== PopulationGovernanceMode.DUAL_CONTROL) {
       throw new BadRequestException('CONTROLLED_TEST_DUAL_CONTROL_REQUIRED');

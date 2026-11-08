@@ -26,8 +26,7 @@ export function normalizeOperationalEvent(value) {
         ? value.communicationCount
         : normalizedAlerts.length,
     latestCommunication:
-      value.latestCommunication &&
-      typeof value.latestCommunication === "object"
+      value.latestCommunication && typeof value.latestCommunication === "object"
         ? value.latestCommunication
         : (normalizedAlerts.at(-1) ?? null),
   };
@@ -102,7 +101,9 @@ export function derivePopulationWorkflowState({ event = null, alert = null }) {
   if (alert.status === "SENDING") return "WAIT";
   if (alert.status === "ACTIVE") {
     const counts = alert.deliveryCounts ?? {};
-    if (derivePopulationCloseState({ ...event, alerts: [alert] }, true).eligible) {
+    if (
+      derivePopulationCloseState({ ...event, alerts: [alert] }, true).eligible
+    ) {
       return "EVENT_CLOSE_REQUIRED";
     }
     if ((counts.DELIVERED ?? 0) > 0) return "DELIVERED";
@@ -188,7 +189,9 @@ export function derivePopulationCloseState(event, canPrepare) {
   const sent = Number(counts.SENT ?? 0);
   const delivered = Number(counts.DELIVERED ?? 0);
   const reconciliation = Number(
-    allClear?.reconciliationRequiredCount ?? counts.RECONCILIATION_REQUIRED ?? 0,
+    allClear?.reconciliationRequiredCount ??
+      counts.RECONCILIATION_REQUIRED ??
+      0,
   );
   const failed = Number(counts.FAILED ?? 0);
   const suppressed = Number(counts.SUPPRESSED ?? 0);
@@ -197,7 +200,8 @@ export function derivePopulationCloseState(event, canPrepare) {
   const allClearPublished = Boolean(
     allClear && ["ACTIVE", "ENDED"].includes(allClear.status),
   );
-  const transportComplete = queued === 0 && sending === 0 && reconciliation === 0;
+  const transportComplete =
+    queued === 0 && sending === 0 && reconciliation === 0;
   const hasConfirmedDelivery = sent + delivered > 0;
   const eligible = Boolean(
     eventActive &&
@@ -271,4 +275,33 @@ export function getOrCreatePopulationIntent(
 
 export function clearPopulationIntent(storage, key) {
   storage.removeItem(key);
+}
+
+// Detail is fetched through the building-scoped canonical route before editing.
+export function hydratePopulationResumeAlert(event, summary, detail) {
+  if (
+    !event?.id ||
+    !summary?.id ||
+    detail?.id !== summary.id ||
+    detail.operationalEventId !== event.id ||
+    detail.emergencyScenarioId !== event.emergencyScenarioId ||
+    detail.type !== summary.type ||
+    typeof detail.messageFR !== "string" ||
+    !detail.messageFR.trim() ||
+    typeof detail.titleFR !== "string" ||
+    !detail.titleFR.trim()
+  )
+    return null;
+  return {
+    ...summary,
+    ...detail,
+    deliveryCounts: detail.deliveryCounts ?? summary.deliveryCounts,
+    deliveryChannelCounts:
+      detail.deliveryChannelCounts ?? summary.deliveryChannelCounts,
+    targetedSubscriberCount:
+      detail.targetedSubscriberCount ?? summary.targetedSubscriberCount,
+    deliverableDeliveryCount:
+      detail.deliverableDeliveryCount ?? summary.deliverableDeliveryCount,
+    targeting: detail.targeting ?? summary.targeting,
+  };
 }

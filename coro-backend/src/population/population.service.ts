@@ -87,7 +87,12 @@ import {
   PopulationTargetingMode,
   type PopulationDirectionalPreviewQueryDto,
 } from './dto/population-directional-targeting.dto';
+import {
+  estimateControlledCampaignCost,
+  ControlledCampaignCostEstimate,
+} from './population-controlled-test-cost';
 import { PopulationControlledLiveTestService } from './population-controlled-live-test.service';
+import { POPULATION_CONTROLLED_LIVE_TEST_QA_PROGRAM_ID } from './population-controlled-live-test.constants';
 
 const POPULATION_LOCATION_RESOLUTION_PURPOSE = 'POPULATION_LOCATION_RESOLUTION';
 const POPULATION_LOCATION_RESOLUTION_TTL_MS = 10 * 60 * 1000;
@@ -5860,6 +5865,7 @@ export class PopulationService {
         id: targeting.scenario.id,
         nameFR: targeting.scenario.nameFR,
         nameEN: targeting.scenario.nameEN,
+        scientificGovernance: targeting.scenario.scientificGovernance,
       },
 
       population: targeting.population,
@@ -6525,6 +6531,15 @@ export class PopulationService {
       }
     }
 
+    const controlledPreparation =
+      program.deliveryMode === PopulationDeliveryMode.LIVE
+        ? await this.controlledLiveTestGuard(
+            { buildingId, program, alert },
+            'PREPARE',
+            deliveries,
+          )
+        : { prepared: false };
+
     for (const channel of new Set(
       deliveries
         .filter(
@@ -6532,7 +6547,7 @@ export class PopulationService {
         )
         .map((delivery) => delivery.channel),
     )) {
-      this.readiness.assertAlertChannelReady(channel);
+      this.assertCampaignChannelReady(channel, controlledPreparation.prepared);
     }
 
     const deliverableSubscriberIds = new Set(
@@ -6779,27 +6794,58 @@ export class PopulationService {
    * Un seul orchestrateur concurrent peut effectuer
    * READY -> SENDING.
    */
-  private async controlledLiveTestGuard(input: {
-    buildingId: string;
-    program: { id: string; governanceMode: PopulationGovernanceMode };
-    alert: {
-      id: string;
-      type: PopulationAlertType;
-      titleFR: string;
-      titleEN: string | null;
-      createdByType: CoroActorType;
-      createdById: string;
-      approvedByType: CoroActorType | null;
-      approvedById: string | null;
-    };
-  }) {
+  private assertCampaignChannelReady(
+    channel: PopulationAlertChannel,
+    prepared = false,
+  ) {
+    // Only the scoped campaign guard can supply `prepared`; global readiness is
+    // unchanged and ordinary SMS stays NOT_VALIDATED during commissioning.
+    if (
+      channel === PopulationAlertChannel.SMS &&
+      prepared &&
+      this.readiness.getReadiness().population.sms === 'NOT_VALIDATED'
+    )
+      return;
+    this.readiness.assertAlertChannelReady(channel);
+  }
+
+  private async controlledLiveTestGuard(
+    input: {
+      buildingId: string;
+      program: {
+        id: string;
+        governanceMode: PopulationGovernanceMode;
+        status: PopulationProgramStatus;
+        deliveryMode: PopulationDeliveryMode;
+      };
+      alert: {
+        id: string;
+        type: PopulationAlertType;
+        titleFR: string;
+        titleEN: string | null;
+        createdByType: CoroActorType;
+        createdById: string;
+        approvedByType: CoroActorType | null;
+        approvedById: string | null;
+      };
+    },
+    stage: 'PREPARE' | 'TRANSPORT' = 'TRANSPORT',
+    candidateDeliveries?: Array<{
+      channel: PopulationAlertChannel;
+      destinationSnapshot: string | null;
+      subscriberId: string | null;
+      messageSnapshot: string;
+    }>,
+  ) {
     const building = await this.prisma.building.findUnique({
       where: { id: input.buildingId },
       select: { organizationId: true },
     });
     if (!building) throw new NotFoundException('Bâtiment introuvable');
     if (
-      process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED === 'true' &&
+      (input.program.id === POPULATION_CONTROLLED_LIVE_TEST_QA_PROGRAM_ID ||
+        process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED === 'true' ||
+        process.env.POPULATION_CONTROLLED_LIVE_TEST_ALERT_ID) &&
       !this.controlledLiveTest
     ) {
       throw new ServiceUnavailableException(
@@ -6807,42 +6853,63 @@ export class PopulationService {
       );
     }
     if (
-      !this.controlledLiveTest?.isEnabledFor(
+      !this.controlledLiveTest?.isConfiguredFor(
         building.organizationId,
         input.program.id,
+        input.alert.id,
       )
     ) {
-      return { enabled: false, destinations: [] as string[] };
+      return {
+        prepared: false,
+        enabled: false,
+        destinations: [] as string[],
+        cost: null as ControlledCampaignCostEstimate | null,
+      };
     }
-    const deliveries = await this.prisma.populationAlertDelivery.findMany({
-      where: {
-        alertId: input.alert.id,
-        suppressionReason: null,
-        status: {
-          in: [
-            PopulationDeliveryStatus.QUEUED,
-            PopulationDeliveryStatus.SENDING,
-            PopulationDeliveryStatus.SENT,
-            PopulationDeliveryStatus.DELIVERED,
-          ],
+    if (
+      input.program.status !== PopulationProgramStatus.ACTIVE ||
+      input.program.deliveryMode !== PopulationDeliveryMode.LIVE
+    ) {
+      throw new ServiceUnavailableException(
+        'CONTROLLED_TEST_PROGRAM_NOT_ACTIVE_LIVE',
+      );
+    }
+    // Include the whole roster. A suppressed or failed extra delivery cannot be
+    // hidden from the exact-cardinality check or the independent provider policy.
+    const deliveries =
+      candidateDeliveries ??
+      (await this.prisma.populationAlertDelivery.findMany({
+        where: { alertId: input.alert.id },
+        select: {
+          channel: true,
+          destinationSnapshot: true,
+          subscriberId: true,
+          messageSnapshot: true,
         },
+      }));
+    const authorized = this.controlledLiveTest.assertCampaign(
+      {
+        organizationId: building.organizationId,
+        programId: input.program.id,
+        governanceMode: input.program.governanceMode,
+        alert: input.alert,
+        deliveries,
       },
-      select: {
-        channel: true,
-        destinationSnapshot: true,
-        subscriberId: true,
-        messageSnapshot: true,
-      },
-    });
-    this.controlledLiveTest.assertCampaign({
-      organizationId: building.organizationId,
-      programId: input.program.id,
-      governanceMode: input.program.governanceMode,
-      alert: input.alert,
-      deliveries,
-    });
+      stage,
+    );
+    if (authorized !== true) {
+      throw new ServiceUnavailableException(
+        'CONTROLLED_TEST_CAMPAIGN_AUTHORITY_INVALID',
+      );
+    }
     return {
-      enabled: true,
+      prepared: true,
+      cost: estimateControlledCampaignCost(deliveries),
+      enabled:
+        this.controlledLiveTest.isEnabledFor(
+          building.organizationId,
+          input.program.id,
+        ) && process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP === 'false',
       destinations: deliveries.map((delivery) =>
         this.controlledLiveTest!.mask(
           delivery.channel,
@@ -6897,6 +6964,7 @@ export class PopulationService {
       throw new BadRequestException('Le mode de diffusion fige est absent');
     }
 
+    let controlledTransport = { prepared: false };
     if (alert.deliveryModeSnapshot === PopulationDeliveryMode.LIVE) {
       await this.suppressInvalidFrozenDeliveries(alert.id);
       const preflight = await this.getAlertLivePreflight(buildingId, alert.id);
@@ -6906,7 +6974,11 @@ export class PopulationService {
           preflight,
         });
       }
-      await this.controlledLiveTestGuard({ buildingId, program, alert });
+      controlledTransport = await this.controlledLiveTestGuard({
+        buildingId,
+        program,
+        alert,
+      });
     }
 
     if (
@@ -6967,7 +7039,10 @@ export class PopulationService {
           'Roster de diffusion incoherent ou non admissible',
         );
       }
-      this.readiness.assertAlertChannelReady(delivery.channel);
+      this.assertCampaignChannelReady(
+        delivery.channel,
+        controlledTransport.prepared,
+      );
     }
 
     const sendingAt = new Date();
@@ -7118,9 +7193,52 @@ export class PopulationService {
     if (deliverable.length === 0)
       blockingReasons.push('NO_DELIVERABLE_COMMUNICATION');
 
+    let controlledTest = {
+      prepared: false,
+      enabled: false,
+      cost: null as ControlledCampaignCostEstimate | null,
+      destinations: [] as string[],
+    };
+    try {
+      controlledTest = await this.controlledLiveTestGuard(
+        {
+          buildingId,
+          program,
+          alert,
+        },
+        'PREPARE',
+      );
+    } catch (error) {
+      if (
+        program.id === POPULATION_CONTROLLED_LIVE_TEST_QA_PROGRAM_ID ||
+        process.env.POPULATION_CONTROLLED_LIVE_TEST_ALERT_ID === alert.id ||
+        this.controlledLiveTest?.isConfiguredFor(
+          (
+            await this.prisma.building.findUnique({
+              where: { id: buildingId },
+              select: { organizationId: true },
+            })
+          )?.organizationId ?? '',
+          program.id,
+          alert.id,
+        )
+      ) {
+        blockingReasons.push(
+          error instanceof Error ? error.message : 'CONTROLLED_TEST_INVALID',
+        );
+      }
+    }
+
+    if (controlledTest.prepared) {
+      if (process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED !== 'true')
+        blockingReasons.push('CONTROLLED_TEST_TRANSPORT_DISABLED');
+      if (process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP !== 'false')
+        blockingReasons.push('POPULATION_CONTROLLED_LIVE_TEST_STOPPED');
+    }
+
     for (const channel of new Set(deliverable.map((item) => item.channel))) {
       try {
-        this.readiness.assertAlertChannelReady(channel);
+        this.assertCampaignChannelReady(channel, controlledTest.prepared);
       } catch {
         blockingReasons.push(`${channel}_NOT_READY`);
       }
@@ -7155,31 +7273,6 @@ export class PopulationService {
     ).length;
     if (retryPending > 0) blockingReasons.push('RETRY_PENDING');
     if (reconciliation > 0) blockingReasons.push('RECONCILIATION_REQUIRED');
-
-    let controlledTest = { enabled: false, destinations: [] as string[] };
-    try {
-      controlledTest = await this.controlledLiveTestGuard({
-        buildingId,
-        program,
-        alert,
-      });
-    } catch (error) {
-      if (
-        this.controlledLiveTest?.isEnabledFor(
-          (
-            await this.prisma.building.findUnique({
-              where: { id: buildingId },
-              select: { organizationId: true },
-            })
-          )?.organizationId ?? '',
-          program.id,
-        )
-      ) {
-        blockingReasons.push(
-          error instanceof Error ? error.message : 'CONTROLLED_TEST_INVALID',
-        );
-      }
-    }
 
     return {
       ready: blockingReasons.length === 0,
@@ -7402,9 +7495,10 @@ export class PopulationService {
       buildingId,
       alertId,
     );
-    if (alert.deliveryModeSnapshot === PopulationDeliveryMode.LIVE) {
-      await this.controlledLiveTestGuard({ buildingId, program, alert });
-    }
+    const controlledTransport =
+      alert.deliveryModeSnapshot === PopulationDeliveryMode.LIVE
+        ? await this.controlledLiveTestGuard({ buildingId, program, alert })
+        : { prepared: false };
     const pendingChannels = await this.prisma.populationAlertDelivery.findMany({
       where: {
         alertId,
@@ -7420,7 +7514,10 @@ export class PopulationService {
       distinct: ['channel'],
     });
     for (const delivery of pendingChannels) {
-      this.readiness.assertAlertChannelReady(delivery.channel);
+      this.assertCampaignChannelReady(
+        delivery.channel,
+        controlledTransport.prepared,
+      );
     }
 
     await this.recoverExpiredDeliveryLeases(alertId);
@@ -7457,7 +7554,10 @@ export class PopulationService {
           'Roster de diffusion incoherent ou non admissible',
         );
       }
-      this.readiness.assertAlertChannelReady(delivery.channel);
+      this.assertCampaignChannelReady(
+        delivery.channel,
+        controlledTransport.prepared,
+      );
     }
 
     for (const delivery of queuedDeliveries) {
@@ -7944,6 +8044,10 @@ export class PopulationService {
       );
     }
 
+    if (controlledTest.prepared && delivery.attemptCount !== 0) {
+      throw new BadRequestException('CONTROLLED_TEST_ATTEMPT_ALREADY_CONSUMED');
+    }
+
     const attemptNumber = delivery.attemptCount + 1;
     const lastAttemptAt = new Date();
     const attemptStarted = await this.prisma.populationAlertDelivery.updateMany(
@@ -8131,7 +8235,8 @@ export class PopulationService {
       const failureAt = new Date();
       const retryable =
         providerError.outcome === 'RETRYABLE_CONFIRMED' &&
-        attemptNumber < POPULATION_DELIVERY_MAX_ATTEMPTS;
+        attemptNumber < POPULATION_DELIVERY_MAX_ATTEMPTS &&
+        !controlledTest.prepared;
       const outcomeUnknown = providerError.outcome === 'OUTCOME_UNKNOWN';
       const safeErrorMessage = outcomeUnknown
         ? 'Résultat fournisseur à réconcilier'

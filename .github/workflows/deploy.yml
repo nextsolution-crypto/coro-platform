@@ -63,6 +63,8 @@ jobs:
         env:
           POPULATION_CONTROLLED_LIVE_TEST_ENABLED: "true"
           POPULATION_CONTROLLED_LIVE_TEST_STOP: "false"
+          POPULATION_CONTROLLED_LIVE_TEST_ALERT_ID: "synthetic-alert"
+          POPULATION_CONTROLLED_LIVE_TEST_EXPIRES_AT: "2030-01-01T00:30:00.000Z"
           POPULATION_CONTROLLED_LIVE_TEST_ORGANIZATION_ID: synthetic-org
           POPULATION_CONTROLLED_LIVE_TEST_PROGRAM_ID: synthetic-program
           POPULATION_CONTROLLED_LIVE_TEST_EMAIL_SHA256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
