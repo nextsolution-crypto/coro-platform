@@ -1,7 +1,7 @@
 'use strict';
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { APPROVAL, assertAuthority, assertFoundation } = require('./population-live-recipient-enrollment.cjs');
+const { APPROVAL, assertAuthority, assertFoundation, safeErrorCode } = require('./population-live-recipient-enrollment.cjs');
 
 const safeEnv = { CORO_POPULATION_RECIPIENT_ENROLLMENT: 'true', CORO_POPULATION_RECIPIENT_ENROLLMENT_APPROVAL: APPROVAL, POPULATION_CONTROLLED_LIVE_TEST_ENABLED: 'false', POPULATION_CONTROLLED_LIVE_TEST_STOP: 'true' };
 
@@ -18,4 +18,9 @@ test('rejects another tenant, client, building or governance mode', () => {
   assert.doesNotThrow(() => assertFoundation(environment, program));
   assert.throws(() => assertFoundation(environment, { ...program, governanceMode: 'STANDARD' }), /GOVERNANCE/);
   assert.throws(() => assertFoundation(environment, { ...program, rueFacilityProfile: { ...program.rueFacilityProfile, building: { ...program.rueFacilityProfile.building, organizationId: 'other' } } }), /SCOPE/);
+});
+
+test('only exposes allowlisted error codes', () => {
+  assert.equal(safeErrorCode(new Error('QA_PROGRAM_SCOPE_INVALID')), 'QA_PROGRAM_SCOPE_INVALID');
+  assert.equal(safeErrorCode(new Error('secret=value@example.test')), 'UNCLASSIFIED_ENROLLMENT_FAILURE');
 });
