@@ -5528,6 +5528,23 @@ describe('PopulationService', () => {
     it('remplace atomiquement les anciens snapshots par le ciblage recalculé', async () => {
       await service.refreshAlertDraftTargeting('building-1', 'alert-1');
 
+      expect(prisma.populationAlert.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: {
+            contextSnapshot: expect.objectContaining({
+              scenario: expect.objectContaining({
+                scientificGovernance: expect.objectContaining({
+                  scenarioUpdatedAt: null,
+                  dispersionReviewedAt: null,
+                  sourceDocumentId: null,
+                  zones: [expect.objectContaining({ id: 'zone-a' })],
+                }),
+              }),
+            }),
+          },
+        }),
+      );
+
       expect(prisma.populationAlertZone.deleteMany).toHaveBeenCalledWith({
         where: {
           alertId: 'alert-1',
