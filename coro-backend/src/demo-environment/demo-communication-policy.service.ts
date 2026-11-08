@@ -1,3 +1,4 @@
+import { controlledOtpAllowed } from '../population/population-controlled-otp';
 import { Injectable } from '@nestjs/common';
 import { createHash } from 'crypto';
 import {
@@ -26,6 +27,7 @@ export type DemoCommunicationRequest = {
   recipient?: string;
   payload: unknown;
   idempotencyKey?: string;
+  populationOtpProgramId?: string;
   controlledPopulationContext?: {
     programId: string;
     alertId: string;
@@ -85,6 +87,18 @@ export class DemoCommunicationPolicyService {
       },
     });
     if (!environment) return { disposition: 'LIVE' };
+    if (
+      request.operation === 'POPULATION_SUBSCRIBER_OTP' &&
+      request.populationOtpProgramId &&
+      request.recipient &&
+      controlledOtpAllowed(process.env, {
+        ...request,
+        programId: request.populationOtpProgramId,
+        recipient: request.recipient,
+      })
+    ) {
+      return this.claimControlledOtp(request);
+    }
 
     if (!environment.externalProvidersDisabled) {
       throw new Error('DEMO_EXTERNAL_PROVIDER_POLICY_INVALID');
@@ -140,6 +154,91 @@ export class DemoCommunicationPolicyService {
     if (authenticationLiveException || controlledPopulationLiveException)
       return { disposition: 'LIVE' };
     return { disposition: 'SIMULATED', eventId: event.id };
+  }
+
+  private async claimControlledOtp(
+    request: DemoCommunicationRequest,
+  ): Promise<DemoCommunicationDecision> {
+    // One irreversible claim per channel/destination/window. An ambiguous provider
+    // result consumes the claim: no automatic retry or second transport call.
+    const idempotencyKey = digest([
+      'CONTROLLED_POPULATION_OTP',
+      request.populationOtpProgramId,
+      request.channel,
+      digest(request.recipient!.trim().toLowerCase()),
+      process.env.POPULATION_CONTROLLED_OTP_EXPIRES_AT,
+    ]);
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${idempotencyKey}, 0))`;
+      const environment = await tx.demoEnvironment.findUnique({
+        where: { organizationId: request.organizationId },
+      });
+      const program = await tx.populationProgram.findUnique({
+        where: { id: request.populationOtpProgramId },
+        include: {
+          rueFacilityProfile: { include: { building: true } },
+          subscribers: {
+            where: { isSynthetic: false },
+            select: {
+              phoneCanonical: true,
+              emailCanonical: true,
+              status: true,
+            },
+          },
+        },
+      });
+      const previous = await tx.demoCommunicationEvent.findUnique({
+        where: {
+          organizationId_idempotencyKey: {
+            organizationId: request.organizationId,
+            idempotencyKey,
+          },
+        },
+      });
+      const normalized =
+        request.channel === 'EMAIL'
+          ? request.recipient!.trim().toLowerCase()
+          : request.recipient!.replace(/[\s().-]/g, '');
+      const subscriber =
+        program?.subscribers.length === 1 ? program.subscribers[0] : null;
+      const eligible =
+        controlledOtpAllowed(process.env, {
+          ...request,
+          programId: request.populationOtpProgramId!,
+          recipient: request.recipient!,
+        }) &&
+        environment?.status === 'ACTIVE' &&
+        environment.communicationMode === 'SIMULATE' &&
+        environment.externalProvidersDisabled &&
+        program?.status === 'ACTIVE' &&
+        program.registrationEnabled &&
+        program.deliveryMode === 'SANDBOX' &&
+        program.governanceMode === 'DUAL_CONTROL' &&
+        program.rueFacilityProfile.building.organizationId ===
+          request.organizationId &&
+        subscriber &&
+        ['PENDING_VERIFICATION', 'ACTIVE'].includes(subscriber.status) &&
+        (request.channel === 'SMS'
+          ? program.smsEnabled && subscriber.phoneCanonical === normalized
+          : program.emailEnabled && subscriber.emailCanonical === normalized);
+      if (previous) return { disposition: 'BLOCKED', eventId: previous.id };
+      const event = await tx.demoCommunicationEvent.create({
+        data: {
+          organizationId: request.organizationId,
+          channel: request.channel,
+          operation: request.operation,
+          recipientHash: digest(normalized),
+          payloadHash: digest(request.payload),
+          idempotencyKey,
+          blocked: !eligible,
+          simulated: false,
+        },
+        select: { id: true },
+      });
+      return eligible
+        ? { disposition: 'LIVE' }
+        : { disposition: 'BLOCKED', eventId: event.id };
+    });
   }
 
   private async isControlledPopulationLiveException(
