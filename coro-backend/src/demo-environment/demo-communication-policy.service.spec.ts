@@ -296,6 +296,7 @@ describe('DemoCommunicationPolicyService', () => {
     h.prisma.populationAlertDelivery.findUnique.mockResolvedValue({
       alertId: 'alert-approved',
       idempotencyKey: 'delivery-idempotency',
+      providerIdempotencyKey: 'provider-idempotency',
       channel: PopulationAlertChannel.EMAIL,
       status: PopulationDeliveryStatus.SENDING,
       suppressionReason: null,
@@ -343,7 +344,7 @@ describe('DemoCommunicationPolicyService', () => {
         operation: 'POPULATION_CONTROLLED_LIVE_TEST',
         recipient,
         payload: { subject: 'EXERCICE / TEST' },
-        idempotencyKey: 'delivery-idempotency',
+        idempotencyKey: 'provider-idempotency',
         controlledPopulationContext: {
           programId: 'program-approved',
           alertId: 'alert-approved',
@@ -351,6 +352,7 @@ describe('DemoCommunicationPolicyService', () => {
         },
       }),
     ).resolves.toEqual({ disposition: 'LIVE' });
+
     await expect(
       h.service.evaluate({
         organizationId: demoOrganizationId,
@@ -381,6 +383,90 @@ describe('DemoCommunicationPolicyService', () => {
         },
       }),
     ).resolves.toEqual({ disposition: 'BLOCKED', eventId: 'event-3' });
+    const context = {
+      programId: 'program-approved',
+      alertId: 'alert-approved',
+      deliveryId: 'delivery-approved',
+    };
+    for (const key of ['delivery-idempotency', 'other-provider-key', '']) {
+      const refused = await h.service.evaluate({
+        organizationId: demoOrganizationId,
+        channel: DemoCommunicationChannel.EMAIL,
+        operation: 'POPULATION_CONTROLLED_LIVE_TEST',
+        recipient,
+        payload: {},
+        idempotencyKey: key,
+        controlledPopulationContext: context,
+      });
+      expect(refused.disposition).toBe('BLOCKED');
+    }
+    const canonical =
+      h.prisma.populationAlertDelivery.findUnique.mock.results[0].value;
+    const emailDelivery = await canonical;
+    h.prisma.populationAlertDelivery.findUnique.mockResolvedValue({
+      ...emailDelivery,
+      providerIdempotencyKey: null,
+    });
+    expect(
+      (
+        await h.service.evaluate({
+          organizationId: demoOrganizationId,
+          channel: DemoCommunicationChannel.EMAIL,
+          operation: 'POPULATION_CONTROLLED_LIVE_TEST',
+          recipient,
+          payload: {},
+          idempotencyKey: 'delivery-idempotency',
+          controlledPopulationContext: context,
+        })
+      ).disposition,
+    ).toBe('BLOCKED');
+    const smsRecipient = '+15145550101';
+    process.env.POPULATION_CONTROLLED_LIVE_TEST_SMS_SHA256 = createHash(
+      'sha256',
+    )
+      .update(smsRecipient)
+      .digest('hex');
+    h.prisma.populationAlertDelivery.findUnique.mockResolvedValue({
+      ...emailDelivery,
+      channel: PopulationAlertChannel.SMS,
+      destinationSnapshot: smsRecipient,
+    });
+    for (const [key, disposition] of [
+      ['delivery-idempotency', 'LIVE'],
+      ['provider-idempotency', 'BLOCKED'],
+      ['other-key', 'BLOCKED'],
+      ['', 'BLOCKED'],
+    ]) {
+      expect(
+        (
+          await h.service.evaluate({
+            organizationId: demoOrganizationId,
+            channel: DemoCommunicationChannel.SMS,
+            operation: 'POPULATION_CONTROLLED_LIVE_TEST',
+            recipient: smsRecipient,
+            payload: {},
+            idempotencyKey: key,
+            controlledPopulationContext: context,
+          })
+        ).disposition,
+      ).toBe(disposition);
+    }
+    expect(
+      (
+        await h.service.evaluate({
+          organizationId: demoOrganizationId,
+          channel: DemoCommunicationChannel.EMAIL,
+          operation: 'POPULATION_CONTROLLED_LIVE_TEST',
+          recipient,
+          payload: {},
+          idempotencyKey: 'provider-idempotency',
+          controlledPopulationContext: context,
+        })
+      ).disposition,
+    ).toBe('BLOCKED');
+    h.prisma.populationAlertDelivery.findUnique.mockResolvedValue(
+      emailDelivery,
+    );
   });
 
   it('ne transforme jamais le nom d operation usurpe en autorisation LIVE', async () => {
@@ -431,6 +517,7 @@ describe('DemoCommunicationPolicyService', () => {
     h.prisma.populationAlertDelivery.findUnique.mockResolvedValue({
       alertId: 'alert-approved',
       idempotencyKey: 'delivery-idempotency',
+      providerIdempotencyKey: 'provider-idempotency',
       channel: PopulationAlertChannel.EMAIL,
       status: PopulationDeliveryStatus.SENT,
       suppressionReason: null,
@@ -478,7 +565,7 @@ describe('DemoCommunicationPolicyService', () => {
         operation: 'POPULATION_CONTROLLED_LIVE_TEST',
         recipient,
         payload: { subject: 'EXERCICE / TEST' },
-        idempotencyKey: 'delivery-idempotency',
+        idempotencyKey: 'provider-idempotency',
         controlledPopulationContext: {
           programId: 'program-approved',
           alertId: 'alert-approved',
