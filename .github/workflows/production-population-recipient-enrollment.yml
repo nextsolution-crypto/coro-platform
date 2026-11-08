@@ -1,0 +1,65 @@
+name: Production Population Recipient Enrollment Window
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: OPEN, CLOSE or STATUS
+        required: true
+        type: choice
+        options: [STATUS, OPEN, CLOSE]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - run: node --test ops/population/population-live-recipient-enrollment.test.cjs
+  operate:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Validate pinned host identity
+        env:
+          HOST_FINGERPRINT: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+        run: '[[ "$HOST_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]'
+      - name: Operate governed enrollment window
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          ENROLLMENT_MODE: ${{ inputs.mode }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,ENROLLMENT_MODE
+          command_timeout: 5m
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            script_path="$(mktemp /tmp/coro-population-recipient-enrollment.XXXXXX.cjs)"
+            evidence_path="$(mktemp /tmp/coro-population-recipient-enrollment.XXXXXX.json)"
+            trap 'rm -f -- "$script_path" "$evidence_path"' EXIT
+            exec 9>/run/lock/coro-production-deployment.lock
+            flock -n 9
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
+            git -C "$repo" show "$SOURCE_SHA:ops/population/population-live-recipient-enrollment.cjs" >"$script_path"
+            cd "$repo"
+            docker compose exec -T \
+              -e CORO_POPULATION_RECIPIENT_ENROLLMENT=true \
+              -e CORO_POPULATION_RECIPIENT_ENROLLMENT_APPROVAL=SP_OPS_04B_RECIPIENT_ENROLLMENT_2026_11_08 \
+              -e ENROLLMENT_MODE="$ENROLLMENT_MODE" \
+              backend node - <"$script_path" >"$evidence_path"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||r.controlledLiveEnabled||!r.stopActive||r.providerCalls!==0||r.deliveryMode!=="SANDBOX"||r.governanceMode!=="DUAL_CONTROL")process.exit(1);if(r.mode==="OPEN"&&(!r.registrationEnabled||r.status!=="ACTIVE"))process.exit(1);if(r.mode==="CLOSE"&&(r.registrationEnabled||r.status!=="CONFIGURING"))process.exit(1);const s=JSON.stringify(r);if(/@|password|secret|token|destination/i.test(s))process.exit(1);' "$evidence_path"
+            cat "$evidence_path"
