@@ -49,7 +49,9 @@ describe('Versioned product manual', () => {
     ['parametres', 'Où trouver les paramètres de mon organisation ?'],
   ])('documents the consolidated internal chapter %s', (id, question) => {
     expect(service.get('INTERNAL', id).id).toBe(id);
-    expect(service.ask('INTERNAL', question).articles.map((a) => a.id)).toContain(id);
+    expect(
+      service.ask('INTERNAL', question).articles.map((a) => a.id),
+    ).toContain(id);
     expect(() => service.get('CLIENT', id)).toThrow(NotFoundException);
   });
   it('keeps recent governance limits explicit and avoids excessive promises', () => {
@@ -92,6 +94,32 @@ describe('Versioned product manual', () => {
       Reflect.getMetadata(GUARDS_METADATA, UserManualClientController),
     ).toHaveLength(1);
     expect(JSON.stringify(service.list('CLIENT'))).not.toContain('sourceRefs');
+  });
+  it('publishes the full Population operator cycle only to the client audience', () => {
+    for (const id of [
+      'population',
+      'population-avant',
+      'population-pendant',
+      'population-apres',
+      'population-verifications',
+    ]) {
+      const chapter = service.get('CLIENT', id);
+      expect(chapter.category).toBe('Sentinelle Population');
+      expect(chapter.prerequisites.length).toBeGreaterThan(0);
+      expect(chapter.steps.length).toBeGreaterThan(4);
+      expect(chapter.limits.length).toBeGreaterThan(0);
+      expect(chapter.href).toBe(`/manual#${id}`);
+      expect(() => service.get('INTERNAL', id)).toThrow(NotFoundException);
+    }
+    expect(service.get('CLIENT', 'population').steps.join(' ')).toContain(
+      'même un message TEST',
+    );
+    expect(service.get('CLIENT', 'population-apres').steps.join(' ')).toContain(
+      'INCOMPLETE',
+    );
+    expect(
+      service.get('CLIENT', 'population-verifications').steps.join(' '),
+    ).toContain('N’utilisez pas une nouvelle alerte');
   });
   it('uses stable integrity references and locally resolvable article links', () => {
     const first = service.list('CLIENT');
