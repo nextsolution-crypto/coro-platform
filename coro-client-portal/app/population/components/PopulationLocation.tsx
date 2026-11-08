@@ -75,6 +75,7 @@ const copy = {
     success: "Secteur d’alerte configuré",
     successText: "Votre inscription est active. Sentinelle Population pourra maintenant déterminer si votre secteur est concerné par une alerte.",
     finish: "Terminer",
+    changeArea: "Modifier mon secteur d’alerte",
     back: "Retour",
   },
   en: {
@@ -114,6 +115,7 @@ const copy = {
     success: "Alert area configured",
     successText: "Your registration is active. Sentinelle Population can now determine whether your area is affected by an alert.",
     finish: "Finish",
+    changeArea: "Change my alert area",
     back: "Back",
   },
 } as const;
@@ -334,6 +336,7 @@ export default function PopulationLocation({
       <span className={styles.confirmationIcon}><CheckCircle2 size={27} /></span>
       <h1>{t.success}</h1><p>{t.successText}</p>
       <button className={`${styles.button} ${styles.primary}`} type="button" onClick={onFinish}>{t.finish}</button>
+      <button className={`${styles.button} ${styles.secondary}`} type="button" onClick={() => { setError(null); setStep("form"); }}>{t.changeArea}</button>
     </section></main>
   );
 
