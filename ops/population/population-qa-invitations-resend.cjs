@@ -1,7 +1,11 @@
 'use strict';
 
 const { createHash, randomBytes } = require('node:crypto');
-const { IDENTITIES: BASE_IDENTITIES, TARGET, assertFoundation, resolveCompiledModule } = require('./population-qa-identities-provision.cjs');
+const TARGET = Object.freeze({ organizationId: '916f54ec-af22-45e0-99db-a369d9630002', clientId: 'd3000001-0000-4000-8000-000000000002', buildingId: '6a1b6f2e-38b2-5f41-a740-48252fd11224', actorEmail: 'demo@getcoro.io', organizationName: 'CORO Démo', clientName: 'Ateliers du Saint-Laurent Démo', buildingName: 'Usine Demo Nord - SP-OPS-04B' });
+const BASE_IDENTITIES = Object.freeze([
+  { id: 'bd4a710f-5eef-5db0-82f0-4787d0b7e46f', email: 'demo-sp-preparer@getcoro.io', firstName: 'Préparateur', lastName: 'Sentinelle QA', role: 'CLIENT_MANAGER', permissions: ['POPULATION_PREPARE', 'POPULATION_SEND'], eventKey: 'sp-ops-04b-preparer-invitation-v1' },
+  { id: 'dcb755b3-d1ad-5e92-bdae-0fb3daab21ba', email: 'demo-sp-approver@getcoro.io', firstName: 'Approbateur', lastName: 'Sentinelle QA', role: 'CLIENT_CORPORATE', permissions: ['POPULATION_APPROVE'], eventKey: 'sp-ops-04b-approver-invitation-v1' },
+]);
 
 const APPROVAL = 'SP_OPS_04B_QA_INVITATIONS_RESEND_ONCE_2026_11_08';
 const IDENTITIES = Object.freeze(BASE_IDENTITIES.map((identity) => Object.freeze({
@@ -10,6 +14,21 @@ const IDENTITIES = Object.freeze(BASE_IDENTITIES.map((identity) => Object.freeze
   eventKey: identity.eventKey.replace(/-v1$/, '-v2'),
 })));
 const digest = (value) => createHash('sha256').update(value.trim().toLowerCase()).digest('hex');
+
+function resolveCompiledModule(root, basename) {
+  const fs = require('node:fs'); const path = require('node:path'); const absoluteRoot = path.resolve(root); const matches = [];
+  const visit = (directory) => { for (const entry of fs.readdirSync(directory, { withFileTypes: true })) { const candidate = path.join(directory, entry.name); if (entry.isSymbolicLink()) continue; if (entry.isDirectory()) visit(candidate); else if (entry.isFile() && entry.name === basename) matches.push(candidate); } };
+  visit(absoluteRoot);
+  if (matches.length !== 1 || !matches[0].startsWith(`${absoluteRoot}${path.sep}`)) throw new Error(`QA_RUNTIME_MODULE_${matches.length ? 'AMBIGUOUS' : 'MISSING'}:${basename}`);
+  return matches[0];
+}
+
+function assertFoundation({ organization, client, building, actor }) {
+  if (!organization?.isActive || organization.id !== TARGET.organizationId || organization.name !== TARGET.organizationName) throw new Error('QA_ORGANIZATION_MISMATCH');
+  if (!client?.isActive || client.id !== TARGET.clientId || client.organizationId !== TARGET.organizationId || client.name !== TARGET.clientName) throw new Error('QA_CLIENT_MISMATCH');
+  if (!building?.isActive || building.id !== TARGET.buildingId || building.clientId !== TARGET.clientId || building.organizationId !== TARGET.organizationId || building.name !== TARGET.buildingName) throw new Error('QA_BUILDING_MISMATCH');
+  if (!actor?.isActive || actor.organizationId !== TARGET.organizationId || !['ADMIN', 'SUPER_ADMIN'].includes(actor.role)) throw new Error('QA_ACTOR_NOT_ELIGIBLE');
+}
 
 function assertAuthority(env) {
   if (env.CORO_POPULATION_QA_INVITATIONS_RESEND !== 'true' || env.CORO_POPULATION_QA_INVITATIONS_RESEND_APPROVAL !== APPROVAL) throw new Error('EXACT_QA_RESEND_APPROVAL_REQUIRED');
