@@ -420,7 +420,16 @@ export default function PopulationAccess({
                   subscriberId={workflow.subscriberId}
                   accessToken={workflow.accessToken}
                   language={language}
-                  onVerified={() => loadProfile(workflow)}
+                  onVerified={async (result) => {
+                    const session = saveAuthenticatedPopulationWorkflowSession({
+                      ...workflow,
+                      accessToken: result.accessToken,
+                      accessTokenExpiresInSeconds:
+                        result.accessTokenExpiresInSeconds,
+                    });
+                    setWorkflow(session);
+                    await loadProfile(session);
+                  }}
                 />
               );
             })}
