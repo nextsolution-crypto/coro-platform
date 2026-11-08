@@ -36,6 +36,7 @@ import {
   derivePopulationWorkflowState,
   getPopulationResumeAction,
   buildPopulationResumePlan,
+  hydratePopulationResumeAlert,
   canCompletePopulationResumeMount,
   derivePopulationCloseState,
   openPopulationCloseConfirmation,
@@ -474,6 +475,13 @@ type PopulationLivePreflight = {
   retryPending: number;
   reconciliation: number;
   controlledTest: {
+    prepared?: boolean;
+    cost?: {
+      smsSegments: number;
+      emailMessages: number;
+      estimatedCadMicros: number;
+      budgetCadMicros: number;
+    } | null;
     enabled: boolean;
     destinations: string[];
   };
@@ -772,7 +780,14 @@ export default function PopulationPage() {
     alert: PopulationOperationalEventAlert,
   ) => {
     let restoredPreview: PopulationPreview;
+    let restoredAlert: PopulationOperationalEventAlert;
     try {
+      const detail = await apiGet(
+        `/client-portal/buildings/${buildingId}/population/alerts/${alert.id}`,
+      );
+      const hydrated = hydratePopulationResumeAlert(event, alert, detail);
+      if (!hydrated) throw new Error("POPULATION_RESUME_CONTEXT_MISMATCH");
+      restoredAlert = hydrated as PopulationOperationalEventAlert;
       restoredPreview = (await apiGet(
         `/client-portal/buildings/${buildingId}/population/scenarios/${event.emergencyScenarioId}/preview`,
       )) as PopulationPreview;
@@ -786,7 +801,7 @@ export default function PopulationPage() {
 
     const plan = buildPopulationResumePlan(
       event,
-      alert,
+      restoredAlert,
       scenariosRef.current,
       restoredPreview,
     );
@@ -800,48 +815,50 @@ export default function PopulationPage() {
 
     setSelectedScenarioId(plan.scenarioId);
     setPreview(plan.preview);
-    setCreatedAlert(alert as CreatedPopulationAlert);
+    setCreatedAlert(restoredAlert as CreatedPopulationAlert);
     setAlertForm({
-      type: alert.type,
-      titleFR: alert.titleFR || "",
-      titleEN: alert.titleEN || "",
-      messageFR: alert.messageFR || "",
-      messageEN: alert.messageEN || "",
-      instructionFR: alert.instructionFR || "",
-      instructionEN: alert.instructionEN || "",
+      type: restoredAlert.type,
+      titleFR: restoredAlert.titleFR || "",
+      titleEN: restoredAlert.titleEN || "",
+      messageFR: restoredAlert.messageFR || "",
+      messageEN: restoredAlert.messageEN || "",
+      instructionFR: restoredAlert.instructionFR || "",
+      instructionEN: restoredAlert.instructionEN || "",
     });
     setFreezeResult(null);
     setLivePreflight(null);
     setAlertStep(plan.step);
-    setPendingResumeAlertId(alert.id);
+    setPendingResumeAlertId(restoredAlert.id);
     setAlertComposerOpen(true);
 
-    if (derivePopulationWorkflowState({ event, alert }) === "SEND_READY") {
-      const deliveryCount = Object.values(alert.deliveryCounts ?? {}).reduce(
-        (sum, count) => sum + count,
-        0,
-      );
+    if (
+      derivePopulationWorkflowState({ event, alert: restoredAlert }) ===
+      "SEND_READY"
+    ) {
+      const deliveryCount = Object.values(
+        restoredAlert.deliveryCounts ?? {},
+      ).reduce((sum, count) => sum + count, 0);
       setFreezeResult({
-        alertId: alert.id,
-        status: alert.status,
-        approvedAt: alert.approvedAt,
-        recipientsFrozenAt: alert.recipientsFrozenAt!,
-        deliveryMode: alert.deliveryModeSnapshot!,
+        alertId: restoredAlert.id,
+        status: restoredAlert.status,
+        approvedAt: restoredAlert.approvedAt,
+        recipientsFrozenAt: restoredAlert.recipientsFrozenAt!,
+        deliveryMode: restoredAlert.deliveryModeSnapshot!,
         targeting: {
-          subscriberCount: alert.targetedSubscriberCount ?? 0,
+          subscriberCount: restoredAlert.targetedSubscriberCount ?? 0,
           deliveryCount,
-          smsDeliveryCount: alert.deliveryChannelCounts?.SMS ?? 0,
-          emailDeliveryCount: alert.deliveryChannelCounts?.EMAIL ?? 0,
-          deliverableCount: alert.deliverableDeliveryCount ?? 0,
+          smsDeliveryCount: restoredAlert.deliveryChannelCounts?.SMS ?? 0,
+          emailDeliveryCount: restoredAlert.deliveryChannelCounts?.EMAIL ?? 0,
+          deliverableCount: restoredAlert.deliverableDeliveryCount ?? 0,
           deliverableSmsCount: 0,
           deliverableEmailCount: 0,
-          suppressedCount: alert.deliveryCounts?.SUPPRESSED ?? 0,
-          ...(alert.targeting ?? {}),
+          suppressedCount: restoredAlert.deliveryCounts?.SUPPRESSED ?? 0,
+          ...(restoredAlert.targeting ?? {}),
         },
         deliveries: [],
       });
-      if (alert.deliveryModeSnapshot === "LIVE") {
-        await loadLivePreflight(alert.id);
+      if (restoredAlert.deliveryModeSnapshot === "LIVE") {
+        await loadLivePreflight(restoredAlert.id);
       }
     }
   };
@@ -2700,8 +2717,7 @@ export default function PopulationPage() {
                       value={targetingMode}
                       onChange={(event) => {
                         const nextMode = event.target.value as
-                          | "GLOBAL"
-                          | "DIRECTIONAL";
+                          "GLOBAL" | "DIRECTIONAL";
                         setTargetingMode(nextMode);
                         if (selectedScenarioId) {
                           void loadScenarioPreview(
@@ -4595,8 +4611,7 @@ function EventCockpit({
   const closeDialogRef = useRef<HTMLDivElement>(null);
   const closeState = derivePopulationCloseState(event, canPrepare);
   const allClear = closeState.allClear as
-    | PopulationOperationalEventAlert
-    | undefined;
+    PopulationOperationalEventAlert | undefined;
   const canFollowUp = Boolean(event && !allClear && canPrepare);
   const initialType = event?.alerts[0]?.type === "TEST" ? "TEST" : "URGENCE";
   const presentation = derivePopulationEventPresentation({
@@ -7179,7 +7194,8 @@ function AlertDraftWorkspace({
               )}
             </div>
 
-            {livePreflight?.controlledTest.enabled && (
+            {(livePreflight?.controlledTest.enabled ||
+              livePreflight?.controlledTest.prepared) && (
               <div
                 role="status"
                 aria-live="polite"
@@ -7194,14 +7210,42 @@ function AlertDraftWorkspace({
                   lineHeight: 1.55,
                 }}
               >
-                <strong>Essai réel contrôlé</strong>
+                <strong>
+                  {livePreflight.controlledTest.enabled
+                    ? "Essai réel contrôlé autorisé par la configuration"
+                    : "Préparation de l’essai contrôlé — transport bloqué"}
+                </strong>
                 <div>
                   Destinations autorisées :{" "}
                   {livePreflight.controlledTest.destinations.join(" · ")}
                 </div>
+                {livePreflight.controlledTest.cost && (
+                  <div>
+                    Estimation serveur :{" "}
+                    {new Intl.NumberFormat("fr-CA", {
+                      style: "currency",
+                      currency: "CAD",
+                      maximumFractionDigits: 4,
+                    }).format(
+                      livePreflight.controlledTest.cost.estimatedCadMicros /
+                        1_000_000,
+                    )}{" "}
+                    · plafond{" "}
+                    {new Intl.NumberFormat("fr-CA", {
+                      style: "currency",
+                      currency: "CAD",
+                    }).format(
+                      livePreflight.controlledTest.cost.budgetCadMicros /
+                        1_000_000,
+                    )}{" "}
+                    · {livePreflight.controlledTest.cost.smsSegments} segment(s)
+                    SMS et {livePreflight.controlledTest.cost.emailMessages}{" "}
+                    courriel.
+                  </div>
+                )}
                 <div>
                   Un seul courriel et un seul SMS; double approbation et arrêt
-                  d’urgence actifs.
+                  d’urgence disponibles.
                 </div>
               </div>
             )}
