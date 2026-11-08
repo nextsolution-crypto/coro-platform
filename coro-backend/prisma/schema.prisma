@@ -6575,7 +6575,7 @@ model BuildingEmployee {
   phone          String?
   qrToken        String   @unique @default(uuid())
   pin            String?
-  pinEmailStatus String   @default("NOT_REQUESTED")
+  pinEmailStatus String   @default("NOT_VERIFIED")
   pinEmailMessageId String?
   pinEmailAttemptedAt DateTime?
   pinEmailDeliveredAt DateTime?
