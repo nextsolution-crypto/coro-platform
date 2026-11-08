@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { IncidentNotificationDispatcherService } from './incident-notification-dispatcher.service';
 
 describe('IncidentNotificationDispatcherService', () => {
@@ -46,4 +48,19 @@ describe('IncidentNotificationDispatcherService', () => {
     await expect(service.recordDelivered('delivery-1', 'provider-1')).resolves.toEqual({ recorded: true });
     expect(prisma.incidentNotificationDelivery.updateMany).toHaveBeenCalledWith({ where: { id: 'delivery-1', providerMessageId: 'provider-1', status: 'SENT' }, data: { status: 'DELIVERED', providerDeliveredAt: expect.any(Date) } });
   });
+  it('fails closed before persisting or sending if the encryption key is absent', async () => {
+    delete process.env.INCIDENT_OUTBOX_KEY_BASE64;
+    await expect(service.enqueue({ organizationId: 'org-1', incidentEventId: 'incident-1', channel: 'EMAIL', purpose: 'TEST', idempotencyKey: 'incident-1:test', envelope: { destination: 'qa@example.invalid' } })).rejects.toThrow('INCIDENT_OUTBOX_KEY_BASE64 is required');
+    expect(prisma.incidentNotificationDelivery.upsert).not.toHaveBeenCalled();
+    expect(provider.sendEmail).not.toHaveBeenCalled();
+    expect(provider.sendSms).not.toHaveBeenCalled();
+  });
+
+  it('propagates the dedicated Incident key into the backend without a fake provider default', () => {
+    const compose = readFileSync(resolve(__dirname, '../../../docker-compose.yml'), 'utf8');
+    expect(compose).toContain('INCIDENT_OUTBOX_KEY_BASE64: ${INCIDENT_OUTBOX_KEY_BASE64:-}');
+    expect(compose).toContain('INCIDENT_OUTBOX_KEY_ID: ${INCIDENT_OUTBOX_KEY_ID:-v1}');
+    expect(compose).not.toMatch(/INCIDENT_NOTIFICATION_PROVIDER_MODE:.*FAKE/);
+  });
+
 });
