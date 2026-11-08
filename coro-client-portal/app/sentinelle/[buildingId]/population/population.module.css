@@ -6,6 +6,42 @@
   line-height: 1.5;
 }
 
+.operatorManual {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: center;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid #d9e5e1;
+  border-radius: 12px;
+  background: #f3f8f6;
+}
+.operatorManual a {
+  color: #145e50;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.operatorManual span {
+  flex-basis: 100%;
+}
+.operatorManual a:focus-visible,
+.testClosure :is(button, textarea):focus-visible {
+  outline: 3px solid #167d6a;
+  outline-offset: 3px;
+}
+.testClosure {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid #d9e5e1;
+  border-radius: 10px;
+}
+.testClosure textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 /* Keep operational text readable while preserving a clear hierarchy. */
 .page :where(div, section, article, header, footer) {
   font-size: 16px !important;
