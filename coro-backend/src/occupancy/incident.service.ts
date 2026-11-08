@@ -803,8 +803,6 @@ export class IncidentService {
     const status = opts?.status || 'ACTIVE';
     const deferNotifications = opts?.deferNotifications ?? false;
     const isExercise = body.isExercise === true;
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
 
     // PMU actif
     const activePmu = await this.prisma.project.findFirst({
@@ -847,11 +845,11 @@ export class IncidentService {
 
     // Snapshots
     const presentRecords = await this.prisma.occupancyRecord.findMany({
-      where: { buildingId: body.buildingId, status: 'IN', checkedInAt: { gte: startOfDay } },
+      where: { buildingId: body.buildingId, status: 'IN' },
     });
     const presentIds = new Set(
       (await this.prisma.occupancyRecord.findMany({
-        where: { buildingId: body.buildingId, status: 'IN', type: 'EMPLOYE', checkedInAt: { gte: startOfDay } },
+        where: { buildingId: body.buildingId, status: 'IN', type: 'EMPLOYE' },
         select: { employeeId: true },
       })).map(r => r.employeeId).filter(Boolean)
     );
