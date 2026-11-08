@@ -28,6 +28,7 @@ import {
 } from "../lib/populationSession";
 import PopulationLocation from "./PopulationLocation";
 import PopulationContactProfile from "./PopulationContactProfile";
+import PopulationAdditionalVerification from "./PopulationAdditionalVerification";
 import styles from "./PopulationPublicShell.module.css";
 
 type Language = "fr" | "en";
@@ -399,6 +400,30 @@ export default function PopulationAccess({
                 setError(t.profileError);
               }}
             />
+            {(["SMS", "EMAIL"] as const).map((candidate) => {
+              const contact =
+                candidate === "SMS"
+                  ? profile.communications.phone
+                  : profile.communications.email;
+              if (
+                !contact.exists ||
+                !contact.programEnabled ||
+                contact.localEnabled ||
+                contact.verified
+              )
+                return null;
+              return (
+                <PopulationAdditionalVerification
+                  key={candidate}
+                  channel={candidate}
+                  publicSlug={publicSlug}
+                  subscriberId={workflow.subscriberId}
+                  accessToken={workflow.accessToken}
+                  language={language}
+                  onVerified={() => loadProfile(workflow)}
+                />
+              );
+            })}
             <div>
               <h2>{t.alertArea}</h2>
               <p>
