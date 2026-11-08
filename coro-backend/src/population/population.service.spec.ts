@@ -1994,6 +1994,9 @@ describe('PopulationService', () => {
         expect.any(String),
         'organization-1',
         'POPULATION_SUBSCRIBER_OTP',
+        undefined,
+        undefined,
+        'program-1',
       );
     });
 
@@ -2257,6 +2260,9 @@ describe('PopulationService', () => {
         expect.any(String),
         'organization-1',
         'POPULATION_SUBSCRIBER_OTP',
+        undefined,
+        undefined,
+        'program-1',
       );
     });
 
