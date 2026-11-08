@@ -315,6 +315,7 @@ export class DemoCommunicationPolicyService {
       select: {
         alertId: true,
         idempotencyKey: true,
+        providerIdempotencyKey: true,
         channel: true,
         status: true,
         suppressionReason: true,
@@ -414,7 +415,10 @@ export class DemoCommunicationPolicyService {
       delivery.suppressionReason === null &&
       destination === normalized &&
       Boolean(request.idempotencyKey) &&
-      delivery.idempotencyKey === request.idempotencyKey &&
+      (request.channel === DemoCommunicationChannel.EMAIL
+        ? Boolean(delivery.providerIdempotencyKey) &&
+          delivery.providerIdempotencyKey === request.idempotencyKey
+        : delivery.idempotencyKey === request.idempotencyKey) &&
       process.env.POPULATION_CONTROLLED_LIVE_TEST_STOP === 'false' &&
       process.env.POPULATION_CONTROLLED_LIVE_TEST_ENABLED === 'true' &&
       controlledPopulationCampaignPinned(process.env, {
