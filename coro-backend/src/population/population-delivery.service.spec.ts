@@ -10,6 +10,7 @@ import {
 describe('PopulationDeliveryService', () => {
   let service: PopulationDeliveryService;
 
+  const originalEnvironment = { ...process.env };
   const originalFetch = global.fetch;
   const originalApiKey = process.env.BREVO_API_KEY;
   const originalSmsSender = process.env.BREVO_SMS_SENDER;
@@ -28,6 +29,7 @@ describe('PopulationDeliveryService', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+    process.env = { ...originalEnvironment };
   });
 
   afterAll(() => {
@@ -91,6 +93,27 @@ describe('PopulationDeliveryService', () => {
     });
   });
 
+  function controlledService() {
+    Object.assign(process.env, {
+      POPULATION_CONTROLLED_LIVE_TEST_ENABLED: 'true',
+      POPULATION_CONTROLLED_LIVE_TEST_STOP: 'false',
+      POPULATION_CONTROLLED_LIVE_TEST_ORGANIZATION_ID: 'org-test',
+      POPULATION_CONTROLLED_LIVE_TEST_PROGRAM_ID: 'program-test',
+      POPULATION_CONTROLLED_LIVE_TEST_ALERT_ID: 'alert-test',
+      POPULATION_CONTROLLED_LIVE_TEST_EXPIRES_AT: new Date(
+        Date.now() + 1800000,
+      ).toISOString(),
+    });
+    return new PopulationDeliveryService({
+      evaluate: jest.fn(async () => ({ disposition: 'LIVE' })),
+    } as never);
+  }
+  const controlledContext = {
+    programId: 'program-test',
+    alertId: 'alert-test',
+    deliveryId: 'delivery-test',
+  };
+
   it('transmet le TFN E.164 exact pour le test contrôlé', async () => {
     process.env.BREVO_SMS_SENDER =
       POPULATION_CONTROLLED_LIVE_TEST_SMS_SENDER_E164;
@@ -100,11 +123,13 @@ describe('PopulationDeliveryService', () => {
       text: jest.fn().mockResolvedValue(JSON.stringify({ messageId: 'sms-1' })),
     });
 
-    await service.sendSms(
+    await controlledService().sendSms(
       '+15145550101',
       'EXERCICE / TEST CORO',
-      undefined,
+      'org-test',
       POPULATION_CONTROLLED_LIVE_TEST_OPERATION,
+      'idempotency-key',
+      controlledContext,
     );
 
     expect(
@@ -143,11 +168,13 @@ describe('PopulationDeliveryService', () => {
       else process.env.BREVO_SMS_SENDER = sender;
 
       await expect(
-        service.sendSms(
+        controlledService().sendSms(
           '+15145550101',
           'EXERCICE / TEST CORO',
-          undefined,
+          'org-test',
           POPULATION_CONTROLLED_LIVE_TEST_OPERATION,
+          'idempotency-key',
+          controlledContext,
         ),
       ).rejects.toMatchObject({
         code: 'CONTROLLED_TEST_SMS_SENDER_INVALID',
@@ -386,5 +413,63 @@ describe('PopulationDeliveryService', () => {
     });
     expect(global.fetch).not.toHaveBeenCalled();
     delete process.env.POPULATION_EMAIL_TIMEOUT_MS;
+  });
+  it('refuses a controlled provider call without canonical policy/context', async () => {
+    await expect(
+      service.sendSms(
+        '+15145550101',
+        'EXERCICE / TEST',
+        undefined,
+        POPULATION_CONTROLLED_LIVE_TEST_OPERATION,
+      ),
+    ).rejects.toMatchObject({
+      code: 'CONTROLLED_TEST_PROVIDER_AUTHORITY_INVALID',
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+  it('rechecks expiry after the asynchronous canonical policy decision', async () => {
+    controlledService();
+    const guarded = new PopulationDeliveryService({
+      evaluate: jest.fn(async () => {
+        process.env.POPULATION_CONTROLLED_LIVE_TEST_EXPIRES_AT = new Date(
+          0,
+        ).toISOString();
+        return { disposition: 'LIVE' };
+      }),
+    } as never);
+    process.env.BREVO_SMS_SENDER =
+      POPULATION_CONTROLLED_LIVE_TEST_SMS_SENDER_E164;
+    await expect(
+      guarded.sendSms(
+        '+15145550101',
+        'EXERCICE / TEST',
+        'org-test',
+        POPULATION_CONTROLLED_LIVE_TEST_OPERATION,
+        'idempotency-key',
+        controlledContext,
+      ),
+    ).rejects.toMatchObject({
+      code: 'CONTROLLED_TEST_PROVIDER_AUTHORITY_INVALID',
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+  it('records controlled SMS network ambiguity without permitting a retry', async () => {
+    const guarded = controlledService();
+    process.env.BREVO_SMS_SENDER =
+      POPULATION_CONTROLLED_LIVE_TEST_SMS_SENDER_E164;
+    (global.fetch as jest.Mock).mockRejectedValue(
+      new Error('synthetic network failure'),
+    );
+    await expect(
+      guarded.sendSms(
+        '+15145550101',
+        'EXERCICE / TEST',
+        'org-test',
+        POPULATION_CONTROLLED_LIVE_TEST_OPERATION,
+        'idempotency-key',
+        controlledContext,
+      ),
+    ).rejects.toMatchObject({ outcome: 'OUTCOME_UNKNOWN' });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 });
