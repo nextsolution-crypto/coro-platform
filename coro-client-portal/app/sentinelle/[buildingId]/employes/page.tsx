@@ -30,6 +30,7 @@ const clientFetch = async (path: string, method = 'POST', body?: any) => {
 import PortalLayout from '../../../components/PortalLayout';
 import { UserPlus, Download, Trash2, QrCode, Shield } from 'lucide-react';
 import QRCode from 'qrcode';
+import { pinEmailLabel } from './pinEmailPresentation.mjs';
 
 const EMERGENCY_ROLES = [
   { value: 'COORDINATOR',      label: 'Coordonnateur' },
@@ -74,6 +75,7 @@ export default function EmployesPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [operationMessage, setOperationMessage] = useState('');
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [editingId, setEditingId]         = useState<string | null>(null);
   const [showImport, setShowImport]       = useState(false);
@@ -179,11 +181,12 @@ export default function EmployesPage() {
     if (!form.firstName.trim() || !form.lastName.trim()) return;
     setSaving(true);
     try {
-      await apiPost(`/client-portal/buildings/${buildingId}/sentinelle/employees`, form);
+      const created = await apiPost(`/client-portal/buildings/${buildingId}/sentinelle/employees`, form);
+      setOperationMessage(`Employé enregistré. ${pinEmailLabel(created.pinEmailStatus)}`);
       setForm({ ...EMPTY_FORM });
       setShowForm(false);
       fetchAll();
-    } catch (err) { console.error(err); }
+    } catch { setOperationMessage('Enregistrement non confirmé. Actualisez la liste avant de réessayer afin d’éviter un doublon.'); }
     finally { setSaving(false); }
   };
 
@@ -269,6 +272,8 @@ export default function EmployesPage() {
           </div>
         </div>
       </header>
+
+      {operationMessage && <p role="status">{operationMessage}</p>}
 
       {/* ── Formulaire édition ── */}
       {editingId && (
@@ -531,6 +536,7 @@ export default function EmployesPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 3 }}>
                     <span style={{ fontSize: 12, color: '#ADB5BD' }}>
                       {emp.poste || '—'}{emp.email ? ` · ${emp.email}` : ''}
+                      {emp.email && <span style={{ display: 'block' }}>{pinEmailLabel(emp.pinEmailStatus)}</span>}
                     </span>
                     {roleInfo && (
                       <span style={{ fontSize: 11, fontWeight: 700, color: '#C0392B', backgroundColor: '#FDEDEC', padding: '2px 7px', borderRadius: 4 }}>

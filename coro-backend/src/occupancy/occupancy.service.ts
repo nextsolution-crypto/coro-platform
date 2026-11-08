@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -94,8 +95,6 @@ export class OccupancyService {
     const buildingId = body.buildingId;
     const kioskToken = body.kioskToken;
 
-    console.log('[Sentinelle] checkIn reçu:', JSON.stringify(body));
-
     if (!buildingId) throw new Error('buildingId manquant');
     if (!kioskToken) throw new Error('kioskToken manquant');
 
@@ -142,7 +141,11 @@ export class OccupancyService {
 
     return this.prisma.occupancyRecord.update({
       where: { id: recordId },
-      data: { status: 'OUT', checkedOutAt: new Date() },
+      data: {
+        status: 'OUT',
+        checkedOutAt: new Date(),
+        checkoutSource: 'MANUAL',
+      },
     });
   }
 
@@ -191,12 +194,18 @@ export class OccupancyService {
     });
     if (!building) throw new NotFoundException('Bâtiment introuvable');
 
-    // Snapshot des occupants présents à cet instant
-    const presentOccupants = await this.prisma.occupancyRecord.findMany({
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`sentinelle-evacuation:${dto.buildingId}`}, 0))`;
+      const active = await tx.evacuationEvent.findFirst({
+        where: { buildingId: dto.buildingId, organizationId, status: 'ACTIVE' }, select: { id: true },
+      });
+      if (active) throw new ConflictException('Une évacuation est déjà active pour ce bâtiment.');
+      // Snapshot et dénombrement sont créés dans la même transaction.
+    const presentOccupants = await tx.occupancyRecord.findMany({
       where: { buildingId: dto.buildingId, status: 'IN' },
     });
 
-    const event = await this.prisma.evacuationEvent.create({
+    const event = await tx.evacuationEvent.create({
       data: {
         buildingId: dto.buildingId,
         organizationId,
@@ -210,7 +219,7 @@ export class OccupancyService {
 
     // Créer les entrées de dénombrement pour chaque occupant
     if (presentOccupants.length > 0) {
-      await this.prisma.evacuationCheckIn.createMany({
+      await tx.evacuationCheckIn.createMany({
         data: presentOccupants.map((o) => ({
           evacuationEventId: event.id,
           occupantRecordId: o.id,
@@ -220,6 +229,7 @@ export class OccupancyService {
     }
 
     return event;
+    });
   }
 
   // Obtenir l'évacuation active d'un bâtiment
@@ -252,10 +262,12 @@ export class OccupancyService {
     const checkin = await this.prisma.evacuationCheckIn.findFirst({
       where: {
         evacuationEventId: dto.evacuationEventId,
+        evacuationEvent: { organizationId, status: 'ACTIVE' },
         occupantRecordId: dto.occupantRecordId,
       },
     });
-    if (!checkin) throw new NotFoundException('Entrée de dénombrement introuvable');
+    if (!checkin)
+      throw new NotFoundException('Entrée de dénombrement introuvable');
 
     return this.prisma.evacuationCheckIn.update({
       where: { id: checkin.id },
@@ -269,6 +281,11 @@ export class OccupancyService {
 
   // Clore une évacuation
   async resolveEvacuation(evacuationEventId: string, organizationId: string) {
+    const event = await this.prisma.evacuationEvent.findFirst({
+      where: { id: evacuationEventId, organizationId, status: 'ACTIVE' },
+      select: { id: true },
+    });
+    if (!event) throw new NotFoundException('Évacuation active introuvable');
     return this.prisma.evacuationEvent.update({
       where: { id: evacuationEventId },
       data: { status: 'RESOLVED', resolvedAt: new Date() },
@@ -386,7 +403,7 @@ export class OccupancyService {
     return { ...event, accounted, missing, durationMinutes: duration };
   }
 
-    // ── Résilience opérationnelle ─────────────────────────────────────────────
+  // ── Résilience opérationnelle ─────────────────────────────────────────────
 
   async getReadiness(buildingId: string, token: string) {
     await this.validateKioskToken(buildingId, token);
@@ -394,39 +411,54 @@ export class OccupancyService {
     // Tous les membres de l'équipe d'urgence du bâtiment
     const allMembers = await this.prisma.buildingEmployee.findMany({
       where: { buildingId, isActive: true, isEmergencyMember: true },
-      include: { emergencyRoles: { orderBy: { priority: 'asc' } }, qualifications: true },
+      include: {
+        emergencyRoles: { orderBy: { priority: 'asc' } },
+        qualifications: true,
+      },
     });
 
-    // Employés présents aujourd'hui
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    // Toute présence ouverte, y compris les quarts traversant minuit.
     const presentRecords = await this.prisma.occupancyRecord.findMany({
-      where: { buildingId, status: 'IN', type: 'EMPLOYE', checkedInAt: { gte: startOfDay } },
+      where: {
+        buildingId,
+        status: 'IN',
+        type: 'EMPLOYE',
+      },
       select: { employeeId: true },
     });
-    const presentIds = new Set(presentRecords.map(r => r.employeeId).filter(Boolean));
+    const presentIds = new Set(
+      presentRecords.map((r) => r.employeeId).filter(Boolean),
+    );
 
     // Membres avec statut de présence
-    const membersWithPresence = allMembers.map(emp => ({
+    const membersWithPresence = allMembers.map((emp) => ({
       ...emp,
       isPresent: presentIds.has(emp.id),
     }));
 
     // Couverture par rôle avec logique de substitution
-    const ROLE_TYPES = ['COORDINATOR', 'EPI', 'ASSEMBLY_WARDEN', 'SEARCHER', 'EXIT_WARDEN', 'PNA_ESCORT', 'FIRST_AIDER'];
-    const roleCoverage = ROLE_TYPES.map(roleType => {
+    const ROLE_TYPES = [
+      'COORDINATOR',
+      'EPI',
+      'ASSEMBLY_WARDEN',
+      'SEARCHER',
+      'EXIT_WARDEN',
+      'PNA_ESCORT',
+      'FIRST_AIDER',
+    ];
+    const roleCoverage = ROLE_TYPES.map((roleType) => {
       const membersForRole = allMembers
-        .filter(m => m.emergencyRoles.some(r => r.role === roleType))
-        .map(m => {
-          const roleEntry = m.emergencyRoles.find(r => r.role === roleType)!;
+        .filter((m) => m.emergencyRoles.some((r) => r.role === roleType))
+        .map((m) => {
+          const roleEntry = m.emergencyRoles.find((r) => r.role === roleType)!;
           return {
-            id:         m.id,
-            firstName:  m.firstName,
-            lastName:   m.lastName,
-            isPresent:  presentIds.has(m.id),
+            id: m.id,
+            firstName: m.firstName,
+            lastName: m.lastName,
+            isPresent: presentIds.has(m.id),
             assignType: roleEntry.assignType,
-            priority:   roleEntry.priority,
-            zone:       roleEntry.zone ?? null,
+            priority: roleEntry.priority,
+            zone: roleEntry.zone ?? null,
           };
         })
         // Tri : titulaires en premier (PRIMARY avant ALTERNATE), puis par priorité croissante
@@ -435,55 +467,68 @@ export class OccupancyService {
           return a.assignType === 'PRIMARY' ? -1 : 1;
         });
 
-      const presentForRole = membersForRole.filter(m => m.isPresent);
+      const presentForRole = membersForRole.filter((m) => m.isPresent);
 
       // Membre effectif : le premier présent dans l'ordre de priorité
-      const effectiveMember = presentForRole.length > 0 ? presentForRole[0] : null;
+      const effectiveMember =
+        presentForRole.length > 0 ? presentForRole[0] : null;
 
       // Titulaire théorique (PRIMARY priorité 1)
-      const primaryMember = membersForRole.find(m => m.assignType === 'PRIMARY' && m.priority === 1) ?? null;
+      const primaryMember =
+        membersForRole.find(
+          (m) => m.assignType === 'PRIMARY' && m.priority === 1,
+        ) ?? null;
 
       // Substitution active si le titulaire est absent et que le membre effectif est un substitut
-      const substitutionActive = !!effectiveMember
-        && !!primaryMember
-        && !primaryMember.isPresent
-        && effectiveMember.id !== primaryMember.id;
+      const substitutionActive =
+        !!effectiveMember &&
+        !!primaryMember &&
+        !primaryMember.isPresent &&
+        effectiveMember.id !== primaryMember.id;
 
       return {
-        role:              roleType,
-        total:             membersForRole.length,
-        present:           presentForRole.length,
+        role: roleType,
+        total: membersForRole.length,
+        present: presentForRole.length,
         effectiveMember,
         primaryMember,
         substitutionActive,
-        members:           membersForRole,
+        members: membersForRole,
       };
-    }).filter(r => r.total > 0);
+    }).filter((r) => r.total > 0);
 
     // Lacunes (aucun membre présent) et capacité réduite
-    const gaps    = roleCoverage.filter(r => r.present === 0);
-    const reduced = roleCoverage.filter(r => r.present > 0 && r.present < r.total);
+    const gaps = roleCoverage.filter((r) => r.present === 0);
+    const reduced = roleCoverage.filter(
+      (r) => r.present > 0 && r.present < r.total,
+    );
 
     // Rôles avec substitution active
-    const substitutions = roleCoverage.filter(r => r.substitutionActive);
+    const substitutions = roleCoverage.filter((r) => r.substitutionActive);
 
     // Indice de préparation (% rôles couverts par au moins 1 membre présent)
-    const totalRoles     = roleCoverage.length;
-    const coveredRoles   = roleCoverage.filter(r => r.present > 0).length;
-    const readinessIndex = totalRoles > 0 ? Math.round((coveredRoles / totalRoles) * 100) : 100;
-    const status         = readinessIndex === 100 ? 'READY' : readinessIndex >= 60 ? 'REDUCED' : 'CRITICAL';
+    const totalRoles = roleCoverage.length;
+    const coveredRoles = roleCoverage.filter((r) => r.present > 0).length;
+    const readinessIndex =
+      totalRoles > 0 ? Math.round((coveredRoles / totalRoles) * 100) : 100;
+    const status =
+      readinessIndex === 100
+        ? 'READY'
+        : readinessIndex >= 60
+          ? 'REDUCED'
+          : 'CRITICAL';
 
     return {
       status,
       readinessIndex,
-      totalMembers:    allMembers.length,
-      presentMembers:  membersWithPresence.filter(m => m.isPresent).length,
+      totalMembers: allMembers.length,
+      presentMembers: membersWithPresence.filter((m) => m.isPresent).length,
       roleCoverage,
       gaps,
       reduced,
       substitutions,
-      members:         membersWithPresence,
-      computedAt:      new Date().toISOString(),
+      members: membersWithPresence,
+      computedAt: new Date().toISOString(),
     };
   }
 

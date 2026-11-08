@@ -9,6 +9,8 @@ import { PopulationBrevoSmsWebhookService } from './population-brevo-sms-webhook
 
 describe('PopulationBrevoSmsWebhookService', () => {
   const tx = {
+    incidentNotificationDelivery: { findMany: jest.fn().mockResolvedValue([]) },
+    buildingEmployee: { findMany: jest.fn().mockResolvedValue([]) },
     $executeRaw: jest.fn(),
     populationInboundSmsEvent: { create: jest.fn() },
     populationSubscriber: { findMany: jest.fn(), updateMany: jest.fn() },
@@ -24,6 +26,8 @@ describe('PopulationBrevoSmsWebhookService', () => {
     },
   };
   const prisma = {
+    incidentNotificationDelivery: { findMany: jest.fn().mockResolvedValue([]) },
+    buildingEmployee: { findMany: jest.fn().mockResolvedValue([]) },
     populationAlertDelivery: {
       findFirst: jest.fn(),
       findMany: jest.fn(),

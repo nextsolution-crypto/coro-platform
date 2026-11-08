@@ -200,7 +200,7 @@ export default function HistoriquePage() {
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <p style={{ margin: 0, fontSize: 12, color: '#2C3E50', fontWeight: 600 }}>↓ {entree}</p>
                   {sortie ? (
-                    <p style={{ margin: '2px 0 0', fontSize: 11, color: '#ADB5BD' }}>↑ {sortie} · {duration} min</p>
+                    <p style={{ margin: '2px 0 0', fontSize: 11, color: '#ADB5BD' }}>↑ {sortie} · {duration} min{r.checkoutSource === 'AUTO_STALE_16H' ? ' · Fermeture auto (> 16 h)' : r.checkoutSource === 'MANUAL' ? ' · Sortie confirmée' : ''}</p>
                   ) : (
                     <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 6, backgroundColor: '#EAFAF1', color: '#27AE60' }}>Présent</span>
                   )}

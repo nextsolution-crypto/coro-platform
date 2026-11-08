@@ -36,6 +36,8 @@ describe('PopulationBrevoWebhookService', () => {
   };
 
   const prisma = {
+    incidentNotificationDelivery: { findMany: jest.fn().mockResolvedValue([]) },
+    buildingEmployee: { findMany: jest.fn().mockResolvedValue([]) },
     populationAlertDelivery: {
       findFirst: jest.fn(),
       findUnique: jest.fn(),

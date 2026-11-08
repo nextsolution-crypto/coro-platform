@@ -6501,6 +6501,7 @@ model OccupancyRecord {
   qrToken        String?
   checkedInAt    DateTime        @default(now())
   checkedOutAt   DateTime?
+  checkoutSource String?
   organizationId String
   createdAt      DateTime        @default(now())
 
@@ -6574,6 +6575,10 @@ model BuildingEmployee {
   phone          String?
   qrToken        String   @unique @default(uuid())
   pin            String?
+  pinEmailStatus String   @default("NOT_VERIFIED")
+  pinEmailMessageId String?
+  pinEmailAttemptedAt DateTime?
+  pinEmailDeliveredAt DateTime?
   isActive       Boolean  @default(true)
   organizationId String
   createdAt      DateTime @default(now())

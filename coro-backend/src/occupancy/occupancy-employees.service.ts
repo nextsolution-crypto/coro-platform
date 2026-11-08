@@ -1,4 +1,12 @@
-import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  Optional,
+} from '@nestjs/common';
+import { isEmail } from 'class-validator';
+import { randomInt } from 'node:crypto';
 import { DemoCommunicationChannel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { DemoCommunicationPolicyService } from '../demo-environment/demo-communication-policy.service';
@@ -15,10 +23,11 @@ export class OccupancyEmployeesService {
     operation: string;
     recipient: string;
     payload: unknown;
-  }): Promise<boolean> {
+  }): Promise<string> {
     if (!this.demoCommunicationPolicy) {
-      if (process.env.NODE_ENV === 'production') throw new Error('DEMO_COMMUNICATION_POLICY_REQUIRED');
-      return true;
+      if (process.env.NODE_ENV === 'production')
+        throw new Error('DEMO_COMMUNICATION_POLICY_REQUIRED');
+      return 'LIVE';
     }
     const decision = await this.demoCommunicationPolicy.evaluate({
       organizationId: input.organizationId,
@@ -27,7 +36,7 @@ export class OccupancyEmployeesService {
       recipient: input.recipient,
       payload: input.payload,
     });
-    return decision.disposition === 'LIVE';
+    return decision.disposition;
   }
 
   // ── Employés ─────────────────────────────────────────────────────────────
@@ -53,92 +62,124 @@ export class OccupancyEmployeesService {
     organizationId: string,
     sendExternalEmail: boolean = true,
   ) {
+    if (!String(body.firstName || '').trim() || !String(body.lastName || '').trim()) {
+      throw new BadRequestException('Prénom et nom requis.');
+    }
+    if (body.email && !isEmail(String(body.email).trim())) {
+      throw new BadRequestException('Adresse courriel invalide.');
+    }
+    body = { ...body, firstName: String(body.firstName).trim(), lastName: String(body.lastName).trim(), email: body.email ? String(body.email).trim().toLowerCase() : null };
     const building = await this.prisma.building.findFirst({
       where: { id: body.buildingId, organizationId },
     });
     if (!building) throw new NotFoundException('Bâtiment introuvable');
 
-    // Générer un PIN unique à 4 chiffres pour ce bâtiment
-    let pin = '';
-    let unique = false;
-    while (!unique) {
-      pin = Math.floor(1000 + Math.random() * 9000).toString();
-      const existing = await this.prisma.buildingEmployee.findFirst({
-        where: { buildingId: body.buildingId, pin, isActive: true },
-      });
-      if (!existing) unique = true;
-    }
-
-    const employee = await this.prisma.buildingEmployee.create({
-      data: {
-        buildingId: body.buildingId,
-        organizationId,
-        firstName: body.firstName,
-        lastName: body.lastName,
-        poste: body.poste,
-        email: body.email,
-        phone: body.phone,
-        pin,
-        isEmergencyMember: body.isEmergencyMember === true,
-        smsConsent:        body.smsConsent === true,
-      },
-    });
-
-    // Rôle d'urgence
-    if (body.isEmergencyMember && body.emergencyRole) {
-      await this.prisma.employeeEmergencyRole.create({
+    // Serialize allocation for this building; the database index is the final guard.
+    const employee = await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`sentinelle-pin:${body.buildingId}`}, 0))`;
+      let pin: string | undefined;
+      for (let attempt = 0; attempt < 100; attempt++) {
+        const candidate = randomInt(1000, 10000).toString();
+        const existing = await tx.buildingEmployee.findFirst({
+          where: {
+            buildingId: body.buildingId,
+            pin: candidate,
+            isActive: true,
+          },
+        });
+        if (!existing) {
+          pin = candidate;
+          break;
+        }
+      }
+      if (!pin)
+        throw new ConflictException(
+          'Aucun PIN disponible; contactez un administrateur.',
+        );
+      const created = await tx.buildingEmployee.create({
         data: {
-          employeeId: employee.id,
           buildingId: body.buildingId,
-          role: body.emergencyRole,
-          assignType: body.emergencyAssignType || 'PRIMARY',
-          priority: body.emergencyAssignType === 'ALTERNATE' ? 2 : 1,
-          zone: body.emergencyZone || null,
+          organizationId,
+          firstName: body.firstName,
+          lastName: body.lastName,
+          poste: body.poste,
+          email: body.email,
+          phone: body.phone,
+          pin,
+          isEmergencyMember: body.isEmergencyMember === true,
+          smsConsent: body.smsConsent === true,
+          pinEmailStatus: 'NOT_REQUESTED',
         },
       });
-    }
-
-    // Qualifications
-    if (body.qualifications?.length > 0) {
-      for (const qual of body.qualifications) {
-        await this.prisma.employeeQualification.create({
-          data: { employeeId: employee.id, type: qual },
+      if (body.isEmergencyMember && body.emergencyRole) {
+        await tx.employeeEmergencyRole.create({
+          data: {
+            employeeId: created.id,
+            buildingId: body.buildingId,
+            role: body.emergencyRole,
+            assignType: body.emergencyAssignType || 'PRIMARY',
+            priority: body.emergencyAssignType === 'ALTERNATE' ? 2 : 1,
+            zone: body.emergencyZone || null,
+          },
         });
       }
-    }
-
-    // Envoyer le PIN par courriel si email fourni
-    if (body.email && sendExternalEmail) {
-      try {
-        await this.sendPinEmail(employee, building);
-      } catch (error) {
-        // The API must not report a failed creation while leaving an employee
-        // that the client cannot safely retry. Related role/qualification rows
-        // are removed by their existing cascade constraints.
-        await this.prisma.buildingEmployee.delete({ where: { id: employee.id } });
-        throw error;
+      for (const type of body.qualifications || []) {
+        await tx.employeeQualification.create({
+          data: { employeeId: created.id, type },
+        });
       }
-    }
+      return created;
+    });
 
-    return employee;
+    if (!body.email || !sendExternalEmail) return employee;
+    // Persist the attempt before I/O. An interrupted/ambiguous request must not
+    // delete the identity or invite automatic retries.
+    await this.prisma.buildingEmployee.update({
+      where: { id: employee.id },
+      data: {
+        pinEmailStatus: 'OUTCOME_UNKNOWN',
+        pinEmailAttemptedAt: new Date(),
+      },
+    });
+    let delivery: { status: string; messageId?: string };
+    try {
+      delivery = await this.sendPinEmail(employee, building);
+    } catch {
+      delivery = { status: 'OUTCOME_UNKNOWN' };
+    }
+    return this.prisma.buildingEmployee.update({
+      where: { id: employee.id },
+      data: {
+        pinEmailStatus: delivery.status,
+        pinEmailMessageId: delivery.messageId ?? null,
+      },
+    });
   }
 
   private async sendPinEmail(employee: any, building: any) {
-    if (!(await this.allowExternalEmail({
+    const html = (value: string) => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
+    const disposition = await this.allowExternalEmail({
       organizationId: employee.organizationId,
       operation: 'SENTINELLE_EMPLOYEE_PIN',
       recipient: employee.email,
       payload: { employeeId: employee.id, buildingId: building.id },
-    }))) return;
-    await fetch('https://api.brevo.com/v3/smtp/email', {
+    });
+    if (disposition !== 'LIVE') return { status: disposition };
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
+      signal: AbortSignal.timeout(15000),
       headers: {
         'Content-Type': 'application/json',
         'api-key': process.env.BREVO_API_KEY || '',
       },
       body: JSON.stringify({
         sender: { name: 'CORO Sentinelle', email: 'info@getcoro.io' },
-        to: [{ email: employee.email, name: `${employee.firstName} ${employee.lastName}` }],
+        to: [
+          {
+            email: employee.email,
+            name: `${employee.firstName} ${employee.lastName}`,
+          },
+        ],
         subject: `Votre code d'accès CORO Sentinelle — ${building.name}`,
         htmlContent: `
           <div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;">
@@ -149,9 +190,9 @@ export class OccupancyEmployeesService {
             <div style="background:#FFFFFF;padding:32px;border:1px solid #E9ECEF;border-radius:0 0 8px 8px;">
               <h2 style="color:#2C3E50;margin:0 0 8px;">Votre code PIN d'accès</h2>
               <p style="color:#6C757D;margin:0 0 24px;">
-                Bonjour ${employee.firstName},<br><br>
+                Bonjour ${html(employee.firstName)},<br><br>
                 Vous avez été enregistré(e) dans le système de présence CORO Sentinelle 
-                pour <strong>${building.name}</strong>.
+                pour <strong>${html(building.name)}</strong>.
               </p>
               <div style="background:#F8F9FA;border-radius:12px;padding:32px;margin:0 0 24px;text-align:center;">
                 <p style="margin:0 0 8px;font-size:12px;color:#ADB5BD;text-transform:uppercase;letter-spacing:0.08em;">Votre PIN personnel</p>
@@ -163,7 +204,7 @@ export class OccupancyEmployeesService {
                 <ol style="margin:8px 0 0;padding-left:20px;color:#6C757D;font-size:13px;line-height:1.8;">
                   <li>Scannez le QR code affiché sur la borne d'accueil</li>
                   <li>Entrez votre PIN à 4 chiffres</li>
-                  <li>Votre entrée ou sortie est enregistrée automatiquement</li>
+                  <li>Vérifiez votre identité et confirmez votre entrée ou votre sortie</li>
                 </ol>
               </div>
               <p style="color:#ADB5BD;font-size:12px;margin:0;">
@@ -174,6 +215,19 @@ export class OccupancyEmployeesService {
         `,
       }),
     });
+    if (!response.ok)
+      return {
+        status:
+          response.status >= 400 &&
+          response.status < 500 &&
+          response.status !== 408
+            ? 'REJECTED'
+            : 'OUTCOME_UNKNOWN',
+      };
+    const payload = await response.json().catch(() => null);
+    return typeof payload?.messageId === 'string' && payload.messageId.trim()
+      ? { status: 'ACCEPTED', messageId: payload.messageId }
+      : { status: 'OUTCOME_UNKNOWN' };
   }
 
   async updateEmployee(id: string, body: any, organizationId: string) {
@@ -250,21 +304,20 @@ export class OccupancyEmployeesService {
     });
     if (!kiosk) throw new NotFoundException('Token borne invalide');
 
-    // Vérifier pas déjà checké in aujourd'hui
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const existing = await this.prisma.occupancyRecord.findFirst({
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${employee.id}))`;
+      // Une présence ouverte reste ouverte après minuit, quel que soit le QR utilisé.
+    const existing = await tx.occupancyRecord.findFirst({
       where: {
         employeeId: employee.id,
         status: 'IN',
-        checkedInAt: { gte: startOfDay },
       },
     });
     if (existing) {
       return { alreadyIn: true, record: existing, employee };
     }
 
-    const record = await this.prisma.occupancyRecord.create({
+    const record = await tx.occupancyRecord.create({
       data: {
         buildingId: employee.buildingId,
         organizationId: employee.organizationId,
@@ -277,6 +330,7 @@ export class OccupancyEmployeesService {
     });
 
     return { alreadyIn: false, record, employee };
+    });
   }
 
   // ── Invitations visiteurs ─────────────────────────────────────────────────
@@ -377,9 +431,15 @@ export class OccupancyEmployeesService {
   // ── Envoi courriel invitation ─────────────────────────────────────────────
 
   private async sendInvitationEmail(invitation: any, building: any) {
-    const visitDateFr = new Date(invitation.visitDate).toLocaleDateString('fr-CA', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-    });
+    const visitDateFr = new Date(invitation.visitDate).toLocaleDateString(
+      'fr-CA',
+      {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      },
+    );
 
     // URL du QR code — la borne va le scanner
     const qrUrl = `https://client.getcoro.io/kiosk/qr/${invitation.qrToken}`;
@@ -387,12 +447,15 @@ export class OccupancyEmployeesService {
     // Générer l'image QR via API publique
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrUrl)}`;
 
-    if (!(await this.allowExternalEmail({
-      organizationId: invitation.organizationId,
-      operation: 'SENTINELLE_VISITOR_INVITATION',
-      recipient: invitation.email,
-      payload: { invitationId: invitation.id, buildingId: building.id },
-    }))) return;
+    if (
+      (await this.allowExternalEmail({
+        organizationId: invitation.organizationId,
+        operation: 'SENTINELLE_VISITOR_INVITATION',
+        recipient: invitation.email,
+        payload: { invitationId: invitation.id, buildingId: building.id },
+      })) !== 'LIVE'
+    )
+      return;
 
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
@@ -402,7 +465,12 @@ export class OccupancyEmployeesService {
       },
       body: JSON.stringify({
         sender: { name: 'CORO Sentinelle', email: 'info@getcoro.io' },
-        to: [{ email: invitation.email, name: `${invitation.firstName} ${invitation.lastName}` }],
+        to: [
+          {
+            email: invitation.email,
+            name: `${invitation.firstName} ${invitation.lastName}`,
+          },
+        ],
         subject: `Votre invitation pour le ${visitDateFr} — ${building.name}`,
         htmlContent: `
           <div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;">
@@ -442,7 +510,7 @@ export class OccupancyEmployeesService {
     });
   }
 
-    // Check-out via QR token (employé ou invitation)
+  // Check-out via QR token (employé ou invitation)
   async checkoutByQrToken(qrToken: string, kioskToken: string) {
     // Essayer employé
     const employee = await this.prisma.buildingEmployee.findFirst({
@@ -450,20 +518,32 @@ export class OccupancyEmployeesService {
     });
     if (employee) {
       const kiosk = await this.prisma.buildingKioskToken.findFirst({
-        where: { buildingId: employee.buildingId, token: kioskToken, isActive: true },
+        where: {
+          buildingId: employee.buildingId,
+          token: kioskToken,
+          isActive: true,
+        },
       });
       if (!kiosk) throw new NotFoundException('Token borne invalide');
 
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
       const record = await this.prisma.occupancyRecord.findFirst({
-        where: { employeeId: employee.id, status: 'IN', checkedInAt: { gte: startOfDay } },
+        where: {
+          employeeId: employee.id,
+          status: 'IN',
+          checkedInAt: { gte: startOfDay },
+        },
       });
       if (!record) return { alreadyOut: true, employee };
 
       await this.prisma.occupancyRecord.update({
         where: { id: record.id },
-        data: { status: 'OUT', checkedOutAt: new Date() },
+        data: {
+          status: 'OUT',
+          checkedOutAt: new Date(),
+          checkoutSource: 'MANUAL',
+        },
       });
       return { alreadyOut: false, employee };
     }
@@ -474,7 +554,11 @@ export class OccupancyEmployeesService {
     });
     if (invitation) {
       const kiosk = await this.prisma.buildingKioskToken.findFirst({
-        where: { buildingId: invitation.buildingId, token: kioskToken, isActive: true },
+        where: {
+          buildingId: invitation.buildingId,
+          token: kioskToken,
+          isActive: true,
+        },
       });
       if (!kiosk) throw new NotFoundException('Token borne invalide');
 
@@ -493,7 +577,11 @@ export class OccupancyEmployeesService {
 
       await this.prisma.occupancyRecord.update({
         where: { id: record.id },
-        data: { status: 'OUT', checkedOutAt: new Date() },
+        data: {
+          status: 'OUT',
+          checkedOutAt: new Date(),
+          checkoutSource: 'MANUAL',
+        },
       });
       return { alreadyOut: false, invitation };
     }
@@ -501,7 +589,7 @@ export class OccupancyEmployeesService {
     throw new NotFoundException('QR Code invalide');
   }
 
-    // Check-in ou check-out par PIN (depuis page /presence)
+  // Check-in ou check-out par PIN (depuis page /presence)
   async checkinByPin(kioskToken: string, pin: string) {
     // Valider le token kiosque et récupérer le bâtiment
     const kiosk = await this.prisma.buildingKioskToken.findFirst({
@@ -530,7 +618,11 @@ export class OccupancyEmployeesService {
       // Déjà présent → checkout
       await this.prisma.occupancyRecord.update({
         where: { id: existing.id },
-        data: { status: 'OUT', checkedOutAt: new Date() },
+        data: {
+          status: 'OUT',
+          checkedOutAt: new Date(),
+          checkoutSource: 'MANUAL',
+        },
       });
       return { action: 'checkout', employee };
     }
@@ -572,14 +664,25 @@ export class OccupancyEmployeesService {
     return null;
   }
 
-    // ── Import CSV ────────────────────────────────────────────────────────────
+  // ── Import CSV ────────────────────────────────────────────────────────────
 
-  async importEmployeesCsv(buildingId: string, csvContent: string, organizationId: string, sendEmails: boolean = true) {
-    const building = await this.prisma.building.findFirst({ where: { id: buildingId, organizationId } });
+  async importEmployeesCsv(
+    buildingId: string,
+    csvContent: string,
+    organizationId: string,
+    sendEmails: boolean = true,
+  ) {
+    const building = await this.prisma.building.findFirst({
+      where: { id: buildingId, organizationId },
+    });
     if (!building) throw new NotFoundException('Bâtiment introuvable');
 
-    const lines = csvContent.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    if (lines.length < 2) return { created: 0, skipped: 0, errors: [], total: 0 };
+    const lines = csvContent
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+    if (lines.length < 2)
+      return { created: 0, skipped: 0, errors: [], total: 0 };
 
     // Détecter le séparateur (virgule ou point-virgule)
     const sep = lines[0].includes(';') ? ';' : ',';
@@ -591,23 +694,34 @@ export class OccupancyEmployeesService {
       let inQuotes = false;
       for (let i = 0; i < line.length; i++) {
         const char = line[i];
-        if (char === '"') { inQuotes = !inQuotes; continue; }
-        if (char === sep && !inQuotes) { result.push(current.trim()); current = ''; continue; }
+        if (char === '"') {
+          inQuotes = !inQuotes;
+          continue;
+        }
+        if (char === sep && !inQuotes) {
+          result.push(current.trim());
+          current = '';
+          continue;
+        }
         current += char;
       }
       result.push(current.trim());
       return result;
     };
 
-    const headers = parseLine(lines[0]).map(h => h.toLowerCase().trim()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // supprimer accents
-      .replace(/[^a-z0-9]/g, '')
+    const headers = parseLine(lines[0]).map((h) =>
+      h
+        .toLowerCase()
+        .trim()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // supprimer accents
+        .replace(/[^a-z0-9]/g, ''),
     );
 
     // Mapping flexible des colonnes
     const col = (names: string[]): number => {
       for (const name of names) {
-        const idx = headers.findIndex(h => h.includes(name));
+        const idx = headers.findIndex((h) => h.includes(name));
         if (idx >= 0) return idx;
       }
       return -1;
@@ -615,42 +729,127 @@ export class OccupancyEmployeesService {
 
     const COLS = {
       // Colonnes CORO natif + Azure AD + Google Workspace + ADP + BambooHR
-      firstName:       col(['prenom', 'firstname', 'first', 'givenname', 'given name', 'givenname', 'prénom', 'forename']),
-      lastName:        col(['nom', 'lastname', 'last', 'surname', 'familyname', 'family name', 'sn']),
-      displayName:     col(['displayname', 'display name', 'fullname', 'full name', 'name', 'nom complet']),
-      poste:           col(['poste', 'titre', 'position', 'title', 'jobtitle', 'job title', 'fonction', 'department']),
-      email:           col(['email', 'courriel', 'mail', 'userprincipalname', 'user principal name', 'emailaddress', 'email address', 'work email']),
-      phone:           col(['telephone', 'phone', 'tel', 'cellulaire', 'mobilephone', 'mobile phone', 'mobile', 'cell', 'businessphones', 'work phone', 'phonenum']),
-      isEmergency:     col(['urgence', 'emergency', 'membre']),
-      emergencyRole:   col(['roleurgence', 'emergencyrole', 'roleurgence']),
-      assignType:      col(['type', 'assigntype', 'titulaire']),
-      zone:            col(['zone', 'secteur', 'area']),
-      qualifications:  col(['qualification', 'certif', 'formation']),
-      smsConsent:      col(['sms', 'consentement', 'consent']),
+      firstName: col([
+        'prenom',
+        'firstname',
+        'first',
+        'givenname',
+        'given name',
+        'givenname',
+        'prénom',
+        'forename',
+      ]),
+      lastName: col([
+        'nom',
+        'lastname',
+        'last',
+        'surname',
+        'familyname',
+        'family name',
+        'sn',
+      ]),
+      displayName: col([
+        'displayname',
+        'display name',
+        'fullname',
+        'full name',
+        'name',
+        'nom complet',
+      ]),
+      poste: col([
+        'poste',
+        'titre',
+        'position',
+        'title',
+        'jobtitle',
+        'job title',
+        'fonction',
+        'department',
+      ]),
+      email: col([
+        'email',
+        'courriel',
+        'mail',
+        'userprincipalname',
+        'user principal name',
+        'emailaddress',
+        'email address',
+        'work email',
+      ]),
+      phone: col([
+        'telephone',
+        'phone',
+        'tel',
+        'cellulaire',
+        'mobilephone',
+        'mobile phone',
+        'mobile',
+        'cell',
+        'businessphones',
+        'work phone',
+        'phonenum',
+      ]),
+      isEmergency: col(['urgence', 'emergency', 'membre']),
+      emergencyRole: col(['roleurgence', 'emergencyrole', 'roleurgence']),
+      assignType: col(['type', 'assigntype', 'titulaire']),
+      zone: col(['zone', 'secteur', 'area']),
+      qualifications: col(['qualification', 'certif', 'formation']),
+      smsConsent: col(['sms', 'consentement', 'consent']),
     };
 
     const ROLE_MAP: Record<string, string> = {
-      'coordinateur': 'COORDINATOR', 'coordinator': 'COORDINATOR', 'coord': 'COORDINATOR',
-      'epi': 'EPI', 'equipe premiere': 'EPI', 'first response': 'EPI',
-      'rassemblement': 'ASSEMBLY_WARDEN', 'assembly': 'ASSEMBLY_WARDEN', 'warden': 'ASSEMBLY_WARDEN',
-      'chercheur': 'SEARCHER', 'searcher': 'SEARCHER',
-      'sortie': 'EXIT_WARDEN', 'exit': 'EXIT_WARDEN',
-      'pna': 'PNA_ESCORT', 'accompagnateur': 'PNA_ESCORT', 'escort': 'PNA_ESCORT',
-      'secouriste': 'FIRST_AIDER', 'first aid': 'FIRST_AIDER', 'aider': 'FIRST_AIDER',
+      coordinateur: 'COORDINATOR',
+      coordinator: 'COORDINATOR',
+      coord: 'COORDINATOR',
+      epi: 'EPI',
+      'equipe premiere': 'EPI',
+      'first response': 'EPI',
+      rassemblement: 'ASSEMBLY_WARDEN',
+      assembly: 'ASSEMBLY_WARDEN',
+      warden: 'ASSEMBLY_WARDEN',
+      chercheur: 'SEARCHER',
+      searcher: 'SEARCHER',
+      sortie: 'EXIT_WARDEN',
+      exit: 'EXIT_WARDEN',
+      pna: 'PNA_ESCORT',
+      accompagnateur: 'PNA_ESCORT',
+      escort: 'PNA_ESCORT',
+      secouriste: 'FIRST_AIDER',
+      'first aid': 'FIRST_AIDER',
+      aider: 'FIRST_AIDER',
     };
 
     const QUAL_MAP: Record<string, string> = {
-      'rcr': 'FIRST_AID_CPR', 'rcp': 'FIRST_AID_CPR', 'cpr': 'FIRST_AID_CPR',
-      'premiers soins': 'FIRST_AID_CPR', 'first aid': 'FIRST_AID_CPR', 'first_aid_cpr': 'FIRST_AID_CPR',
-      'dea': 'AED', 'aed': 'AED', 'defibrillateur': 'AED',
-      'extincteur': 'FIRE_EXTINGUISHER', 'extinguisher': 'FIRE_EXTINGUISHER', 'fire_extinguisher': 'FIRE_EXTINGUISHER',
-      'epi': 'EPI_TRAINING', 'epi_training': 'EPI_TRAINING',
-      'matdang': 'HAZMAT', 'hazmat': 'HAZMAT', 'matieres dangereuses': 'HAZMAT',
+      rcr: 'FIRST_AID_CPR',
+      rcp: 'FIRST_AID_CPR',
+      cpr: 'FIRST_AID_CPR',
+      'premiers soins': 'FIRST_AID_CPR',
+      'first aid': 'FIRST_AID_CPR',
+      first_aid_cpr: 'FIRST_AID_CPR',
+      dea: 'AED',
+      aed: 'AED',
+      defibrillateur: 'AED',
+      extincteur: 'FIRE_EXTINGUISHER',
+      extinguisher: 'FIRE_EXTINGUISHER',
+      fire_extinguisher: 'FIRE_EXTINGUISHER',
+      epi: 'EPI_TRAINING',
+      epi_training: 'EPI_TRAINING',
+      matdang: 'HAZMAT',
+      hazmat: 'HAZMAT',
+      'matieres dangereuses': 'HAZMAT',
     };
 
-    const isOui = (val: string) => ['oui', 'yes', 'true', '1', 'vrai', 'x'].includes(val.toLowerCase().trim());
+    const isOui = (val: string) =>
+      ['oui', 'yes', 'true', '1', 'vrai', 'x'].includes(
+        val.toLowerCase().trim(),
+      );
 
-    const results = { created: 0, skipped: 0, errors: [] as string[], total: 0 };
+    const results = {
+      created: 0,
+      skipped: 0,
+      errors: [] as string[],
+      total: 0,
+    };
     const dataLines = lines.slice(1);
     results.total = dataLines.length;
 
@@ -658,10 +857,11 @@ export class OccupancyEmployeesService {
       const row = parseLine(dataLines[i]);
       const lineNum = i + 2;
 
-      const get = (colIdx: number) => (colIdx >= 0 && colIdx < row.length ? row[colIdx]?.trim() || '' : '');
+      const get = (colIdx: number) =>
+        colIdx >= 0 && colIdx < row.length ? row[colIdx]?.trim() || '' : '';
 
       let firstName = get(COLS.firstName);
-      let lastName  = get(COLS.lastName);
+      let lastName = get(COLS.lastName);
 
       // Fallback displayName — Azure AD et Google exportent souvent "John Doe" dans une seule colonne
       if ((!firstName || !lastName) && COLS.displayName >= 0) {
@@ -670,13 +870,15 @@ export class OccupancyEmployeesService {
           const parts = displayName.split(' ');
           if (parts.length >= 2) {
             firstName = firstName || parts[0];
-            lastName  = lastName  || parts.slice(1).join(' ');
+            lastName = lastName || parts.slice(1).join(' ');
           }
         }
       }
 
       if (!firstName || !lastName) {
-        results.errors.push(`Ligne ${lineNum} : Prénom et Nom requis — ignorée`);
+        results.errors.push(
+          `Ligne ${lineNum} : Prénom et Nom requis — ignorée`,
+        );
         results.skipped++;
         continue;
       }
@@ -689,19 +891,12 @@ export class OccupancyEmployeesService {
           where: { buildingId, email, isActive: true },
         });
         if (existing) {
-          results.errors.push(`Ligne ${lineNum} : ${firstName} ${lastName} (${email}) — déjà existant, ignoré`);
+          results.errors.push(
+            `Ligne ${lineNum} : ${firstName} ${lastName} (${email}) — déjà existant, ignoré`,
+          );
           results.skipped++;
           continue;
         }
-      }
-
-      // Générer PIN unique
-      let pin = '';
-      let unique = false;
-      while (!unique) {
-        pin = Math.floor(1000 + Math.random() * 9000).toString();
-        const existingPin = await this.prisma.buildingEmployee.findFirst({ where: { buildingId, pin, isActive: true } });
-        if (!existingPin) unique = true;
       }
 
       const isEmergencyRaw = get(COLS.isEmergency);
@@ -709,20 +904,33 @@ export class OccupancyEmployeesService {
 
       // Parser rôle urgence
       const emergencyRoleRaw = get(COLS.emergencyRole).toLowerCase().trim();
-      const emergencyRole = ROLE_MAP[emergencyRoleRaw] || (Object.values(ROLE_MAP).includes(emergencyRoleRaw.toUpperCase()) ? emergencyRoleRaw.toUpperCase() : null);
+      const emergencyRole =
+        ROLE_MAP[emergencyRoleRaw] ||
+        (Object.values(ROLE_MAP).includes(emergencyRoleRaw.toUpperCase())
+          ? emergencyRoleRaw.toUpperCase()
+          : null);
 
       // Parser type (titulaire/substitut)
       const assignTypeRaw = get(COLS.assignType).toLowerCase().trim();
-      const assignType = ['alternate', 'substitut', 'sub', '2'].includes(assignTypeRaw) ? 'ALTERNATE' : 'PRIMARY';
+      const assignType = ['alternate', 'substitut', 'sub', '2'].includes(
+        assignTypeRaw,
+      )
+        ? 'ALTERNATE'
+        : 'PRIMARY';
 
       // Parser qualifications (séparées par | ou ,)
       const qualRaw = get(COLS.qualifications);
       const qualifications: string[] = [];
       if (qualRaw) {
-        const parts = qualRaw.split(/[|,]/).map(q => q.trim().toLowerCase());
+        const parts = qualRaw.split(/[|,]/).map((q) => q.trim().toLowerCase());
         for (const part of parts) {
-          const mapped = QUAL_MAP[part] || (Object.values(QUAL_MAP).includes(part.toUpperCase()) ? part.toUpperCase() : null);
-          if (mapped && !qualifications.includes(mapped)) qualifications.push(mapped);
+          const mapped =
+            QUAL_MAP[part] ||
+            (Object.values(QUAL_MAP).includes(part.toUpperCase())
+              ? part.toUpperCase()
+              : null);
+          if (mapped && !qualifications.includes(mapped))
+            qualifications.push(mapped);
         }
       }
 
@@ -730,48 +938,39 @@ export class OccupancyEmployeesService {
       const smsConsent = smsConsentRaw ? isOui(smsConsentRaw) : false;
 
       try {
-        const employee = await this.prisma.buildingEmployee.create({
-          data: {
+        const employee = await this.createEmployee(
+          {
             buildingId,
-            organizationId,
             firstName,
             lastName,
-            poste:            get(COLS.poste)  || null,
-            email:            email            || null,
-            phone:            get(COLS.phone)  || null,
-            pin,
+            poste: get(COLS.poste) || null,
+            email: email || null,
+            phone: get(COLS.phone) || null,
             isEmergencyMember,
             smsConsent,
+            emergencyRole,
+            emergencyAssignType: assignType,
+            emergencyZone: get(COLS.zone) || null,
+            qualifications,
           },
-        });
-
-        if (isEmergencyMember && emergencyRole) {
-          await this.prisma.employeeEmergencyRole.create({
-            data: {
-              employeeId: employee.id,
-              buildingId,
-              role:       emergencyRole as any,
-              assignType: assignType as any,
-              priority:   assignType === 'ALTERNATE' ? 2 : 1,
-              zone:       get(COLS.zone) || null,
-            },
-          });
+          organizationId,
+          sendEmails,
+        );
+        if (
+          email &&
+          sendEmails &&
+          employee.pinEmailStatus !== 'ACCEPTED' &&
+          employee.pinEmailStatus !== 'DELIVERED'
+        ) {
+          results.errors.push(
+            `Ligne ${lineNum} : employé créé; courriel PIN ${employee.pinEmailStatus}. Ne pas réimporter cette ligne pour relancer l’envoi.`,
+          );
         }
-
-        for (const qual of qualifications) {
-          await this.prisma.employeeQualification.create({
-            data: { employeeId: employee.id, type: qual as any },
-          });
-        }
-
-        // Envoyer courriel PIN si email fourni et option activée
-        if (email && sendEmails) {
-          await this.sendPinEmail(employee, building).catch(() => {});
-        }
-
         results.created++;
       } catch (err: any) {
-        results.errors.push(`Ligne ${lineNum} : ${firstName} ${lastName} — Erreur : ${err.message}`);
+        results.errors.push(
+          `Ligne ${lineNum} : ${firstName} ${lastName} — Erreur : ${err.message}`,
+        );
         results.skipped++;
       }
     }
