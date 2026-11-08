@@ -319,7 +319,7 @@ export function verifyPopulationSubscriber(
 export function resendPopulationVerification(
   publicSlug: string,
   subscriberId: string,
-  input: { channel: "SMS" | "EMAIL" },
+  input: { channel: "SMS" | "EMAIL"; accessToken?: string },
 ) {
   return publicRequest<ResendPopulationVerificationResult>(
     `/population/public/${encodeURIComponent(publicSlug)}/subscribers/${encodeURIComponent(subscriberId)}/resend-verification`,

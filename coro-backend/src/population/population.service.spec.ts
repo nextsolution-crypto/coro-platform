@@ -2354,6 +2354,90 @@ describe('PopulationService', () => {
       expect(prisma.populationVerification.create).not.toHaveBeenCalled();
     });
 
+    const secondChannelToken = (
+      subscriberId = 'subscriber-1',
+      programId = 'program-1',
+      expires = Date.now() + 60000,
+    ) => {
+      const payload = Buffer.from(
+        JSON.stringify({ subscriberId, programId, exp: expires }),
+      ).toString('base64url');
+      const signature = require('crypto')
+        .createHmac(
+          'sha256',
+          'test-population-access-secret-not-for-production',
+        )
+        .update(payload)
+        .digest('base64url');
+      return `${payload}.${signature}`;
+    };
+
+    it('demande le second canal EMAIL seulement avec une session de la meme inscription', async () => {
+      prisma.populationSubscriber.findFirst.mockResolvedValue({
+        ...pendingSubscriber,
+        status: PopulationSubscriberStatus.ACTIVE,
+        smsEnabled: true,
+        emailEnabled: false,
+      });
+      const result = await service.resendVerification(
+        'sobeys-boucherville',
+        'subscriber-1',
+        {
+          channel: PopulationVerificationChannel.EMAIL,
+          accessToken: secondChannelToken(),
+        },
+      );
+      expect(result.deliveryStatus).toBe('SENT');
+      expect(populationDeliveryService.sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          destination: 'citoyen@example.com',
+          populationOtpProgramId: 'program-1',
+          operation: 'POPULATION_SUBSCRIBER_OTP',
+        }),
+      );
+      expect(prisma.populationSubscriber.update).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['autre abonne', () => secondChannelToken('other')],
+      ['autre programme', () => secondChannelToken('subscriber-1', 'other')],
+      [
+        'expiration',
+        () => secondChannelToken('subscriber-1', 'program-1', Date.now() - 1),
+      ],
+      ['signature invalide', () => 'invalid.invalid'],
+    ])('refuse le second canal pour %s', async (_label, token) => {
+      prisma.populationSubscriber.findFirst.mockResolvedValue({
+        ...pendingSubscriber,
+        status: PopulationSubscriberStatus.ACTIVE,
+        smsEnabled: true,
+        emailEnabled: false,
+      });
+      await expect(
+        service.resendVerification('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.EMAIL,
+          accessToken: token(),
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.populationVerification.create).not.toHaveBeenCalled();
+      expect(populationDeliveryService.sendEmail).not.toHaveBeenCalled();
+    });
+
+    it('refuse un canal deja active meme avec une session valide', async () => {
+      prisma.populationSubscriber.findFirst.mockResolvedValue({
+        ...pendingSubscriber,
+        status: PopulationSubscriberStatus.ACTIVE,
+        emailEnabled: true,
+      });
+      await expect(
+        service.resendVerification('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.EMAIL,
+          accessToken: secondChannelToken(),
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.populationVerification.create).not.toHaveBeenCalled();
+    });
+
     it('refuse un subscriber appartenant à un autre programme', async () => {
       prisma.populationSubscriber.findFirst.mockResolvedValue(null);
 
@@ -4021,17 +4105,29 @@ describe('PopulationService', () => {
     it('snapshotte uniquement les contacts des établissements explicitement sélectionnés et admissibles', async () => {
       prisma.rueSurroundingAsset.findMany.mockResolvedValue([
         {
-          id: 'asset-hospital', type: 'HOSPITAL', name: 'Hôpital synthétique',
-          latitude: 45.5, longitude: -73.5, geometry: null,
-          estimatedOccupancy: 240, isSensitive: true, isCritical: true,
-          source: 'MANUAL', sourceReference: 'QA-SP-OPS-02',
+          id: 'asset-hospital',
+          type: 'HOSPITAL',
+          name: 'Hôpital synthétique',
+          latitude: 45.5,
+          longitude: -73.5,
+          geometry: null,
+          estimatedOccupancy: 240,
+          isSensitive: true,
+          isCritical: true,
+          source: 'MANUAL',
+          sourceReference: 'QA-SP-OPS-02',
           validatedAt: new Date('2026-11-05T12:00:00.000Z'),
           updatedAt: new Date('2026-11-05T12:00:00.000Z'),
-          contacts: [{
-            id: 'contact-hospital', roleDescription: 'Sécurité',
-            phone: '+15145550100', email: 'urgence@example.invalid',
-            isPrimary: true, is24x7: true,
-          }],
+          contacts: [
+            {
+              id: 'contact-hospital',
+              roleDescription: 'Sécurité',
+              phone: '+15145550100',
+              email: 'urgence@example.invalid',
+              isPrimary: true,
+              is24x7: true,
+            },
+          ],
         },
       ]);
       populationGeospatialService.isPointInsideImpactZone.mockReturnValue(true);
@@ -4042,15 +4138,19 @@ describe('PopulationService', () => {
         actor,
       );
 
-      expect(prisma.populationAlertInstitutionTarget.createMany).toHaveBeenCalledWith({
-        data: [expect.objectContaining({
-          alertId: 'alert-1',
-          surroundingAssetId: 'asset-hospital',
-          surroundingAssetContactId: 'contact-hospital',
-          assetNameSnapshot: 'Hôpital synthétique',
-          contactRoleSnapshot: 'Sécurité',
-          selectedById: actor.id,
-        })],
+      expect(
+        prisma.populationAlertInstitutionTarget.createMany,
+      ).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({
+            alertId: 'alert-1',
+            surroundingAssetId: 'asset-hospital',
+            surroundingAssetContactId: 'contact-hospital',
+            assetNameSnapshot: 'Hôpital synthétique',
+            contactRoleSnapshot: 'Sécurité',
+            selectedById: actor.id,
+          }),
+        ],
         skipDuplicates: true,
       });
       const serializedSnapshot = JSON.stringify(
@@ -4064,19 +4164,34 @@ describe('PopulationService', () => {
     it('refuse un établissement sélectionné hors périmètre sans écrire le brouillon', async () => {
       prisma.rueSurroundingAsset.findMany.mockResolvedValue([
         {
-          id: 'asset-outside', type: 'SCHOOL', name: 'École hors zone',
-          latitude: 46.5, longitude: -72.5, geometry: null,
-          estimatedOccupancy: 300, isSensitive: true, isCritical: false,
-          source: 'MANUAL', sourceReference: 'QA-SP-OPS-02',
+          id: 'asset-outside',
+          type: 'SCHOOL',
+          name: 'École hors zone',
+          latitude: 46.5,
+          longitude: -72.5,
+          geometry: null,
+          estimatedOccupancy: 300,
+          isSensitive: true,
+          isCritical: false,
+          source: 'MANUAL',
+          sourceReference: 'QA-SP-OPS-02',
           validatedAt: new Date('2026-11-05T12:00:00.000Z'),
           updatedAt: new Date('2026-11-05T12:00:00.000Z'),
-          contacts: [{
-            id: 'contact-school', roleDescription: 'Direction', phone: null,
-            email: 'direction@example.invalid', isPrimary: true, is24x7: false,
-          }],
+          contacts: [
+            {
+              id: 'contact-school',
+              roleDescription: 'Direction',
+              phone: null,
+              email: 'direction@example.invalid',
+              isPrimary: true,
+              is24x7: false,
+            },
+          ],
         },
       ]);
-      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(false);
+      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(
+        false,
+      );
 
       await expect(
         service.createAlertDraft(
@@ -4087,7 +4202,9 @@ describe('PopulationService', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(prisma.populationAlert.create).not.toHaveBeenCalled();
-      expect(prisma.populationAlertInstitutionTarget.createMany).not.toHaveBeenCalled();
+      expect(
+        prisma.populationAlertInstitutionTarget.createMany,
+      ).not.toHaveBeenCalled();
     });
 
     it('conserve dans contextSnapshot les agrégats dédupliqués calculés par le même moteur que le preview', async () => {
@@ -5965,13 +6082,18 @@ describe('PopulationService', () => {
     );
 
     it('fige une cible institutionnelle en SANDBOX sans destination ni appel fournisseur', async () => {
-      activeProfile.populationProgram.deliveryMode = PopulationDeliveryMode.SANDBOX;
+      activeProfile.populationProgram.deliveryMode =
+        PopulationDeliveryMode.SANDBOX;
       prisma.populationAlert.findFirst.mockResolvedValue({
         ...approvedAlert,
-        institutionTargets: [{
-          id: 'institution-target-1', assetNameSnapshot: 'Hôpital synthétique',
-          phoneSnapshot: '+15145550100', emailSnapshot: 'urgence@example.invalid',
-        }],
+        institutionTargets: [
+          {
+            id: 'institution-target-1',
+            assetNameSnapshot: 'Hôpital synthétique',
+            phoneSnapshot: '+15145550100',
+            emailSnapshot: 'urgence@example.invalid',
+          },
+        ],
       });
 
       await service.freezeAlertRecipients('building-1', 'alert-1');
@@ -5999,13 +6121,18 @@ describe('PopulationService', () => {
     });
 
     it('refuse la diffusion institutionnelle LIVE avant toute matérialisation', async () => {
-      activeProfile.populationProgram.deliveryMode = PopulationDeliveryMode.LIVE;
+      activeProfile.populationProgram.deliveryMode =
+        PopulationDeliveryMode.LIVE;
       prisma.populationAlert.findFirst.mockResolvedValue({
         ...approvedAlert,
-        institutionTargets: [{
-          id: 'institution-target-1', assetNameSnapshot: 'Hôpital synthétique',
-          phoneSnapshot: null, emailSnapshot: 'urgence@example.invalid',
-        }],
+        institutionTargets: [
+          {
+            id: 'institution-target-1',
+            assetNameSnapshot: 'Hôpital synthétique',
+            phoneSnapshot: null,
+            emailSnapshot: 'urgence@example.invalid',
+          },
+        ],
       });
 
       await expect(
@@ -8374,6 +8501,28 @@ describe('PopulationService', () => {
       expect(JSON.stringify(result)).not.toMatch(
         /latitude|longitude|coordinates|geometry|provider|raw|addressLine|postalCode/,
       );
+    });
+
+    it('ne declare pas le courriel verifie a partir de la seule verification SMS', async () => {
+      prisma.populationSubscriber.findFirst.mockResolvedValue({
+        id: 'subscriber-1',
+        status: PopulationSubscriberStatus.ACTIVE,
+        preferredLanguage: PopulationPreferredLanguage.FR,
+        phone: '+14505551234',
+        email: 'citoyen@example.com',
+        smsEnabled: true,
+        emailEnabled: false,
+        verifiedAt: new Date(),
+        unsubscribedAt: null,
+      });
+      const result = await service.getSubscriberProfile(
+        'sobeys-boucherville',
+        'subscriber-1',
+        { accessToken: createAccessToken() },
+      );
+      expect(result.communications.phone.verified).toBe(true);
+      expect(result.communications.email.verified).toBe(false);
+      expect(result.communications.email.localEnabled).toBe(false);
     });
 
     it('ne retourne pas de destination pour un canal absent', async () => {
