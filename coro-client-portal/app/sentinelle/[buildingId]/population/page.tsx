@@ -24,6 +24,7 @@ import PortalLayout from "../../../components/PortalLayout";
 import { formatMoment, plural } from "../../presentation.mjs";
 import PopulationOperationalMap from "./PopulationOperationalMap";
 import DispersionCriticalSummary from "./DispersionCriticalSummary";
+import PopulationScenarioGovernance from "./PopulationScenarioGovernance";
 import PopulationEvidenceEntry from "./evidence/PopulationEvidenceEntry";
 import PublicPortalSharing from "./PublicPortalSharing";
 import {
@@ -122,6 +123,8 @@ type PopulationImpactZone = {
   operational: boolean;
   purpose?: string;
   approvedForAlerting?: boolean;
+  determinationMethod?: string | null;
+  sourceReference?: string | null;
 };
 
 type PopulationScenario = {
@@ -2584,7 +2587,31 @@ export default function PopulationPage() {
         </section>
 
         {selectedScenario && (
-          <DispersionCriticalSummary scenario={selectedScenario} />
+          <>
+            <DispersionCriticalSummary scenario={selectedScenario} />
+            <PopulationScenarioGovernance
+              key={
+                selectedScenario.id +
+                JSON.stringify(selectedScenario.dispersionBasis) +
+                JSON.stringify(selectedScenario.impactZones)
+              }
+              buildingId={buildingId}
+              scenario={selectedScenario}
+              canPrepare={canPrepare}
+              canApprove={
+                status.populationPermissions?.includes("POPULATION_APPROVE") ??
+                false
+              }
+              onChanged={async () => {
+                const response = (await apiGet(
+                  `/client-portal/buildings/${buildingId}/population/scenarios`,
+                )) as PopulationScenarioList;
+                scenariosRef.current = response.scenarios;
+                setScenarios(response.scenarios);
+                setPreview(null);
+              }}
+            />
+          </>
         )}
 
         {/* Poste de commandement */}
