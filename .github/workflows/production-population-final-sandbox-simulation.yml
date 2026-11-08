@@ -1,0 +1,58 @@
+name: Production Population Final Sandbox Simulation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: node ops/population/population-final-sandbox-simulation.test.cjs
+  simulate:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Validate pinned host identity
+        env:
+          HOST_FINGERPRINT: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+        run: '[[ "$HOST_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]'
+      - name: Execute governed final SANDBOX simulation
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA
+          command_timeout: 10m
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            script_path="$(mktemp /tmp/coro-population-final-simulation.XXXXXX.cjs)"
+            evidence_path="$(mktemp /tmp/coro-population-final-simulation.XXXXXX.json)"
+            trap 'rm -f -- "$script_path" "$evidence_path"' EXIT
+            exec 9>/run/lock/coro-production-deployment.lock
+            flock -n 9
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main
+            git -C "$repo" show "$SOURCE_SHA:ops/population/population-final-sandbox-simulation.cjs" >"$script_path"
+            cd "$repo"
+            docker compose exec -T \
+              -e CORO_POPULATION_FINAL_SIMULATION=true \
+              -e CORO_POPULATION_FINAL_SIMULATION_APPROVAL=SP_OPS_04B_FINAL_SANDBOX_SIMULATION_2026_11_08 \
+              backend node - <"$script_path" >"$evidence_path"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||!r.draftCreated||!r.ready||!r.distinctApproval||!r.selfApprovalRefused||r.frozenSubscriberCount!==1||r.frozenDeliveryCount!==2||r.simulatedTransportEvents!==2||!r.smsSimulated||!r.emailSimulated||r.campaignStatus!=="ENDED"||r.operationalEventStatus!=="ENDED"||r.integrityStatus!=="VERIFIED"||!r.reportCreated||r.liveProviderCalls!==0||!r.programReturnedSafe)process.exit(1);const s=JSON.stringify(r);if(/@|password|secret|token|destination|providerMessage/i.test(s))process.exit(1);' "$evidence_path"
+            cat "$evidence_path"
