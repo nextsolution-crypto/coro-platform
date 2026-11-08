@@ -380,6 +380,21 @@ describePostgres('Pinned first Population campaign on PostgreSQL 16', () => {
       type: 'CLIENT_USER',
       id: target.preparerId,
     });
+    const ready = await prisma.populationAlert.findUniqueOrThrow({
+      where: { id: alertId },
+    });
+    const scenario = await prisma.rueEmergencyScenario.findUniqueOrThrow({
+      where: { id: scenarioId },
+    });
+    expect(ready.contextSnapshot).toMatchObject({
+      scenario: {
+        scientificGovernance: {
+          scenarioUpdatedAt: scenario.updatedAt.toISOString(),
+          dispersionReviewedAt: scenario.dispersionReviewedAt!.toISOString(),
+          sourceDocumentId: scenario.dispersionSourceFileId,
+        },
+      },
+    });
     await service.approveAlert(target.buildingId, alertId, {
       type: 'CLIENT_USER',
       id: target.approverId,
@@ -579,35 +594,39 @@ describePostgres('Pinned first Population campaign on PostgreSQL 16', () => {
       where: { programId: target.programId, isSynthetic: false },
     });
     let arm!: Promise<unknown>;
-    await prisma.$transaction(
-      async (tx) => {
-        await tx.$queryRaw`SELECT id FROM "PopulationSubscriber" WHERE id = ${owner.id} FOR UPDATE`;
-        arm = operation.execute(prisma, 'ARM', process.env);
-        void arm.catch(() => undefined);
-        // Observe the actual PostgreSQL lock wait, not a fixed scheduling delay.
-        const deadline = Date.now() + 3000;
-        let observedLockWait = false;
-        while (Date.now() < deadline) {
-          const waiting = await tx.$queryRaw<
-            Array<{ count: bigint }>
-          >`SELECT count(*) FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query LIKE '%PopulationSubscriber%FOR SHARE%'`;
-          if (Number(waiting[0]?.count) > 0) {
-            observedLockWait = true;
-            break;
+    try {
+      await prisma.$transaction(
+        async (tx) => {
+          await tx.$queryRaw`SELECT id FROM "PopulationSubscriber" WHERE id = ${owner.id} FOR UPDATE`;
+          arm = operation.execute(prisma, 'ARM', process.env);
+          void arm.catch(() => undefined);
+          // Observe the actual PostgreSQL lock wait, not a fixed scheduling delay.
+          const deadline = Date.now() + 3000;
+          let observedLockWait = false;
+          while (Date.now() < deadline) {
+            const waiting = await prisma.$queryRaw<
+              Array<{ count: bigint }>
+            >`SELECT count(*) FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query LIKE '%PopulationSubscriber%FOR SHARE%'`;
+            if (Number(waiting[0]?.count) > 0) {
+              observedLockWait = true;
+              break;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 10));
           }
-          await new Promise((resolve) => setTimeout(resolve, 10));
-        }
-        expect(observedLockWait).toBe(true);
-        await tx.populationSubscriber.update({
-          where: { id: owner.id },
-          data: {
-            email: 'changed@example.invalid',
-            emailCanonical: 'changed@example.invalid',
-          },
-        });
-      },
-      { timeout: 10000 },
-    );
+          expect(observedLockWait).toBe(true);
+          await tx.populationSubscriber.update({
+            where: { id: owner.id },
+            data: {
+              email: 'changed@example.invalid',
+              emailCanonical: 'changed@example.invalid',
+            },
+          });
+        },
+        { timeout: 10000 },
+      );
+    } finally {
+      if (arm) await Promise.allSettled([arm]);
+    }
     await expect(arm).rejects.toThrow('QA_VERIFIED_RECIPIENT_INVALID');
     expect(
       await prisma.populationProgram.findUnique({
