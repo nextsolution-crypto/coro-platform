@@ -119,7 +119,7 @@ async function prepareTransport(prisma, mode, env) {
     await tx.$queryRaw`SELECT id FROM "PopulationProgram" WHERE id = ${TARGET.programId} FOR UPDATE`;
     await tx.$queryRaw`SELECT id FROM "User" WHERE email = ${TARGET.operatorEmail} FOR SHARE`;
     if (mode === 'ARM') {
-      await tx.$queryRaw`SELECT id FROM "DemoEnvironment" WHERE "organizationId" = ${TARGET.organizationId} FOR SHARE`;
+      await tx.$queryRaw`SELECT "organizationId" FROM "DemoEnvironment" WHERE "organizationId" = ${TARGET.organizationId} FOR SHARE`;
       await tx.$queryRaw`SELECT id FROM "ClientUser" WHERE id IN (${TARGET.preparerId}, ${TARGET.approverId}) FOR SHARE`;
       await tx.$queryRaw`SELECT id FROM "PopulationAlert" WHERE id = ${env.POPULATION_CONTROLLED_LIVE_TEST_ALERT_ID ?? ''} AND "programId" = ${TARGET.programId} FOR UPDATE`;
       await tx.$queryRaw`SELECT id FROM "PopulationSubscriber" WHERE "programId" = ${TARGET.programId} FOR SHARE`;
