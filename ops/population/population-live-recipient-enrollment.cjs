@@ -94,5 +94,19 @@ async function main() {
   finally { await prisma.$disconnect(); }
 }
 
-if (!module.parent) main().catch(() => { process.stdout.write('{"schemaVersion":1,"execution":"FAILED"}\n'); process.exitCode = 1; });
-module.exports = { APPROVAL, TARGET, assertAuthority, assertFoundation, execute };
+const SAFE_ERROR_CODES = new Set([
+  'ENROLLMENT_MODE_INVALID', 'EXACT_ENROLLMENT_APPROVAL_REQUIRED', 'CONTROLLED_LIVE_SAFETY_STATE_INVALID',
+  'DEMO_SIMULATION_POLICY_INVALID', 'QA_PROGRAM_GOVERNANCE_INVALID', 'QA_PROGRAM_SCOPE_INVALID',
+  'QA_RECIPIENT_CARDINALITY_INVALID', 'QA_RECIPIENT_ALREADY_EXISTS_RECONCILE_FIRST',
+  'QA_PROGRAM_CHANGED_CONCURRENTLY', 'QA_ENROLLMENT_OPEN_PRECONDITION_FAILED',
+]);
+function safeErrorCode(error) {
+  const value = error instanceof Error ? error.message : '';
+  return SAFE_ERROR_CODES.has(value) ? value : 'UNCLASSIFIED_ENROLLMENT_FAILURE';
+}
+
+if (!module.parent) main().catch((error) => {
+  process.stdout.write(`${JSON.stringify({ schemaVersion: 1, execution: 'FAILED', errorCode: safeErrorCode(error) })}\n`);
+  process.exitCode = 1;
+});
+module.exports = { APPROVAL, TARGET, assertAuthority, assertFoundation, execute, safeErrorCode };
