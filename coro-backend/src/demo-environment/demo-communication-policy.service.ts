@@ -232,7 +232,12 @@ export class DemoCommunicationPolicyService {
           channel: request.channel,
           operation: request.operation,
           recipientHash: digest(normalized),
-          payloadHash: digest(request.payload),
+          // Do not persist a brute-forceable hash of a six-digit OTP.
+          payloadHash: digest({
+            operation: request.operation,
+            programId: request.populationOtpProgramId,
+            channel: request.channel,
+          }),
           idempotencyKey,
           blocked: !eligible,
           simulated: false,
