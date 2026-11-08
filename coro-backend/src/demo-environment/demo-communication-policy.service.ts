@@ -161,11 +161,15 @@ export class DemoCommunicationPolicyService {
   ): Promise<DemoCommunicationDecision> {
     // One irreversible claim per channel/destination/window. An ambiguous provider
     // result consumes the claim: no automatic retry or second transport call.
+    const normalizedRecipient =
+      request.channel === 'EMAIL'
+        ? request.recipient!.trim().toLowerCase()
+        : request.recipient!.replace(/[\s().-]/g, '');
     const idempotencyKey = digest([
       'CONTROLLED_POPULATION_OTP',
       request.populationOtpProgramId,
       request.channel,
-      digest(request.recipient!.trim().toLowerCase()),
+      digest(normalizedRecipient),
       process.env.POPULATION_CONTROLLED_OTP_EXPIRES_AT,
     ]);
     return this.prisma.$transaction(async (tx) => {
