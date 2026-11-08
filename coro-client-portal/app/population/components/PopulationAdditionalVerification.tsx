@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import {
   resendPopulationVerification,
   verifyPopulationSubscriber,
+  type VerifyPopulationSubscriberResult,
 } from "../lib/publicPopulationApi";
 import styles from "./PopulationPublicShell.module.css";
 
@@ -20,7 +21,7 @@ export default function PopulationAdditionalVerification({
   subscriberId: string;
   accessToken: string;
   language: "fr" | "en";
-  onVerified: () => Promise<void>;
+  onVerified: (result: VerifyPopulationSubscriberResult) => Promise<void>;
 }) {
   const [requested, setRequested] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -69,12 +70,16 @@ export default function PopulationAdditionalVerification({
     setBusy(true);
     setError("");
     try {
-      await verifyPopulationSubscriber(publicSlug, subscriberId, {
-        channel,
-        code,
-      });
+      const result = await verifyPopulationSubscriber(
+        publicSlug,
+        subscriberId,
+        {
+          channel,
+          code,
+        },
+      );
       setCode("");
-      await onVerified();
+      await onVerified(result);
     } catch {
       setCode("");
       setError(
