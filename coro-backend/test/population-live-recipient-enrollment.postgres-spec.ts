@@ -49,6 +49,9 @@ describePostgres(
       await prisma.auditLog.deleteMany({
         where: { organizationId: enrollment.TARGET.organizationId },
       });
+      await prisma.populationSubscriber.deleteMany({
+        where: { program: { publicSlug: enrollment.TARGET.publicSlug } },
+      });
       await prisma.populationProgram.deleteMany({
         where: { publicSlug: enrollment.TARGET.publicSlug },
       });
