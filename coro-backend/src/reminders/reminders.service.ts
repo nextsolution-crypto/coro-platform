@@ -139,12 +139,24 @@ export class RemindersService {
   @Cron('0 * * * *') // Toutes les heures
   async closeStaleCheckins() {
     this.logger.log('Fermeture des check-ins oubliés...');
-    // Ferme tous les records IN dont le punch remonte à avant hier 6h
-    // Couvre les shifts de nuit (18h-6h) sans les couper prématurément
+    // Présences de plus de 16 h; préserver les sites en intervention.
     const cutoff = new Date(Date.now() - 16 * 60 * 60 * 1000); // 16h
     const result = await this.prisma.occupancyRecord.updateMany({
-      where: { status: 'IN', checkedInAt: { lt: cutoff } },
-      data: { status: 'OUT', checkedOutAt: new Date() },
+      where: {
+        status: 'IN',
+        checkedInAt: { lt: cutoff },
+        building: {
+          incidentEvents: {
+            none: { status: { in: ['PRE_ALERT', 'ACTIVE', 'CONTAINED'] } },
+          },
+          evacuationEvents: { none: { status: 'ACTIVE' } },
+        },
+      },
+      data: {
+        status: 'OUT',
+        checkedOutAt: new Date(),
+        checkoutSource: 'AUTO_STALE_16H',
+      },
     });
     this.logger.log(`${result.count} check-ins fermés automatiquement`);
   }
