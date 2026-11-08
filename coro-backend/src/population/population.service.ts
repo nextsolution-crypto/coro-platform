@@ -5865,6 +5865,7 @@ export class PopulationService {
         id: targeting.scenario.id,
         nameFR: targeting.scenario.nameFR,
         nameEN: targeting.scenario.nameEN,
+        scientificGovernance: targeting.scenario.scientificGovernance,
       },
 
       population: targeting.population,
