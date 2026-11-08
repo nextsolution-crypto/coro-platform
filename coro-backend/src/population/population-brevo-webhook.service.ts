@@ -1,3 +1,4 @@
+import { reconcileSentinelleProviderEvent } from './sentinelle-provider-reconciliation';
 import {
   BadRequestException,
   Inject,
@@ -109,6 +110,7 @@ export class PopulationBrevoWebhookService {
     });
 
     if (!delivery) {
+      await reconcileSentinelleProviderEvent(this.prisma, 'EMAIL', parsed);
       this.logger.log(
         `provider=BREVO eventType=${parsed.eventType} matched=false`,
       );
@@ -282,19 +284,20 @@ export class PopulationBrevoWebhookService {
       )
       .sort(
         (left, right) =>
-          right.providerOccurredAt.getTime() - left.providerOccurredAt.getTime(),
+          right.providerOccurredAt.getTime() -
+          left.providerOccurredAt.getTime(),
       )[0];
     const finalFailure = events
       .filter((event) => DEFINITIVE_FAILURES.has(event.eventType))
       .sort(
         (left, right) =>
-          right.providerOccurredAt.getTime() - left.providerOccurredAt.getTime(),
+          right.providerOccurredAt.getTime() -
+          left.providerOccurredAt.getTime(),
       )[0];
 
     const common = {
       provider: 'BREVO',
-      providerMessageId:
-        delivery.providerMessageId ?? parsed.providerMessageId,
+      providerMessageId: delivery.providerMessageId ?? parsed.providerMessageId,
       outcomeUnknownAt: null,
       claimedAt: null,
       leaseExpiresAt: null,
@@ -350,9 +353,7 @@ export class PopulationBrevoWebhookService {
       where: { alertId },
       _count: { _all: true },
     });
-    const counts = new Map(
-      summary.map((row) => [row.status, row._count._all]),
-    );
+    const counts = new Map(summary.map((row) => [row.status, row._count._all]));
     const pending =
       (counts.get(PopulationDeliveryStatus.QUEUED) ?? 0) +
       (counts.get(PopulationDeliveryStatus.SENDING) ?? 0);
