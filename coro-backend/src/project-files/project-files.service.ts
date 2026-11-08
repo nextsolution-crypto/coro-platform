@@ -892,13 +892,23 @@ export class ProjectFilesService {
         organizationId,
         ...(actor
           ? {
-              project: {
-                is: {
-                  isActive: true,
-                  status: { not: 'ARCHIVED' },
-                  ...projectAccessWhere(actor),
+              OR: [
+                {
+                  project: {
+                    is: {
+                      isActive: true,
+                      status: { not: 'ARCHIVED' },
+                      ...projectAccessWhere(actor),
+                    },
+                  },
                 },
-              },
+                {
+                  projectId: null,
+                  building: {
+                    is: { organizationId: actor.organizationId },
+                  },
+                },
+              ],
             }
           : {}),
       },
