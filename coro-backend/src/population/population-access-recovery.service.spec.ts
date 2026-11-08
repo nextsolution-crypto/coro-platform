@@ -166,6 +166,9 @@ describe('Population access recovery', () => {
       expect.any(String),
       'organization-1',
       'POPULATION_SUBSCRIBER_OTP',
+      undefined,
+      undefined,
+      'program-1',
     );
     expect(result).not.toHaveProperty('subscriberId');
     expect(result).not.toHaveProperty('verificationId');
@@ -187,6 +190,9 @@ describe('Population access recovery', () => {
       expect.any(String),
       'organization-1',
       'POPULATION_SUBSCRIBER_OTP',
+      undefined,
+      undefined,
+      'program-1',
     );
   });
 

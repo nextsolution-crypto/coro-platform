@@ -1,3 +1,6 @@
+import { createHash } from 'crypto';
+import { DemoCommunicationPolicyService } from '../src/demo-environment/demo-communication-policy.service';
+import type { PrismaService } from '../src/prisma/prisma.service';
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { PrismaClient } from '@prisma/client';
 import { setupPopulationControlledTest } from '../src/admin/population-controlled-test-setup';
@@ -40,8 +43,14 @@ describePostgres(
         where: { buildingId: enrollment.TARGET.buildingId },
         select: { id: true },
       });
+      await prisma.demoCommunicationEvent.deleteMany({
+        where: { organizationId: enrollment.TARGET.organizationId },
+      });
       await prisma.auditLog.deleteMany({
         where: { organizationId: enrollment.TARGET.organizationId },
+      });
+      await prisma.populationSubscriber.deleteMany({
+        where: { program: { publicSlug: enrollment.TARGET.publicSlug } },
       });
       await prisma.populationProgram.deleteMany({
         where: { publicSlug: enrollment.TARGET.publicSlug },
@@ -140,6 +149,70 @@ describePostgres(
         status: 'ACTIVE',
         registrationEnabled: true,
       });
+      // Two concurrent OTP requests must obtain only one durable transport claim.
+      const qaProgram = await prisma.populationProgram.findUniqueOrThrow({
+        where: { publicSlug: enrollment.TARGET.publicSlug },
+      });
+      const qaPhone = '+15145550123';
+      await prisma.populationSubscriber.create({
+        data: {
+          programId: qaProgram.id,
+          isSynthetic: false,
+          status: 'PENDING_VERIFICATION',
+          phone: qaPhone,
+          phoneCanonical: qaPhone,
+          smsEnabled: true,
+        },
+      });
+      const previousEnvironment = { ...process.env };
+      try {
+        Object.assign(process.env, safeEnvironment, {
+          POPULATION_CONTROLLED_OTP_ENABLED: 'true',
+          POPULATION_CONTROLLED_OTP_EXPIRES_AT: new Date(
+            Date.now() + 1800000,
+          ).toISOString(),
+          POPULATION_CONTROLLED_LIVE_TEST_ORGANIZATION_ID:
+            enrollment.TARGET.organizationId,
+          POPULATION_CONTROLLED_LIVE_TEST_PROGRAM_ID: qaProgram.id,
+          POPULATION_CONTROLLED_LIVE_TEST_SMS_SHA256: createHash('sha256')
+            .update(qaPhone)
+            .digest('hex'),
+          POPULATION_SMS_TFN_APPROVED: 'true',
+          BREVO_SMS_SENDER: '+18335886812',
+        });
+        const policy = new DemoCommunicationPolicyService(
+          prisma as unknown as PrismaService,
+        );
+        const request = {
+          organizationId: enrollment.TARGET.organizationId,
+          channel: 'SMS' as const,
+          operation: 'POPULATION_SUBSCRIBER_OTP',
+          recipient: qaPhone,
+          payload: { message: 'synthetic OTP only' },
+          populationOtpProgramId: qaProgram.id,
+        };
+        const decisions = await Promise.all([
+          policy.evaluate(request),
+          policy.evaluate(request),
+        ]);
+        expect(decisions.map((value) => value.disposition).sort()).toEqual([
+          'BLOCKED',
+          'LIVE',
+        ]);
+        expect(
+          await prisma.demoCommunicationEvent.count({
+            where: {
+              organizationId: enrollment.TARGET.organizationId,
+              operation: 'POPULATION_SUBSCRIBER_OTP',
+              simulated: false,
+              blocked: false,
+            },
+          }),
+        ).toBe(1);
+      } finally {
+        process.env = previousEnvironment;
+      }
+
       await expect(
         enrollment.execute(prisma, 'CLOSE', safeEnvironment),
       ).resolves.toMatchObject({

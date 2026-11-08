@@ -1,3 +1,4 @@
+import { controlledOtpAllowed } from './population-controlled-otp';
 import {
   BadRequestException,
   ConflictException,
@@ -319,6 +320,9 @@ export class PopulationService {
           message,
           organizationId,
           'POPULATION_SUBSCRIBER_OTP',
+          undefined,
+          undefined,
+          data.programId,
         );
       } else {
         const subject = english
@@ -336,6 +340,7 @@ export class PopulationService {
           html: `<p>${intro} <strong>${data.code}</strong>.</p><p>${expiry}</p>`,
           organizationId,
           operation: 'POPULATION_SUBSCRIBER_OTP',
+          populationOtpProgramId: data.programId,
         });
       }
       return 'SENT';
@@ -1497,7 +1502,46 @@ export class PopulationService {
       phone && program.smsEnabled && !smsGloballySuppressed
         ? PopulationVerificationChannel.SMS
         : PopulationVerificationChannel.EMAIL;
-    this.readiness.assertVerificationChannelReady(requestedChannel);
+    // The scoped commissioning exception only waives the production SMS
+    // qualification; OTP secrets, canonical scope and provider policy remain required.
+    const otpProgram =
+      process.env.POPULATION_CONTROLLED_OTP_ENABLED === 'true'
+        ? await this.prisma.populationProgram.findUnique({
+            where: { id: program.id },
+            select: {
+              deliveryMode: true,
+              governanceMode: true,
+              rueFacilityProfile: {
+                select: { building: { select: { organizationId: true } } },
+              },
+            },
+          })
+        : null;
+    const otpOrganizationId =
+      otpProgram?.rueFacilityProfile.building.organizationId;
+    const otpDemo = otpOrganizationId
+      ? await this.prisma.demoEnvironment.findUnique({
+          where: { organizationId: otpOrganizationId },
+        })
+      : null;
+    const scopedOtp =
+      otpProgram?.deliveryMode === 'SANDBOX' &&
+      otpProgram.governanceMode === 'DUAL_CONTROL' &&
+      otpDemo?.status === 'ACTIVE' &&
+      otpDemo.communicationMode === 'SIMULATE' &&
+      otpDemo.externalProvidersDisabled &&
+      controlledOtpAllowed(process.env, {
+        organizationId: otpOrganizationId!,
+        programId: program.id,
+        channel: requestedChannel,
+        recipient:
+          requestedChannel === PopulationVerificationChannel.SMS
+            ? phoneCanonical!
+            : emailCanonical!,
+      });
+    if (scopedOtp && requestedChannel === PopulationVerificationChannel.SMS)
+      this.readiness.assertOtpReady();
+    else this.readiness.assertVerificationChannelReady(requestedChannel);
     const now = new Date();
     const verificationExpiresAt = new Date(
       now.getTime() + POPULATION_ACCESS_REQUEST_TTL_MS,
@@ -3554,14 +3598,14 @@ export class PopulationService {
         }
       }
 
-      const eligibleContacts = asset.contacts.filter(
-        (contact) => Boolean(contact.phone?.trim() || contact.email?.trim()),
+      const eligibleContacts = asset.contacts.filter((contact) =>
+        Boolean(contact.phone?.trim() || contact.email?.trim()),
       );
       const geographicallyConcerned = matchingZoneIds.length > 0;
       const notificationEligible = Boolean(
         geographicallyConcerned &&
-          asset.validatedAt &&
-          eligibleContacts.length > 0,
+        asset.validatedAt &&
+        eligibleContacts.length > 0,
       );
       return {
         id: asset.id,
@@ -3582,8 +3626,12 @@ export class PopulationService {
         selectedForNotification:
           notificationEligible && requestedSensitiveAssetIds.has(asset.id),
         availableChannels: {
-          sms: eligibleContacts.some((contact) => Boolean(contact.phone?.trim())),
-          email: eligibleContacts.some((contact) => Boolean(contact.email?.trim())),
+          sms: eligibleContacts.some((contact) =>
+            Boolean(contact.phone?.trim()),
+          ),
+          email: eligibleContacts.some((contact) =>
+            Boolean(contact.email?.trim()),
+          ),
         },
         eligibleContacts,
       };
@@ -3592,9 +3640,7 @@ export class PopulationService {
     const selectedSensitiveAssets = sensitiveAssets.filter(
       (asset) => asset.selectedForNotification,
     );
-    if (
-      selectedSensitiveAssets.length !== requestedSensitiveAssetIds.size
-    ) {
+    if (selectedSensitiveAssets.length !== requestedSensitiveAssetIds.size) {
       throw new BadRequestException(
         "Un établissement sélectionné est hors périmètre, non validé ou sans contact d'urgence admissible",
       );
