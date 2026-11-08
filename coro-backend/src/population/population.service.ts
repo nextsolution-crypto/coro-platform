@@ -1867,6 +1867,8 @@ export class PopulationService {
         phoneCanonical: true,
         email: true,
         preferredLanguage: true,
+        smsEnabled: true,
+        emailEnabled: true,
       },
     });
 
@@ -1884,7 +1886,23 @@ export class PopulationService {
       );
     }
 
-    if (subscriber.status !== PopulationSubscriberStatus.PENDING_VERIFICATION) {
+    if (subscriber.status === PopulationSubscriberStatus.ACTIVE) {
+      // Existing verified identity is required before activating its second channel.
+      if (!dto.accessToken)
+        throw new BadRequestException('Jeton d’accès requis');
+      this.verifySubscriberAccessToken(
+        dto.accessToken,
+        subscriberId,
+        program.id,
+      );
+      const enabled =
+        dto.channel === PopulationVerificationChannel.SMS
+          ? subscriber.smsEnabled
+          : subscriber.emailEnabled;
+      if (enabled) throw new BadRequestException('Ce canal est déjà activé');
+    } else if (
+      subscriber.status !== PopulationSubscriberStatus.PENDING_VERIFICATION
+    ) {
       throw new BadRequestException(
         'Cette inscription n’est pas en attente de vérification',
       );
@@ -8569,7 +8587,9 @@ export class PopulationService {
       (phoneEvidence.some(
         (row) => row.proposedDestinationFingerprint === fingerprints[0],
       ) ||
-        (phoneEvidence.length === 0 && subscriber.verifiedAt)),
+        (phoneEvidence.length === 0 &&
+          subscriber.smsEnabled &&
+          subscriber.verifiedAt)),
     );
     const emailFingerprint =
       emailCanonical && this.contactCrypto
@@ -8586,7 +8606,9 @@ export class PopulationService {
       (emailEvidence.some(
         (row) => row.proposedDestinationFingerprint === emailFingerprint,
       ) ||
-        (emailEvidence.length === 0 && subscriber.verifiedAt)),
+        (emailEvidence.length === 0 &&
+          subscriber.emailEnabled &&
+          subscriber.verifiedAt)),
     );
     const phoneSuppressed = phoneCanonical
       ? await this.isSmsGloballySuppressed(phoneCanonical)
