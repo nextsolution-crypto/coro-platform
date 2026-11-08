@@ -23,7 +23,7 @@ minimum_age_hours="$(node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSyn
 cache_age_hours="$(node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));const v=p.minimumBuildCacheAgeHours;if(!Number.isInteger(v)||v<12||v>168)process.exit(1);process.stdout.write(String(v))' "$policy_file")" || { echo 'CAPACITY_CLEANUP_FAILED code=CACHE_AGE_INVALID'; exit 1; }
 
 bootstrap_marker=""
-marker="$(find "$state_root" -maxdepth 1 -type f -name 'production-*.reconciled.json' -printf '%T@ %p\n' | sort -rn | head -n1 | cut -d' ' -f2-)"
+marker="$(find "$state_root" -maxdepth 1 -type f -name 'production-*.reconciled.json' -printf '%T@ %p\n' | sort -rn | sed -n '1p' | cut -d' ' -f2-)"
 if [[ -z "$marker" && "$mode" == DRY_RUN ]]; then
   manifest_preview="$(find "$release_dir" -maxdepth 1 -type f -name 'production-*.json' -printf '%T@ %p\n' | sort -rn | cut -d' ' -f2- | while read -r candidate; do node -e 'const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.exit(m.status==="SUCCESS"?0:1)' "$candidate" 2>/dev/null && { echo "$candidate"; break; } || true; done)"
   [[ -n "$manifest_preview" ]] || { echo 'CAPACITY_CLEANUP_FAILED code=RECONCILED_RELEASE_MISSING'; exit 1; }

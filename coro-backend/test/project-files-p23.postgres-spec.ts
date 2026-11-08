@@ -81,7 +81,7 @@ describePostgres('P-2.3 ProjectFile governance on PostgreSQL 16', () => {
 
   afterAll(async () => {
     const files = await prisma.projectFile.findMany({
-      where: { projectId: ids.project },
+      where: { organizationId: ids.organization },
       select: { id: true },
     });
     const fileIds = files.map(({ id }) => id);
@@ -124,6 +124,130 @@ describePostgres('P-2.3 ProjectFile governance on PostgreSQL 16', () => {
         sha256: randomUUID().replaceAll('-', ''),
       },
     });
+
+  it('reviews direct-building uploads with actor scope while retaining custody and tenant checks', async () => {
+    const file = await prisma.projectFile.create({
+      data: {
+        organizationId: ids.organization,
+        buildingId: ids.building,
+        uploadedById: ids.user,
+        name: 'fictitious-building-source.pdf',
+        category: 'documents_reference',
+        size: 11,
+        mimeType: 'application/pdf',
+        storageKey: `qa/p23/${randomUUID()}`,
+        url: 'private:project-file',
+        visibility: 'shared',
+        lifecycleState: 'DRAFT',
+      },
+    });
+    const review = (
+      actorId: string,
+      role = 'OPERATOR',
+      organizationId = ids.organization,
+    ) =>
+      service.requestReview({
+        fileId: file.id,
+        organizationId,
+        actorId,
+        actor: { userId: actorId, organizationId, role },
+        reason: 'Review explicitly fictitious QA source',
+        requestId: randomUUID(),
+        lockVersion: 0,
+      });
+
+    await expect(review(ids.escalation)).rejects.toMatchObject({ status: 403 });
+    // A claimed admin role cannot replace the canonical database identity.
+    await expect(review(ids.escalation, 'ADMIN')).rejects.toMatchObject({
+      status: 403,
+    });
+    await expect(review(ids.user, 'ADMIN', randomUUID())).rejects.toMatchObject(
+      { status: 404 },
+    );
+    await prisma.user.update({
+      where: { id: ids.user },
+      data: { isActive: false },
+    });
+    try {
+      await expect(review(ids.user)).rejects.toMatchObject({ status: 403 });
+    } finally {
+      await prisma.user.update({
+        where: { id: ids.user },
+        data: { isActive: true },
+      });
+    }
+    await expect(review(ids.user)).resolves.toMatchObject({
+      lifecycleState: 'REVIEW',
+      lockVersion: 1,
+    });
+    await expect(
+      prisma.projectFileLifecycleEvent.count({
+        where: { projectFileId: file.id },
+      }),
+    ).resolves.toBe(1);
+
+    await prisma.user.update({
+      where: { id: ids.escalation },
+      data: { role: 'ADMIN' },
+    });
+    try {
+      await expect(
+        service.approveFile({
+          fileId: file.id,
+          organizationId: ids.organization,
+          actorId: ids.escalation,
+          actor: {
+            userId: ids.escalation,
+            organizationId: ids.organization,
+            role: 'ADMIN',
+          },
+          reason: 'Accept fictitious QA fixture only',
+          requestId: randomUUID(),
+          lockVersion: 1,
+          effectiveAt: new Date(Date.now() - 1000).toISOString(),
+        }),
+      ).resolves.toMatchObject({ lifecycleState: 'APPROVED' });
+    } finally {
+      await prisma.user.update({
+        where: { id: ids.escalation },
+        data: { role: 'OPERATOR' },
+      });
+    }
+  });
+
+  it('does not admit an archived project through the direct-building branch', async () => {
+    const file = await createFile(1, null);
+    await prisma.project.update({
+      where: { id: ids.project },
+      data: { status: 'ARCHIVED' },
+    });
+    try {
+      await expect(
+        service.approveFile({
+          fileId: file.id,
+          organizationId: ids.organization,
+          actorId: ids.user,
+          actor: {
+            userId: ids.user,
+            organizationId: ids.organization,
+            role: 'ADMIN',
+          },
+          reason: 'Archived project must remain read only',
+          requestId: randomUUID(),
+          lockVersion: 0,
+          effectiveAt: new Date().toISOString(),
+        }),
+      ).rejects.toMatchObject({ status: 404 });
+    } finally {
+      await prisma.project.update({
+        where: { id: ids.project },
+        data: { status: 'IN_PROGRESS' },
+      });
+    }
+    await expect(
+      prisma.projectFile.findUnique({ where: { id: file.id } }),
+    ).resolves.toMatchObject({ lifecycleState: 'REVIEW', lockVersion: 0 });
+  });
 
   it('resolves one current version and schedules a future replacement atomically', async () => {
     const v1 = await createFile(1, null);
