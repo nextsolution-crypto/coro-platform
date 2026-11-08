@@ -65,6 +65,7 @@ export class PopulationDeliveryService {
     payload: unknown;
     idempotencyKey?: string;
     controlledPopulationContext?: PopulationControlledTransportContext;
+    populationOtpProgramId?: string;
   }): Promise<PopulationProviderResult | null> {
     if (!input.organizationId) return null;
     if (!this.demoCommunicationPolicy) {
@@ -85,6 +86,7 @@ export class PopulationDeliveryService {
       payload: input.payload,
       idempotencyKey: input.idempotencyKey,
       controlledPopulationContext: input.controlledPopulationContext,
+      populationOtpProgramId: input.populationOtpProgramId,
     });
     if (decision.disposition === 'LIVE') return null;
     if (decision.disposition === 'BLOCKED') {
@@ -166,6 +168,7 @@ export class PopulationDeliveryService {
     operation = 'POPULATION_SMS',
     idempotencyKey?: string,
     controlledPopulationContext?: PopulationControlledTransportContext,
+    populationOtpProgramId?: string,
   ): Promise<PopulationProviderResult> {
     const simulated = await this.evaluateDemo({
       organizationId,
@@ -175,6 +178,7 @@ export class PopulationDeliveryService {
       payload: { message },
       idempotencyKey,
       controlledPopulationContext,
+      populationOtpProgramId,
     });
     if (simulated) return simulated;
     const apiKey = this.getApiKey();
@@ -245,6 +249,7 @@ export class PopulationDeliveryService {
     organizationId?: string;
     operation?: string;
     controlledPopulationContext?: PopulationControlledTransportContext;
+    populationOtpProgramId?: string;
   }): Promise<PopulationProviderResult> {
     const simulated = await this.evaluateDemo({
       organizationId: data.organizationId,
@@ -254,6 +259,7 @@ export class PopulationDeliveryService {
       payload: { subject: data.subject },
       idempotencyKey: data.providerIdempotencyKey,
       controlledPopulationContext: data.controlledPopulationContext,
+      populationOtpProgramId: data.populationOtpProgramId,
     });
     if (simulated) return simulated;
     const apiKey = this.getApiKey();
