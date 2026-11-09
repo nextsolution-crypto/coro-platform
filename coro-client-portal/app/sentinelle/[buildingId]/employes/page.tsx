@@ -62,7 +62,7 @@ const EMPTY_FORM = {
   emergencyAssignType: 'PRIMARY',
   emergencyZone: '',
   qualifications: [] as string[],
-  smsConsent: false,
+  smsConsent: true,
 };
 
 export default function EmployesPage() {
@@ -84,6 +84,7 @@ export default function EmployesPage() {
   const [importing, setImporting]         = useState(false);
   const [importResult, setImportResult]   = useState<any>(null);
   const [sendEmails, setSendEmails]       = useState(true);
+  const [contractConsent, setContractConsent] = useState(true);
 
   const downloadTemplate = () => {
     const rows = [
@@ -118,7 +119,7 @@ export default function EmployesPage() {
     reader.onload = async (e) => {
       try {
         const result = await clientFetch('/client-portal/employees/import-csv', 'POST', {
-          buildingId, csvContent: e.target?.result as string, sendEmails,
+          buildingId, csvContent: e.target?.result as string, sendEmails, contractConsent,
         });
         setImportResult(result);
         if (result.created > 0) fetchAll();
@@ -265,7 +266,7 @@ export default function EmployesPage() {
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#6C757D' }}>
               📥 Importer CSV
             </button>
-            <button type="button" onClick={() => setShowForm(true)}
+            <button type="button" onClick={() => { setEditingId(null); setForm({ ...EMPTY_FORM }); setShowForm(true); }}
               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 8, border: 'none', backgroundColor: '#2C3E50', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
               <UserPlus size={16} /> Ajouter un employé
             </button>
@@ -419,6 +420,14 @@ export default function EmployesPage() {
               </div>
             ))}
           </div>
+
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 20, padding: 14, border: '1px solid #A9DFBF', borderRadius: 8 }}>
+            <input type="checkbox" checked={form.smsConsent}
+              onChange={e => setForm(prev => ({ ...prev, smsConsent: e.target.checked }))} />
+            <span><strong>Consentement SMS confirmé par l’employeur</strong><br />
+              En enregistrant cette fiche avec cette case cochée, vous attestez que le consentement aux SMS de sécurité et d’urgence a déjà été recueilli, notamment dans le contrat de travail. Décochez-la si ce consentement reste à obtenir.
+            </span>
+          </label>
 
           {/* Organisation d'urgence */}
           <div style={{ borderTop: '1px solid #F1F3F5', paddingTop: 20, marginBottom: 20 }}>
@@ -621,6 +630,13 @@ export default function EmployesPage() {
                         onChange={e => e.target.files?.[0] && handleCsvFile(e.target.files[0])} />
                     </label>
                   </div>
+
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, margin: '16px 0' }}>
+                    <input type="checkbox" checked={contractConsent} onChange={e => setContractConsent(e.target.checked)} />
+                    <span><strong>Consentements SMS déjà recueillis par contrat</strong><br />
+                      Vous attestez avoir recueilli les consentements des employés importés. Ce choix s’applique uniquement aux lignes sans valeur dans « Consentement SMS »; une valeur « non » reste prioritaire. Décochez si les consentements restent à obtenir.
+                    </span>
+                  </label>
 
                   {/* Prévisualisation */}
                   {csvPreview.length > 0 && (

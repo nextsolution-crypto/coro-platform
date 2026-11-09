@@ -669,6 +669,7 @@ export class OccupancyEmployeesService {
     csvContent: string,
     organizationId: string,
     sendEmails: boolean = true,
+    contractConsent: boolean = false,
   ) {
     const building = await this.prisma.building.findFirst({
       where: { id: buildingId, organizationId },
@@ -933,7 +934,7 @@ export class OccupancyEmployeesService {
       }
 
       const smsConsentRaw = get(COLS.smsConsent);
-      const smsConsent = smsConsentRaw ? isOui(smsConsentRaw) : false;
+      const smsConsent = smsConsentRaw ? isOui(smsConsentRaw) : contractConsent === true;
 
       try {
         const employee = await this.createEmployee(

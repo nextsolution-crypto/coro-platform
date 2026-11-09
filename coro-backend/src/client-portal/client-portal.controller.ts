@@ -2245,6 +2245,7 @@ export class ClientPortalController {
       body.csvContent,
       req.clientUser.organizationId,
       policy.externalEmployeeEmail && body.sendEmails !== false,
+      body.contractConsent === true,
     );
   }
 
