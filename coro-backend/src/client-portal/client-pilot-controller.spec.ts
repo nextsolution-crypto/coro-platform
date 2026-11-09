@@ -16,6 +16,7 @@ describe('ClientPortalController pilot delivery restrictions', () => {
   };
   const portal = {
     assertBuildingAccess: jest.fn(),
+    assertEmployeeAccess: jest.fn(),
     assertPilotOperationAllowed: jest.fn(),
     getPilotPolicy: jest.fn(),
     getProject: jest.fn(),
@@ -23,6 +24,7 @@ describe('ClientPortalController pilot delivery restrictions', () => {
   const employees = {
     createInvitation: jest.fn(),
     createEmployee: jest.fn(),
+    resendPinEmail: jest.fn(),
   };
   const controller = new ClientPortalController(
     portal as any,
@@ -64,6 +66,21 @@ describe('ClientPortalController pilot delivery restrictions', () => {
       'org-pilot',
       false,
     );
+  });
+
+  it('checks employee access and forwards the actor and pilot policy before PIN resend', async () => {
+    portal.assertEmployeeAccess.mockResolvedValue(undefined);
+    portal.getPilotPolicy.mockReturnValue({ externalEmployeeEmail: false });
+    employees.resendPinEmail.mockResolvedValue({ pinEmailStatus: 'BLOCKED' });
+    await controller.resendSentinelleEmployeePin('building-a', 'employee-a', { clientUser: actor });
+    expect(portal.assertEmployeeAccess).toHaveBeenCalledWith('building-a', 'employee-a', actor);
+    expect(employees.resendPinEmail).toHaveBeenCalledWith('employee-a', 'building-a', 'org-pilot', 'client-user-a', false);
+  });
+
+  it('rejects PIN resend outside the authorized building before provider work', async () => {
+    portal.assertEmployeeAccess.mockRejectedValueOnce(new ForbiddenException('access denied'));
+    await expect(controller.resendSentinelleEmployeePin('building-other', 'employee-a', { clientUser: actor })).rejects.toBeInstanceOf(ForbiddenException);
+    expect(employees.resendPinEmail).not.toHaveBeenCalled();
   });
 
   it('denies official PDF recovery before contacting private storage', async () => {
