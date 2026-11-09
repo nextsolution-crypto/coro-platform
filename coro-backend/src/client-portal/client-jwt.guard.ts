@@ -38,6 +38,7 @@ export class ClientJwtGuard implements CanActivate {
           populationPermissions: true,
           operationalReviewPermissions: true,
           correctiveActionPermissions: true,
+          displayPermissions: true,
           sessionVersion: true,
         },
       });
@@ -55,6 +56,7 @@ export class ClientJwtGuard implements CanActivate {
         populationPermissions: user.populationPermissions,
         operationalReviewPermissions: user.operationalReviewPermissions,
         correctiveActionPermissions: user.correctiveActionPermissions,
+        displayPermissions: user.displayPermissions,
       };
       return true;
     } catch {

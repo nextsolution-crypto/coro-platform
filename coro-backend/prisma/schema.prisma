@@ -86,6 +86,25 @@ model Organization {
   demoFixtures                     DemoFixtureRecord[]
   demoCommunicationEvents          DemoCommunicationEvent[]
   pilotScenarios                   PilotScenario[]
+  buildingFloors                   BuildingFloor[]
+  buildingZones                    BuildingZone[]
+  displayLocations                 DisplayLocation[]
+}
+
+enum SpatialResourceStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum DisplayPermission {
+  DISPLAY_READ
+  DISPLAY_DEVICE_MANAGE
+  DISPLAY_CONTENT_MANAGE
+  DISPLAY_COMMAND
+  DISPLAY_EMERGENCY_ACTIVATE
+  DISPLAY_EMERGENCY_RESET
+  DISPLAY_AUDIT_READ
 }
 
 enum DemoEnvironmentStatus {
@@ -292,6 +311,7 @@ model User {
   certification                                String?
   province                                     String?
   isActive                                     Boolean                                  @default(true)
+  displayPermissions                           DisplayPermission[]                      @default([])
   createdAt                                    DateTime                                 @default(now())
   updatedAt                                    DateTime                                 @updatedAt
   observationsCreated                          ReviewObservation[]                      @relation("observationCreator")
@@ -2820,6 +2840,9 @@ model Building {
   capabilityEntitlements CapabilityEntitlement[]
   meteringResults        MeteringResult[]
   pilotScenarios         PilotScenario[]
+  spatialFloors          BuildingFloor[]
+  spatialZones           BuildingZone[]
+  displayLocations       DisplayLocation[]
 
   // CORO RUE / PUE / Sentinelle Population
   // Profil réglementaire et opérationnel de l'installation.
@@ -2832,6 +2855,81 @@ model Building {
 
   @@unique([id, clientId, organizationId])
   @@unique([id, organizationId])
+}
+
+model BuildingFloor {
+  id             String                @id @default(uuid())
+  organizationId String
+  buildingId     String
+  code           String
+  name           String
+  levelNumber    Int?
+  sortOrder      Int                   @default(0)
+  status         SpatialResourceStatus @default(ACTIVE)
+  lockVersion    Int                   @default(0)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building         Building          @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  zones            BuildingZone[]
+  displayLocations DisplayLocation[]
+
+  @@unique([buildingId, code])
+  @@unique([id, organizationId, buildingId])
+  @@index([organizationId, buildingId, status, sortOrder])
+}
+
+model BuildingZone {
+  id             String                @id @default(uuid())
+  organizationId String
+  buildingId     String
+  floorId        String
+  code           String
+  name           String
+  description    String?
+  geometry       Json?
+  status         SpatialResourceStatus @default(ACTIVE)
+  lockVersion    Int                   @default(0)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building         Building          @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  floor            BuildingFloor     @relation(fields: [floorId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
+  displayLocations DisplayLocation[]
+
+  @@unique([floorId, code])
+  @@unique([id, organizationId, buildingId, floorId])
+  @@index([organizationId, buildingId, floorId, status])
+}
+
+model DisplayLocation {
+  id                 String                @id @default(uuid())
+  organizationId     String
+  buildingId         String
+  floorId            String
+  zoneId             String?
+  code               String
+  label              String
+  description        String?
+  positionX          Float?
+  positionY          Float?
+  orientationDegrees Float?
+  youAreHereX        Float?
+  youAreHereY        Float?
+  status             SpatialResourceStatus @default(ACTIVE)
+  lockVersion        Int                   @default(0)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building     Building      @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  floor        BuildingFloor @relation(fields: [floorId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
+  zone         BuildingZone? @relation(fields: [zoneId, organizationId, buildingId, floorId], references: [id, organizationId, buildingId, floorId], onDelete: Restrict)
+
+  @@unique([buildingId, code])
+  @@index([organizationId, buildingId, floorId, zoneId, status], map: "DisplayLocation_org_building_floor_zone_status_idx")
 }
 
 model Project {
@@ -3838,6 +3936,7 @@ model ClientUser {
   operationalReviewPermissions OperationalReviewPermission[] @default([])
   correctiveActionPermissions  CorrectiveActionPermission[]  @default([])
   incidentPermissions          IncidentPermission[]          @default([])
+  displayPermissions           DisplayPermission[]           @default([])
   buildingIds                  String[]
   isActive                     Boolean                       @default(true)
   clientId                     String

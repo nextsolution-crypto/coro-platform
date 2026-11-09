@@ -79,6 +79,7 @@ import { KnowledgeModule } from './knowledge/knowledge.module';
 import { UserManualModule } from './user-manual/user-manual.module';
 import { PublicKnowledgeModule } from './public-knowledge/public-knowledge.module';
 import { PilotScenariosModule } from './pilot-scenarios/pilot-scenarios.module';
+import { SpatialModule } from './spatial/spatial.module';
 
 @Module({
   imports: [
@@ -108,6 +109,7 @@ import { PilotScenariosModule } from './pilot-scenarios/pilot-scenarios.module';
     UserManualModule,
     PublicKnowledgeModule,
     PilotScenariosModule,
+    SpatialModule,
     AuthModule,
     UsersModule,
     ClientsModule,

@@ -424,6 +424,7 @@ describe('Client password reset', () => {
         populationPermissions: true,
         operationalReviewPermissions: true,
         correctiveActionPermissions: true,
+        displayPermissions: true,
         sessionVersion: true,
       },
     });
