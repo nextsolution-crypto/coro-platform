@@ -1,7 +1,10 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { DemoCommunicationChannel } from '@prisma/client';
-import { DemoCommunicationPolicyService } from '../demo-environment/demo-communication-policy.service';
+import {
+  DemoCommunicationPolicyService,
+  isSentinelleDemoEmailCandidate,
+} from '../demo-environment/demo-communication-policy.service';
 import {
   POPULATION_EMAIL_TIMEOUT_DEFAULT_MS,
   POPULATION_EMAIL_TIMEOUT_MAX_MS,
@@ -325,7 +328,16 @@ export class PopulationDeliveryService {
           email: data.destination,
         },
       ],
-      subject: data.subject,
+      subject:
+        data.organizationId &&
+        isSentinelleDemoEmailCandidate({
+          organizationId: data.organizationId,
+          channel: DemoCommunicationChannel.EMAIL,
+          recipient: data.destination,
+          operation: data.operation ?? 'POPULATION_EMAIL',
+        })
+          ? `[DÉMO CORO] ${data.subject}`
+          : data.subject,
       htmlContent: data.html,
       headers: {
         idempotencyKey: data.providerIdempotencyKey ?? randomUUID(),
