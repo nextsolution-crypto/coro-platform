@@ -16,9 +16,9 @@
 
 La première exécution en sandbox a produit des `spawn EPERM` sur des tests historiques utilisant des sous-processus. Une relance hors sandbox a éliminé ces erreurs. Il reste un seul test historique bloqué : `knowledge/office-extractor.spec.ts` requiert l’exécutable externe `pdftoppm`, absent de l’hôte (`ENOENT`). Les autres 2 649 tests passent; ce blocage n’est pas causé par DISPLAY-02A.
 
-## Ajustement de consommateur
+## Contrat portail
 
-`ClientJwtGuard` relit désormais `displayPermissions` depuis le `ClientUser` canonique. Le test exact du contrat de sélection de session a été mis à jour et passe (18/18 dans la suite password-reset ciblée).
+`ClientUser.displayPermissions` est préparé dans le modèle avec une valeur vide, mais aucune route portail spatiale ni projection de session n'est ajoutée dans ce lot. Le futur service portail devra relire l'autorité canonique avant chaque opération.
 
 ## Modules inchangés
 

@@ -6,14 +6,12 @@
 - `coro-backend/prisma/migrations/20261129010000_coro_display_spatial_foundations/migration.sql`
 - `coro-backend/src/spatial/**`
 - `coro-backend/src/app.module.ts`
-- `coro-backend/src/client-portal/client-jwt.guard.ts`
 
 ## Fichiers de test
 
 - `src/spatial/*.spec.ts`
 - `src/spatial/dto/spatial.dto.spec.ts`
 - `test/spatial-foundations.postgres-spec.ts`
-- ajustement du contrat `client-password-reset.spec.ts`
 
 ## Choix d’architecture
 
