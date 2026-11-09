@@ -96,7 +96,10 @@ describePostgres(
       expect(user.displayPermissions).toEqual([]);
       expect(user.displayBuildingIds).toEqual([]);
       await expect(
-        service.listFloors(orgA.id, buildingA.id, actor, {}),
+        service.listFloors(orgA.id, buildingA.id, actor, {
+          offset: 0,
+          limit: 50,
+        }),
       ).rejects.toBeInstanceOf(ForbiddenException);
 
       await prisma.user.update({
@@ -104,7 +107,10 @@ describePostgres(
         data: { displayPermissions: [DisplayPermission.DISPLAY_READ] },
       });
       await expect(
-        service.listFloors(orgA.id, buildingA.id, actor, {}),
+        service.listFloors(orgA.id, buildingA.id, actor, {
+          offset: 0,
+          limit: 50,
+        }),
       ).rejects.toBeInstanceOf(ForbiddenException);
 
       await prisma.user.update({
@@ -112,10 +118,16 @@ describePostgres(
         data: { displayBuildingIds: [buildingA.id] },
       });
       await expect(
-        service.listFloors(orgA.id, buildingA.id, actor, {}),
+        service.listFloors(orgA.id, buildingA.id, actor, {
+          offset: 0,
+          limit: 50,
+        }),
       ).resolves.toEqual({ items: [], total: 0, offset: 0, limit: 50 });
       await expect(
-        service.listFloors(orgA.id, buildingA2.id, actor, {}),
+        service.listFloors(orgA.id, buildingA2.id, actor, {
+          offset: 0,
+          limit: 50,
+        }),
       ).rejects.toBeInstanceOf(ForbiddenException);
       await expect(
         service.createFloor(
