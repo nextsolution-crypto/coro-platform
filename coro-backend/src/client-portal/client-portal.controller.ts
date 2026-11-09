@@ -314,6 +314,20 @@ export class ClientPortalController {
     );
   }
 
+  @Post('buildings/:buildingId/sentinelle/employees/:employeeId/resend-pin')
+  async resendSentinelleEmployeePin(
+    @Param('buildingId') buildingId: string,
+    @Param('employeeId') employeeId: string,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertEmployeeAccess(buildingId, employeeId, req.clientUser);
+    const policy = this.clientPortalService.getPilotPolicy(req.clientUser.organizationId);
+    return this.occupancyEmployeesService.resendPinEmail(
+      employeeId, buildingId, req.clientUser.organizationId, req.clientUser.sub || req.clientUser.id,
+      policy.externalEmployeeEmail,
+    );
+  }
+
   @Put('buildings/:buildingId/sentinelle/employees/:employeeId')
   async updateSentinelleEmployee(
     @Param('buildingId') buildingId: string,

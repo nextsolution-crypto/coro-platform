@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   Optional,
@@ -154,6 +155,62 @@ export class OccupancyEmployeesService {
         pinEmailMessageId: delivery.messageId ?? null,
       },
     });
+  }
+
+  async resendPinEmail(
+    employeeId: string,
+    buildingId: string,
+    organizationId: string,
+    clientUserId: string,
+    sendExternalEmail: boolean,
+  ) {
+    if (!clientUserId) throw new ForbiddenException('Identité du demandeur requise.');
+    const employee = await this.prisma.buildingEmployee.findFirst({
+      where: { id: employeeId, buildingId, organizationId, isActive: true },
+      include: { building: true },
+    });
+    if (!employee) throw new NotFoundException('Employé introuvable');
+    if (!sendExternalEmail) throw new ForbiddenException('Le renvoi du PIN est désactivé pour cet environnement pilote.');
+    if (!employee.email || !isEmail(employee.email)) throw new BadRequestException('Ajoutez une adresse courriel valide à la fiche avant de renvoyer le PIN.');
+    if (!/^\d{4}$/.test(employee.pin || '')) throw new BadRequestException('Aucun PIN disponible; contactez un administrateur.');
+    if (employee.pinEmailStatus === 'OUTCOME_UNKNOWN') throw new ConflictException('Le résultat du dernier envoi est incertain. Faites vérifier sa livraison avant de renvoyer le PIN.');
+    const attemptedAt = new Date();
+    const cooldownBefore = new Date(attemptedAt.getTime() - 60_000);
+    if (employee.pinEmailAttemptedAt && employee.pinEmailAttemptedAt > cooldownBefore) throw new ConflictException('Veuillez patienter une minute entre deux demandes de renvoi du PIN.');
+
+    // Claim and audit before transport. Concurrent clicks cannot send twice;
+    // a crash after this commit remains uncertain and cannot auto-retry.
+    await this.prisma.$transaction(async (tx) => {
+      const claim = await tx.buildingEmployee.updateMany({
+        where: {
+          id: employeeId, buildingId, organizationId, isActive: true,
+          email: employee.email, pin: employee.pin,
+          pinEmailStatus: { not: 'OUTCOME_UNKNOWN' },
+          OR: [{ pinEmailAttemptedAt: null }, { pinEmailAttemptedAt: { lte: cooldownBefore } }],
+        },
+        data: { pinEmailStatus: 'OUTCOME_UNKNOWN', pinEmailAttemptedAt: attemptedAt, pinEmailMessageId: null, pinEmailDeliveredAt: null },
+      });
+      if (claim.count !== 1) throw new ConflictException('Une demande de renvoi est déjà en cours ou la fiche a changé. Actualisez la liste.');
+      await tx.auditLog.create({ data: {
+        organizationId, clientUserId, action: 'SENTINELLE_PIN_RESEND_REQUESTED',
+        entityType: 'BuildingEmployee', entityId: employeeId,
+        description: 'Renvoi manuel du PIN existant par courriel.',
+        metadata: { buildingId, previousStatus: employee.pinEmailStatus, previousProviderMessageId: employee.pinEmailMessageId, attemptedAt: attemptedAt.toISOString() },
+      } });
+    });
+    let delivery: { status: string; messageId?: string };
+    try { delivery = await this.sendPinEmail(employee, employee.building); }
+    catch { delivery = { status: 'OUTCOME_UNKNOWN' }; }
+    await this.prisma.$transaction(async (tx) => {
+      await tx.buildingEmployee.update({ where: { id: employeeId }, data: { pinEmailStatus: delivery.status, pinEmailMessageId: delivery.messageId ?? null } });
+      await tx.auditLog.create({ data: {
+        organizationId, clientUserId, action: 'SENTINELLE_PIN_RESEND_RESULT',
+        entityType: 'BuildingEmployee', entityId: employeeId,
+        description: 'Résultat du renvoi manuel du PIN par courriel.',
+        metadata: { buildingId, status: delivery.status, providerMessageId: delivery.messageId ?? null, attemptedAt: attemptedAt.toISOString() },
+      } });
+    });
+    return { pinEmailStatus: delivery.status, pinEmailAttemptedAt: attemptedAt };
   }
 
   private async sendPinEmail(employee: any, building: any) {
