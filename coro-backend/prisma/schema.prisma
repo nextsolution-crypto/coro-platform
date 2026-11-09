@@ -312,6 +312,7 @@ model User {
   province                                     String?
   isActive                                     Boolean                                  @default(true)
   displayPermissions                           DisplayPermission[]                      @default([])
+  displayBuildingIds                           String[]                                 @default([])
   createdAt                                    DateTime                                 @default(now())
   updatedAt                                    DateTime                                 @updatedAt
   observationsCreated                          ReviewObservation[]                      @relation("observationCreator")
@@ -3937,6 +3938,7 @@ model ClientUser {
   correctiveActionPermissions  CorrectiveActionPermission[]  @default([])
   incidentPermissions          IncidentPermission[]          @default([])
   displayPermissions           DisplayPermission[]           @default([])
+  displayBuildingIds           String[]                      @default([])
   buildingIds                  String[]
   isActive                     Boolean                       @default(true)
   clientId                     String

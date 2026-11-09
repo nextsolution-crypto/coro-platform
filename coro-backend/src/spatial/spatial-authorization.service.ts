@@ -15,6 +15,7 @@ export class SpatialAuthorizationService {
   async require(
     actor: SpatialActor,
     organizationId: string,
+    buildingId: string,
     permission: DisplayPermission,
   ): Promise<void> {
     if (!actor?.userId || actor.organizationId !== organizationId) {
@@ -27,10 +28,13 @@ export class SpatialAuthorizationService {
         isActive: true,
         organization: { isActive: true },
         displayPermissions: { has: permission },
+        displayBuildingIds: { has: buildingId },
       },
       select: { id: true },
     });
     if (!authorized)
-      throw new ForbiddenException('Permission Display requise.');
+      throw new ForbiddenException(
+        'Permission Display et affectation au bâtiment requises.',
+      );
   }
 }

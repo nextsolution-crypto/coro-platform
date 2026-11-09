@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { DisplayPermission, Prisma } from '@prisma/client';
 import { AdminAuditService } from '../src/admin-audit/admin-audit.service';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -49,7 +45,17 @@ describePostgres(
           },
         }),
       ]);
-      const [buildingA, buildingB] = await Promise.all([
+      const [buildingA, buildingA2, buildingB] = await Promise.all([
+        prisma.building.create({
+          data: {
+            name: 'A2',
+            address: '3 QA',
+            city: 'Montréal',
+            province: 'QC',
+            organizationId: orgA.id,
+            clientId: clientA.id,
+          },
+        }),
         prisma.building.create({
           data: {
             name: 'A',
@@ -88,6 +94,7 @@ describePostgres(
       };
 
       expect(user.displayPermissions).toEqual([]);
+      expect(user.displayBuildingIds).toEqual([]);
       await expect(
         service.listFloors(orgA.id, buildingA.id, actor, {}),
       ).rejects.toBeInstanceOf(ForbiddenException);
@@ -98,7 +105,18 @@ describePostgres(
       });
       await expect(
         service.listFloors(orgA.id, buildingA.id, actor, {}),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { displayBuildingIds: [buildingA.id] },
+      });
+      await expect(
+        service.listFloors(orgA.id, buildingA.id, actor, {}),
       ).resolves.toEqual({ items: [], total: 0, offset: 0, limit: 50 });
+      await expect(
+        service.listFloors(orgA.id, buildingA2.id, actor, {}),
+      ).rejects.toBeInstanceOf(ForbiddenException);
       await expect(
         service.createFloor(
           orgA.id,
@@ -165,12 +183,10 @@ describePostgres(
           actor,
         ),
       ]);
-      const firstPage = await service.listFloors(
-        orgA.id,
-        buildingA.id,
-        actor,
-        { offset: 0, limit: 2 },
-      );
+      const firstPage = await service.listFloors(orgA.id, buildingA.id, actor, {
+        offset: 0,
+        limit: 2,
+      });
       const secondPage = await service.listFloors(
         orgA.id,
         buildingA.id,
@@ -181,8 +197,9 @@ describePostgres(
       expect(firstPage.items).toHaveLength(2);
       expect(secondPage.items).toHaveLength(1);
       expect(
-        new Set([...firstPage.items, ...secondPage.items].map((item) => item.id))
-          .size,
+        new Set(
+          [...firstPage.items, ...secondPage.items].map((item) => item.id),
+        ).size,
       ).toBe(3);
 
       await prisma.buildingFloor.update({
@@ -202,7 +219,7 @@ describePostgres(
 
       await expect(
         service.getFloor(orgA.id, buildingB.id, floor.id, actor),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      ).rejects.toBeInstanceOf(ForbiddenException);
       await expect(
         service.createZone(
           orgA.id,

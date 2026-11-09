@@ -723,6 +723,7 @@ export class SpatialService {
     await this.authorization.require(
       actor,
       organizationId,
+      buildingId,
       DisplayPermission.DISPLAY_READ,
     );
     await this.requireBuilding(this.prisma, organizationId, buildingId);
@@ -736,6 +737,7 @@ export class SpatialService {
     await this.authorization.require(
       actor,
       organizationId,
+      buildingId,
       DisplayPermission.DISPLAY_DEVICE_MANAGE,
     );
     await this.requireActiveBuilding(this.prisma, organizationId, buildingId);

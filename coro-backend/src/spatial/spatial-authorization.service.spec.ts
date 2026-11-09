@@ -12,7 +12,12 @@ describe('SpatialAuthorizationService', () => {
 
   it('requires the route tenant to equal the canonical actor tenant', async () => {
     await expect(
-      service.require(actor, 'org-b', DisplayPermission.DISPLAY_READ),
+      service.require(
+        actor,
+        'org-b',
+        'building-b',
+        DisplayPermission.DISPLAY_READ,
+      ),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(prisma.user.findFirst).not.toHaveBeenCalled();
   });
@@ -20,12 +25,18 @@ describe('SpatialAuthorizationService', () => {
   it('does not grant Display rights implicitly to an administrator', async () => {
     prisma.user.findFirst.mockResolvedValue(null);
     await expect(
-      service.require(actor, 'org-a', DisplayPermission.DISPLAY_READ),
+      service.require(
+        actor,
+        'org-a',
+        'building-a',
+        DisplayPermission.DISPLAY_READ,
+      ),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(prisma.user.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           displayPermissions: { has: DisplayPermission.DISPLAY_READ },
+          displayBuildingIds: { has: 'building-a' },
         }),
       }),
     );
@@ -34,8 +45,32 @@ describe('SpatialAuthorizationService', () => {
   it('accepts only an active canonical user carrying the exact permission', async () => {
     prisma.user.findFirst.mockResolvedValue({ id: 'user-a' });
     await expect(
-      service.require(actor, 'org-a', DisplayPermission.DISPLAY_DEVICE_MANAGE),
+      service.require(
+        actor,
+        'org-a',
+        'building-a',
+        DisplayPermission.DISPLAY_DEVICE_MANAGE,
+      ),
     ).resolves.toBeUndefined();
+  });
+
+  it('rejects the same permission outside the assigned building scope', async () => {
+    prisma.user.findFirst.mockResolvedValue(null);
+    await expect(
+      service.require(
+        actor,
+        'org-a',
+        'building-b',
+        DisplayPermission.DISPLAY_READ,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.user.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          displayBuildingIds: { has: 'building-b' },
+        }),
+      }),
+    );
   });
 
   it('keeps emergency activation and reset as distinct contracts', () => {

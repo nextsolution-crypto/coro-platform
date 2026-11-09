@@ -13,10 +13,12 @@ CREATE TYPE "DisplayPermission" AS ENUM (
 );
 
 ALTER TABLE "User"
-  ADD COLUMN "displayPermissions" "DisplayPermission"[] NOT NULL DEFAULT ARRAY[]::"DisplayPermission"[];
+  ADD COLUMN "displayPermissions" "DisplayPermission"[] NOT NULL DEFAULT ARRAY[]::"DisplayPermission"[],
+  ADD COLUMN "displayBuildingIds" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
 
 ALTER TABLE "ClientUser"
-  ADD COLUMN "displayPermissions" "DisplayPermission"[] NOT NULL DEFAULT ARRAY[]::"DisplayPermission"[];
+  ADD COLUMN "displayPermissions" "DisplayPermission"[] NOT NULL DEFAULT ARRAY[]::"DisplayPermission"[],
+  ADD COLUMN "displayBuildingIds" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
 
 CREATE TABLE "BuildingFloor" (
   "id" TEXT NOT NULL,
