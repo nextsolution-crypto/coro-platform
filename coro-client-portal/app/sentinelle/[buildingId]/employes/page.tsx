@@ -574,7 +574,7 @@ export default function EmployesPage() {
                     )}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', maxWidth: '100%' }}>
                   <button type="button" onClick={() => handleResendPin(emp)}
                     disabled={Boolean(resendingPinId) || pinEmailResendDisabled(emp)}
                     aria-label={`Renvoyer le PIN par courriel à ${emp.firstName} ${emp.lastName}`}
