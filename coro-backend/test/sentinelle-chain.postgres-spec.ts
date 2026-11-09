@@ -237,6 +237,40 @@ suite('Sentinelle employee to closed exercise on PostgreSQL', () => {
     ).toBe(3);
     expect(global.fetch).not.toHaveBeenCalled();
   });
+  it('closes an overnight employee QR visit exactly once under concurrent exits', async () => {
+    const employee = await employees.createEmployee(
+      { buildingId, firstName: 'Overnight', lastName: 'FICTIF' },
+      organizationId,
+      false,
+    );
+    const kiosk = await occupancy.getOrCreateKioskToken(
+      buildingId,
+      organizationId,
+    );
+    const arrival = await employees.checkinByQrToken(
+      employee.qrToken,
+      kiosk.token,
+    );
+    await prisma.occupancyRecord.update({
+      where: { id: arrival.record.id },
+      data: { checkedInAt: new Date(Date.now() - 36 * 3600000) },
+    });
+    await expect(
+      employees.checkoutByQrToken(employee.qrToken, 'wrong-kiosk'),
+    ).rejects.toThrow('Token borne invalide');
+    const exits = await Promise.all([
+      employees.checkoutByQrToken(employee.qrToken, kiosk.token),
+      employees.checkoutByQrToken(employee.qrToken, kiosk.token),
+    ]);
+    expect(exits.filter((exit) => !exit.alreadyOut)).toHaveLength(1);
+    expect(exits.filter((exit) => exit.alreadyOut)).toHaveLength(1);
+    const closed = await prisma.occupancyRecord.findUniqueOrThrow({
+      where: { id: arrival.record.id },
+    });
+    expect(closed.status).toBe('OUT');
+    expect(closed.checkoutSource).toBe('MANUAL');
+    expect(closed.checkedOutAt).not.toBeNull();
+  });
   it('allocates distinct active PINs under concurrent employee creation', async () => {
     const created = await Promise.all(
       Array.from({ length: 8 }, (_, i) =>
