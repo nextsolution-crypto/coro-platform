@@ -17,6 +17,7 @@ function harness(environment: any) {
   const prisma = {
     user: { findUnique: jest.fn() },
     clientUser: { findUnique: jest.fn() },
+    buildingEmployee: { findFirst: jest.fn() },
     demoEnvironment: {
       findUnique: jest.fn().mockResolvedValue(environment),
     },
@@ -184,6 +185,86 @@ describe('DemoCommunicationPolicyService', () => {
     ).resolves.toEqual({ disposition: 'LIVE' });
     const stored = [...h.events.values()][0];
     expect(stored).toMatchObject({ simulated: false, blocked: false });
+  });
+
+  it('autorise un PIN seulement pour le compte allowliste et son employe actif', async () => {
+    allowRecipient();
+    const h = eligibleHarness('clientUser');
+    h.prisma.buildingEmployee.findFirst.mockResolvedValue({
+      id: 'employee-qa',
+    });
+    await expect(
+      h.service.evaluate({
+        organizationId: demoOrganizationId,
+        channel: DemoCommunicationChannel.EMAIL,
+        operation: 'SENTINELLE_EMPLOYEE_PIN',
+        recipient,
+        payload: { employeeId: 'employee-qa', buildingId: 'building-qa' },
+      }),
+    ).resolves.toEqual({ disposition: 'LIVE' });
+    expect(h.prisma.buildingEmployee.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'employee-qa',
+        buildingId: 'building-qa',
+        organizationId: demoOrganizationId,
+        email: recipient,
+        isActive: true,
+        building: { organizationId: demoOrganizationId },
+      },
+      select: { id: true },
+    });
+    expect(JSON.stringify([...h.events.values()])).not.toContain(recipient);
+  });
+
+  it.each([
+    'absent',
+    'ambiguous',
+    'not-allowlisted',
+    'no-context',
+    'no-employee',
+    'paused',
+    'block',
+    'sms',
+  ])('ne libere pas le PIN pour %s', async (reason) => {
+    allowRecipient();
+    const h = eligibleHarness('clientUser');
+    if (reason === 'absent')
+      h.prisma.clientUser.findUnique.mockResolvedValue(null);
+    if (reason === 'ambiguous')
+      h.prisma.user.findUnique.mockResolvedValue({
+        organizationId: demoOrganizationId,
+        isActive: true,
+      });
+    if (reason === 'not-allowlisted')
+      delete process.env.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST;
+    if (reason === 'paused' || reason === 'block')
+      h.prisma.demoEnvironment.findUnique.mockResolvedValue({
+        status: reason === 'paused' ? 'PAUSED' : 'ACTIVE',
+        communicationMode:
+          reason === 'block'
+            ? DemoCommunicationMode.BLOCK
+            : DemoCommunicationMode.SIMULATE,
+        externalProvidersDisabled: true,
+      });
+    h.prisma.buildingEmployee.findFirst.mockResolvedValue(
+      reason === 'no-employee' ? null : { id: 'employee-qa' },
+    );
+    const result = await h.service.evaluate({
+      organizationId: demoOrganizationId,
+      channel:
+        reason === 'sms'
+          ? DemoCommunicationChannel.SMS
+          : DemoCommunicationChannel.EMAIL,
+      operation: 'SENTINELLE_EMPLOYEE_PIN',
+      recipient,
+      payload:
+        reason === 'no-context'
+          ? null
+          : { employeeId: 'employee-qa', buildingId: 'building-qa' },
+    });
+    expect(result.disposition).toBe(
+      reason === 'paused' || reason === 'block' ? 'BLOCKED' : 'SIMULATED',
+    );
   });
 
   it.each([
