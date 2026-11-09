@@ -49,6 +49,7 @@ const AUTHENTICATION_LIVE_OPERATIONS = new Set([
   'CLIENT_MAGIC_LINK',
   'CLIENT_INVITATION',
   'ORGANIZATION_USER_INVITATION',
+  'SENTINELLE_EMPLOYEE_PIN',
 ]);
 const CORO_DEMO_ORGANIZATION_ID = '916f54ec-af22-45e0-99db-a369d9630002';
 
@@ -474,6 +475,32 @@ export class DemoCommunicationPolicyService {
       clientUser.isActive === true &&
       clientUser.client.isActive === true;
     if (request.operation.startsWith('CLIENT_')) return eligibleClientUser;
+    if (request.operation === 'SENTINELLE_EMPLOYEE_PIN') {
+      // A PIN is an access credential. Keep the existing authentication
+      // allowlist and require one active account plus its active employee.
+      if (Number(eligibleUser) + Number(eligibleClientUser) !== 1) return false;
+      const context = request.payload as {
+        employeeId?: unknown;
+        buildingId?: unknown;
+      } | null;
+      if (
+        typeof context?.employeeId !== 'string' ||
+        typeof context?.buildingId !== 'string'
+      )
+        return false;
+      const employee = await this.prisma.buildingEmployee.findFirst({
+        where: {
+          id: context.employeeId,
+          buildingId: context.buildingId,
+          organizationId: CORO_DEMO_ORGANIZATION_ID,
+          email: normalized,
+          isActive: true,
+          building: { organizationId: CORO_DEMO_ORGANIZATION_ID },
+        },
+        select: { id: true },
+      });
+      return Boolean(employee);
+    }
     if (request.operation === 'PLATFORM_MFA') {
       return Number(eligibleUser) + Number(eligibleClientUser) === 1;
     }
