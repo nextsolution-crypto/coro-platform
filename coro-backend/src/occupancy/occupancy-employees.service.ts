@@ -526,26 +526,24 @@ export class OccupancyEmployeesService {
       });
       if (!kiosk) throw new NotFoundException('Token borne invalide');
 
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      const record = await this.prisma.occupancyRecord.findFirst({
-        where: {
-          employeeId: employee.id,
-          status: 'IN',
-          checkedInAt: { gte: startOfDay },
-        },
-      });
-      if (!record) return { alreadyOut: true, employee };
+      return this.prisma.$transaction(async (tx) => {
+        // Share the mobile/QR employee lock and preserve an open overnight visit.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${employee.id}))`;
+        const record = await tx.occupancyRecord.findFirst({
+          where: { employeeId: employee.id, status: 'IN' },
+        });
+        if (!record) return { alreadyOut: true, employee };
 
-      await this.prisma.occupancyRecord.update({
-        where: { id: record.id },
-        data: {
-          status: 'OUT',
-          checkedOutAt: new Date(),
-          checkoutSource: 'MANUAL',
-        },
+        await tx.occupancyRecord.update({
+          where: { id: record.id },
+          data: {
+            status: 'OUT',
+            checkedOutAt: new Date(),
+            checkoutSource: 'MANUAL',
+          },
+        });
+        return { alreadyOut: false, employee };
       });
-      return { alreadyOut: false, employee };
     }
 
     // Essayer invitation
