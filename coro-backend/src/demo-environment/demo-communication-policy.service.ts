@@ -53,6 +53,30 @@ const AUTHENTICATION_LIVE_OPERATIONS = new Set([
 ]);
 const CORO_DEMO_ORGANIZATION_ID = '916f54ec-af22-45e0-99db-a369d9630002';
 
+const DEMO_SENTINELLE_EMAIL_RECIPIENT = 'demo-client@getcoro.io';
+const DEMO_SENTINELLE_EMAIL_OPERATIONS = new Set([
+  'COORDINATOR_ALERT',
+  'MEMBER_ALERT',
+  'OCCUPANT_ALERT',
+  'TASK_ACK_ESCALATION_LEVEL_1',
+  'TASK_ACK_ESCALATION_LEVEL_2',
+]);
+
+export function isSentinelleDemoEmailCandidate(
+  request: Pick<
+    DemoCommunicationRequest,
+    'organizationId' | 'channel' | 'recipient' | 'operation'
+  >,
+): boolean {
+  return (
+    request.organizationId === CORO_DEMO_ORGANIZATION_ID &&
+    request.channel === DemoCommunicationChannel.EMAIL &&
+    request.recipient?.trim().toLowerCase() ===
+      DEMO_SENTINELLE_EMAIL_RECIPIENT &&
+    DEMO_SENTINELLE_EMAIL_OPERATIONS.has(request.operation)
+  );
+}
+
 @Injectable()
 export class DemoCommunicationPolicyService {
   constructor(private readonly prisma: PrismaService) {}
@@ -118,6 +142,20 @@ export class DemoCommunicationPolicyService {
     const controlledPopulationLiveException =
       !foundationBlocked &&
       (await this.isControlledPopulationLiveException(request));
+    const sentinelleDemoEmailException =
+      !foundationBlocked &&
+      environment.communicationMode === DemoCommunicationMode.SIMULATE &&
+      (await this.isSentinelleDemoEmailException(request));
+    // Keep real-demo evidence separate from a previous simulated attempt.
+    const auditKey = sentinelleDemoEmailException
+      ? `SENTINELLE_DEMO_REAL_EMAIL_V1:${request.idempotencyKey}`
+      : (request.idempotencyKey ??
+        digest({
+          channel: request.channel,
+          operation: request.operation,
+          recipient: request.recipient,
+          payload: request.payload,
+        }));
     // A rejected real-test request is never converted into a simulated success.
     const blocked =
       foundationBlocked ||
@@ -127,14 +165,7 @@ export class DemoCommunicationPolicyService {
       where: {
         organizationId_idempotencyKey: {
           organizationId: request.organizationId,
-          idempotencyKey:
-            request.idempotencyKey ??
-            digest({
-              channel: request.channel,
-              operation: request.operation,
-              recipient: request.recipient,
-              payload: request.payload,
-            }),
+          idempotencyKey: auditKey,
         },
       },
       create: {
@@ -145,25 +176,23 @@ export class DemoCommunicationPolicyService {
           ? digest(request.recipient.trim().toLowerCase())
           : null,
         payloadHash: digest(request.payload),
-        idempotencyKey:
-          request.idempotencyKey ??
-          digest({
-            channel: request.channel,
-            operation: request.operation,
-            recipient: request.recipient,
-            payload: request.payload,
-          }),
+        idempotencyKey: auditKey,
         simulated:
           !blocked &&
           !authenticationLiveException &&
-          !controlledPopulationLiveException,
+          !controlledPopulationLiveException &&
+          !sentinelleDemoEmailException,
         blocked,
       },
       update: {},
       select: { id: true },
     });
     if (blocked) return { disposition: 'BLOCKED', eventId: event.id };
-    if (authenticationLiveException || controlledPopulationLiveException)
+    if (
+      authenticationLiveException ||
+      controlledPopulationLiveException ||
+      sentinelleDemoEmailException
+    )
       return { disposition: 'LIVE' };
     return { disposition: 'SIMULATED', eventId: event.id };
   }
@@ -427,6 +456,69 @@ export class DemoCommunicationPolicyService {
         programId: context.programId,
         alertId: context.alertId,
       })
+    );
+  }
+
+  private async isSentinelleDemoEmailException(
+    request: DemoCommunicationRequest,
+  ): Promise<boolean> {
+    if (!isSentinelleDemoEmailCandidate(request) || !request.idempotencyKey)
+      return false;
+    const allowed = (
+      process.env.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST || ''
+    )
+      .split(',')
+      .map((v) => v.trim().toLowerCase());
+    if (!allowed.includes(digest(DEMO_SENTINELLE_EMAIL_RECIPIENT)))
+      return false;
+    const [account, delivery] = await Promise.all([
+      this.prisma.clientUser.findUnique({
+        where: { email: DEMO_SENTINELLE_EMAIL_RECIPIENT },
+        select: {
+          organizationId: true,
+          isActive: true,
+          client: { select: { isActive: true } },
+        },
+      }),
+      this.prisma.incidentNotificationDelivery.findUnique({
+        where: { idempotencyKey: request.idempotencyKey },
+        select: {
+          organizationId: true,
+          channel: true,
+          purpose: true,
+          recipientHash: true,
+          status: true,
+          createdAt: true,
+          incidentEvent: {
+            select: {
+              organizationId: true,
+              isActive: true,
+              status: true,
+              building: { select: { organizationId: true } },
+            },
+          },
+        },
+      }),
+    ]);
+    const now = Date.now();
+    // Only the canonical dispatch of a fresh active incident may use this
+    // recipient exception. Old demo queues cannot become delayed real alerts.
+    return (
+      account?.organizationId === CORO_DEMO_ORGANIZATION_ID &&
+      account.isActive &&
+      account.client.isActive &&
+      delivery?.organizationId === CORO_DEMO_ORGANIZATION_ID &&
+      delivery.channel === 'EMAIL' &&
+      delivery.purpose === request.operation &&
+      delivery.recipientHash === digest(DEMO_SENTINELLE_EMAIL_RECIPIENT) &&
+      delivery.status === 'PROCESSING' &&
+      delivery.createdAt.getTime() >= now - 5 * 60_000 &&
+      delivery.createdAt.getTime() <= now + 60_000 &&
+      delivery.incidentEvent.organizationId === CORO_DEMO_ORGANIZATION_ID &&
+      delivery.incidentEvent.building.organizationId ===
+        CORO_DEMO_ORGANIZATION_ID &&
+      delivery.incidentEvent.isActive &&
+      delivery.incidentEvent.status === 'ACTIVE'
     );
   }
 
