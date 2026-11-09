@@ -266,7 +266,7 @@ export default function EmployesPage() {
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#6C757D' }}>
               📥 Importer CSV
             </button>
-            <button type="button" onClick={() => setShowForm(true)}
+            <button type="button" onClick={() => { setEditingId(null); setForm({ ...EMPTY_FORM }); setShowForm(true); }}
               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 8, border: 'none', backgroundColor: '#2C3E50', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
               <UserPlus size={16} /> Ajouter un employé
             </button>
