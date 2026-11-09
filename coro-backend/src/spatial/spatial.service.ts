@@ -42,14 +42,22 @@ export class SpatialService {
     query: SpatialListQueryDto,
   ) {
     await this.readAccess(organizationId, buildingId, actor);
-    return this.prisma.buildingFloor.findMany({
-      where: {
-        organizationId,
-        buildingId,
-        status: query.status ?? { not: SpatialResourceStatus.ARCHIVED },
-      },
-      orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }, { id: 'asc' }],
-    });
+    const { offset, limit } = this.page(query);
+    const where: Prisma.BuildingFloorWhereInput = {
+      organizationId,
+      buildingId,
+      status: query.status ?? { not: SpatialResourceStatus.ARCHIVED },
+    };
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.buildingFloor.findMany({
+        where,
+        orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }, { id: 'asc' }],
+        skip: offset,
+        take: limit,
+      }),
+      this.prisma.buildingFloor.count({ where }),
+    ]);
+    return { items, total, offset, limit };
   }
 
   async getFloor(
@@ -246,15 +254,23 @@ export class SpatialService {
   ) {
     await this.readAccess(organizationId, buildingId, actor);
     await this.requireFloor(this.prisma, organizationId, buildingId, floorId);
-    return this.prisma.buildingZone.findMany({
-      where: {
-        organizationId,
-        buildingId,
-        floorId,
-        status: query.status ?? { not: 'ARCHIVED' },
-      },
-      orderBy: [{ code: 'asc' }, { id: 'asc' }],
-    });
+    const { offset, limit } = this.page(query);
+    const where: Prisma.BuildingZoneWhereInput = {
+      organizationId,
+      buildingId,
+      floorId,
+      status: query.status ?? { not: 'ARCHIVED' },
+    };
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.buildingZone.findMany({
+        where,
+        orderBy: [{ code: 'asc' }, { id: 'asc' }],
+        skip: offset,
+        take: limit,
+      }),
+      this.prisma.buildingZone.count({ where }),
+    ]);
+    return { items, total, offset, limit };
   }
 
   async getZone(
@@ -462,14 +478,22 @@ export class SpatialService {
     query: SpatialListQueryDto,
   ) {
     await this.readAccess(organizationId, buildingId, actor);
-    return this.prisma.displayLocation.findMany({
-      where: {
-        organizationId,
-        buildingId,
-        status: query.status ?? { not: 'ARCHIVED' },
-      },
-      orderBy: [{ floorId: 'asc' }, { code: 'asc' }, { id: 'asc' }],
-    });
+    const { offset, limit } = this.page(query);
+    const where: Prisma.DisplayLocationWhereInput = {
+      organizationId,
+      buildingId,
+      status: query.status ?? { not: 'ARCHIVED' },
+    };
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.displayLocation.findMany({
+        where,
+        orderBy: [{ floorId: 'asc' }, { code: 'asc' }, { id: 'asc' }],
+        skip: offset,
+        take: limit,
+      }),
+      this.prisma.displayLocation.count({ where }),
+    ]);
+    return { items, total, offset, limit };
   }
 
   async getLocation(
@@ -754,8 +778,10 @@ export class SpatialService {
       where: { id: floorId, organizationId, buildingId },
     });
     if (!value) throw new NotFoundException('Étage introuvable.');
-    if (mutable && value.status === 'ARCHIVED')
-      throw new ConflictException("L'étage archivé est en lecture seule.");
+    if (mutable && value.status !== 'ACTIVE')
+      throw new ConflictException(
+        "L'étage inactif ou archivé est en lecture seule.",
+      );
     return value;
   }
 
@@ -771,8 +797,10 @@ export class SpatialService {
       where: { id: zoneId, organizationId, buildingId, floorId },
     });
     if (!value) throw new NotFoundException('Zone introuvable.');
-    if (mutable && value.status === 'ARCHIVED')
-      throw new ConflictException('La zone archivée est en lecture seule.');
+    if (mutable && value.status !== 'ACTIVE')
+      throw new ConflictException(
+        'La zone inactive ou archivée est en lecture seule.',
+      );
     return value;
   }
 
@@ -787,9 +815,9 @@ export class SpatialService {
       where: { id: locationId, organizationId, buildingId },
     });
     if (!value) throw new NotFoundException('Emplacement introuvable.');
-    if (mutable && value.status === 'ARCHIVED')
+    if (mutable && value.status !== 'ACTIVE')
       throw new ConflictException(
-        "L'emplacement archivé est en lecture seule.",
+        "L'emplacement inactif ou archivé est en lecture seule.",
       );
     return value;
   }
@@ -869,6 +897,10 @@ export class SpatialService {
       throw new BadRequestException(
         'Le repère Vous êtes ici X/Y doit être fourni en paire.',
       );
+  }
+
+  private page(query: SpatialListQueryDto) {
+    return { offset: query.offset ?? 0, limit: query.limit ?? 50 };
   }
 
   private rethrowConstraint(error: unknown, message: string): never {

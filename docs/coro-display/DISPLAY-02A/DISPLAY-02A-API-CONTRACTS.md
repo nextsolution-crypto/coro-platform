@@ -24,7 +24,7 @@ Préfixe interne authentifié :
 
 Les DTO rejettent les champs inattendus (`forbidNonWhitelisted`). Les identifiants tenant/bâtiment ne sont jamais pris du corps. Les codes sont normalisés en majuscules et limités à `A-Z`, chiffres, `_` et `-`. Les modifications et archivages exigent `expectedLockVersion`.
 
-Les listes sont déterministes et limitées au bâtiment. Une pagination n’est pas introduite à ce stade : les étages, zones et emplacements constituent des collections bornées par bâtiment; toute volumétrie justifiant une pagination devra être démontrée avant modification du contrat.
+Les listes sont déterministes, limitées au bâtiment et paginées explicitement avec `offset` (défaut 0, maximum 1 000 000) et `limit` (défaut 50, maximum 100). La réponse expose `items`, `total`, `offset` et `limit`; les filtres sont appliqués avant le décompte et la pagination.
 
 ## Erreurs
 

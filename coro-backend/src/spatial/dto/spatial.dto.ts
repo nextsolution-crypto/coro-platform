@@ -19,6 +19,20 @@ export class SpatialListQueryDto {
   @IsOptional()
   @IsEnum(SpatialResourceStatus)
   status?: SpatialResourceStatus;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(1_000_000)
+  offset = 0;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit = 50;
 }
 
 export class CreateFloorDto {

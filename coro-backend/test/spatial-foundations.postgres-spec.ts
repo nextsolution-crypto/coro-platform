@@ -1,4 +1,8 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { DisplayPermission, Prisma } from '@prisma/client';
 import { AdminAuditService } from '../src/admin-audit/admin-audit.service';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -94,7 +98,7 @@ describePostgres(
       });
       await expect(
         service.listFloors(orgA.id, buildingA.id, actor, {}),
-      ).resolves.toEqual([]);
+      ).resolves.toEqual({ items: [], total: 0, offset: 0, limit: 50 });
       await expect(
         service.createFloor(
           orgA.id,
@@ -146,6 +150,55 @@ describePostgres(
         actor,
       );
       expect(location.zoneId).toBe(zone.id);
+
+      const [floor2, floor3] = await Promise.all([
+        service.createFloor(
+          orgA.id,
+          buildingA.id,
+          { code: 'N1', name: 'Niveau 1', sortOrder: 1 },
+          actor,
+        ),
+        service.createFloor(
+          orgA.id,
+          buildingA.id,
+          { code: 'N2', name: 'Niveau 2', sortOrder: 2 },
+          actor,
+        ),
+      ]);
+      const firstPage = await service.listFloors(
+        orgA.id,
+        buildingA.id,
+        actor,
+        { offset: 0, limit: 2 },
+      );
+      const secondPage = await service.listFloors(
+        orgA.id,
+        buildingA.id,
+        actor,
+        { offset: 2, limit: 2 },
+      );
+      expect(firstPage.total).toBe(3);
+      expect(firstPage.items).toHaveLength(2);
+      expect(secondPage.items).toHaveLength(1);
+      expect(
+        new Set([...firstPage.items, ...secondPage.items].map((item) => item.id))
+          .size,
+      ).toBe(3);
+
+      await prisma.buildingFloor.update({
+        where: { id: floor2.id },
+        data: { status: 'INACTIVE' },
+      });
+      await expect(
+        service.createZone(
+          orgA.id,
+          buildingA.id,
+          floor2.id,
+          { code: 'REFUSEE', name: 'Zone refusée' },
+          actor,
+        ),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(floor3.status).toBe('ACTIVE');
 
       await expect(
         service.getFloor(orgA.id, buildingB.id, floor.id, actor),

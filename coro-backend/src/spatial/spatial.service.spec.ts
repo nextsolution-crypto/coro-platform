@@ -27,7 +27,9 @@ describe('SpatialService', () => {
     };
     prisma = {
       ...tx,
-      $transaction: jest.fn((action) => action(tx)),
+      $transaction: jest.fn((action) =>
+        Array.isArray(action) ? Promise.all(action) : action(tx),
+      ),
     };
     authorization = { require: jest.fn().mockResolvedValue(undefined) };
     audit = { record: jest.fn().mockResolvedValue({ id: 'audit-a' }) };
@@ -84,6 +86,30 @@ describe('SpatialService', () => {
     expect(tx.buildingFloor.create).not.toHaveBeenCalled();
   });
 
+  it('paginates deterministic floor lists and reports the complete count', async () => {
+    tx.buildingFloor.findMany.mockResolvedValue([{ id: 'floor-b' }]);
+    tx.buildingFloor.count.mockResolvedValue(62);
+
+    await expect(
+      service.listFloors('org-a', 'building-a', actor, {
+        offset: 50,
+        limit: 25,
+      }),
+    ).resolves.toEqual({
+      items: [{ id: 'floor-b' }],
+      total: 62,
+      offset: 50,
+      limit: 25,
+    });
+    expect(tx.buildingFloor.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 50,
+        take: 25,
+        orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }, { id: 'asc' }],
+      }),
+    );
+  });
+
   it('rejects a zone whose floor does not belong to the route hierarchy', async () => {
     tx.buildingFloor.findFirst.mockResolvedValue(null);
     await expect(
@@ -95,6 +121,23 @@ describe('SpatialService', () => {
         actor,
       ),
     ).rejects.toBeInstanceOf(NotFoundException);
+    expect(tx.buildingZone.create).not.toHaveBeenCalled();
+  });
+
+  it('keeps inactive floors read-only', async () => {
+    tx.buildingFloor.findFirst.mockResolvedValue({
+      id: 'floor-a',
+      status: 'INACTIVE',
+    });
+    await expect(
+      service.createZone(
+        'org-a',
+        'building-a',
+        'floor-a',
+        { code: 'A', name: 'Zone A' },
+        actor,
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
     expect(tx.buildingZone.create).not.toHaveBeenCalled();
   });
 

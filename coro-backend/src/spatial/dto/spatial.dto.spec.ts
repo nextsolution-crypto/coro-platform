@@ -2,6 +2,7 @@ import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import {
   CreateDisplayLocationDto,
   CreateFloorDto,
+  SpatialListQueryDto,
   UpdateFloorDto,
 } from './spatial.dto';
 
@@ -47,6 +48,21 @@ describe('Spatial DTOs', () => {
           positionY: 0.5,
         },
         { type: 'body', metatype: CreateDisplayLocationDto },
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('bounds and transforms explicit pagination parameters', async () => {
+    await expect(
+      pipe.transform(
+        { offset: '25', limit: '100' },
+        { type: 'query', metatype: SpatialListQueryDto },
+      ),
+    ).resolves.toMatchObject({ offset: 25, limit: 100 });
+    await expect(
+      pipe.transform(
+        { offset: 0, limit: 101 },
+        { type: 'query', metatype: SpatialListQueryDto },
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
