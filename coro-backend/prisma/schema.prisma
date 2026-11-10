@@ -65,21 +65,21 @@ model Organization {
   mandateServices                  ProjectMandateService[]
   mandateServiceOperations         MandateServiceOperation[]
   // Programme de recommandation
-  referralsSent                    Referral[]                        @relation("ReferralReferrer")
-  referralReceived                 Referral?                         @relation("ReferralReferred")
-  referralCredits                  ReferralCredit[]                  @relation("ReferralCreditOrganization")
+  referralsSent                    Referral[]                          @relation("ReferralReferrer")
+  referralReceived                 Referral?                           @relation("ReferralReferred")
+  referralCredits                  ReferralCredit[]                    @relation("ReferralCreditOrganization")
   contracts                        OrganizationContract[]
   capabilityEntitlements           CapabilityEntitlement[]
   commercialSubscriptions          CommercialSubscription[]
   commercialInvoices               CommercialInvoice[]
   commercialTaxConfigurations      CommercialTaxConfiguration[]
   commercialProposals              CommercialProposal[]
-  convertedCommercialProspects     CommercialProspect[]              @relation("CommercialProspectConversion")
+  convertedCommercialProspects     CommercialProspect[]                @relation("CommercialProspectConversion")
   meteringResults                  MeteringResult[]
   commercialSimulationWorkspaces   CommercialSimulationWorkspace[]
   advisorInternalCostRates         AdvisorInternalCostRate[]
-  platformAuthority                PlatformAuthorityConfiguration?   @relation("PlatformOperatorOrganization")
-  platformPermissionScopes         PlatformPermissionGrant[]         @relation("PlatformPermissionTargetOrganization")
+  platformAuthority                PlatformAuthorityConfiguration?     @relation("PlatformOperatorOrganization")
+  platformPermissionScopes         PlatformPermissionGrant[]           @relation("PlatformPermissionTargetOrganization")
   userInvitationEvents             OrganizationUserInvitationEvent[]
   settingsConflicts                OrganizationSettingsConflict[]
   demoEnvironment                  DemoEnvironment?
@@ -92,6 +92,8 @@ model Organization {
   displayPlanPublications          DisplayPlanPublication[]
   displayPlanPublicationEvents     DisplayPlanPublicationEvent[]
   displayPdfRenderJobs             DisplayPdfRenderJob[]
+  displayCorrectionObservations    DisplayCorrectionObservation[]
+  displayCorrectionEvents          DisplayCorrectionObservationEvent[]
 }
 
 enum SpatialResourceStatus {
@@ -114,6 +116,41 @@ enum DisplayPermission {
   DISPLAY_PLAN_APPROVE
   DISPLAY_PLAN_PUBLISH
   DISPLAY_PLAN_REVOKE
+  DISPLAY_CLIENT_PLAN_READ
+  DISPLAY_CLIENT_PREVIEW
+  DISPLAY_CLIENT_LOCATION_READ
+  DISPLAY_CLIENT_OBSERVATION_SUBMIT
+  DISPLAY_CLIENT_OBSERVATION_READ
+}
+
+enum DisplayCorrectionCategory {
+  EXTINGUISHER_MOVED
+  EXIT_CHANGED
+  DOOR_BLOCKED
+  NEW_PARTITION
+  ROOM_NUMBER_CHANGED
+  ROUTE_CHANGED
+  SAFETY_EQUIPMENT_MISSING
+  DOCUMENT_INFORMATION_INCORRECT
+  OTHER
+}
+
+enum DisplayCorrectionPriority {
+  INFORMATION
+  MINOR
+  MAJOR
+  CRITICAL
+}
+
+enum DisplayCorrectionStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  MORE_INFO_REQUIRED
+  ACCEPTED
+  REJECTED
+  CORRECTION_IN_PROGRESS
+  RESOLVED
+  CLOSED
 }
 
 enum DisplayPlanPublicationStatus {
@@ -2767,14 +2804,15 @@ model Client {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  buildings              Building[]
-  projects               Project[]
-  clientUsers            ClientUser[]
-  exerciseReports        ExerciseReport[]
-  capabilityEntitlements CapabilityEntitlement[]
-  meteringResults        MeteringResult[]
-  provisioningRequest    ClientProvisioningRequest?
-  invitationEvents       ClientInvitationEvent[]
+  buildings                     Building[]
+  projects                      Project[]
+  clientUsers                   ClientUser[]
+  exerciseReports               ExerciseReport[]
+  capabilityEntitlements        CapabilityEntitlement[]
+  meteringResults               MeteringResult[]
+  provisioningRequest           ClientProvisioningRequest?
+  invitationEvents              ClientInvitationEvent[]
+  displayCorrectionObservations DisplayCorrectionObservation[]
 
   @@unique([id, organizationId])
 }
@@ -2865,33 +2903,34 @@ model Building {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  clientId                String
-  client                  Client                   @relation(fields: [clientId], references: [id])
-  projects                Project[]
-  occupancyRecords        OccupancyRecord[]
-  evacuationEvents        EvacuationEvent[]
-  kioskToken              BuildingKioskToken?
-  presenceSessions        PresenceSession[]
-  presenceDeviceSessions  PresenceDeviceSession[]
-  presenceDisplays        PresenceKioskDisplay[]
-  alarmToken              BuildingAlarmToken?
-  employees               BuildingEmployee[]
-  visitorInvitations      VisitorInvitation[]
-  emergencyRoles          EmployeeEmergencyRole[]
-  incidentEvents          IncidentEvent[]
-  resilienceSnapshots     ResilienceSnapshot[]
-  exerciseReports         ExerciseReport[]
-  buildingRequirements    BuildingRequirement[]
-  complianceEvidence      ComplianceEvidence[]
-  correctiveActions       CorrectiveAction[]
-  capabilityEntitlements  CapabilityEntitlement[]
-  meteringResults         MeteringResult[]
-  pilotScenarios          PilotScenario[]
-  spatialFloors           BuildingFloor[]
-  spatialZones            BuildingZone[]
-  displayLocations        DisplayLocation[]
-  displayPlanPublications DisplayPlanPublication[]
-  displayPdfRenderJobs    DisplayPdfRenderJob[]
+  clientId                      String
+  client                        Client                         @relation(fields: [clientId], references: [id])
+  projects                      Project[]
+  occupancyRecords              OccupancyRecord[]
+  evacuationEvents              EvacuationEvent[]
+  kioskToken                    BuildingKioskToken?
+  presenceSessions              PresenceSession[]
+  presenceDeviceSessions        PresenceDeviceSession[]
+  presenceDisplays              PresenceKioskDisplay[]
+  alarmToken                    BuildingAlarmToken?
+  employees                     BuildingEmployee[]
+  visitorInvitations            VisitorInvitation[]
+  emergencyRoles                EmployeeEmergencyRole[]
+  incidentEvents                IncidentEvent[]
+  resilienceSnapshots           ResilienceSnapshot[]
+  exerciseReports               ExerciseReport[]
+  buildingRequirements          BuildingRequirement[]
+  complianceEvidence            ComplianceEvidence[]
+  correctiveActions             CorrectiveAction[]
+  capabilityEntitlements        CapabilityEntitlement[]
+  meteringResults               MeteringResult[]
+  pilotScenarios                PilotScenario[]
+  spatialFloors                 BuildingFloor[]
+  spatialZones                  BuildingZone[]
+  displayLocations              DisplayLocation[]
+  displayPlanPublications       DisplayPlanPublication[]
+  displayPdfRenderJobs          DisplayPdfRenderJob[]
+  displayCorrectionObservations DisplayCorrectionObservation[]
 
   // CORO RUE / PUE / Sentinelle Population
   // Profil réglementaire et opérationnel de l'installation.
@@ -2919,11 +2958,12 @@ model BuildingFloor {
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
 
-  organization            Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  building                Building                 @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  organization            Organization                   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building                Building                       @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
   zones                   BuildingZone[]
   displayLocations        DisplayLocation[]
   displayPlanPublications DisplayPlanPublication[]
+  correctionObservations  DisplayCorrectionObservation[]
 
   @@unique([buildingId, code])
   @@unique([id, organizationId, buildingId])
@@ -2974,11 +3014,12 @@ model DisplayLocation {
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
 
-  organization     Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  building         Building                 @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  floor            BuildingFloor            @relation(fields: [floorId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
-  zone             BuildingZone?            @relation(fields: [zoneId, organizationId, buildingId, floorId], references: [id, organizationId, buildingId, floorId], onDelete: Restrict)
-  planPublications DisplayPlanPublication[]
+  organization           Organization                   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building               Building                       @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  floor                  BuildingFloor                  @relation(fields: [floorId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
+  zone                   BuildingZone?                  @relation(fields: [zoneId, organizationId, buildingId, floorId], references: [id, organizationId, buildingId, floorId], onDelete: Restrict)
+  planPublications       DisplayPlanPublication[]
+  correctionObservations DisplayCorrectionObservation[]
 
   @@unique([buildingId, code])
   @@unique([id, organizationId, buildingId, floorId])
@@ -3030,22 +3071,23 @@ model DisplayPlanPublication {
   createdAt          DateTime                     @default(now())
   updatedAt          DateTime                     @updatedAt
 
-  organization  Organization                  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  building      Building                      @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  floor         BuildingFloor                 @relation(fields: [floorId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
-  zone          BuildingZone?                 @relation(fields: [zoneId, organizationId, buildingId, floorId], references: [id, organizationId, buildingId, floorId], onDelete: Restrict)
-  location      DisplayLocation               @relation(fields: [locationId, organizationId, buildingId, floorId], references: [id, organizationId, buildingId, floorId], onDelete: Restrict)
-  projectFile   ProjectFile                   @relation(fields: [projectFileId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
-  createdBy     User                          @relation("DisplayPlanPublicationCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  reviewedBy    User?                         @relation("DisplayPlanPublicationReviewer", fields: [reviewedById], references: [id], onDelete: Restrict)
-  approvedBy    User?                         @relation("DisplayPlanPublicationApprover", fields: [approvedById], references: [id], onDelete: Restrict)
-  publishedBy   User?                         @relation("DisplayPlanPublicationPublisher", fields: [publishedById], references: [id], onDelete: Restrict)
-  suspendedBy   User?                         @relation("DisplayPlanPublicationSuspender", fields: [suspendedById], references: [id], onDelete: Restrict)
-  revokedBy     User?                         @relation("DisplayPlanPublicationRevoker", fields: [revokedById], references: [id], onDelete: Restrict)
-  supersededBy  DisplayPlanPublication?       @relation("DisplayPlanPublicationSupersession", fields: [supersededById], references: [id], onDelete: Restrict)
-  supersedes    DisplayPlanPublication[]      @relation("DisplayPlanPublicationSupersession")
-  events        DisplayPlanPublicationEvent[]
-  pdfRenderJobs DisplayPdfRenderJob[]
+  organization           Organization                   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building               Building                       @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  floor                  BuildingFloor                  @relation(fields: [floorId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
+  zone                   BuildingZone?                  @relation(fields: [zoneId, organizationId, buildingId, floorId], references: [id, organizationId, buildingId, floorId], onDelete: Restrict)
+  location               DisplayLocation                @relation(fields: [locationId, organizationId, buildingId, floorId], references: [id, organizationId, buildingId, floorId], onDelete: Restrict)
+  projectFile            ProjectFile                    @relation(fields: [projectFileId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
+  createdBy              User                           @relation("DisplayPlanPublicationCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  reviewedBy             User?                          @relation("DisplayPlanPublicationReviewer", fields: [reviewedById], references: [id], onDelete: Restrict)
+  approvedBy             User?                          @relation("DisplayPlanPublicationApprover", fields: [approvedById], references: [id], onDelete: Restrict)
+  publishedBy            User?                          @relation("DisplayPlanPublicationPublisher", fields: [publishedById], references: [id], onDelete: Restrict)
+  suspendedBy            User?                          @relation("DisplayPlanPublicationSuspender", fields: [suspendedById], references: [id], onDelete: Restrict)
+  revokedBy              User?                          @relation("DisplayPlanPublicationRevoker", fields: [revokedById], references: [id], onDelete: Restrict)
+  supersededBy           DisplayPlanPublication?        @relation("DisplayPlanPublicationSupersession", fields: [supersededById], references: [id], onDelete: Restrict)
+  supersedes             DisplayPlanPublication[]       @relation("DisplayPlanPublicationSupersession")
+  events                 DisplayPlanPublicationEvent[]
+  pdfRenderJobs          DisplayPdfRenderJob[]
+  correctionObservations DisplayCorrectionObservation[]
 
   @@unique([locationId, versionNumber])
   @@unique([organizationId, buildingId, creationRequestId])
@@ -3053,6 +3095,68 @@ model DisplayPlanPublication {
   @@index([organizationId, buildingId, floorId, status])
   @@index([projectFileId, sourceVersion, status])
   @@index([locationId, status, publishedAt])
+}
+
+model DisplayCorrectionObservation {
+  id                      String                    @id @default(uuid())
+  reference               String                    @unique
+  organizationId          String
+  clientId                String
+  buildingId              String
+  floorId                 String
+  locationId              String
+  publicationId           String
+  publicationVersion      Int
+  variantVersion          Int
+  variantSha256           String                    @db.Char(64)
+  category                DisplayCorrectionCategory
+  description             String                    @db.Text
+  suggestedPriority       DisplayCorrectionPriority
+  status                  DisplayCorrectionStatus   @default(SUBMITTED)
+  normalizedX             Float?
+  normalizedY             Float?
+  submittedByClientUserId String
+  submissionRequestId     String
+  clientVisibleResponse   String?                   @db.Text
+  resolvedAt              DateTime?
+  closedAt                DateTime?
+  lockVersion             Int                       @default(0)
+  submittedAt             DateTime                  @default(now())
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+
+  organization Organization                        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  client       Client                              @relation(fields: [clientId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  building     Building                            @relation(fields: [buildingId, clientId, organizationId], references: [id, clientId, organizationId], onDelete: Restrict)
+  floor        BuildingFloor                       @relation(fields: [floorId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
+  location     DisplayLocation                     @relation(fields: [locationId, organizationId, buildingId, floorId], references: [id, organizationId, buildingId, floorId], onDelete: Restrict)
+  publication  DisplayPlanPublication              @relation(fields: [publicationId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
+  submittedBy  ClientUser                          @relation(fields: [submittedByClientUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  events       DisplayCorrectionObservationEvent[]
+
+  @@unique([submittedByClientUserId, submissionRequestId])
+  @@unique([id, organizationId, buildingId])
+  @@index([organizationId, clientId, buildingId, status, updatedAt])
+  @@index([publicationId, publicationVersion, variantVersion])
+}
+
+model DisplayCorrectionObservationEvent {
+  id                String                  @id @default(uuid())
+  observationId     String
+  organizationId    String
+  buildingId        String
+  status            DisplayCorrectionStatus
+  action            String
+  actorClientUserId String
+  metadata          Json?
+  createdAt         DateTime                @default(now())
+
+  observation     DisplayCorrectionObservation @relation(fields: [observationId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
+  organization    Organization                 @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  actorClientUser ClientUser                   @relation(fields: [actorClientUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@index([observationId, createdAt])
+  @@index([organizationId, buildingId, createdAt])
 }
 
 model DisplayPlanPublicationEvent {
@@ -4122,47 +4226,49 @@ model Notification {
 }
 
 model ClientUser {
-  id                           String                        @id @default(uuid())
-  email                        String                        @unique
-  password                     String
-  firstName                    String
-  lastName                     String
-  role                         ClientUserRole                @default(CLIENT_MANAGER)
-  populationPermissions        PopulationPermission[]        @default([])
-  operationalReviewPermissions OperationalReviewPermission[] @default([])
-  correctiveActionPermissions  CorrectiveActionPermission[]  @default([])
-  incidentPermissions          IncidentPermission[]          @default([])
-  displayPermissions           DisplayPermission[]           @default([])
-  displayBuildingIds           String[]                      @default([])
-  buildingIds                  String[]
-  isActive                     Boolean                       @default(true)
-  clientId                     String
-  client                       Client                        @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  organizationId               String
-  organization                 Organization                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  signatures                   DocumentSignature[]
-  createdAt                    DateTime                      @default(now())
-  updatedAt                    DateTime                      @updatedAt
-  magicLinks                   MagicLink[]
-  engagements                  DocumentEngagement[]
-  bookings                     Booking[]
-  mfaCode                      String?
-  mfaCodeExpiry                DateTime?
-  documentaryGrants            BuildingDocumentGrant[]
-  uploadedFiles                ProjectFile[]                 @relation("ClientFileUploader")
-  trustedDevices               ClientTrustedDevice[]
-  passwordResetTokens          ClientPasswordResetToken[]
-  securityAuditEvents          ClientSecurityAuditEvent[]
-  auditLogs                    AuditLog[]                    @relation("AuditLogClientActor")
-  sessionVersion               Int                           @default(0)
-  offlineDocumentDevices       OfflineDocumentDevice[]
-  offlineDocumentLeases        OfflineDocumentLease[]
-  offlineDocumentAuditEvents   OfflineDocumentAuditEvent[]
-  adminAuditEvents             AdminAuditEvent[]             @relation("AdminAuditClientActor")
-  networkAssignmentsGranted    CustomerPortfolioAssignment[] @relation("NetworkAssignmentGrantedByClientUser")
-  networkAssignmentsRevoked    CustomerPortfolioAssignment[] @relation("NetworkAssignmentRevokedByClientUser")
-  projectComments              ProjectComment[]
-  invitationEvents             ClientInvitationEvent[]
+  id                            String                              @id @default(uuid())
+  email                         String                              @unique
+  password                      String
+  firstName                     String
+  lastName                      String
+  role                          ClientUserRole                      @default(CLIENT_MANAGER)
+  populationPermissions         PopulationPermission[]              @default([])
+  operationalReviewPermissions  OperationalReviewPermission[]       @default([])
+  correctiveActionPermissions   CorrectiveActionPermission[]        @default([])
+  incidentPermissions           IncidentPermission[]                @default([])
+  displayPermissions            DisplayPermission[]                 @default([])
+  displayBuildingIds            String[]                            @default([])
+  buildingIds                   String[]
+  isActive                      Boolean                             @default(true)
+  clientId                      String
+  client                        Client                              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  organizationId                String
+  organization                  Organization                        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  signatures                    DocumentSignature[]
+  createdAt                     DateTime                            @default(now())
+  updatedAt                     DateTime                            @updatedAt
+  magicLinks                    MagicLink[]
+  engagements                   DocumentEngagement[]
+  bookings                      Booking[]
+  mfaCode                       String?
+  mfaCodeExpiry                 DateTime?
+  documentaryGrants             BuildingDocumentGrant[]
+  uploadedFiles                 ProjectFile[]                       @relation("ClientFileUploader")
+  trustedDevices                ClientTrustedDevice[]
+  passwordResetTokens           ClientPasswordResetToken[]
+  securityAuditEvents           ClientSecurityAuditEvent[]
+  auditLogs                     AuditLog[]                          @relation("AuditLogClientActor")
+  sessionVersion                Int                                 @default(0)
+  offlineDocumentDevices        OfflineDocumentDevice[]
+  offlineDocumentLeases         OfflineDocumentLease[]
+  offlineDocumentAuditEvents    OfflineDocumentAuditEvent[]
+  adminAuditEvents              AdminAuditEvent[]                   @relation("AdminAuditClientActor")
+  networkAssignmentsGranted     CustomerPortfolioAssignment[]       @relation("NetworkAssignmentGrantedByClientUser")
+  networkAssignmentsRevoked     CustomerPortfolioAssignment[]       @relation("NetworkAssignmentRevokedByClientUser")
+  projectComments               ProjectComment[]
+  invitationEvents              ClientInvitationEvent[]
+  displayCorrectionObservations DisplayCorrectionObservation[]
+  displayCorrectionEvents       DisplayCorrectionObservationEvent[]
 
   @@unique([id, organizationId])
 }
