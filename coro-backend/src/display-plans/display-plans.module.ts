@@ -5,7 +5,7 @@ import { StorageModule } from '../storage/storage.module';
 import { DisplayPlanPublicationController } from './display-plan-publication.controller';
 import { DisplayPlanPublicationService } from './display-plan-publication.service';
 import { DisplayPlanRendererService } from './display-plan-renderer.service';
-import { DisplayPdfEngineService } from './display-pdf-engine.service';
+import { DisplayPdfRasterizerBridgeService } from './display-pdf-rasterizer-bridge.service';
 import { DisplayPdfRenderJobService } from './display-pdf-render-job.service';
 
 @Module({
@@ -14,7 +14,7 @@ import { DisplayPdfRenderJobService } from './display-pdf-render-job.service';
   providers: [
     DisplayPlanPublicationService,
     DisplayPlanRendererService,
-    DisplayPdfEngineService,
+    DisplayPdfRasterizerBridgeService,
     DisplayPdfRenderJobService,
   ],
   exports: [DisplayPlanPublicationService, DisplayPdfRenderJobService],

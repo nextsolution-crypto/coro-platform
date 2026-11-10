@@ -12,9 +12,10 @@ import {
 } from '../spatial/spatial-authorization.service';
 import { StorageService } from '../storage/storage.service';
 import {
-  DisplayPdfEngineService,
   DisplayPdfRejectedError,
+  PdfRenderResult,
 } from './display-pdf-engine.service';
+import { DisplayPdfRasterizerBridgeService } from './display-pdf-rasterizer-bridge.service';
 import { DisplayPlanRendererService } from './display-plan-renderer.service';
 
 type ClaimedJob = {
@@ -30,7 +31,7 @@ export class DisplayPdfRenderJobService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly authorization: SpatialAuthorizationService,
-    private readonly engine: DisplayPdfEngineService,
+    private readonly engine: DisplayPdfRasterizerBridgeService,
     private readonly overlay: DisplayPlanRendererService,
   ) {}
 
@@ -108,6 +109,22 @@ export class DisplayPdfRenderJobService {
   }
 
   async recoverAbandoned(staleBefore = new Date(Date.now() - 2 * 60_000)) {
+    await this.prisma.displayPdfRenderJob.updateMany({
+      where: {
+        status: 'PROCESSING',
+        heartbeatAt: { lt: staleBefore },
+        attempts: { gte: 3 },
+      },
+      data: {
+        status: 'FAILED',
+        claimedBy: null,
+        claimedAt: null,
+        heartbeatAt: null,
+        completedAt: new Date(),
+        failureCode: 'LEASE_EXHAUSTED',
+        failureDetail: 'Bail expirÃ© aprÃ¨s le nombre maximal de tentatives.',
+      },
+    });
     return this.prisma.displayPdfRenderJob.updateMany({
       where: {
         status: 'PROCESSING',
@@ -186,11 +203,45 @@ export class DisplayPdfRenderJobService {
         'SOURCE_HASH_MISMATCH',
         'Intégrité de la source invalide.',
       );
-    const raster = await this.engine.render(
-      source,
-      job.pageNumber,
-      job.targetDpi,
-    );
+    const heartbeat = setInterval(() => {
+      void this.prisma.displayPdfRenderJob.updateMany({
+        where: { id, status: 'PROCESSING', claimedBy: job.claimedBy },
+        data: { heartbeatAt: new Date() },
+      });
+    }, 15_000);
+    heartbeat.unref();
+    let raster: PdfRenderResult;
+    try {
+      raster = await this.engine.render(source, job.pageNumber, job.targetDpi);
+    } finally {
+      clearInterval(heartbeat);
+    }
+    const authorityAfterRender =
+      await this.prisma.displayPlanPublication.findFirst({
+        where: {
+          id: publication.id,
+          organizationId: job.organizationId,
+          buildingId: job.buildingId,
+          status: 'DRAFT',
+          sourceSha256: job.sourceSha256,
+          projectFileId: job.sourceProjectFileId,
+          projectFile: {
+            is: {
+              lifecycleState: 'APPROVED',
+              revokedAt: null,
+              supersededAt: null,
+              version: job.sourceVersion,
+              sha256: job.sourceSha256,
+            },
+          },
+        },
+        select: { id: true },
+      });
+    if (!authorityAfterRender)
+      throw new DisplayPdfRejectedError(
+        'AUTHORITY_CHANGED',
+        'Document authority changed during rasterization.',
+      );
     const rasterSha = this.hash(raster.bytes);
     const rasterKey = `tenant-${job.organizationId}/display-plan-publications/${publication.id}/pdf-raster-${job.id}-${rasterSha}.png`;
     await this.storage.uploadPrivateImmutable(
@@ -215,12 +266,35 @@ export class DisplayPdfRenderJobService {
     );
 
     await this.prisma.$transaction(async (tx) => {
+      const currentPublication = await tx.displayPlanPublication.findFirst({
+        where: {
+          id: publication.id,
+          organizationId: job.organizationId,
+          buildingId: job.buildingId,
+        },
+        include: { projectFile: true },
+      });
+      if (
+        !currentPublication ||
+        currentPublication.status !== 'DRAFT' ||
+        currentPublication.projectFile.lifecycleState !== 'APPROVED' ||
+        currentPublication.projectFile.revokedAt ||
+        currentPublication.projectFile.supersededAt ||
+        currentPublication.projectFile.id !== job.sourceProjectFileId ||
+        currentPublication.projectFile.sha256 !== job.sourceSha256 ||
+        currentPublication.projectFile.version !== job.sourceVersion
+      )
+        throw new DisplayPdfRejectedError(
+          'AUTHORITY_CHANGED',
+          "L'autoritÃ© documentaire a changÃ© avant la publication du rendu.",
+        );
       const changed = await tx.displayPlanPublication.updateMany({
         where: {
           id: publication.id,
           status: 'DRAFT',
           lockVersion: publication.lockVersion,
           sourceSha256: job.sourceSha256,
+          projectFileId: job.sourceProjectFileId,
         },
         data: {
           variantVersion,

@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { promisify } from 'util';
+import { createHash } from 'crypto';
 
 const run = promisify(execFile);
 
@@ -32,6 +33,10 @@ export class DisplayPdfEngineService {
   static readonly MAX_PAGES = 100;
   static readonly MAX_PIXELS = 100_000_000;
   static readonly TIMEOUT_MS = 30_000;
+
+  static sha256(bytes: Buffer) {
+    return createHash('sha256').update(bytes).digest('hex');
+  }
 
   async render(
     source: Buffer,
@@ -96,7 +101,7 @@ export class DisplayPdfEngineService {
         { timeout: DisplayPdfEngineService.TIMEOUT_MS, maxBuffer: 128 * 1024 },
       ).catch((error: unknown) => {
         throw new DisplayPdfRejectedError(
-          'PDF_RENDER_FAILED',
+          this.isTimeout(error) ? 'PDF_TIMEOUT' : 'PDF_RENDER_FAILED',
           this.safeError(error),
         );
       });
@@ -144,6 +149,12 @@ export class DisplayPdfEngineService {
       '/Filespec',
       '/RichMedia',
       '/XFA',
+      '/OpenAction',
+      '/AA',
+      '/URI',
+      '/GoToR',
+      '/SubmitForm',
+      '/ImportData',
     ];
     if (forbidden.some((token) => ascii.includes(token)))
       throw new DisplayPdfRejectedError(
@@ -174,5 +185,19 @@ export class DisplayPdfEngineService {
   private safeError(error: unknown) {
     if (!(error instanceof Error)) return 'Erreur moteur PDF.';
     return error.message.replace(/[\r\n]+/g, ' ').slice(0, 300);
+  }
+
+  private isTimeout(error: unknown) {
+    if (!error || typeof error !== 'object') return false;
+    const candidate = error as {
+      killed?: boolean;
+      code?: string;
+      signal?: string;
+    };
+    return (
+      candidate.killed === true ||
+      candidate.code === 'ETIMEDOUT' ||
+      candidate.signal === 'SIGTERM'
+    );
   }
 }

@@ -105,25 +105,45 @@ services:
         source: ${POPULATION_SMS_VALIDATION_EVIDENCE_HOST_DIR:-/var/lib/coro/sms-validation}
         target: /var/lib/coro/sms-validation
 
+  display-pdf-spool-init:
+    image: ghcr.io/nextsolution-crypto/coro-backend:latest
+    profiles: ["display-pdf-worker"]
+    restart: "no"
+    command: ["sh", "-c", "chown 1000:1000 /var/lib/coro/display-pdf-spool && chmod 0700 /var/lib/coro/display-pdf-spool"]
+    user: "0:0"
+    read_only: true
+    network_mode: none
+    cap_drop: ["ALL"]
+    cap_add: ["CHOWN", "FOWNER"]
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - type: bind
+        source: ${DISPLAY_PDF_SPOOL_HOST_DIR:-/var/lib/coro/display-pdf-spool}
+        target: /var/lib/coro/display-pdf-spool
+
   display-pdf-worker:
     image: ghcr.io/nextsolution-crypto/coro-backend:latest
     container_name: coro_display_pdf_worker
     profiles: ["display-pdf-worker"]
     restart: unless-stopped
+    init: true
     command: ["node", "dist/src/display-pdf-worker/main.js"]
     user: "1000:1000"
     read_only: true
     tmpfs:
-      - /tmp:rw,noexec,nosuid,nodev,size=256m,mode=0700
+      - /tmp:rw,noexec,nosuid,nodev,size=256m,mode=0700,uid=1000,gid=1000
     cap_drop: ["ALL"]
     security_opt:
       - no-new-privileges:true
     pids_limit: 32
     mem_limit: 512m
+    memswap_limit: 512m
     cpus: 1.0
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       DISPLAY_PDF_WORKER_ENABLED: "true"
+      DISPLAY_PDF_SPOOL_DIR: /var/lib/coro/display-pdf-spool
       DO_SPACES_KEY: ${DO_SPACES_KEY}
       DO_SPACES_SECRET: ${DO_SPACES_SECRET}
       DO_SPACES_ENDPOINT: ${DO_SPACES_ENDPOINT}
@@ -137,9 +157,46 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      display-pdf-spool-init:
+        condition: service_completed_successfully
     networks:
       - coro_network
       - coro_qa_storage_internal
+    volumes:
+      - type: bind
+        source: ${DISPLAY_PDF_SPOOL_HOST_DIR:-/var/lib/coro/display-pdf-spool}
+        target: /var/lib/coro/display-pdf-spool
+
+  display-pdf-rasterizer:
+    image: ghcr.io/nextsolution-crypto/coro-backend:latest
+    container_name: coro_display_pdf_rasterizer
+    profiles: ["display-pdf-worker"]
+    restart: unless-stopped
+    init: true
+    command: ["node", "dist/src/display-pdf-rasterizer/main.js"]
+    user: "1000:1000"
+    read_only: true
+    network_mode: none
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=256m,mode=0700,uid=1000,gid=1000
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 16
+    mem_limit: 384m
+    memswap_limit: 384m
+    cpus: 1.0
+    environment:
+      DISPLAY_PDF_RASTERIZER_ENABLED: "true"
+      DISPLAY_PDF_SPOOL_DIR: /var/lib/coro/display-pdf-spool
+      NODE_ENV: production
+    depends_on:
+      display-pdf-spool-init:
+        condition: service_completed_successfully
+    volumes:
+      - type: bind
+        source: ${DISPLAY_PDF_SPOOL_HOST_DIR:-/var/lib/coro/display-pdf-spool}
+        target: /var/lib/coro/display-pdf-spool
 
   frontend:
     image: ghcr.io/nextsolution-crypto/coro-frontend:latest

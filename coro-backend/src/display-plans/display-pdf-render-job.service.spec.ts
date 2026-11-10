@@ -4,7 +4,10 @@ describe('DisplayPdfRenderJobService', () => {
   it('recovers only stale retryable processing jobs', async () => {
     const updateMany: jest.MockedFunction<
       (args: unknown) => Promise<{ count: number }>
-    > = jest.fn().mockResolvedValue({ count: 1 });
+    > = jest
+      .fn()
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 });
     const service = new DisplayPdfRenderJobService(
       { displayPdfRenderJob: { updateMany } } as never,
       {} as never,
@@ -16,7 +19,15 @@ describe('DisplayPdfRenderJobService', () => {
     await expect(service.recoverAbandoned(staleBefore)).resolves.toEqual({
       count: 1,
     });
-    const call = updateMany.mock.calls[0]?.[0] as {
+    expect(updateMany.mock.calls[0]?.[0]).toMatchObject({
+      where: {
+        status: 'PROCESSING',
+        heartbeatAt: { lt: staleBefore },
+        attempts: { gte: 3 },
+      },
+      data: { status: 'FAILED', failureCode: 'LEASE_EXHAUSTED' },
+    });
+    const call = updateMany.mock.calls[1]?.[0] as {
       where: unknown;
       data: { nextAttemptAt: Date };
     };
