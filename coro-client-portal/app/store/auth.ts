@@ -35,6 +35,14 @@ export interface ClientUser {
     | "CORRECTIVE_ACTION_CLOSE"
     | "CORRECTIVE_ACTION_REPORT_GENERATE"
   >;
+  displayPermissions: Array<
+    | "DISPLAY_CLIENT_PLAN_READ"
+    | "DISPLAY_CLIENT_PREVIEW"
+    | "DISPLAY_CLIENT_LOCATION_READ"
+    | "DISPLAY_CLIENT_OBSERVATION_SUBMIT"
+    | "DISPLAY_CLIENT_OBSERVATION_READ"
+  >;
+  displayBuildingIds: string[];
 }
 
 export function getToken(): string | null {

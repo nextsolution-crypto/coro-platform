@@ -5,7 +5,10 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class ClientJwtGuard implements CanActivate {
-  constructor(private jwt: JwtService, private prisma: PrismaService) {}
+  constructor(
+    private jwt: JwtService,
+    private prisma: PrismaService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -18,7 +21,10 @@ export class ClientJwtGuard implements CanActivate {
     const token = authHeader.split(' ')[1];
     try {
       const payload = this.jwt.verify(token);
-      if (payload.type !== 'CLIENT' || !Number.isInteger(payload.sessionVersion)) {
+      if (
+        payload.type !== 'CLIENT' ||
+        !Number.isInteger(payload.sessionVersion)
+      ) {
         throw new UnauthorizedException('Token invalide.');
       }
       const user = await this.prisma.clientUser.findFirst({
@@ -38,10 +44,13 @@ export class ClientJwtGuard implements CanActivate {
           populationPermissions: true,
           operationalReviewPermissions: true,
           correctiveActionPermissions: true,
+          displayPermissions: true,
+          displayBuildingIds: true,
           sessionVersion: true,
         },
       });
-      if (!user || user.sessionVersion !== payload.sessionVersion) throw new UnauthorizedException('Token invalide.');
+      if (!user || user.sessionVersion !== payload.sessionVersion)
+        throw new UnauthorizedException('Token invalide.');
       // Identity proof comes from the signed token; mutable authorization scope
       // always comes from the current canonical ClientUser row.
       request.clientUser = {
@@ -55,6 +64,8 @@ export class ClientJwtGuard implements CanActivate {
         populationPermissions: user.populationPermissions,
         operationalReviewPermissions: user.operationalReviewPermissions,
         correctiveActionPermissions: user.correctiveActionPermissions,
+        displayPermissions: user.displayPermissions,
+        displayBuildingIds: user.displayBuildingIds,
       };
       return true;
     } catch {

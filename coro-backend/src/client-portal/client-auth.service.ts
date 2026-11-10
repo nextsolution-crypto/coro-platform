@@ -73,6 +73,8 @@ export class ClientAuthService {
       populationPermissions: clientUser.populationPermissions,
       operationalReviewPermissions: clientUser.operationalReviewPermissions,
       correctiveActionPermissions: clientUser.correctiveActionPermissions,
+      displayPermissions: clientUser.displayPermissions,
+      displayBuildingIds: clientUser.displayBuildingIds,
       sessionVersion: clientUser.sessionVersion,
       mfaVerifiedAt: mfaVerifiedAt?.toISOString() ?? null,
       type: 'CLIENT',
@@ -90,7 +92,12 @@ export class ClientAuthService {
 
   async getCurrentUser(clientUserId: string, organizationId: string) {
     const clientUser = await this.prisma.clientUser.findFirst({
-      where: { id: clientUserId, organizationId, isActive: true, client: { isActive: true } },
+      where: {
+        id: clientUserId,
+        organizationId,
+        isActive: true,
+        client: { isActive: true },
+      },
       include: { client: { select: { name: true } } },
     });
     if (!clientUser)
@@ -107,6 +114,8 @@ export class ClientAuthService {
       populationPermissions: clientUser.populationPermissions,
       operationalReviewPermissions: clientUser.operationalReviewPermissions,
       correctiveActionPermissions: clientUser.correctiveActionPermissions,
+      displayPermissions: clientUser.displayPermissions,
+      displayBuildingIds: clientUser.displayBuildingIds,
     };
   }
 
@@ -149,6 +158,8 @@ export class ClientAuthService {
             operationalReviewPermissions:
               clientUser.operationalReviewPermissions,
             correctiveActionPermissions: clientUser.correctiveActionPermissions,
+            displayPermissions: clientUser.displayPermissions,
+            displayBuildingIds: clientUser.displayBuildingIds,
           },
         };
       }
@@ -236,6 +247,8 @@ export class ClientAuthService {
         populationPermissions: clientUser.populationPermissions,
         operationalReviewPermissions: clientUser.operationalReviewPermissions,
         correctiveActionPermissions: clientUser.correctiveActionPermissions,
+        displayPermissions: clientUser.displayPermissions,
+        displayBuildingIds: clientUser.displayBuildingIds,
       },
     };
   }
@@ -305,7 +318,12 @@ export class ClientAuthService {
       await tx.$queryRaw`SELECT id FROM "ClientUser" WHERE id = ${clientUserId} FOR UPDATE`;
       const locked = await tx.clientUser.findUnique({
         where: { id: clientUserId },
-        select: { password: true, organizationId: true, isActive: true, client: { select: { isActive: true } } },
+        select: {
+          password: true,
+          organizationId: true,
+          isActive: true,
+          client: { select: { isActive: true } },
+        },
       });
       if (
         !this.isEligible(locked) ||
@@ -440,7 +458,11 @@ export class ClientAuthService {
       if (claim.count !== 1) throw new BadRequestException(INVALID_RESET);
       const user = await tx.clientUser.findUnique({
         where: { id: record.clientUserId },
-        select: { organizationId: true, isActive: true, client: { select: { isActive: true } } },
+        select: {
+          organizationId: true,
+          isActive: true,
+          client: { select: { isActive: true } },
+        },
       });
       if (!this.isEligible(user)) throw new BadRequestException(INVALID_RESET);
       await tx.clientUser.update({

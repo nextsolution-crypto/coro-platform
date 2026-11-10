@@ -17,6 +17,8 @@ import { PopulationModule } from '../population/population.module';
 import { requireJwtSecret } from '../auth/auth-security.config';
 import { AuthModule } from '../auth/auth.module';
 import { ClientPilotPolicyService } from './client-pilot-policy.service';
+import { ClientDisplayController } from './client-display.controller';
+import { ClientDisplayService } from './client-display.service';
 
 @Module({
   imports: [
@@ -33,7 +35,11 @@ import { ClientPilotPolicyService } from './client-pilot-policy.service';
       signOptions: { expiresIn: '7d' },
     }),
   ],
-  controllers: [ClientPortalController, ClientAuthController],
+  controllers: [
+    ClientPortalController,
+    ClientAuthController,
+    ClientDisplayController,
+  ],
   providers: [
     ClientPortalService,
     ClientAuthService,
@@ -41,6 +47,7 @@ import { ClientPilotPolicyService } from './client-pilot-policy.service';
     EmailService,
     CorrectiveActionsService,
     CorrectiveActionEvidenceService,
+    ClientDisplayService,
   ],
   exports: [ClientPortalService, EmailService, ClientPilotPolicyService],
 })

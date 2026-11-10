@@ -20,6 +20,7 @@ import {
   Network,
   HardDriveDownload,
   BookOpenCheck,
+  MonitorUp,
 } from "lucide-react";
 import workspace from "./PortalWorkspace.module.css";
 import { resolveActivePortalNavigationPath } from "./active-navigation";
@@ -120,6 +121,9 @@ export default function PortalLayout({
 
   const onlineNavItems = [
     { label: "Tableau de bord", path: "/dashboard", icon: LayoutDashboard },
+    ...(user?.displayPermissions?.includes("DISPLAY_CLIENT_PLAN_READ")
+      ? [{ label: "CORO Display", path: "/display", icon: MonitorUp }]
+      : []),
     { label: "Bâtiments", path: "/buildings", icon: Building2 },
     { label: "Conformité", path: "/documents", icon: FileText },
     { label: "CORO AI", path: "/knowledge", icon: BookOpenCheck },
