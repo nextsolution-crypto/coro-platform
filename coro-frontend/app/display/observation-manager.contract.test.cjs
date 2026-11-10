@@ -1,0 +1,28 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const page = fs.readFileSync(path.join(__dirname, 'page.tsx'), 'utf8');
+const component = fs.readFileSync(path.join(__dirname, 'ObservationManager.tsx'), 'utf8');
+const css = fs.readFileSync(path.join(__dirname, 'observations.module.css'), 'utf8');
+
+assert.match(page, /DISPLAY_OBSERVATION_READ/);
+assert.match(page, /ObservationManager/);
+for (const permission of ['QUALIFY', 'ASSIGN', 'RESPOND']) assert.match(component, new RegExp(`DISPLAY_OBSERVATION_${permission}`));
+for (const status of ['SUBMITTED', 'UNDER_REVIEW', 'MORE_INFO_REQUIRED', 'ACCEPTED', 'REJECTED', 'CORRECTION_IN_PROGRESS', 'RESOLVED', 'CLOSED']) assert.match(component, new RegExp(status));
+assert.match(component, /Commentaire interne/);
+assert.match(component, /Visible au client/);
+assert.match(component, /Observation critique/);
+assert.match(component, /ne confirme pas un incident/);
+assert.match(component, /window\.confirm/);
+assert.match(component, /DOCUMENT_INFORMATION_INCORRECT/);
+assert.doesNotMatch(component, /DOCUMENT_ERROR/);
+assert.match(component, /correctionReferenceType/);
+assert.match(component, /correctionEvidence/);
+assert.match(component, /Constat ou preuve contrôlé par le validateur/);
+assert.match(component, /correctionEvidence\.trim\(\)\.length<3/);
+assert.match(component, /filter\(canTransition\)/);
+assert.doesNotMatch(component, /incident.*create|notification.*send|evacuation.*trigger/i);
+assert.match(css, /@media\(max-width:760px\)/);
+assert.match(css, /prefers-reduced-motion:reduce/);
+assert.match(component, /aria-modal="true"/);
+console.log('DISPLAY-05C frontend contract: PASS');
