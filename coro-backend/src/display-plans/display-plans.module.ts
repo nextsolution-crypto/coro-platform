@@ -7,6 +7,7 @@ import { DisplayPlanPublicationService } from './display-plan-publication.servic
 import { DisplayPlanRendererService } from './display-plan-renderer.service';
 import { DisplayPdfRasterizerBridgeService } from './display-pdf-rasterizer-bridge.service';
 import { DisplayPdfRenderJobService } from './display-pdf-render-job.service';
+import { DisplayPdfMaintenanceService } from './display-pdf-maintenance.service';
 
 @Module({
   imports: [PrismaModule, SpatialModule, StorageModule],
@@ -16,7 +17,12 @@ import { DisplayPdfRenderJobService } from './display-pdf-render-job.service';
     DisplayPlanRendererService,
     DisplayPdfRasterizerBridgeService,
     DisplayPdfRenderJobService,
+    DisplayPdfMaintenanceService,
   ],
-  exports: [DisplayPlanPublicationService, DisplayPdfRenderJobService],
+  exports: [
+    DisplayPlanPublicationService,
+    DisplayPdfRenderJobService,
+    DisplayPdfMaintenanceService,
+  ],
 })
 export class DisplayPlansModule {}

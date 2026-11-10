@@ -41,4 +41,16 @@ describe('DisplayPdfEngineService', () => {
       'PDF_DPI',
     );
   });
+
+  it('rejects a polyglot payload appended after the final EOF marker', () => {
+    expect(
+      codeOf(() =>
+        service.validateEnvelope(
+          Buffer.concat([minimal(), Buffer.from('PK\x03\x04archive')]),
+          1,
+          300,
+        ),
+      ),
+    ).toBe('PDF_TRAILING_DATA');
+  });
 });

@@ -84,6 +84,17 @@ export class DisplayPdfEngineService {
           'Page demandée inexistante.',
         );
 
+      if (metadata.widthPoints && metadata.heightPoints) {
+        const estimatedPixels =
+          ((metadata.widthPoints * dpi) / 72) *
+          ((metadata.heightPoints * dpi) / 72);
+        if (estimatedPixels > DisplayPdfEngineService.MAX_PIXELS)
+          throw new DisplayPdfRejectedError(
+            'OUTPUT_PIXEL_LIMIT',
+            'Dimensions PDF produisant une sortie supérieure à 100 mégapixels.',
+          );
+      }
+
       await run(
         'pdftocairo',
         [
@@ -141,6 +152,12 @@ export class DisplayPdfEngineService {
     if (!Number.isInteger(dpi) || dpi < 72 || dpi > 300)
       throw new DisplayPdfRejectedError('PDF_DPI', 'Résolution hors limites.');
     const ascii = source.toString('latin1');
+    const eof = ascii.lastIndexOf('%%EOF');
+    if (eof < 0 || ascii.slice(eof + 5).trim().length > 0)
+      throw new DisplayPdfRejectedError(
+        'PDF_TRAILING_DATA',
+        'Données non PDF détectées après la marque de fin.',
+      );
     const forbidden = [
       '/JavaScript',
       '/JS',
@@ -166,7 +183,15 @@ export class DisplayPdfEngineService {
   private parseInfo(output: string) {
     const pages = Number(/^Pages:\s+(\d+)$/im.exec(output)?.[1] ?? 0);
     const encrypted = /^Encrypted:\s+yes/im.test(output);
-    return { pages, encrypted };
+    const pageSize = /^Page size:\s+([\d.]+)\s+x\s+([\d.]+)\s+pts/im.exec(
+      output,
+    );
+    return {
+      pages,
+      encrypted,
+      widthPoints: pageSize ? Number(pageSize[1]) : null,
+      heightPoints: pageSize ? Number(pageSize[2]) : null,
+    };
   }
 
   private pngDimensions(bytes: Buffer) {
