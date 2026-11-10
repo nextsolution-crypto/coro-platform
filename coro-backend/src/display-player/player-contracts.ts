@@ -59,6 +59,7 @@ export interface TrustedManifestKey {
   keyId: string;
   publicKeyPem: string;
   activeFrom: string;
+  expiresAt?: string;
   revokedAt?: string;
 }
 
@@ -86,6 +87,7 @@ export interface SecondaryContent {
   organizationId: string;
   buildingId: string;
   version: number;
+  authenticated: boolean;
   approved: boolean;
   revoked: boolean;
   validFrom: string;

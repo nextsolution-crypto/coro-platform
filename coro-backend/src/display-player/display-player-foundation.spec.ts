@@ -174,6 +174,7 @@ describe('DISPLAY-06A player foundation', () => {
       organizationId: device.organizationId,
       buildingId: device.buildingId,
       version: 1,
+      authenticated: true,
       approved: true,
       revoked: false,
       validFrom: '2026-11-10T00:00:00.000Z',

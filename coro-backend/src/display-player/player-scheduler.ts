@@ -30,6 +30,7 @@ export function isSecondaryContentEligible(
 ): boolean {
   return Boolean(
     content?.approved &&
+    content.authenticated &&
     !content.revoked &&
     content.organizationId === input.organizationId &&
     content.buildingId === input.buildingId &&
