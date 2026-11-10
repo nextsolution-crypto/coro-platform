@@ -3138,6 +3138,7 @@ model DisplayCorrectionObservation {
   @@unique([id, organizationId, buildingId])
   @@index([organizationId, clientId, buildingId, status, updatedAt])
   @@index([publicationId, publicationVersion, variantVersion])
+  @@index([suggestedPriority, status, updatedAt])
 }
 
 model DisplayCorrectionObservationEvent {

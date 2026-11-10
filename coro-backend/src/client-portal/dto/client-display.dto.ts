@@ -1,6 +1,7 @@
 import { Transform } from 'class-transformer';
 import {
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -17,6 +18,36 @@ import {
 export class ClientDisplayListQueryDto {
   @IsOptional() @IsUUID() buildingId?: string;
   @IsOptional() @IsString() @Length(1, 120) search?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit = 25;
+
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(0)
+  offset = 0;
+}
+
+export class ClientDisplayObservationListQueryDto {
+  @IsOptional() @IsUUID() buildingId?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit = 25;
+
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(0)
+  offset = 0;
 }
 
 export class SubmitDisplayCorrectionDto {

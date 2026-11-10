@@ -19,6 +19,7 @@ import {
 } from './client-display.service';
 import {
   ClientDisplayListQueryDto,
+  ClientDisplayObservationListQueryDto,
   SubmitDisplayCorrectionDto,
 } from './dto/client-display.dto';
 
@@ -48,8 +49,9 @@ export class ClientDisplayController {
   }
   @Get('observations') observations(
     @Request() req: { clientUser: ClientDisplayActor },
+    @Query() query: ClientDisplayObservationListQueryDto,
   ) {
-    return this.display.observations(req.clientUser);
+    return this.display.observations(req.clientUser, query);
   }
   @Post('observations') submit(
     @Request() req: { clientUser: ClientDisplayActor },
@@ -67,7 +69,9 @@ export class ClientDisplayController {
     const file = await this.display.preview(req.clientUser, id);
     res.setHeader('Content-Type', file.mimeType);
     res.setHeader('ETag', `"${file.sha256}"`);
-    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Vary', 'Authorization');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.send(file.bytes);
   }
