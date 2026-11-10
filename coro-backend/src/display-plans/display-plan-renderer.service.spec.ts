@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { createHash } from 'crypto';
 import { DisplayPlanRendererService } from './display-plan-renderer.service';
 
 describe('DisplayPlanRendererService', () => {
@@ -44,5 +45,50 @@ describe('DisplayPlanRendererService', () => {
         orientationDegrees: 0,
       }),
     ).toThrow(BadRequestException);
+  });
+
+  it('refuses unsafe marker coordinates, orientation and dimensions', () => {
+    const png = Buffer.alloc(24);
+    png.writeUInt8(0x89, 0);
+    png.write('PNG', 1, 'ascii');
+    png.writeUInt32BE(20_000, 16);
+    png.writeUInt32BE(1_700, 20);
+    const base = {
+      source: png,
+      mimeType: 'image/png',
+      youAreHereX: 0.5,
+      youAreHereY: 0.5,
+      orientationDegrees: 0,
+    };
+    expect(() => renderer.render({ ...base, youAreHereX: 1.01 })).toThrow(
+      'Coordonnées',
+    );
+    expect(() => renderer.render({ ...base, orientationDegrees: 360 })).toThrow(
+      'Orientation',
+    );
+    expect(() => renderer.render(base)).toThrow('Dimensions');
+  });
+
+  it('creates isolated variants with distinct hashes for distinct locations', () => {
+    const png = Buffer.alloc(24);
+    png.writeUInt8(0x89, 0);
+    png.write('PNG', 1, 'ascii');
+    png.writeUInt32BE(2200, 16);
+    png.writeUInt32BE(1700, 20);
+    const render = (x: number, orientationDegrees: number) =>
+      renderer.render({
+        source: png,
+        mimeType: 'image/png',
+        youAreHereX: x,
+        youAreHereY: 0.5,
+        orientationDegrees,
+      }).bytes;
+    const hashes = [
+      render(0.15, 0),
+      render(0.35, 90),
+      render(0.65, 180),
+      render(0.85, 270),
+    ].map((bytes) => createHash('sha256').update(bytes).digest('hex'));
+    expect(new Set(hashes).size).toBe(4);
   });
 });

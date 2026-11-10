@@ -69,6 +69,28 @@ export class DisplayPlanPublicationController {
     return this.plans.playerContract(org, building, location, req.user);
   }
 
+  @Get('player-contract/:locationId/variant/:publicationId')
+  async playerVariant(
+    @Param('organizationId') org: string,
+    @Param('buildingId') building: string,
+    @Param('locationId') location: string,
+    @Param('publicationId') publication: string,
+    @Request() req: DisplayRequest,
+    @Res() res: Response,
+  ) {
+    const file = await this.plans.downloadPlayerVariant(
+      org,
+      building,
+      location,
+      publication,
+      req.user,
+    );
+    res.setHeader('Content-Type', file.mimeType);
+    res.setHeader('ETag', `"${file.sha256}"`);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.send(file.bytes);
+  }
+
   @Get(':id')
   get(
     @Param('organizationId') org: string,

@@ -106,6 +106,8 @@ CREATE INDEX "DisplayPlanPublication_file_version_status_idx"
   ON "DisplayPlanPublication"("projectFileId", "sourceVersion", "status");
 CREATE INDEX "DisplayPlanPublication_location_status_published_idx"
   ON "DisplayPlanPublication"("locationId", "status", "publishedAt");
+CREATE UNIQUE INDEX "DisplayPlanPublication_one_published_per_location_key"
+  ON "DisplayPlanPublication"("locationId") WHERE "status" = 'PUBLISHED';
 CREATE UNIQUE INDEX "DisplayPlanPublicationEvent_publication_request_key"
   ON "DisplayPlanPublicationEvent"("publicationId", "requestId");
 CREATE INDEX "DisplayPlanPublicationEvent_org_building_created_idx"

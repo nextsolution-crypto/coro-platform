@@ -9,6 +9,10 @@ export type RenderedDisplayPlan = {
 
 @Injectable()
 export class DisplayPlanRendererService {
+  private static readonly MAX_SOURCE_BYTES = 25 * 1024 * 1024;
+  private static readonly MAX_DIMENSION = 16_384;
+  private static readonly MAX_PIXELS = 100_000_000;
+
   render(input: {
     source: Buffer;
     mimeType: string;
@@ -16,7 +20,25 @@ export class DisplayPlanRendererService {
     youAreHereY: number;
     orientationDegrees: number;
   }): RenderedDisplayPlan {
+    if (input.source.length > DisplayPlanRendererService.MAX_SOURCE_BYTES)
+      throw new BadRequestException('Source graphique trop volumineuse.');
+    if (
+      !Number.isFinite(input.youAreHereX) ||
+      !Number.isFinite(input.youAreHereY) ||
+      input.youAreHereX < 0 ||
+      input.youAreHereX > 1 ||
+      input.youAreHereY < 0 ||
+      input.youAreHereY > 1
+    )
+      throw new BadRequestException('Coordonnées du repère invalides.');
+    if (
+      !Number.isFinite(input.orientationDegrees) ||
+      input.orientationDegrees < 0 ||
+      input.orientationDegrees >= 360
+    )
+      throw new BadRequestException('Orientation du repère invalide.');
     const dimensions = this.dimensions(input.source, input.mimeType);
+    this.assertDimensions(dimensions.width, dimensions.height);
     const x = Math.round(input.youAreHereX * dimensions.width * 1000) / 1000;
     const y = Math.round(input.youAreHereY * dimensions.height * 1000) / 1000;
     const radius = Math.max(
@@ -75,5 +97,16 @@ export class DisplayPlanRendererService {
       offset += length + 2;
     }
     throw new BadRequestException('Dimensions JPEG introuvables.');
+  }
+
+  private assertDimensions(width: number, height: number) {
+    if (
+      width < 1 ||
+      height < 1 ||
+      width > DisplayPlanRendererService.MAX_DIMENSION ||
+      height > DisplayPlanRendererService.MAX_DIMENSION ||
+      width * height > DisplayPlanRendererService.MAX_PIXELS
+    )
+      throw new BadRequestException('Dimensions graphiques non admissibles.');
   }
 }

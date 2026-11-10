@@ -309,6 +309,10 @@ export class DisplayPlanPublicationService {
           throw new ForbiddenException(
             "L'auteur ne peut pas approuver sa publication.",
           );
+        if (row.reviewedById === actor.userId)
+          throw new ForbiddenException(
+            "Le réviseur ne peut pas approuver la publication qu'il a révisée.",
+          );
         if (!row.reviewedById || !row.variantSha256)
           throw new ConflictException(
             'La revue humaine et la variante sont obligatoires.',
@@ -359,6 +363,7 @@ export class DisplayPlanPublicationService {
         current.lockVersion !== dto.expectedLockVersion
       )
         throw new ConflictException('Publication modifiée concurremment.');
+      await this.assertTransactionalAuthority(tx, current);
       const active = await tx.displayPlanPublication.findMany({
         where: {
           locationId: publication.locationId,
@@ -610,6 +615,32 @@ export class DisplayPlanPublicationService {
     return { bytes, mimeType: row.variantMimeType, sha256: row.variantSha256 };
   }
 
+  async downloadPlayerVariant(
+    organizationId: string,
+    buildingId: string,
+    locationId: string,
+    publicationId: string,
+    actor: SpatialActor,
+  ) {
+    const contract = await this.playerContract(
+      organizationId,
+      buildingId,
+      locationId,
+      actor,
+    );
+    if (contract.publicationId !== publicationId)
+      throw new NotFoundException('Publication Player inactive.');
+    const row = await this.load(publicationId, organizationId, buildingId);
+    const bytes = await this.storage.downloadPrivate(row.variantStorageKey!);
+    if (this.hash(bytes) !== contract.variantSha256)
+      throw new ConflictException('Intégrité de la variante Player invalide.');
+    return {
+      bytes,
+      mimeType: contract.mimeType!,
+      sha256: contract.variantSha256,
+    };
+  }
+
   async playerContract(
     organizationId: string,
     buildingId: string,
@@ -635,17 +666,23 @@ export class DisplayPlanPublicationService {
         floor: { status: 'ACTIVE' },
         projectFile: {
           lifecycleState: 'APPROVED',
+          approvedAt: { not: null },
+          approvedById: { not: null },
           revokedAt: null,
           supersededAt: null,
+          effectiveAt: { lte: now },
+          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
         },
       },
       orderBy: [{ publishedAt: 'desc' }, { id: 'asc' }],
     });
     if (!row || !row.variantSha256 || !row.variantStorageKey)
       throw new NotFoundException('Aucune publication active.');
+    await this.assertCurrentAuthority(row);
     return {
       publicationId: row.id,
       publicationVersion: row.versionNumber,
+      status: row.status,
       documentVersion: row.sourceVersion,
       sourceSha256: row.sourceSha256,
       variantVersion: row.variantVersion,
@@ -655,13 +692,15 @@ export class DisplayPlanPublicationService {
       height: row.heightPixels,
       validFrom: row.validFrom,
       validUntil: row.validUntil,
+      publishedAt: row.publishedAt,
+      revokedAt: row.revokedAt,
       organizationId,
       buildingId,
       floorId: row.floorId,
       zoneId: row.zoneId,
       locationId: row.locationId,
       renderParameters: row.renderParameters,
-      downloadPath: `/organizations/${organizationId}/buildings/${buildingId}/display-plan-publications/${row.id}/variant`,
+      downloadPath: `/organizations/${organizationId}/buildings/${buildingId}/display-plan-publications/player-contract/${row.locationId}/variant/${row.id}`,
     };
   }
 
@@ -837,6 +876,47 @@ export class DisplayPlanPublicationService {
     )
       throw new ConflictException("L'autorité spatiale n'est plus publiable.");
     return { source, location };
+  }
+
+  private async assertTransactionalAuthority(
+    tx: Prisma.TransactionClient,
+    row: Publication,
+  ) {
+    const now = new Date();
+    const [source, location] = await Promise.all([
+      tx.projectFile.findFirst({
+        where: {
+          id: row.projectFileId,
+          organizationId: row.organizationId,
+          buildingId: row.buildingId,
+          version: row.sourceVersion,
+          sha256: row.sourceSha256,
+          lifecycleState: 'APPROVED',
+          approvedAt: { not: null },
+          approvedById: { not: null },
+          revokedAt: null,
+          supersededAt: null,
+          effectiveAt: { lte: now },
+          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+        },
+      }),
+      tx.displayLocation.findFirst({
+        where: {
+          id: row.locationId,
+          organizationId: row.organizationId,
+          buildingId: row.buildingId,
+          floorId: row.floorId,
+          zoneId: row.zoneId,
+          status: 'ACTIVE',
+          floor: { status: 'ACTIVE' },
+          ...(row.zoneId ? { zone: { status: 'ACTIVE' } } : {}),
+        },
+      }),
+    ]);
+    if (!source || !location)
+      throw new ConflictException(
+        "L'autorité documentaire ou spatiale a changé avant publication.",
+      );
   }
 
   private async assertCurrentAuthority(row: Publication) {

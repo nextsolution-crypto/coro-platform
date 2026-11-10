@@ -109,6 +109,7 @@ describePostgres('DISPLAY-03 publication governance on PostgreSQL', () => {
     ]);
     const reviewer = await mkUser('reviewer', [
       DisplayPermission.DISPLAY_PLAN_REVIEW,
+      DisplayPermission.DISPLAY_PLAN_APPROVE,
     ]);
     const approver = await mkUser('approver', [
       DisplayPermission.DISPLAY_PLAN_APPROVE,
@@ -218,6 +219,19 @@ describePostgres('DISPLAY-03 publication governance on PostgreSQL', () => {
       },
       actor(reviewer),
     );
+    await expect(
+      service.approve(
+        org.id,
+        building.id,
+        draft.id,
+        {
+          expectedLockVersion: reviewed.lockVersion,
+          reason: 'Réviseur approbateur interdit QA',
+          requestId: `reviewer-approve-${suffix}`,
+        },
+        actor(reviewer),
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     const approved = await service.approve(
       org.id,
       building.id,
@@ -249,10 +263,50 @@ describePostgres('DISPLAY-03 publication governance on PostgreSQL', () => {
     );
     expect(contract).toMatchObject({
       publicationId: draft.id,
+      status: 'PUBLISHED',
       documentVersion: 1,
+      sourceSha256: sourceHash,
       variantSha256: rendered.variantSha256,
       locationId: location.id,
     });
+    const playerBytes = await service.downloadPlayerVariant(
+      org.id,
+      building.id,
+      location.id,
+      draft.id,
+      actor(publisher),
+    );
+    expect(playerBytes.sha256).toBe(rendered.variantSha256);
+    const suspended = await service.suspend(
+      org.id,
+      building.id,
+      draft.id,
+      {
+        expectedLockVersion: published.lockVersion,
+        reason: 'Suspension QA',
+        requestId: `suspend-${suffix}`,
+      },
+      actor(publisher),
+    );
+    await expect(
+      service.playerContract(
+        org.id,
+        building.id,
+        location.id,
+        actor(publisher),
+      ),
+    ).rejects.toThrow('Aucune publication active');
+    const resumed = await service.resume(
+      org.id,
+      building.id,
+      draft.id,
+      {
+        expectedLockVersion: suspended.lockVersion,
+        reason: 'Reprise QA',
+        requestId: `resume-${suffix}`,
+      },
+      actor(publisher),
+    );
     const history = await service.history(
       org.id,
       building.id,
@@ -274,7 +328,7 @@ describePostgres('DISPLAY-03 publication governance on PostgreSQL', () => {
       building.id,
       draft.id,
       {
-        expectedLockVersion: published.lockVersion,
+        expectedLockVersion: resumed.lockVersion,
         reason: 'Révocation immédiate QA',
         requestId: `revoke-${suffix}`,
       },
@@ -289,10 +343,19 @@ describePostgres('DISPLAY-03 publication governance on PostgreSQL', () => {
         actor(publisher),
       ),
     ).rejects.toThrow('Aucune publication active');
+    await expect(
+      service.downloadPlayerVariant(
+        org.id,
+        building.id,
+        location.id,
+        draft.id,
+        actor(publisher),
+      ),
+    ).rejects.toThrow('Aucune publication active');
     expect(
       await prisma.adminAuditEvent.count({
         where: { organizationId: org.id, targetId: draft.id },
       }),
     ).toBeGreaterThanOrEqual(6);
-  });
+  }, 30_000);
 });
