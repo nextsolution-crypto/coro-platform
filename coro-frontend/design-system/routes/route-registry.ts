@@ -88,6 +88,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { pattern: '/clients', family: 'portfolio', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'], sensitivity: ['destructive'] },
   { pattern: '/clients/[id]', family: 'portfolio', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'], sensitivity: ['permissions'], validation: ['test:skin', 'test:design-system'] },
   { pattern: '/clients/[id]/portfolio', family: 'portfolio', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'] },
+  { pattern: '/display', family: 'portfolio', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'css-module'], sensitivity: ['documents', 'emergency-content'], validation: ['test:display-manager', 'test:skin', 'test:design-system'] },
   { pattern: '/referrals', family: 'portfolio', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'] },
   // ── compliance (5) ──
   { pattern: '/configurator/[projectId]', family: 'compliance', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'], sensitivity: ['documents', 'emergency-content'], validation: ['test:skin', 'test:design-system'] },

@@ -5,6 +5,8 @@ const page = fs.readFileSync(path.join(__dirname, 'page.tsx'), 'utf8');
 const css = fs.readFileSync(path.join(__dirname, 'display.module.css'), 'utf8');
 
 assert.match(page, /display-manager/);
+assert.match(page, /import AppLayout from '@\/components\/layout\/AppLayout'/);
+assert.match(page, /<AppLayout>/);
 assert.match(page, /DISPLAY_PLAN_CREATE/);
 assert.match(page, /DISPLAY_PLAN_REVIEW/);
 assert.match(page, /DISPLAY_PLAN_PUBLISH/);

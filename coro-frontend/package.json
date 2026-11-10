@@ -34,6 +34,7 @@
     "test:settings-glass": "node app/settings/settings-glass.contract.test.cjs",
     "test:portfolio-glass": "node app/activities/portfolio/portfolio-glass.contract.test.cjs",
     "test:planning": "node app/planning/planning.test.cjs",
+    "test:display-manager": "node app/display/display-manager.contract.test.cjs",
     "test:bookings": "node app/bookings/booking-commitment.contract.test.mjs",
     "test:organization360": "node app/admin/organizations/[organizationId]/organization360.contract.test.cjs",
     "test:commercial-catalog": "node app/admin/product-catalog/product-catalog.contract.test.cjs",
