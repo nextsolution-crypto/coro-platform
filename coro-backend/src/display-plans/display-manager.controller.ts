@@ -7,6 +7,8 @@ import {
   Query,
   Request,
   UseGuards,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
@@ -23,6 +25,13 @@ import {
 
 @Controller('organizations/:organizationId/display-manager')
 @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
+@UsePipes(
+  new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }),
+)
 export class DisplayManagerController {
   constructor(
     private readonly manager: DisplayManagerService,

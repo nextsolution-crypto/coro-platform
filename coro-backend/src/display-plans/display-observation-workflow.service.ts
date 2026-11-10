@@ -331,6 +331,11 @@ export class DisplayObservationWorkflowService {
     );
     const message = this.plain(dto.message, 3, 4000, 'Message');
     const reason = this.plain(dto.reason, 3, 2000, 'Motif');
+    const observation = await this.requireObservation(
+      organizationId,
+      observationId,
+      authority,
+    );
     const existing =
       await this.prisma.displayCorrectionObservationMessage.findUnique({
         where: {
@@ -348,11 +353,7 @@ export class DisplayObservationWorkflowService {
       }
       return this.detail(organizationId, observationId, actor);
     }
-    const observation = await this.requireObservation(
-      organizationId,
-      observationId,
-      authority,
-    );
+    this.assertOpen(observation.status);
     if (observation.lockVersion !== dto.expectedLockVersion)
       throw new ConflictException(
         'Observation modifiée par un autre utilisateur.',
@@ -419,6 +420,30 @@ export class DisplayObservationWorkflowService {
     const clientResponse = dto.clientResponse
       ? this.plain(dto.clientResponse, 3, 4000, 'Réponse client')
       : undefined;
+    const correctionReferenceType = dto.correctionReferenceType
+      ? this.plain(dto.correctionReferenceType, 2, 80, 'Type de référence')
+      : undefined;
+    const correctionReferenceId = dto.correctionReferenceId
+      ? this.plain(dto.correctionReferenceId, 1, 200, 'Référence de correction')
+      : undefined;
+    const correctionEvidence = dto.correctionEvidence
+      ? this.plain(dto.correctionEvidence, 3, 4000, 'Preuve')
+      : undefined;
+    if (Boolean(correctionReferenceType) !== Boolean(correctionReferenceId)) {
+      throw new BadRequestException(
+        'Le type et la référence de correction sont requis ensemble.',
+      );
+    }
+    if (
+      (correctionReferenceType ||
+        correctionReferenceId ||
+        correctionEvidence) &&
+      !['CORRECTION_IN_PROGRESS', 'RESOLVED'].includes(dto.toStatus)
+    ) {
+      throw new BadRequestException(
+        'Les données de correction sont réservées au suivi ou à la résolution.',
+      );
+    }
     if (
       ['MORE_INFO_REQUIRED', 'REJECTED'].includes(dto.toStatus) &&
       !clientResponse
@@ -438,36 +463,35 @@ export class DisplayObservationWorkflowService {
           throw new BadRequestException(
             `Transition ${observation.status} → ${dto.toStatus} interdite.`,
           );
+        const effectiveReferenceId =
+          correctionReferenceId ?? observation.correctionReferenceId;
+        const effectiveEvidence =
+          correctionEvidence ?? observation.correctionEvidence;
         if (
           dto.toStatus === 'RESOLVED' &&
-          observation.correctionReferenceId &&
-          !dto.correctionEvidence?.trim() &&
-          !observation.correctionEvidence
+          effectiveReferenceId &&
+          !effectiveEvidence
         ) {
           throw new BadRequestException(
             'Une preuve de correction est requise avant la résolution.',
+          );
+        }
+        if (
+          dto.toStatus === 'RESOLVED' &&
+          effectiveReferenceId &&
+          observation.decidedByUserId === authority.userId
+        ) {
+          throw new BadRequestException(
+            "La validation d'une correction documentaire doit être effectuée par un autre professionnel autorisé.",
           );
         }
         return {
           status: dto.toStatus,
           clientVisibleResponse:
             clientResponse ?? observation.clientVisibleResponse,
-          ...(dto.correctionReferenceType
-            ? { correctionReferenceType: dto.correctionReferenceType.trim() }
-            : {}),
-          ...(dto.correctionReferenceId
-            ? { correctionReferenceId: dto.correctionReferenceId.trim() }
-            : {}),
-          ...(dto.correctionEvidence
-            ? {
-                correctionEvidence: this.plain(
-                  dto.correctionEvidence,
-                  3,
-                  4000,
-                  'Preuve',
-                ),
-              }
-            : {}),
+          ...(correctionReferenceType ? { correctionReferenceType } : {}),
+          ...(correctionReferenceId ? { correctionReferenceId } : {}),
+          ...(correctionEvidence ? { correctionEvidence } : {}),
           ...(['ACCEPTED', 'REJECTED'].includes(dto.toStatus)
             ? { decisionAt: new Date(), decidedByUserId: authority.userId }
             : {}),
@@ -499,6 +523,11 @@ export class DisplayObservationWorkflowService {
     clientMessage?: string,
   ) {
     const reason = this.plain(dto.reason, 3, 2000, 'Motif');
+    const observation = await this.requireObservation(
+      organizationId,
+      observationId,
+      authority,
+    );
     const replay =
       await this.prisma.displayCorrectionObservationEvent.findUnique({
         where: {
@@ -514,15 +543,9 @@ export class DisplayObservationWorkflowService {
           "Clé d'idempotence déjà utilisée pour une autre observation.",
         );
       }
-      return this.prisma.displayCorrectionObservation.findUnique({
-        where: { id: replay.observationId },
-      });
+      return observation;
     }
-    const observation = await this.requireObservation(
-      organizationId,
-      observationId,
-      authority,
-    );
+    this.assertOpen(observation.status);
     if (observation.lockVersion !== dto.expectedLockVersion)
       throw new ConflictException(
         'Observation modifiée par un autre utilisateur.',
@@ -627,6 +650,14 @@ export class DisplayObservationWorkflowService {
     if (!authority.buildingIds.includes(buildingId))
       throw new ForbiddenException('Bâtiment hors périmètre.');
     return [buildingId];
+  }
+
+  private assertOpen(status: DisplayCorrectionStatus) {
+    if (status === DisplayCorrectionStatus.CLOSED) {
+      throw new BadRequestException(
+        'Une observation clôturée ne peut plus être modifiée.',
+      );
+    }
   }
 
   private transitionPermission(status: DisplayCorrectionStatus) {
