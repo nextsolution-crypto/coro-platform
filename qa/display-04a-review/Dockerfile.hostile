@@ -1,0 +1,4 @@
+FROM coro-display-04a-integration:final
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends qpdf && rm -rf /var/lib/apt/lists/*
+USER 1000:1000
