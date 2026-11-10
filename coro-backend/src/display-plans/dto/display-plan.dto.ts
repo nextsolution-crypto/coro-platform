@@ -7,12 +7,14 @@ import { Type } from 'class-transformer';
 import {
   IsEnum,
   IsInt,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
   Max,
   MaxLength,
+  Matches,
   Min,
 } from 'class-validator';
 
@@ -90,6 +92,53 @@ export class DisplayPlanMutationDto {
   @IsNotEmpty()
   @MaxLength(100)
   requestId!: string;
+}
+
+export const DISPLAY_PLAN_VISUAL_PROFILES = [
+  'SOURCE_NATIVE',
+  'ORIGINAL_17X11',
+  'SCREEN_16X9',
+  'SCREEN_16X10',
+] as const;
+
+export class ApproveDisplayPlanDto extends DisplayPlanMutationDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  sourceVersion!: number;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(64)
+  @Matches(/^[a-f0-9]{64}$/i)
+  sourceSha256!: string;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  variantVersion!: number;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(64)
+  @Matches(/^[a-f0-9]{64}$/i)
+  variantSha256!: string;
+
+  @IsIn(DISPLAY_PLAN_VISUAL_PROFILES)
+  profile!: (typeof DISPLAY_PLAN_VISUAL_PROFILES)[number];
+
+  @IsUUID()
+  locationId!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  observations?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  reservations?: string;
 }
 
 export class PublishDisplayPlanDto extends DisplayPlanMutationDto {

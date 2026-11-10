@@ -16,6 +16,7 @@ import type { Response } from 'express';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 import type { SpatialActor } from '../spatial/spatial-authorization.service';
 import {
+  ApproveDisplayPlanDto,
   CreateDisplayPlanPublicationDto,
   EnqueueDisplayPdfRenderDto,
   DisplayPlanListQueryDto,
@@ -209,7 +210,7 @@ export class DisplayPlanPublicationController {
     @Param('organizationId') org: string,
     @Param('buildingId') building: string,
     @Param('id') id: string,
-    @Body() dto: DisplayPlanMutationDto,
+    @Body() dto: ApproveDisplayPlanDto,
     @Request() req: DisplayRequest,
   ) {
     return this.plans.approve(org, building, id, dto, req.user);
