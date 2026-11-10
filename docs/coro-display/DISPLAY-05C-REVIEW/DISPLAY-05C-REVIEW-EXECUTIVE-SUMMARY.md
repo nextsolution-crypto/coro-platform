@@ -1,7 +1,9 @@
 # DISPLAY-05C-REVIEW — Synthèse exécutive
 
-Date : 2026-11-10  
-Source auditée : `22cc8778322ef13bcbae21f7adfdefdea7ae1111`  
+Date : 2026-11-10
+
+Source auditée : `22cc8778322ef13bcbae21f7adfdefdea7ae1111`
+
 Branche : `review/coro-display-05c-observation-workflow`
 
 La revue indépendante a confirmé l’architecture unique du workflow d’observations et a corrigé neuf défauts avant intégration : rejeu idempotent après révocation de périmètre, mutations après fermeture, preuve de correction contournable, absence de séparation décideur/validateur, validation insuffisante des références, filtres UI couplés, transitions UI non filtrées, formulaire de preuve absent et catégories UI non canoniques. La frontière DTO refuse maintenant les champs surnuméraires.

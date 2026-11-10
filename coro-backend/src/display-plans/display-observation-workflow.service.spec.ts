@@ -249,7 +249,7 @@ describe('DisplayObservationWorkflowService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('impose un second professionnel pour valider une correction documentaire', async () => {
+  it('exige une preuve pour toute résolution, même sans référence documentaire', async () => {
     const prisma = {
       user: {
         findFirst: jest.fn().mockResolvedValue({
@@ -265,7 +265,51 @@ describe('DisplayObservationWorkflowService', () => {
           buildingId: 'building-1',
           lockVersion: 3,
           status: 'ACCEPTED',
-          correctionReferenceId: 'TASK-42',
+          correctionReferenceId: null,
+          correctionEvidence: null,
+          decidedByUserId: 'user-2',
+          clientVisibleResponse: null,
+        }),
+      },
+      displayCorrectionObservationEvent: {
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
+      $transaction: jest
+        .fn()
+        .mockImplementation((callback: (tx: never) => unknown) =>
+          callback({
+            displayCorrectionObservation: { updateMany: jest.fn() },
+          } as never),
+        ),
+    };
+    const service = new DisplayObservationWorkflowService(prisma as never);
+    await expect(
+      service.transition('org-1', 'observation-1', actor, {
+        expectedLockVersion: 3,
+        requestId: 'request-proof-without-reference',
+        reason: 'Résolution proposée',
+        toStatus: 'RESOLVED',
+      } as never),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('impose un second professionnel pour valider toute résolution', async () => {
+    const prisma = {
+      user: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'user-1',
+          displayPermissions: [DisplayPermission.DISPLAY_OBSERVATION_RESOLVE],
+          displayBuildingIds: ['building-1'],
+        }),
+      },
+      displayCorrectionObservation: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'observation-1',
+          organizationId: 'org-1',
+          buildingId: 'building-1',
+          lockVersion: 3,
+          status: 'ACCEPTED',
+          correctionReferenceId: null,
           correctionEvidence: null,
           decidedByUserId: 'user-1',
           clientVisibleResponse: null,

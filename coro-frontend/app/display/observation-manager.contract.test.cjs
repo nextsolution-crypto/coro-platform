@@ -18,6 +18,8 @@ assert.match(component, /DOCUMENT_INFORMATION_INCORRECT/);
 assert.doesNotMatch(component, /DOCUMENT_ERROR/);
 assert.match(component, /correctionReferenceType/);
 assert.match(component, /correctionEvidence/);
+assert.match(component, /Constat ou preuve contrôlé par le validateur/);
+assert.match(component, /correctionEvidence\.trim\(\)\.length<3/);
 assert.match(component, /filter\(canTransition\)/);
 assert.doesNotMatch(component, /incident.*create|notification.*send|evacuation.*trigger/i);
 assert.match(css, /@media\(max-width:760px\)/);

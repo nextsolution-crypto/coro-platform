@@ -463,26 +463,19 @@ export class DisplayObservationWorkflowService {
           throw new BadRequestException(
             `Transition ${observation.status} → ${dto.toStatus} interdite.`,
           );
-        const effectiveReferenceId =
-          correctionReferenceId ?? observation.correctionReferenceId;
         const effectiveEvidence =
           correctionEvidence ?? observation.correctionEvidence;
-        if (
-          dto.toStatus === 'RESOLVED' &&
-          effectiveReferenceId &&
-          !effectiveEvidence
-        ) {
+        if (dto.toStatus === 'RESOLVED' && !effectiveEvidence) {
           throw new BadRequestException(
             'Une preuve de correction est requise avant la résolution.',
           );
         }
         if (
           dto.toStatus === 'RESOLVED' &&
-          effectiveReferenceId &&
           observation.decidedByUserId === authority.userId
         ) {
           throw new BadRequestException(
-            "La validation d'une correction documentaire doit être effectuée par un autre professionnel autorisé.",
+            'La validation de la résolution doit être effectuée par un autre professionnel autorisé.',
           );
         }
         return {
