@@ -307,6 +307,12 @@ describePostgres('DISPLAY-03 publication governance on PostgreSQL', () => {
           expectedLockVersion: reviewed.lockVersion,
           reason: 'Réviseur approbateur interdit QA',
           requestId: `reviewer-approve-${suffix}`,
+          sourceVersion: reviewed.sourceVersion,
+          sourceSha256: reviewed.sourceSha256,
+          variantVersion: reviewed.variantVersion,
+          variantSha256: reviewed.variantSha256!,
+          profile: 'SOURCE_NATIVE',
+          locationId: reviewed.locationId,
         },
         actor(reviewer),
       ),
@@ -319,9 +325,32 @@ describePostgres('DISPLAY-03 publication governance on PostgreSQL', () => {
         expectedLockVersion: reviewed.lockVersion,
         reason: 'Approbation indépendante QA',
         requestId: `approve-${suffix}`,
+        sourceVersion: reviewed.sourceVersion,
+        sourceSha256: reviewed.sourceSha256,
+        variantVersion: reviewed.variantVersion,
+        variantSha256: reviewed.variantSha256!,
+        profile: 'SOURCE_NATIVE',
+        locationId: reviewed.locationId,
       },
       actor(approver),
     );
+    const approvalEvent = await prisma.displayPlanPublicationEvent.findUnique({
+      where: {
+        publicationId_requestId: {
+          publicationId: draft.id,
+          requestId: `approve-${suffix}`,
+        },
+      },
+    });
+    expect(approvalEvent?.metadata).toMatchObject({
+      visualAcceptance: {
+        status: 'APPROVED',
+        sourceSha256: reviewed.sourceSha256,
+        variantSha256: reviewed.variantSha256,
+        profile: 'SOURCE_NATIVE',
+        locationId: reviewed.locationId,
+      },
+    });
     const published = await service.publish(
       org.id,
       building.id,

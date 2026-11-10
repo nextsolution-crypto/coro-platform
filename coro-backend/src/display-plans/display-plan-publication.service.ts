@@ -19,12 +19,14 @@ import {
 } from '../spatial/spatial-authorization.service';
 import { StorageService } from '../storage/storage.service';
 import {
+  ApproveDisplayPlanDto,
   CreateDisplayPlanPublicationDto,
   DisplayPlanListQueryDto,
   DisplayPlanMutationDto,
   PublishDisplayPlanDto,
 } from './dto/display-plan.dto';
 import { DisplayPlanRendererService } from './display-plan-renderer.service';
+import { assertCurrentVisualAcceptance } from './display-plan-visual-acceptance';
 
 type Publication = Prisma.DisplayPlanPublicationGetPayload<
   Record<string, never>
@@ -291,7 +293,7 @@ export class DisplayPlanPublicationService {
     organizationId: string,
     buildingId: string,
     id: string,
-    dto: DisplayPlanMutationDto,
+    dto: ApproveDisplayPlanDto,
     actor: SpatialActor,
   ) {
     return this.transition(
@@ -317,9 +319,23 @@ export class DisplayPlanPublicationService {
           throw new ConflictException(
             'La revue humaine et la variante sont obligatoires.',
           );
+        assertCurrentVisualAcceptance(row, dto);
         await this.assertCurrentAuthority(row);
         return { approvedById: actor.userId, approvedAt: new Date() };
       },
+      () => ({
+        visualAcceptance: {
+          status: 'APPROVED',
+          sourceVersion: dto.sourceVersion,
+          sourceSha256: dto.sourceSha256,
+          variantVersion: dto.variantVersion,
+          variantSha256: dto.variantSha256,
+          profile: dto.profile,
+          locationId: dto.locationId,
+          observations: dto.observations ?? null,
+          reservations: dto.reservations ?? null,
+        },
+      }),
     );
   }
 
@@ -719,6 +735,7 @@ export class DisplayPlanPublicationService {
     ) =>
       | Prisma.DisplayPlanPublicationUpdateManyMutationInput
       | Promise<Prisma.DisplayPlanPublicationUpdateManyMutationInput>,
+    eventMetadata?: (row: Publication) => Prisma.InputJsonValue,
   ) {
     await this.authorization.require(
       actor,
@@ -767,6 +784,7 @@ export class DisplayPlanPublicationService {
         to,
         actor.userId,
         dto.reason,
+        eventMetadata?.(updated),
       );
       await this.audit.record(tx, {
         actorUserId: actor.userId,
