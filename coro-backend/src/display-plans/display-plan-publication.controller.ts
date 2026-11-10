@@ -17,11 +17,13 @@ import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 import type { SpatialActor } from '../spatial/spatial-authorization.service';
 import {
   CreateDisplayPlanPublicationDto,
+  EnqueueDisplayPdfRenderDto,
   DisplayPlanListQueryDto,
   DisplayPlanMutationDto,
   PublishDisplayPlanDto,
 } from './dto/display-plan.dto';
 import { DisplayPlanPublicationService } from './display-plan-publication.service';
+import { DisplayPdfRenderJobService } from './display-pdf-render-job.service';
 
 type DisplayRequest = { user: SpatialActor };
 
@@ -37,7 +39,10 @@ type DisplayRequest = { user: SpatialActor };
   }),
 )
 export class DisplayPlanPublicationController {
-  constructor(private readonly plans: DisplayPlanPublicationService) {}
+  constructor(
+    private readonly plans: DisplayPlanPublicationService,
+    private readonly pdfJobs: DisplayPdfRenderJobService,
+  ) {}
 
   @Post()
   create(
@@ -135,6 +140,35 @@ export class DisplayPlanPublicationController {
     @Request() req: DisplayRequest,
   ) {
     return this.plans.generatePreview(org, building, id, dto, req.user);
+  }
+
+  @Post(':id/pdf-render-jobs')
+  enqueuePdfRender(
+    @Param('organizationId') org: string,
+    @Param('buildingId') building: string,
+    @Param('id') id: string,
+    @Body() dto: EnqueueDisplayPdfRenderDto,
+    @Request() req: DisplayRequest,
+  ) {
+    return this.pdfJobs.enqueue(
+      org,
+      building,
+      id,
+      dto.requestId,
+      req.user,
+      dto.pageNumber,
+      dto.targetDpi,
+    );
+  }
+
+  @Get(':id/pdf-render-jobs/:jobId')
+  pdfRenderJob(
+    @Param('organizationId') org: string,
+    @Param('buildingId') building: string,
+    @Param('jobId') jobId: string,
+    @Request() req: DisplayRequest,
+  ) {
+    return this.pdfJobs.get(org, building, jobId, req.user);
   }
 
   @Post(':id/submit')

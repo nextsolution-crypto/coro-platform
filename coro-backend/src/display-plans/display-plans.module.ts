@@ -5,11 +5,18 @@ import { StorageModule } from '../storage/storage.module';
 import { DisplayPlanPublicationController } from './display-plan-publication.controller';
 import { DisplayPlanPublicationService } from './display-plan-publication.service';
 import { DisplayPlanRendererService } from './display-plan-renderer.service';
+import { DisplayPdfEngineService } from './display-pdf-engine.service';
+import { DisplayPdfRenderJobService } from './display-pdf-render-job.service';
 
 @Module({
   imports: [PrismaModule, SpatialModule, StorageModule],
   controllers: [DisplayPlanPublicationController],
-  providers: [DisplayPlanPublicationService, DisplayPlanRendererService],
-  exports: [DisplayPlanPublicationService],
+  providers: [
+    DisplayPlanPublicationService,
+    DisplayPlanRendererService,
+    DisplayPdfEngineService,
+    DisplayPdfRenderJobService,
+  ],
+  exports: [DisplayPlanPublicationService, DisplayPdfRenderJobService],
 })
 export class DisplayPlansModule {}

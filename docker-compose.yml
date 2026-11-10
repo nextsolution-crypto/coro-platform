@@ -105,6 +105,42 @@ services:
         source: ${POPULATION_SMS_VALIDATION_EVIDENCE_HOST_DIR:-/var/lib/coro/sms-validation}
         target: /var/lib/coro/sms-validation
 
+  display-pdf-worker:
+    image: ghcr.io/nextsolution-crypto/coro-backend:latest
+    container_name: coro_display_pdf_worker
+    profiles: ["display-pdf-worker"]
+    restart: unless-stopped
+    command: ["node", "dist/src/display-pdf-worker/main.js"]
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=256m,mode=0700
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 32
+    mem_limit: 512m
+    cpus: 1.0
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DISPLAY_PDF_WORKER_ENABLED: "true"
+      DO_SPACES_KEY: ${DO_SPACES_KEY}
+      DO_SPACES_SECRET: ${DO_SPACES_SECRET}
+      DO_SPACES_ENDPOINT: ${DO_SPACES_ENDPOINT}
+      DO_SPACES_BUCKET: ${DO_SPACES_BUCKET}
+      PRIVATE_STORAGE_QA_MODE: ${PRIVATE_STORAGE_QA_MODE:-false}
+      PRIVATE_STORAGE_QA_ENDPOINT: ${PRIVATE_STORAGE_QA_ENDPOINT:-}
+      PRIVATE_STORAGE_QA_ACCESS_KEY: ${PRIVATE_STORAGE_QA_ACCESS_KEY:-}
+      PRIVATE_STORAGE_QA_SECRET_KEY: ${PRIVATE_STORAGE_QA_SECRET_KEY:-}
+      PRIVATE_STORAGE_QA_BUCKET: ${PRIVATE_STORAGE_QA_BUCKET:-}
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - coro_network
+      - coro_qa_storage_internal
+
   frontend:
     image: ghcr.io/nextsolution-crypto/coro-frontend:latest
     container_name: coro_frontend

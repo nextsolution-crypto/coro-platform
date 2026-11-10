@@ -101,3 +101,24 @@ export class PublishDisplayPlanDto extends DisplayPlanMutationDto {
   @IsString()
   validUntil?: string;
 }
+
+export class EnqueueDisplayPdfRenderDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  requestId!: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  pageNumber = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(72)
+  @Max(300)
+  targetDpi = 300;
+}
