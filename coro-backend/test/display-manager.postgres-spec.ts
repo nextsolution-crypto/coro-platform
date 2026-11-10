@@ -1,7 +1,16 @@
-import { DisplayPermission, UserRole } from '@prisma/client';
+import {
+  DisplayPermission,
+  DisplayPlanPublicationStatus,
+  UserRole,
+} from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { AdminAuditService } from '../src/admin-audit/admin-audit.service';
 import { DisplayManagerService } from '../src/display-plans/display-manager.service';
+import { DisplayPlanPublicationService } from '../src/display-plans/display-plan-publication.service';
+import { DisplayPlanRendererService } from '../src/display-plans/display-plan-renderer.service';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { SpatialAuthorizationService } from '../src/spatial/spatial-authorization.service';
+import type { StorageService } from '../src/storage/storage.service';
 
 const enabled = process.env.RUN_POSTGRES_TESTS === 'true';
 const describePostgres = enabled ? describe : describe.skip;
@@ -9,6 +18,13 @@ const describePostgres = enabled ? describe : describe.skip;
 describePostgres('DISPLAY-05A manager tenant and permission isolation', () => {
   const prisma = new PrismaService();
   const service = new DisplayManagerService(prisma);
+  const publications = new DisplayPlanPublicationService(
+    prisma,
+    {} as StorageService,
+    new SpatialAuthorizationService(prisma),
+    new AdminAuditService(),
+    new DisplayPlanRendererService(),
+  );
   const suffix = randomUUID();
 
   beforeAll(async () => prisma.$connect());
@@ -180,10 +196,14 @@ describePostgres('DISPLAY-05A manager tenant and permission isolation', () => {
       role: authorized.role,
     });
     expect(workspace.buildings.map((item) => item.id)).toEqual([buildingA1.id]);
-    expect(workspace.plans.map((item) => item.id)).toEqual([publication.id]);
-    expect(workspace.eligiblePdfSources.map((item) => item.id)).toEqual([
-      source.id,
-    ]);
+    expect(
+      (workspace.plans as Array<{ id: string }>).map((item) => item.id),
+    ).toEqual([publication.id]);
+    expect(
+      (workspace.eligiblePdfSources as Array<{ id: string }>).map(
+        (item) => item.id,
+      ),
+    ).toEqual([source.id]);
     expect(workspace.recentEvents).toHaveLength(1);
     expect(JSON.stringify(workspace)).not.toContain(buildingA2.id);
     expect(JSON.stringify(workspace)).not.toContain(buildingB.id);
@@ -281,5 +301,133 @@ describePostgres('DISPLAY-05A manager tenant and permission isolation', () => {
     expect(workspace.plans).toEqual([]);
     expect(workspace.eligiblePdfSources).toEqual([]);
     expect(workspace.recentEvents).toEqual([]);
+  });
+
+  it('paginates and filters the governed plan library without crossing building scope', async () => {
+    const org = await prisma.organization.create({
+      data: { name: `Display review pagination ${suffix}` },
+    });
+    const client = await prisma.client.create({
+      data: { name: 'Client pagination', organizationId: org.id },
+    });
+    const [building, foreignBuilding] = await Promise.all(
+      ['P1', 'P2'].map((name) =>
+        prisma.building.create({
+          data: {
+            name,
+            address: `${name} rue QA`,
+            city: 'Laval',
+            province: 'QC',
+            organizationId: org.id,
+            clientId: client.id,
+          },
+        }),
+      ),
+    );
+    const floor = await prisma.buildingFloor.create({
+      data: {
+        organizationId: org.id,
+        buildingId: building.id,
+        code: 'RDC',
+        name: 'RDC',
+      },
+    });
+    const location = await prisma.displayLocation.create({
+      data: {
+        organizationId: org.id,
+        buildingId: building.id,
+        floorId: floor.id,
+        code: 'PAGINATION',
+        label: 'Pagination',
+      },
+    });
+    const reader = await user(
+      org.id,
+      UserRole.OPERATOR,
+      [DisplayPermission.DISPLAY_PLAN_READ],
+      [building.id],
+      'pagination-reader',
+    );
+    const creator = await user(
+      org.id,
+      UserRole.OPERATOR,
+      [DisplayPermission.DISPLAY_PLAN_CREATE],
+      [building.id],
+      'pagination-creator',
+    );
+    const source = await prisma.projectFile.create({
+      data: {
+        organizationId: org.id,
+        buildingId: building.id,
+        name: 'Pagination.pdf',
+        category: 'plans_evacuation',
+        size: 512,
+        mimeType: 'application/pdf',
+        storageKey: `tenant-${org.id}/pagination.pdf`,
+        url: 'private://pagination.pdf',
+        lifecycleState: 'APPROVED',
+        status: 'valide',
+        sha256: 'b'.repeat(64),
+        approvedAt: new Date(),
+        approvedById: creator.id,
+      },
+    });
+    await Promise.all(
+      [
+        DisplayPlanPublicationStatus.DRAFT,
+        DisplayPlanPublicationStatus.REVIEW,
+        DisplayPlanPublicationStatus.REVOKED,
+      ].map((status, index) =>
+        prisma.displayPlanPublication.create({
+          data: {
+            organizationId: org.id,
+            buildingId: building.id,
+            floorId: floor.id,
+            locationId: location.id,
+            projectFileId: source.id,
+            creationRequestId: randomUUID(),
+            sourceVersion: source.version,
+            sourceSha256: source.sha256!,
+            sourceApprovedById: creator.id,
+            sourceApprovedAt: source.approvedAt!,
+            versionNumber: index + 1,
+            orientation: 'LANDSCAPE',
+            language: 'FR',
+            renderParameters: {},
+            createdById: creator.id,
+            status,
+          },
+        }),
+      ),
+    );
+    const actor = {
+      userId: reader.id,
+      organizationId: org.id,
+      role: reader.role,
+    };
+
+    await expect(
+      publications.list(org.id, building.id, { offset: 1, limit: 1 }, actor),
+    ).resolves.toMatchObject({ total: 3, offset: 1, limit: 1, items: [{}] });
+    const filtered = await publications.list(
+      org.id,
+      building.id,
+      {
+        status: DisplayPlanPublicationStatus.REVIEW,
+        offset: 0,
+        limit: 50,
+      },
+      actor,
+    );
+    expect(filtered.total).toBe(1);
+    expect(filtered.items[0].status).toBe(DisplayPlanPublicationStatus.REVIEW);
+    await expect(
+      publications.list(
+        org.id,
+        foreignBuilding.id,
+        { offset: 0, limit: 50 },
+        actor,
+      ),
+    ).rejects.toThrow();
   });
 });

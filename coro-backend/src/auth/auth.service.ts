@@ -36,7 +36,7 @@ export class AuthService {
   private payload(user: {
     id: string;
     email: string;
-    role: any;
+    role: UserRole;
     organizationId: string;
     authVersion: number;
   }) {
@@ -197,7 +197,7 @@ export class AuthService {
   private async generateRefreshToken(
     userId: string,
     authVersion: number,
-    tx: any = this.prisma,
+    tx: Pick<PrismaService, 'refreshToken'> = this.prisma,
   ) {
     const token = crypto.randomBytes(40).toString('hex');
     await tx.refreshToken.create({
@@ -260,7 +260,10 @@ export class AuthService {
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
-        resetToken: crypto.createHash('sha256').update(token, 'utf8').digest('hex'),
+        resetToken: crypto
+          .createHash('sha256')
+          .update(token, 'utf8')
+          .digest('hex'),
         resetTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
       },
     });
@@ -277,11 +280,17 @@ export class AuthService {
 
   async resetPassword(token: string, password: string) {
     this.validatePassword(password);
-    const tokenHash = crypto.createHash('sha256').update(token, 'utf8').digest('hex');
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(token, 'utf8')
+      .digest('hex');
     const user = await this.prisma.user.findFirst({
       // The raw-token branch is a bounded compatibility path for links issued
       // before token hashing was introduced. Every successful use clears it.
-      where: { resetToken: { in: [tokenHash, token] }, resetTokenExpiry: { gt: new Date() } },
+      where: {
+        resetToken: { in: [tokenHash, token] },
+        resetTokenExpiry: { gt: new Date() },
+      },
     });
     if (!user) throw new BadRequestException('Lien invalide ou expiré.');
     const hashed = await bcrypt.hash(password, 10);
