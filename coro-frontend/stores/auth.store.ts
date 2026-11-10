@@ -8,6 +8,8 @@ interface User {
   lastName: string;
   role: string;
   organizationId?: string;
+  displayPermissions?: string[];
+  displayBuildingIds?: string[];
 }
 
 interface AuthState {

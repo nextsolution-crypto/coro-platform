@@ -9,10 +9,12 @@ import { DisplayPdfRasterizerBridgeService } from './display-pdf-rasterizer-brid
 import { DisplayPdfRenderJobService } from './display-pdf-render-job.service';
 import { DisplayPdfMaintenanceService } from './display-pdf-maintenance.service';
 import { DisplayPlanProfileService } from './display-plan-profile.service';
+import { DisplayManagerController } from './display-manager.controller';
+import { DisplayManagerService } from './display-manager.service';
 
 @Module({
   imports: [PrismaModule, SpatialModule, StorageModule],
-  controllers: [DisplayPlanPublicationController],
+  controllers: [DisplayPlanPublicationController, DisplayManagerController],
   providers: [
     DisplayPlanPublicationService,
     DisplayPlanRendererService,
@@ -20,6 +22,7 @@ import { DisplayPlanProfileService } from './display-plan-profile.service';
     DisplayPdfRenderJobService,
     DisplayPdfMaintenanceService,
     DisplayPlanProfileService,
+    DisplayManagerService,
   ],
   exports: [
     DisplayPlanPublicationService,

@@ -46,6 +46,8 @@ export class UsersService {
         lastName: true,
         role: true,
         organizationId: true,
+        displayPermissions: true,
+        displayBuildingIds: true,
         isActive: true,
         horaireBase: true,
         timeZone: true,

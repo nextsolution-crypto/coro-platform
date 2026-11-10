@@ -13,6 +13,7 @@ import * as crypto from 'crypto';
 import { requirePlatformMfaSecret } from './auth-security.config';
 import { renderPlatformMfaEmail } from './platform-mfa-email';
 import { MfaDeliveryService } from './mfa-delivery.service';
+import { DisplayPermission, User, UserRole } from '@prisma/client';
 
 const MFA_TTL_MS = 10 * 60 * 1000;
 export const PLATFORM_MFA_MAX_ATTEMPTS = 5;
@@ -35,7 +36,7 @@ export class AuthService {
   private payload(user: {
     id: string;
     email: string;
-    role: any;
+    role: UserRole;
     organizationId: string;
     authVersion: number;
   }) {
@@ -55,7 +56,16 @@ export class AuthService {
       .digest('hex');
   }
 
-  private publicUser(user: any) {
+  private publicUser(user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: UserRole;
+    organizationId: string;
+    displayPermissions?: DisplayPermission[];
+    displayBuildingIds?: string[];
+  }) {
     return {
       id: user.id,
       email: user.email,
@@ -63,6 +73,8 @@ export class AuthService {
       lastName: user.lastName,
       role: user.role,
       organizationId: user.organizationId,
+      displayPermissions: user.displayPermissions ?? [],
+      displayBuildingIds: user.displayBuildingIds ?? [],
     };
   }
 
@@ -168,7 +180,7 @@ export class AuthService {
     return { ...(await this.issueSession(user)), trusted_token: trustedToken };
   }
 
-  private async issueSession(user: any) {
+  private async issueSession(user: User) {
     const refreshToken = await this.generateRefreshToken(
       user.id,
       user.authVersion,
@@ -185,7 +197,7 @@ export class AuthService {
   private async generateRefreshToken(
     userId: string,
     authVersion: number,
-    tx: any = this.prisma,
+    tx: Pick<PrismaService, 'refreshToken'> = this.prisma,
   ) {
     const token = crypto.randomBytes(40).toString('hex');
     await tx.refreshToken.create({
@@ -248,7 +260,10 @@ export class AuthService {
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
-        resetToken: crypto.createHash('sha256').update(token, 'utf8').digest('hex'),
+        resetToken: crypto
+          .createHash('sha256')
+          .update(token, 'utf8')
+          .digest('hex'),
         resetTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
       },
     });
@@ -265,11 +280,17 @@ export class AuthService {
 
   async resetPassword(token: string, password: string) {
     this.validatePassword(password);
-    const tokenHash = crypto.createHash('sha256').update(token, 'utf8').digest('hex');
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(token, 'utf8')
+      .digest('hex');
     const user = await this.prisma.user.findFirst({
       // The raw-token branch is a bounded compatibility path for links issued
       // before token hashing was introduced. Every successful use clears it.
-      where: { resetToken: { in: [tokenHash, token] }, resetTokenExpiry: { gt: new Date() } },
+      where: {
+        resetToken: { in: [tokenHash, token] },
+        resetTokenExpiry: { gt: new Date() },
+      },
     });
     if (!user) throw new BadRequestException('Lien invalide ou expiré.');
     const hashed = await bcrypt.hash(password, 10);

@@ -44,6 +44,8 @@ describe('Platform MFA email', () => {
       password: passwordHash,
       role: 'SUPER_ADMIN',
       organizationId: 'org-1',
+      displayPermissions: ['DISPLAY_READ'],
+      displayBuildingIds: ['building-1'],
       authVersion: 1,
       isActive: true,
     };
@@ -90,6 +92,8 @@ describe('Platform MFA email', () => {
       lastName: 'Gagnon',
       role: 'SUPER_ADMIN',
       organizationId: 'org-1',
+      displayPermissions: ['DISPLAY_READ'],
+      displayBuildingIds: ['building-1'],
       authVersion: 1,
       isActive: true,
     };
@@ -110,7 +114,13 @@ describe('Platform MFA email', () => {
     const usersService = { findByEmail: jest.fn().mockResolvedValue(user) } as any;
     const service = new AuthService(usersService, jwtService, prisma);
 
-    await expect(service.verifyMfa(user.email, code)).resolves.toMatchObject({ access_token: 'access-token' });
+    await expect(service.verifyMfa(user.email, code)).resolves.toMatchObject({
+      access_token: 'access-token',
+      user: {
+        displayPermissions: ['DISPLAY_READ'],
+        displayBuildingIds: ['building-1'],
+      },
+    });
     await expect(service.verifyMfa(user.email, code)).rejects.toBeInstanceOf(UnauthorizedException);
     expect(prisma.trustedDevice.create).toHaveBeenCalledTimes(1);
     expect(jwtService.sign).toHaveBeenCalledTimes(1);

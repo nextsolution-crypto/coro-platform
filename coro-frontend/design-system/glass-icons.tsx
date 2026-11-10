@@ -21,6 +21,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   '/buildings': Building2,
   '/buildings/map': MapIcon,
   '/buildings/compliance': ShieldCheck,
+  '/display': LayoutDashboard,
   '/library': Library,
   '/manual': BookOpen,
   '/settings': Settings,

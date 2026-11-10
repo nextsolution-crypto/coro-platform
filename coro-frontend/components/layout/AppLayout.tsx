@@ -53,6 +53,7 @@ const NAV_GROUPS = [
       { label: 'Bâtiments', path: '/buildings',             icon: '🏗' },
       { label: 'Carte',     path: '/buildings/map',          icon: '🗺️' },
       { label: 'Conformité', path: '/buildings/compliance', icon: '✅' },
+      { label: 'CORO Display', path: '/display', icon: '▣', displayPermission: 'DISPLAY_READ' },
     ],
   },
   {
@@ -835,7 +836,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   </p>
                 )}
                 <div className="space-y-0.5">
-                  {group.items.map(item => renderNavItem(item))}
+                  {group.items
+                    .filter(item => !('displayPermission' in item) || user?.displayPermissions?.includes(String(item.displayPermission)))
+                    .map(item => renderNavItem(item))}
                 </div>
               </div>
             ))}
