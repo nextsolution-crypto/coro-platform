@@ -196,7 +196,7 @@ export class ClientDisplayService {
       buildings,
       plans: plans.map((plan) => ({
         ...plan,
-        publishedOnDisplay: plan.status === 'PUBLISHED',
+        publishedForDisplay: plan.status === 'PUBLISHED',
         previewPath: `/client-portal/display/plans/${plan.id}/preview`,
       })),
       observations: {

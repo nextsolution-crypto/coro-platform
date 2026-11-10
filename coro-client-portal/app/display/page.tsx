@@ -14,7 +14,7 @@ type Plan = {
   versionNumber: number;
   variantVersion: number;
   status: string;
-  publishedOnDisplay: boolean;
+  publishedForDisplay: boolean;
   building: { name: string };
   floor: { name: string };
   zone: { name: string } | null;
@@ -239,8 +239,8 @@ export default function DisplayPage() {
               <article className={styles.card} key={plan.id}>
                 <div>
                   <span className={styles.badge}>
-                    {plan.publishedOnDisplay
-                      ? "Diffusé sur écran"
+                    {plan.publishedForDisplay
+                      ? "Publié pour affichage"
                       : "Consultable"}
                   </span>
                   <h2>{plan.projectFile.name}</h2>
