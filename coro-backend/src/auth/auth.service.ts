@@ -13,6 +13,7 @@ import * as crypto from 'crypto';
 import { requirePlatformMfaSecret } from './auth-security.config';
 import { renderPlatformMfaEmail } from './platform-mfa-email';
 import { MfaDeliveryService } from './mfa-delivery.service';
+import { DisplayPermission, User, UserRole } from '@prisma/client';
 
 const MFA_TTL_MS = 10 * 60 * 1000;
 export const PLATFORM_MFA_MAX_ATTEMPTS = 5;
@@ -55,7 +56,16 @@ export class AuthService {
       .digest('hex');
   }
 
-  private publicUser(user: any) {
+  private publicUser(user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: UserRole;
+    organizationId: string;
+    displayPermissions?: DisplayPermission[];
+    displayBuildingIds?: string[];
+  }) {
     return {
       id: user.id,
       email: user.email,
@@ -63,6 +73,8 @@ export class AuthService {
       lastName: user.lastName,
       role: user.role,
       organizationId: user.organizationId,
+      displayPermissions: user.displayPermissions ?? [],
+      displayBuildingIds: user.displayBuildingIds ?? [],
     };
   }
 
@@ -168,7 +180,7 @@ export class AuthService {
     return { ...(await this.issueSession(user)), trusted_token: trustedToken };
   }
 
-  private async issueSession(user: any) {
+  private async issueSession(user: User) {
     const refreshToken = await this.generateRefreshToken(
       user.id,
       user.authVersion,

@@ -67,4 +67,26 @@ describe('DisplayManagerService', () => {
     expect(result.plans).toEqual([]);
     expect(result.recentEvents).toEqual([]);
   });
+  it('signale un emplacement suspendu comme non couvert par un plan actif', async () => {
+    prisma.user.findFirst.mockResolvedValue({
+      displayPermissions: [
+        DisplayPermission.DISPLAY_READ,
+        DisplayPermission.DISPLAY_PLAN_READ,
+      ],
+      displayBuildingIds: ['building-1'],
+    });
+    prisma.building.findMany.mockResolvedValue([
+      {
+        id: 'building-1',
+        spatialFloors: [{ displayLocations: [{ id: 'location-1' }] }],
+      },
+    ]);
+    prisma.displayPlanPublication.findMany.mockResolvedValue([
+      { id: 'plan-1', status: 'SUSPENDED', locationId: 'location-1' },
+    ]);
+
+    const result = await service.getWorkspace('org-1', actor);
+
+    expect(result.dashboard.anomalyCount).toBe(1);
+  });
 });

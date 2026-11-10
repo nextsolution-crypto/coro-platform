@@ -76,6 +76,9 @@ export class DisplayManagerService {
                   code: true,
                   label: true,
                   status: true,
+                  youAreHereX: true,
+                  youAreHereY: true,
+                  orientationDegrees: true,
                 },
               },
             },
@@ -133,8 +136,13 @@ export class DisplayManagerService {
               category: 'plans_evacuation',
               mimeType: 'application/pdf',
               lifecycleState: 'APPROVED',
+              approvedAt: { not: null },
+              approvedById: { not: null },
+              sha256: { not: null },
               revokedAt: null,
               supersededAt: null,
+              effectiveAt: { lte: new Date() },
+              OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
             },
             orderBy: [{ approvedAt: 'desc' }, { id: 'asc' }],
             select: {
@@ -180,7 +188,7 @@ export class DisplayManagerService {
     }>;
     const activeLocationIds = new Set(
       planRows
-        .filter((plan) => ['PUBLISHED', 'SUSPENDED'].includes(plan.status))
+        .filter((plan) => plan.status === 'PUBLISHED')
         .map((plan) => plan.locationId),
     );
     const byStatus = Object.fromEntries(
