@@ -80,6 +80,7 @@ import { UserManualModule } from './user-manual/user-manual.module';
 import { PublicKnowledgeModule } from './public-knowledge/public-knowledge.module';
 import { PilotScenariosModule } from './pilot-scenarios/pilot-scenarios.module';
 import { SpatialModule } from './spatial/spatial.module';
+import { DisplayPlansModule } from './display-plans/display-plans.module';
 
 @Module({
   imports: [
@@ -110,6 +111,7 @@ import { SpatialModule } from './spatial/spatial.module';
     PublicKnowledgeModule,
     PilotScenariosModule,
     SpatialModule,
+    DisplayPlansModule,
     AuthModule,
     UsersModule,
     ClientsModule,

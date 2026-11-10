@@ -89,6 +89,8 @@ model Organization {
   buildingFloors                   BuildingFloor[]
   buildingZones                    BuildingZone[]
   displayLocations                 DisplayLocation[]
+  displayPlanPublications          DisplayPlanPublication[]
+  displayPlanPublicationEvents     DisplayPlanPublicationEvent[]
 }
 
 enum SpatialResourceStatus {
@@ -105,6 +107,33 @@ enum DisplayPermission {
   DISPLAY_EMERGENCY_ACTIVATE
   DISPLAY_EMERGENCY_RESET
   DISPLAY_AUDIT_READ
+  DISPLAY_PLAN_READ
+  DISPLAY_PLAN_CREATE
+  DISPLAY_PLAN_REVIEW
+  DISPLAY_PLAN_APPROVE
+  DISPLAY_PLAN_PUBLISH
+  DISPLAY_PLAN_REVOKE
+}
+
+enum DisplayPlanPublicationStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  PUBLISHED
+  SUPERSEDED
+  REVOKED
+  SUSPENDED
+}
+
+enum DisplayPlanOrientation {
+  LANDSCAPE
+  PORTRAIT
+}
+
+enum DisplayPlanLanguage {
+  FR
+  EN
+  BILINGUAL
 }
 
 enum DemoEnvironmentStatus {
@@ -313,6 +342,13 @@ model User {
   isActive                                     Boolean                                  @default(true)
   displayPermissions                           DisplayPermission[]                      @default([])
   displayBuildingIds                           String[]                                 @default([])
+  displayPlanPublicationsCreated               DisplayPlanPublication[]                 @relation("DisplayPlanPublicationCreator")
+  displayPlanPublicationsReviewed              DisplayPlanPublication[]                 @relation("DisplayPlanPublicationReviewer")
+  displayPlanPublicationsApproved              DisplayPlanPublication[]                 @relation("DisplayPlanPublicationApprover")
+  displayPlanPublicationsPublished             DisplayPlanPublication[]                 @relation("DisplayPlanPublicationPublisher")
+  displayPlanPublicationsSuspended             DisplayPlanPublication[]                 @relation("DisplayPlanPublicationSuspender")
+  displayPlanPublicationsRevoked               DisplayPlanPublication[]                 @relation("DisplayPlanPublicationRevoker")
+  displayPlanPublicationEvents                 DisplayPlanPublicationEvent[]
   createdAt                                    DateTime                                 @default(now())
   updatedAt                                    DateTime                                 @updatedAt
   observationsCreated                          ReviewObservation[]                      @relation("observationCreator")
@@ -2844,6 +2880,7 @@ model Building {
   spatialFloors          BuildingFloor[]
   spatialZones           BuildingZone[]
   displayLocations       DisplayLocation[]
+  displayPlanPublications DisplayPlanPublication[]
 
   // CORO RUE / PUE / Sentinelle Population
   // Profil réglementaire et opérationnel de l'installation.
@@ -2875,6 +2912,7 @@ model BuildingFloor {
   building         Building          @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
   zones            BuildingZone[]
   displayLocations DisplayLocation[]
+  displayPlanPublications DisplayPlanPublication[]
 
   @@unique([buildingId, code])
   @@unique([id, organizationId, buildingId])
@@ -2899,6 +2937,7 @@ model BuildingZone {
   building         Building          @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
   floor            BuildingFloor     @relation(fields: [floorId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
   displayLocations DisplayLocation[]
+  displayPlanPublications DisplayPlanPublication[]
 
   @@unique([floorId, code])
   @@unique([id, organizationId, buildingId, floorId])
@@ -2928,9 +2967,107 @@ model DisplayLocation {
   building     Building      @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
   floor        BuildingFloor @relation(fields: [floorId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
   zone         BuildingZone? @relation(fields: [zoneId, organizationId, buildingId, floorId], references: [id, organizationId, buildingId, floorId], onDelete: Restrict)
+  planPublications DisplayPlanPublication[]
 
   @@unique([buildingId, code])
+  @@unique([id, organizationId, buildingId, floorId])
   @@index([organizationId, buildingId, floorId, zoneId, status], map: "DisplayLocation_org_building_floor_zone_status_idx")
+}
+
+model DisplayPlanPublication {
+  id                 String                       @id @default(uuid())
+  organizationId     String
+  buildingId         String
+  floorId            String
+  zoneId             String?
+  locationId         String
+  projectFileId      String
+  creationRequestId  String
+  sourceVersion      Int
+  sourceSha256       String                       @db.Char(64)
+  sourceApprovedById String
+  sourceApprovedAt   DateTime
+  versionNumber      Int
+  variantVersion     Int                          @default(0)
+  variantStorageKey  String?
+  variantSha256      String?                      @db.Char(64)
+  variantMimeType    String?
+  widthPixels        Int?
+  heightPixels       Int?
+  orientation        DisplayPlanOrientation
+  language           DisplayPlanLanguage
+  renderParameters   Json
+  status             DisplayPlanPublicationStatus @default(DRAFT)
+  createdById        String
+  reviewedById       String?
+  reviewedAt         DateTime?
+  approvedById       String?
+  approvedAt         DateTime?
+  publishedById      String?
+  publishedAt        DateTime?
+  validFrom          DateTime?
+  validUntil         DateTime?
+  suspendedById      String?
+  suspendedAt        DateTime?
+  suspensionReason   String?
+  revokedById        String?
+  revokedAt          DateTime?
+  revocationReason   String?
+  supersededAt       DateTime?
+  supersededById     String?
+  lockVersion        Int                          @default(0)
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+
+  organization Organization                  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building     Building                      @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  floor        BuildingFloor                 @relation(fields: [floorId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
+  zone         BuildingZone?                 @relation(fields: [zoneId, organizationId, buildingId, floorId], references: [id, organizationId, buildingId, floorId], onDelete: Restrict)
+  location     DisplayLocation               @relation(fields: [locationId, organizationId, buildingId, floorId], references: [id, organizationId, buildingId, floorId], onDelete: Restrict)
+  projectFile  ProjectFile                   @relation(fields: [projectFileId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
+  createdBy    User                          @relation("DisplayPlanPublicationCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  reviewedBy   User?                         @relation("DisplayPlanPublicationReviewer", fields: [reviewedById], references: [id], onDelete: Restrict)
+  approvedBy   User?                         @relation("DisplayPlanPublicationApprover", fields: [approvedById], references: [id], onDelete: Restrict)
+  publishedBy  User?                         @relation("DisplayPlanPublicationPublisher", fields: [publishedById], references: [id], onDelete: Restrict)
+  suspendedBy  User?                         @relation("DisplayPlanPublicationSuspender", fields: [suspendedById], references: [id], onDelete: Restrict)
+  revokedBy    User?                         @relation("DisplayPlanPublicationRevoker", fields: [revokedById], references: [id], onDelete: Restrict)
+  supersededBy DisplayPlanPublication?       @relation("DisplayPlanPublicationSupersession", fields: [supersededById], references: [id], onDelete: Restrict)
+  supersedes   DisplayPlanPublication[]      @relation("DisplayPlanPublicationSupersession")
+  events       DisplayPlanPublicationEvent[]
+
+  @@unique([locationId, versionNumber])
+  @@unique([organizationId, buildingId, creationRequestId])
+  @@unique([id, organizationId, buildingId])
+  @@index([organizationId, buildingId, floorId, status])
+  @@index([projectFileId, sourceVersion, status])
+  @@index([locationId, status, publishedAt])
+}
+
+model DisplayPlanPublicationEvent {
+  id             String                        @id @default(uuid())
+  publicationId  String
+  organizationId String
+  buildingId     String
+  requestId      String
+  action         String
+  fromStatus     DisplayPlanPublicationStatus?
+  toStatus       DisplayPlanPublicationStatus
+  actorUserId    String
+  reason         String?
+  sourceVersion  Int
+  sourceSha256   String                        @db.Char(64)
+  variantVersion Int
+  variantSha256  String?                       @db.Char(64)
+  metadata       Json?
+  createdAt      DateTime                      @default(now())
+
+  publication  DisplayPlanPublication @relation(fields: [publicationId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
+  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  actor        User                   @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@unique([publicationId, requestId])
+  @@index([organizationId, buildingId, createdAt])
+  @@index([publicationId, createdAt])
 }
 
 model Project {
@@ -4417,7 +4554,9 @@ model ProjectFile {
   knowledgeIngestions              ProjectFileKnowledgeIngestion[]
   knowledgeCitations               ProjectFileKnowledgeCitation[]
   dispersionScenarioSources        RueEmergencyScenario[]          @relation("DispersionStudySource")
+  displayPlanPublications          DisplayPlanPublication[]
 
+  @@unique([id, organizationId, buildingId])
   @@index([organizationId, projectId, lifecycleState])
   @@index([buildingId, lifecycleState])
   @@index([expiresAt])
