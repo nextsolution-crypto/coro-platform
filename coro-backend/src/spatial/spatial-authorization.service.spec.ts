@@ -42,6 +42,26 @@ describe('SpatialAuthorizationService', () => {
     );
   });
 
+  it('does not grant Display rights implicitly to a super administrator', async () => {
+    prisma.user.findFirst.mockResolvedValue(null);
+    await expect(
+      service.require(
+        { ...actor, role: 'SUPER_ADMIN' },
+        'org-a',
+        'building-a',
+        DisplayPermission.DISPLAY_PLAN_PUBLISH,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.user.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          displayPermissions: { has: DisplayPermission.DISPLAY_PLAN_PUBLISH },
+          displayBuildingIds: { has: 'building-a' },
+        }),
+      }),
+    );
+  });
+
   it('accepts only an active canonical user carrying the exact permission', async () => {
     prisma.user.findFirst.mockResolvedValue({ id: 'user-a' });
     await expect(

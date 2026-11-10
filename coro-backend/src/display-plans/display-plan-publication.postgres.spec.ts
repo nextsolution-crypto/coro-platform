@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { DisplayPermission, UserRole } from '@prisma/client';
 import { createHash, randomUUID } from 'crypto';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
@@ -76,6 +76,14 @@ describePostgres('DISPLAY-03 publication governance on PostgreSQL', () => {
         name: 'Rez-de-chaussée',
       },
     });
+    const otherFloor = await prisma.buildingFloor.create({
+      data: {
+        organizationId: org.id,
+        buildingId: building.id,
+        code: 'ETAGE-2',
+        name: 'Etage 2',
+      },
+    });
     const location = await prisma.displayLocation.create({
       data: {
         organizationId: org.id,
@@ -122,6 +130,26 @@ describePostgres('DISPLAY-03 publication governance on PostgreSQL', () => {
     const revoker = await mkUser('revoker', [
       DisplayPermission.DISPLAY_PLAN_REVOKE,
     ]);
+    const adminWithoutDisplayRights = await prisma.user.create({
+      data: {
+        email: `admin-${suffix}@example.invalid`,
+        password: 'not-used',
+        firstName: 'admin',
+        lastName: 'QA',
+        role: UserRole.ADMIN,
+        organizationId: org.id,
+      },
+    });
+    const superAdminWithoutDisplayRights = await prisma.user.create({
+      data: {
+        email: `super-admin-${suffix}@example.invalid`,
+        password: 'not-used',
+        firstName: 'super-admin',
+        lastName: 'QA',
+        role: UserRole.SUPER_ADMIN,
+        organizationId: org.id,
+      },
+    });
     const sourceBytes = Buffer.alloc(24);
     sourceBytes.writeUInt8(0x89, 0);
     sourceBytes.write('PNG', 1, 'ascii');
@@ -155,16 +183,67 @@ describePostgres('DISPLAY-03 publication governance on PostgreSQL', () => {
       organizationId: org.id,
       role: user.role,
     });
+    const draftInput = {
+      locationId: location.id,
+      projectFileId: source.id,
+      sourceVersion: 1,
+      orientation: 'LANDSCAPE' as const,
+      language: 'FR' as const,
+    };
+    await expect(
+      service.createDraft(
+        org.id,
+        building.id,
+        {
+          ...draftInput,
+          floorId: floor.id,
+          requestId: `admin-without-rights-${suffix}`,
+        },
+        actor(adminWithoutDisplayRights),
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.createDraft(
+        org.id,
+        building.id,
+        {
+          ...draftInput,
+          floorId: floor.id,
+          requestId: `super-admin-without-rights-${suffix}`,
+        },
+        actor(superAdminWithoutDisplayRights),
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.createDraft(
+        org.id,
+        building.id,
+        {
+          ...draftInput,
+          floorId: otherFloor.id,
+          requestId: `contradictory-floor-${suffix}`,
+        },
+        actor(author),
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.createDraft(
+        'foreign-organization',
+        building.id,
+        {
+          ...draftInput,
+          floorId: floor.id,
+          requestId: `foreign-organization-${suffix}`,
+        },
+        actor(author),
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     const draft = await service.createDraft(
       org.id,
       building.id,
       {
+        ...draftInput,
         floorId: floor.id,
-        locationId: location.id,
-        projectFileId: source.id,
-        sourceVersion: 1,
-        orientation: 'LANDSCAPE',
-        language: 'FR',
         requestId: `create-${suffix}`,
       },
       actor(author),
