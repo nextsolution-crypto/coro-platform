@@ -11,6 +11,7 @@ import { DisplayPdfMaintenanceService } from './display-pdf-maintenance.service'
 import { DisplayPlanProfileService } from './display-plan-profile.service';
 import { DisplayManagerController } from './display-manager.controller';
 import { DisplayManagerService } from './display-manager.service';
+import { DisplayObservationWorkflowService } from './display-observation-workflow.service';
 
 @Module({
   imports: [PrismaModule, SpatialModule, StorageModule],
@@ -23,6 +24,7 @@ import { DisplayManagerService } from './display-manager.service';
     DisplayPdfMaintenanceService,
     DisplayPlanProfileService,
     DisplayManagerService,
+    DisplayObservationWorkflowService,
   ],
   exports: [
     DisplayPlanPublicationService,

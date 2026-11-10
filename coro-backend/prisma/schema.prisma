@@ -121,6 +121,14 @@ enum DisplayPermission {
   DISPLAY_CLIENT_LOCATION_READ
   DISPLAY_CLIENT_OBSERVATION_SUBMIT
   DISPLAY_CLIENT_OBSERVATION_READ
+  DISPLAY_OBSERVATION_READ
+  DISPLAY_OBSERVATION_QUALIFY
+  DISPLAY_OBSERVATION_ASSIGN
+  DISPLAY_OBSERVATION_DECIDE
+  DISPLAY_OBSERVATION_RESPOND
+  DISPLAY_OBSERVATION_RESOLVE
+  DISPLAY_OBSERVATION_CLOSE
+  DISPLAY_OBSERVATION_AUDIT_READ
 }
 
 enum DisplayCorrectionCategory {
@@ -3098,8 +3106,8 @@ model DisplayPlanPublication {
 }
 
 model DisplayCorrectionObservation {
-  id                      String                    @id @default(uuid())
-  reference               String                    @unique
+  id                      String                     @id @default(uuid())
+  reference               String                     @unique
   organizationId          String
   clientId                String
   buildingId              String
@@ -3108,56 +3116,97 @@ model DisplayCorrectionObservation {
   publicationId           String
   publicationVersion      Int
   variantVersion          Int
-  variantSha256           String                    @db.Char(64)
+  variantSha256           String                     @db.Char(64)
   category                DisplayCorrectionCategory
-  description             String                    @db.Text
+  description             String                     @db.Text
   suggestedPriority       DisplayCorrectionPriority
-  status                  DisplayCorrectionStatus   @default(SUBMITTED)
+  professionalPriority    DisplayCorrectionPriority?
+  qualifiedCategory       DisplayCorrectionCategory?
+  qualifiedAt             DateTime?
+  qualifiedByUserId       String?
+  assignedUserId          String?
+  assignedAt              DateTime?
+  assignedByUserId        String?
+  decisionAt              DateTime?
+  decidedByUserId         String?
+  correctionReferenceType String?
+  correctionReferenceId   String?
+  correctionEvidence      String?                    @db.Text
+  resolutionValidatedAt   DateTime?
+  resolutionValidatedById String?
+  status                  DisplayCorrectionStatus    @default(SUBMITTED)
   normalizedX             Float?
   normalizedY             Float?
   submittedByClientUserId String
   submissionRequestId     String
-  clientVisibleResponse   String?                   @db.Text
+  clientVisibleResponse   String?                    @db.Text
   resolvedAt              DateTime?
   closedAt                DateTime?
-  lockVersion             Int                       @default(0)
-  submittedAt             DateTime                  @default(now())
-  createdAt               DateTime                  @default(now())
-  updatedAt               DateTime                  @updatedAt
+  lockVersion             Int                        @default(0)
+  submittedAt             DateTime                   @default(now())
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
 
-  organization Organization                        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  client       Client                              @relation(fields: [clientId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  building     Building                            @relation(fields: [buildingId, clientId, organizationId], references: [id, clientId, organizationId], onDelete: Restrict)
-  floor        BuildingFloor                       @relation(fields: [floorId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
-  location     DisplayLocation                     @relation(fields: [locationId, organizationId, buildingId, floorId], references: [id, organizationId, buildingId, floorId], onDelete: Restrict)
-  publication  DisplayPlanPublication              @relation(fields: [publicationId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
-  submittedBy  ClientUser                          @relation(fields: [submittedByClientUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  organization Organization                          @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  client       Client                                @relation(fields: [clientId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  building     Building                              @relation(fields: [buildingId, clientId, organizationId], references: [id, clientId, organizationId], onDelete: Restrict)
+  floor        BuildingFloor                         @relation(fields: [floorId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
+  location     DisplayLocation                       @relation(fields: [locationId, organizationId, buildingId, floorId], references: [id, organizationId, buildingId, floorId], onDelete: Restrict)
+  publication  DisplayPlanPublication                @relation(fields: [publicationId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
+  submittedBy  ClientUser                            @relation(fields: [submittedByClientUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
   events       DisplayCorrectionObservationEvent[]
+  messages     DisplayCorrectionObservationMessage[]
 
   @@unique([submittedByClientUserId, submissionRequestId])
   @@unique([id, organizationId, buildingId])
   @@index([organizationId, clientId, buildingId, status, updatedAt])
   @@index([publicationId, publicationVersion, variantVersion])
   @@index([suggestedPriority, status, updatedAt])
+  @@index([organizationId, assignedUserId, status, updatedAt])
+  @@index([professionalPriority, status, updatedAt])
 }
 
 model DisplayCorrectionObservationEvent {
-  id                String                  @id @default(uuid())
+  id                String                   @id @default(uuid())
   observationId     String
   organizationId    String
   buildingId        String
   status            DisplayCorrectionStatus
   action            String
-  actorClientUserId String
+  actorClientUserId String?
+  actorUserId       String?
+  requestId         String?
+  fromStatus        DisplayCorrectionStatus?
+  reason            String?                  @db.Text
+  lockVersion       Int?
   metadata          Json?
-  createdAt         DateTime                @default(now())
+  createdAt         DateTime                 @default(now())
 
   observation     DisplayCorrectionObservation @relation(fields: [observationId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
   organization    Organization                 @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  actorClientUser ClientUser                   @relation(fields: [actorClientUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  actorClientUser ClientUser?                  @relation(fields: [actorClientUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
 
+  @@unique([organizationId, requestId])
   @@index([observationId, createdAt])
   @@index([organizationId, buildingId, createdAt])
+}
+
+model DisplayCorrectionObservationMessage {
+  id             String   @id @default(uuid())
+  observationId  String
+  organizationId String
+  buildingId     String
+  authorUserId   String
+  requestId      String
+  visibility     String
+  message        String   @db.Text
+  createdAt      DateTime @default(now())
+
+  observation DisplayCorrectionObservation @relation(fields: [observationId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
+
+  @@unique([organizationId, requestId])
+  @@index([observationId, createdAt])
+  @@index([organizationId, buildingId, visibility, createdAt])
 }
 
 model DisplayPlanPublicationEvent {
