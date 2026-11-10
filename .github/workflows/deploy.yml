@@ -82,6 +82,8 @@ jobs:
 
       - name: Type check
         working-directory: ${{ matrix.app }}
+        env:
+          NODE_OPTIONS: ${{ matrix.app == 'coro-backend' && '--max-old-space-size=8192' || '' }}
         run: npx tsc --noEmit --incremental false
 
   backend-tests:

@@ -44,6 +44,8 @@ jobs:
         run: npm ci
 
       - name: TypeScript
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
         run: npx tsc --noEmit --incremental false
 
       - name: Runtime, authentication and email security tests
