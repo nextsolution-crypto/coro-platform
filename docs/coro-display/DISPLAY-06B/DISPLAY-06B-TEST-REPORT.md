@@ -1,0 +1,5 @@
+# DISPLAY-06B — Tests
+
+Tests ciblés Device + Player + Display : **78/78 PASS**, avec un test Display préexistant ignoré. Couverture : invitation opaque/usage unique, expiration, preuve forgée, signature de requête, replay, révocation, bundle de confiance, rollback, contenu signé, multitenant, cache disque, corruption, urgence persistante/HMAC, CSP, flags kiosque et watchdog.
+
+Suite backend en bac à sable : **298 suites et 2 777 tests PASS**, avec **2 suites / 7 tests en échec** parce que les sous-processus locaux y sont interdits. La reprise hors bac à sable de ces deux suites confirme **34/35 tests PASS** : les six tests AWS passent et l'unique échec résiduel est le test OCR réel, bloqué par l'absence locale de `pdftoppm` (`spawnSync pdftoppm ENOENT`). Les suites ciblées DISPLAY-06A/06B/plans passent à **12 suites, 78 tests PASS et 1 test préexistant ignoré**. TypeScript, ESLint et build : **PASS**. PostgreSQL est **NOT_APPLICABLE** à ce stade car aucune migration ni adaptateur DB n'est ajouté.
