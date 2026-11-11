@@ -44,16 +44,20 @@ function registeredDevice(registry: DeviceRegistry) {
 
 function enroll(registry: DeviceRegistry) {
   registeredDevice(registry);
-  const invitation = registry.createInvitation('device-a', now);
   const keys = generateKeyPairSync('ed25519');
+  const publicKeyPem = keys.publicKey
+    .export({ type: 'spki', format: 'pem' })
+    .toString();
+  const invitation = registry.createInvitation('device-a', now, {
+    keyId: 'device-key-a',
+    publicKeyPem,
+  });
   const proof = {
     invitationId: invitation.invitationId,
     token: invitation.token,
     deviceId: 'device-a',
     keyId: 'device-key-a',
-    publicKeyPem: keys.publicKey
-      .export({ type: 'spki', format: 'pem' })
-      .toString(),
+    publicKeyPem,
     signature: sign(
       null,
       deviceEnrollmentStatement({
@@ -87,25 +91,34 @@ describe('DISPLAY-06B device and kiosk foundation', () => {
   it('rejects expired, foreign and forged enrollment proofs', () => {
     const expired = new DeviceRegistry();
     registeredDevice(expired);
-    const invitation = expired.createInvitation('device-a', now, 1);
     const keys = generateKeyPairSync('ed25519');
+    const publicKeyPem = keys.publicKey
+      .export({ type: 'spki', format: 'pem' })
+      .toString();
+    const invitation = expired.createInvitation(
+      'device-a',
+      now,
+      { keyId: 'device-key-a', publicKeyPem },
+      1_000,
+    );
     const base = {
       invitationId: invitation.invitationId,
       token: invitation.token,
       deviceId: 'device-a',
       keyId: 'device-key-a',
-      publicKeyPem: keys.publicKey
-        .export({ type: 'spki', format: 'pem' })
-        .toString(),
+      publicKeyPem,
       signature: '',
     };
-    expect(() => expired.enroll(base, new Date(now.getTime() + 2))).toThrow(
+    expect(() => expired.enroll(base, new Date(now.getTime() + 1_001))).toThrow(
       'INVITATION_EXPIRED',
     );
 
     const forged = new DeviceRegistry();
     registeredDevice(forged);
-    const current = forged.createInvitation('device-a', now);
+    const current = forged.createInvitation('device-a', now, {
+      keyId: base.keyId,
+      publicKeyPem: base.publicKeyPem,
+    });
     expect(() =>
       forged.enroll(
         { ...base, invitationId: current.invitationId, token: current.token },
@@ -120,7 +133,7 @@ describe('DISPLAY-06B device and kiosk foundation', () => {
     const proof = {
       deviceId: device.deviceId,
       timestamp: now.toISOString(),
-      nonce: 'nonce-unique-a',
+      nonce: 'nonce-unique-a-01',
       method: 'GET',
       path: '/device/manifest',
       bodySha256: sha256(Buffer.alloc(0)),
@@ -147,7 +160,7 @@ describe('DISPLAY-06B device and kiosk foundation', () => {
     expect(() =>
       authenticator.authenticate(
         registry.get(device.deviceId)!,
-        { ...proof, nonce: 'new' },
+        { ...proof, nonce: 'nonce-unique-a-02' },
         now,
       ),
     ).toThrow('DEVICE_NOT_ACTIVE');
@@ -251,9 +264,19 @@ describe('DISPLAY-06B device and kiosk foundation', () => {
     try {
       const bytes = Buffer.from('plan-generation-one');
       const manifest = {
-        payload: { documentSha256: sha256(bytes) },
+        payload: {
+          sequence: 1,
+          documentVersionId: 'document-version-one',
+          knownRevoked: false,
+          documentSha256: sha256(bytes),
+        },
       } as unknown as SignedPlayerDisplayManifest;
-      const cache = new PersistentPlanCache(root, 'device-a', 'lobby-a');
+      const cache = new PersistentPlanCache(
+        root,
+        'device-a',
+        'lobby-a',
+        () => undefined,
+      );
       await cache.commit(manifest, bytes, now);
       expect(Buffer.from((await cache.readVerified())!.bytes).toString()).toBe(
         'plan-generation-one',
