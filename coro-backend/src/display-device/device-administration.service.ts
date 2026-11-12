@@ -19,6 +19,19 @@ import {
   TransitionDisplayDeviceDto,
 } from './dto/device-administration.dto';
 
+function administrativeTransitionAllowed(current: string, target: string) {
+  switch (current) {
+    case 'PENDING_ENROLLMENT':
+      return target === 'REVOKED' || target === 'RETIRED';
+    case 'ACTIVE':
+      return ['SUSPENDED', 'REVOKED', 'RETIRED'].includes(target);
+    case 'SUSPENDED':
+      return ['ACTIVE', 'REVOKED', 'RETIRED'].includes(target);
+    default:
+      return false;
+  }
+}
+
 @Injectable()
 export class DeviceAdministrationService {
   constructor(
@@ -238,8 +251,8 @@ export class DeviceAdministrationService {
       device.buildingId,
       DisplayPermission.DISPLAY_PLAN_PUBLISH,
     );
-    if (device.status === 'REVOKED' || device.status === 'RETIRED')
-      throw new ConflictException('DEVICE_TERMINAL_STATE');
+    if (!administrativeTransitionAllowed(device.status, dto.status))
+      throw new ConflictException('DEVICE_TRANSITION_NOT_ALLOWED');
     const updated = await this.prisma.displayDevice.updateMany({
       where: {
         id: deviceId,

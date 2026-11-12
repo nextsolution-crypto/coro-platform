@@ -2,9 +2,11 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { DisplayPermission, UserRole } from '@prisma/client';
 import { createHash, generateKeyPairSync, randomUUID, sign } from 'node:crypto';
+import { execFile } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 import { PrismaService } from '../prisma/prisma.service';
 import { SpatialAuthorizationService } from '../spatial/spatial-authorization.service';
 import { StorageService } from '../storage/storage.service';
@@ -21,6 +23,9 @@ import {
 } from './connected-player-runtime';
 import { DISPLAY_MANIFEST_SIGNER, ManifestSigner } from './manifest-signer';
 import { EmergencyStateStore } from './persistent-runtime';
+import { DisplayManagerService } from '../display-plans/display-manager.service';
+
+const execFileAsync = promisify(execFile);
 
 const enabled = process.env.RUN_POSTGRES_TESTS === 'true';
 const describePostgres = enabled ? describe : describe.skip;
@@ -84,7 +89,12 @@ describePostgres('display-06c-operational-e2e', () => {
     app = module.createNestApplication();
     await prisma.$connect();
     await app.listen(0, '127.0.0.1');
-    const address = app.getHttpServer().address() as { port: number };
+    const server = app.getHttpServer() as {
+      address(): string | { port: number } | null;
+    };
+    const address = server.address();
+    if (!address || typeof address === 'string')
+      throw new Error('E2E_HTTP_BIND_FAILED');
     baseUrl = `http://127.0.0.1:${address.port}`;
 
     (globalThis as unknown as { __display06c: unknown }).__display06c = {
@@ -103,6 +113,14 @@ describePostgres('display-06c-operational-e2e', () => {
     const org = await prisma.organization.create({
       data: { name: `DISPLAY-06C E2E ${suffix}` },
     });
+    const foreignOrganizations = await Promise.all([
+      prisma.organization.create({
+        data: { name: `DISPLAY-06C foreign A ${suffix}` },
+      }),
+      prisma.organization.create({
+        data: { name: `DISPLAY-06C foreign B ${suffix}` },
+      }),
+    ]);
     const client = await prisma.client.create({
       data: { name: 'Client synthétique', organizationId: org.id },
     });
@@ -142,6 +160,7 @@ describePostgres('display-06c-operational-e2e', () => {
         role: UserRole.OPERATOR,
         organizationId: org.id,
         displayPermissions: [
+          DisplayPermission.DISPLAY_READ,
           DisplayPermission.DISPLAY_PLAN_PUBLISH,
           DisplayPermission.DISPLAY_PLAN_READ,
           DisplayPermission.DISPLAY_AUDIT_READ,
@@ -287,9 +306,35 @@ describePostgres('display-06c-operational-e2e', () => {
     const active = await player.synchronize();
     expect(Buffer.from(active.bytes).equals(renderBytes)).toBe(true);
     await player.heartbeat('ONLINE');
+    const supervised = await new DisplayManagerService(prisma).getWorkspace(
+      org.id,
+      actor,
+    );
+    expect(supervised.devices).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: device.id,
+          lastNetworkStatus: 'ONLINE',
+          lastCacheHealth: 'HEALTHY',
+          lastRuntimeHealth: 'HEALTHY',
+        }),
+      ]),
+    );
+    expect(
+      supervised.devices.some((candidate) =>
+        foreignOrganizations.some(
+          (foreign) => candidate.organizationId === foreign.id,
+        ),
+      ),
+    ).toBe(false);
 
-    const origin = new LocalPlayerOrigin(async () => player.activeBytes());
+    const origin = new LocalPlayerOrigin(() =>
+      Promise.resolve(player.activeBytes()),
+    );
     const playerUrl = await origin.start();
+    // Jest compiles this suite as CommonJS; Function preserves the native ESM
+    // import required by Puppeteer when --experimental-vm-modules is enabled.
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval, @typescript-eslint/no-unsafe-call
     const puppeteer = (await new Function(
       'return import("puppeteer")',
     )()) as typeof import('puppeteer');
@@ -308,17 +353,6 @@ describePostgres('display-06c-operational-e2e', () => {
     await app.close();
     await page.reload({ waitUntil: 'networkidle0' });
     await page.screenshot({ path: join(evidenceRoot, 'offline.png') });
-    const restarted = new ConnectedPlayerService(
-      identity,
-      trustedKeys,
-      cacheRoot,
-      gateway,
-    );
-    expect(
-      Buffer.from((await restarted.restore())!.bytes).equals(renderBytes),
-    ).toBe(true);
-    await page.screenshot({ path: join(evidenceRoot, 'restart.png') });
-
     const emergencyPath = join(root, 'emergency', 'state.json');
     const emergencyKey = createHash('sha256').update(suffix).digest();
     const emergency = new EmergencyStateStore(emergencyPath, emergencyKey);
@@ -336,8 +370,49 @@ describePostgres('display-06c-operational-e2e', () => {
       emergencyKey,
     );
     expect((await restoredEmergency.read())?.mode).toBe('EMERGENCY_REAL');
-    restarted.setMode('EMERGENCY_REAL');
     await page.screenshot({ path: join(evidenceRoot, 'emergency.png') });
+    const restartResultPath = join(evidenceRoot, 'restart-process.json');
+    await execFileAsync(
+      process.execPath,
+      [
+        join(process.cwd(), 'node_modules', 'ts-node', 'dist', 'bin.js'),
+        join(
+          process.cwd(),
+          'src',
+          'display-device',
+          'display-player-restart-probe.ts',
+        ),
+      ],
+      {
+        env: {
+          ...process.env,
+          DISPLAY_RESTART_IDENTITY_JSON: JSON.stringify(identity),
+          DISPLAY_RESTART_TRUSTED_KEYS_JSON: JSON.stringify(trustedKeys),
+          DISPLAY_RESTART_CACHE_ROOT: cacheRoot,
+          DISPLAY_RESTART_EMERGENCY_PATH: emergencyPath,
+          DISPLAY_RESTART_EMERGENCY_KEY_HEX: emergencyKey.toString('hex'),
+          DISPLAY_RESTART_SCREENSHOT_PATH: join(evidenceRoot, 'restart.png'),
+          DISPLAY_RESTART_RESULT_PATH: restartResultPath,
+        },
+        timeout: 60_000,
+      },
+    );
+    const restartResult = JSON.parse(
+      await readFile(restartResultPath, 'utf8'),
+    ) as {
+      pid: number;
+      manifestSequence: number;
+      documentSha256: string;
+      emergencyMode: string;
+      chromiumNaturalWidth: number;
+    };
+    expect(restartResult.pid).not.toBe(process.pid);
+    expect(restartResult.manifestSequence).toBe(
+      active.manifest.payload.sequence,
+    );
+    expect(restartResult.documentSha256).toBe(renderSha);
+    expect(restartResult.emergencyMode).toBe('EMERGENCY_REAL');
+    expect(restartResult.chromiumNaturalWidth).toBeGreaterThan(0);
     await expect(
       emergency.write({
         mode: 'PERMANENT_PLAN',
@@ -384,6 +459,9 @@ describePostgres('display-06c-operational-e2e', () => {
           renderSha256: renderSha,
           syncStatus: confirmed.status,
           heartbeatAt: persistedDevice.lastHeartbeatAt,
+          supervisionVerified: true,
+          syntheticOrganizationCount: 1 + foreignOrganizations.length,
+          restartProcessPid: restartResult.pid,
           emergencyRestored: true,
           governedClear: true,
           physicalDisplayProof: false,
