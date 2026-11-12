@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+result=PASS
+check() { if "$@" >/dev/null 2>&1; then printf 'PASS %s\n' "$*"; else printf 'FAIL %s\n' "$*"; result=FAIL; fi; }
+check test "$(id -u)" -ne 0
+check test -r /etc/coro-display/player.env
+check test -x /usr/local/libexec/coro-display-signer
+check test -w /var/lib/coro-display
+check test -w /var/log/coro-display
+check systemctl is-enabled coro-display-player.service
+check systemd-analyze verify /etc/systemd/system/coro-display-player.service
+[[ "$result" == PASS ]]

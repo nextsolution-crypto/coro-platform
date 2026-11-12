@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+state=$(systemctl is-active coro-display-player.service 2>/dev/null || true)
+printf '{"service":"%s","failedUnits":%s,"bootIdPresent":%s}\n' \
+  "$state" \
+  "$(systemctl --failed --no-legend | wc -l)" \
+  "$([[ -r /proc/sys/kernel/random/boot_id ]] && echo true || echo false)"
+[[ "$state" == active ]]
