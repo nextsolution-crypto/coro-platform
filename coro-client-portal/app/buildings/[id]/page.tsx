@@ -2,8 +2,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Building2, FileCheck2, FolderOpen, Shield, ArrowRight } from "lucide-react";
-import { apiGet } from "../../store/auth";
+import { Building2, FileCheck2, FolderOpen, Shield, ArrowRight, MonitorUp } from "lucide-react";
+import { apiGet, getUser } from "../../store/auth";
 import PortalLayout from "../../components/PortalLayout";
 import BuildingDocuments from "../../components/building-documents/BuildingDocuments";
 import { belongsToBuilding } from "../building-projects";
@@ -15,6 +15,7 @@ const statuses: Record<string, string> = { DRAFT: "Brouillon", IN_PROGRESS: "En 
 export default function BuildingWorkspacePage() {
   const params = useParams();
   const buildingId = String(params.id);
+  const canReadDisplay = getUser()?.displayPermissions?.includes("DISPLAY_CLIENT_PLAN_READ") === true;
   const [building, setBuilding] = useState<Building | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [section, setSection] = useState<"conformity" | "documentation">("conformity");
@@ -23,25 +24,32 @@ export default function BuildingWorkspacePage() {
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let active = true;
-    setLoading(true); setError(""); setBuilding(null); setProjects([]);
-    Promise.all([apiGet("/client-portal/buildings"), apiGet("/client-portal/projects")])
-      .then(([buildings, allProjects]) => {
-        if (!active) return;
-        const found = (buildings as Building[]).find(b => b.id === buildingId);
-        if (!found) throw new Error("Ce bâtiment est introuvable ou inaccessible avec vos permissions.");
-        setBuilding(found);
-        setProjects((allProjects as Project[]).filter(p => belongsToBuilding(p, buildingId)));
-      })
-      .catch(e => { if (active) setError(e instanceof Error ? e.message : "Impossible de charger le bâtiment."); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+    const timer = window.setTimeout(() => {
+      if (!active) return;
+      setLoading(true); setError(""); setBuilding(null); setProjects([]);
+      Promise.all([apiGet("/client-portal/buildings"), apiGet("/client-portal/projects")])
+        .then(([buildings, allProjects]) => {
+          if (!active) return;
+          const found = (buildings as Building[]).find(b => b.id === buildingId);
+          if (!found) throw new Error("Ce bâtiment est introuvable ou inaccessible avec vos permissions.");
+          setBuilding(found);
+          setProjects((allProjects as Project[]).filter(p => belongsToBuilding(p, buildingId)));
+        })
+        .catch(e => { if (active) setError(e instanceof Error ? e.message : "Impossible de charger le bâtiment."); })
+        .finally(() => { if (active) setLoading(false); });
+    }, 0);
+    return () => { active = false; window.clearTimeout(timer); };
   }, [buildingId, attempt]);
   return <PortalLayout><div className={styles.page}>
     <Link href="/buildings" className={styles.back}>← Mes bâtiments</Link>
     {loading ? <p role="status">Chargement du bâtiment…</p> : error ? <div role="alert"><p>{error}</p><button type="button" onClick={() => setAttempt(a => a + 1)}>Réessayer</button></div> : building && <>
       <header className={styles.header}>
         <div><p className={styles.eyebrow}><Building2 size={16} /> FICHE BÂTIMENT</p><h1>{building.name}</h1><p>{[building.address, building.city].filter(Boolean).join(", ")}</p></div>
-        <div className={styles.operations}><Link href={`/sentinelle/${buildingId}/resilience`}><Shield size={17} /> Résilience</Link><Link href={`/sentinelle/${buildingId}`}>Sentinelle <ArrowRight size={17} /></Link></div>
+        <div className={styles.operations}>
+          {canReadDisplay && <Link href={`/display?buildingId=${encodeURIComponent(buildingId)}`}><MonitorUp size={17} /> CORO Display</Link>}
+          <Link href={`/sentinelle/${buildingId}/resilience`}><Shield size={17} /> Résilience</Link>
+          <Link href={`/sentinelle/${buildingId}`}>Sentinelle <ArrowRight size={17} /></Link>
+        </div>
       </header>
       <nav className={styles.sections} aria-label="Espaces documentaires du bâtiment">
         <button type="button" aria-pressed={section === "conformity"} aria-controls="building-conformity" onClick={() => setSection("conformity")}><FileCheck2 size={24} /><span><strong>Documents de conformité</strong><small>PMU, PSI, PCA et livrables préparés par votre conseiller</small><span>{projects.length} dossier{projects.length > 1 ? "s" : ""} de conformité</span></span></button>

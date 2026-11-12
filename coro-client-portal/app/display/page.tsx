@@ -81,7 +81,10 @@ export default function DisplayPage() {
   const permissions = new Set(getUser()?.displayPermissions ?? []);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [observations, setObservations] = useState<Observation[]>([]);
-  const [building, setBuilding] = useState("");
+  const [building, setBuilding] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return new URLSearchParams(window.location.search).get("buildingId") ?? "";
+  });
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Plan | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
