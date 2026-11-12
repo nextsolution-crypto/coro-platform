@@ -18,6 +18,7 @@ import {
   DeviceTelemetryDto,
   DeviceHeartbeatDto,
   EnrollDisplayDeviceDto,
+  ReconcileDeviceEventsDto,
 } from './dto/device-gateway.dto';
 import { DeviceGatewayService } from './device-gateway.service';
 
@@ -82,5 +83,11 @@ export class DeviceGatewayController {
   @HttpCode(202)
   heartbeat(@Body() dto: DeviceHeartbeatDto) {
     return this.gateway.heartbeat(dto);
+  }
+
+  @Post('events/reconcile')
+  @HttpCode(202)
+  reconcileEvents(@Body() dto: ReconcileDeviceEventsDto) {
+    return this.gateway.reconcileEvents(dto);
   }
 }

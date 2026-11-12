@@ -26,7 +26,10 @@ async function syncDirectory(path: string): Promise<void> {
   }
 }
 
-async function atomicWrite(path: string, bytes: Uint8Array): Promise<void> {
+export async function atomicWrite(
+  path: string,
+  bytes: Uint8Array,
+): Promise<void> {
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
   const temporary = `${path}.${randomBytes(8).toString('hex')}.tmp`;
   const handle = await open(temporary, 'wx', 0o600);

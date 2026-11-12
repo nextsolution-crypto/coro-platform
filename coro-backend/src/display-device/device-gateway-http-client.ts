@@ -81,6 +81,13 @@ export class DeviceGatewayHttpClient {
     return this.signedPost('/device-gateway/heartbeat', payload);
   }
 
+  reconcileEvents(payload: Json) {
+    return this.signedPost<{ acceptedIds: string[]; classification: string }>(
+      '/device-gateway/events/reconcile',
+      payload,
+    );
+  }
+
   private async signedPost<T>(path: string, payload: Json): Promise<T> {
     const response = await this.signedRequest(path, payload);
     return (await response.json()) as T;

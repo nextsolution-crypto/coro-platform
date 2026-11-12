@@ -41,7 +41,10 @@ describe('DeviceGatewayService machine authentication', () => {
           return { count: 1 };
         }),
       },
-      displayDeviceEvent: { create: jest.fn(async ({ data }: any) => data) },
+      displayDeviceEvent: {
+        create: jest.fn(async ({ data }: any) => data),
+        createMany: jest.fn(async ({ data }: any) => ({ count: data.length })),
+      },
       $transaction: jest.fn(async (items: Promise<unknown>[]) =>
         Promise.all(items),
       ),
@@ -130,5 +133,81 @@ describe('DeviceGatewayService machine authentication', () => {
       'DEVICE_REQUEST_SCOPE_MISMATCH',
     );
     expect(prisma.displayDeviceNonce.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('reconciles an ordered local journal with duplicate-safe persistence', async () => {
+    const { service, prisma } = fixture();
+    const firstUnsigned = {
+      id: 'event-local-000000000001',
+      sequence: 1,
+      occurredAt: new Date(0).toISOString(),
+      type: 'BOOT',
+      details: {},
+      previousHash: 'GENESIS',
+    };
+    const firstHash = createHash('sha256')
+      .update(canonicalize(firstUnsigned))
+      .digest('hex');
+    const secondUnsigned = {
+      id: 'event-local-000000000002',
+      sequence: 2,
+      occurredAt: new Date(1).toISOString(),
+      type: 'NETWORK_LOST',
+      details: { fallback: 'VERIFIED_CACHE' },
+      previousHash: firstHash,
+    };
+    const events = [
+      { ...firstUnsigned, hash: firstHash },
+      {
+        ...secondUnsigned,
+        hash: createHash('sha256')
+          .update(canonicalize(secondUnsigned))
+          .digest('hex'),
+      },
+    ];
+    const payload = { requestId: 'events-reconcile-0001', events };
+    const path = '/device-gateway/events/reconcile';
+    const bodySha256 = createHash('sha256')
+      .update(canonicalize(payload))
+      .digest('hex');
+    const challenge = await service.challenge({
+      deviceId: device.id,
+      operation: 'events',
+      method: 'POST',
+      path,
+      bodySha256,
+    });
+    const timestamp = new Date().toISOString();
+    const statement = Buffer.from(
+      [
+        'CORO-DISPLAY-REQUEST',
+        device.id,
+        timestamp,
+        challenge.nonce,
+        'POST',
+        path,
+        bodySha256,
+      ].join('\n'),
+    );
+    await expect(
+      service.reconcileEvents({
+        ...payload,
+        proof: {
+          deviceId: device.id,
+          timestamp,
+          nonce: challenge.nonce,
+          method: 'POST',
+          path,
+          bodySha256,
+          signature: sign(null, statement, keys.privateKey).toString('base64'),
+        },
+      }),
+    ).resolves.toEqual({
+      acceptedIds: events.map((event) => event.id),
+      classification: 'HISTORICAL_NOT_CURRENT_STATE',
+    });
+    expect(prisma.displayDeviceEvent.createMany).toHaveBeenCalledWith(
+      expect.objectContaining({ skipDuplicates: true }),
+    );
   });
 });

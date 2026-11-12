@@ -35,8 +35,10 @@ export class ConnectedPlayerService {
     );
   }
 
-  async restore(): Promise<CachedPlan | null> {
-    this.active = await this.cache.readVerified();
+  async restore(
+    revokedDocumentVersionIds: ReadonlySet<string> = new Set(),
+  ): Promise<CachedPlan | null> {
+    this.active = await this.cache.readVerified({ revokedDocumentVersionIds });
     return this.active;
   }
 

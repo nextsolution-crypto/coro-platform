@@ -5,6 +5,7 @@ import {
   createPublicKey,
   generateKeyPairSync,
   sign,
+  type KeyObject,
 } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -48,7 +49,7 @@ export class SyntheticDeviceKeyStore implements DeviceKeyStore {
 
 /** Process-local adapter. Production must replace it with an OS/hardware keystore. */
 export class EnvironmentDeviceKeyStore implements DeviceKeyStore {
-  private readonly privateKey;
+  private readonly privateKey: KeyObject;
   constructor(
     private readonly id: string,
     privateKeyPem: string,
@@ -83,9 +84,23 @@ export interface ChromiumLauncher {
     args: string[];
     defaultViewport: null;
   }): Promise<{
-    newPage(): Promise<{ goto(url: string): Promise<unknown> }>;
+    newPage(): Promise<{
+      goto(url: string): Promise<unknown>;
+      setDefaultNavigationTimeout?(timeout: number): void;
+      setRequestInterception?(enabled: boolean): Promise<void>;
+      on?(
+        event: 'request',
+        handler: (request: InterceptedRequest) => void,
+      ): unknown;
+    }>;
     close(): Promise<void>;
   }>;
+}
+
+interface InterceptedRequest {
+  url(): string;
+  abort(): Promise<void>;
+  continue(): Promise<void>;
 }
 
 export class LocalPlayerOrigin {
@@ -156,7 +171,15 @@ export async function launchKioskPlayer(
     '--kiosk',
     '--disable-extensions',
     '--disable-features=Translate,AutofillServerCommunication',
+    '--disable-background-networking',
+    '--disable-component-update',
+    '--disable-default-apps',
+    '--disable-prompt-on-repost',
+    '--disable-sync',
+    '--metrics-recording-only',
     '--no-first-run',
+    '--no-default-browser-check',
+    '--password-store=basic',
   ];
   validateKioskLaunchConfiguration({
     args,
@@ -171,6 +194,18 @@ export async function launchKioskPlayer(
     defaultViewport: null,
   });
   const page = await browser.newPage();
+  page.setDefaultNavigationTimeout?.(15_000);
+  await page.setRequestInterception?.(true);
+  page.on?.('request', (request) => {
+    try {
+      const requested = new URL(String(request.url()));
+      const application = new URL(applicationUrl);
+      if (requested.origin !== application.origin) void request.abort();
+      else void request.continue();
+    } catch {
+      void request.abort();
+    }
+  });
   await page.goto(applicationUrl);
   return browser;
 }
