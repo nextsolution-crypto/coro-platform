@@ -21,8 +21,8 @@
     "test:population-profile": "node app/population/populationContactProfile.contract.test.mjs",
     "test:bookings": "node app/bookings/bookings.contract.test.mjs",
     "test:offline-documents": "node app/offline-documents/offline-security.contract.test.mjs",
-    "test:pilot-restrictions": "node app/pilot-restrictions.contract.test.mjs"
-    ,"test:display-client": "node app/display/display.contract.test.mjs"
+    "test:pilot-restrictions": "node app/pilot-restrictions.contract.test.mjs",
+    "test:display-client": "node app/display/display.contract.test.mjs"
   },
   "dependencies": {
     "html5-qrcode": "^2.3.8",
@@ -42,6 +42,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "^16.4.2",
+    "playwright-core": "^1.51.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "zod": "4.6.6"

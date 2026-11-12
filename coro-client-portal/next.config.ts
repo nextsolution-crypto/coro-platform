@@ -16,7 +16,6 @@ const nextConfig: NextConfig = {
         headers: [
           ...sensitiveLinkHeaders,
           { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'Content-Security-Policy', value: "default-src 'self'; connect-src 'self' https://api.getcoro.io http://localhost:3002; img-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'" },
         ],
       },
     ];
