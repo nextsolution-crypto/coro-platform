@@ -11,6 +11,12 @@ WHERE "publicDisplayId" IS NULL;
 CREATE UNIQUE INDEX "DisplayLocation_publicDisplayId_key"
   ON "DisplayLocation"("publicDisplayId");
 
+-- Required by the tenant-scoped foreign keys below. The Prisma model already
+-- declares this compound identity; the migration must establish it before the
+-- activation and session tables reference it.
+CREATE UNIQUE INDEX "DisplayLocation_id_organizationId_buildingId_key"
+  ON "DisplayLocation"("id", "organizationId", "buildingId");
+
 CREATE TABLE "DisplayWebActivation" (
   "id" TEXT NOT NULL,
   "organizationId" TEXT NOT NULL,

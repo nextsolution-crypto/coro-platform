@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-import { UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { generateKeyPairSync } from 'node:crypto';
 import { DisplayWebService } from './display-web.service';
 
 describe('DisplayWebService security', () => {
@@ -26,6 +27,9 @@ describe('DisplayWebService security', () => {
   const audit: any = { record: jest.fn() };
   const storage: any = { downloadPrivate: jest.fn() };
   const service = new DisplayWebService(prisma, authorization, audit, storage);
+  const validPublicJwk = generateKeyPairSync('ec', {
+    namedCurve: 'prime256v1',
+  }).publicKey.export({ format: 'jwk' });
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -69,7 +73,7 @@ describe('DisplayWebService security', () => {
       service.activate('A'.repeat(18), {
         code: '123456',
         keyId: 'browser-key-a',
-        publicKeyJwk: { kty: 'EC', crv: 'P-256', x: 'x', y: 'y' },
+        publicKeyJwk: validPublicJwk,
       }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
     expect(tx.displayWebActivation.update).toHaveBeenCalledWith({
@@ -87,6 +91,22 @@ describe('DisplayWebService security', () => {
         publicKeyJwk: { kty: 'EC', crv: 'P-256', x: 'x', y: 'y', d: 'private' },
       }),
     ).rejects.toThrow('Clé navigateur invalide.');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects malformed P-256 coordinates before database mutation', async () => {
+    await expect(
+      service.activate('A'.repeat(18), {
+        code: '123456',
+        keyId: 'browser-key-a',
+        publicKeyJwk: {
+          kty: 'EC',
+          crv: 'P-256',
+          x: 'A'.repeat(43),
+          y: 'A'.repeat(43),
+        },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });

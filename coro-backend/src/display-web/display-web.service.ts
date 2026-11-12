@@ -9,10 +9,12 @@ import {
 import { DisplayPermission, Prisma } from '@prisma/client';
 import {
   createHash,
+  createPublicKey,
   randomBytes,
   randomInt,
   timingSafeEqual,
 } from 'node:crypto';
+import type { JsonWebKey as NodeJsonWebKey } from 'node:crypto';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import type { SpatialActor } from '../spatial/spatial-authorization.service';
@@ -454,16 +456,32 @@ export class DisplayWebService {
   }
 
   private validJwk(value: Record<string, unknown>) {
-    return (
-      value &&
-      value.kty === 'EC' &&
-      value.crv === 'P-256' &&
-      typeof value.x === 'string' &&
-      typeof value.y === 'string' &&
-      String(value.x).length <= 128 &&
-      String(value.y).length <= 128 &&
-      value.d === undefined
-    );
+    if (
+      !value ||
+      value.kty !== 'EC' ||
+      value.crv !== 'P-256' ||
+      typeof value.x !== 'string' ||
+      typeof value.y !== 'string' ||
+      value.x.length < 40 ||
+      value.x.length > 128 ||
+      value.y.length < 40 ||
+      value.y.length > 128 ||
+      value.d !== undefined
+    )
+      return false;
+    try {
+      const key = createPublicKey({
+        key: value as NodeJsonWebKey,
+        format: 'jwk',
+      });
+      return (
+        key.asymmetricKeyType === 'ec' &&
+        (!key.asymmetricKeyDetails?.namedCurve ||
+          key.asymmetricKeyDetails.namedCurve === 'prime256v1')
+      );
+    } catch {
+      return false;
+    }
   }
 
   private genericUnavailable() {
