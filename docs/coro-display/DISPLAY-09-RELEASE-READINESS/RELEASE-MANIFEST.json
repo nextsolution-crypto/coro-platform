@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "preparedAt": "2026-11-12T23:45:00Z",
+  "sourceSha": "5ae7cd213346169465ee739d09df6d39b26ac6c3",
+  "productionSha": "e83d83a1afcb80d9bc95037dadc27700d3f68d89",
+  "images": {
+    "backend": {"localDigest":"sha256:09c8119a804329d7d50c4b41aee66e097cf54737f8a8b870b996bd3a64066fa8","registryDigest":"UNRESOLVED","architecture":"linux/amd64"},
+    "frontend": {"localDigest":"sha256:84179111a1cc7c20cde175faf93248919f3c4559d909147c1b98003d2b299423","registryDigest":"UNRESOLVED","architecture":"linux/amd64"},
+    "clientPortal": {"localDigest":"sha256:b8bdcc19a97f60bc5329ee62469f675dac6aec3a6be8d5d171d0889671e6a631","registryDigest":"UNRESOLVED","architecture":"linux/amd64"},
+    "website": {"localDigest":"sha256:063406f7f2dbcc63b19f774b24068d49dd58f721bba580271f810256c20ff21e","registryDigest":"UNRESOLVED","architecture":"linux/amd64"}
+  },
+  "migrations":{"before":176,"after":187,"candidateCount":11,"simulation":"PASS"},
+  "dns":{"hostname":"display.getcoro.io","status":"NXDOMAIN","target":"UNRESOLVED","tls":"UNRESOLVED"},
+  "demo":{"organizationId":"916f54ec-af22-45e0-99db-a369d9630002","buildingId":"UNRESOLVED","profile":"WEB_VIEW_ONLY","externalKey":"display-demo-tour-premont-e03-corridor-est"},
+  "featureFlags":{"buildingBridge":false,"machineIncidentOpsProvenance":false,"emergencyEligible":false},
+  "gates":{"code":"PASS","database":"PASS","localImages":"PASS","infrastructure":"PASS","dnsTls":"CONDITIONAL","demoIdentity":"CONDITIONAL","authorization":"PENDING"},
+  "productionMutationPerformed": false,
+  "verdict": "GO_CONDITIONNEL_RELEASE_READY"
+}
