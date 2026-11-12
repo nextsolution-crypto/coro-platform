@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "mode": "PLAN_ONLY_NO_MUTATION",
+  "targetLookup": {
+    "buildingDisplayName": "Tour Prémont",
+    "buildingAddressDisplay": "1200 boulevard Robert-Bourassa, Montréal",
+    "organizationDisplayName": "Groupe Immobilier Prémont",
+    "accountDisplayName": "Martin Gagnon",
+    "canonicalIds": null
+  },
+  "syntheticLocation": {
+    "externalKey": "display-demo-tour-premont-e03-corridor-est",
+    "name": "Étage 3 — Corridor Est — CORO Display Démo",
+    "profile": "WEB_VIEW_ONLY"
+  },
+  "documents": [
+    "CORO-DISPLAY-DEMO-TOUR-PREMONT-E03-V1.pdf",
+    "CORO-DISPLAY-DEMO-TOUR-PREMONT-E03-V2.pdf"
+  ],
+  "guards": {
+    "requiresAuthorizedCanonicalLookup": true,
+    "requiresFictitiousBuildingConfirmation": true,
+    "productionMutationAllowed": false,
+    "touchExistingPmuPca": false,
+    "touchExistingClientDocuments": false
+  },
+  "rollback": "Delete only resources bearing externalKey after verifying zero non-demo references."
+}
