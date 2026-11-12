@@ -17,6 +17,7 @@
     "start:prod": "node dist/main",
     "qa:runtime": "node dist/src/main.js",
     "start:display-pdf-worker": "node dist/src/display-pdf-worker/main.js",
+    "start:display-player": "ts-node src/display-device/connected-player-main.ts",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
