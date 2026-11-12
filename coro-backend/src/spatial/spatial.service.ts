@@ -26,6 +26,7 @@ import {
   SpatialActor,
   SpatialAuthorizationService,
 } from './spatial-authorization.service';
+import { randomBytes } from 'node:crypto';
 
 @Injectable()
 export class SpatialService {
@@ -545,6 +546,7 @@ export class SpatialService {
             floorId: dto.floorId,
             zoneId: dto.zoneId,
             code: this.code(dto.code),
+            publicDisplayId: randomBytes(9).toString('hex').toUpperCase(),
             label: this.text(dto.label, 'libellé'),
             description: dto.description?.trim() || null,
             positionX: dto.positionX,

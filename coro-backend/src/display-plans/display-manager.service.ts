@@ -72,6 +72,7 @@ export class DisplayManagerService {
                 orderBy: { label: 'asc' },
                 select: {
                   id: true,
+                  publicDisplayId: true,
                   floorId: true,
                   zoneId: true,
                   code: true,
