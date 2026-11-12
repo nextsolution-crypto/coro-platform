@@ -3102,6 +3102,8 @@ model DisplayLocation {
   floorId            String
   zoneId             String?
   code               String
+  publicDisplayId    String?               @unique @db.VarChar(24)
+  publicIdRotatedAt  DateTime?
   label              String
   description        String?
   positionX          Float?
@@ -3120,10 +3122,58 @@ model DisplayLocation {
   zone                   BuildingZone?                  @relation(fields: [zoneId, organizationId, buildingId, floorId], references: [id, organizationId, buildingId, floorId], onDelete: Restrict)
   planPublications       DisplayPlanPublication[]
   correctionObservations DisplayCorrectionObservation[]
+  webActivations         DisplayWebActivation[]
+  webSessions            DisplayWebSession[]
 
   @@unique([buildingId, code])
+  @@unique([id, organizationId, buildingId])
   @@unique([id, organizationId, buildingId, floorId])
   @@index([organizationId, buildingId, floorId, zoneId, status], map: "DisplayLocation_org_building_floor_zone_status_idx")
+}
+
+model DisplayWebActivation {
+  id              String    @id @default(uuid())
+  organizationId  String
+  buildingId      String
+  locationId      String
+  codeHash        String    @unique @db.Char(64)
+  expiresAt       DateTime
+  consumedAt      DateTime?
+  revokedAt       DateTime?
+  failedAttempts  Int       @default(0)
+  createdByUserId String
+  createdAt       DateTime  @default(now())
+
+  location DisplayLocation @relation(fields: [locationId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
+
+  @@index([organizationId, buildingId, locationId, expiresAt])
+}
+
+model DisplayWebSession {
+  id               String    @id @default(uuid())
+  organizationId   String
+  buildingId       String
+  locationId       String
+  deviceId         String
+  tokenHash        String    @unique @db.Char(64)
+  keyId            String    @db.VarChar(128)
+  publicKeyJwk      Json
+  capability       String    @default("WEB_VIEW_ONLY")
+  status           String    @default("ACTIVE")
+  expiresAt        DateTime
+  lastSeenAt       DateTime?
+  lastConfirmedAt  DateTime?
+  lastPublicationId String?
+  lastVersion      Int?
+  revokedAt        DateTime?
+  revocationReason String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  location DisplayLocation @relation(fields: [locationId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
+
+  @@unique([deviceId, organizationId])
+  @@index([organizationId, buildingId, locationId, status])
 }
 
 model DisplayPlanPublication {

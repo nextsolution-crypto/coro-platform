@@ -36,6 +36,16 @@ export interface RouteEntry {
 }
 
 export const ROUTE_REGISTRY: readonly RouteEntry[] = [
+  {
+    pattern: "/d/[publicDisplayId]",
+    family: "public",
+    shell: "none",
+    status: "beta",
+    render: "skin",
+    styling: ["css-module"],
+    sensitivity: ["documents", "emergency-content"],
+    validation: ["test:skin", "test:display-client"],
+  },
   { pattern: "/buildings/[id]", family: "portal", shell: "none", status: "beta", render: "skin", styling: ["css-module"], sensitivity: ["documents"], validation: ["test:skin", "test:offline-documents"] },
   { pattern: "/manual", family: "portal", shell: "none", status: "beta", render: "skin", styling: ["inline-hex", "css-module"] },
   {

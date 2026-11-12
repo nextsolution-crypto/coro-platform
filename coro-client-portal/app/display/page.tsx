@@ -18,7 +18,7 @@ type Plan = {
   building: { name: string };
   floor: { name: string };
   zone: { name: string } | null;
-  location: { label: string };
+  location: { label: string; publicDisplayId: string | null };
   projectFile: { name: string };
   previewPath: string;
 };
@@ -249,6 +249,12 @@ export default function DisplayPage() {
                     {plan.zone ? ` · ${plan.zone.name}` : ""}
                   </p>
                   <p>Emplacement : {plan.location.label}</p>
+                  {plan.location.publicDisplayId && (
+                    <p>
+                      URL permanente :{" "}
+                      <code>{`https://display.getcoro.io/d/${plan.location.publicDisplayId}`}</code>
+                    </p>
+                  )}
                   <p>
                     Version documentaire {plan.sourceVersion} · variante{" "}
                     {plan.variantVersion}
@@ -260,6 +266,18 @@ export default function DisplayPage() {
                 >
                   Prévisualiser
                 </button>
+                {plan.location.publicDisplayId && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void navigator.clipboard.writeText(
+                        `https://display.getcoro.io/d/${plan.location.publicDisplayId}`,
+                      )
+                    }
+                  >
+                    Copier l’URL
+                  </button>
+                )}
               </article>
             ))}
           </section>

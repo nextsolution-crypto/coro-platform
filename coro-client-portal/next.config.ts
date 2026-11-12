@@ -11,6 +11,13 @@ const nextConfig: NextConfig = {
     return [
       { source: '/reset-password', headers: sensitiveLinkHeaders },
       { source: '/magic', headers: sensitiveLinkHeaders },
+      {
+        source: '/d/:path*',
+        headers: [
+          ...sensitiveLinkHeaders,
+          { key: 'X-Frame-Options', value: 'DENY' },
+        ],
+      },
     ];
   },
 };

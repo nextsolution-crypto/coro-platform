@@ -82,6 +82,7 @@ import { PilotScenariosModule } from './pilot-scenarios/pilot-scenarios.module';
 import { SpatialModule } from './spatial/spatial.module';
 import { DisplayPlansModule } from './display-plans/display-plans.module';
 import { DisplayDeviceModule } from './display-device/display-device.module';
+import { DisplayWebModule } from './display-web/display-web.module';
 import { DisplayOrchestrationModule } from './display-orchestration/display-orchestration.module';
 
 @Module({
@@ -115,6 +116,7 @@ import { DisplayOrchestrationModule } from './display-orchestration/display-orch
     SpatialModule,
     DisplayPlansModule,
     DisplayDeviceModule,
+    DisplayWebModule,
     DisplayOrchestrationModule,
     AuthModule,
     UsersModule,
