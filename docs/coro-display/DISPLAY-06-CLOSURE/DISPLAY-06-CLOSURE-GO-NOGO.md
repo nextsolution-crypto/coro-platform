@@ -2,7 +2,7 @@
 
 ## Constat
 
-Les six P0 disposent d'une correction et d'une preuve logicielle; contre-revue et GitHub restent à terminer.
+Les six P0 disposent d'une correction et d'une preuve logicielle. La contre-revue isolée est favorable et la CI de la PR Draft #253 est verte sur le candidat produit `af1c1f833eb0258595fb9ae4d026bc87886b4074`.
 
 ## Correction et preuve
 
@@ -14,8 +14,8 @@ Watchdog raccordé, signer externe, intégrité authentifiée, révocations sign
 
 ## Risque résiduel
 
-CI Linux/OCR, keystore matériel, systemd cible, UPS, coupures et endurance 8 h/24 h.
+Keystore matériel, systemd cible, UPS, coupures et endurance 8 h/24 h. L'OCR Linux est PASS en CI; il reste NOT_VERIFIED localement seulement.
 
 ## Verdict
 
-**GO CONDITIONNEL DISPLAY-06-SOFTWARE-CLOSURE** jusqu'à contre-revue, intégration propre et PR Draft verte. Aucune fusion ni production autorisée.
+**GO CONDITIONNEL DISPLAY-06-SOFTWARE-CLOSURE.** Les critères logiciels P0 et la CI sont démontrés; les réserves conditionnelles sont physiques et explicitement transférées à DISPLAY-08. Aucune fusion ni production autorisée.
