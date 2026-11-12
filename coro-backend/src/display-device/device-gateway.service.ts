@@ -30,6 +30,7 @@ import {
   DeviceChallengeDto,
   DeviceRequestProofDto,
   DeviceTelemetryDto,
+  DeviceHeartbeatDto,
   EnrollDisplayDeviceDto,
 } from './dto/device-gateway.dto';
 import { DISPLAY_MANIFEST_SIGNER } from './manifest-signer';
@@ -279,6 +280,7 @@ export class DeviceGatewayService {
         };
         return {
           syncId: sync.id,
+          publicationVersion: publication.versionNumber,
           manifest,
         };
       },
@@ -339,6 +341,9 @@ export class DeviceGatewayService {
         manifestSequence: dto.manifestSequence,
         publicationId: dto.publicationId,
         publicationVersion: dto.publicationVersion,
+        assignmentId: dto.assignmentId,
+        documentSha256: dto.documentSha256,
+        activatedAt: dto.activatedAt,
       },
     );
     return this.prisma.$transaction(async (tx) => {
@@ -354,6 +359,19 @@ export class DeviceGatewayService {
         },
       });
       if (!sync) throw new ConflictException('SYNC_CONFIRMATION_INVALID');
+      const assignment = await tx.displayDeviceAssignment.findFirst({
+        where: {
+          id: dto.assignmentId,
+          deviceId: device.id,
+          publicationId: dto.publicationId,
+          organizationId: device.organizationId,
+          buildingId: device.buildingId,
+          locationId: device.locationId,
+          status: 'ACTIVE',
+        },
+      });
+      if (!assignment)
+        throw new ConflictException('SYNC_ASSIGNMENT_NO_LONGER_VALID');
       const publication = await tx.displayPlanPublication.findFirst({
         where: {
           id: dto.publicationId,
@@ -363,6 +381,7 @@ export class DeviceGatewayService {
           versionNumber: dto.publicationVersion,
           status: 'PUBLISHED',
           revokedAt: null,
+          variantSha256: dto.documentSha256,
         },
       });
       if (!publication)
@@ -432,6 +451,58 @@ export class DeviceGatewayService {
       }),
     ]);
     return { accepted: true, observation: 'DECLARED_NOT_PHYSICALLY_VERIFIED' };
+  }
+
+  async heartbeat(dto: DeviceHeartbeatDto) {
+    const declared = {
+      softwareVersion: dto.softwareVersion,
+      mode: dto.mode,
+      documentVersionId: dto.documentVersionId,
+      lastAcceptedSequence: dto.lastAcceptedSequence,
+      cacheHealth: dto.cacheHealth,
+      runtimeHealth: dto.runtimeHealth,
+      networkStatus: dto.networkStatus,
+      errorCodes: dto.errorCodes.slice(0, 20),
+    };
+    const device = await this.authenticate(
+      dto.proof,
+      'POST',
+      '/device-gateway/heartbeat',
+      { requestId: dto.requestId, ...declared },
+    );
+    const now = new Date();
+    await this.prisma.$transaction([
+      this.prisma.displayDevice.update({
+        where: { id: device.id },
+        data: {
+          softwareVersion: dto.softwareVersion,
+          lastCommunicationAt: now,
+          lastHeartbeatAt: now,
+          lastDeclaredMode: dto.mode,
+          lastCacheHealth: dto.cacheHealth,
+          lastRuntimeHealth: dto.runtimeHealth,
+          lastNetworkStatus: dto.networkStatus,
+          lastHeartbeatErrors: declared.errorCodes,
+        },
+      }),
+      this.prisma.displayDeviceEvent.create({
+        data: {
+          id: randomUUID(),
+          deviceId: device.id,
+          organizationId: device.organizationId,
+          buildingId: device.buildingId,
+          eventType: 'HEARTBEAT_DECLARED',
+          requestId: dto.requestId,
+          declaredState: declared,
+          verifiedAt: now,
+        },
+      }),
+    ]);
+    return {
+      accepted: true,
+      authenticatedAt: now.toISOString(),
+      physicalDisplayProof: false,
+    };
   }
 
   private async authenticate(

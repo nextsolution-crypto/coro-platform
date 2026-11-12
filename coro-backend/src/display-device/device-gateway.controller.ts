@@ -16,6 +16,7 @@ import {
   ConfirmDisplaySyncDto,
   DeviceChallengeDto,
   DeviceTelemetryDto,
+  DeviceHeartbeatDto,
   EnrollDisplayDeviceDto,
 } from './dto/device-gateway.dto';
 import { DeviceGatewayService } from './device-gateway.service';
@@ -75,5 +76,11 @@ export class DeviceGatewayController {
   @HttpCode(202)
   telemetry(@Body() dto: DeviceTelemetryDto) {
     return this.gateway.telemetry(dto);
+  }
+
+  @Post('heartbeat')
+  @HttpCode(202)
+  heartbeat(@Body() dto: DeviceHeartbeatDto) {
+    return this.gateway.heartbeat(dto);
   }
 }

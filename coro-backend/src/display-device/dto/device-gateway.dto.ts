@@ -66,4 +66,24 @@ export class ConfirmDisplaySyncDto extends AuthenticatedDeviceRequestDto {
   @IsInt() @Min(1) manifestSequence!: number;
   @IsString() @Length(1, 128) publicationId!: string;
   @IsInt() @Min(1) publicationVersion!: number;
+  @IsString() @Length(1, 128) assignmentId!: string;
+  @Matches(/^[a-f0-9]{64}$/) documentSha256!: string;
+  @IsISO8601() activatedAt!: string;
+}
+
+export class DeviceHeartbeatDto extends AuthenticatedDeviceRequestDto {
+  @IsString() @MaxLength(100) softwareVersion!: string;
+  @IsIn([
+    'NORMAL_CYCLE',
+    'PERMANENT_PLAN',
+    'EMERGENCY_EXERCISE',
+    'EMERGENCY_REAL',
+  ])
+  mode!: string;
+  @IsOptional() @IsString() @MaxLength(128) documentVersionId?: string;
+  @IsOptional() @IsInt() @Min(0) lastAcceptedSequence?: number;
+  @IsIn(['HEALTHY', 'DEGRADED', 'CORRUPT']) cacheHealth!: string;
+  @IsIn(['HEALTHY', 'DEGRADED', 'FAILED']) runtimeHealth!: string;
+  @IsIn(['ONLINE', 'OFFLINE', 'DEGRADED']) networkStatus!: string;
+  @IsArray() @IsString({ each: true }) errorCodes!: string[];
 }

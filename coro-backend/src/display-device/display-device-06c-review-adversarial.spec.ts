@@ -114,6 +114,9 @@ describe('DISPLAY-06C independent adversarial review', () => {
 
   it('refuses a late confirmation that would roll back the accepted sequence', async () => {
     const transaction = {
+      displayDeviceAssignment: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'assignment-review' }),
+      },
       displayDeviceSync: {
         findFirst: jest.fn().mockResolvedValue({ id: 'sync-old' }),
         updateMany: jest.fn(),
@@ -146,6 +149,9 @@ describe('DISPLAY-06C independent adversarial review', () => {
         manifestSequence: 4,
         publicationId: 'publication-review',
         publicationVersion: 7,
+        assignmentId: 'assignment-review',
+        documentSha256: 'a'.repeat(64),
+        activatedAt: new Date().toISOString(),
         proof: {} as never,
       }),
     ).rejects.toThrow('SYNC_SEQUENCE_REPLAY_OR_ROLLBACK');

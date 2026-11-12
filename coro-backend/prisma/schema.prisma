@@ -3311,6 +3311,12 @@ model DisplayDevice {
   lastAcceptedManifestSequence BigInt            @default(0)
   lastDeclaredPublicationId  String?
   lastDeclaredVersion        Int?
+  lastHeartbeatAt            DateTime?
+  lastDeclaredMode           String?
+  lastCacheHealth            String?
+  lastRuntimeHealth          String?
+  lastNetworkStatus          String?
+  lastHeartbeatErrors        Json?
   revokedAt                  DateTime?
   revocationReason           String?
   lockVersion                Int                 @default(0)

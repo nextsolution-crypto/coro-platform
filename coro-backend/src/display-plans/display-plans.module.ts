@@ -12,6 +12,7 @@ import { DisplayPlanProfileService } from './display-plan-profile.service';
 import { DisplayManagerController } from './display-manager.controller';
 import { DisplayManagerService } from './display-manager.service';
 import { DisplayObservationWorkflowService } from './display-observation-workflow.service';
+import { DeviceAdministrationService } from '../display-device/device-administration.service';
 
 @Module({
   imports: [PrismaModule, SpatialModule, StorageModule],
@@ -25,6 +26,7 @@ import { DisplayObservationWorkflowService } from './display-observation-workflo
     DisplayPlanProfileService,
     DisplayManagerService,
     DisplayObservationWorkflowService,
+    DeviceAdministrationService,
   ],
   exports: [
     DisplayPlanPublicationService,

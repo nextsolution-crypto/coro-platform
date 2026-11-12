@@ -1,0 +1,12 @@
+{
+  "deviceId": "f695a6f5-913f-4a43-b84d-142673eb488a",
+  "assignmentId": "ad85fc60-76b0-4401-a850-6e4d1e30a24a",
+  "publicationId": "3f0d4354-8fd4-47c7-a1a3-fcce38beba10",
+  "manifestSequence": 1,
+  "renderSha256": "36ee1edf742e4418d6bf9b51c7b79cef098678a44fdaa6f62e16cafb0f0f08b0",
+  "syncStatus": "CONFIRMED",
+  "heartbeatAt": "2026-11-12T01:24:58.125Z",
+  "emergencyRestored": true,
+  "governedClear": true,
+  "physicalDisplayProof": false
+}

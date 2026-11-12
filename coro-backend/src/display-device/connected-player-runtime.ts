@@ -1,5 +1,11 @@
 import { createServer, Server } from 'node:http';
-import { createHash, generateKeyPairSync, sign } from 'node:crypto';
+import {
+  createHash,
+  createPrivateKey,
+  createPublicKey,
+  generateKeyPairSync,
+  sign,
+} from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { PLAYER_CSP, validateKioskLaunchConfiguration } from './kiosk-policy';
@@ -40,6 +46,37 @@ export class SyntheticDeviceKeyStore implements DeviceKeyStore {
   }
 }
 
+/** Process-local adapter. Production must replace it with an OS/hardware keystore. */
+export class EnvironmentDeviceKeyStore implements DeviceKeyStore {
+  private readonly privateKey;
+  constructor(
+    private readonly id: string,
+    privateKeyPem: string,
+  ) {
+    this.privateKey = createPrivateKey(privateKeyPem);
+    if (this.privateKey.asymmetricKeyType !== 'ed25519')
+      throw new Error('DEVICE_KEY_INVALID');
+  }
+  keyId() {
+    return Promise.resolve(this.id);
+  }
+  publicKeyPem() {
+    return Promise.resolve(
+      createPublicKey(this.privateKey)
+        .export({ type: 'spki', format: 'pem' })
+        .toString(),
+    );
+  }
+  sign(payload: Uint8Array) {
+    return Promise.resolve(
+      sign(null, payload, this.privateKey).toString('base64'),
+    );
+  }
+  hardwareBacked() {
+    return false;
+  }
+}
+
 export interface ChromiumLauncher {
   launch(options: {
     headless: boolean;
@@ -53,19 +90,31 @@ export interface ChromiumLauncher {
 
 export class LocalPlayerOrigin {
   private server?: Server;
-  constructor(private readonly renderPath: string) {}
+  constructor(
+    private readonly renderSource: string | (() => Promise<Buffer>),
+  ) {}
 
   async start(): Promise<string> {
     if (this.server) throw new Error('PLAYER_ORIGIN_ALREADY_STARTED');
-    const bytes = await readFile(resolve(this.renderPath));
     this.server = createServer((request, response) => {
       response.setHeader('Content-Security-Policy', PLAYER_CSP);
       response.setHeader('X-Content-Type-Options', 'nosniff');
       response.setHeader('Referrer-Policy', 'no-referrer');
       response.setHeader('Cache-Control', 'no-store');
       if (request.url === '/render') {
-        response.setHeader('Content-Type', 'image/webp');
-        response.end(bytes);
+        void (async () => {
+          try {
+            const bytes =
+              typeof this.renderSource === 'string'
+                ? await readFile(resolve(this.renderSource))
+                : await this.renderSource();
+            response.setHeader('Content-Type', 'image/webp');
+            response.end(bytes);
+          } catch {
+            response.statusCode = 503;
+            response.end();
+          }
+        })();
         return;
       }
       if (request.url === '/style.css') {
