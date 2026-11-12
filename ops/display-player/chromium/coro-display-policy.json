@@ -1,0 +1,13 @@
+{
+  "BrowserSignin": 0,
+  "DefaultPopupsSetting": 2,
+  "DeveloperToolsAvailability": 2,
+  "DownloadRestrictions": 3,
+  "ExtensionInstallBlocklist": ["*"],
+  "IncognitoModeAvailability": 1,
+  "PasswordManagerEnabled": false,
+  "PrintingEnabled": false,
+  "RestoreOnStartup": 4,
+  "SafeBrowsingProtectionLevel": 2,
+  "SyncDisabled": true
+}
