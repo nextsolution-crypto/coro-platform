@@ -1,9 +1,11 @@
 # Verdict GO / NO-GO
 
-Verdict local après contre-revue : **GO CONDITIONNEL DISPLAY-07-SOFTWARE-REVIEW**.
+Verdict : **GO POUR REVUE HUMAINE ET FUSION CONTRÔLÉE — AUCUNE FUSION AUTORISÉE PAR DISPLAY-07**.
 
-Garanties P0 démontrées : autorité, cloisonnement, ciblage, publication documentaire, signature, séquence, priorité, sortie gouvernée, persistance hors ligne, accusés distincts, atomicité/outbox, journal Incident, migration PostgreSQL et Chromium synthétique. La contre-revue a découvert puis fermé l'usurpation possible des provenances machine sur la route humaine.
+Les garanties P0 sont démontrées sur le candidat publié : autorité serveur, cloisonnement multitenant, ciblage déterministe, publication documentaire approuvée, signature Ed25519, séquence monotone, priorité des commandes, sortie gouvernée, persistance hors ligne, accusés distincts, atomicité avec outbox, journal Incident, migration PostgreSQL depuis zéro et rendu Chromium synthétique.
 
-Condition finale : la PR Draft doit obtenir une CI verte au SHA exact. Matériel, Building Bridge, observation physique, adaptateur Ops entrant, OCR Windows local et ordonnanceur proactif d'escalade hors ligne restent documentés sans être présentés comme vérifiés.
+La contre-revue indépendante a identifié puis fermé l'usurpation possible des provenances machine sur la route humaine. Les contrôles locaux et GitHub sont verts; les jobs de construction d'images et de release production sont ignorés par conception sur une PR.
 
-Aucune fusion, aucun déploiement et aucune activation d'appareil ne sont autorisés par ce verdict.
+Réserves explicites : matériel réel, Building Bridge, observation physique d'un écran, adaptateur Ops entrant, OCR Poppler local sous Windows et ordonnanceur proactif d'escalade hors ligne ne sont pas démontrés. Ces limites n'affaiblissent pas les contrôles logiciels validés, mais elles doivent être traitées avant toute activation opérationnelle réelle.
+
+Aucun Player matériel, aucune connexion à un panneau d'alarme incendie, aucune urgence réelle, aucun SMS/courriel, aucune fusion et aucun déploiement n'ont été exécutés.
