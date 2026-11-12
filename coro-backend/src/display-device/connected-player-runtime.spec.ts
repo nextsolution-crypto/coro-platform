@@ -77,7 +77,9 @@ describe('connected player runtime', () => {
   });
 
   it('rejects DNS-rebinding hosts, non-GET methods and unknown paths', async () => {
-    const origin = new LocalPlayerOrigin(Buffer.from('synthetic-render'));
+    const origin = new LocalPlayerOrigin(async () =>
+      Buffer.from('synthetic-render'),
+    );
     try {
       const url = await origin.start();
       const probe = (path: string, method = 'GET', host?: string) =>
