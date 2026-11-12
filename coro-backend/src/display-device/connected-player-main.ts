@@ -14,6 +14,7 @@ import {
 } from './connected-player-runtime';
 import { EmergencyStateStore } from './persistent-runtime';
 import { canonicalize } from '../display-player/manifest-validator';
+import { GovernedDisplayCommandProcessor } from '../display-orchestration/player-command-processor';
 import {
   DurableLocalJournal,
   FileMonotonicAnchor,
@@ -112,6 +113,15 @@ async function main() {
   });
   const persistedEmergency = await emergency.read();
   if (persistedEmergency) player.setMode(persistedEmergency.mode);
+  const commandProcessor = new GovernedDisplayCommandProcessor(
+    identity,
+    trustedKeys,
+    gateway,
+    player,
+    emergency,
+    journal,
+  );
+  await commandProcessor.restore();
   await player.restore(revocations.ids);
   try {
     const registry = await gateway.revocations(`revocations-${randomUUID()}`);
@@ -140,6 +150,7 @@ async function main() {
     await synchronizeWithBackoff(player);
     await journal.append('SYNC', { result: 'SUCCESS' });
     await player.heartbeat('ONLINE');
+    await commandProcessor.pollAndApply();
     const pendingEvents = await journal.pending();
     if (pendingEvents.length) {
       const reconciliation = await gateway.reconcileEvents({
@@ -161,10 +172,21 @@ async function main() {
   );
   const url = await origin.start();
   let browser = await launchKioskPlayer(puppeteer, url);
+  const commandTimer = setInterval(
+    () =>
+      void commandProcessor.pollAndApply().catch((error: unknown) =>
+        journal.append('ERROR', {
+          code: error instanceof Error ? error.message : 'COMMAND_POLL_FAILED',
+        }),
+      ),
+    5_000,
+  );
+  commandTimer.unref();
   let shuttingDown = false;
   const shutdown = async () => {
     if (shuttingDown) return;
     shuttingDown = true;
+    clearInterval(commandTimer);
     watchdog.stop();
     await journal.append('SHUTDOWN');
     await browser.close();
@@ -194,7 +216,9 @@ async function main() {
         chromium: connected ? ('HEALTHY' as const) : ('FAILED' as const),
         renderResponsive,
         cache: renderResponsive ? ('HEALTHY' as const) : ('DEGRADED' as const),
-        emergencyActive: Boolean(await emergency.read()),
+        emergencyActive: ['EMERGENCY_EXERCISE', 'EMERGENCY_REAL'].includes(
+          (await emergency.read())?.mode ?? '',
+        ),
         lastActivatedSequence: 0,
       };
     },

@@ -19,6 +19,6 @@ import {
       useExisting: EnvironmentManifestSigner,
     },
   ],
-  exports: [DeviceGatewayService],
+  exports: [DeviceGatewayService, DISPLAY_MANIFEST_SIGNER],
 })
 export class DisplayDeviceModule {}

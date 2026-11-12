@@ -636,7 +636,7 @@ export class DeviceGatewayService {
     };
   }
 
-  private async authenticate(
+  async authenticateDeviceRequest(
     proof: DeviceRequestProofDto,
     method: string,
     path: string,
@@ -701,5 +701,14 @@ export class DeviceGatewayService {
     if (consumed.count !== 1)
       throw new UnauthorizedException('DEVICE_REQUEST_REPLAY');
     return device;
+  }
+
+  private authenticate(
+    proof: DeviceRequestProofDto,
+    method: string,
+    path: string,
+    payload: Record<string, unknown>,
+  ) {
+    return this.authenticateDeviceRequest(proof, method, path, payload);
   }
 }
