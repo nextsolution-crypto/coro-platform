@@ -14,4 +14,4 @@ PR: https://github.com/nextsolution-crypto/coro-platform/pull/253. PASS: Backend
 
 ## Résultat et risque résiduel
 
-**PASS CI sur le SHA produit final avant ce commit documentaire.** Le commit de réconciliation ne modifie aucun code; ses checks applicables doivent rester verts. Aucune fusion ni production.
+**PASS CI sur le SHA final `a855d06b99d4a830162dcf84c43f194a3debdd04`.** PR #253 fusionnée par merge commit `31f9a1ed02e2c8cea4e62082b033bdcba1a52efb`. Le workflow post-fusion `43274357271` est PASS: backend-tests, PostgreSQL, OCR/PDF, Knowledge, quatre typechecks et build portail. `build-images` et `production-release` sont SKIPPED; aucune production.
