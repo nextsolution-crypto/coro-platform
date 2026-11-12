@@ -60,8 +60,8 @@ export function validateKioskLaunchConfiguration(
     throw new Error('KIOSK_ORIGIN_INVALID');
   }
   if (
-    !['app:', 'https:'].includes(application.protocol) ||
-    (application.protocol === 'https:' &&
+    !['app:', 'http:', 'https:'].includes(application.protocol) ||
+    (['http:', 'https:'].includes(application.protocol) &&
       !['127.0.0.1', 'localhost', '[::1]'].includes(application.hostname))
   )
     throw new Error('KIOSK_ORIGIN_FORBIDDEN');

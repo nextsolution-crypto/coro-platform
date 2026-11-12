@@ -190,6 +190,20 @@ enum DisplayPdfRenderJobStatus {
   CANCELLED
 }
 
+enum DisplayDeviceStatus {
+  REGISTERED
+  PENDING_ENROLLMENT
+  ACTIVE
+  SUSPENDED
+  REVOKED
+  RETIRED
+}
+
+enum DisplayDeviceAssignmentStatus {
+  ACTIVE
+  REVOKED
+}
+
 enum DemoEnvironmentStatus {
   ACTIVE
   PAUSED
@@ -3280,6 +3294,136 @@ model DisplayPdfRenderJob {
   @@unique([publicationId, requestId])
   @@index([status, nextAttemptAt, createdAt])
   @@index([organizationId, buildingId, publicationId])
+}
+
+model DisplayDevice {
+  id                         String              @id @default(uuid())
+  organizationId             String
+  buildingId                 String
+  locationId                 String
+  profile                    String
+  status                     DisplayDeviceStatus @default(PENDING_ENROLLMENT)
+  publicKey                  String              @db.Text
+  keyId                      String
+  softwareVersion            String?
+  lastVerifiedSyncAt         DateTime?
+  lastCommunicationAt        DateTime?
+  lastAcceptedManifestSequence BigInt            @default(0)
+  lastDeclaredPublicationId  String?
+  lastDeclaredVersion        Int?
+  lastHeartbeatAt            DateTime?
+  lastDeclaredMode           String?
+  lastCacheHealth            String?
+  lastRuntimeHealth          String?
+  lastNetworkStatus          String?
+  lastHeartbeatErrors        Json?
+  revokedAt                  DateTime?
+  revocationReason           String?
+  lockVersion                Int                 @default(0)
+  createdAt                  DateTime            @default(now())
+  updatedAt                  DateTime            @updatedAt
+
+  @@unique([organizationId, keyId])
+  @@unique([id, organizationId, buildingId])
+  @@index([organizationId, buildingId, locationId, status])
+}
+
+model DisplayDeviceEnrollmentInvitation {
+  id                String   @id @default(uuid())
+  deviceId          String
+  organizationId    String
+  buildingId        String
+  locationId        String
+  tokenHash         String   @unique @db.Char(64)
+  expectedKeyId     String
+  expectedPublicKey String   @db.Text
+  expiresAt         DateTime
+  consumedAt        DateTime?
+  consumedRequestId String?  @unique
+  createdByUserId   String
+  createdAt         DateTime @default(now())
+
+  @@index([deviceId, organizationId, expiresAt])
+}
+
+model DisplayDeviceNonce {
+  id             String   @id @default(uuid())
+  deviceId       String
+  organizationId String
+  nonceHash      String   @unique @db.Char(64)
+  operation      String
+  httpMethod     String
+  requestPath    String
+  bodySha256     String   @db.Char(64)
+  expiresAt      DateTime
+  consumedAt     DateTime?
+  createdAt      DateTime @default(now())
+
+  @@index([deviceId, organizationId, expiresAt, consumedAt])
+}
+
+model DisplayDeviceAssignment {
+  id             String                        @id @default(uuid())
+  deviceId       String
+  organizationId String
+  buildingId     String
+  locationId     String
+  publicationId  String
+  profile        String
+  status         DisplayDeviceAssignmentStatus @default(ACTIVE)
+  assignedById   String
+  assignedAt     DateTime                      @default(now())
+  revokedAt      DateTime?
+  revocationReason String?
+  lockVersion    Int                           @default(0)
+
+  @@unique([deviceId, publicationId])
+  @@index([organizationId, buildingId, locationId, status])
+  @@index([publicationId, status])
+}
+
+model DisplayDeviceManifestSequence {
+  deviceId       String   @id
+  organizationId String
+  nextSequence   BigInt   @default(1)
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+model DisplayDeviceSync {
+  id               String   @id @default(uuid())
+  deviceId         String
+  organizationId   String
+  buildingId       String
+  publicationId    String?
+  manifestSequence BigInt?
+  status           String
+  requestId        String
+  errorCode        String?
+  startedAt        DateTime @default(now())
+  confirmedAt      DateTime?
+  createdAt        DateTime @default(now())
+
+  @@unique([deviceId, requestId])
+  @@index([organizationId, buildingId, deviceId, createdAt])
+}
+
+model DisplayDeviceEvent {
+  id             String   @id @default(uuid())
+  deviceId       String
+  organizationId String
+  buildingId     String
+  eventType      String
+  requestId      String?
+  declaredState  Json?
+  verifiedAt     DateTime?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  @@unique([deviceId, requestId])
+  @@index([organizationId, buildingId, deviceId, createdAt])
+  @@index([eventType, createdAt])
 }
 
 model Project {

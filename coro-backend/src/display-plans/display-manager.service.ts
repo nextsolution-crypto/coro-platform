@@ -37,7 +37,8 @@ export class DisplayManagerService {
     const buildingIds = user.displayBuildingIds;
     const can = (permission: DisplayPermission) =>
       user.displayPermissions.includes(permission);
-    const [buildings, plans, sources, events] = await Promise.all([
+    const deviceAuthorityAvailable = Boolean(this.prisma.displayDevice);
+    const [buildings, plans, sources, events, devices] = await Promise.all([
       this.prisma.building.findMany({
         where: { id: { in: buildingIds }, organizationId, isActive: true },
         select: {
@@ -177,6 +178,31 @@ export class DisplayManagerService {
             },
           })
         : Promise.resolve([]),
+      this.prisma.displayDevice?.findMany({
+        where: { organizationId, buildingId: { in: buildingIds } },
+        orderBy: [{ lastCommunicationAt: 'desc' }, { id: 'asc' }],
+        select: {
+          id: true,
+          organizationId: true,
+          buildingId: true,
+          locationId: true,
+          profile: true,
+          status: true,
+          softwareVersion: true,
+          lastCommunicationAt: true,
+          lastVerifiedSyncAt: true,
+          lastDeclaredPublicationId: true,
+          lastDeclaredVersion: true,
+          lastHeartbeatAt: true,
+          lastDeclaredMode: true,
+          lastCacheHealth: true,
+          lastRuntimeHealth: true,
+          lastNetworkStatus: true,
+          lastHeartbeatErrors: true,
+          revokedAt: true,
+          lockVersion: true,
+        },
+      }) ?? Promise.resolve([]),
     ]);
 
     const locations = buildings.flatMap((building) =>
@@ -211,15 +237,18 @@ export class DisplayManagerService {
           (location) => !activeLocationIds.has(location.id),
         ).length,
         devices: {
-          available: false,
-          count: null,
-          reason: 'Aucune autorité de périphériques Display n’est enregistrée.',
+          available: deviceAuthorityAvailable,
+          count: deviceAuthorityAvailable ? devices.length : null,
+          active: devices.filter((device) => device.status === 'ACTIVE').length,
+          revoked: devices.filter((device) => device.status === 'REVOKED')
+            .length,
         },
       },
       buildings,
       plans,
       eligiblePdfSources: sources,
       recentEvents: events,
+      devices,
     };
   }
 }
