@@ -8,6 +8,7 @@ import { useAuthStore } from "@/stores/auth.store";
 import styles from "./display.module.css";
 import ObservationManager from "./ObservationManager";
 import DeviceSupervision, { type SupervisedDevice } from "./DeviceSupervision";
+import EmergencyOperations from "./EmergencyOperations";
 
 type Location = {
   id: string;
@@ -522,6 +523,13 @@ export default function DisplayManagerPage() {
             data.buildings.map((item) => [item.id, item.name]),
           )}
         />
+        {orgId && data.capabilities.DISPLAY_READ && (
+          <EmergencyOperations
+            organizationId={orgId}
+            buildings={data.buildings.map(({ id, name }) => ({ id, name }))}
+            capabilities={data.capabilities}
+          />
+        )}
         <section className={styles.bottom}>
           <article>
             <h2>Créer depuis un PDF approuvé</h2>

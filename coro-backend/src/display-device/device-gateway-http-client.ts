@@ -105,6 +105,17 @@ export class DeviceGatewayHttpClient {
     );
   }
 
+  commands(requestId: string, afterSequence: number) {
+    return this.signedPost<{
+      commands: unknown[];
+      physicalDisplayProof: false;
+    }>('/device-gateway/commands', { requestId, afterSequence });
+  }
+
+  acknowledgeCommand(payload: Json) {
+    return this.signedPost('/device-gateway/commands/ack', payload);
+  }
+
   private async signedPost<T>(path: string, payload: Json): Promise<T> {
     const response = await this.signedRequest(path, payload);
     return (await response.json()) as T;
