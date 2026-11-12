@@ -6,6 +6,7 @@ PURGE_DATA=false
 systemctl disable --now coro-display-player.service 2>/dev/null || true
 rm -f /etc/systemd/system/coro-display-player.service
 rm -f /etc/chromium/policies/managed/coro-display.json
+rm -f /usr/lib/sysusers.d/coro-display.conf /usr/lib/tmpfiles.d/coro-display.conf
 rm -rf /opt/coro-display
 systemctl daemon-reload
 if "$PURGE_DATA"; then

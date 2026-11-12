@@ -11,6 +11,9 @@ test('fails closed, supports dry-run and does not embed credentials', () => {
   assert.match(installer, /--dry-run/);
   assert.match(installer, /OS_VERSION_UNSUPPORTED/);
   assert.match(installer, /EXTERNAL_SIGNER_MISSING/);
+  assert.match(installer, /systemd-sysusers/);
+  assert.match(installer, /systemd-tmpfiles --create/);
+  assert.match(installer, /chmod 0755 \/opt\/coro-display\/ops\/display-player\/bin\/coro-display-preflight/);
   assert.doesNotMatch(installer, /BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY/);
   assert.doesNotMatch(installer, /curl \|/);
 });

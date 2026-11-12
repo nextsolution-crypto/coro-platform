@@ -33,6 +33,8 @@ source /etc/os-release
 command -v node >/dev/null || fail NODE_MISSING
 command -v chromium >/dev/null || command -v chromium-browser >/dev/null || fail CHROMIUM_MISSING
 command -v systemctl >/dev/null || fail SYSTEMD_MISSING
+command -v systemd-sysusers >/dev/null || fail SYSTEMD_SYSUSERS_MISSING
+command -v systemd-tmpfiles >/dev/null || fail SYSTEMD_TMPFILES_MISSING
 [[ "$(df -B1 --output=avail / | tail -n1 | tr -d ' ')" -ge 17179869184 ]] || fail DISK_INSUFFICIENT
 [[ "$(awk '/MemTotal/ {print $2}' /proc/meminfo)" -ge 4194304 ]] || fail MEMORY_INSUFFICIENT
 
@@ -40,12 +42,16 @@ command -v systemctl >/dev/null || fail SYSTEMD_MISSING
 [[ -r /etc/coro-display/player.env ]] || fail PLAYER_ENV_MISSING
 [[ "$(stat -c %a /etc/coro-display/player.env)" =~ ^(400|440|600|640)$ ]] || fail PLAYER_ENV_PERMISSIONS_UNSAFE
 
+run install -o root -g root -m 0644 "$(dirname "$0")/sysusers.d/coro-display.conf" /usr/lib/sysusers.d/coro-display.conf
+run install -o root -g root -m 0644 "$(dirname "$0")/tmpfiles.d/coro-display.conf" /usr/lib/tmpfiles.d/coro-display.conf
+run systemd-sysusers /usr/lib/sysusers.d/coro-display.conf
+run systemd-tmpfiles --create /usr/lib/tmpfiles.d/coro-display.conf
 run install -d -o root -g root -m 0755 /opt/coro-display
 run cp -a "$PACKAGE_DIR/." /opt/coro-display/
 run chown -R root:root /opt/coro-display
 run find /opt/coro-display -type d -exec chmod 0755 '{}' +
 run find /opt/coro-display -type f -exec chmod 0644 '{}' +
-run install -d -o coro-display -g coro-display -m 0700 /var/lib/coro-display /var/log/coro-display
+run chmod 0755 /opt/coro-display/ops/display-player/bin/coro-display-preflight /opt/coro-display/ops/display-player/bin/coro-display-health
 run install -o root -g root -m 0644 "$(dirname "$0")/systemd/coro-display-player.service" /etc/systemd/system/coro-display-player.service
 run install -d -o root -g root -m 0755 /etc/chromium/policies/managed
 run install -o root -g root -m 0644 "$(dirname "$0")/chromium/coro-display-policy.json" /etc/chromium/policies/managed/coro-display.json
