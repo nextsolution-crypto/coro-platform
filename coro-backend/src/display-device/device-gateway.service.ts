@@ -19,6 +19,10 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { canonicalize } from '../display-player/manifest-validator';
+import type {
+  DisplayProfile,
+  SignedPlayerDisplayManifest,
+} from '../display-player/player-contracts';
 import { deviceEnrollmentStatement, digestSecret } from './device-security';
 import {
   AuthenticatedDeviceRequestDto,
@@ -33,6 +37,34 @@ import type { ManifestSigner } from './manifest-signer';
 
 const sha256 = (value: string | Buffer) =>
   createHash('sha256').update(value).digest('hex');
+
+const PROFILE_ALIASES: Record<string, DisplayProfile> = {
+  LANDSCAPE_17X11: 'LANDSCAPE_17X11',
+  TABLOID_11X17: 'LANDSCAPE_17X11',
+  SOURCE_NATIVE: 'LANDSCAPE_17X11',
+  WIDESCREEN_16X9: 'WIDESCREEN_16X9',
+  SCREEN_16X9: 'WIDESCREEN_16X9',
+  DISPLAY_16_9: 'WIDESCREEN_16X9',
+  WIDESCREEN_16X10: 'WIDESCREEN_16X10',
+  SCREEN_16X10: 'WIDESCREEN_16X10',
+  DISPLAY_16_10: 'WIDESCREEN_16X10',
+};
+
+function resolveDisplayProfile(
+  deviceProfile: string,
+  assignmentProfile: string,
+  width: number,
+  height: number,
+): DisplayProfile {
+  const explicit =
+    PROFILE_ALIASES[assignmentProfile] ?? PROFILE_ALIASES[deviceProfile];
+  if (explicit && explicit !== 'LANDSCAPE_17X11') return explicit;
+  const ratio = width / height;
+  if (Math.abs(ratio - 17 / 11) <= 0.02) return 'LANDSCAPE_17X11';
+  if (Math.abs(ratio - 16 / 9) <= 0.02) return 'WIDESCREEN_16X9';
+  if (Math.abs(ratio - 16 / 10) <= 0.02) return 'WIDESCREEN_16X10';
+  throw new ConflictException('DISPLAY_PROFILE_GEOMETRY_MISMATCH');
+}
 
 @Injectable()
 export class DeviceGatewayService {
@@ -203,27 +235,51 @@ export class DeviceGatewayService {
             requestId: dto.requestId,
           },
         });
-        const payload = {
+        if (!publication.widthPixels || !publication.heightPixels)
+          throw new ConflictException('PUBLICATION_GEOMETRY_MISSING');
+        const displayProfile = resolveDisplayProfile(
+          device.profile,
+          assignment.profile,
+          publication.widthPixels,
+          publication.heightPixels,
+        );
+        const issuedAt = new Date();
+        const payload: SignedPlayerDisplayManifest['payload'] = {
           schemaVersion: 1,
-          deviceId: device.id,
+          manifestId: sync.id,
+          sequence: manifestSequence,
+          assignmentId: assignment.id,
           organizationId: device.organizationId,
           buildingId: device.buildingId,
           locationId: device.locationId,
           publicationId: publication.id,
-          publicationVersion: publication.versionNumber,
-          variantVersion: publication.variantVersion,
-          renderSha256: publication.variantSha256!,
-          renderMimeType: publication.variantMimeType!,
-          profile: assignment.profile,
-          sequence: manifestSequence,
-          issuedAt: new Date().toISOString(),
-          expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(),
+          documentVersionId: `${publication.id}:v${publication.versionNumber}:r${publication.variantVersion}`,
+          documentSha256: publication.variantSha256!,
+          displayProfile,
+          width: publication.widthPixels,
+          height: publication.heightPixels,
+          issuedAt: issuedAt.toISOString(),
+          reevaluateAt: new Date(
+            issuedAt.getTime() + 10 * 60_000,
+          ).toISOString(),
+          knownRevoked: false,
+          renderReference: `private://device-gateway/renders/${publication.id}`,
+          policy: {
+            planDurationSeconds: 40,
+            communicationDurationSeconds: 10,
+            safetyDurationSeconds: 10,
+            allowApprovedSecondaryContent: false,
+          },
+        };
+        const manifest: SignedPlayerDisplayManifest = {
           keyId: this.signer.keyId,
+          algorithm: 'Ed25519',
+          payload,
+          signature: await this.signer.sign(payload),
         };
         return {
           syncId: sync.id,
-          manifest: payload,
-          signature: await this.signer.sign(payload),
+          manifest,
         };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
@@ -293,15 +349,31 @@ export class DeviceGatewayService {
           publicationId: dto.publicationId,
           manifestSequence: BigInt(dto.manifestSequence),
           status: 'MANIFEST_ISSUED',
+          organizationId: device.organizationId,
+          buildingId: device.buildingId,
         },
       });
       if (!sync) throw new ConflictException('SYNC_CONFIRMATION_INVALID');
-      await tx.displayDeviceSync.update({
-        where: { id: sync.id },
-        data: { status: 'CONFIRMED', confirmedAt: new Date() },
+      const publication = await tx.displayPlanPublication.findFirst({
+        where: {
+          id: dto.publicationId,
+          organizationId: device.organizationId,
+          buildingId: device.buildingId,
+          locationId: device.locationId,
+          versionNumber: dto.publicationVersion,
+          status: 'PUBLISHED',
+          revokedAt: null,
+        },
       });
-      await tx.displayDevice.update({
-        where: { id: device.id },
+      if (!publication)
+        throw new ConflictException('SYNC_PUBLICATION_NO_LONGER_VALID');
+      const advanced = await tx.displayDevice.updateMany({
+        where: {
+          id: device.id,
+          status: 'ACTIVE',
+          revokedAt: null,
+          lastAcceptedManifestSequence: { lt: BigInt(dto.manifestSequence) },
+        },
         data: {
           lastVerifiedSyncAt: new Date(),
           lastCommunicationAt: new Date(),
@@ -310,6 +382,14 @@ export class DeviceGatewayService {
           lastDeclaredVersion: dto.publicationVersion,
         },
       });
+      if (advanced.count !== 1)
+        throw new ConflictException('SYNC_SEQUENCE_REPLAY_OR_ROLLBACK');
+      const confirmed = await tx.displayDeviceSync.updateMany({
+        where: { id: sync.id, status: 'MANIFEST_ISSUED' },
+        data: { status: 'CONFIRMED', confirmedAt: new Date() },
+      });
+      if (confirmed.count !== 1)
+        throw new ConflictException('SYNC_ALREADY_CONFIRMED');
       return { status: 'CONFIRMED' as const };
     });
   }

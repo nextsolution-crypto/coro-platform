@@ -10,7 +10,9 @@ import {
   Matches,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class EnrollDisplayDeviceDto {
   @IsString() @Length(32, 64) invitationId!: string;
@@ -42,7 +44,10 @@ export class DeviceRequestProofDto {
 }
 
 export class AuthenticatedDeviceRequestDto {
-  @IsObject() proof!: DeviceRequestProofDto;
+  @IsObject()
+  @ValidateNested()
+  @Type(() => DeviceRequestProofDto)
+  proof!: DeviceRequestProofDto;
   @IsString() @Length(16, 128) requestId!: string;
 }
 

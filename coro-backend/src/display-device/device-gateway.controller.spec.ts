@@ -54,6 +54,27 @@ describe('DeviceGatewayController HTTP contracts', () => {
         })
         .expect(200);
       expect(gateway.challenge).toHaveBeenCalledTimes(1);
+      await request(app.getHttpServer())
+        .post('/device-gateway/telemetry')
+        .send({
+          requestId: 'request-nested-proof',
+          proof: {
+            deviceId: 'device-a',
+            timestamp: 'not-a-date',
+            nonce: 'short',
+            method: 'GET',
+            path: 'not-a-path',
+            bodySha256: 'invalid',
+            signature: 42,
+          },
+          softwareVersion: 'review',
+          mode: 'NORMAL',
+          errors: [],
+          restartCount: 0,
+          cacheHealth: 'HEALTHY',
+        })
+        .expect(400);
+      expect(gateway.telemetry).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }

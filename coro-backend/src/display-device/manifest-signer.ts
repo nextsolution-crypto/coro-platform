@@ -4,7 +4,7 @@ import { canonicalize } from '../display-player/manifest-validator';
 
 export interface ManifestSigner {
   readonly keyId: string;
-  sign(payload: Record<string, unknown>): Promise<string>;
+  sign(payload: unknown): Promise<string>;
 }
 
 export const DISPLAY_MANIFEST_SIGNER = Symbol('DISPLAY_MANIFEST_SIGNER');
@@ -13,7 +13,7 @@ export const DISPLAY_MANIFEST_SIGNER = Symbol('DISPLAY_MANIFEST_SIGNER');
 export class EnvironmentManifestSigner implements ManifestSigner {
   readonly keyId = process.env.DISPLAY_MANIFEST_SIGNING_KEY_ID ?? '';
 
-  sign(payload: Record<string, unknown>): Promise<string> {
+  sign(payload: unknown): Promise<string> {
     const pem = process.env.DISPLAY_MANIFEST_SIGNING_PRIVATE_KEY_PEM;
     if (!pem || !this.keyId) throw new Error('DISPLAY_SIGNER_NOT_CONFIGURED');
     const key = createPrivateKey(pem);
