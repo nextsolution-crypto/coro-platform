@@ -105,6 +105,7 @@ interface InterceptedRequest {
 
 export class LocalPlayerOrigin {
   private server?: Server;
+  private allowedHost?: string;
   constructor(
     private readonly renderSource: string | (() => Promise<Buffer>),
   ) {}
@@ -116,6 +117,18 @@ export class LocalPlayerOrigin {
       response.setHeader('X-Content-Type-Options', 'nosniff');
       response.setHeader('Referrer-Policy', 'no-referrer');
       response.setHeader('Cache-Control', 'no-store');
+      const remoteAddress = request.socket.remoteAddress;
+      if (
+        request.method !== 'GET' ||
+        request.headers.host !== this.allowedHost ||
+        !['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(
+          remoteAddress ?? '',
+        )
+      ) {
+        response.statusCode = 403;
+        response.end();
+        return;
+      }
       if (request.url === '/render') {
         void (async () => {
           try {
@@ -139,10 +152,15 @@ export class LocalPlayerOrigin {
         );
         return;
       }
-      response.setHeader('Content-Type', 'text/html; charset=utf-8');
-      response.end(
-        '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="/style.css"></head><body><main><img src="/render" alt="Plan CORO"></main></body></html>',
-      );
+      if (request.url === '/') {
+        response.setHeader('Content-Type', 'text/html; charset=utf-8');
+        response.end(
+          '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="/style.css"></head><body><main><img src="/render" alt="Plan CORO"></main></body></html>',
+        );
+        return;
+      }
+      response.statusCode = 404;
+      response.end();
     });
     await new Promise<void>((resolveStart, reject) => {
       this.server!.once('error', reject);
@@ -151,6 +169,7 @@ export class LocalPlayerOrigin {
     const address = this.server.address();
     if (!address || typeof address === 'string')
       throw new Error('PLAYER_BIND_FAILED');
+    this.allowedHost = `127.0.0.1:${address.port}`;
     return `http://127.0.0.1:${address.port}/`;
   }
 
@@ -160,6 +179,7 @@ export class LocalPlayerOrigin {
       this.server!.close((error) => (error ? reject(error) : resolveStop())),
     );
     this.server = undefined;
+    this.allowedHost = undefined;
   }
 }
 

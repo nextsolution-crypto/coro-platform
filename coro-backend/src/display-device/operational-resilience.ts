@@ -4,7 +4,8 @@ import {
   randomUUID,
   timingSafeEqual,
 } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readFile, realpath, stat } from 'node:fs/promises';
+import { isAbsolute, relative, resolve, sep } from 'node:path';
 import type { DeviceKeyStore } from './connected-player-runtime';
 import { atomicWrite } from './persistent-runtime';
 import { canonicalize } from '../display-player/manifest-validator';
@@ -41,8 +42,11 @@ export class OperationalWatchdog {
     snapshot: RuntimeHealthSnapshot,
     now = new Date(),
   ): WatchdogDecision {
-    if (!Number.isFinite(Date.parse(snapshot.observedAt)))
+    const observedAt = Date.parse(snapshot.observedAt);
+    if (!Number.isFinite(observedAt))
       return { action: 'CIRCUIT_OPEN', reason: 'HEALTH_TIMESTAMP_INVALID' };
+    if (Math.abs(now.getTime() - observedAt) > 120_000)
+      return { action: 'CIRCUIT_OPEN', reason: 'HEALTH_TIMESTAMP_STALE' };
     const unhealthy =
       snapshot.player !== 'HEALTHY' ||
       snapshot.chromium !== 'HEALTHY' ||
@@ -338,10 +342,38 @@ export async function verifyRuntimeIntegrity(
   root: string,
   entries: RuntimeIntegrityEntry[],
 ): Promise<void> {
+  if (entries.length === 0) throw new Error('RUNTIME_INTEGRITY_MANIFEST_EMPTY');
+  const trustedRoot = await realpath(root);
+  const observed = new Set<string>();
   for (const entry of entries) {
-    if (!/^[a-f0-9]{64}$/.test(entry.sha256) || entry.path.includes('..'))
+    if (
+      !/^[a-f0-9]{64}$/.test(entry.sha256) ||
+      !entry.path ||
+      entry.path.includes('\0') ||
+      isAbsolute(entry.path)
+    )
       throw new Error('RUNTIME_INTEGRITY_MANIFEST_INVALID');
-    const bytes = await readFile(`${root}/${entry.path}`);
+    const candidate = resolve(trustedRoot, entry.path);
+    const child = relative(trustedRoot, candidate);
+    if (
+      child === '' ||
+      child === '..' ||
+      child.startsWith(`..${sep}`) ||
+      observed.has(candidate)
+    )
+      throw new Error('RUNTIME_INTEGRITY_MANIFEST_INVALID');
+    observed.add(candidate);
+    const resolvedCandidate = await realpath(candidate);
+    const resolvedChild = relative(trustedRoot, resolvedCandidate);
+    if (
+      resolvedChild === '' ||
+      resolvedChild === '..' ||
+      resolvedChild.startsWith(`..${sep}`)
+    )
+      throw new Error('RUNTIME_INTEGRITY_SCOPE_ESCAPE');
+    if (!(await stat(resolvedCandidate)).isFile())
+      throw new Error('RUNTIME_INTEGRITY_FILE_INVALID');
+    const bytes = await readFile(resolvedCandidate);
     const actual = createHash('sha256').update(bytes).digest('hex');
     if (actual !== entry.sha256) throw new Error('RUNTIME_INTEGRITY_MISMATCH');
   }

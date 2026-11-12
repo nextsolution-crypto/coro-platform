@@ -1,5 +1,12 @@
 import { createHash, generateKeyPairSync, sign } from 'node:crypto';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -41,6 +48,32 @@ describe('DISPLAY-06D operational resilience', () => {
     expect(watchdog.evaluate(snapshot, new Date(2))).toEqual({
       action: 'CIRCUIT_OPEN',
       reason: 'RESTART_BUDGET_EXHAUSTED',
+    });
+  });
+
+  it('fails closed on stale or future watchdog observations', () => {
+    const watchdog = new OperationalWatchdog();
+    const snapshot = {
+      observedAt: new Date(0).toISOString(),
+      player: 'HEALTHY' as const,
+      chromium: 'HEALTHY' as const,
+      renderResponsive: true,
+      cache: 'HEALTHY' as const,
+      emergencyActive: false,
+      lastActivatedSequence: 1,
+    };
+    expect(watchdog.evaluate(snapshot, new Date(120_001))).toEqual({
+      action: 'CIRCUIT_OPEN',
+      reason: 'HEALTH_TIMESTAMP_STALE',
+    });
+    expect(
+      watchdog.evaluate(
+        { ...snapshot, observedAt: new Date(240_001).toISOString() },
+        new Date(120_000),
+      ),
+    ).toEqual({
+      action: 'CIRCUIT_OPEN',
+      reason: 'HEALTH_TIMESTAMP_STALE',
     });
   });
 
@@ -98,6 +131,35 @@ describe('DISPLAY-06D operational resilience', () => {
     await expect(
       verifyRuntimeIntegrity(root, [{ path: 'player.js', sha256 }]),
     ).rejects.toThrow('RUNTIME_INTEGRITY_MISMATCH');
+  });
+
+  it('rejects empty, duplicate, escaping and symbolic runtime entries', async () => {
+    const trusted = join(root, 'trusted');
+    const outside = join(root, 'outside.js');
+    await writeFile(outside, 'outside');
+    await writeFile(join(root, 'placeholder'), 'placeholder');
+    await mkdir(trusted);
+    const path = join(trusted, 'player.js');
+    await writeFile(path, 'trusted');
+    const sha256 = createHash('sha256').update('trusted').digest('hex');
+    await expect(verifyRuntimeIntegrity(trusted, [])).rejects.toThrow(
+      'RUNTIME_INTEGRITY_MANIFEST_EMPTY',
+    );
+    await expect(
+      verifyRuntimeIntegrity(trusted, [
+        { path: 'player.js', sha256 },
+        { path: 'player.js', sha256 },
+      ]),
+    ).rejects.toThrow('RUNTIME_INTEGRITY_MANIFEST_INVALID');
+    await expect(
+      verifyRuntimeIntegrity(trusted, [{ path: '../outside.js', sha256 }]),
+    ).rejects.toThrow('RUNTIME_INTEGRITY_MANIFEST_INVALID');
+    if (process.platform !== 'win32') {
+      await symlink(outside, join(trusted, 'linked.js'));
+      await expect(
+        verifyRuntimeIntegrity(trusted, [{ path: 'linked.js', sha256 }]),
+      ).rejects.toThrow('RUNTIME_INTEGRITY_SCOPE_ESCAPE');
+    }
   });
 
   it('preserves known revocations with integrity while offline', async () => {

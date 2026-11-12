@@ -1,7 +1,7 @@
 import { writeFile, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { get } from 'node:http';
+import { get, request } from 'node:http';
 import {
   launchKioskPlayer,
   LocalPlayerOrigin,
@@ -40,6 +40,32 @@ describe('connected player runtime', () => {
     } finally {
       await origin.stop();
       await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects DNS-rebinding hosts, non-GET methods and unknown paths', async () => {
+    const origin = new LocalPlayerOrigin(Buffer.from('synthetic-render'));
+    try {
+      const url = await origin.start();
+      const probe = (path: string, method = 'GET', host?: string) =>
+        new Promise<number>((resolve, reject) => {
+          const target = new URL(path, url);
+          const req = request(
+            target,
+            { method, headers: host ? { host } : undefined },
+            (response) => {
+              response.resume();
+              response.on('end', () => resolve(response.statusCode ?? 0));
+            },
+          );
+          req.on('error', reject);
+          req.end();
+        });
+      await expect(probe('/', 'GET', 'attacker.invalid')).resolves.toBe(403);
+      await expect(probe('/', 'POST')).resolves.toBe(403);
+      await expect(probe('/not-a-player-route')).resolves.toBe(404);
+    } finally {
+      await origin.stop();
     }
   });
 
