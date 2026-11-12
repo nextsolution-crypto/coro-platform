@@ -52,6 +52,12 @@ export class DeviceGatewayController {
     return this.gateway.manifest(dto);
   }
 
+  @Post('revocations')
+  @HttpCode(200)
+  revocations(@Body() dto: AuthenticatedDeviceRequestDto) {
+    return this.gateway.revocations(dto);
+  }
+
   @Post('renders/:publicationId')
   @HttpCode(200)
   @Header('Cache-Control', 'private, no-store, max-age=0')

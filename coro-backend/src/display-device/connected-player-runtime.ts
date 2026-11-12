@@ -1,4 +1,5 @@
 import { createServer, Server } from 'node:http';
+import { spawn } from 'node:child_process';
 import {
   createHash,
   createPrivateKey,
@@ -78,6 +79,54 @@ export class EnvironmentDeviceKeyStore implements DeviceKeyStore {
   }
 }
 
+/**
+ * Production adapter for an OS/TPM/PKCS#11 signer. The private key remains in
+ * the provider process; only the payload and resulting signature cross IPC.
+ */
+export class CommandDeviceKeyStore implements DeviceKeyStore {
+  constructor(
+    private readonly id: string,
+    private readonly publicKey: string,
+    private readonly command: string,
+    private readonly commandArgs: string[] = [],
+    private readonly providerHardwareBacked = true,
+  ) {
+    if (!id || !command) throw new Error('DEVICE_SIGNER_CONFIGURATION_INVALID');
+    const parsed = createPublicKey(publicKey);
+    if (parsed.asymmetricKeyType !== 'ed25519')
+      throw new Error('DEVICE_KEY_INVALID');
+  }
+  keyId() {
+    return Promise.resolve(this.id);
+  }
+  publicKeyPem() {
+    return Promise.resolve(this.publicKey);
+  }
+  hardwareBacked() {
+    return this.providerHardwareBacked;
+  }
+  sign(payload: Uint8Array): Promise<string> {
+    return new Promise((resolveSignature, reject) => {
+      const child = spawn(this.command, this.commandArgs, {
+        stdio: ['pipe', 'pipe', 'ignore'],
+        windowsHide: true,
+        timeout: 10_000,
+      });
+      const chunks: Buffer[] = [];
+      child.stdout.on('data', (chunk: Buffer) => chunks.push(chunk));
+      child.once('error', () => reject(new Error('DEVICE_SIGNER_UNAVAILABLE')));
+      child.once('close', (code) => {
+        if (code !== 0) return reject(new Error('DEVICE_SIGNER_FAILED'));
+        const signature = Buffer.concat(chunks).toString('utf8').trim();
+        if (!/^[A-Za-z0-9+/]+={0,2}$/.test(signature))
+          return reject(new Error('DEVICE_SIGNER_RESPONSE_INVALID'));
+        resolveSignature(signature);
+      });
+      child.stdin.end(Buffer.from(payload).toString('base64'));
+    });
+  }
+}
+
 export interface ChromiumLauncher {
   launch(options: {
     headless: boolean;
@@ -121,9 +170,7 @@ export class LocalPlayerOrigin {
       if (
         request.method !== 'GET' ||
         request.headers.host !== this.allowedHost ||
-        !['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(
-          remoteAddress ?? '',
-        )
+        !['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(remoteAddress ?? '')
       ) {
         response.statusCode = 403;
         response.end();
@@ -136,7 +183,13 @@ export class LocalPlayerOrigin {
               typeof this.renderSource === 'string'
                 ? await readFile(resolve(this.renderSource))
                 : await this.renderSource();
-            response.setHeader('Content-Type', 'image/webp');
+            const prefix = bytes.subarray(0, 256).toString('utf8').trimStart();
+            response.setHeader(
+              'Content-Type',
+              prefix.startsWith('<svg') || prefix.startsWith('<?xml')
+                ? 'image/svg+xml'
+                : 'image/webp',
+            );
             response.end(bytes);
           } catch {
             response.statusCode = 503;

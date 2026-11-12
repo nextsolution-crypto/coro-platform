@@ -207,8 +207,8 @@ describePostgres('display-06c-operational-e2e', () => {
     ).rejects.toThrow('GATEWAY_HTTP_410');
 
     const renderBytes = Buffer.from(
-      'UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEALmk0mk0iIiIiIgBoSygABc6zbAAA',
-      'base64',
+      '<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080"><rect width="1920" height="1080" fill="#f4f7fb"/><path d="M180 180h1560v720H180z" fill="none" stroke="#18324a" stroke-width="18"/><path d="M960 200v680M200 540h1520" stroke="#2d6a8a" stroke-width="12"/><circle cx="960" cy="540" r="70" fill="#00a37a"/><text x="960" y="110" text-anchor="middle" font-family="sans-serif" font-size="64" fill="#102a43">PLAN D EVACUATION CORO - SYNTHETIQUE</text><text x="960" y="565" text-anchor="middle" font-family="sans-serif" font-size="44" fill="white">VOUS ETES ICI</text></svg>',
+      'utf8',
     );
     const renderSha = createHash('sha256').update(renderBytes).digest('hex');
     const storage = (
@@ -224,7 +224,7 @@ describePostgres('display-06c-operational-e2e', () => {
         name: 'Plan synthétique E2E',
         category: 'plans_evacuation',
         size: renderBytes.length,
-        mimeType: 'image/webp',
+        mimeType: 'image/svg+xml',
         storageKey: `display/${suffix}.webp`,
         url: 'private:e2e',
         version: 1,
@@ -253,7 +253,7 @@ describePostgres('display-06c-operational-e2e', () => {
         variantVersion: 1,
         variantStorageKey: `display/${suffix}.webp`,
         variantSha256: renderSha,
-        variantMimeType: 'image/webp',
+        variantMimeType: 'image/svg+xml',
         widthPixels: 1920,
         heightPixels: 1080,
         orientation: 'LANDSCAPE',
@@ -349,6 +349,17 @@ describePostgres('display-06c-operational-e2e', () => {
       process.env.DISPLAY_06C_E2E_EVIDENCE_DIR ?? join(root, 'evidence');
     await mkdir(evidenceRoot, { recursive: true });
     await page.screenshot({ path: join(evidenceRoot, 'online.png') });
+    for (const profile of [
+      { name: '17x11', width: 1700, height: 1100 },
+      { name: '16x9', width: 1600, height: 900 },
+      { name: '16x10', width: 1600, height: 1000 },
+    ]) {
+      await page.setViewport({ width: profile.width, height: profile.height });
+      await page.screenshot({
+        path: join(evidenceRoot, `profile-${profile.name}.png`),
+      });
+    }
+    await page.setViewport({ width: 1280, height: 720 });
 
     await app.close();
     await page.reload({ waitUntil: 'networkidle0' });

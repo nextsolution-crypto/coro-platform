@@ -3,13 +3,46 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { get, request } from 'node:http';
 import {
+  CommandDeviceKeyStore,
   launchKioskPlayer,
   LocalPlayerOrigin,
   SyntheticDeviceKeyStore,
 } from './connected-player-runtime';
+import { generateKeyPairSync, verify } from 'node:crypto';
 import { PLAYER_CSP } from './kiosk-policy';
 
 describe('connected player runtime', () => {
+  it('delegates production signing to an external non-exportable provider', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'display-signer-'));
+    try {
+      const pair = generateKeyPairSync('ed25519');
+      const privatePem = pair.privateKey
+        .export({ type: 'pkcs8', format: 'pem' })
+        .toString();
+      const script = join(root, 'signer.cjs');
+      await writeFile(
+        script,
+        `const {createPrivateKey,sign}=require('node:crypto');let s='';process.stdin.on('data',c=>s+=c);process.stdin.on('end',()=>process.stdout.write(sign(null,Buffer.from(s,'base64'),createPrivateKey(${JSON.stringify(privatePem)})).toString('base64')));`,
+      );
+      const publicPem = pair.publicKey
+        .export({ type: 'spki', format: 'pem' })
+        .toString();
+      const store = new CommandDeviceKeyStore(
+        'key-a',
+        publicPem,
+        process.execPath,
+        [script],
+      );
+      const payload = Buffer.from('proof');
+      const signature = await store.sign(payload);
+      expect(
+        verify(null, payload, pair.publicKey, Buffer.from(signature, 'base64')),
+      ).toBe(true);
+      expect('privateKey' in store).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
   it('serves only a loopback origin with the effective restrictive CSP', async () => {
     const root = await mkdtemp(join(tmpdir(), 'coro-player-'));
     const render = join(root, 'render.webp');
@@ -24,7 +57,7 @@ describe('connected player runtime', () => {
       }>((resolve, reject) => {
         get(url, (result) => {
           const chunks: Buffer[] = [];
-          result.on('data', (chunk) => chunks.push(chunk));
+          result.on('data', (chunk: Buffer) => chunks.push(chunk));
           result.on('end', () =>
             resolve({
               csp: result.headers['content-security-policy'],
@@ -70,19 +103,22 @@ describe('connected player runtime', () => {
   });
 
   it('launches kiosk mode without unsafe flags or public debugging', async () => {
-    const goto = jest.fn(async () => undefined);
+    const goto = jest.fn(() => Promise.resolve(undefined));
     const launch = jest.fn(
-      async (_options: {
+      (options: {
         headless: boolean;
         args: string[];
         defaultViewport: null;
-      }) => ({
-        newPage: async () => ({ goto }),
-        close: async () => undefined,
-      }),
+      }) => {
+        void options;
+        return Promise.resolve({
+          newPage: () => Promise.resolve({ goto }),
+          close: () => Promise.resolve(undefined),
+        });
+      },
     );
     await launchKioskPlayer({ launch }, 'http://127.0.0.1:32123/');
-    const options = launch.mock.calls[0]![0];
+    const options = launch.mock.calls[0][0];
     expect(options.args).toContain('--kiosk');
     expect(options.args).not.toContain('--no-sandbox');
     expect(

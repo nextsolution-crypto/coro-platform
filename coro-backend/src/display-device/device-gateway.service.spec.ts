@@ -42,6 +42,7 @@ describe('DeviceGatewayService machine authentication', () => {
         }),
       },
       displayDeviceEvent: {
+        findFirst: jest.fn(async () => null),
         create: jest.fn(async ({ data }: any) => data),
         createMany: jest.fn(async ({ data }: any) => ({ count: data.length })),
       },

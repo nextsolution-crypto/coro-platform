@@ -1,14 +1,67 @@
 import {
   createHash,
   createHmac,
+  createPublicKey,
   randomUUID,
   timingSafeEqual,
+  verify,
 } from 'node:crypto';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 import type { DeviceKeyStore } from './connected-player-runtime';
 import { atomicWrite } from './persistent-runtime';
 import { canonicalize } from '../display-player/manifest-validator';
+
+export interface RuntimeWatchdogHandlers {
+  snapshot(): Promise<RuntimeHealthSnapshot>;
+  restartChromium(reason: string): Promise<void>;
+  failPlayer(reason: string): Promise<void>;
+  audit(decision: WatchdogDecision): Promise<void>;
+}
+
+/** Runs the watchdog policy against the live Player and performs bounded actions. */
+export class RuntimeWatchdogController {
+  private timer?: NodeJS.Timeout;
+  private evaluating = false;
+  constructor(
+    private readonly policy: OperationalWatchdog,
+    private readonly handlers: RuntimeWatchdogHandlers,
+    private readonly intervalMs = 15_000,
+  ) {}
+  start() {
+    if (this.timer) throw new Error('WATCHDOG_ALREADY_STARTED');
+    this.timer = setInterval(() => void this.tick(), this.intervalMs);
+    this.timer.unref();
+  }
+  async tick(now = new Date()) {
+    if (this.evaluating) return;
+    this.evaluating = true;
+    try {
+      const decision = this.policy.evaluate(
+        await this.handlers.snapshot(),
+        now,
+      );
+      if (decision.action === 'NONE') return;
+      await this.handlers.audit(decision);
+      if (decision.action === 'CIRCUIT_OPEN') {
+        await this.handlers.failPlayer(decision.reason);
+        return;
+      }
+      await new Promise((resolveDelay) =>
+        setTimeout(resolveDelay, decision.delayMs),
+      );
+      if (decision.action === 'RESTART_CHROMIUM')
+        await this.handlers.restartChromium(decision.reason);
+      else await this.handlers.failPlayer(decision.reason);
+    } finally {
+      this.evaluating = false;
+    }
+  }
+  stop() {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = undefined;
+  }
+}
 
 export type RuntimeComponentHealth = 'HEALTHY' | 'DEGRADED' | 'FAILED';
 
@@ -137,10 +190,62 @@ interface JournalEnvelope {
 }
 
 interface RevocationEnvelope {
-  version: 1;
+  version: 2;
+  sequence: number;
   updatedAt: string;
   documentVersionIds: string[];
   mac: string;
+}
+
+export interface MonotonicAnchor {
+  read(): Promise<number>;
+  advance(sequence: number): Promise<void>;
+}
+
+/** Separate protected anchor; production should place it in OS/TPM storage. */
+export class FileMonotonicAnchor implements MonotonicAnchor {
+  constructor(
+    private readonly path: string,
+    private readonly integrityKey: Uint8Array,
+  ) {
+    if (integrityKey.length < 32) throw new Error('ANCHOR_KEY_TOO_SHORT');
+  }
+  async read() {
+    try {
+      const value = JSON.parse(await readFile(this.path, 'utf8')) as {
+        sequence: number;
+        mac: string;
+      };
+      const expected = createHmac('sha256', this.integrityKey)
+        .update(String(value.sequence))
+        .digest();
+      const received = Buffer.from(value.mac, 'hex');
+      if (
+        !Number.isSafeInteger(value.sequence) ||
+        value.sequence < 0 ||
+        received.length !== expected.length ||
+        !timingSafeEqual(received, expected)
+      )
+        throw new Error('ANCHOR_INTEGRITY_FAILED');
+      return value.sequence;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 0;
+      throw error;
+    }
+  }
+  async advance(sequence: number) {
+    const current = await this.read();
+    if (!Number.isSafeInteger(sequence) || sequence < current)
+      throw new Error('ANCHOR_ROLLBACK');
+    if (sequence === current) return;
+    const mac = createHmac('sha256', this.integrityKey)
+      .update(String(sequence))
+      .digest('hex');
+    await atomicWrite(
+      this.path,
+      Buffer.from(JSON.stringify({ sequence, mac })),
+    );
+  }
 }
 
 const journalQueues = new Map<string, Promise<void>>();
@@ -278,6 +383,7 @@ export class KnownRevocationStore {
   constructor(
     private readonly path: string,
     private readonly integrityKey: Uint8Array,
+    private readonly anchor?: MonotonicAnchor,
   ) {
     if (integrityKey.length < 32) throw new Error('REVOCATION_KEY_TOO_SHORT');
   }
@@ -286,8 +392,10 @@ export class KnownRevocationStore {
     const ids = [...new Set(documentVersionIds)].sort();
     if (ids.some((id) => !id || id.length > 128))
       throw new Error('REVOCATION_ID_INVALID');
+    const sequence = ((await this.anchor?.read()) ?? 0) + 1;
     const payload = JSON.stringify({
-      version: 1,
+      version: 2,
+      sequence,
       updatedAt: updatedAt.toISOString(),
       documentVersionIds: ids,
     });
@@ -298,6 +406,7 @@ export class KnownRevocationStore {
       this.path,
       Buffer.from(JSON.stringify({ ...JSON.parse(payload), mac })),
     );
+    await this.anchor?.advance(sequence);
   }
 
   async read(): Promise<{ ids: ReadonlySet<string>; updatedAt?: string }> {
@@ -307,6 +416,7 @@ export class KnownRevocationStore {
       ) as RevocationEnvelope;
       const payload = JSON.stringify({
         version: envelope.version,
+        sequence: envelope.sequence,
         updatedAt: envelope.updatedAt,
         documentVersionIds: envelope.documentVersionIds,
       });
@@ -315,12 +425,17 @@ export class KnownRevocationStore {
         .digest();
       const received = Buffer.from(envelope.mac, 'hex');
       if (
-        envelope.version !== 1 ||
+        envelope.version !== 2 ||
+        !Number.isSafeInteger(envelope.sequence) ||
         !Array.isArray(envelope.documentVersionIds) ||
         received.length !== expected.length ||
         !timingSafeEqual(received, expected)
       )
         throw new Error('REVOCATION_STORE_INTEGRITY_FAILED');
+      const anchored = await this.anchor?.read();
+      if (anchored !== undefined && envelope.sequence < anchored)
+        throw new Error('REVOCATION_STORE_ROLLBACK');
+      await this.anchor?.advance(envelope.sequence);
       return {
         ids: new Set(envelope.documentVersionIds),
         updatedAt: envelope.updatedAt,
@@ -336,6 +451,59 @@ export class KnownRevocationStore {
 export interface RuntimeIntegrityEntry {
   path: string;
   sha256: string;
+}
+
+export interface AuthenticatedRuntimeManifestPayload {
+  version: 1;
+  authorityKeyId: string;
+  runtimeVersion: string;
+  validFrom: string;
+  validUntil: string;
+  entries: RuntimeIntegrityEntry[];
+}
+
+export interface AuthenticatedRuntimeManifest {
+  payload: AuthenticatedRuntimeManifestPayload;
+  signature: string;
+}
+
+export async function verifyAuthenticatedRuntimeManifest(
+  root: string,
+  manifest: AuthenticatedRuntimeManifest,
+  trustedAuthority: { keyId: string; publicKeyPem: string },
+  expectedRuntimeVersion: string,
+  now = new Date(),
+) {
+  const payload = manifest?.payload;
+  if (
+    payload?.version !== 1 ||
+    payload.authorityKeyId !== trustedAuthority.keyId ||
+    payload.runtimeVersion !== expectedRuntimeVersion ||
+    !Array.isArray(payload.entries)
+  )
+    throw new Error('RUNTIME_INTEGRITY_MANIFEST_INVALID');
+  const validFrom = Date.parse(payload.validFrom);
+  const validUntil = Date.parse(payload.validUntil);
+  if (
+    !Number.isFinite(validFrom) ||
+    !Number.isFinite(validUntil) ||
+    validFrom > now.getTime() ||
+    validUntil <= now.getTime()
+  )
+    throw new Error('RUNTIME_INTEGRITY_MANIFEST_EXPIRED');
+  let signature: Buffer;
+  try {
+    signature = Buffer.from(manifest.signature, 'base64');
+  } catch {
+    throw new Error('RUNTIME_INTEGRITY_SIGNATURE_INVALID');
+  }
+  const publicKey = createPublicKey(trustedAuthority.publicKeyPem);
+  if (
+    publicKey.asymmetricKeyType !== 'ed25519' ||
+    !verify(null, Buffer.from(canonicalize(payload)), publicKey, signature)
+  )
+    throw new Error('RUNTIME_INTEGRITY_SIGNATURE_INVALID');
+  await verifyRuntimeIntegrity(root, payload.entries);
 }
 
 export async function verifyRuntimeIntegrity(

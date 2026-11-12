@@ -331,6 +331,39 @@ export class DeviceGatewayService {
     };
   }
 
+  async revocations(dto: AuthenticatedDeviceRequestDto) {
+    const device = await this.authenticate(
+      dto.proof,
+      'POST',
+      '/device-gateway/revocations',
+      { requestId: dto.requestId },
+    );
+    const revoked = await this.prisma.displayPlanPublication.findMany({
+      where: {
+        organizationId: device.organizationId,
+        buildingId: device.buildingId,
+        status: 'REVOKED',
+      },
+      select: { id: true, versionNumber: true, variantVersion: true },
+      orderBy: { id: 'asc' },
+    });
+    const payload = {
+      schemaVersion: 1,
+      organizationId: device.organizationId,
+      buildingId: device.buildingId,
+      issuedAt: new Date().toISOString(),
+      documentVersionIds: revoked.map(
+        (item) => `${item.id}:v${item.versionNumber}:r${item.variantVersion}`,
+      ),
+    };
+    return {
+      keyId: this.signer.keyId,
+      algorithm: 'Ed25519' as const,
+      payload,
+      signature: await this.signer.sign(payload),
+    };
+  }
+
   async confirm(dto: ConfirmDisplaySyncDto) {
     const device = await this.authenticate(
       dto.proof,
@@ -524,6 +557,26 @@ export class DeviceGatewayService {
       '/device-gateway/events/reconcile',
       { requestId: dto.requestId, ...declared },
     );
+    const lastAccepted = await this.prisma.displayDeviceEvent.findFirst({
+      where: { deviceId: device.id, eventType: { startsWith: 'LOCAL_' } },
+      orderBy: [{ verifiedAt: 'desc' }, { id: 'desc' }],
+      select: { declaredState: true },
+    });
+    if (lastAccepted && dto.events.length) {
+      const state = lastAccepted.declaredState as {
+        sequence?: number;
+        hash?: string;
+      } | null;
+      const first = dto.events[0];
+      if (
+        !state ||
+        typeof state.sequence !== 'number' ||
+        typeof state.hash !== 'string' ||
+        first.sequence !== state.sequence + 1 ||
+        first.previousHash !== state.hash
+      )
+        throw new BadRequestException('DEVICE_EVENT_HISTORY_FORK');
+    }
     for (let index = 1; index < dto.events.length; index += 1) {
       const previous = dto.events[index - 1];
       const current = dto.events[index];

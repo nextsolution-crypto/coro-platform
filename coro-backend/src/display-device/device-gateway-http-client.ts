@@ -12,6 +12,19 @@ export interface GatewayManifestResponse {
   manifest: SignedPlayerDisplayManifest;
 }
 
+export interface SignedRevocationRegistry {
+  keyId: string;
+  algorithm: 'Ed25519';
+  payload: {
+    schemaVersion: 1;
+    organizationId: string;
+    buildingId: string;
+    issuedAt: string;
+    documentVersionIds: string[];
+  };
+  signature: string;
+}
+
 export class DeviceGatewayHttpClient {
   private readonly base: URL;
 
@@ -65,6 +78,10 @@ export class DeviceGatewayHttpClient {
 
   manifest(requestId: string): Promise<GatewayManifestResponse> {
     return this.signedPost('/device-gateway/manifest', { requestId });
+  }
+
+  revocations(requestId: string): Promise<SignedRevocationRegistry> {
+    return this.signedPost('/device-gateway/revocations', { requestId });
   }
 
   async render(publicationId: string, requestId: string): Promise<Buffer> {

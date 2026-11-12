@@ -27,6 +27,13 @@ RestrictNamespaces=true
 LockPersonality=true
 MemoryDenyWriteExecute=true
 SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallFilter=@system-service ~@mount @reboot @swap @raw-io @privileged
+UMask=0077
+ProtectProc=invisible
+ProcSubset=pid
 ReadWritePaths=/var/lib/coro-display /var/log/coro-display
 EnvironmentFile=/etc/coro-display/player.env
 
