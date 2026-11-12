@@ -8,5 +8,5 @@ Software evidence: targeted policy/runtime/resilience tests and installer contra
 
 Verdicts:
 
-- software: **GO CONDITIONNEL DISPLAY-08-SOFTWARE-READY**, conditional on Draft PR CI and Linux disposable-host validation;
+- software: **GO DISPLAY-08-SOFTWARE-READY** for human review (Draft PR #257, required CI green on the initial product HEAD);
 - physical: **NOT_VERIFIED — PHYSICAL PILOT NOT AUTHORIZED**.

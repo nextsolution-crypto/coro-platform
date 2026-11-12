@@ -2,9 +2,9 @@
 
 ## Software
 
-Current verdict: **GO CONDITIONNEL DISPLAY-08-SOFTWARE-READY**.
+Current verdict: **GO DISPLAY-08-SOFTWARE-READY** for human review and physical-pilot preparation.
 
-Demonstrated: target OS/hardware contract, fail-closed/idempotent/reversible installer design, unprivileged hardened unit, sandboxed Chromium policy, external Ed25519 signer boundary, bounded/redacted telemetry, profile validation and retained DISPLAY-06/07 safety. Conditions: disposable Ubuntu/systemd/PostgreSQL validation, complete regressions, independent review, Draft PR and green terminal CI.
+Demonstrated: target OS/hardware contract, fail-closed/idempotent/reversible installer design, unprivileged hardened unit, sandboxed Chromium policy, external Ed25519 signer boundary, bounded/redacted telemetry, profile validation, retained DISPLAY-06/07 safety, PostgreSQL 16 migrations/tests, independent review, Draft PR and green mandatory CI. The real Ubuntu host/systemd execution remains a physical-pilot acceptance item and is not mislabeled software evidence.
 
 ## Physical
 
