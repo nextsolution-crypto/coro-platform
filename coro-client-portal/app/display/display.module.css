@@ -82,10 +82,10 @@
   padding: 10px 15px;
   cursor: pointer;
 }
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
+.page button:focus-visible,
+.page input:focus-visible,
+.page select:focus-visible,
+.page textarea:focus-visible {
   outline: 3px solid #f1c40f;
   outline-offset: 2px;
 }

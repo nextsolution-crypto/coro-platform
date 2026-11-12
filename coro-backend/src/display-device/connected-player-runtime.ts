@@ -1,10 +1,12 @@
 import { createServer, Server } from 'node:http';
+import { spawn } from 'node:child_process';
 import {
   createHash,
   createPrivateKey,
   createPublicKey,
   generateKeyPairSync,
   sign,
+  type KeyObject,
 } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -48,7 +50,7 @@ export class SyntheticDeviceKeyStore implements DeviceKeyStore {
 
 /** Process-local adapter. Production must replace it with an OS/hardware keystore. */
 export class EnvironmentDeviceKeyStore implements DeviceKeyStore {
-  private readonly privateKey;
+  private readonly privateKey: KeyObject;
   constructor(
     private readonly id: string,
     privateKeyPem: string,
@@ -77,19 +79,82 @@ export class EnvironmentDeviceKeyStore implements DeviceKeyStore {
   }
 }
 
+/**
+ * Production adapter for an OS/TPM/PKCS#11 signer. The private key remains in
+ * the provider process; only the payload and resulting signature cross IPC.
+ */
+export class CommandDeviceKeyStore implements DeviceKeyStore {
+  constructor(
+    private readonly id: string,
+    private readonly publicKey: string,
+    private readonly command: string,
+    private readonly commandArgs: string[] = [],
+    private readonly providerHardwareBacked = true,
+  ) {
+    if (!id || !command) throw new Error('DEVICE_SIGNER_CONFIGURATION_INVALID');
+    const parsed = createPublicKey(publicKey);
+    if (parsed.asymmetricKeyType !== 'ed25519')
+      throw new Error('DEVICE_KEY_INVALID');
+  }
+  keyId() {
+    return Promise.resolve(this.id);
+  }
+  publicKeyPem() {
+    return Promise.resolve(this.publicKey);
+  }
+  hardwareBacked() {
+    return this.providerHardwareBacked;
+  }
+  sign(payload: Uint8Array): Promise<string> {
+    return new Promise((resolveSignature, reject) => {
+      const child = spawn(this.command, this.commandArgs, {
+        stdio: ['pipe', 'pipe', 'ignore'],
+        windowsHide: true,
+        timeout: 10_000,
+      });
+      const chunks: Buffer[] = [];
+      child.stdout.on('data', (chunk: Buffer) => chunks.push(chunk));
+      child.once('error', () => reject(new Error('DEVICE_SIGNER_UNAVAILABLE')));
+      child.once('close', (code) => {
+        if (code !== 0) return reject(new Error('DEVICE_SIGNER_FAILED'));
+        const signature = Buffer.concat(chunks).toString('utf8').trim();
+        if (!/^[A-Za-z0-9+/]+={0,2}$/.test(signature))
+          return reject(new Error('DEVICE_SIGNER_RESPONSE_INVALID'));
+        resolveSignature(signature);
+      });
+      child.stdin.end(Buffer.from(payload).toString('base64'));
+    });
+  }
+}
+
 export interface ChromiumLauncher {
   launch(options: {
     headless: boolean;
     args: string[];
     defaultViewport: null;
   }): Promise<{
-    newPage(): Promise<{ goto(url: string): Promise<unknown> }>;
+    newPage(): Promise<{
+      goto(url: string): Promise<unknown>;
+      setDefaultNavigationTimeout?(timeout: number): void;
+      setRequestInterception?(enabled: boolean): Promise<void>;
+      on?(
+        event: 'request',
+        handler: (request: InterceptedRequest) => void,
+      ): unknown;
+    }>;
     close(): Promise<void>;
   }>;
 }
 
+interface InterceptedRequest {
+  url(): string;
+  abort(): Promise<void>;
+  continue(): Promise<void>;
+}
+
 export class LocalPlayerOrigin {
   private server?: Server;
+  private allowedHost?: string;
   constructor(
     private readonly renderSource: string | (() => Promise<Buffer>),
   ) {}
@@ -101,6 +166,16 @@ export class LocalPlayerOrigin {
       response.setHeader('X-Content-Type-Options', 'nosniff');
       response.setHeader('Referrer-Policy', 'no-referrer');
       response.setHeader('Cache-Control', 'no-store');
+      const remoteAddress = request.socket.remoteAddress;
+      if (
+        request.method !== 'GET' ||
+        request.headers.host !== this.allowedHost ||
+        !['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(remoteAddress ?? '')
+      ) {
+        response.statusCode = 403;
+        response.end();
+        return;
+      }
       if (request.url === '/render') {
         void (async () => {
           try {
@@ -108,7 +183,13 @@ export class LocalPlayerOrigin {
               typeof this.renderSource === 'string'
                 ? await readFile(resolve(this.renderSource))
                 : await this.renderSource();
-            response.setHeader('Content-Type', 'image/webp');
+            const prefix = bytes.subarray(0, 256).toString('utf8').trimStart();
+            response.setHeader(
+              'Content-Type',
+              prefix.startsWith('<svg') || prefix.startsWith('<?xml')
+                ? 'image/svg+xml'
+                : 'image/webp',
+            );
             response.end(bytes);
           } catch {
             response.statusCode = 503;
@@ -124,10 +205,15 @@ export class LocalPlayerOrigin {
         );
         return;
       }
-      response.setHeader('Content-Type', 'text/html; charset=utf-8');
-      response.end(
-        '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="/style.css"></head><body><main><img src="/render" alt="Plan CORO"></main></body></html>',
-      );
+      if (request.url === '/') {
+        response.setHeader('Content-Type', 'text/html; charset=utf-8');
+        response.end(
+          '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="/style.css"></head><body><main><img src="/render" alt="Plan CORO"></main></body></html>',
+        );
+        return;
+      }
+      response.statusCode = 404;
+      response.end();
     });
     await new Promise<void>((resolveStart, reject) => {
       this.server!.once('error', reject);
@@ -136,6 +222,7 @@ export class LocalPlayerOrigin {
     const address = this.server.address();
     if (!address || typeof address === 'string')
       throw new Error('PLAYER_BIND_FAILED');
+    this.allowedHost = `127.0.0.1:${address.port}`;
     return `http://127.0.0.1:${address.port}/`;
   }
 
@@ -145,6 +232,7 @@ export class LocalPlayerOrigin {
       this.server!.close((error) => (error ? reject(error) : resolveStop())),
     );
     this.server = undefined;
+    this.allowedHost = undefined;
   }
 }
 
@@ -156,7 +244,15 @@ export async function launchKioskPlayer(
     '--kiosk',
     '--disable-extensions',
     '--disable-features=Translate,AutofillServerCommunication',
+    '--disable-background-networking',
+    '--disable-component-update',
+    '--disable-default-apps',
+    '--disable-prompt-on-repost',
+    '--disable-sync',
+    '--metrics-recording-only',
     '--no-first-run',
+    '--no-default-browser-check',
+    '--password-store=basic',
   ];
   validateKioskLaunchConfiguration({
     args,
@@ -171,6 +267,18 @@ export async function launchKioskPlayer(
     defaultViewport: null,
   });
   const page = await browser.newPage();
+  page.setDefaultNavigationTimeout?.(15_000);
+  await page.setRequestInterception?.(true);
+  page.on?.('request', (request) => {
+    try {
+      const requested = new URL(String(request.url()));
+      const application = new URL(applicationUrl);
+      if (requested.origin !== application.origin) void request.abort();
+      else void request.continue();
+    } catch {
+      void request.abort();
+    }
+  });
   await page.goto(applicationUrl);
   return browser;
 }

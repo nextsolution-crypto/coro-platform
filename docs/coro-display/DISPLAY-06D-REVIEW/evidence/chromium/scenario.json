@@ -1,0 +1,15 @@
+{
+  "deviceId": "3fd2fff6-6784-41e7-9020-31d33d6dbb31",
+  "assignmentId": "0f855632-2ab5-44f7-96ef-275b9c17fe5d",
+  "publicationId": "f55a8026-b6cb-4089-aeff-22fbfd36b7a6",
+  "manifestSequence": 1,
+  "renderSha256": "36ee1edf742e4418d6bf9b51c7b79cef098678a44fdaa6f62e16cafb0f0f08b0",
+  "syncStatus": "CONFIRMED",
+  "heartbeatAt": "2026-11-12T12:32:16.199Z",
+  "supervisionVerified": true,
+  "syntheticOrganizationCount": 3,
+  "restartProcessPid": 24372,
+  "emergencyRestored": true,
+  "governedClear": true,
+  "physicalDisplayProof": false
+}

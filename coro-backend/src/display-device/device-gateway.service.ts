@@ -30,6 +30,7 @@ import {
   DeviceChallengeDto,
   DeviceRequestProofDto,
   DeviceTelemetryDto,
+  ReconcileDeviceEventsDto,
   DeviceHeartbeatDto,
   EnrollDisplayDeviceDto,
 } from './dto/device-gateway.dto';
@@ -330,6 +331,39 @@ export class DeviceGatewayService {
     };
   }
 
+  async revocations(dto: AuthenticatedDeviceRequestDto) {
+    const device = await this.authenticate(
+      dto.proof,
+      'POST',
+      '/device-gateway/revocations',
+      { requestId: dto.requestId },
+    );
+    const revoked = await this.prisma.displayPlanPublication.findMany({
+      where: {
+        organizationId: device.organizationId,
+        buildingId: device.buildingId,
+        status: 'REVOKED',
+      },
+      select: { id: true, versionNumber: true, variantVersion: true },
+      orderBy: { id: 'asc' },
+    });
+    const payload = {
+      schemaVersion: 1,
+      organizationId: device.organizationId,
+      buildingId: device.buildingId,
+      issuedAt: new Date().toISOString(),
+      documentVersionIds: revoked.map(
+        (item) => `${item.id}:v${item.versionNumber}:r${item.variantVersion}`,
+      ),
+    };
+    return {
+      keyId: this.signer.keyId,
+      algorithm: 'Ed25519' as const,
+      payload,
+      signature: await this.signer.sign(payload),
+    };
+  }
+
   async confirm(dto: ConfirmDisplaySyncDto) {
     const device = await this.authenticate(
       dto.proof,
@@ -502,6 +536,103 @@ export class DeviceGatewayService {
       accepted: true,
       authenticatedAt: now.toISOString(),
       physicalDisplayProof: false,
+    };
+  }
+
+  async reconcileEvents(dto: ReconcileDeviceEventsDto) {
+    const declared = {
+      events: dto.events.map((event) => ({
+        id: event.id,
+        sequence: event.sequence,
+        occurredAt: event.occurredAt,
+        type: event.type,
+        details: event.details,
+        previousHash: event.previousHash,
+        hash: event.hash,
+      })),
+    };
+    const device = await this.authenticate(
+      dto.proof,
+      'POST',
+      '/device-gateway/events/reconcile',
+      { requestId: dto.requestId, ...declared },
+    );
+    const lastAccepted = await this.prisma.displayDeviceEvent.findFirst({
+      where: { deviceId: device.id, eventType: { startsWith: 'LOCAL_' } },
+      orderBy: [{ verifiedAt: 'desc' }, { id: 'desc' }],
+      select: { declaredState: true },
+    });
+    if (lastAccepted && dto.events.length) {
+      const state = lastAccepted.declaredState as {
+        sequence?: number;
+        hash?: string;
+      } | null;
+      const first = dto.events[0];
+      if (
+        !state ||
+        typeof state.sequence !== 'number' ||
+        typeof state.hash !== 'string' ||
+        first.sequence !== state.sequence + 1 ||
+        first.previousHash !== state.hash
+      )
+        throw new BadRequestException('DEVICE_EVENT_HISTORY_FORK');
+    }
+    for (let index = 1; index < dto.events.length; index += 1) {
+      const previous = dto.events[index - 1];
+      const current = dto.events[index];
+      if (
+        current.sequence !== previous.sequence + 1 ||
+        current.previousHash !== previous.hash
+      )
+        throw new BadRequestException('DEVICE_EVENT_CHAIN_INVALID');
+    }
+    for (const event of dto.events) {
+      if (
+        Object.keys(event.details).length > 32 ||
+        JSON.stringify(event.details).length > 4096 ||
+        Object.values(event.details).some(
+          (value) =>
+            value !== null &&
+            !['string', 'number', 'boolean'].includes(typeof value),
+        )
+      )
+        throw new BadRequestException('DEVICE_EVENT_DETAILS_INVALID');
+      const expectedHash = sha256(
+        canonicalize({
+          id: event.id,
+          sequence: event.sequence,
+          occurredAt: event.occurredAt,
+          type: event.type,
+          details: event.details,
+          previousHash: event.previousHash,
+        }),
+      );
+      if (event.hash !== expectedHash)
+        throw new BadRequestException('DEVICE_EVENT_HASH_INVALID');
+    }
+    await this.prisma.displayDeviceEvent.createMany({
+      data: dto.events.map((event) => ({
+        id: randomUUID(),
+        deviceId: device.id,
+        organizationId: device.organizationId,
+        buildingId: device.buildingId,
+        eventType: `LOCAL_${event.type}`.slice(0, 100),
+        requestId: event.id,
+        declaredState: {
+          sequence: event.sequence,
+          occurredAt: event.occurredAt,
+          details: event.details,
+          previousHash: event.previousHash,
+          hash: event.hash,
+          classification: 'HISTORICAL_DEVICE_DECLARATION',
+        },
+        verifiedAt: new Date(),
+      })),
+      skipDuplicates: true,
+    });
+    return {
+      acceptedIds: dto.events.map((event) => event.id),
+      classification: 'HISTORICAL_NOT_CURRENT_STATE',
     };
   }
 

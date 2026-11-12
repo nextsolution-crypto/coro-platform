@@ -12,6 +12,19 @@ export interface GatewayManifestResponse {
   manifest: SignedPlayerDisplayManifest;
 }
 
+export interface SignedRevocationRegistry {
+  keyId: string;
+  algorithm: 'Ed25519';
+  payload: {
+    schemaVersion: 1;
+    organizationId: string;
+    buildingId: string;
+    issuedAt: string;
+    documentVersionIds: string[];
+  };
+  signature: string;
+}
+
 export class DeviceGatewayHttpClient {
   private readonly base: URL;
 
@@ -67,6 +80,10 @@ export class DeviceGatewayHttpClient {
     return this.signedPost('/device-gateway/manifest', { requestId });
   }
 
+  revocations(requestId: string): Promise<SignedRevocationRegistry> {
+    return this.signedPost('/device-gateway/revocations', { requestId });
+  }
+
   async render(publicationId: string, requestId: string): Promise<Buffer> {
     const path = `/device-gateway/renders/${encodeURIComponent(publicationId)}`;
     const response = await this.signedRequest(path, { requestId });
@@ -79,6 +96,13 @@ export class DeviceGatewayHttpClient {
 
   heartbeat(payload: Json) {
     return this.signedPost('/device-gateway/heartbeat', payload);
+  }
+
+  reconcileEvents(payload: Json) {
+    return this.signedPost<{ acceptedIds: string[]; classification: string }>(
+      '/device-gateway/events/reconcile',
+      payload,
+    );
   }
 
   private async signedPost<T>(path: string, payload: Json): Promise<T> {

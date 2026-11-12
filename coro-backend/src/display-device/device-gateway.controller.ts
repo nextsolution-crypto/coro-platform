@@ -18,6 +18,7 @@ import {
   DeviceTelemetryDto,
   DeviceHeartbeatDto,
   EnrollDisplayDeviceDto,
+  ReconcileDeviceEventsDto,
 } from './dto/device-gateway.dto';
 import { DeviceGatewayService } from './device-gateway.service';
 
@@ -51,6 +52,12 @@ export class DeviceGatewayController {
     return this.gateway.manifest(dto);
   }
 
+  @Post('revocations')
+  @HttpCode(200)
+  revocations(@Body() dto: AuthenticatedDeviceRequestDto) {
+    return this.gateway.revocations(dto);
+  }
+
   @Post('renders/:publicationId')
   @HttpCode(200)
   @Header('Cache-Control', 'private, no-store, max-age=0')
@@ -82,5 +89,11 @@ export class DeviceGatewayController {
   @HttpCode(202)
   heartbeat(@Body() dto: DeviceHeartbeatDto) {
     return this.gateway.heartbeat(dto);
+  }
+
+  @Post('events/reconcile')
+  @HttpCode(202)
+  reconcileEvents(@Body() dto: ReconcileDeviceEventsDto) {
+    return this.gateway.reconcileEvents(dto);
   }
 }

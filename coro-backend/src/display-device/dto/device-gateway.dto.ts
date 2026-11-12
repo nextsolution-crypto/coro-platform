@@ -1,5 +1,6 @@
 import {
   IsArray,
+  ArrayMaxSize,
   IsIn,
   IsISO8601,
   IsInt,
@@ -86,4 +87,39 @@ export class DeviceHeartbeatDto extends AuthenticatedDeviceRequestDto {
   @IsIn(['HEALTHY', 'DEGRADED', 'FAILED']) runtimeHealth!: string;
   @IsIn(['ONLINE', 'OFFLINE', 'DEGRADED']) networkStatus!: string;
   @IsArray() @IsString({ each: true }) errorCodes!: string[];
+}
+
+export class DeviceOperationalEventDto {
+  @IsString() @Length(16, 128) id!: string;
+  @IsInt() @Min(1) sequence!: number;
+  @IsISO8601() occurredAt!: string;
+  @IsIn([
+    'BOOT',
+    'SHUTDOWN',
+    'CRASH',
+    'RESTART',
+    'SYNC',
+    'ACTIVATION',
+    'HEARTBEAT',
+    'NETWORK_LOST',
+    'NETWORK_RESTORED',
+    'ERROR',
+    'EMERGENCY',
+    'GOVERNED_CLEAR',
+    'REVOCATION',
+    'TRUST_UPDATED',
+  ])
+  type!: string;
+  @IsObject()
+  details!: Record<string, string | number | boolean | null>;
+  @Matches(/^(GENESIS|[a-f0-9]{64})$/) previousHash!: string;
+  @Matches(/^[a-f0-9]{64}$/) hash!: string;
+}
+
+export class ReconcileDeviceEventsDto extends AuthenticatedDeviceRequestDto {
+  @IsArray()
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => DeviceOperationalEventDto)
+  events!: DeviceOperationalEventDto[];
 }
