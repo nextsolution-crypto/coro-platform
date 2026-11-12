@@ -524,8 +524,12 @@ export class DisplayOrchestrationService {
   private validateSource(dto: IssueDisplayOperationalCommandDto) {
     if (dto.source === 'BUILDING_BRIDGE_FUTURE')
       throw new ForbiddenException('BUILDING_BRIDGE_NOT_ENABLED');
-    if (dto.source === 'CORO_OPS' && !dto.protocolId)
-      throw new BadRequestException('APPROVED_PROTOCOL_REFERENCE_REQUIRED');
+    if (dto.source === 'CORO_OPS' || dto.source === 'CORO_INCIDENT')
+      throw new ForbiddenException(
+        'MACHINE_EVENT_SOURCE_REQUIRES_TRUSTED_ADAPTER',
+      );
+    if (dto.source === 'SIMULATOR' && !dto.exercise)
+      throw new ForbiddenException('SIMULATOR_SOURCE_REQUIRES_EXERCISE');
     if (dto.commandType === 'RESTORE_NORMAL')
       throw new ForbiddenException(
         'DIRECT_RESTORE_FORBIDDEN_USE_GOVERNED_CLEAR',

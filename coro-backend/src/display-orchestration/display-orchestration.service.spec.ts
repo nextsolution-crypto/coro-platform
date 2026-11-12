@@ -62,15 +62,34 @@ describe('DisplayOrchestrationService security boundaries', () => {
     ).rejects.toThrow('BUILDING_BRIDGE_NOT_ENABLED');
   });
 
-  it('requires an approved protocol reference for the minimal CORO Ops adapter', async () => {
+  it('refuses machine provenance on the human JWT route', async () => {
     await expect(
       service.issue(
         'org-a',
         'building-a',
         { userId: 'actor-a', organizationId: 'org-a', role: 'OPERATOR' },
-        { ...base, source: 'CORO_OPS' } as never,
+        { ...base, source: 'CORO_OPS', protocolId: 'protocol-a' } as never,
       ),
-    ).rejects.toThrow('APPROVED_PROTOCOL_REFERENCE_REQUIRED');
+    ).rejects.toThrow('MACHINE_EVENT_SOURCE_REQUIRES_TRUSTED_ADAPTER');
+    await expect(
+      service.issue(
+        'org-a',
+        'building-a',
+        { userId: 'actor-a', organizationId: 'org-a', role: 'OPERATOR' },
+        { ...base, source: 'CORO_INCIDENT' } as never,
+      ),
+    ).rejects.toThrow('MACHINE_EVENT_SOURCE_REQUIRES_TRUSTED_ADAPTER');
+  });
+
+  it('restricts simulator provenance to exercises', async () => {
+    await expect(
+      service.issue(
+        'org-a',
+        'building-a',
+        { userId: 'actor-a', organizationId: 'org-a', role: 'OPERATOR' },
+        { ...base, source: 'SIMULATOR', exercise: false } as never,
+      ),
+    ).rejects.toThrow('SIMULATOR_SOURCE_REQUIRES_EXERCISE');
   });
 
   it('forbids a direct restore that bypasses governed clear', async () => {
@@ -90,7 +109,12 @@ describe('DisplayOrchestrationService security boundaries', () => {
         'org-a',
         'building-a',
         { userId: 'actor-a', organizationId: 'org-a', role: 'OPERATOR' },
-        { ...base, commandType: 'ENTER_EMERGENCY', exercise: false } as never,
+        {
+          ...base,
+          source: 'MANUAL',
+          commandType: 'ENTER_EMERGENCY',
+          exercise: false,
+        } as never,
       ),
     ).rejects.toThrow('ACTIVE_INCIDENT_REQUIRED');
   });

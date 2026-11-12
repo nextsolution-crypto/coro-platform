@@ -1,7 +1,9 @@
 # Verdict GO / NO-GO
 
-Verdict actuel : **GO CONDITIONNEL DISPLAY-07-SOFTWARE-REVIEW**.
+Verdict local après contre-revue : **GO CONDITIONNEL DISPLAY-07-SOFTWARE-REVIEW**.
 
-Garanties P0 démontrées localement : autorité, cloisonnement, ciblage, publication documentaire, signature, séquence, priorité, sortie gouvernée, persistance hors ligne, accusés distincts, atomicité/outbox, journal Incident, migrations et Chromium synthétique.
+Garanties P0 démontrées : autorité, cloisonnement, ciblage, publication documentaire, signature, séquence, priorité, sortie gouvernée, persistance hors ligne, accusés distincts, atomicité/outbox, journal Incident, migration PostgreSQL et Chromium synthétique. La contre-revue a découvert puis fermé l'usurpation possible des provenances machine sur la route humaine.
 
-Conditions avant GO : revue indépendante, régressions complètes, CI Draft verte et correction de toute faille P0. Matériel, Building Bridge, observation physique et intégration Ops complète restent NOT_VERIFIED sans bloquer la revue logicielle.
+Condition finale : la PR Draft doit obtenir une CI verte au SHA exact. Matériel, Building Bridge, observation physique, adaptateur Ops entrant, OCR Windows local et ordonnanceur proactif d'escalade hors ligne restent documentés sans être présentés comme vérifiés.
+
+Aucune fusion, aucun déploiement et aucune activation d'appareil ne sont autorisés par ce verdict.
