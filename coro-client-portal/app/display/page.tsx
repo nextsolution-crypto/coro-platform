@@ -54,6 +54,19 @@ const categories = [
   "DOCUMENT_INFORMATION_INCORRECT",
   "OTHER",
 ];
+const displayPlayerBaseUrl = (() => {
+  const configured =
+    process.env.NEXT_PUBLIC_DISPLAY_PLAYER_URL || "http://localhost:3003";
+  try {
+    const parsed = new URL(configured);
+    if (!["http:", "https:"].includes(parsed.protocol)) throw new Error();
+    return parsed.toString().replace(/\/$/, "");
+  } catch {
+    return "http://localhost:3003";
+  }
+})();
+const displayPlayerUrl = (publicDisplayId: string) =>
+  `${displayPlayerBaseUrl}/d/${encodeURIComponent(publicDisplayId)}`;
 const categoryLabels: Record<string, string> = {
   EXTINGUISHER_MOVED: "Extincteur déplacé",
   EXIT_CHANGED: "Issue modifiée",
@@ -255,7 +268,7 @@ export default function DisplayPage() {
                   {plan.location.publicDisplayId && (
                     <p>
                       URL permanente :{" "}
-                      <code>{`https://display.getcoro.io/d/${plan.location.publicDisplayId}`}</code>
+                      <code>{displayPlayerUrl(plan.location.publicDisplayId)}</code>
                     </p>
                   )}
                   <p>
@@ -272,11 +285,14 @@ export default function DisplayPage() {
                 {plan.location.publicDisplayId && (
                   <button
                     type="button"
-                    onClick={() =>
-                      void navigator.clipboard.writeText(
-                        `https://display.getcoro.io/d/${plan.location.publicDisplayId}`,
-                      )
-                    }
+                    onClick={() => {
+                      const publicDisplayId = plan.location.publicDisplayId;
+                      if (publicDisplayId) {
+                        void navigator.clipboard.writeText(
+                          displayPlayerUrl(publicDisplayId),
+                        );
+                      }
+                    }}
                   >
                     Copier l’URL
                   </button>

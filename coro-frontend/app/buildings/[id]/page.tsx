@@ -263,23 +263,35 @@ export default function BuildingDetailPage() {
             </div>
           </div>
 
-          {/* Bouton modifier */}
-          {['ADMIN', 'SUPER_ADMIN'].includes(user?.role || '') && <button
-            onClick={() => setShowEditModal(true)}
-            className="w-full lg:w-auto justify-center flex items-center gap-2 text-sm font-medium px-3 py-2 rounded transition-colors"
-            style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
-            onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = '#F8F9FA';
-              e.currentTarget.style.color = '#2C3E50';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#6C757D';
-            }}
-          >
-            <Edit2 size={14} />
-            Modifier
-          </button>}
+          <div className="flex w-full flex-col gap-2 lg:w-auto lg:flex-row">
+            {user?.displayPermissions?.includes('DISPLAY_READ') && (
+              <button
+                type="button"
+                onClick={() => router.push(`/display?buildingId=${encodeURIComponent(buildingId)}`)}
+                className="w-full lg:w-auto justify-center flex items-center gap-2 text-sm font-medium px-3 py-2 rounded transition-colors"
+                style={{ border: '1px solid #C0392B', color: '#C0392B' }}
+              >
+                <Building2 size={14} />
+                Ouvrir dans CORO Display
+              </button>
+            )}
+            {['ADMIN', 'SUPER_ADMIN'].includes(user?.role || '') && <button
+              onClick={() => setShowEditModal(true)}
+              className="w-full lg:w-auto justify-center flex items-center gap-2 text-sm font-medium px-3 py-2 rounded transition-colors"
+              style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = '#F8F9FA';
+                e.currentTarget.style.color = '#2C3E50';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = '#6C757D';
+              }}
+            >
+              <Edit2 size={14} />
+              Modifier
+            </button>}
+          </div>
         </div>
       </div>
 

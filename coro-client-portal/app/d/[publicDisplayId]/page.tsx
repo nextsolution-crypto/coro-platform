@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import styles from "./player.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002/api";
@@ -27,9 +27,15 @@ type Manifest = {
   };
 };
 
+class HttpError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
+
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { ...init, cache: "no-store" });
-  if (!response.ok) throw new Error(response.status === 401 ? "Activation ou session refusée." : "Service temporairement indisponible.");
+  if (!response.ok) throw new HttpError(response.status === 401 ? "Activation ou session refusée." : "Service temporairement indisponible.", response.status);
   return response.json();
 }
 
@@ -42,45 +48,72 @@ export default function DisplayWebPlayer({ params }: { params: Promise<{ publicD
   const [content, setContent] = useState("");
   const [error, setError] = useState("");
   const [offline, setOffline] = useState(false);
+  const contentRef = useRef("");
+  const publicationRef = useRef("");
+  const syncInFlight = useRef(false);
 
   useEffect(() => {
     void params.then(({ publicDisplayId: id }) => {
       setPublicDisplayId(id);
       setToken(localStorage.getItem(`${SESSION_PREFIX}${id}`) ?? "");
-      void json<PublicStatus>(`${API}/display-public/d/${id}`).then(setStatus).catch((e: Error) => setError(e.message));
+      void json<PublicStatus>(`${API}/display-public/d/${id}`).then(setStatus).catch((cause: Error) => setError(cause.message));
     });
   }, [params]);
 
   const sync = useCallback(async () => {
-    if (!publicDisplayId || !token) return;
+    if (!publicDisplayId || !token || syncInFlight.current) return;
+    syncInFlight.current = true;
     try {
       const next = await json<Manifest>(`${API}/display-public/d/${publicDisplayId}/manifest`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setManifest(next);
       setOffline(false);
-      if (!next.publication) return;
+      setError("");
+      if (!next.publication) {
+        publicationRef.current = "";
+        if (contentRef.current) URL.revokeObjectURL(contentRef.current);
+        contentRef.current = "";
+        setContent("");
+        return;
+      }
+      const publicationKey = `${next.publication.id}:${next.publication.versionNumber}:${next.publication.variantVersion}:${next.publication.variantSha256}`;
+      if (publicationRef.current === publicationKey && contentRef.current) return;
       const response = await fetch(`${API}${next.publication.contentPath}`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
       });
-      if (!response.ok) throw new Error("Plan indisponible.");
+      if (!response.ok) throw new HttpError(response.status === 401 ? "Activation ou session refusée." : "Plan indisponible.", response.status);
       const blob = await response.blob();
       const nextUrl = URL.createObjectURL(blob);
-      setContent((old) => {
-        if (old) URL.revokeObjectURL(old);
-        return nextUrl;
-      });
+      if (contentRef.current) URL.revokeObjectURL(contentRef.current);
+      contentRef.current = nextUrl;
+      publicationRef.current = publicationKey;
+      setContent(nextUrl);
       await json(`${API}/display-public/d/${publicDisplayId}/confirm`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ publicationId: next.publication.id, version: next.publication.versionNumber }),
       });
     } catch (cause) {
+      if (cause instanceof HttpError && cause.status === 401) {
+        localStorage.removeItem(`${SESSION_PREFIX}${publicDisplayId}`);
+        if (contentRef.current) URL.revokeObjectURL(contentRef.current);
+        contentRef.current = "";
+        publicationRef.current = "";
+        setContent("");
+        setManifest(null);
+        setToken("");
+        setOffline(false);
+        setError(cause.message);
+        return;
+      }
       setOffline(true);
-      if (!content) setError(cause instanceof Error ? cause.message : "Synchronisation impossible.");
+      if (!contentRef.current) setError(cause instanceof Error ? cause.message : "Synchronisation impossible.");
+    } finally {
+      syncInFlight.current = false;
     }
-  }, [content, publicDisplayId, token]);
+  }, [publicDisplayId, token]);
 
   useEffect(() => {
     void sync();
@@ -88,6 +121,10 @@ export default function DisplayWebPlayer({ params }: { params: Promise<{ publicD
     const timer = window.setInterval(() => void sync(), Math.max(15, manifest.pollingSeconds) * 1000);
     return () => window.clearInterval(timer);
   }, [manifest?.pollingSeconds, sync]);
+
+  useEffect(() => () => {
+    if (contentRef.current) URL.revokeObjectURL(contentRef.current);
+  }, []);
 
   async function activate(event: FormEvent) {
     event.preventDefault();
@@ -119,7 +156,7 @@ export default function DisplayWebPlayer({ params }: { params: Promise<{ publicD
           <p>{status.location?.floor} — {status.location?.label}</p>
           <p>Cet appareil n’est pas encore activé. Entrez le code temporaire fourni par le responsable autorisé.</p>
           <form onSubmit={activate}>
-            <label>Code d’activation<input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} required /></label>
+            <label>Code d’activation<input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))} required /></label>
             <button type="submit">Activer l’appareil</button>
           </form>
           {error && <p role="alert" className={styles.error}>{error}</p>}

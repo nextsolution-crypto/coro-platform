@@ -110,6 +110,7 @@ export default function DisplayManagerPage() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("ALL");
   const [building, setBuilding] = useState("ALL");
+  const [requestedBuildingId, setRequestedBuildingId] = useState("");
   const [selected, setSelected] = useState<Plan | null>(null);
   const [preview, setPreview] = useState("");
   const [busy, setBusy] = useState(false);
@@ -139,6 +140,20 @@ export default function DisplayManagerPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
+  useEffect(() => {
+    const buildingId = new URLSearchParams(window.location.search).get(
+      "buildingId",
+    );
+    if (buildingId) setRequestedBuildingId(buildingId);
+  }, []);
+  useEffect(() => {
+    if (!data || !requestedBuildingId) return;
+    if (data.buildings.some((item) => item.id === requestedBuildingId)) {
+      setBuilding(requestedBuildingId);
+      return;
+    }
+    setError("Ce bâtiment n’est pas accessible dans CORO Display.");
+  }, [data, requestedBuildingId]);
   useEffect(
     () => () => {
       if (preview) URL.revokeObjectURL(preview);
@@ -360,6 +375,23 @@ export default function DisplayManagerPage() {
         {error && (
           <div className={styles.error} role="alert">
             {error}
+          </div>
+        )}
+        {requestedBuildingId && building !== "ALL" && (
+          <div className={styles.contextBanner} role="status">
+            <span>
+              Contexte bâtiment : {data.buildings.find((item) => item.id === building)?.name}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setBuilding("ALL");
+                setRequestedBuildingId("");
+                window.history.replaceState(null, "", "/display");
+              }}
+            >
+              Voir tous les bâtiments
+            </button>
           </div>
         )}
         <section className={styles.metrics}>
