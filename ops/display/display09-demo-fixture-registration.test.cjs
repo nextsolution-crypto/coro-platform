@@ -2,6 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const { register, unregister, EXPECTED_BUILDING_FINGERPRINT } = require('./display09-demo-fixture-registration.cjs');
 
 function harness(overrides = {}) {
@@ -47,4 +48,9 @@ test('reversal removes only the exact registry record', async () => {
   const crypto = require('node:crypto');
   const actual = crypto.createHash('sha256').update('canonical-building').digest('hex');
   assert.deepEqual(await unregister(h.prisma, actual), { schemaVersion: 1, execution: 'PASS', removed: true, registryOnly: true });
+});
+
+test('stdin execution is gated by the explicit runtime switch', () => {
+  const source = fs.readFileSync(require.resolve('./display09-demo-fixture-registration.cjs'), 'utf8');
+  assert.match(source, /require\.main === module \|\| process\.env\.DISPLAY09_FIXTURE_REGISTRATION_RUN === 'true'/);
 });
