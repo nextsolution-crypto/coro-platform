@@ -8,6 +8,15 @@ PASS :
 - `DemoFixtureRecord` gouverné, unique, réversible;
 - Gate 1A PostgreSQL READ ONLY;
 - routage local Host `display.getcoro.io` vers le Player Web;
-- code/CI et quatre images GHCR immuables.
+- code/CI et quatre images GHCR immuables;
+- inspection TLS profonde exécutée sans mutation.
 
-Blocage unique démontré : le certificat actuellement présenté par l'origine ne couvre pas `display.getcoro.io`. Une correction TLS gouvernée et sa revalidation sont nécessaires avant la demande de déploiement. Gate 1B restera obligatoire après migrations et avant publication ou activation d'appareil.
+Inspection finale `43463944144` :
+
+- `INSPECTION_EXECUTED=PASS`;
+- `TLS_VALIDATED=FAIL` pour `display.getcoro.io`;
+- `ORIGIN_PATH_VERIFIED=NOT_VERIFIED`.
+
+Blocages avant déploiement : le certificat d'origine ne couvre pas `display.getcoro.io`, et la cible Cloudflare n'est pas encore corrélée de manière vérifiable avec l'origine inspectée. Une correction TLS gouvernée, la preuve du chemin Cloudflare → origine et leur revalidation sont nécessaires.
+
+Gate 1B restera obligatoire après migrations et avant publication ou activation d'appareil.
