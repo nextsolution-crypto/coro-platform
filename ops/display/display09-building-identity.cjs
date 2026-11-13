@@ -20,7 +20,6 @@ async function inspect(tx) {
     where: { organizationId: ORGANIZATION_ID, clientId: { in: clients.map((c) => c.id) } },
     select: {
       id: true, clientId: true, name: true, address: true, city: true, province: true, isActive: true,
-      _count: { select: { displayLocations: true } },
     },
     orderBy: { id: 'asc' },
   });
@@ -30,7 +29,7 @@ async function inspect(tx) {
     normalize(building.city) === 'montreal',
   );
   const building = matches.length === 1 ? matches[0] : null;
-  const [organization, internalAuthorities, clientAuthorities] = await Promise.all([
+  const [organization, demoFixtures] = await Promise.all([
     tx.organization.findUnique({
       where: { id: ORGANIZATION_ID },
       select: {
@@ -38,20 +37,12 @@ async function inspect(tx) {
         demoEnvironment: { select: { status: true, communicationMode: true, externalProvidersDisabled: true } },
       },
     }),
-    building ? tx.user.findMany({
-      where: { organizationId: ORGANIZATION_ID, isActive: true, displayBuildingIds: { has: building.id } },
-      select: { id: true, displayPermissions: true },
-    }) : [],
-    building ? tx.clientUser.findMany({
-      where: { organizationId: ORGANIZATION_ID, clientId: building.clientId, isActive: true, displayBuildingIds: { has: building.id } },
-      select: { id: true, displayPermissions: true },
+    building ? tx.demoFixtureRecord.findMany({
+      where: { organizationId: ORGANIZATION_ID, entityType: 'BUILDING', entityId: building.id, state: 'ACTIVE' },
+      select: { id: true },
     }) : [],
   ]);
-  const hasDisplayRead = (entry) => entry.displayPermissions.includes('DISPLAY_CLIENT_PLAN_READ') || entry.displayPermissions.includes('DISPLAY_READ');
-  const result = {
-    organization, clients, matches,
-    displayAuthorityCount: [...internalAuthorities, ...clientAuthorities].filter(hasDisplayRead).length,
-  };
+  const result = { organization, clients, matches, demoFixtureCount: demoFixtures.length };
   return result;
 }
 
@@ -67,15 +58,15 @@ async function run(prisma, secureEvidencePath) {
     const demo = result.organization?.id === ORGANIZATION_ID && normalize(result.organization?.name) === normalize('CORO Démo') && result.organization?.isActive === true && result.organization?.isInternal === false && result.organization?.demoEnvironment?.status === 'ACTIVE' && result.organization?.demoEnvironment?.communicationMode === 'SIMULATE' && result.organization?.demoEnvironment?.externalProvidersDisabled === true;
     const clientActive = unique && result.clients[0].isActive === true;
     const buildingActive = building?.isActive === true;
-    const displayAuthorityConfirmed = result.displayAuthorityCount > 0;
-    const accepted = unique && demo && clientActive && buildingActive && displayAuthorityConfirmed;
+    const buildingFictitious = result.demoFixtureCount === 1;
+    const accepted = unique && demo && clientActive && buildingActive && buildingFictitious;
     const secure = {
       schemaVersion: 1, readOnly: transactionReadOnly, organizationId: ORGANIZATION_ID,
       clientId: unique ? result.clients[0].id : null,
       buildingId: building?.id ?? null, name: building?.name ?? null,
       address: building ? `${building.address}, ${building.city}, ${building.province}` : null,
-      active: building?.isActive ?? null, displayLocationCount: building?._count.displayLocations ?? null,
-      displayAuthorityCount: result.displayAuthorityCount, demo, clientActive, buildingActive,
+      active: building?.isActive ?? null, demoFixtureCount: result.demoFixtureCount,
+      buildingFictitious, demo, clientActive, buildingActive,
     };
     fs.writeFileSync(secureEvidencePath, `${JSON.stringify(secure)}\n`, { mode: 0o600 });
     return {
@@ -86,8 +77,8 @@ async function run(prisma, secureEvidencePath) {
       addressMatches: building ? normalize(building.address) === normalize(BUILDING_ADDRESS) : false,
       cityMatches: building ? normalize(building.city) === 'montreal' : false,
       clientActive, active: building?.isActive ?? null, demo,
-      displayAuthorityConfirmed, displayAuthorityCount: result.displayAuthorityCount,
-      displayLocationCount: building?._count.displayLocations ?? null,
+      buildingFictitious, demoFixtureCount: result.demoFixtureCount,
+      postMigrationDisplayGate: 'REQUIRED',
     };
   }, { timeout: 60_000 });
 }
