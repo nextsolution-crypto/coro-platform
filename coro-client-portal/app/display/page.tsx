@@ -285,11 +285,14 @@ export default function DisplayPage() {
                 {plan.location.publicDisplayId && (
                   <button
                     type="button"
-                    onClick={() =>
-                      void navigator.clipboard.writeText(
-                        displayPlayerUrl(plan.location.publicDisplayId),
-                      )
-                    }
+                    onClick={() => {
+                      const publicDisplayId = plan.location.publicDisplayId;
+                      if (publicDisplayId) {
+                        void navigator.clipboard.writeText(
+                          displayPlayerUrl(publicDisplayId),
+                        );
+                      }
+                    }}
                   >
                     Copier l’URL
                   </button>
