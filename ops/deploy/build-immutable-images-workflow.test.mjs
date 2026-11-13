@@ -13,9 +13,10 @@ test('build-only workflow is fail-closed and cannot deploy', () => {
   assert.match(workflow, /git merge-base --is-ancestor/);
   assert.match(workflow, /git status --porcelain/);
   assert.match(workflow, /packages: write/);
-  assert.match(workflow, /secrets\.GITHUB_TOKEN/);
-  assert.doesNotMatch(workflow, /secrets\.GHCR_TOKEN/);
+  assert.match(workflow, /secrets\.GHCR_TOKEN/);
+  assert.doesNotMatch(workflow, /secrets\.GITHUB_TOKEN/);
   assert.match(workflow, /release-policy\.mjs images/);
+  assert.match(workflow, /docker buildx imagetools inspect/);
   assert.doesNotMatch(workflow, /environment:\s*production/);
   assert.doesNotMatch(workflow, /production-release/);
   assert.doesNotMatch(workflow, /appleboy\/ssh-action/);

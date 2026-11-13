@@ -66,7 +66,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Build and push backend
         id: backend
@@ -119,6 +119,22 @@ jobs:
           CLIENT_PORTAL_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-client-portal@${{ steps.client-portal.outputs.digest }}
           WEBSITE_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-website@${{ steps.website.outputs.digest }}
         run: node ops/deploy/release-policy.mjs images
+
+      - name: Verify remote manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          verify_manifest() {
+            local image="$1"
+            local expected="$2"
+            local actual
+            actual="$(docker buildx imagetools inspect "$image" --format '{{.Manifest.Digest}}')"
+            test "$actual" = "$expected"
+          }
+          verify_manifest "ghcr.io/${{ github.repository_owner }}/coro-backend:${{ needs.validate.outputs.candidate }}" "${{ steps.backend.outputs.digest }}"
+          verify_manifest "ghcr.io/${{ github.repository_owner }}/coro-frontend:${{ needs.validate.outputs.candidate }}" "${{ steps.frontend.outputs.digest }}"
+          verify_manifest "ghcr.io/${{ github.repository_owner }}/coro-client-portal:${{ needs.validate.outputs.candidate }}" "${{ steps.client-portal.outputs.digest }}"
+          verify_manifest "ghcr.io/${{ github.repository_owner }}/coro-website:${{ needs.validate.outputs.candidate }}" "${{ steps.website.outputs.digest }}"
 
       - name: Publish digest summary
         run: |
