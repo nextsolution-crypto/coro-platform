@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "preparedAt": "2026-11-13T12:00:00Z",
+  "sourceSha": "5ae7cd213346169465ee739d09df6d39b26ac6c3",
+  "productionSha": "e83d83a1afcb80d9bc95037dadc27700d3f68d89",
+  "images": {
+    "backend": {"localDigest":"sha256:09c8119a804329d7d50c4b41aee66e097cf54737f8a8b870b996bd3a64066fa8","registryDigest":"sha256:27983be97af79abadf0db2a612db480dc9261c52a3bcf41892946e54865aea0c","architecture":"linux/amd64"},
+    "frontend": {"localDigest":"sha256:84179111a1cc7c20cde175faf93248919f3c4559d909147c1b98003d2b299423","registryDigest":"sha256:c54fe1952d3da44e6fde282e5c7459eda284ba69e437225713cc21e1c8e99c00","architecture":"linux/amd64"},
+    "clientPortal": {"localDigest":"sha256:b8bdcc19a97f60bc5329ee62469f675dac6aec3a6be8d5d171d0889671e6a631","registryDigest":"sha256:186dfc9ba1b7953dcfbb21fa74a4c9e38eaf861b34c688c88282591cf699ed90","architecture":"linux/amd64"},
+    "website": {"localDigest":"sha256:063406f7f2dbcc63b19f774b24068d49dd58f721bba580271f810256c20ff21e","registryDigest":"sha256:44288caa82b85ecb18b5546d92e30480587020f4016ee4986225e09b4f3f2cb8","architecture":"linux/amd64"}
+  },
+  "migrations":{"before":176,"after":187,"candidateCount":11,"simulation":"PASS"},
+  "dns":{"hostname":"display.getcoro.io","status":"NXDOMAIN","provider":"Cloudflare","plannedRecord":{"type":"CNAME","name":"display","target":"client.getcoro.io","proxy":true,"ttl":"AUTO"},"edgeTls":"PROVIDER_CONFIRMED_WILDCARD","originTls":"NOT_VERIFIED","sslMode":"FULL"},
+  "demo":{"organizationId":"916f54ec-af22-45e0-99db-a369d9630002","buildingFingerprint":"5ba4072e9e0027d5b74ff469e5424463f671eb76b9c052db8f024b2450b0f3ec","canonicalIdentity":"PASS","directProvenance":"FAIL","demoFixtureCount":0,"profile":"WEB_VIEW_ONLY","externalKey":"display-demo-tour-premont-e03-corridor-est"},
+  "featureFlags":{"buildingBridge":false,"machineIncidentOpsProvenance":false,"emergencyEligible":false},
+  "gates":{"code":"PASS","database":"PASS_PREPARATORY","localImages":"EVIDENCE_PASS_IMAGES_CLEANED","infrastructure":"PASS_PREPARATORY","dnsEdge":"PASS_PREPARATORY","originTls":"NOT_VERIFIED","demoIdentity":"PASS","demoProvenance":"FAIL","postMigrationDisplay":"REQUIRED","registry":"PASS_REMOTE_MANIFESTS_VERIFIED","authorization":"BLOCKED"},
+  "productionMutationPerformed": false,
+  "verdict": "NO_GO_FINAL_PREDEPLOYMENT"
+}
