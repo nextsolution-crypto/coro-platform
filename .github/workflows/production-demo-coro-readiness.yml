@@ -7,6 +7,14 @@ on:
         description: Type RESOLVE_DISPLAY09_BUILDING_READ_ONLY to execute the fixed Display inventory
         required: false
         type: string
+      display09_fixture_registration:
+        description: Type REGISTER_TOUR_PREMONT_DEMO_FIXTURE to register only the canonical demo building
+        required: false
+        type: string
+      display09_origin_inspection:
+        description: Type INSPECT_DISPLAY09_ORIGIN_READ_ONLY to inspect origin TLS and routing without changes
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -16,6 +24,80 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  display09-origin-inspection:
+    if: inputs.display09_origin_inspection == 'INSPECT_DISPLAY09_ORIGIN_READ_ONLY'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Inspect origin certificate and Display routing without mutation
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            before="$(docker compose -f "$repo/docker-compose.yml" ps --format json | sha256sum | cut -d' ' -f1)"
+            portal="$(docker compose -f "$repo/docker-compose.yml" ps -q client-portal)"
+            test -n "$portal"
+            app_result="$(docker exec "$portal" node -e 'fetch("http://127.0.0.1:3003/d/nonexistent-display-id",{headers:{host:"display.getcoro.io"}}).then(r=>console.log(JSON.stringify({status:r.status,cache:r.headers.get("cache-control"),frame:r.headers.get("x-frame-options")}))).catch(()=>process.exit(1))')"
+            tls_status=NOT_VERIFIED
+            tls_enddate=""
+            tls_san_match=false
+            if timeout 10 openssl s_client -connect 127.0.0.1:443 -servername display.getcoro.io </dev/null > /tmp/display09-tls.txt 2>/dev/null; then
+              cert="$(openssl x509 -noout -enddate -ext subjectAltName </tmp/display09-tls.txt 2>/dev/null || true)"
+              tls_enddate="$(printf '%s\n' "$cert" | sed -n 's/^notAfter=//p')"
+              if printf '%s\n' "$cert" | grep -Eq 'DNS:(\*\.)?getcoro\.io([,[:space:]]|$)|DNS:display\.getcoro\.io([,[:space:]]|$)'; then tls_san_match=true; fi
+              if [[ -n "$tls_enddate" && "$tls_san_match" == true ]] && openssl x509 -checkend 2592000 -noout </tmp/display09-tls.txt >/dev/null 2>&1; then tls_status=PASS; else tls_status=FAIL; fi
+            fi
+            rm -f /tmp/display09-tls.txt
+            after="$(docker compose -f "$repo/docker-compose.yml" ps --format json | sha256sum | cut -d' ' -f1)"
+            test "$before" = "$after"
+            printf '{"schemaVersion":1,"execution":"PASS","readOnly":true,"app":%s,"originTls":"%s","originTlsExpiry":"%s","originSanMatches":%s,"runtimeUnchanged":true}\n' "$app_result" "$tls_status" "$tls_enddate" "$tls_san_match"
+
+  display09-fixture-registration:
+    if: inputs.display09_fixture_registration == 'REGISTER_TOUR_PREMONT_DEMO_FIXTURE'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: node --test ops/display/display09-demo-fixture-registration.test.cjs ops/display/display09-building-identity.test.cjs
+      - name: Register only the pinned canonical demo building fixture
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          WORKFLOW_SHA: ${{ github.sha }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: WORKFLOW_SHA,GITHUB_RUN_ID
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            script_path="$(mktemp /tmp/display09-fixture.XXXXXX.cjs)"
+            output_path="$(mktemp /tmp/display09-fixture.XXXXXX.json)"
+            trap 'rm -f -- "$script_path" "$output_path"' EXIT
+            exec 9>/run/lock/coro-production-deployment.lock
+            flock -n 9
+            git -C "$repo" fetch --quiet origin main
+            test "$(git -C "$repo" rev-parse origin/main)" = "$WORKFLOW_SHA"
+            git -C "$repo" show "$WORKFLOW_SHA:ops/display/display09-demo-fixture-registration.cjs" >"$script_path"
+            cd "$repo"
+            systemctl start coro-db-backup.service
+            test "$(systemctl show -p Result --value coro-db-backup.service)" = success
+            docker compose exec -T -e DISPLAY09_FIXTURE_REGISTRATION_RUN=true -e GITHUB_RUN_ID="$GITHUB_RUN_ID" backend node - <"$script_path" >"$output_path"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.execution!=="PASS"||r.registryOnly!==true||r.reversible!==true||r.activeFixtureCount!==1||r.postMigrationDisplayGate!=="REQUIRED")process.exit(1);' "$output_path"
+            cat "$output_path"
+
   display09-building-identity:
     if: inputs.display09_building_identity == 'RESOLVE_DISPLAY09_BUILDING_READ_ONLY'
     runs-on: ubuntu-latest
