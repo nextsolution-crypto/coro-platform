@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
 import './globals.css';
 import 'leaflet/dist/leaflet.css';
 import '../design-system/tokens.css';
@@ -65,17 +66,19 @@ export const viewport: Viewport = {
 
 import ServiceWorkerRegister from './components/ServiceWorkerRegister';
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
+
   return (
     // data-ui / data-theme : Classique par défaut ; le script anti-flash n'applique Glass que sur les routes re-teintées ET si la bêta
     // de préproduction est activée par le jeton de build (voir design-system/routes/route-registry.ts).
     <html lang="fr" data-ui="legacy" data-theme="light" suppressHydrationWarning>
       <head>
-        <ThemeInitScript />
+        <ThemeInitScript nonce={nonce} />
       </head>
       <body>
         <ThemeProvider>

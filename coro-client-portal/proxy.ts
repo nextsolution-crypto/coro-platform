@@ -1,13 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 
+function apiConnectOrigin(): string {
+  try {
+    const candidate = new URL(
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002/api",
+    );
+    return candidate.protocol === "https:" || candidate.protocol === "http:"
+      ? candidate.origin
+      : "http://localhost:3002";
+  } catch {
+    return "http://localhost:3002";
+  }
+}
+
 export function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const csp = [
     "default-src 'self'",
-    "connect-src 'self' https://api.getcoro.io http://localhost:3002",
+    `connect-src 'self' ${apiConnectOrigin()}`,
     "img-src 'self' blob:",
     "style-src 'self' 'unsafe-inline'",
-    `script-src 'self' 'nonce-${nonce}' 'sha256-bB/+gyBeYUEHq85/+Kg7ejQ6hxyl2XhjUEl2SAD4xvY=' 'strict-dynamic'`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
     "frame-ancestors 'none'",
     "base-uri 'none'",
     "form-action 'self'",
