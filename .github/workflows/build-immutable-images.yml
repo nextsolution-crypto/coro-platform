@@ -42,8 +42,10 @@ jobs:
           test "$BUILD_APPROVAL" = "BUILD_IMAGES_ONLY"
           [[ "$CANDIDATE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
           git fetch --quiet origin main
+          git cat-file -e "$CANDIDATE_COMMIT^{commit}"
           test "$(git rev-parse HEAD)" = "$CANDIDATE_COMMIT"
-          test "$(git rev-parse origin/main)" = "$CANDIDATE_COMMIT"
+          git merge-base --is-ancestor "$CANDIDATE_COMMIT" origin/main
+          test -z "$(git status --porcelain=v1 --untracked-files=no)"
           echo "candidate=$CANDIDATE_COMMIT" >> "$GITHUB_OUTPUT"
 
   build-images:
@@ -64,7 +66,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push backend
         id: backend

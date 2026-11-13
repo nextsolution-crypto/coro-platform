@@ -9,8 +9,12 @@ const workflow = readFileSync(
 
 test('build-only workflow is fail-closed and cannot deploy', () => {
   assert.match(workflow, /BUILD_IMAGES_ONLY/);
-  assert.match(workflow, /git rev-parse origin\/main/);
+  assert.match(workflow, /git cat-file -e/);
+  assert.match(workflow, /git merge-base --is-ancestor/);
+  assert.match(workflow, /git status --porcelain/);
   assert.match(workflow, /packages: write/);
+  assert.match(workflow, /secrets\.GITHUB_TOKEN/);
+  assert.doesNotMatch(workflow, /secrets\.GHCR_TOKEN/);
   assert.match(workflow, /release-policy\.mjs images/);
   assert.doesNotMatch(workflow, /environment:\s*production/);
   assert.doesNotMatch(workflow, /production-release/);
