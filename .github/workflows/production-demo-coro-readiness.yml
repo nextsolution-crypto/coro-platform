@@ -44,8 +44,15 @@ jobs:
             repo=/opt/coro-platform
             before="$(docker compose -f "$repo/docker-compose.yml" ps --format json | sha256sum | cut -d' ' -f1)"
             portal="$(docker compose -f "$repo/docker-compose.yml" ps -q client-portal)"
-            test -n "$portal"
-            app_result="$(docker exec "$portal" node -e 'fetch("http://127.0.0.1:3003/d/nonexistent-display-id",{headers:{host:"display.getcoro.io"}}).then(r=>console.log(JSON.stringify({status:r.status,cache:r.headers.get("cache-control"),frame:r.headers.get("x-frame-options")}))).catch(()=>process.exit(1))')"
+            app_status=NOT_VERIFIED
+            app_http_status=0
+            app_no_store=false
+            if [[ -n "$portal" ]] && curl --silent --show-error --max-time 10 --output /dev/null --dump-header /tmp/display09-app-headers.txt --header 'Host: display.getcoro.io' http://127.0.0.1:3003/d/nonexistent-display-id; then
+              app_http_status="$(awk 'toupper($1) ~ /^HTTP\// {code=$2} END {print code+0}' /tmp/display09-app-headers.txt)"
+              if grep -Eiq '^cache-control:.*no-store' /tmp/display09-app-headers.txt; then app_no_store=true; fi
+              if [[ "$app_http_status" == 404 && "$app_no_store" == true ]]; then app_status=PASS; else app_status=FAIL; fi
+            fi
+            rm -f /tmp/display09-app-headers.txt
             tls_status=NOT_VERIFIED
             tls_enddate=""
             tls_san_match=false
@@ -58,7 +65,7 @@ jobs:
             rm -f /tmp/display09-tls.txt
             after="$(docker compose -f "$repo/docker-compose.yml" ps --format json | sha256sum | cut -d' ' -f1)"
             test "$before" = "$after"
-            printf '{"schemaVersion":1,"execution":"PASS","readOnly":true,"app":%s,"originTls":"%s","originTlsExpiry":"%s","originSanMatches":%s,"runtimeUnchanged":true}\n' "$app_result" "$tls_status" "$tls_enddate" "$tls_san_match"
+            printf '{"schemaVersion":1,"execution":"PASS","readOnly":true,"appRouting":"%s","appHttpStatus":%s,"appNoStore":%s,"originTls":"%s","originTlsExpiry":"%s","originSanMatches":%s,"runtimeUnchanged":true}\n' "$app_status" "$app_http_status" "$app_no_store" "$tls_status" "$tls_enddate" "$tls_san_match"
 
   display09-fixture-registration:
     if: inputs.display09_fixture_registration == 'REGISTER_TOUR_PREMONT_DEMO_FIXTURE'
