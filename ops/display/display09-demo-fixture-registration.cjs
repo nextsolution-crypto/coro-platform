@@ -84,4 +84,4 @@ async function main() {
 }
 
 module.exports = { ORGANIZATION_ID, EXPECTED_BUILDING_FINGERPRINT, FIXTURE_NAMESPACE, FIXTURE_KEY, fingerprint, normalize, resolveCanonical, register, unregister };
-if (require.main === module) main().catch((error) => { process.stdout.write(`${JSON.stringify({ schemaVersion: 1, execution: 'FAILED', failureCode: error.message })}\n`); process.exitCode = 1; });
+if (require.main === module || process.env.DISPLAY09_FIXTURE_REGISTRATION_RUN === 'true') main().catch((error) => { process.stdout.write(`${JSON.stringify({ schemaVersion: 1, execution: 'FAILED', failureCode: error.message })}\n`); process.exitCode = 1; });
