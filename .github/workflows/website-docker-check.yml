@@ -63,7 +63,6 @@ jobs:
           build-args: |
             NEXT_PUBLIC_API_URL=https://api.getcoro.io/api
             NEXT_PUBLIC_CLIENT_PORTAL_URL=https://client.getcoro.io
-            NEXT_PUBLIC_GLASS_BETA=production-preview
       - name: Verify immutable manifest from GHCR
         env:
           IMAGE: ghcr.io/${{ github.repository_owner }}/coro-${{ matrix.name }}:display09-candidate-${{ inputs.candidate_sha }}
