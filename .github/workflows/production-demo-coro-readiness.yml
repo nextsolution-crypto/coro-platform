@@ -54,11 +54,11 @@ jobs:
                 cat "$output_path"
                 exit 1
               fi
+              cat "$output_path"
               node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.execution!=="PASS"||r.readOnly!==true||r.clientCardinality!==1||r.buildingCardinality!==1||r.clientActive!==true||r.active!==true||r.demo!==true||r.buildingFictitious!==true||r.postMigrationDisplayGate!=="REQUIRED")process.exit(1);if(/building-1|client-1|@/.test(JSON.stringify(r)))process.exit(1)' "$output_path"
               docker compose cp backend:/tmp/display09-building-identity.json "$evidence_path"
               docker compose exec -T backend rm -f /tmp/display09-building-identity.json
               chmod 0600 "$evidence_path"
-            cat "$output_path"
 
   validate:
     runs-on: ubuntu-latest
