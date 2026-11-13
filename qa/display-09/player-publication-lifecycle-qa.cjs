@@ -93,6 +93,17 @@ async function eventually(assertion, timeout = 20_000) {
   throw lastError;
 }
 
+async function assertNoHorizontalOverflow(page, state) {
+  const dimensions = await page.evaluate(() => ({
+    viewport: window.innerWidth,
+    document: document.documentElement.scrollWidth,
+  }));
+  assert.ok(
+    dimensions.document <= dimensions.viewport,
+    `${state} overflows horizontally: ${dimensions.document}px > ${dimensions.viewport}px`,
+  );
+}
+
 async function main() {
   await mkdir(evidence, { recursive: true });
   // Bind both localhost address families because Next's local API default may
@@ -127,6 +138,7 @@ async function main() {
     await eventually(() => assert.equal(events.filter((event) => event.type === 'CONFIRMED' && event.version === 2).length, 1), 20_000);
     assert.equal(events.filter((event) => event.type === 'CONTENT' && event.version === 2).length, 1, 'V2 content must be fetched once');
     await page.setViewportSize({ width: 390, height: 844 });
+    await assertNoHorizontalOverflow(page, 'V2 mobile player');
     await page.screenshot({ path: path.join(evidence, '02-v2-mobile.png'), fullPage: true });
 
     await page.reload({ waitUntil: 'networkidle' });
@@ -145,6 +157,7 @@ async function main() {
     await page.waitForTimeout(16_000);
     await page.getByRole('heading', { name: 'Activer cet affichage' }).waitFor();
     await page.getByRole('alert').filter({ hasText: 'Activation ou session refusée.' }).waitFor();
+    await assertNoHorizontalOverflow(page, 'revoked mobile activation');
     await page.screenshot({ path: path.join(evidence, '05-session-revoked.png'), fullPage: true });
 
     assert.equal(await page.evaluate((key) => localStorage.getItem(key), `coro_display_web_${PUBLIC_ID}`), null);
