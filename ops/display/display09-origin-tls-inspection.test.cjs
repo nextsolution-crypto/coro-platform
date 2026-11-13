@@ -43,3 +43,21 @@ test('origin correlation publishes only a SHA-256 fingerprint, never the address
   assert.match(script, /origin_address.*sha256sum/);
   assert.doesNotMatch(script, /printf[^\n]*origin_address[^\n]*\\n/);
 });
+
+test('nginx effective configuration dump is private and removed on every exit path', () => {
+  assert.match(script, /umask 077/);
+  assert.match(script, /trap cleanup EXIT/);
+  assert.match(script, /mktemp \/tmp\/display09-nginx-effective\.XXXXXX/);
+  assert.match(script, /chmod 0600 "\$nginx_dump"/);
+  assert.match(script, /temporary_paths\+\=\("\$nginx_dump"\)/);
+  assert.doesNotMatch(script, /cat\s+"?\$nginx_dump/);
+});
+
+test('HTTP-01 detection examines loaded nginx ACME locations and certbot authenticators', () => {
+  assert.match(script, /grep -Eiq[^\n]+acme-challenge[^\n]+"\$nginx_dump"/);
+  assert.match(script, /authenticator=nginx/);
+  assert.match(script, /authenticator=webroot/);
+  assert.match(script, /http01StaticLocationPresent/);
+  assert.match(script, /http01CertbotPluginPresent/);
+  assert.match(script, /http01ChallengeConfigured/);
+});

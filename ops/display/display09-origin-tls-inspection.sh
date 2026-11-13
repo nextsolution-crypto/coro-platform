@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+umask 077
+
+temporary_paths=()
+cleanup() {
+  if (( ${#temporary_paths[@]} )); then rm -f -- "${temporary_paths[@]}"; fi
+}
+trap cleanup EXIT
 
 # Read-only origin inspection. The output is deliberately limited to service names,
 # certificate metadata and booleans; private keys and environment values are never read.
@@ -30,7 +37,9 @@ fi
 matrix=""
 for host in "${TARGETS[@]}"; do
   status="NOT_VERIFIED"; subject=""; issuer=""; start=""; end=""; fingerprint=""; sans=""; verify="NOT_VERIFIED"
-  tmp="$(mktemp)"; trap 'rm -f "$tmp"' RETURN
+  tmp="$(mktemp /tmp/display09-origin-cert.XXXXXX)"
+  chmod 0600 "$tmp"
+  temporary_paths+=("$tmp")
   if timeout 10 openssl s_client -connect 127.0.0.1:443 -servername "$host" -showcerts </dev/null >"$tmp" 2>/dev/null; then
     subject="$(openssl x509 -in "$tmp" -noout -subject 2>/dev/null | sed 's/^subject=//')"
     issuer="$(openssl x509 -in "$tmp" -noout -issuer 2>/dev/null | sed 's/^issuer=//')"
@@ -41,7 +50,7 @@ for host in "${TARGETS[@]}"; do
     if openssl s_client -connect 127.0.0.1:443 -servername "$host" -verify_hostname "$host" -verify_return_error </dev/null 2>&1 | grep -q 'Verify return code: 0'; then verify="PASS"; else verify="FAIL"; fi
     status="PASS"
   fi
-  rm -f "$tmp"; trap - RETURN
+  rm -f "$tmp"
   item="{\"hostname\":\"$(json_escape "$host")\",\"inspection\":\"$status\",\"hostnameValidation\":\"$verify\",\"subject\":\"$(json_escape "$subject")\",\"issuer\":\"$(json_escape "$issuer")\",\"notBefore\":\"$(json_escape "$start")\",\"notAfter\":\"$(json_escape "$end")\",\"sha256Fingerprint\":\"$(json_escape "$fingerprint")\",\"sans\":\"$(json_escape "$sans")\"}"
   matrix="${matrix}${matrix:+,}${item}"
 done
@@ -49,10 +58,13 @@ done
 nginx_state="ABSENT"
 nginx_files=""
 nginx_directives=""
+http01_static_location=false
 if command_exists nginx; then
   nginx_state="PRESENT"
   nginx -t >/dev/null 2>&1 || nginx_state="PRESENT_CONFIG_INVALID"
-  nginx_dump="$(mktemp)"
+  nginx_dump="$(mktemp /tmp/display09-nginx-effective.XXXXXX)"
+  chmod 0600 "$nginx_dump"
+  temporary_paths+=("$nginx_dump")
   if nginx -T >"$nginx_dump" 2>&1; then
     nginx_files="$(sed -n 's/^# configuration file \([^:]*\):$/\1/p' "$nginx_dump" | grep -E '^/etc/nginx/(nginx\.conf|conf\.d/|sites-enabled/|snippets/)' | sort -u | paste -sd '|' -)"
     nginx_directives="$(awk '
@@ -62,6 +74,9 @@ if command_exists nginx; then
         if (line !~ /^ssl_certificate_key[[:space:]]/) print file "::" line
       }
     ' "$nginx_dump" | sort -u | paste -sd '|' -)"
+    if grep -Eiq '^[[:space:]]*location([[:space:]]+\^~)?[[:space:]]+/?\.well-known/acme-challenge([/{[:space:]]|$)' "$nginx_dump"; then
+      http01_static_location=true
+    fi
   fi
   rm -f "$nginx_dump"
 fi
@@ -81,6 +96,10 @@ if [[ -d /etc/letsencrypt/renewal ]]; then
     certbot_profiles="${certbot_profiles}${certbot_profiles:+|}${profile}"
   done < <(find /etc/letsencrypt/renewal -maxdepth 1 -type f -name '*.conf' -print | sort)
 fi
+http01_certbot_plugin=false
+if [[ "$certbot_profiles" == *"authenticator=nginx"* || "$certbot_profiles" == *"authenticator=webroot"* ]]; then
+  http01_certbot_plugin=true
+fi
 
 timer_details="NOT_VERIFIED"
 if command_exists systemctl && systemctl show certbot.timer >/dev/null 2>&1; then
@@ -98,7 +117,7 @@ getent ahosts display.getcoro.io >/dev/null 2>&1 && http01_dns=true
 http01_listener=false
 if command_exists ss && ss -H -ltn '( sport = :80 )' 2>/dev/null | grep -q .; then http01_listener=true; fi
 http01_challenge=false
-if [[ "$nginx_directives" == *".well-known/acme-challenge"* ]]; then http01_challenge=true; fi
+if [[ "$http01_static_location" == true || "$http01_certbot_plugin" == true ]]; then http01_challenge=true; fi
 
-printf '{"schemaVersion":1,"discoveryVersion":2,"execution":"PASS","readOnly":true,"listener443":"%s","terminator":"%s","nginx":"%s","renewal":"%s","nginxConfigFiles":"%s","nginxWhitelistedDirectives":"%s","certbotProfiles":"%s","certbotTimer":"%s","serverOriginFingerprint":"%s","acme":{"http01DnsPresent":%s,"http01ListenerPresent":%s,"http01ChallengeDirectivePresent":%s,"dns01CredentialAvailability":"NOT_VERIFIED"},"certificates":[%s]}\n' \
-  "$listener" "$terminator" "$nginx_state" "$renewal" "$(json_escape "$nginx_files")" "$(json_escape "$nginx_directives")" "$(json_escape "$certbot_profiles")" "$(json_escape "$timer_details")" "$origin_fingerprint" "$http01_dns" "$http01_listener" "$http01_challenge" "$matrix"
+printf '{"schemaVersion":1,"discoveryVersion":2,"execution":"PASS","readOnly":true,"listener443":"%s","terminator":"%s","nginx":"%s","renewal":"%s","nginxConfigFiles":"%s","nginxWhitelistedDirectives":"%s","certbotProfiles":"%s","certbotTimer":"%s","serverOriginFingerprint":"%s","acme":{"http01DnsPresent":%s,"http01ListenerPresent":%s,"http01StaticLocationPresent":%s,"http01CertbotPluginPresent":%s,"http01ChallengeConfigured":%s,"dns01CredentialAvailability":"NOT_VERIFIED"},"certificates":[%s]}\n' \
+  "$listener" "$terminator" "$nginx_state" "$renewal" "$(json_escape "$nginx_files")" "$(json_escape "$nginx_directives")" "$(json_escape "$certbot_profiles")" "$(json_escape "$timer_details")" "$origin_fingerprint" "$http01_dns" "$http01_listener" "$http01_static_location" "$http01_certbot_plugin" "$http01_challenge" "$matrix"
