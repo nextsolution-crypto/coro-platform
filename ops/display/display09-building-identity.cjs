@@ -101,5 +101,14 @@ async function main() {
   finally { await prisma.$disconnect(); }
 }
 
-module.exports = { ORGANIZATION_ID, CLIENT_NAME, BUILDING_NAME, BUILDING_ADDRESS, fingerprint, normalize, inspect, run };
-if (require.main === module) main().catch(() => { process.stdout.write('{"schemaVersion":1,"execution":"FAILED","readOnly":true}\n'); process.exitCode = 1; });
+function failureCode(error) {
+  if (error?.message === 'READ_ONLY_TRANSACTION_NOT_CONFIRMED') return error.message;
+  if (/^P\d{4}$/.test(error?.code ?? '')) return `PRISMA_${error.code}`;
+  return `UNEXPECTED_${String(error?.name ?? 'ERROR').replace(/[^A-Z0-9_]/gi, '_').toUpperCase()}`;
+}
+
+module.exports = { ORGANIZATION_ID, CLIENT_NAME, BUILDING_NAME, BUILDING_ADDRESS, fingerprint, normalize, inspect, run, failureCode };
+if (require.main === module) main().catch((error) => {
+  process.stdout.write(`${JSON.stringify({ schemaVersion: 1, execution: 'FAILED', readOnly: true, failureCode: failureCode(error) })}\n`);
+  process.exitCode = 1;
+});

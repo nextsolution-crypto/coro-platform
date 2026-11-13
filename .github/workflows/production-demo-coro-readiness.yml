@@ -47,14 +47,17 @@ jobs:
             git -C "$repo" show "$WORKFLOW_SHA:ops/display/display09-building-identity.cjs" >"$script_path"
             install -d -m 0700 "$evidence_dir"
             cd "$repo"
-            docker compose exec -T \
-              -e DISPLAY09_BUILDING_INVENTORY_RUN=true \
-              -e DISPLAY09_SECURE_EVIDENCE_PATH=/tmp/display09-building-identity.json \
-              backend node - <"$script_path" >"$output_path"
-            docker compose cp backend:/tmp/display09-building-identity.json "$evidence_path"
-            docker compose exec -T backend rm -f /tmp/display09-building-identity.json
-            chmod 0600 "$evidence_path"
+              if ! docker compose exec -T \
+                -e DISPLAY09_BUILDING_INVENTORY_RUN=true \
+                -e DISPLAY09_SECURE_EVIDENCE_PATH=/tmp/display09-building-identity.json \
+                backend node - <"$script_path" >"$output_path"; then
+                cat "$output_path"
+                exit 1
+              fi
               node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.execution!=="PASS"||r.readOnly!==true||r.clientCardinality!==1||r.buildingCardinality!==1||r.clientActive!==true||r.active!==true||r.demo!==true||r.displayAuthorityConfirmed!==true)process.exit(1);if(/building-1|client-1|@/.test(JSON.stringify(r)))process.exit(1)' "$output_path"
+              docker compose cp backend:/tmp/display09-building-identity.json "$evidence_path"
+              docker compose exec -T backend rm -f /tmp/display09-building-identity.json
+              chmod 0600 "$evidence_path"
             cat "$output_path"
 
   validate:
