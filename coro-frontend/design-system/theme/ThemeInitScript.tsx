@@ -15,6 +15,6 @@ const SCRIPT = buildThemeInitScript(shellTable({ production: PRODUCTION }), {
   storageBeta: !PRODUCTION,
 });
 
-export function ThemeInitScript() {
-  return <script dangerouslySetInnerHTML={{ __html: SCRIPT }} />;
+export function ThemeInitScript({ nonce }: { nonce?: string }) {
+  return <script nonce={nonce} dangerouslySetInnerHTML={{ __html: SCRIPT }} />;
 }
