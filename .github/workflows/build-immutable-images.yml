@@ -1,0 +1,131 @@
+name: Build Immutable Images Only
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_commit:
+        description: Full 40-character SHA currently at origin/main
+        required: true
+        type: string
+      build_approval:
+        description: Type BUILD_IMAGES_ONLY to authorize image publication without deployment
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: immutable-images-${{ inputs.candidate_commit }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      candidate: ${{ steps.preflight.outputs.candidate }}
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.candidate_commit }}
+          fetch-depth: 0
+
+      - name: Validate build-only request
+        id: preflight
+        env:
+          CANDIDATE_COMMIT: ${{ inputs.candidate_commit }}
+          BUILD_APPROVAL: ${{ inputs.build_approval }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$BUILD_APPROVAL" = "BUILD_IMAGES_ONLY"
+          [[ "$CANDIDATE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          git fetch --quiet origin main
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_COMMIT"
+          test "$(git rev-parse origin/main)" = "$CANDIDATE_COMMIT"
+          echo "candidate=$CANDIDATE_COMMIT" >> "$GITHUB_OUTPUT"
+
+  build-images:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout validated candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.candidate }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build and push backend
+        id: backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./coro-backend
+          push: true
+          platforms: linux/amd64
+          tags: ghcr.io/${{ github.repository_owner }}/coro-backend:${{ needs.validate.outputs.candidate }}
+
+      - name: Build and push frontend
+        id: frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./coro-frontend
+          push: true
+          platforms: linux/amd64
+          tags: ghcr.io/${{ github.repository_owner }}/coro-frontend:${{ needs.validate.outputs.candidate }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://api.getcoro.io/api
+            NEXT_PUBLIC_GLASS_BETA=production-preview
+
+      - name: Build and push client portal
+        id: client-portal
+        uses: docker/build-push-action@v5
+        with:
+          context: ./coro-client-portal
+          push: true
+          platforms: linux/amd64
+          tags: ghcr.io/${{ github.repository_owner }}/coro-client-portal:${{ needs.validate.outputs.candidate }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://api.getcoro.io/api
+            NEXT_PUBLIC_CLIENT_PORTAL_URL=https://client.getcoro.io
+            NEXT_PUBLIC_DISPLAY_PLAYER_URL=https://display.getcoro.io
+            NEXT_PUBLIC_GLASS_BETA=production-preview
+
+      - name: Build and push website
+        id: website
+        uses: docker/build-push-action@v5
+        with:
+          context: ./coro-website
+          push: true
+          platforms: linux/amd64
+          tags: ghcr.io/${{ github.repository_owner }}/coro-website:${{ needs.validate.outputs.candidate }}
+
+      - name: Verify immutable image set
+        env:
+          BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-backend@${{ steps.backend.outputs.digest }}
+          FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-frontend@${{ steps.frontend.outputs.digest }}
+          CLIENT_PORTAL_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-client-portal@${{ steps.client-portal.outputs.digest }}
+          WEBSITE_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-website@${{ steps.website.outputs.digest }}
+        run: node ops/deploy/release-policy.mjs images
+
+      - name: Publish digest summary
+        run: |
+          {
+            echo '### Immutable image set'
+            echo '- Backend: `${{ steps.backend.outputs.digest }}`'
+            echo '- Frontend: `${{ steps.frontend.outputs.digest }}`'
+            echo '- Client portal: `${{ steps.client-portal.outputs.digest }}`'
+            echo '- Website: `${{ steps.website.outputs.digest }}`'
+            echo ''
+            echo 'No deployment job exists in this workflow.'
+          } >> "$GITHUB_STEP_SUMMARY"
