@@ -42,7 +42,10 @@ jobs:
           script: |
             set -Eeuo pipefail
             repo=/opt/coro-platform
-            before="$(docker compose -f "$repo/docker-compose.yml" ps --format json | sha256sum | cut -d' ' -f1)"
+            container_ids="$(docker compose -f "$repo/docker-compose.yml" ps -q | sort)"
+            test -n "$container_ids"
+            snapshot() { for id in $container_ids; do docker inspect --format '{{.Id}}:{{.State.Status}}:{{.RestartCount}}' "$id"; done | sort | sha256sum | cut -d' ' -f1; }
+            before="$(snapshot)"
             portal="$(docker compose -f "$repo/docker-compose.yml" ps -q client-portal)"
             app_status=NOT_VERIFIED
             app_http_status=0
@@ -63,9 +66,10 @@ jobs:
               if [[ -n "$tls_enddate" && "$tls_san_match" == true ]] && openssl x509 -checkend 2592000 -noout </tmp/display09-tls.txt >/dev/null 2>&1; then tls_status=PASS; else tls_status=FAIL; fi
             fi
             rm -f /tmp/display09-tls.txt
-            after="$(docker compose -f "$repo/docker-compose.yml" ps --format json | sha256sum | cut -d' ' -f1)"
-            test "$before" = "$after"
-            printf '{"schemaVersion":1,"execution":"PASS","readOnly":true,"appRouting":"%s","appHttpStatus":%s,"appNoStore":%s,"originTls":"%s","originTlsExpiry":"%s","originSanMatches":%s,"runtimeUnchanged":true}\n' "$app_status" "$app_http_status" "$app_no_store" "$tls_status" "$tls_enddate" "$tls_san_match"
+            after="$(snapshot)"
+            runtime_unchanged=false
+            if [[ "$before" == "$after" ]]; then runtime_unchanged=true; fi
+            printf '{"schemaVersion":1,"execution":"PASS","readOnly":true,"appRouting":"%s","appHttpStatus":%s,"appNoStore":%s,"originTls":"%s","originTlsExpiry":"%s","originSanMatches":%s,"runtimeUnchanged":%s}\n' "$app_status" "$app_http_status" "$app_no_store" "$tls_status" "$tls_enddate" "$tls_san_match" "$runtime_unchanged"
 
   display09-fixture-registration:
     if: inputs.display09_fixture_registration == 'REGISTER_TOUR_PREMONT_DEMO_FIXTURE'
