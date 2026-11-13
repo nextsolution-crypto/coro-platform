@@ -24,9 +24,7 @@ async function inspect(tx) {
     orderBy: { id: 'asc' },
   });
   const matches = buildings.filter((building) =>
-    normalize(building.name) === normalize(BUILDING_NAME) &&
-    normalize(building.address) === normalize(BUILDING_ADDRESS) &&
-    normalize(building.city) === 'montreal',
+    normalize(building.name) === normalize(BUILDING_NAME),
   );
   const building = matches.length === 1 ? matches[0] : null;
   const [organization, demoFixtures] = await Promise.all([
