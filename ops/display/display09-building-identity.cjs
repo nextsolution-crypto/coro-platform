@@ -108,7 +108,7 @@ function failureCode(error) {
 }
 
 module.exports = { ORGANIZATION_ID, CLIENT_NAME, BUILDING_NAME, BUILDING_ADDRESS, fingerprint, normalize, inspect, run, failureCode };
-if (require.main === module) main().catch((error) => {
+if (require.main === module || process.env.DISPLAY09_BUILDING_INVENTORY_RUN === 'true') main().catch((error) => {
   process.stdout.write(`${JSON.stringify({ schemaVersion: 1, execution: 'FAILED', readOnly: true, failureCode: failureCode(error) })}\n`);
   process.exitCode = 1;
 });
