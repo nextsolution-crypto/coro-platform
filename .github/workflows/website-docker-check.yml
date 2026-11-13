@@ -6,12 +6,69 @@ on:
       - "coro-website/**"
       - ".github/workflows/website-docker-check.yml"
   workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: Exact candidate SHA; only the approved DISPLAY-09 SHA is accepted
+        required: false
+        type: string
 
 permissions:
   contents: read
 
 jobs:
+  display09-candidate-images:
+    if: github.event_name == 'workflow_dispatch' && inputs.candidate_sha != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: backend
+            context: coro-backend
+          - name: frontend
+            context: coro-frontend
+          - name: client-portal
+            context: coro-client-portal
+          - name: website
+            context: coro-website
+    steps:
+      - name: Validate immutable candidate
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+        run: test "$CANDIDATE_SHA" = '5ae7cd213346169465ee739d09df6d39b26ac6c3'
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.candidate_sha }}
+          persist-credentials: false
+      - run: test "$(git rev-parse HEAD)" = '${{ inputs.candidate_sha }}'
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish immutable candidate
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.context }}
+          push: true
+          platforms: linux/amd64
+          provenance: mode=max
+          tags: ghcr.io/${{ github.repository_owner }}/coro-${{ matrix.name }}:display09-candidate-${{ inputs.candidate_sha }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://api.getcoro.io/api
+            NEXT_PUBLIC_CLIENT_PORTAL_URL=https://client.getcoro.io
+            NEXT_PUBLIC_GLASS_BETA=production-preview
+      - name: Record remote digest
+        run: echo '${{ matrix.name }}=${{ steps.build.outputs.digest }}' >> "$GITHUB_STEP_SUMMARY"
+
   website-docker-build:
+    if: github.event_name == 'pull_request' || inputs.candidate_sha == ''
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
