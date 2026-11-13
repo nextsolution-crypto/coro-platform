@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "preparedAt": "2026-11-12T23:45:00Z",
+  "preparedAt": "2026-11-13T00:20:00Z",
   "sourceSha": "5ae7cd213346169465ee739d09df6d39b26ac6c3",
   "productionSha": "e83d83a1afcb80d9bc95037dadc27700d3f68d89",
   "images": {
@@ -10,10 +10,10 @@
     "website": {"localDigest":"sha256:063406f7f2dbcc63b19f774b24068d49dd58f721bba580271f810256c20ff21e","registryDigest":"UNRESOLVED","architecture":"linux/amd64"}
   },
   "migrations":{"before":176,"after":187,"candidateCount":11,"simulation":"PASS"},
-  "dns":{"hostname":"display.getcoro.io","status":"NXDOMAIN","target":"UNRESOLVED","tls":"UNRESOLVED"},
+  "dns":{"hostname":"display.getcoro.io","status":"NXDOMAIN","provider":"Cloudflare","plannedRecord":{"type":"CNAME","name":"display","target":"client.getcoro.io","proxy":true,"ttl":"AUTO"},"tls":"FULL_STRICT_PROVIDER_CONFIRMATION_REQUIRED"},
   "demo":{"organizationId":"916f54ec-af22-45e0-99db-a369d9630002","buildingId":"UNRESOLVED","profile":"WEB_VIEW_ONLY","externalKey":"display-demo-tour-premont-e03-corridor-est"},
   "featureFlags":{"buildingBridge":false,"machineIncidentOpsProvenance":false,"emergencyEligible":false},
-  "gates":{"code":"PASS","database":"PASS","localImages":"PASS","infrastructure":"PASS","dnsTls":"CONDITIONAL","demoIdentity":"CONDITIONAL","authorization":"PENDING"},
+  "gates":{"code":"PASS","database":"PASS","localImages":"EVIDENCE_PASS_IMAGES_CLEANED","infrastructure":"PASS","dnsTls":"READY_FOR_PROVIDER_CONFIRMATION","demoIdentity":"UNRESOLVED_CANONICAL_BUILDING","registry":"BLOCKED_BY_REGISTRY_AUTHORITY","authorization":"PENDING"},
   "productionMutationPerformed": false,
-  "verdict": "GO_CONDITIONNEL_RELEASE_READY"
+  "verdict": "GO_CONDITIONNEL_FINAL_THREE_GATES"
 }

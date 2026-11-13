@@ -1,5 +1,7 @@
 # Gates GO/NO-GO
 
+Revalidation du 2026-11-12 : **GO CONDITIONNEL FINAL-THREE-GATES**. Le tenant et les projets Tour Prémont sont confirmés, mais le bâtiment canonique reste non résolu. Le plan Cloudflare CNAME/TLS est prêt pour confirmation fournisseur. GHCR est le registre gouverné, mais l'identité locale ne possède pas l'autorité packages requise; aucune image n'a été publiée et aucun déploiement n'a été déclenché. Voir les rapports `FINAL-GATE-*`.
+
 | Gate | Verdict | Condition |
 |---|---|---|
 | Code | PASS | SHA/CI/delta vérifiés |
