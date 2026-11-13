@@ -47,10 +47,58 @@ for host in "${TARGETS[@]}"; do
 done
 
 nginx_state="ABSENT"
+nginx_files=""
+nginx_directives=""
 if command_exists nginx; then
   nginx_state="PRESENT"
   nginx -t >/dev/null 2>&1 || nginx_state="PRESENT_CONFIG_INVALID"
+  nginx_dump="$(mktemp)"
+  if nginx -T >"$nginx_dump" 2>&1; then
+    nginx_files="$(sed -n 's/^# configuration file \([^:]*\):$/\1/p' "$nginx_dump" | grep -E '^/etc/nginx/(nginx\.conf|conf\.d/|sites-enabled/|snippets/)' | sort -u | paste -sd '|' -)"
+    nginx_directives="$(awk '
+      /^# configuration file / { file=$0; sub(/^# configuration file /,"",file); sub(/:$/,"",file); next }
+      /^[[:space:]]*(listen|server_name|ssl_certificate|proxy_pass)[[:space:]]/ {
+        line=$0; sub(/^[[:space:]]*/,"",line); sub(/[[:space:]]*;[[:space:]]*$/,"",line);
+        if (line !~ /^ssl_certificate_key[[:space:]]/) print file "::" line
+      }
+    ' "$nginx_dump" | sort -u | paste -sd '|' -)"
+  fi
+  rm -f "$nginx_dump"
 fi
 
-printf '{"schemaVersion":1,"execution":"PASS","readOnly":true,"listener443":"%s","terminator":"%s","nginx":"%s","renewal":"%s","certificates":[%s]}\n' \
-  "$listener" "$terminator" "$nginx_state" "$renewal" "$matrix"
+certbot_profiles=""
+if [[ -d /etc/letsencrypt/renewal ]]; then
+  while IFS= read -r renewal_file; do
+    name="$(basename "$renewal_file" .conf)"
+    domains="$(sed -n 's/^[[:space:]]*domains[[:space:]]*=[[:space:]]*//p' "$renewal_file" | head -n1)"
+    authenticator="$(sed -n 's/^[[:space:]]*authenticator[[:space:]]*=[[:space:]]*//p' "$renewal_file" | head -n1)"
+    installer="$(sed -n 's/^[[:space:]]*installer[[:space:]]*=[[:space:]]*//p' "$renewal_file" | head -n1)"
+    pre=false; post=false; deploy=false
+    grep -Eq '^[[:space:]]*pre_hook[[:space:]]*=' "$renewal_file" && pre=true
+    grep -Eq '^[[:space:]]*post_hook[[:space:]]*=' "$renewal_file" && post=true
+    grep -Eq '^[[:space:]]*renew_hook[[:space:]]*=|^[[:space:]]*deploy_hook[[:space:]]*=' "$renewal_file" && deploy=true
+    profile="$(json_escape "$renewal_file")::name=$(json_escape "$name")::domains=$(json_escape "$domains")::authenticator=$(json_escape "$authenticator")::installer=$(json_escape "$installer")::preHook=$pre::postHook=$post::deployHook=$deploy"
+    certbot_profiles="${certbot_profiles}${certbot_profiles:+|}${profile}"
+  done < <(find /etc/letsencrypt/renewal -maxdepth 1 -type f -name '*.conf' -print | sort)
+fi
+
+timer_details="NOT_VERIFIED"
+if command_exists systemctl && systemctl show certbot.timer >/dev/null 2>&1; then
+  timer_details="$(systemctl show certbot.timer -p Id -p ActiveState -p UnitFileState -p NextElapseUSecRealtime --value 2>/dev/null | paste -sd '|' -)"
+fi
+
+origin_fingerprint="NOT_VERIFIED"
+if command_exists curl; then
+  origin_address="$(curl --silent --show-error --max-time 2 http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+  if [[ "$origin_address" =~ ^[0-9a-fA-F:.]+$ ]]; then origin_fingerprint="$(printf '%s' "$origin_address" | sha256sum | cut -d' ' -f1)"; fi
+fi
+
+http01_dns=false
+getent ahosts display.getcoro.io >/dev/null 2>&1 && http01_dns=true
+http01_listener=false
+if command_exists ss && ss -H -ltn '( sport = :80 )' 2>/dev/null | grep -q .; then http01_listener=true; fi
+http01_challenge=false
+if [[ "$nginx_directives" == *".well-known/acme-challenge"* ]]; then http01_challenge=true; fi
+
+printf '{"schemaVersion":1,"discoveryVersion":2,"execution":"PASS","readOnly":true,"listener443":"%s","terminator":"%s","nginx":"%s","renewal":"%s","nginxConfigFiles":"%s","nginxWhitelistedDirectives":"%s","certbotProfiles":"%s","certbotTimer":"%s","serverOriginFingerprint":"%s","acme":{"http01DnsPresent":%s,"http01ListenerPresent":%s,"http01ChallengeDirectivePresent":%s,"dns01CredentialAvailability":"NOT_VERIFIED"},"certificates":[%s]}\n' \
+  "$listener" "$terminator" "$nginx_state" "$renewal" "$(json_escape "$nginx_files")" "$(json_escape "$nginx_directives")" "$(json_escape "$certbot_profiles")" "$(json_escape "$timer_details")" "$origin_fingerprint" "$http01_dns" "$http01_listener" "$http01_challenge" "$matrix"

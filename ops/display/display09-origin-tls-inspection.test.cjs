@@ -21,3 +21,25 @@ test('inspection detects the supported TLS terminators without exposing process 
   for (const name of ['NGINX', 'TRAEFIK', 'CADDY', 'APACHE', 'DOCKER_PROXY']) assert.ok(script.includes(name));
   assert.doesNotMatch(script, /ps\s+(?:aux|-[a-z]*e)/i);
 });
+
+test('discovery emits only whitelisted nginx directives and never reads private key material', () => {
+  for (const directive of ['listen', 'server_name', 'ssl_certificate', 'proxy_pass']) assert.ok(script.includes(directive));
+  assert.match(script, /line !~ \/\^ssl_certificate_key/);
+  assert.doesNotMatch(script, /cat\s+[^\n]*(?:privkey|ssl_certificate_key)/i);
+  assert.match(script, /nginxConfigFiles/);
+  assert.match(script, /nginxWhitelistedDirectives/);
+});
+
+test('certbot discovery is metadata-only and ACME readiness distinguishes HTTP-01 from DNS-01', () => {
+  assert.match(script, /\/etc\/letsencrypt\/renewal/);
+  assert.match(script, /preHook=\$pre::postHook=\$post::deployHook=\$deploy/);
+  assert.match(script, /http01DnsPresent/);
+  assert.match(script, /dns01CredentialAvailability/);
+  assert.doesNotMatch(script, /certbot\s+(?:renew|certonly|run)/i);
+});
+
+test('origin correlation publishes only a SHA-256 fingerprint, never the address', () => {
+  assert.match(script, /serverOriginFingerprint/);
+  assert.match(script, /origin_address.*sha256sum/);
+  assert.doesNotMatch(script, /printf[^\n]*origin_address[^\n]*\\n/);
+});
