@@ -16,4 +16,8 @@ assert.match(page, /Publié pour affichage/);
 assert.doesNotMatch(page, /Diffusé sur écran/);
 assert.match(page, /Les pièces jointes sont désactivées/);
 assert.doesNotMatch(page, /DISPLAY_CONTENT_MANAGE/);
+assert.match(page, /NEXT_PUBLIC_DISPLAY_PLAYER_URL/);
+assert.match(page, /http:\/\/localhost:3003/);
+assert.match(page, /encodeURIComponent\(publicDisplayId\)/);
+assert.doesNotMatch(page, /`https:\/\/display\.getcoro\.io\/d\/\$\{/);
 console.log('DISPLAY-05B portal contract: PASS');

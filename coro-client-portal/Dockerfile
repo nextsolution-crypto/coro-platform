@@ -11,6 +11,8 @@ ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_CLIENT_PORTAL_URL=http://localhost:3003
 ENV NEXT_PUBLIC_CLIENT_PORTAL_URL=$NEXT_PUBLIC_CLIENT_PORTAL_URL
+ARG NEXT_PUBLIC_DISPLAY_PLAYER_URL=http://localhost:3003
+ENV NEXT_PUBLIC_DISPLAY_PLAYER_URL=$NEXT_PUBLIC_DISPLAY_PLAYER_URL
 
 # Présentation Liquid Glass V2 : valeur exacte fixée par le workflow de release pour activer les écrans migrés, vide par défaut = Classique partout.
 # Ce n'est PAS un mécanisme d'authentification ni d'autorisation : aucun droit n'en dépend.

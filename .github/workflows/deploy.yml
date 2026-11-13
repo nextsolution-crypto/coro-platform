@@ -252,6 +252,7 @@ jobs:
           build-args: |
             NEXT_PUBLIC_API_URL=https://api.getcoro.io/api
             NEXT_PUBLIC_CLIENT_PORTAL_URL=https://client.getcoro.io
+            NEXT_PUBLIC_DISPLAY_PLAYER_URL=https://display.getcoro.io
             NEXT_PUBLIC_GLASS_BETA=production-preview
 
       - name: Verify complete immutable image set
