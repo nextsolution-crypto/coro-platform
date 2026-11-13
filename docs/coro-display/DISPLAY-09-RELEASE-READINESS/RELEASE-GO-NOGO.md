@@ -1,15 +1,14 @@
 # Gates GO/NO-GO
 
-Revalidation du 2026-11-12 : **GO CONDITIONNEL FINAL-THREE-GATES**. Le tenant et les projets Tour Prémont sont confirmés, mais le bâtiment canonique reste non résolu. Le plan Cloudflare CNAME/TLS est prêt pour confirmation fournisseur. GHCR est le registre gouverné, mais l'identité locale ne possède pas l'autorité packages requise; aucune image n'a été publiée et aucun déploiement n'a été déclenché. Voir les rapports `FINAL-GATE-*`.
+Revalidation du 2026-11-12 : **GO CONDITIONNEL FINAL-THREE-GATES**.
 
-| Gate | Verdict | Condition |
+| Gate | Verdict | Preuve / condition restante |
 |---|---|---|
-| Code | PASS | SHA/CI/delta vérifiés |
-| Database | PASS | 11 migrations et simulation 176→187 PASS |
-| Images locales | PASS | 4 builds/digests locaux amd64; registre pending |
-| Infrastructure | PASS conditionnel | capacité/backup/rollback actuels; rejouer à T0 |
-| DNS/TLS | CONDITIONNEL | NXDOMAIN; cible/certificat fournisseur non résolus |
-| Démo | CONDITIONNEL | tenant/projets confirmés; buildingId non résolu |
-| Autorisation | PENDING | aucune autorisation de release dans ce MASTER |
+| Building Identity | CONDITIONAL | Workflow `43339858225` refusé avant connexion par la protection d’environnement; PR #264 à fusionner explicitement avant l’exécution READ ONLY |
+| Cloudflare DNS/TLS | CONDITIONAL | Zone, NS, certificat wildcard, cible et rollback préparés; compte/règles/origine non vérifiés chez le fournisseur; aucun DNS modifié |
+| GHCR Images | PASS | Run `43341138318`; quatre digests distants `linux/amd64` vérifiés |
+| Code / CI | PASS | Candidat `5ae7cd21…`; CI documentaire et outillage réussies |
+| Base / migrations | PASS préparatoire | 11 migrations candidates et simulation 176→187 PASS; aucune migration partagée |
+| Autorisation de déploiement | PENDING | Hors du présent mandat |
 
-Verdict global : **GO CONDITIONNEL RELEASE-READY**. Aucun P0 logiciel reproduit. Déploiement interdit tant que DNS/TLS, buildingId, digests registre, sauvegarde/restauration fraîche et autorisation ne sont pas tous satisfaits.
+Verdict global : **GO CONDITIONNEL FINAL-THREE-GATES**. Il ne reste aucun blocage du registre. Le déploiement reste interdit tant que l’identité canonique du bâtiment et la confirmation fournisseur Cloudflare ne sont pas démontrées, puis que les gates T0 et une autorisation distincte ne sont pas obtenus.

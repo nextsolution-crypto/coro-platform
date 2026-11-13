@@ -1,18 +1,25 @@
-# Gate 3 — registre d'images immuables
+# Gate 3 — registre d’images immuables
 
-Vérification du 2026-11-12. Registre gouverné : GHCR, organisation `nextsolution-crypto`, dépôts `coro-backend`, `coro-frontend`, `coro-client-portal`, `coro-website`.
+Publication gouvernée du 2026-11-12. Candidat exact : `5ae7cd213346169465ee739d09df6d39b26ac6c3`.
 
-## Préconditions
+## Workflow et autorité
 
-- Candidat : `5ae7cd213346169465ee739d09df6d39b26ac6c3`.
-- Les quatre builds `linux/amd64`, audits npm production et preuves locales précédentes sont PASS; leurs digests locaux demeurent consignés dans `RELEASE-IMAGE-BUILD-DIGESTS.md`.
-- Aucun workflow n'écoute `registry_package`. Les builds et la release de `deploy.yml` exigent `workflow_dispatch`; une publication manuelle de package ne déclenche donc ni déploiement, ni migration.
-- Tag prévu, nouveau et non consommé : `display09-candidate-5ae7cd213346169465ee739d09df6d39b26ac6c3` pour chacun des quatre dépôts. Aucun tag `latest`, `production`, `stable` ou SHA de release n'est remplacé.
+- PR d’outillage : [#264](https://github.com/nextsolution-crypto/coro-platform/pull/264), HEAD `5d4afbdd68a39c9b3978c53f123014333f5b746e`.
+- Workflow manuel `Website Docker Check`, run [43341138318](https://github.com/nextsolution-crypto/coro-platform/actions/runs/43341138318) : **SUCCESS**.
+- Autorité GHCR gouvernée existante (`GHCR_TOKEN`), sans nouveau jeton et sans exposition de secret.
+- Checkout et validation explicites du SHA candidat; `linux/amd64`; provenance BuildKit `mode=max`.
+- Tag neuf : `display09-candidate-5ae7cd213346169465ee739d09df6d39b26ac6c3`.
+- Chaque job a relu le manifeste distant depuis GHCR et vérifié son digest et la plateforme `linux/amd64`.
 
-## Blocage d'autorité
+## Digests distants
 
-Le compte GitHub local ne dispose pas de la portée `read:packages` (API : HTTP 403) et `docker manifest inspect` retourne `unauthorized`. Il n'existe donc aucune preuve de permission de lecture ou de push. Les images locales avaient été retirées après la recette gouvernée; les reconstruire sans pouvoir publier n'aurait pas levé le gate.
+| Image | Digest GHCR |
+|---|---|
+| `ghcr.io/nextsolution-crypto/coro-backend` | `sha256:27983be97af79abadf0db2a612db480dc9261c52a3bcf41892946e54865aea0c` |
+| `ghcr.io/nextsolution-crypto/coro-frontend` | `sha256:c54fe1952d3da44e6fde282e5c7459eda284ba69e437225713cc21e1c8e99c00` |
+| `ghcr.io/nextsolution-crypto/coro-client-portal` | `sha256:186dfc9ba1b7953dcfbb21fa74a4c9e38eaf861b34c688c88282591cf699ed90` |
+| `ghcr.io/nextsolution-crypto/coro-website` | `sha256:44288caa82b85ecb18b5546d92e30480587020f4016ee4986225e09b4f3f2cb8` |
 
-Aucune publication n'a été tentée et aucun jeton n'a été affiché. La publication doit être effectuée avec un jeton d'organisation limité à ces quatre packages (`read:packages`, `write:packages`), puis vérifiée par manifeste distant : digest complet, `linux/amd64`, taille, tag SHA, provenance du contexte exact et absence de workflow/release après l'heure du push.
+Les quatre builds ont produit un manifeste d’attestation distinct. Aucun tag `latest`, `production`, `stable` ou de release existante n’a été remplacé. Aucun workflow `registry_package` n’existe; le job de déploiement n’a pas été déclenché; aucune migration ni release n’a été exécutée.
 
-**Verdict : BLOCKED_BY_REGISTRY_AUTHORITY.** Digests distants : `UNRESOLVED`; aucune image candidate publiée; aucun déploiement déclenché.
+**Verdict : PASS.** Quatre images immuables publiées et relues à distance; SHA, architecture, provenance et absence de déploiement démontrés.

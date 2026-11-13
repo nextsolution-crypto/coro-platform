@@ -1,20 +1,22 @@
 # Gate 1 — identité canonique de Tour Prémont
 
-Vérification du 2026-11-12, strictement en lecture seule.
+Revalidation du 2026-11-12, strictement en lecture seule.
 
-## Preuves acquises
+## Mécanisme gouverné
 
-- Le workflow gouverné `Production Demo Coro Readiness Inventory` (run `43326658664`) a confirmé `CORO Démo`, organisation `916f54ec-af22-45e0-99db-a369d9630002`, active, non interne et isolée.
-- `PMU — Tour Prémont 2026` et `PCA — Tour Prémont 2026` ont chacun exactement une ligne dans ce tenant et appartiennent au client `Groupe Immobilier Prémont`.
-- Le tenant contient sept bâtiments; le rapport agrégé ne publie volontairement ni identifiant ni adresse de bâtiment.
-- La session Chrome disponible a été inventoriée, mais toute prise de contrôle échoue avant navigation avec `Cannot read properties of undefined (reading 'timeoutMs')`. Aucune donnée n'a été modifiée.
+- PR d’outillage : [#264](https://github.com/nextsolution-crypto/coro-platform/pull/264), HEAD `5d4afbdd68a39c9b3978c53f123014333f5b746e`.
+- Requête fixe : organisation `916f54ec-af22-45e0-99db-a369d9630002`, client `Groupe Immobilier Prémont`, bâtiment `Tour Prémont`, adresse `1200 boulevard Robert-Bourassa`, ville normalisée Montréal.
+- Transaction PostgreSQL `READ ONLY`; cardinalité exigée égale à un; aucune donnée personnelle exportée; identifiants bruts réservés à une preuve serveur protégée.
+- Tests ciblés : PASS. CI PR #264 : PASS (`43340482954`, `43340482927`).
 
-## Limite bloquante
+## Exécution
 
-Le triplet canonique `clientId/buildingId/address`, le statut fictif, les permissions Display et le nombre d'emplacements ne sont pas démontrés par la preuve disponible. Les libellés « Tour Prémont » et « 1200 boulevard Robert-Bourassa » restent des indices. Aucun bâtiment n'est sélectionné arbitrairement.
+Le workflow `Production Demo Coro Readiness Inventory` a été déclenché une seule fois (`43339858225`). GitHub a refusé le job avant toute connexion au serveur :
 
-## Action minimale
+`Branch "ops/display09-final-gates" is not allowed to deploy to production due to environment protection rules.`
 
-Exécuter une requête fixe en transaction PostgreSQL `READ ONLY`, revue et gouvernée, qui filtre l'organisation ci-dessus, le client exact, le nom et l'adresse, refuse toute cardinalité différente de un, et n'émet dans GitHub qu'une empreinte du `buildingId` et les booléens d'autorité. Conserver l'identifiant brut dans l'évidence interne sécurisée uniquement.
+Le job de validation a réussi, mais le job d’inventaire protégé n’a pas démarré. Aucune lecture PostgreSQL et aucune mutation n’ont eu lieu. La protection n’a pas été contournée.
 
-**Verdict : CONDITIONAL / UNRESOLVED.** Aucune fixture réelle ne peut être autorisée avant cette preuve.
+## Verdict
+
+**CONDITIONAL — BLOCKED_BY_PRODUCTION_ENVIRONMENT_BRANCH_PROTECTION.** Le tenant, le client et les projets restent confirmés par les preuves antérieures, mais l’identité canonique du bâtiment, son statut démo, son autorité Display et son nombre d’emplacements ne sont pas encore démontrés. Action minimale : revue puis fusion explicite de la PR #264 vers une branche autorisée, ou décision séparée sur la protection d’environnement; ensuite, une exécution unique du workflow READ ONLY.
