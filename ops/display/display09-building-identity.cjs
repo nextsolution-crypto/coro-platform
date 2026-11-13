@@ -31,7 +31,13 @@ async function inspect(tx) {
   );
   const building = matches.length === 1 ? matches[0] : null;
   const [organization, internalAuthorities, clientAuthorities] = await Promise.all([
-    tx.organization.findUnique({ where: { id: ORGANIZATION_ID }, select: { id: true, name: true, isActive: true, isInternal: true, licenseType: true } }),
+    tx.organization.findUnique({
+      where: { id: ORGANIZATION_ID },
+      select: {
+        id: true, name: true, isActive: true, isInternal: true, licenseType: true,
+        demoEnvironment: { select: { status: true, communicationMode: true, externalProvidersDisabled: true } },
+      },
+    }),
     building ? tx.user.findMany({
       where: { organizationId: ORGANIZATION_ID, isActive: true, displayBuildingIds: { has: building.id } },
       select: { id: true, displayPermissions: true },
@@ -52,25 +58,35 @@ async function inspect(tx) {
 async function run(prisma, secureEvidencePath) {
   return prisma.$transaction(async (tx) => {
     await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');
+    const readOnlyRows = await tx.$queryRawUnsafe('SHOW transaction_read_only');
+    const transactionReadOnly = readOnlyRows?.[0]?.transaction_read_only === 'on';
+    if (!transactionReadOnly) throw new Error('READ_ONLY_TRANSACTION_NOT_CONFIRMED');
     const result = await inspect(tx);
     const unique = result.clients.length === 1 && result.matches.length === 1;
     const building = unique ? result.matches[0] : null;
-    const demo = result.organization?.id === ORGANIZATION_ID && result.organization?.name === 'CORO Démo' && result.organization?.isActive === true && result.organization?.isInternal === false;
+    const demo = result.organization?.id === ORGANIZATION_ID && normalize(result.organization?.name) === normalize('CORO Démo') && result.organization?.isActive === true && result.organization?.isInternal === false && result.organization?.demoEnvironment?.status === 'ACTIVE' && result.organization?.demoEnvironment?.communicationMode === 'SIMULATE' && result.organization?.demoEnvironment?.externalProvidersDisabled === true;
+    const clientActive = unique && result.clients[0].isActive === true;
+    const buildingActive = building?.isActive === true;
+    const displayAuthorityConfirmed = result.displayAuthorityCount > 0;
+    const accepted = unique && demo && clientActive && buildingActive && displayAuthorityConfirmed;
     const secure = {
-      schemaVersion: 1, readOnly: true, organizationId: ORGANIZATION_ID,
+      schemaVersion: 1, readOnly: transactionReadOnly, organizationId: ORGANIZATION_ID,
       clientId: unique ? result.clients[0].id : null,
       buildingId: building?.id ?? null, name: building?.name ?? null,
       address: building ? `${building.address}, ${building.city}, ${building.province}` : null,
       active: building?.isActive ?? null, displayLocationCount: building?._count.displayLocations ?? null,
-      displayAuthorityCount: result.displayAuthorityCount, demo,
+      displayAuthorityCount: result.displayAuthorityCount, demo, clientActive, buildingActive,
     };
     fs.writeFileSync(secureEvidencePath, `${JSON.stringify(secure)}\n`, { mode: 0o600 });
     return {
-      schemaVersion: 1, execution: unique && demo ? 'PASS' : 'FAILED', readOnly: true,
+      schemaVersion: 1, execution: accepted ? 'PASS' : 'FAILED', readOnly: transactionReadOnly,
       organizationFingerprint: fingerprint(ORGANIZATION_ID), clientCardinality: result.clients.length,
       buildingCardinality: result.matches.length, buildingFingerprint: building ? fingerprint(building.id) : null,
-      nameMatches: building?.name === BUILDING_NAME, addressMatches: building ? normalize(building.address) === normalize(BUILDING_ADDRESS) : false,
-      active: building?.isActive ?? null, demo, displayAuthorityCount: result.displayAuthorityCount,
+      nameMatches: building ? normalize(building.name) === normalize(BUILDING_NAME) : false,
+      addressMatches: building ? normalize(building.address) === normalize(BUILDING_ADDRESS) : false,
+      cityMatches: building ? normalize(building.city) === 'montreal' : false,
+      clientActive, active: building?.isActive ?? null, demo,
+      displayAuthorityConfirmed, displayAuthorityCount: result.displayAuthorityCount,
       displayLocationCount: building?._count.displayLocations ?? null,
     };
   }, { timeout: 60_000 });
