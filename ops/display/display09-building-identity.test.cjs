@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
-const { normalize, run } = require('./display09-building-identity.cjs');
+const { normalize, run, failureCode } = require('./display09-building-identity.cjs');
 
 test('normalizes accents without weakening exact normalized matching', () => assert.equal(normalize('  Montréal '), 'montreal'));
 test('uses a read-only transaction, exact tenant/client/building and secure evidence', async () => {
@@ -55,4 +55,9 @@ test('refuses execution when PostgreSQL does not confirm READ ONLY', async () =>
     () => run({ $transaction: async (fn) => fn(tx) }, path.join(os.tmpdir(), 'display09-unwritten.json')),
     /READ_ONLY_TRANSACTION_NOT_CONFIRMED/,
   );
+});
+
+test('classifies failures without exposing database messages', () => {
+  assert.equal(failureCode({ code: 'P2021', message: 'sensitive table detail' }), 'PRISMA_P2021');
+  assert.equal(failureCode(new TypeError('sensitive runtime detail')), 'UNEXPECTED_TYPEERROR');
 });
