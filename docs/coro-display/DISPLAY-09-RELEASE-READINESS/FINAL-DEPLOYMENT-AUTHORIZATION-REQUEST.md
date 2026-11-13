@@ -1,10 +1,14 @@
-# Prochaine autorisation minimale requise
+# Demande groupée minimale avant la demande finale de déploiement
 
-La release ne peut pas encore être soumise à autorisation finale.
+Les preuves techniques sont prêtes dans la PR #270, HEAD `a94097ed`, CI `43424120751` PASS.
 
-Deux interventions circonscrites sont nécessaires :
+Autorisation humaine encore indispensable :
 
-1. **Provenance Tour Prémont** — fournir ou faire valider par une autorité de données un artefact indépendant et vérifiable établissant que le bâtiment canonique est synthétique et ne représente aucun client réel. Après cette preuve seulement, autoriser explicitement l'enregistrement gouverné, idempotent et audité du `DemoFixtureRecord`.
-2. **Origine** — autoriser une inspection serveur strictement en lecture seule du certificat d'origine, de sa chaîne/expiration et du routage virtual-host pour `display.getcoro.io`, sans DNS ni redémarrage.
+1. fusion contrôlée de la PR d'outillage #270, sans déploiement applicatif;
+2. exécution unique du workflow `Production Demo Coro Readiness Inventory` avec `display09_fixture_registration=REGISTER_TOUR_PREMONT_DEMO_FIXTURE`;
+3. rejeu strictement READ ONLY du Gate 1A avec `display09_building_identity=RESOLVE_DISPLAY09_BUILDING_READ_ONLY`;
+4. exécution unique, strictement READ ONLY, de l'inspection origine avec `display09_origin_inspection=INSPECT_DISPLAY09_ORIGIN_READ_ONLY`.
 
-Une fois ces preuves PASS, une autorisation distincte pourra couvrir les gates frais capacité/sauvegarde/restauration/rollback, les migrations Display, les quatre digests exacts, l'inspection post-release, puis séparément le DNS et le pilote `WEB_VIEW_ONLY` après Gate 1B.
+Ces opérations n'autorisent aucun déploiement, migration Display, DNS/TLS, PDF, emplacement, permission, appareil ou activation iPad. Gate 1B demeure obligatoire après migrations et avant toute publication ou activation.
+
+Après PASS des trois exécutions, la demande finale de déploiement contrôlé pourra être présentée avec des gates frais de capacité, sauvegarde, restauration et rollback.

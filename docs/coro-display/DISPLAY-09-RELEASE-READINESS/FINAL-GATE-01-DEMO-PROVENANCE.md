@@ -1,16 +1,13 @@
 # Gate 1A — provenance de démonstration
 
-## Matrice de preuve
+Le propriétaire de CORO a attesté le 13 novembre 2026 que le tenant `CORO Démo`, ses données et Tour Prémont sont destinés exclusivement aux démonstrations commerciales et fonctionnelles. Il a expressément autorisé la régularisation gouvernée du bâtiment canonique comme fixture de démonstration.
 
-| Source | Classement | Constat |
-|---|---|---|
-| Workflow `43351101756` | Directe pour l'état de production | `demoFixtureCount=0`, `buildingFictitious=false` |
-| `docs/demo-coro/DEMO-ENVIRONMENT-INVENTORY.md` | Corroborante | Le client et les projets préexistants sont à préserver; leur origine détaillée n'est pas présumée et ils ne sont pas enregistrés comme fixtures |
-| `MIG-08-HOMEPAGE-GATE.md` commit `c6d2584c` | Corroborante | Tour Prémont est décrit comme identité de démonstration assainie et non comme client réel |
-| `MIG-03D-INCIDENT-AUDIT.md` commit `418737fe` | Contradictoire / insuffisante | L'adresse apparaît dans un rendu; la provenance y est explicitement non confirmée |
-| `seed-demo.ts` | Insuffisante | Le seed historique crée d'autres organisations et bâtiments; il ne crée pas ce Tour Prémont |
-| Historique Git `-G Tour Prémont` sur les scripts/seed | Insuffisante | Aucun script de création canonique retrouvé |
+Cette décision indépendante complète les preuves techniques déjà acquises :
 
-Les titres PMU/PCA, le nom du tenant, l'apparence du portail et les médias marketing ne constituent pas une preuve directe de création synthétique. Aucun journal canonique de création, seed déterministe ou métadonnée de provenance n'a été retrouvé.
+- organisation canonique `CORO Démo` active, en `SIMULATE`, fournisseurs externes désactivés;
+- client canonique unique et actif;
+- bâtiment canonique unique et actif, empreinte `5ba4072e9e0027d5b74ff469e5424463f671eb76b9c052db8f024b2450b0f3ec`;
+- aucune substitution de libellé ou d'identifiant;
+- PMU/PCA et données métier explicitement hors mutation.
 
-**Verdict provenance : FAIL — DIRECT_PROVENANCE_NOT_DEMONSTRATED.** La documentation converge vers un usage Démo, mais les règles du gate interdisent de transformer cette convergence en preuve directe.
+**Verdict provenance : PASS — OWNER_ATTESTED_DEMO_FIXTURE.**

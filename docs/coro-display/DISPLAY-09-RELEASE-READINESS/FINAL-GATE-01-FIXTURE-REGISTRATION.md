@@ -1,9 +1,15 @@
 # Gate 1A — enregistrement DemoFixtureRecord
 
-Le modèle impose deux unicités : `(organizationId, fixtureNamespace, fixtureKey)` et `(organizationId, entityType, entityId)`. L'inventaire de production a démontré zéro enregistrement actif pour le bâtiment.
+La PR #270, HEAD `a94097ed`, prépare une opération gouvernée qui :
 
-La mutation conditionnelle n'a pas été exécutée : la preuve directe du caractère fictif manque. Créer maintenant un `DemoFixtureRecord` ferait de l'enregistrement sa propre justification et violerait le mandat.
+- verrouille l'organisation et l'empreinte du bâtiment canonique;
+- refuse les collisions de clé ou d'entité;
+- modifie uniquement `DemoFixtureRecord` dans une transaction `SERIALIZABLE`;
+- inscrit la décision propriétaire et l'identifiant d'exécution dans la baseline;
+- est idempotente et possède une opération de retrait strictement ciblée;
+- prend le verrou commun de production et exige une sauvegarde réussie;
+- préserve client, bâtiment, PMU/PCA, documents, personnes, permissions et autres données métier.
 
-Lorsque la provenance sera établie indépendamment, l'opération devra être transactionnelle, verrouillée, idempotente, limitée à l'organisation et au bâtiment canoniques, auditée, sans modification du bâtiment/client/projets/documents/occupants/permissions, et accompagnée d'un retrait ciblé qui refuse toute collision.
+Tests ciblés : 9/9 PASS. CI PR #270, run `43424120751` : PASS; images et release SKIPPED.
 
-**Mutation effectuée : NON. Verdict : BLOCKED_BY_PROVENANCE.**
+**Mutation effectuée : NON. État : READY_FOR_CONTROLLED_REGISTRATION_AFTER_PR_MERGE.**
