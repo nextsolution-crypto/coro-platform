@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "preparedAt": "2026-11-13T01:01:00Z",
+  "preparedAt": "2026-11-13T12:00:00Z",
   "sourceSha": "5ae7cd213346169465ee739d09df6d39b26ac6c3",
   "productionSha": "e83d83a1afcb80d9bc95037dadc27700d3f68d89",
   "images": {
@@ -10,10 +10,10 @@
     "website": {"localDigest":"sha256:063406f7f2dbcc63b19f774b24068d49dd58f721bba580271f810256c20ff21e","registryDigest":"sha256:44288caa82b85ecb18b5546d92e30480587020f4016ee4986225e09b4f3f2cb8","architecture":"linux/amd64"}
   },
   "migrations":{"before":176,"after":187,"candidateCount":11,"simulation":"PASS"},
-  "dns":{"hostname":"display.getcoro.io","status":"NXDOMAIN","provider":"Cloudflare","plannedRecord":{"type":"CNAME","name":"display","target":"client.getcoro.io","proxy":true,"ttl":"AUTO"},"tls":"FULL_STRICT_PROVIDER_CONFIRMATION_REQUIRED"},
-  "demo":{"organizationId":"916f54ec-af22-45e0-99db-a369d9630002","buildingId":"UNRESOLVED","profile":"WEB_VIEW_ONLY","externalKey":"display-demo-tour-premont-e03-corridor-est"},
+  "dns":{"hostname":"display.getcoro.io","status":"NXDOMAIN","provider":"Cloudflare","plannedRecord":{"type":"CNAME","name":"display","target":"client.getcoro.io","proxy":true,"ttl":"AUTO"},"edgeTls":"PROVIDER_CONFIRMED_WILDCARD","originTls":"NOT_VERIFIED","sslMode":"FULL"},
+  "demo":{"organizationId":"916f54ec-af22-45e0-99db-a369d9630002","buildingFingerprint":"5ba4072e9e0027d5b74ff469e5424463f671eb76b9c052db8f024b2450b0f3ec","canonicalIdentity":"PASS","directProvenance":"FAIL","demoFixtureCount":0,"profile":"WEB_VIEW_ONLY","externalKey":"display-demo-tour-premont-e03-corridor-est"},
   "featureFlags":{"buildingBridge":false,"machineIncidentOpsProvenance":false,"emergencyEligible":false},
-  "gates":{"code":"PASS","database":"PASS","localImages":"EVIDENCE_PASS_IMAGES_CLEANED","infrastructure":"PASS","dnsTls":"READY_FOR_PROVIDER_CONFIRMATION","demoIdentity":"BLOCKED_BY_PRODUCTION_ENVIRONMENT_BRANCH_PROTECTION","registry":"PASS_REMOTE_MANIFESTS_VERIFIED","authorization":"PENDING"},
+  "gates":{"code":"PASS","database":"PASS_PREPARATORY","localImages":"EVIDENCE_PASS_IMAGES_CLEANED","infrastructure":"PASS_PREPARATORY","dnsEdge":"PASS_PREPARATORY","originTls":"NOT_VERIFIED","demoIdentity":"PASS","demoProvenance":"FAIL","postMigrationDisplay":"REQUIRED","registry":"PASS_REMOTE_MANIFESTS_VERIFIED","authorization":"BLOCKED"},
   "productionMutationPerformed": false,
-  "verdict": "GO_CONDITIONNEL_FINAL_THREE_GATES"
+  "verdict": "NO_GO_FINAL_PREDEPLOYMENT"
 }

@@ -1,21 +1,11 @@
 # Gate 2 — DNS et TLS
 
-Vérification publique du 2026-11-12. Aucune modification DNS ou TLS.
+État fournisseur relevé en lecture seule par le propriétaire le 2026-11-13 : zone `getcoro.io`, SSL/TLS `Full`, certificat Edge wildcard actif jusqu'au 14 janvier 2027, `api`/`app`/`client` proxifiés, aucun DNS `display`, aucune règle WAF personnalisée, rate limiting des routes d'authentification, aucune règle Cache/Redirect simple, Bot Fight actif, TLS minimal 1.0 et Always Use HTTPS désactivé.
 
-## État et cible
+Contrôles indépendants : `display.getcoro.io` est `NXDOMAIN`; `client.getcoro.io` résout vers Cloudflare et `https://client.getcoro.io/d/nonexistent-display-id` retourne un 404 Next.js via Cloudflare, `Cache-Control: private, no-cache, no-store` et `cf-cache-status: DYNAMIC`.
 
-- Zone autoritaire : Cloudflare; NS `olivia.ns.cloudflare.com` et `zeus.ns.cloudflare.com`.
-- `display.getcoro.io` : `NXDOMAIN`.
-- Player Web : route `/d/{publicDisplayId}` du portail client, service `coro-client-portal`, port interne `3003` dans Compose.
-- `https://client.getcoro.io/d/nonexistent-display-id` rejoint bien Cloudflare et le portail Next.js (404 attendue pour un identifiant inexistant).
-- Les adresses publiques Cloudflare ne sont pas une cible d'origine et ne doivent pas être copiées.
+Configuration préparée, non appliquée : CNAME proxifié `display` vers `client.getcoro.io`, TTL Auto. Ne jamais utiliser une IP anycast Cloudflare comme origine.
 
-## Changement préparé, non appliqué
+Le certificat Edge wildcard couvre le futur hostname, mais ne prouve ni le certificat d'origine ni l'acceptation du Host `display.getcoro.io`. Le mode observé est `Full`, pas `Full (strict)`. TLS 1.0 et l'absence d'Always Use HTTPS sont des réserves de posture globale, à ne pas changer dans ce mandat.
 
-Dans la zone Cloudflare `getcoro.io`, créer un `CNAME` `display` vers `client.getcoro.io`, proxy Cloudflare activé, TTL `Auto`. Cette cible réutilise le service Player existant sans exposer le backend privé. Avant application, confirmer dans Cloudflare que le hostname cible et l'origine de `client.getcoro.io` sont bien gérés dans le même compte et que le proxy accepte l'alias.
-
-TLS : mode Cloudflare `Full (strict)`, certificat Edge couvrant `display.getcoro.io`, origine déjà couverte par le hostname du service existant; ne pas désactiver la validation d'origine. Vérifier après création : DNS, chaîne TLS, redirection HTTPS, `/d/{id}`, CSP/connect-src, cookies, HSTS, `frame-ancestors`, 404/403 et révocation.
-
-Rollback : supprimer uniquement le CNAME `display`, purger le cache du hostname si nécessaire; aucune modification de l'origine ni du portail.
-
-**Verdict : READY_FOR_PROVIDER_CONFIRMATION, public DNS/TLS NOT_VERIFIED.** La configuration est précise mais doit être confirmée dans le compte Cloudflare avant application.
+**Verdict DNS/Edge : PASS préparatoire. Verdict origine/TLS : NOT_VERIFIED. Aucun DNS ou réglage TLS modifié.**
