@@ -4,14 +4,13 @@ Date : 2026-11-13. Candidat : `5ae7cd213346169465ee739d09df6d39b26ac6c3`.
 
 | Gate | Verdict | Preuve |
 |---|---|---|
-| 1A identité canonique | PASS | Workflow READ ONLY `43351101756`, cardinalités 1/1, empreinte stable |
-| 1A provenance | PASS | Attestation explicite du propriétaire, 2026-11-13 |
-| 1A registre de fixture | READY / NOT_EXECUTED | PR #270, HEAD `a94097ed`, 9 tests ciblés et CI `43424120751` PASS |
+| 1A identité/provenance/fixture | PASS | Runs `43427837408` et `43428020659`; fixture unique active, `buildingFictitious=true` |
 | 1B post-migration | REQUIRED | Obligatoire avant emplacement, publication ou activation iPad |
-| 2 Cloudflare Edge/DNS | PASS préparatoire | DNS absent, wildcard Edge actif, route publique `client` fonctionnelle |
-| 2 origine/TLS | READY / NOT_EXECUTED | Inspection serveur READ ONLY préparée dans PR #270 |
-| 3 GHCR | PASS | Run `43341138318`, quatre digests existants, aucune republication |
+| 2 Cloudflare Edge/DNS | PASS préparatoire | DNS absent, wildcard Edge actif, aucune mutation |
+| 2 routage origine | PASS | Run `43430222072`; HTTP 404 attendu, `no-store`, runtime inchangé |
+| 2 certificat origine | FAIL | Certificat expire le 2027-01-09 mais SAN incompatible avec `display.getcoro.io` |
+| 3 GHCR | PASS | Run `43341138318`, quatre digests existants |
 
-Production inchangée : aucun déploiement, migration Display, DNS/TLS, PDF, emplacement, permission, appareil ou urgence modifié. Aucun `DemoFixtureRecord` n'est encore créé.
+Production applicative inchangée : aucun déploiement, migration Display, DNS/TLS, PDF, emplacement, permission, appareil ou urgence modifié. La seule mutation autorisée est l'enregistrement de fixture gouverné.
 
-**Verdict global : NO-GO FINAL-PREDEPLOYMENT jusqu'à la fusion contrôlée de #270, la régularisation gouvernée, le rejeu Gate 1A et l'inspection origine/TLS.**
+**Verdict global : NO-GO FINAL-PREDEPLOYMENT — blocage TLS origine démontré.**

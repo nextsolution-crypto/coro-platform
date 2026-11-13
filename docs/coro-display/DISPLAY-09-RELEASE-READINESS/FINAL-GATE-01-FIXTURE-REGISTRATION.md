@@ -1,15 +1,15 @@
 # Gate 1A — enregistrement DemoFixtureRecord
 
-La PR #270, HEAD `a94097ed`, prépare une opération gouvernée qui :
+Régularisation gouvernée exécutée par le workflow `43427837408` après sauvegarde réussie et verrou de production.
 
-- verrouille l'organisation et l'empreinte du bâtiment canonique;
-- refuse les collisions de clé ou d'entité;
-- modifie uniquement `DemoFixtureRecord` dans une transaction `SERIALIZABLE`;
-- inscrit la décision propriétaire et l'identifiant d'exécution dans la baseline;
-- est idempotente et possède une opération de retrait strictement ciblée;
-- prend le verrou commun de production et exige une sauvegarde réussie;
-- préserve client, bâtiment, PMU/PCA, documents, personnes, permissions et autres données métier.
+- `execution=PASS`;
+- `created=true`;
+- `registryOnly=true`;
+- `reversible=true`;
+- empreinte bâtiment : `5ba4072e9e0027d5b74ff469e5424463f671eb76b9c052db8f024b2450b0f3ec`;
+- un seul enregistrement actif;
+- Gate 1B : `REQUIRED`.
 
-Tests ciblés : 9/9 PASS. CI PR #270, run `43424120751` : PASS; images et release SKIPPED.
+Rejeu READ ONLY Gate 1A : workflow `43428020659`, `buildingFictitious=true`, `demoFixtureCount=1`, cardinalités client/bâtiment 1/1, tenant Démo admissible et bâtiment actif.
 
-**Mutation effectuée : NON. État : READY_FOR_CONTROLLED_REGISTRATION_AFTER_PR_MERGE.**
+**Verdict Gate 1A : PASS.**

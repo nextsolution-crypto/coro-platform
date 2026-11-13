@@ -2,11 +2,12 @@
 
 **NO-GO FINAL-PREDEPLOYMENT au 2026-11-13.**
 
-Passes conservés : identité canonique Tour Prémont, code/CI, simulations de migrations, sauvegarde/restauration de préparation, capacité historique et quatre images GHCR immuables.
+PASS :
 
-Blocages :
+- identité et caractère fictif canoniques de Tour Prémont;
+- `DemoFixtureRecord` gouverné, unique, réversible;
+- Gate 1A PostgreSQL READ ONLY;
+- routage local Host `display.getcoro.io` vers le Player Web;
+- code/CI et quatre images GHCR immuables.
 
-1. `buildingFictitious=false` et `demoFixtureCount=0`; les sources trouvées sont corroborantes ou contradictoires, pas une provenance directe de création.
-2. Cloudflare Edge est qualifié, mais le certificat d'origine et le routage du Host `display.getcoro.io` ne sont pas démontrés.
-
-Gate 1B reste obligatoire après migrations. Aucun déploiement n'est autorisable tant que les deux blocages P0 ne sont pas fermés puis que les gates frais de release ne sont pas rejoués.
+Blocage unique démontré : le certificat actuellement présenté par l'origine ne couvre pas `display.getcoro.io`. Une correction TLS gouvernée et sa revalidation sont nécessaires avant la demande de déploiement. Gate 1B restera obligatoire après migrations et avant publication ou activation d'appareil.
