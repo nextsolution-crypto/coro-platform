@@ -10,6 +10,10 @@ const themeInit = fs.readFileSync(
   new URL("../../design-system/theme/ThemeInitScript.tsx", import.meta.url),
   "utf8",
 );
+const styles = fs.readFileSync(
+  new URL("./[publicDisplayId]/player.module.css", import.meta.url),
+  "utf8",
+);
 
 test("the browser player is explicitly view-only and never emergency eligible", () => {
   assert.match(source, /WEB_VIEW_ONLY/);
@@ -52,4 +56,11 @@ test("the anti-flash theme script receives the per-request CSP nonce", () => {
   assert.match(layout, /<ThemeInitScript nonce=\{nonce\} \/>/);
   assert.match(themeInit, /<script nonce=\{nonce\}/);
   assert.doesNotMatch(proxy, /sha256-bB\//);
+});
+
+test("activation and player controls stay inside narrow viewports", () => {
+  assert.match(styles, /max-width:100vw/);
+  assert.match(styles, /\.shell \*,\.player \*\{box-sizing:border-box\}/);
+  assert.match(styles, /\.activation input\{width:100%;min-width:0/);
+  assert.match(styles, /@media \(max-width:480px\)/);
 });
