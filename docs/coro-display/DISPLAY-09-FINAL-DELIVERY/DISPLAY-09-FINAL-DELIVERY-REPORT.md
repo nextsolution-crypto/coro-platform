@@ -15,4 +15,6 @@
 | TLS Display | FAIL | SAN incompatible |
 | Chemin Cloudflare → origine | NOT_VERIFIED | accès fournisseur requis |
 
-Les lots A, B et C demeurent non exécutés. Aucun DNS, certificat, NGINX, déploiement, migration, fixture Display ou appareil n'a été modifié.
+Le Lot A a été autorisé puis arrêté au préflight : `ORIGIN_PATH_VERIFIED=NOT_VERIFIED`. Les lots B et C demeurent non autorisés. Aucun DNS, certificat, NGINX, déploiement, migration, fixture Display ou appareil n'a été modifié.
+
+Action humaine minimale : ouvrir une session Cloudflare `getcoro.io` dans un navigateur contrôlable, puis permettre la lecture de DNS → Records, Rules → Origin Rules et SSL/TLS. Une alternative acceptable est un accès API Cloudflare existant strictement en lecture seule; aucun nouveau jeton ne sera créé sans autorisation distincte.
