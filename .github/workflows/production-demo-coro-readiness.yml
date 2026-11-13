@@ -15,6 +15,10 @@ on:
         description: Type INSPECT_DISPLAY09_ORIGIN_READ_ONLY to inspect origin TLS and routing without changes
         required: false
         type: string
+      display09_origin_tls_deep_inspection:
+        description: Type INSPECT_DISPLAY09_ORIGIN_TLS_DEEP_READ_ONLY to inventory terminator, renewal and SNI certificates
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -24,6 +28,38 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  display09-origin-tls-deep-inspection:
+    if: inputs.display09_origin_tls_deep_inspection == 'INSPECT_DISPLAY09_ORIGIN_TLS_DEEP_READ_ONLY'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: node --test ops/display/display09-origin-tls-inspection.test.cjs
+      - name: Inspect origin terminator, renewal and SNI certificates without mutation
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          WORKFLOW_SHA: ${{ github.sha }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: WORKFLOW_SHA
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            script_path="$(mktemp /tmp/display09-origin-tls.XXXXXX.sh)"
+            output_path="$(mktemp /tmp/display09-origin-tls.XXXXXX.json)"
+            trap 'rm -f -- "$script_path" "$output_path"' EXIT
+            git -C "$repo" fetch --quiet origin "$WORKFLOW_SHA"
+            git -C "$repo" show "$WORKFLOW_SHA:ops/display/display09-origin-tls-inspection.sh" >"$script_path"
+            chmod 0500 "$script_path"
+            "$script_path" >"$output_path"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||r.readOnly!==true||!Array.isArray(r.certificates)||r.certificates.length!==5)process.exit(1);const s=JSON.stringify(r);if(/PRIVATE KEY|password|secret|token|access[_-]?key|private[_-]?key/i.test(s))process.exit(1)' "$output_path"
+            cat "$output_path"
+
   display09-origin-inspection:
     if: inputs.display09_origin_inspection == 'INSPECT_DISPLAY09_ORIGIN_READ_ONLY'
     runs-on: ubuntu-latest
