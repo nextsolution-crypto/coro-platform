@@ -21,6 +21,19 @@ fail() { printf 'DISPLAY09_TLS_FAILED code=%s\n' "$1" >&2; exit 1; }
 require_pass() { [[ "${!1:-}" == PASS ]] || fail "$1"; }
 require_command() { command -v "$1" >/dev/null 2>&1 || fail "COMMAND_${1^^}_MISSING"; }
 
+require_origin_change_authority() {
+  if [[ "${ORIGIN_PATH_VERIFIED:-}" == PASS ]]; then
+    require_pass DISPLAY_CLOUDFLARE_RULES_VERIFIED
+    printf '%s\n' 'DISPLAY09_ORIGIN_MODE=VERIFIED'
+    return
+  fi
+  [[ "${ORIGIN_PATH_VERIFIED:-NOT_VERIFIED}" == NOT_VERIFIED ]] || fail ORIGIN_PATH_STATUS_INVALID
+  require_pass CONTROLLED_ORIGIN_VERIFICATION_AUTHORIZED
+  require_pass CONTROLLED_ORIGIN_RISK_ACCEPTED
+  [[ "${DISPLAY_CLOUDFLARE_RULES_VERIFIED:-}" == PARTIAL ]] || fail CLOUDFLARE_PARTIAL_EVIDENCE_REQUIRED
+  printf '%s\n' 'DISPLAY09_ORIGIN_MODE=CONTROLLED_ORIGIN_VERIFICATION'
+}
+
 validate_common() {
   [[ "$MODE" =~ ^(PLAN|APPLY|VERIFY|ROLLBACK)$ ]] || fail MODE_INVALID
   [[ -f "$TEMPLATE" && ! -L "$TEMPLATE" ]] || fail TEMPLATE_INVALID
@@ -71,12 +84,17 @@ rollback_on_error() {
 
 issue_certificate() {
   require_command certbot
-  [[ -n "${CERTBOT_ACCOUNT_EMAIL:-}" ]] || fail CERTBOT_ACCOUNT_EMAIL_REQUIRED
+  local account_args=()
+  if [[ -n "${CERTBOT_ACCOUNT_EMAIL:-}" ]]; then
+    account_args=(--email "$CERTBOT_ACCOUNT_EMAIL")
+  else
+    certbot show_account >/dev/null 2>&1 || fail CERTBOT_EXISTING_ACCOUNT_REQUIRED
+  fi
   case "${DISPLAY_ACME_METHOD:-}" in
     HTTP01)
       require_pass DISPLAY_DNS_VERIFIED
       certbot certonly --webroot -w "$ACME_WEBROOT" -d "$DOMAIN" --cert-name "$DOMAIN" \
-        --non-interactive --agree-tos --email "$CERTBOT_ACCOUNT_EMAIL" --keep-until-expiring \
+        --non-interactive --agree-tos "${account_args[@]}" --keep-until-expiring \
         --deploy-hook 'systemctl reload nginx'
       ;;
     DNS01)
@@ -84,7 +102,7 @@ issue_certificate() {
       [[ -f "${CERTBOT_DNS_CREDENTIALS_FILE:-}" && ! -L "${CERTBOT_DNS_CREDENTIALS_FILE:-}" ]] || fail DNS01_CREDENTIALS_INVALID
       [[ "$(stat -c '%a' "$CERTBOT_DNS_CREDENTIALS_FILE")" =~ ^(400|600)$ ]] || fail DNS01_CREDENTIALS_PERMISSIONS_INVALID
       certbot certonly --dns-cloudflare --dns-cloudflare-credentials "$CERTBOT_DNS_CREDENTIALS_FILE" \
-        -d "$DOMAIN" --cert-name "$DOMAIN" --non-interactive --agree-tos --email "$CERTBOT_ACCOUNT_EMAIL" \
+        -d "$DOMAIN" --cert-name "$DOMAIN" --non-interactive --agree-tos "${account_args[@]}" \
         --keep-until-expiring --deploy-hook 'systemctl reload nginx'
       ;;
     *) fail ACME_METHOD_NOT_APPROVED ;;
@@ -126,8 +144,7 @@ case "$MODE" in
     printf 'DISPLAY09_TLS_PLAN=PASS domain=%s upstream=127.0.0.1:3003 mutation=false\n' "$DOMAIN"
     ;;
   APPLY)
-    require_pass ORIGIN_PATH_VERIFIED
-    require_pass DISPLAY_CLOUDFLARE_RULES_VERIFIED
+    require_origin_change_authority
     require_pass DISPLAY_DNS_CHANGE_AUTHORIZED
     require_command nginx; require_command openssl; require_command systemctl; require_command flock
     exec 9>"$LOCK_FILE"; flock --nonblock 9 || fail DEPLOYMENT_LOCK_BUSY

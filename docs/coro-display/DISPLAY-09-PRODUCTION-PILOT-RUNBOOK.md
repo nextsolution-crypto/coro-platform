@@ -14,11 +14,13 @@ Ce runbook est opérationnel et à arrêt obligatoire. Il ne constitue pas une a
 Outillage : `ops/display09/display09-origin-tls-change.sh` et le virtual host `ops/display09/nginx/display.getcoro.io.conf.template`.
 
 1. Exécuter `PLAN`; aucune mutation n'est effectuée.
-2. Dans Cloudflare, démontrer la cible d'origine, les Origin Rules et le SNI. Fixer `ORIGIN_PATH_VERIFIED=PASS` seulement avec cette preuve fournisseur.
+2. Dans Cloudflare, démontrer la cible d'origine, les Origin Rules et le SNI. Fixer `ORIGIN_PATH_VERIFIED=PASS` seulement avec l'inventaire exhaustif. Si cet inventaire demeure incomplet, conserver `NOT_VERIFIED`; la voie distincte `CONTROLLED_ORIGIN_VERIFICATION` exige l'acceptation explicite du risque, les preuves partielles Cloudflare et tous les contrôles publics réels après changement.
 3. Autoriser séparément le changement DNS/TLS. Choisir :
    - `HTTP01` seulement après résolution publique de `display.getcoro.io` et accès au challenge;
    - `DNS01` avec le plugin Cloudflare existant et un fichier d'identifiants hors Git, non symbolique, mode `0400` ou `0600`.
-4. Avant `APPLY`, vérifier les trois gates : `ORIGIN_PATH_VERIFIED=PASS`, `DISPLAY_CLOUDFLARE_RULES_VERIFIED=PASS`, `DISPLAY_DNS_CHANGE_AUTHORIZED=PASS`.
+4. Avant `APPLY`, vérifier `DISPLAY_DNS_CHANGE_AUTHORIZED=PASS` et l'une des deux branches :
+   - origine complète : `ORIGIN_PATH_VERIFIED=PASS` et `DISPLAY_CLOUDFLARE_RULES_VERIFIED=PASS`;
+   - voie contrôlée : `ORIGIN_PATH_VERIFIED=NOT_VERIFIED`, `DISPLAY_CLOUDFLARE_RULES_VERIFIED=PARTIAL`, `CONTROLLED_ORIGIN_VERIFICATION_AUTHORIZED=PASS` et `CONTROLLED_ORIGIN_RISK_ACCEPTED=PASS`.
 5. `APPLY` prend le verrou commun, valide NGINX, sauvegarde le vhost Display, son lien et `nginx -T`, émet uniquement le certificat dédié, installe le vhost vers `127.0.0.1:3003`, puis effectue `nginx -t` et un reload.
 6. `VERIFY` contrôle les cinq SNI, la route réelle `/d/{publicDisplayId}`, `no-store`, CSP, cookies éventuels et le dry-run Certbot.
 7. Au premier échec après mutation, le rollback automatique restaure uniquement le vhost Display. Le mode `ROLLBACK` reste rejouable avec l'état sauvegardé et exige `DISPLAY_TLS_ROLLBACK_AUTHORIZED=PASS`.

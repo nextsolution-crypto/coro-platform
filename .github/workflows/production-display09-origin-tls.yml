@@ -1,0 +1,136 @@
+name: Production Display09 Origin TLS
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: PLAN, APPLY, VERIFY or ROLLBACK
+        required: true
+        type: choice
+        options: [PLAN, APPLY, VERIFY, ROLLBACK]
+      confirmation:
+        description: Type EXECUTE_DISPLAY09_CONTROLLED_ORIGIN_TLS for APPLY/VERIFY or ROLLBACK_DISPLAY09_ORIGIN_TLS for ROLLBACK
+        required: false
+        type: string
+      origin_path_status:
+        description: Documentary origin path status
+        required: true
+        type: choice
+        options: [NOT_VERIFIED, PASS]
+        default: NOT_VERIFIED
+      acme_method:
+        description: ACME method for APPLY
+        required: false
+        type: choice
+        options: [HTTP01]
+        default: HTTP01
+      dns_verified:
+        description: Type DISPLAY_DNS_PUBLICLY_VERIFIED after the authorized record resolves
+        required: false
+        type: string
+      player_test_path:
+        description: Non-sensitive /d/<opaque-id> path used by VERIFY
+        required: false
+        type: string
+      rollback_state:
+        description: Absolute governed state directory emitted by APPLY
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-deployment
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - run: |
+          node ops/display09/display09-origin-tls-change.test.mjs
+          node ops/display09/display09-lot-c-readiness.test.mjs
+          node ops/display09/display09-lot-c-readiness.mjs
+          bash -n ops/display09/display09-origin-tls-change.sh
+
+  execute:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Validate protected inputs
+        env:
+          OPERATION: ${{ inputs.operation }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          ORIGIN_STATUS: ${{ inputs.origin_path_status }}
+          DNS_VERIFIED: ${{ inputs.dns_verified }}
+          PLAYER_TEST_PATH: ${{ inputs.player_test_path }}
+        run: |
+          set -Eeuo pipefail
+          case "$OPERATION" in
+            PLAN) ;;
+            APPLY)
+              test "$CONFIRMATION" = EXECUTE_DISPLAY09_CONTROLLED_ORIGIN_TLS
+              test "$DNS_VERIFIED" = DISPLAY_DNS_PUBLICLY_VERIFIED
+              ;;
+            VERIFY)
+              test "$CONFIRMATION" = EXECUTE_DISPLAY09_CONTROLLED_ORIGIN_TLS
+              [[ "$PLAYER_TEST_PATH" =~ ^/d/[A-Za-z0-9_-]{16,128}$ ]]
+              ;;
+            ROLLBACK) test "$CONFIRMATION" = ROLLBACK_DISPLAY09_ORIGIN_TLS ;;
+            *) exit 1 ;;
+          esac
+          test "$ORIGIN_STATUS" = PASS || test "$ORIGIN_STATUS" = NOT_VERIFIED
+      - name: Execute governed Display origin operation
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          WORKFLOW_SHA: ${{ github.sha }}
+          OPERATION: ${{ inputs.operation }}
+          ORIGIN_STATUS: ${{ inputs.origin_path_status }}
+          ACME_METHOD: ${{ inputs.acme_method }}
+          PLAYER_TEST_PATH: ${{ inputs.player_test_path }}
+          ROLLBACK_STATE: ${{ inputs.rollback_state }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: WORKFLOW_SHA,OPERATION,ORIGIN_STATUS,ACME_METHOD,PLAYER_TEST_PATH,ROLLBACK_STATE
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            tmp="$(mktemp -d /tmp/display09-origin-change.XXXXXX)"
+            cleanup() { find "$tmp" -type f -delete; rmdir "$tmp"; }
+            trap cleanup EXIT
+            git -C "$repo" fetch --quiet origin "$WORKFLOW_SHA"
+            git -C "$repo" show "$WORKFLOW_SHA:ops/display09/display09-origin-tls-change.sh" >"$tmp/change.sh"
+            git -C "$repo" show "$WORKFLOW_SHA:ops/display09/nginx/display.getcoro.io.conf.template" >"$tmp/vhost.template"
+            chmod 0500 "$tmp/change.sh"; chmod 0400 "$tmp/vhost.template"
+            common=(
+              "ORIGIN_PATH_VERIFIED=$ORIGIN_STATUS"
+              "DISPLAY09_NGINX_TEMPLATE=$tmp/vhost.template"
+              "DISPLAY_PLAYER_TEST_PATH=$PLAYER_TEST_PATH"
+              "DISPLAY09_TLS_ROLLBACK_STATE=$ROLLBACK_STATE"
+            )
+            if [[ "$ORIGIN_STATUS" == PASS ]]; then
+              common+=("DISPLAY_CLOUDFLARE_RULES_VERIFIED=PASS")
+            else
+              common+=(
+                "DISPLAY_CLOUDFLARE_RULES_VERIFIED=PARTIAL"
+                "CONTROLLED_ORIGIN_VERIFICATION_AUTHORIZED=PASS"
+                "CONTROLLED_ORIGIN_RISK_ACCEPTED=PASS"
+              )
+            fi
+            case "$OPERATION" in
+              APPLY)
+                env "${common[@]}" \
+                  DISPLAY_DNS_CHANGE_AUTHORIZED=PASS DISPLAY_DNS_VERIFIED=PASS \
+                  DISPLAY_ACME_METHOD="$ACME_METHOD" "$tmp/change.sh" APPLY
+                ;;
+              VERIFY) env "${common[@]}" "$tmp/change.sh" VERIFY ;;
+              ROLLBACK) env "${common[@]}" DISPLAY_TLS_ROLLBACK_AUTHORIZED=PASS "$tmp/change.sh" ROLLBACK ;;
+              PLAN) env "${common[@]}" "$tmp/change.sh" PLAN ;;
+            esac
