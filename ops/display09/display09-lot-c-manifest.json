@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "pilot": "DISPLAY-09-TOUR-PREMONT",
+  "environment": "production",
+  "authorizationRequired": true,
+  "organization": {
+    "id": "916f54ec-af22-45e0-99db-a369d9630002",
+    "name": "CORO Démo",
+    "fixtureNamespace": "display-09-demo-pilot",
+    "fixtureKey": "tour-premont-building",
+    "canonicalBuildingFingerprint": "5ba4072e9e0027d5b74ff469e5424463f671eb76b9c052db8f024b2450b0f3ec"
+  },
+  "spatial": {
+    "floor": { "code": "E03", "name": "Étage 3 — Démonstration", "levelNumber": 3, "sortOrder": 3 },
+    "zone": { "code": "E03-DEMO", "name": "Zone pilote Display", "description": "Fixture synthétique CORO Display — Tour Prémont" },
+    "location": {
+      "code": "E03-DISPLAY-PILOT",
+      "label": "Écran pilote — étage 3",
+      "description": "Emplacement synthétique; aucune autorité d'urgence réelle",
+      "positionX": 0.5,
+      "positionY": 0.5,
+      "orientationDegrees": 0,
+      "youAreHereX": 0.5,
+      "youAreHereY": 0.5
+    }
+  },
+  "assets": [
+    {
+      "version": "V1",
+      "path": "docs/coro-display/DISPLAY-09-DEMO-PILOT/assets/CORO-DISPLAY-DEMO-TOUR-PREMONT-E03-V1.pdf",
+      "sha256": "29bff483ad734e07c6330ee10b00c4b295fdab45ec92e2e32025e5674dd6f7a6",
+      "synthetic": true
+    },
+    {
+      "version": "V2",
+      "path": "docs/coro-display/DISPLAY-09-DEMO-PILOT/assets/CORO-DISPLAY-DEMO-TOUR-PREMONT-E03-V2.pdf",
+      "sha256": "aa579334f87c29bd8391a66c4b20663b3f884f33535c7130dc47c41f8c164c8d",
+      "synthetic": true
+    }
+  ],
+  "publication": {
+    "orientation": "LANDSCAPE",
+    "language": "FR",
+    "visualProfile": "ORIGINAL_17X11",
+    "requiresDistinctReviewAndApproval": true
+  },
+  "player": {
+    "capability": "WEB_VIEW_ONLY",
+    "publicRoute": "/d/{publicDisplayId}",
+    "emergencyEligible": false,
+    "managedKiosk": false
+  },
+  "idempotency": {
+    "floor": "display09-tour-premont-floor-e03",
+    "zone": "display09-tour-premont-zone-e03-demo",
+    "location": "display09-tour-premont-location-e03-pilot",
+    "publicationV1": "display09-tour-premont-publication-v1",
+    "publicationV2": "display09-tour-premont-publication-v2",
+    "activation": "display09-tour-premont-web-activation",
+    "revocation": "display09-tour-premont-web-revocation"
+  },
+  "requiredSequence": [
+    "CANONICAL_FIXTURE_READ_ONLY_VERIFIED",
+    "LOT_A_DNS_TLS_PASS",
+    "LOT_C_AUTHORIZED",
+    "SPATIAL_RESOURCES_CREATED_OR_RECONCILED",
+    "V1_SUBMITTED_REVIEWED_APPROVED_PUBLISHED",
+    "WEB_VIEW_ONLY_ACTIVATED",
+    "IPAD_SAFARI_V1_OBSERVED",
+    "V2_SUBMITTED_REVIEWED_APPROVED_PUBLISHED",
+    "IPAD_SAFARI_V2_SYNC_OBSERVED",
+    "SESSION_AND_ACTIVATION_REVOKED",
+    "SERVER_REFUSAL_AFTER_REVOCATION_VERIFIED"
+  ]
+}
