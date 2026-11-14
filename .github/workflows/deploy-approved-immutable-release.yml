@@ -73,7 +73,7 @@ jobs:
           APPLICATION_COMMIT: ${{ inputs.application_commit }}
           EXPECTED_HEAD: ${{ steps.policy.outputs.migration_head }}
         run: |
-          actual="$(git ls-tree --name-only "$APPLICATION_COMMIT:coro-backend/prisma/migrations" | sort | tail -n 1)"
+          actual="$(git ls-tree -d --name-only "$APPLICATION_COMMIT:coro-backend/prisma/migrations" | sort | tail -n 1)"
           test "$actual" = "$EXPECTED_HEAD"
 
   production-release:
