@@ -70,6 +70,25 @@ cleanup_http01_probe() {
   challenge_file=''; probe_dir=''
 }
 
+report_local_http01_diagnostics() {
+  local diagnostics
+  if diagnostics="$(nginx -T 2>/dev/null | awk -v expected_root="root $ACME_WEBROOT;" '
+      $1 == "server_name" && $2 == "display.getcoro.io;" { server_matches++ }
+      $1 == "root" && $0 ~ expected_root { root_matches++ }
+      END { printf "server_name_matches=%d acme_root_matches=%d", server_matches, root_matches }
+    ')"; then
+    printf 'DISPLAY09_HTTP_VHOST_DIAGNOSTIC %s\n' "$diagnostics" >&2
+  else
+    printf '%s\n' 'DISPLAY09_HTTP_VHOST_DIAGNOSTIC nginx_dump=unavailable' >&2
+  fi
+  if command -v namei >/dev/null 2>&1 && [[ -n "$challenge_file" ]]; then
+    namei -om -- "$challenge_file" >&2 || true
+  fi
+  if [[ -r /var/log/nginx/error.log && -n "$challenge_file" ]]; then
+    grep -F -- "$(basename "$challenge_file")" /var/log/nginx/error.log | tail -n 5 >&2 || true
+  fi
+}
+
 probe_http_response() {
   local label="$1" expected="$2"; shift 2
   : >"$probe_dir/headers"; : >"$probe_dir/body"
@@ -79,9 +98,18 @@ probe_http_response() {
   fi
   local status
   status="$(awk 'toupper($1) ~ /^HTTP\// {code=$2} END {print code+0}' "$probe_dir/headers")"
-  [[ "$status" == 200 ]] || fail "ACME_${label}_HTTP_${status}"
-  ! grep -Eqi '^location:' "$probe_dir/headers" || fail "ACME_${label}_REDIRECT_FORBIDDEN"
-  cmp -s "$expected" "$probe_dir/body" || fail "ACME_${label}_BODY_MISMATCH"
+  if [[ "$status" != 200 ]]; then
+    [[ "$label" != LOCAL ]] || report_local_http01_diagnostics
+    fail "ACME_${label}_HTTP_${status}"
+  fi
+  if grep -Eqi '^location:' "$probe_dir/headers"; then
+    [[ "$label" != LOCAL ]] || report_local_http01_diagnostics
+    fail "ACME_${label}_REDIRECT_FORBIDDEN"
+  fi
+  if ! cmp -s "$expected" "$probe_dir/body"; then
+    [[ "$label" != LOCAL ]] || report_local_http01_diagnostics
+    fail "ACME_${label}_BODY_MISMATCH"
+  fi
 }
 
 probe_http01() {
@@ -96,20 +124,21 @@ probe_http01() {
   install -o root -g root -m 0644 "$probe_dir/expected" "$challenge_file"
   expected_url="http://$DOMAIN/.well-known/acme-challenge/$token"
 
-  probe_http_response LOCAL "$probe_dir/expected" --resolve "$DOMAIN:80:127.0.0.1" "$expected_url"
-  probe_http_response PUBLIC "$probe_dir/expected" "$expected_url"
+  probe_http_response LOCAL "$probe_dir/expected" --noproxy '*' --resolve "$DOMAIN:80:127.0.0.1" "$expected_url"
+  printf '%s\n' 'ACME_LOCAL_HTTP=PASS status=200 exact_body=true redirects=false direct_loopback=true'
+  probe_http_response PUBLIC "$probe_dir/expected" --noproxy '*' "$expected_url"
 
   while read -r ip; do
     [[ -n "$ip" ]] || continue
     count_v4=$((count_v4 + 1))
-    probe_http_response "IPV4_${count_v4}" "$probe_dir/expected" --resolve "$DOMAIN:80:$ip" "$expected_url"
+    probe_http_response "IPV4_${count_v4}" "$probe_dir/expected" --noproxy '*' --resolve "$DOMAIN:80:$ip" "$expected_url"
   done < <(getent ahostsv4 "$DOMAIN" | awk '{print $1}' | sort -u | head -n 4)
   [[ "$count_v4" -gt 0 ]] || fail ACME_IPV4_DNS_MISSING
 
   while read -r ip; do
     [[ -n "$ip" ]] || continue
     count_v6=$((count_v6 + 1))
-    probe_http_response "IPV6_${count_v6}" "$probe_dir/expected" --resolve "$DOMAIN:80:[$ip]" "$expected_url"
+    probe_http_response "IPV6_${count_v6}" "$probe_dir/expected" --noproxy '*' --resolve "$DOMAIN:80:[$ip]" "$expected_url"
   done < <(getent ahostsv6 "$DOMAIN" | awk '{print $1}' | sort -u | head -n 4)
 
   printf 'DISPLAY09_HTTP01_PREFLIGHT=PASS ipv4=%s ipv6=%s exact_body=true redirects=false\n' "$count_v4" "$count_v6"
