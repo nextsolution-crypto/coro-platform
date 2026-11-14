@@ -53,6 +53,11 @@ test('requires exact local, public, IPv4 and relevant IPv6 witness responses bef
   assert.match(responseTests, /MOCK_STATUS=404/);
   assert.match(responseTests, /MOCK_BODY=SUBSTITUTED/);
   assert.match(responseTests, /MOCK_REDIRECT=true/);
+  assert.match(script, /probe_http_response LOCAL[^\n]+--noproxy '\*'[^\n]+--resolve/);
+  assert.match(script, /ACME_LOCAL_HTTP=PASS status=200 exact_body=true redirects=false direct_loopback=true/);
+  assert.match(script, /DISPLAY09_HTTP_VHOST_DIAGNOSTIC/);
+  assert.match(script, /nginx -T 2>\/dev\/null \| awk/);
+  assert.doesNotMatch(script, /nginx-effective|cat .*nginx-effective/);
 });
 
 test('backs up, validates, reloads and rolls back only the Display vhost', () => {
@@ -69,6 +74,10 @@ test('isolated NGINX test renders the template and validates the actual upstream
   assert.match(isolated, /nginx -t/);
   assert.match(isolated, /server_name display\.getcoro\.io/);
   assert.match(isolated, /proxy_pass http:\/\/127\.0\.0\.1:3003/);
+  assert.match(isolated, /HTTP_PROXY=http:\/\/127\.0\.0\.1:9/);
+  assert.match(isolated, /proxy regression was not reproduced/);
+  assert.match(isolated, /--noproxy '\*'/);
+  assert.match(isolated, /ACME_LOCAL_HTTP=PASS/);
 });
 
 test('protected workflow keeps controlled verification explicit and never rewrites origin evidence', () => {
