@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import {
 import { TOUR_PREMONT_E2E_CHECKLIST } from './pilot-scenario.checklist';
 
 type Actor = { userId: string; role: string };
+type TenantActor = Actor & { organizationId: string };
 
 const scenarioInclude = {
   organization: { select: { id: true, name: true, isActive: true } },
@@ -118,6 +120,25 @@ export class PilotScenariosService {
       orderBy: [{ status: 'asc' }, { updatedAt: 'desc' }],
       include: scenarioInclude,
     });
+  }
+
+  listForTenant(actor: TenantActor) {
+    this.requireTenantAdministrator(actor);
+    return this.prisma.pilotScenario.findMany({
+      where: { organizationId: actor.organizationId },
+      orderBy: [{ status: 'asc' }, { updatedAt: 'desc' }],
+      include: scenarioInclude,
+    });
+  }
+
+  async getForTenant(id: string, actor: TenantActor) {
+    this.requireTenantAdministrator(actor);
+    const scenario = await this.prisma.pilotScenario.findFirst({
+      where: { id, organizationId: actor.organizationId },
+      include: scenarioInclude,
+    });
+    if (!scenario) throw new NotFoundException('ScÃ©nario pilote introuvable.');
+    return scenario;
   }
 
   async get(id: string) {
@@ -299,10 +320,25 @@ export class PilotScenariosService {
     dto: UpdatePilotCheckDto,
     actor: Actor,
   ) {
+    return this.updateCheckInternal(scenarioId, runId, checkKey, dto, actor);
+  }
+
+  private async updateCheckInternal(
+    scenarioId: string,
+    runId: string,
+    checkKey: string,
+    dto: UpdatePilotCheckDto,
+    actor: Actor,
+    organizationId?: string,
+  ) {
     return this.prisma.$transaction(
       async (tx) => {
         const run = await tx.pilotScenarioRun.findFirst({
-          where: { id: runId, scenarioId },
+          where: {
+            id: runId,
+            scenarioId,
+            ...(organizationId ? { scenario: { organizationId } } : {}),
+          },
           include: { scenario: true, checks: true },
         });
         if (!run) throw new NotFoundException('Exécution pilote introuvable.');
@@ -352,6 +388,32 @@ export class PilotScenariosService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+  }
+
+  async updateCheckForTenant(
+    scenarioId: string,
+    runId: string,
+    checkKey: string,
+    dto: UpdatePilotCheckDto,
+    actor: TenantActor,
+  ) {
+    this.requireTenantAdministrator(actor);
+    return this.updateCheckInternal(
+      scenarioId,
+      runId,
+      checkKey,
+      dto,
+      actor,
+      actor.organizationId,
+    );
+  }
+
+  private requireTenantAdministrator(actor: TenantActor) {
+    if (actor.role !== 'ADMIN' || !actor.organizationId) {
+      throw new ForbiddenException(
+        'Seul un administrateur du tenant peut exÃ©cuter cette recette pilote.',
+      );
+    }
   }
 
   async completeRun(

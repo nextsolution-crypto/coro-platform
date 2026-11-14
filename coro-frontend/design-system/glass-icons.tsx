@@ -36,6 +36,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   '/settings/timelog-categories': Tags,
   '/settings/feedback': MessageSquare,
   '/admin/test-scenario-pilots': ListChecks,
+  '/pilot-scenarios': ListChecks,
   '/admin/control-center': Radar,
   '/admin/metering': Activity,
   '/admin/qr-codes': QrCode,
