@@ -54,6 +54,7 @@ jobs:
           node ops/display09/display09-origin-tls-change.test.mjs
           node ops/display09/display09-lot-c-readiness.test.mjs
           node ops/display09/display09-lot-c-readiness.mjs
+          bash ops/display09/display09-http01-response.test.sh
           bash -n ops/display09/display09-origin-tls-change.sh
 
   execute:

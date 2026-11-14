@@ -16,6 +16,8 @@ TEMPLATE="${DISPLAY09_NGINX_TEMPLATE:-$(dirname "$0")/nginx/display.getcoro.io.c
 TARGETS=(getcoro.io api.getcoro.io app.getcoro.io client.getcoro.io display.getcoro.io)
 state_dir=''
 changed=false
+challenge_file=''
+probe_dir=''
 
 fail() { printf 'DISPLAY09_TLS_FAILED code=%s\n' "$1" >&2; exit 1; }
 require_pass() { [[ "${!1:-}" == PASS ]] || fail "$1"; }
@@ -48,6 +50,72 @@ render_vhost() {
   chmod 0600 "$output"
 }
 
+prepare_acme_webroot() {
+  [[ "$ACME_WEBROOT" == /var/www/* && "$ACME_WEBROOT" != *'/../'* && "$ACME_WEBROOT" != *'/..' ]] || fail ACME_WEBROOT_SCOPE_INVALID
+  [[ ! -L "$ACME_WEBROOT" ]] || fail ACME_WEBROOT_SYMLINK_FORBIDDEN
+  install -d -o root -g root -m 0755 \
+    "$ACME_WEBROOT" \
+    "$ACME_WEBROOT/.well-known" \
+    "$ACME_WEBROOT/.well-known/acme-challenge"
+  [[ "$(stat -c '%a' "$ACME_WEBROOT")" == 755 ]] || fail ACME_WEBROOT_PERMISSIONS_INVALID
+  [[ "$(stat -c '%a' "$ACME_WEBROOT/.well-known/acme-challenge")" == 755 ]] || fail ACME_CHALLENGE_PERMISSIONS_INVALID
+}
+
+cleanup_http01_probe() {
+  [[ -z "$challenge_file" ]] || rm -f -- "$challenge_file"
+  if [[ -n "$probe_dir" && -d "$probe_dir" ]]; then
+    rm -f -- "$probe_dir/expected" "$probe_dir/headers" "$probe_dir/body"
+    rmdir -- "$probe_dir" 2>/dev/null || true
+  fi
+  challenge_file=''; probe_dir=''
+}
+
+probe_http_response() {
+  local label="$1" expected="$2"; shift 2
+  : >"$probe_dir/headers"; : >"$probe_dir/body"
+  if ! curl --silent --show-error --max-time 15 --max-redirs 0 \
+      -D "$probe_dir/headers" -o "$probe_dir/body" "$@"; then
+    fail "ACME_${label}_REQUEST_FAILED"
+  fi
+  local status
+  status="$(awk 'toupper($1) ~ /^HTTP\// {code=$2} END {print code+0}' "$probe_dir/headers")"
+  [[ "$status" == 200 ]] || fail "ACME_${label}_HTTP_${status}"
+  ! grep -Eqi '^location:' "$probe_dir/headers" || fail "ACME_${label}_REDIRECT_FORBIDDEN"
+  cmp -s "$expected" "$probe_dir/body" || fail "ACME_${label}_BODY_MISMATCH"
+}
+
+probe_http01() {
+  require_command curl; require_command getent
+  prepare_acme_webroot
+  probe_dir="$(mktemp -d "$state_dir/http01-probe.XXXXXX")"
+  chmod 0700 "$probe_dir"
+  local token expected_url ip count_v4=0 count_v6=0
+  token="coro-display09-$(openssl rand -hex 16)"
+  printf 'CORO-DISPLAY09-ACME-PROBE-%s' "$(openssl rand -hex 16)" >"$probe_dir/expected"
+  challenge_file="$ACME_WEBROOT/.well-known/acme-challenge/$token"
+  install -o root -g root -m 0644 "$probe_dir/expected" "$challenge_file"
+  expected_url="http://$DOMAIN/.well-known/acme-challenge/$token"
+
+  probe_http_response LOCAL "$probe_dir/expected" --resolve "$DOMAIN:80:127.0.0.1" "$expected_url"
+  probe_http_response PUBLIC "$probe_dir/expected" "$expected_url"
+
+  while read -r ip; do
+    [[ -n "$ip" ]] || continue
+    count_v4=$((count_v4 + 1))
+    probe_http_response "IPV4_${count_v4}" "$probe_dir/expected" --resolve "$DOMAIN:80:$ip" "$expected_url"
+  done < <(getent ahostsv4 "$DOMAIN" | awk '{print $1}' | sort -u | head -n 4)
+  [[ "$count_v4" -gt 0 ]] || fail ACME_IPV4_DNS_MISSING
+
+  while read -r ip; do
+    [[ -n "$ip" ]] || continue
+    count_v6=$((count_v6 + 1))
+    probe_http_response "IPV6_${count_v6}" "$probe_dir/expected" --resolve "$DOMAIN:80:[$ip]" "$expected_url"
+  done < <(getent ahostsv6 "$DOMAIN" | awk '{print $1}' | sort -u | head -n 4)
+
+  printf 'DISPLAY09_HTTP01_PREFLIGHT=PASS ipv4=%s ipv6=%s exact_body=true redirects=false\n' "$count_v4" "$count_v6"
+  cleanup_http01_probe
+}
+
 backup_configuration() {
   mkdir -p "$STATE_ROOT"
   chmod 0700 "$STATE_ROOT"
@@ -74,6 +142,7 @@ restore_configuration() {
 
 rollback_on_error() {
   local exit_code=$?
+  cleanup_http01_probe
   if [[ "$MODE" == APPLY && "$changed" == true && -n "$state_dir" ]]; then
     set +e
     restore_configuration "$state_dir"
@@ -152,11 +221,13 @@ case "$MODE" in
     backup_configuration
     trap rollback_on_error ERR
     changed=true
-    mkdir -p "$ACME_WEBROOT" "$AVAILABLE_DIR" "$ENABLED_DIR"
+    mkdir -p "$AVAILABLE_DIR" "$ENABLED_DIR"
     render_vhost "$state_dir/vhost.candidate"
     if [[ "${DISPLAY_ACME_METHOD:-}" == HTTP01 ]]; then
+      prepare_acme_webroot
       awk 'BEGIN{https=0} /^server \{/ {blocks++} blocks==2 {https=1} !https {print}' "$state_dir/vhost.candidate" >"$VHOST"
       chmod 0600 "$VHOST"; ln -sfn "$VHOST" "$ENABLED"; nginx -t; systemctl reload nginx
+      probe_http01
     fi
     issue_certificate
     install -m 0600 "$state_dir/vhost.candidate" "$VHOST"
