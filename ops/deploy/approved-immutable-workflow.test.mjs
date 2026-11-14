@@ -20,6 +20,10 @@ test('reuses only policy-bound remote manifests and never builds images', () => 
   for (const name of ['BACKEND_IMAGE', 'FRONTEND_IMAGE', 'CLIENT_PORTAL_IMAGE', 'WEBSITE_IMAGE']) assert.match(workflow, new RegExp(name));
 });
 
+test('migration head discovery excludes migration_lock.toml', () => {
+  assert.match(workflow, /git ls-tree -d --name-only/);
+});
+
 test('retains protected production environment, deployment lock and recovery gates', () => {
   assert.match(workflow, /environment: production/);
   assert.match(workflow, /group: coro-production-deployment/);
