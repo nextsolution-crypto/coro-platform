@@ -6,6 +6,7 @@ const script = fs.readFileSync(new URL('./display09-origin-tls-change.sh', impor
 const template = fs.readFileSync(new URL('./nginx/display.getcoro.io.conf.template', import.meta.url), 'utf8');
 const isolated = fs.readFileSync(new URL('./display09-origin-tls-isolated-test.sh', import.meta.url), 'utf8');
 const workflow = fs.readFileSync(new URL('../../.github/workflows/production-display09-origin-tls.yml', import.meta.url), 'utf8');
+const responseTests = fs.readFileSync(new URL('./display09-http01-response.test.sh', import.meta.url), 'utf8');
 
 test('fails closed before any TLS or DNS mutation', () => {
   for (const gate of ['CONTROLLED_ORIGIN_VERIFICATION_AUTHORIZED', 'CONTROLLED_ORIGIN_RISK_ACCEPTED', 'DISPLAY_DNS_CHANGE_AUTHORIZED']) assert.match(script, new RegExp(`require_pass ${gate}`));
@@ -37,6 +38,23 @@ test('supports only governed HTTP-01 or Cloudflare DNS-01 and never reads privat
   assert.doesNotMatch(script, /register-unsafely-without-email/);
 });
 
+test('makes the public ACME webroot traversable despite the restrictive global umask', () => {
+  assert.match(script, /umask 077/);
+  assert.match(script, /install -d -o root -g root -m 0755/);
+  assert.match(script, /ACME_WEBROOT_PERMISSIONS_INVALID/);
+  assert.match(script, /install -o root -g root -m 0644.*expected.*challenge_file/);
+});
+
+test('requires exact local, public, IPv4 and relevant IPv6 witness responses before Certbot', () => {
+  for (const token of ['probe_http_response LOCAL', 'probe_http_response PUBLIC', 'getent ahostsv4', 'getent ahostsv6', 'cmp -s', 'REDIRECT_FORBIDDEN', 'DISPLAY09_HTTP01_PREFLIGHT=PASS']) {
+    assert.match(script, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+  assert.match(script, /if \[\[ "\$\{DISPLAY_ACME_METHOD:-\}" == HTTP01 \]\]; then[\s\S]*probe_http01[\s\S]*fi[\s\S]*issue_certificate/);
+  assert.match(responseTests, /MOCK_STATUS=404/);
+  assert.match(responseTests, /MOCK_BODY=SUBSTITUTED/);
+  assert.match(responseTests, /MOCK_REDIRECT=true/);
+});
+
 test('backs up, validates, reloads and rolls back only the Display vhost', () => {
   for (const token of ['backup_configuration', 'nginx -t', 'systemctl reload nginx', 'restore_configuration', 'DISPLAY09_TLS_ROLLBACK']) assert.match(script, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   assert.doesNotMatch(script, /rm -rf|certbot delete|systemctl restart/);
@@ -60,6 +78,7 @@ test('protected workflow keeps controlled verification explicit and never rewrit
   assert.match(workflow, /DISPLAY_DNS_PUBLICLY_VERIFIED/);
   assert.match(workflow, /CONTROLLED_ORIGIN_VERIFICATION_AUTHORIZED=PASS/);
   assert.match(workflow, /CONTROLLED_ORIGIN_RISK_ACCEPTED=PASS/);
+  assert.match(workflow, /bash ops\/display09\/display09-http01-response\.test\.sh/);
   assert.doesNotMatch(workflow, /ORIGIN_PATH_VERIFIED=PASS/);
   assert.doesNotMatch(workflow, /rm -rf|certbot delete|systemctl restart/);
 });
