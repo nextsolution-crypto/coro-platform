@@ -154,10 +154,12 @@ exec 9>"$LOCK_FILE"
 flock --nonblock 9 || fail CONCURRENT_RELEASE
 
 cd "$REPO"
-[[ "$(git branch --show-current)" == main ]] || fail PRODUCTION_BRANCH_INVALID
+production_branch="$(git branch --show-current)"
+[[ "$production_branch" == main || "$production_branch" == release-active ]] || fail PRODUCTION_BRANCH_INVALID
 [[ -z "$(git status --porcelain --untracked-files=no)" ]] || fail PRODUCTION_WORKTREE_DIRTY
 git fetch --quiet origin main
-[[ "$(git rev-parse origin/main)" == "$RELEASE_COMMIT" ]] || fail REMOTE_COMMIT_MISMATCH
+git cat-file -e "$RELEASE_COMMIT^{commit}" 2>/dev/null || fail RELEASE_COMMIT_NOT_FOUND
+git merge-base --is-ancestor "$RELEASE_COMMIT" origin/main || fail RELEASE_COMMIT_NOT_APPROVED
 
 previous_commit="$(git rev-parse HEAD)"
 previous_migration_head="$(docker compose exec -T postgres sh -ceu 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc '\''SELECT migration_name FROM "_prisma_migrations" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY finished_at DESC LIMIT 1'\''')" || fail PREVIOUS_MIGRATION_HEAD_UNAVAILABLE
@@ -224,7 +226,7 @@ grep -qx 'status=RESTORE_VERIFIED' <<<"$restore_output" || fail RESTORE_VERIFICA
 restore_report="$(sed -n 's/^reportPath=//p' <<<"$restore_output")"
 [[ -f "$restore_report" ]] || fail RESTORE_REPORT_MISSING
 
-git merge --ff-only origin/main || fail RELEASE_CHECKOUT_FAILED
+git checkout --force -B release-active "$RELEASE_COMMIT" || fail RELEASE_CHECKOUT_FAILED
 [[ "$(git rev-parse HEAD)" == "$RELEASE_COMMIT" ]] || fail RELEASE_CHECKOUT_FAILED
 expected_migration_head="$(find coro-backend/prisma/migrations -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | tail -n 1)"
 [[ -n "$expected_migration_head" ]] || fail EXPECTED_MIGRATION_HEAD_MISSING

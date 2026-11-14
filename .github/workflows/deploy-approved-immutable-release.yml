@@ -1,0 +1,153 @@
+name: Deploy Approved Immutable Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      application_commit:
+        description: Approved application SHA bound to prebuilt immutable images
+        required: true
+        type: string
+      production_approval:
+        description: Type DEPLOY_PRODUCTION
+        required: true
+        type: string
+      migration_compatibility_approval:
+        description: Type CONFIRMED_BACKWARD_COMPATIBLE
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      backend_image: ${{ steps.policy.outputs.backend_image }}
+      frontend_image: ${{ steps.policy.outputs.frontend_image }}
+      client_portal_image: ${{ steps.policy.outputs.client_portal_image }}
+      website_image: ${{ steps.policy.outputs.website_image }}
+      migration_head: ${{ steps.policy.outputs.migration_head }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate approvals and resolve immutable policy
+        id: policy
+        env:
+          RELEASE_COMMIT: ${{ inputs.application_commit }}
+          PRODUCTION_APPROVAL: ${{ inputs.production_approval }}
+          MIGRATION_COMPATIBILITY_APPROVAL: ${{ inputs.migration_compatibility_approval }}
+        run: |
+          node ops/deploy/release-policy.mjs request
+          node ops/deploy/approved-immutable-release.mjs "$RELEASE_COMMIT"
+      - name: Verify candidate is approved history and runtime sources are exact
+        env:
+          APPLICATION_COMMIT: ${{ inputs.application_commit }}
+        run: |
+          git cat-file -e "$APPLICATION_COMMIT^{commit}"
+          git merge-base --is-ancestor "$APPLICATION_COMMIT" HEAD
+          git diff --exit-code "$APPLICATION_COMMIT" HEAD -- \
+            docker-compose.yml \
+            coro-backend/Dockerfile coro-backend/package.json coro-backend/package-lock.json coro-backend/prisma coro-backend/src coro-backend/assets \
+            coro-frontend coro-client-portal coro-website
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+      - name: Verify approved remote manifests
+        env:
+          BACKEND_IMAGE: ${{ steps.policy.outputs.backend_image }}
+          FRONTEND_IMAGE: ${{ steps.policy.outputs.frontend_image }}
+          CLIENT_PORTAL_IMAGE: ${{ steps.policy.outputs.client_portal_image }}
+          WEBSITE_IMAGE: ${{ steps.policy.outputs.website_image }}
+        run: |
+          node ops/deploy/release-policy.mjs images
+          for image in "$BACKEND_IMAGE" "$FRONTEND_IMAGE" "$CLIENT_PORTAL_IMAGE" "$WEBSITE_IMAGE"; do
+            docker buildx imagetools inspect "$image" >/dev/null
+          done
+      - name: Verify approved migration head
+        env:
+          APPLICATION_COMMIT: ${{ inputs.application_commit }}
+          EXPECTED_HEAD: ${{ steps.policy.outputs.migration_head }}
+        run: |
+          actual="$(git ls-tree --name-only "$APPLICATION_COMMIT:coro-backend/prisma/migrations" | sort | tail -n 1)"
+          test "$actual" = "$EXPECTED_HEAD"
+
+  production-release:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: production
+    concurrency:
+      group: coro-production-deployment
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run fail-closed production release with governed tooling
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          RELEASE_COMMIT: ${{ inputs.application_commit }}
+          RELEASE_TOOLING_COMMIT: ${{ github.sha }}
+          PRODUCTION_APPROVAL: ${{ inputs.production_approval }}
+          MIGRATION_COMPATIBILITY_APPROVAL: ${{ inputs.migration_compatibility_approval }}
+          RELEASE_OPERATOR: ${{ github.actor }}
+          BACKEND_IMAGE: ${{ needs.preflight.outputs.backend_image }}
+          FRONTEND_IMAGE: ${{ needs.preflight.outputs.frontend_image }}
+          CLIENT_PORTAL_IMAGE: ${{ needs.preflight.outputs.client_portal_image }}
+          WEBSITE_IMAGE: ${{ needs.preflight.outputs.website_image }}
+          CLIENT_INVITATION_OUTBOX_KEY_BASE64: ${{ secrets.CLIENT_INVITATION_OUTBOX_KEY_BASE64 }}
+          CLIENT_INVITATION_OUTBOX_KEY_ID: ${{ vars.CLIENT_INVITATION_OUTBOX_KEY_ID }}
+          CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64: ${{ secrets.CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64 }}
+          DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST: ${{ secrets.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          command_timeout: 60m
+          envs: RELEASE_COMMIT,RELEASE_TOOLING_COMMIT,PRODUCTION_APPROVAL,MIGRATION_COMPATIBILITY_APPROVAL,RELEASE_OPERATOR,BACKEND_IMAGE,FRONTEND_IMAGE,CLIENT_PORTAL_IMAGE,WEBSITE_IMAGE,CLIENT_INVITATION_OUTBOX_KEY_BASE64,CLIENT_INVITATION_OUTBOX_KEY_ID,CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64,DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST
+          script: |
+            set -Eeuo pipefail
+            tmp="$(mktemp -d /tmp/coro-approved-release.XXXXXX)"
+            trap 'rm -f -- "$tmp"/*; rmdir -- "$tmp"' EXIT
+            repo=/opt/coro-platform
+            test -d "$repo/.git"
+            git -C "$repo" fetch --quiet origin main "$RELEASE_COMMIT"
+            test "$(git -C "$repo" rev-parse origin/main)" = "$RELEASE_TOOLING_COMMIT"
+            git -C "$repo" merge-base --is-ancestor "$RELEASE_COMMIT" "$RELEASE_TOOLING_COMMIT"
+            for file in coro-production-release.sh coro-release-control.sh coro-release-reconcile.sh release-state.mjs; do
+              git -C "$repo" show "$RELEASE_TOOLING_COMMIT:ops/deploy/$file" >"$tmp/$file"
+            done
+            chmod 0700 "$tmp"/*
+            CORO_RELEASE_SCRIPT_SOURCE="$tmp/coro-production-release.sh" \
+            CORO_RELEASE_STATE_SOURCE="$tmp/release-state.mjs" \
+            CORO_RELEASE_RECONCILE_SOURCE="$tmp/coro-release-reconcile.sh" \
+            "$tmp/coro-release-control.sh"
+
+  gate-1b:
+    needs: production-release
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Display Gate 1B read-only
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          RELEASE_TOOLING_COMMIT: ${{ github.sha }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: RELEASE_TOOLING_COMMIT
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            tmp="$(mktemp /tmp/display09-gate1b.XXXXXX.sql)"
+            trap 'rm -f -- "$tmp"' EXIT
+            git -C "$repo" show "$RELEASE_TOOLING_COMMIT:ops/display09/display09-gate1b.sql" >"$tmp"
+            chmod 0600 "$tmp"
+            docker compose -f "$repo/docker-compose.yml" exec -T postgres sh -ceu 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <"$tmp"
