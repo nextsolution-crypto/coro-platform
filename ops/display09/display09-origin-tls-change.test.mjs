@@ -58,6 +58,16 @@ test('requires exact local, public, IPv4 and relevant IPv6 witness responses bef
   assert.match(script, /DISPLAY09_HTTP_VHOST_DIAGNOSTIC/);
   assert.match(script, /nginx -T 2>\/dev\/null \| awk/);
   assert.doesNotMatch(script, /nginx-effective|cat .*nginx-effective/);
+  assert.match(script, /ip -6 route get "\$ip"/);
+  assert.match(script, /ACME_IPV6=NOT_APPLICABLE reason=origin_has_no_ipv6_route/);
+  assert.match(script, /ipv6_tested=%s ipv6_dns=%s ipv6_applicable=%s/);
+  assert.match(responseTests, /rollback_trap=PASS/);
+});
+
+test('failures return non-zero so the governed ERR trap can restore configuration', () => {
+  assert.match(script, /fail\(\) \{[^}]+return 1;/s);
+  assert.doesNotMatch(script, /fail\(\) \{[^}]+exit 1;/s);
+  assert.match(responseTests, /trap 'printf triggered/);
 });
 
 test('backs up, validates, reloads and rolls back only the Display vhost', () => {
