@@ -11,6 +11,7 @@ const read = (...p) => fs.readFileSync(path.join(root, ...p), 'utf8').replaceAll
 const TOKEN = 'production-preview';
 
 const deploy = read('.github', 'workflows', 'deploy.yml');
+const immutableBuild = read('.github', 'workflows', 'build-immutable-images.yml');
 
 test('le jeton n’est transmis que par la release manuelle protégée, aux images application et portail seulement', () => {
   const occurrences = [...deploy.matchAll(/NEXT_PUBLIC_GLASS_BETA=(\S+)/g)];
@@ -43,8 +44,20 @@ test('ni le backend, ni le site vitrine, ni la composition de production ne conn
     assert.ok(!read(...file).includes('GLASS_BETA'), file.join('/'));
   }
   for (const f of fs.readdirSync(path.join(root, '.github', 'workflows'))) {
-    if (f === 'deploy.yml') continue;
+    if (['deploy.yml', 'build-immutable-images.yml'].includes(f)) continue;
     assert.ok(!read('.github', 'workflows', f).includes(TOKEN), `${f} : le jeton n’est transmis que par deploy.yml`);
+  }
+});
+
+test('le build immuable gouverne transmet le jeton aux deux images Next.js seulement', () => {
+  const occurrences = [...immutableBuild.matchAll(/NEXT_PUBLIC_GLASS_BETA=(\S+)/g)];
+  assert.equal(occurrences.length, 2, 'exactement deux arguments de build immuable');
+  for (const match of occurrences) assert.equal(match[1], TOKEN);
+  for (const name of ['backend', 'website']) {
+    const block = immutableBuild
+      .split('- name: ')
+      .find((candidate) => candidate.startsWith(`Build and push ${name}\n`));
+    assert.ok(block && !block.includes('NEXT_PUBLIC_GLASS_BETA'), `${name} ne recoit jamais le jeton`);
   }
 });
 
