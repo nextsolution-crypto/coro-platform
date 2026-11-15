@@ -22,6 +22,7 @@ type Location = {
 };
 type Floor = {
   id: string;
+  code?: string;
   name: string;
   zones: { id: string; name: string }[];
   displayLocations: Location[];
@@ -120,6 +121,15 @@ export default function DisplayManagerPage() {
   const [locationId, setLocationId] = useState("");
   const [orientation, setOrientation] = useState("LANDSCAPE");
   const [language, setLanguage] = useState("FR");
+  const [locationBuildingId, setLocationBuildingId] = useState("");
+  const [spatialFloorId, setSpatialFloorId] = useState("__NEW__");
+  const [spatialZoneId, setSpatialZoneId] = useState("");
+  const [floorCode, setFloorCode] = useState("");
+  const [floorName, setFloorName] = useState("");
+  const [zoneCode, setZoneCode] = useState("");
+  const [zoneName, setZoneName] = useState("");
+  const [locationCode, setLocationCode] = useState("");
+  const [locationLabel, setLocationLabel] = useState("");
   const load = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
@@ -188,6 +198,65 @@ export default function DisplayManagerPage() {
       setSelected(p);
     } catch (e: unknown) {
       setError(errorMessage(e, "Variante privée indisponible."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const createDisplayLocation = async () => {
+    if (!orgId || !locationBuildingId) {
+      setError("Selectionnez le batiment de l'ecran.");
+      return;
+    }
+    if (!locationCode.trim() || !locationLabel.trim()) {
+      setError("Le code et le nom de l'emplacement sont obligatoires.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const base = `/organizations/${orgId}/buildings/${locationBuildingId}/spatial`;
+      let targetFloorId = spatialFloorId;
+      if (targetFloorId === "__NEW__") {
+        if (!floorCode.trim() || !floorName.trim()) {
+          throw new Error("Renseignez le code et le nom du nouvel etage.");
+        }
+        const floor = await api.post(`${base}/floors`, {
+          code: floorCode.trim().toUpperCase(),
+          name: floorName.trim(),
+        });
+        targetFloorId = floor.data.id;
+      }
+
+      let targetZoneId = spatialZoneId;
+      if (targetZoneId === "__NEW__") {
+        if (!zoneCode.trim() || !zoneName.trim()) {
+          throw new Error("Renseignez le code et le nom de la nouvelle zone.");
+        }
+        const zone = await api.post(`${base}/floors/${targetFloorId}/zones`, {
+          code: zoneCode.trim().toUpperCase(),
+          name: zoneName.trim(),
+        });
+        targetZoneId = zone.data.id;
+      }
+
+      await api.post(`${base}/display-locations`, {
+        floorId: targetFloorId,
+        ...(targetZoneId ? { zoneId: targetZoneId } : {}),
+        code: locationCode.trim().toUpperCase(),
+        label: locationLabel.trim(),
+      });
+      setFloorCode("");
+      setFloorName("");
+      setZoneCode("");
+      setZoneName("");
+      setLocationCode("");
+      setLocationLabel("");
+      setSpatialFloorId("__NEW__");
+      setSpatialZoneId("");
+      await load();
+    } catch (e: unknown) {
+      setError(errorMessage(e, e instanceof Error ? e.message : "Impossible de creer l'emplacement Display."));
     } finally {
       setBusy(false);
     }
@@ -308,6 +377,12 @@ export default function DisplayManagerPage() {
         )
         .map((l) => ({ ...l, floorId: f.id })),
     ) || [];
+  const locationBuilding = data?.buildings.find(
+    (item) => item.id === locationBuildingId,
+  );
+  const locationFloor = locationBuilding?.spatialFloors.find(
+    (item) => item.id === spatialFloorId,
+  );
   const createPlan = async () => {
     const location = sourceLocations.find((l) => l.id === locationId);
     if (!orgId || !source?.buildingId || !location) {
@@ -549,6 +624,110 @@ export default function DisplayManagerPage() {
             )}
           </section>
         </div>
+        {data.capabilities.DISPLAY_DEVICE_MANAGE && (
+          <section className={styles.bottom} aria-labelledby="display-location-title">
+            <article>
+              <h2 id="display-location-title">Ajouter un ecran</h2>
+              <p>
+                Definissez son emplacement dans le batiment. Ces donnees seront
+                reutilisees pour les publications et l'activation du Player.
+              </p>
+              <div className={styles.createForm}>
+                <label>
+                  Batiment
+                  <select
+                    value={locationBuildingId}
+                    onChange={(event) => {
+                      setLocationBuildingId(event.target.value);
+                      setSpatialFloorId("__NEW__");
+                      setSpatialZoneId("");
+                    }}
+                  >
+                    <option value="">Choisir...</option>
+                    {data.buildings.map((item) => (
+                      <option key={item.id} value={item.id}>{item.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Etage
+                  <select
+                    value={spatialFloorId}
+                    disabled={!locationBuildingId}
+                    onChange={(event) => {
+                      setSpatialFloorId(event.target.value);
+                      setSpatialZoneId("");
+                    }}
+                  >
+                    <option value="__NEW__">Creer un nouvel etage</option>
+                    {locationBuilding?.spatialFloors.map((item) => (
+                      <option key={item.id} value={item.id}>{item.name}</option>
+                    ))}
+                  </select>
+                </label>
+                {spatialFloorId === "__NEW__" && (
+                  <div>
+                    <label>
+                      Code etage
+                      <input value={floorCode} onChange={(event) => setFloorCode(event.target.value)} placeholder="E03" />
+                    </label>
+                    <label>
+                      Nom de l'etage
+                      <input value={floorName} onChange={(event) => setFloorName(event.target.value)} placeholder="Etage 3" />
+                    </label>
+                  </div>
+                )}
+                <label>
+                  Zone (facultative)
+                  <select
+                    value={spatialZoneId}
+                    disabled={!locationBuildingId}
+                    onChange={(event) => setSpatialZoneId(event.target.value)}
+                  >
+                    <option value="">Aucune zone</option>
+                    <option value="__NEW__">Creer une nouvelle zone</option>
+                    {locationFloor?.zones.map((item) => (
+                      <option key={item.id} value={item.id}>{item.name}</option>
+                    ))}
+                  </select>
+                </label>
+                {spatialZoneId === "__NEW__" && (
+                  <div>
+                    <label>
+                      Code zone
+                      <input value={zoneCode} onChange={(event) => setZoneCode(event.target.value)} placeholder="E03-DEMO" />
+                    </label>
+                    <label>
+                      Nom de la zone
+                      <input value={zoneName} onChange={(event) => setZoneName(event.target.value)} placeholder="Zone pilote" />
+                    </label>
+                  </div>
+                )}
+                <div>
+                  <label>
+                    Code emplacement
+                    <input value={locationCode} onChange={(event) => setLocationCode(event.target.value)} placeholder="E03-DISPLAY-PILOT" />
+                  </label>
+                  <label>
+                    Nom visible
+                    <input value={locationLabel} onChange={(event) => setLocationLabel(event.target.value)} placeholder="Ecran pilote Tour Premont" />
+                  </label>
+                </div>
+                <button disabled={busy || !locationBuildingId} onClick={() => void createDisplayLocation()}>
+                  Creer l'emplacement
+                </button>
+              </div>
+            </article>
+            <article>
+              <h2>Prochaine etape</h2>
+              <p>
+                Importez le PDF dans CORO Documents, faites-le approuver, puis
+                revenez ici pour creer la publication Display.
+              </p>
+              <Link href="/projects">Ouvrir CORO Documents</Link>
+            </article>
+          </section>
+        )}
         <DeviceSupervision
           devices={data.devices}
           buildingNames={Object.fromEntries(

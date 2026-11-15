@@ -1,9 +1,20 @@
-import { Controller, Get, Post, Put, Param, Body, UseGuards, Request, ForbiddenException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Param,
+  Body,
+  UseGuards,
+  Request,
+  ForbiddenException,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
 import type { UpdateMeDto } from './users.service';
 import { CreateOrganizationUserDto } from './dto/create-organization-user.dto';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
+import { UpdateDisplayAuthorityDto } from './dto/update-display-authority.dto';
 
 @Controller('users')
 export class UsersController {
@@ -31,9 +42,16 @@ export class UsersController {
 
   @Post('organization')
   @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
-  async createOrganizationUser(@Body() body: CreateOrganizationUserDto, @Request() req: any) {
+  async createOrganizationUser(
+    @Body() body: CreateOrganizationUserDto,
+    @Request() req: any,
+  ) {
     this.assertAdmin(req);
-    return this.usersService.createInOrganization(req.user.organizationId, body, req.user);
+    return this.usersService.createInOrganization(
+      req.user.organizationId,
+      body,
+      req.user,
+    );
   }
 
   @Post('organization/:userId/resend-invite')
@@ -44,7 +62,12 @@ export class UsersController {
     @Request() req: any,
   ) {
     this.assertAdmin(req);
-    return this.usersService.resendInvite(userId, req.user.organizationId, req.user, body.requestId);
+    return this.usersService.resendInvite(
+      userId,
+      req.user.organizationId,
+      req.user,
+      body.requestId,
+    );
   }
 
   @Put('organization/:id/active')
@@ -55,7 +78,29 @@ export class UsersController {
     @Request() req: any,
   ) {
     this.assertAdmin(req);
-    return this.usersService.toggleActiveInOrganization(id, req.user.organizationId, body.isActive, req.user, body.reason);
+    return this.usersService.toggleActiveInOrganization(
+      id,
+      req.user.organizationId,
+      body.isActive,
+      req.user,
+      body.reason,
+    );
+  }
+
+  @Put('organization/:id/display-authority')
+  @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
+  async updateDisplayAuthority(
+    @Param('id') id: string,
+    @Body() body: UpdateDisplayAuthorityDto,
+    @Request() req: any,
+  ) {
+    this.assertAdmin(req);
+    return this.usersService.updateDisplayAuthority(
+      id,
+      req.user.organizationId,
+      body,
+      req.user,
+    );
   }
 
   @Get('me')
@@ -66,37 +111,74 @@ export class UsersController {
 
   @Put('organization/:userId/time-zone')
   @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
-  async setTimeZone(@Param('userId') userId: string, @Body() body: { timeZone: string }, @Request() req: any) {
+  async setTimeZone(
+    @Param('userId') userId: string,
+    @Body() body: { timeZone: string },
+    @Request() req: any,
+  ) {
     this.assertAdmin(req);
-    return this.usersService.setTimeZone(userId, req.user.organizationId, body?.timeZone);
+    return this.usersService.setTimeZone(
+      userId,
+      req.user.organizationId,
+      body?.timeZone,
+    );
   }
 
   @Put('me')
   @UseGuards(AuthGuard('jwt'))
   async updateMe(@Request() req: any, @Body() body: UpdateMeDto) {
-    return this.usersService.updateMe(req.user.userId, body, ['ADMIN', 'SUPER_ADMIN'].includes(req.user.role));
+    return this.usersService.updateMe(
+      req.user.userId,
+      body,
+      ['ADMIN', 'SUPER_ADMIN'].includes(req.user.role),
+    );
   }
 
   @Put('me/password')
   @UseGuards(AuthGuard('jwt'))
-  async changePassword(@Request() req: any, @Body() body: { currentPassword: string; newPassword: string }) {
+  async changePassword(
+    @Request() req: any,
+    @Body() body: { currentPassword: string; newPassword: string },
+  ) {
     if (!body.newPassword || body.newPassword.length < 8) {
-      throw new ForbiddenException('Le mot de passe doit contenir au moins 8 caractères.');
+      throw new ForbiddenException(
+        'Le mot de passe doit contenir au moins 8 caractères.',
+      );
     }
-    return this.usersService.changePassword(req.user.userId, body.currentPassword, body.newPassword);
+    return this.usersService.changePassword(
+      req.user.userId,
+      body.currentPassword,
+      body.newPassword,
+    );
   }
 
   @Put('me/logo')
   @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
-  async updateLogo(@Request() req: any, @Body() body: { companyLogoB64: string }) {
+  async updateLogo(
+    @Request() req: any,
+    @Body() body: { companyLogoB64: string },
+  ) {
     this.assertAdmin(req);
-    return this.usersService.updateOrganizationLogo(req.user.organizationId, req.user, 'companyLogoB64', body.companyLogoB64);
+    return this.usersService.updateOrganizationLogo(
+      req.user.organizationId,
+      req.user,
+      'companyLogoB64',
+      body.companyLogoB64,
+    );
   }
 
   @Put('me/logo-full')
   @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
-  async updateLogoFull(@Request() req: any, @Body() body: { companyLogoFullB64: string }) {
+  async updateLogoFull(
+    @Request() req: any,
+    @Body() body: { companyLogoFullB64: string },
+  ) {
     this.assertAdmin(req);
-    return this.usersService.updateOrganizationLogo(req.user.organizationId, req.user, 'companyLogoFullB64', body.companyLogoFullB64);
+    return this.usersService.updateOrganizationLogo(
+      req.user.organizationId,
+      req.user,
+      'companyLogoFullB64',
+      body.companyLogoFullB64,
+    );
   }
 }
