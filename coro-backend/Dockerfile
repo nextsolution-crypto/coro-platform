@@ -56,6 +56,7 @@ RUN node -e "require('./node_modules/.prisma/client/libquery_engine-debian-opens
 
 RUN node dist/scripts/knowledge-runtime-smoke.js
 RUN node dist/scripts/knowledge-ocr-smoke.js
+RUN node dist/scripts/display-pdf-runtime-smoke.js
 
 EXPOSE 3002
 

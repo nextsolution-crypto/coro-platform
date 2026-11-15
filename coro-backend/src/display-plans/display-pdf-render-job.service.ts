@@ -103,6 +103,27 @@ export class DisplayPdfRenderJobService {
     );
     const job = await this.prisma.displayPdfRenderJob.findFirst({
       where: { id, organizationId, buildingId },
+      select: {
+        id: true,
+        publicationId: true,
+        pageNumber: true,
+        targetDpi: true,
+        status: true,
+        attempts: true,
+        maxAttempts: true,
+        startedAt: true,
+        completedAt: true,
+        failureCode: true,
+        failureDetail: true,
+        engine: true,
+        engineVersion: true,
+        outputSha256: true,
+        outputMimeType: true,
+        widthPixels: true,
+        heightPixels: true,
+        renderMetadata: true,
+        createdAt: true,
+      },
     });
     if (!job) throw new NotFoundException('Travail PDF introuvable.');
     return job;
@@ -315,6 +336,30 @@ export class DisplayPdfRenderJobService {
           'CONCURRENT_CHANGE',
           'Publication modifiée concurremment.',
         );
+      await tx.displayPlanPublicationEvent.create({
+        data: {
+          publicationId: publication.id,
+          organizationId: job.organizationId,
+          buildingId: job.buildingId,
+          requestId: job.requestId,
+          action: 'PDF_PREVIEW_GENERATED',
+          fromStatus: 'DRAFT',
+          toStatus: 'DRAFT',
+          actorUserId: job.requestedById,
+          sourceVersion: job.sourceVersion,
+          sourceSha256: job.sourceSha256,
+          variantVersion,
+          variantSha256: variantSha,
+          metadata: {
+            pageNumber: job.pageNumber,
+            targetDpi: job.targetDpi,
+            pageCount: raster.pageCount,
+            engine: raster.engine,
+            engineVersion: raster.engineVersion,
+            outputSha256: rasterSha,
+          },
+        },
+      });
       await tx.displayPdfRenderJob.update({
         where: { id },
         data: {

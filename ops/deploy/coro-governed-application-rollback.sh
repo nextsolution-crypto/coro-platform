@@ -43,7 +43,7 @@ cleanup() { rm -f -- "$security_input" "$current_override" "$rollback_override" 
 recover() {
   status=$?
   if [[ "$status" -ne 0 && "$recovery_required" == true ]]; then
-    docker compose -f "$repo/docker-compose.yml" -f "$current_override" up -d --no-deps --no-build backend frontend client-portal website >/dev/null || true
+    docker compose --profile display-pdf-worker -f "$repo/docker-compose.yml" -f "$current_override" up -d --no-deps --no-build backend frontend client-portal website display-pdf-worker display-pdf-rasterizer >/dev/null || true
   fi
   cleanup
   exit "$status"
@@ -78,16 +78,17 @@ for pair in 'backend coro_backend backend' 'frontend coro_frontend frontend' 'cl
 done
 mapfile -t previous_refs < <(node -e 'const m=require(process.argv[1]);for(const r of m.previousImages||[])if(r)console.log(r)' "$manifest")
 [[ "${#previous_refs[@]}" -eq 4 ]] || fail ROLLBACK_SET_INVALID
-printf 'services:\n  backend:\n    image: %s\n  frontend:\n    image: %s\n  client-portal:\n    image: %s\n  website:\n    image: %s\n' "${current_refs[backend]}" "${current_refs[frontend]}" "${current_refs[client-portal]}" "${current_refs[website]}" >"$current_override"
+printf 'services:\n  backend:\n    image: %s\n  display-pdf-spool-init:\n    image: %s\n  display-pdf-worker:\n    image: %s\n  display-pdf-rasterizer:\n    image: %s\n  frontend:\n    image: %s\n  client-portal:\n    image: %s\n  website:\n    image: %s\n' "${current_refs[backend]}" "${current_refs[backend]}" "${current_refs[backend]}" "${current_refs[backend]}" "${current_refs[frontend]}" "${current_refs[client-portal]}" "${current_refs[website]}" >"$current_override"
 printf 'services:\n  backend:\n    image: %s\n  frontend:\n    image: %s\n  client-portal:\n    image: %s\n  website:\n    image: %s\n' "${previous_refs[0]}" "${previous_refs[1]}" "${previous_refs[2]}" "${previous_refs[3]}" >"$rollback_override"
 docker compose -f "$repo/docker-compose.yml" -f "$current_override" config --quiet || fail CURRENT_COMPOSE_INVALID
 docker compose -f "$repo/docker-compose.yml" -f "$rollback_override" config --quiet || fail ROLLBACK_COMPOSE_INVALID
 
 before_outbox="$(docker compose -f "$repo/docker-compose.yml" exec -T postgres sh -ceu 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc '\''SELECT (SELECT count(*) FROM "ClientInvitationEvent") || ':'\'' || (SELECT count(*) FROM "OrganizationUserInvitationEvent")'\''')" || fail OUTBOX_SNAPSHOT_FAILED
-docker compose -f "$repo/docker-compose.yml" stop frontend client-portal website backend >/dev/null || fail QUIESCE_FAILED
+docker compose --profile display-pdf-worker -f "$repo/docker-compose.yml" stop display-pdf-worker display-pdf-rasterizer frontend client-portal website backend >/dev/null || fail QUIESCE_FAILED
 recovery_required=true
 build_security_input EXECUTION QUIESCED
 node "$validator" "$security_input" >/dev/null || fail SECURITY_EXECUTION_REFUSED
+docker compose -f "$repo/docker-compose.yml" rm -f display-pdf-worker display-pdf-rasterizer >/dev/null 2>&1 || true
 docker compose -f "$repo/docker-compose.yml" -f "$rollback_override" up -d --no-deps --no-build backend frontend client-portal website >/dev/null || fail ROLLBACK_SWITCH_FAILED
 
 for endpoint in 'http://127.0.0.1:3000' 'http://127.0.0.1:3003' 'http://127.0.0.1:3001'; do

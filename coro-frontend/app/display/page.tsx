@@ -70,6 +70,13 @@ type Event = {
   toStatus: string;
   createdAt: string;
 };
+type PdfRenderJob = {
+  id: string;
+  status: "PENDING" | "PROCESSING" | "SUCCEEDED" | "FAILED" | "CANCELLED";
+  pageNumber: number;
+  failureCode: string | null;
+  failureDetail: string | null;
+};
 type Workspace = {
   capabilities: Record<string, boolean>;
   dashboard: {
@@ -137,15 +144,18 @@ export default function DisplayManagerPage() {
   const [locationOrientationDegrees, setLocationOrientationDegrees] =
     useState("0");
   const [locationToCompleteId, setLocationToCompleteId] = useState("");
+  const [renderPage, setRenderPage] = useState("");
+  const [renderStatus, setRenderStatus] = useState("");
   const load = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
     setError("");
     try {
-      setData(
-        (await api.get<Workspace>(`/organizations/${orgId}/display-manager`))
-          .data,
-      );
+      const workspace = (
+        await api.get<Workspace>(`/organizations/${orgId}/display-manager`)
+      ).data;
+      setData(workspace);
+      return workspace;
     } catch (e: unknown) {
       setError(errorMessage(e, "Impossible de charger CORO Display."));
     } finally {
@@ -321,6 +331,65 @@ export default function DisplayManagerPage() {
       await load();
     } catch (e: unknown) {
       setError(errorMessage(e, "Action refusée; aucune donnée modifiée."));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const generatePdfPreview = async () => {
+    if (!selected || !orgId || busy) return;
+    const pageNumber = Number(renderPage);
+    if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > 100) {
+      setError(
+        "Choisissez explicitement la page PDF à afficher (entre 1 et 100).",
+      );
+      return;
+    }
+    setBusy(true);
+    setError("");
+    setRenderStatus("Mise en file du rendu PDF sécurisé…");
+    try {
+      const requestId = crypto.randomUUID();
+      const created = (
+        await api.post<PdfRenderJob>(
+          `/organizations/${orgId}/buildings/${selected.buildingId}/display-plan-publications/${selected.id}/pdf-render-jobs`,
+          { requestId, pageNumber, targetDpi: 300 },
+        )
+      ).data;
+      let job = created;
+      const deadline = Date.now() + 60_000;
+      while (!["SUCCEEDED", "FAILED", "CANCELLED"].includes(job.status)) {
+        if (Date.now() >= deadline)
+          throw new Error(
+            "Le rendu continue en arrière-plan. Actualisez l’état dans quelques instants.",
+          );
+        setRenderStatus(
+          job.status === "PROCESSING"
+            ? `Conversion de la page ${pageNumber} en cours…`
+            : "Rendu en attente du worker sécurisé…",
+        );
+        await new Promise((resolve) => window.setTimeout(resolve, 750));
+        job = (
+          await api.get<PdfRenderJob>(
+            `/organizations/${orgId}/buildings/${selected.buildingId}/display-plan-publications/${selected.id}/pdf-render-jobs/${created.id}`,
+          )
+        ).data;
+      }
+      if (job.status !== "SUCCEEDED")
+        throw new Error(
+          job.failureDetail ||
+            `Le moteur PDF a refusé le document (${job.failureCode || job.status}).`,
+        );
+      setRenderStatus(`Aperçu de la page ${pageNumber} généré avec succès.`);
+      const workspace = await load();
+      const updated = workspace?.plans.find((plan) => plan.id === selected.id);
+      if (!updated?.variantSha256)
+        throw new Error("Le rendu est terminé, mais la variante demeure introuvable.");
+      await showPreview(updated);
+    } catch (e: unknown) {
+      setError(
+        errorMessage(e, e instanceof Error ? e.message : "Échec du rendu PDF."),
+      );
+      setRenderStatus("");
     } finally {
       setBusy(false);
     }
@@ -1116,17 +1185,49 @@ export default function DisplayManagerPage() {
               </label>
               <div className={styles.actionStack}>
                 {selected.variantSha256 && (
-                  <button onClick={() => void showPreview(selected)}>
+                  <button
+                    onClick={() => void showPreview(selected)}
+                    disabled={busy}
+                  >
                     Charger l’aperçu
                   </button>
                 )}
                 {selected.status === "DRAFT" &&
                   data.capabilities.DISPLAY_PLAN_CREATE && (
                     <>
-                      <button onClick={() => void act("preview")}>
-                        Générer l’aperçu
+                      <label className={styles.reason}>
+                        Page PDF à afficher
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          step="1"
+                          inputMode="numeric"
+                          value={renderPage}
+                          onChange={(event) => setRenderPage(event.target.value)}
+                          placeholder="Ex. 1"
+                          disabled={busy}
+                        />
+                        <span>
+                          La page doit être choisie explicitement, même pour un
+                          PDF d’une seule page.
+                        </span>
+                      </label>
+                      <button
+                        onClick={() => void generatePdfPreview()}
+                        disabled={busy || !renderPage}
+                      >
+                        {busy ? "Génération en cours…" : "Générer l’aperçu"}
                       </button>
-                      <button onClick={() => void act("submit")}>
+                      {renderStatus && (
+                        <p role="status" aria-live="polite">
+                          {renderStatus}
+                        </p>
+                      )}
+                      <button
+                        onClick={() => void act("submit")}
+                        disabled={busy || !selected.variantSha256}
+                      >
                         Soumettre
                       </button>
                     </>

@@ -94,8 +94,9 @@ async function main() {
   process.once('SIGTERM', stop);
   process.once('SIGINT', stop);
   while (!stopping) {
-    if (await processOne(engine)) break;
-    await new Promise((resolveWait) => setTimeout(resolveWait, 100));
+    const processed = await processOne(engine);
+    if (!processed)
+      await new Promise((resolveWait) => setTimeout(resolveWait, 100));
   }
   await app.close();
 }

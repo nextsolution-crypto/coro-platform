@@ -63,12 +63,45 @@ describe('DisplayPdfRenderJobService', () => {
         userId: 'user-a',
       } as never),
     ).rejects.toThrow('Travail PDF introuvable.');
-    expect(findFirst).toHaveBeenCalledWith({
-      where: {
-        id: 'job-b',
-        organizationId: 'tenant-a',
-        buildingId: 'building-a',
-      },
+    const query = (
+      findFirst.mock.calls as unknown as Array<
+        [{ where: Record<string, string>; select: Record<string, boolean> }]
+      >
+    )[0][0];
+    expect(query.where).toEqual({
+      id: 'job-b',
+      organizationId: 'tenant-a',
+      buildingId: 'building-a',
     });
+    expect(query.select).toMatchObject({
+      id: true,
+      status: true,
+      outputSha256: true,
+    });
+  });
+
+  it('does not expose source or storage authority through job status', async () => {
+    const findFirst = jest
+      .fn()
+      .mockResolvedValue({ id: 'job-a', status: 'PENDING' });
+    const service = new DisplayPdfRenderJobService(
+      { displayPdfRenderJob: { findFirst } } as never,
+      {} as never,
+      { require: jest.fn() } as never,
+      {} as never,
+      {} as never,
+    );
+    await service.get('tenant-a', 'building-a', 'job-a', {
+      userId: 'user-a',
+    } as never);
+    const selection = (
+      findFirst.mock.calls as unknown as Array<
+        [{ select: Record<string, boolean> }]
+      >
+    )[0][0].select;
+    expect(selection).toBeDefined();
+    expect(selection).not.toHaveProperty('sourceStorageKey');
+    expect(selection).not.toHaveProperty('outputStorageKey');
+    expect(selection).not.toHaveProperty('sourceProjectFileId');
   });
 });
