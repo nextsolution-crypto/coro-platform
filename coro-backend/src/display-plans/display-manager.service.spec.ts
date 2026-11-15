@@ -89,4 +89,33 @@ describe('DisplayManagerService', () => {
 
     expect(result.dashboard.anomalyCount).toBe(1);
   });
+
+  it('retourne le verrou et le repere des emplacements afin de permettre leur completion gouvernee', async () => {
+    prisma.user.findFirst.mockResolvedValue({
+      displayPermissions: [DisplayPermission.DISPLAY_READ],
+      displayBuildingIds: ['building-1'],
+    });
+    prisma.building.findMany.mockResolvedValue([]);
+
+    await service.getWorkspace('org-1', actor);
+
+    expect(prisma.building.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          spatialFloors: expect.objectContaining({
+            select: expect.objectContaining({
+              displayLocations: expect.objectContaining({
+                select: expect.objectContaining({
+                  lockVersion: true,
+                  youAreHereX: true,
+                  youAreHereY: true,
+                  orientationDegrees: true,
+                }),
+              }),
+            }),
+          }),
+        }),
+      }),
+    );
+  });
 });

@@ -17,6 +17,16 @@ assert.match(page, /\/spatial`/);
 assert.match(page, /\/floors`/);
 assert.match(page, /\/zones`/);
 assert.match(page, /\/display-locations`/);
+assert.match(page, /Completer l'emplacement/);
+assert.match(page, /Enregistrer et rendre admissible/);
+assert.match(page, /expectedLockVersion:\s*location\.lockVersion/);
+assert.match(page, /youAreHereX/);
+assert.match(page, /orientationDegrees/);
+assert.doesNotMatch(
+  page,
+  /f\.displayLocations\s*\.filter\(/,
+  "an incomplete location must remain visible with its ineligibility reason",
+);
 assert.match(page, /approvePlan/);
 assert.match(page, /publishPlan/);
 assert.match(page, /window\.confirm/);
