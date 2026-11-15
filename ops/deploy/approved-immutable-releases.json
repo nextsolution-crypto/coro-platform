@@ -1,6 +1,15 @@
 {
   "schemaVersion": 1,
   "releases": {
+    "0edd769e3ec8214f201c78f6a5749ce97c74722e": {
+      "migrationHead": "20261207010000_display_permanent_url_web_player",
+      "images": {
+        "backend": "ghcr.io/nextsolution-crypto/coro-backend@sha256:37cc87f795aa20247eb4286a99b25948a7c173ecb1dc8257fe0ee8c1db1ebc6d",
+        "frontend": "ghcr.io/nextsolution-crypto/coro-frontend@sha256:907f3ea8aa6f7c8e12572995ce8da356b1374ad6fbe51a0e0d3fe00014726089",
+        "clientPortal": "ghcr.io/nextsolution-crypto/coro-client-portal@sha256:d0a2d94f6a451d5caef9eb9eeb42b0b42bf7d443b3b2c51b294ea1d9820af0cb",
+        "website": "ghcr.io/nextsolution-crypto/coro-website@sha256:7ef9d7f0066ae1f5f337a39cc8005a2d506d4ce47719b68569c2ef285f1e3446"
+      }
+    },
     "315fa346a541a3ead7fe2293219f5a839485a658": {
       "migrationHead": "20261207010000_display_permanent_url_web_player",
       "images": {
