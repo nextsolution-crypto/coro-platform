@@ -326,9 +326,16 @@ export default function DisplayManagerPage() {
           reason: reason.trim(),
         },
       );
-      setSelected(null);
       setReason("");
-      await load();
+      const workspace = await load();
+      if (action === "review") {
+        const updated = workspace?.plans.find(
+          (plan) => plan.id === selected.id,
+        );
+        setSelected(updated ?? null);
+      } else {
+        setSelected(null);
+      }
     } catch (e: unknown) {
       setError(errorMessage(e, "Action refusée; aucune donnée modifiée."));
     } finally {
@@ -1248,6 +1255,15 @@ export default function DisplayManagerPage() {
                     <button onClick={() => void approvePlan()}>
                       Approuver la preuve
                     </button>
+                  )}
+                {selected.status === "REVIEW" &&
+                  data.capabilities.DISPLAY_PLAN_REVIEW &&
+                  data.capabilities.DISPLAY_PLAN_APPROVE && (
+                    <p className={styles.note} role="status">
+                      Vous pouvez confirmer la revue puis approuver cette même
+                      version. Le soumissionnaire demeure exclu de
+                      l’approbation.
+                    </p>
                   )}
                 {selected.status === "APPROVED" &&
                   data.capabilities.DISPLAY_PLAN_PUBLISH && (
