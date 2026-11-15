@@ -78,6 +78,7 @@ export class DisplayManagerService {
                   code: true,
                   label: true,
                   status: true,
+                  lockVersion: true,
                   youAreHereX: true,
                   youAreHereY: true,
                   orientationDegrees: true,

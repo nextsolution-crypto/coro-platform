@@ -16,6 +16,8 @@ type Location = {
   zoneId: string | null;
   code: string;
   label: string;
+  status: string;
+  lockVersion: number;
   youAreHereX: number | null;
   youAreHereY: number | null;
   orientationDegrees: number | null;
@@ -130,6 +132,11 @@ export default function DisplayManagerPage() {
   const [zoneName, setZoneName] = useState("");
   const [locationCode, setLocationCode] = useState("");
   const [locationLabel, setLocationLabel] = useState("");
+  const [locationYouAreHereX, setLocationYouAreHereX] = useState("0.5");
+  const [locationYouAreHereY, setLocationYouAreHereY] = useState("0.5");
+  const [locationOrientationDegrees, setLocationOrientationDegrees] =
+    useState("0");
+  const [locationToCompleteId, setLocationToCompleteId] = useState("");
   const load = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
@@ -212,6 +219,25 @@ export default function DisplayManagerPage() {
       setError("Le code et le nom de l'emplacement sont obligatoires.");
       return;
     }
+    const youAreHereX = Number(locationYouAreHereX);
+    const youAreHereY = Number(locationYouAreHereY);
+    const orientationDegrees = Number(locationOrientationDegrees);
+    if (
+      !Number.isFinite(youAreHereX) ||
+      !Number.isFinite(youAreHereY) ||
+      youAreHereX < 0 ||
+      youAreHereX > 1 ||
+      youAreHereY < 0 ||
+      youAreHereY > 1 ||
+      !Number.isFinite(orientationDegrees) ||
+      orientationDegrees < 0 ||
+      orientationDegrees > 360
+    ) {
+      setError(
+        "Le repere X/Y doit etre compris entre 0 et 1 et l'orientation entre 0 et 360 degres.",
+      );
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -245,6 +271,9 @@ export default function DisplayManagerPage() {
         ...(targetZoneId ? { zoneId: targetZoneId } : {}),
         code: locationCode.trim().toUpperCase(),
         label: locationLabel.trim(),
+        youAreHereX,
+        youAreHereY,
+        orientationDegrees,
       });
       setFloorCode("");
       setFloorName("");
@@ -252,6 +281,9 @@ export default function DisplayManagerPage() {
       setZoneName("");
       setLocationCode("");
       setLocationLabel("");
+      setLocationYouAreHereX("0.5");
+      setLocationYouAreHereY("0.5");
+      setLocationOrientationDegrees("0");
       setSpatialFloorId("__NEW__");
       setSpatialZoneId("");
       await load();
@@ -366,17 +398,20 @@ export default function DisplayManagerPage() {
   const sourceBuilding = data?.buildings.find(
     (b) => b.id === source?.buildingId,
   );
-  const sourceLocations =
+  const allSourceLocations =
     sourceBuilding?.spatialFloors.flatMap((f) =>
-      f.displayLocations
-        .filter(
-          (l) =>
-            l.youAreHereX != null &&
-            l.youAreHereY != null &&
-            l.orientationDegrees != null,
-        )
-        .map((l) => ({ ...l, floorId: f.id })),
+      f.displayLocations.map((l) => ({ ...l, floorId: f.id })),
     ) || [];
+  const sourceLocations = allSourceLocations.filter(
+    (l) =>
+      l.status === "ACTIVE" &&
+      l.youAreHereX != null &&
+      l.youAreHereY != null &&
+      l.orientationDegrees != null,
+  );
+  const incompleteSourceLocations = allSourceLocations.filter(
+    (l) => !sourceLocations.some((eligible) => eligible.id === l.id),
+  );
   const locationBuilding = data?.buildings.find(
     (item) => item.id === locationBuildingId,
   );
@@ -412,6 +447,50 @@ export default function DisplayManagerPage() {
       await load();
     } catch (e: unknown) {
       setError(errorMessage(e, "Création refusée; aucune donnée modifiée."));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const completeDisplayLocation = async (location: Location) => {
+    if (!orgId || !source?.buildingId) return;
+    const youAreHereX = Number(locationYouAreHereX);
+    const youAreHereY = Number(locationYouAreHereY);
+    const orientationDegrees = Number(locationOrientationDegrees);
+    if (
+      !Number.isFinite(youAreHereX) ||
+      !Number.isFinite(youAreHereY) ||
+      youAreHereX < 0 ||
+      youAreHereX > 1 ||
+      youAreHereY < 0 ||
+      youAreHereY > 1 ||
+      !Number.isFinite(orientationDegrees) ||
+      orientationDegrees < 0 ||
+      orientationDegrees > 360
+    ) {
+      setError(
+        "Le repere X/Y doit etre compris entre 0 et 1 et l'orientation entre 0 et 360 degres.",
+      );
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await api.patch(
+        `/organizations/${orgId}/buildings/${source.buildingId}/spatial/display-locations/${location.id}`,
+        {
+          expectedLockVersion: location.lockVersion,
+          youAreHereX,
+          youAreHereY,
+          orientationDegrees,
+        },
+      );
+      setLocationToCompleteId("");
+      await load();
+      setLocationId(location.id);
+    } catch (e: unknown) {
+      setError(
+        errorMessage(e, "Impossible de completer l'emplacement Display."),
+      );
     } finally {
       setBusy(false);
     }
@@ -629,8 +708,7 @@ export default function DisplayManagerPage() {
             <article>
               <h2 id="display-location-title">Ajouter un ecran</h2>
               <p>
-                Definissez son emplacement dans le batiment. Ces donnees seront
-                reutilisees pour les publications et l'activation du Player.
+                {"Definissez son emplacement dans le batiment. Ces donnees seront reutilisees pour les publications et l'activation du Player."}
               </p>
               <div className={styles.createForm}>
                 <label>
@@ -672,7 +750,7 @@ export default function DisplayManagerPage() {
                       <input value={floorCode} onChange={(event) => setFloorCode(event.target.value)} placeholder="E03" />
                     </label>
                     <label>
-                      Nom de l'etage
+                      {"Nom de l'etage"}
                       <input value={floorName} onChange={(event) => setFloorName(event.target.value)} placeholder="Etage 3" />
                     </label>
                   </div>
@@ -713,8 +791,49 @@ export default function DisplayManagerPage() {
                     <input value={locationLabel} onChange={(event) => setLocationLabel(event.target.value)} placeholder="Ecran pilote Tour Premont" />
                   </label>
                 </div>
+                <div>
+                  <label>
+                    Repere horizontal (0 a 1)
+                    <input
+                      type="number"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={locationYouAreHereX}
+                      onChange={(event) =>
+                        setLocationYouAreHereX(event.target.value)
+                      }
+                    />
+                  </label>
+                  <label>
+                    Repere vertical (0 a 1)
+                    <input
+                      type="number"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={locationYouAreHereY}
+                      onChange={(event) =>
+                        setLocationYouAreHereY(event.target.value)
+                      }
+                    />
+                  </label>
+                </div>
+                <label>
+                  Orientation du regard (degres)
+                  <input
+                    type="number"
+                    min="0"
+                    max="360"
+                    step="1"
+                    value={locationOrientationDegrees}
+                    onChange={(event) =>
+                      setLocationOrientationDegrees(event.target.value)
+                    }
+                  />
+                </label>
                 <button disabled={busy || !locationBuildingId} onClick={() => void createDisplayLocation()}>
-                  Creer l'emplacement
+                  {"Creer l'emplacement"}
                 </button>
               </div>
             </article>
@@ -779,6 +898,86 @@ export default function DisplayManagerPage() {
                     ))}
                   </select>
                 </label>
+                {sourceId && !allSourceLocations.length && (
+                  <p className={styles.locationGuidance}>
+                    {"Aucun emplacement n'existe dans ce batiment. "}
+                    <a href="#display-location-title">Ajouter un emplacement</a>.
+                  </p>
+                )}
+                {sourceId && incompleteSourceLocations.length > 0 && (
+                  <div className={styles.locationGuidance} role="status">
+                    <strong>Emplacement non admissible</strong>
+                    <p>
+                      {"Completez le repere « Vous etes ici » et l'orientation avant de creer une publication."}
+                    </p>
+                    {incompleteSourceLocations.map((location) => (
+                      <div className={styles.locationIssue} key={location.id}>
+                        <span>{location.label}</span>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => setLocationToCompleteId(location.id)}
+                        >
+                          {"Completer l'emplacement"}
+                        </button>
+                        {locationToCompleteId === location.id && (
+                          <div className={styles.locationCompletion}>
+                            <label>
+                              Repere horizontal (0 a 1)
+                              <input
+                                type="number"
+                                min="0"
+                                max="1"
+                                step="0.01"
+                                value={locationYouAreHereX}
+                                onChange={(event) =>
+                                  setLocationYouAreHereX(event.target.value)
+                                }
+                              />
+                            </label>
+                            <label>
+                              Repere vertical (0 a 1)
+                              <input
+                                type="number"
+                                min="0"
+                                max="1"
+                                step="0.01"
+                                value={locationYouAreHereY}
+                                onChange={(event) =>
+                                  setLocationYouAreHereY(event.target.value)
+                                }
+                              />
+                            </label>
+                            <label>
+                              Orientation (degres)
+                              <input
+                                type="number"
+                                min="0"
+                                max="360"
+                                step="1"
+                                value={locationOrientationDegrees}
+                                onChange={(event) =>
+                                  setLocationOrientationDegrees(
+                                    event.target.value,
+                                  )
+                                }
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() =>
+                                void completeDisplayLocation(location)
+                              }
+                            >
+                              Enregistrer et rendre admissible
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div>
                   <label>
                     Orientation

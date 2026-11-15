@@ -394,6 +394,24 @@
 .createForm button:disabled {
   opacity: 0.45;
 }
+.locationGuidance {
+  border: 1px solid #d5a746;
+  border-radius: 10px;
+  background: #fffaf0;
+  padding: 12px;
+  color: #5f4818;
+}
+.locationGuidance p { margin: 5px 0 10px; }
+.locationIssue { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid #ead8ae; }
+.locationCompletion { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.locationCompletion button { grid-column: 1 / -1; }
+.createForm input {
+  width: 100%;
+  border: 1px solid #cbd7da;
+  border-radius: 9px;
+  padding: 9px;
+  background: #fff;
+}
 .reason select {
   width: 100%;
   border: 1px solid #cbd7da;
@@ -436,6 +454,7 @@
 .commandTable td { padding: 10px; border-bottom: 1px solid #e8edef; text-align: left; font-size: 0.78rem; }
 .commandTable th { background: #f3f7f7; }
 @media (max-width: 760px) {
+  .locationCompletion { grid-template-columns: 1fr; }
   .emergencyControls { grid-template-columns: 1fr; }
   .wideControl { grid-column: auto; }
 }
