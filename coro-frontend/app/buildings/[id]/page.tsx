@@ -1,13 +1,22 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { useAuthStore } from '@/stores/auth.store';
-import api from '@/lib/api';
-import BuildingDocuments from '@/components/building-documents/BuildingDocuments';
-import AppLayout from '@/components/layout/AppLayout';
-import { toast } from '@/lib/toast';
-import { ArrowLeft, Building2, MapPin, Layers, Edit2, FolderOpen, Plus, Calendar } from 'lucide-react';
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { useAuthStore } from "@/stores/auth.store";
+import api from "@/lib/api";
+import BuildingDocuments from "@/components/building-documents/BuildingDocuments";
+import AppLayout from "@/components/layout/AppLayout";
+import { toast } from "@/lib/toast";
+import {
+  ArrowLeft,
+  Building2,
+  MapPin,
+  Layers,
+  Edit2,
+  FolderOpen,
+  Plus,
+  Calendar,
+} from "lucide-react";
 
 interface Building {
   id: string;
@@ -37,10 +46,13 @@ interface Project {
   updatedAt: string;
 }
 
-const statusColors: Record<string, { bg: string; color: string; label: string }> = {
-  DRAFT:     { bg: '#FEF9E7', color: '#F39C12', label: 'Brouillon' },
-  ACTIVE:    { bg: '#EAFAF1', color: '#27AE60', label: 'Actif' },
-  ARCHIVED:  { bg: '#F8F9FA', color: '#ADB5BD', label: 'Archivé' },
+const statusColors: Record<
+  string,
+  { bg: string; color: string; label: string }
+> = {
+  DRAFT: { bg: "#FEF9E7", color: "#F39C12", label: "Brouillon" },
+  ACTIVE: { bg: "#EAFAF1", color: "#27AE60", label: "Actif" },
+  ARCHIVED: { bg: "#F8F9FA", color: "#ADB5BD", label: "Archivé" },
 };
 
 export default function BuildingDetailPage() {
@@ -49,39 +61,69 @@ export default function BuildingDetailPage() {
   const buildingId = params.id as string;
   const { isAuthenticated, user } = useAuthStore();
 
-  const [building, setBuilding]   = useState<Building | null>(null);
-  const [projects, setProjects]   = useState<Project[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [loadError, setLoadError] = useState('');
+  const [building, setBuilding] = useState<Building | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [form, setForm] = useState({
-    name: '', address: '', city: '', province: '',
-    postalCode: '', floors: '', buildingType: '', timeZone: 'America/Toronto', photoBase64: '',
-    responsableFirstName: '', responsableLastName: '',
-    responsableTitre: '', responsableEmail: '', responsablePhone: '',
+    name: "",
+    address: "",
+    city: "",
+    province: "",
+    postalCode: "",
+    floors: "",
+    buildingType: "",
+    timeZone: "America/Toronto",
+    photoBase64: "",
+    responsableFirstName: "",
+    responsableLastName: "",
+    responsableTitre: "",
+    responsableEmail: "",
+    responsablePhone: "",
   });
   const [projectForm, setProjectForm] = useState({
-    name: '', documentType: 'PMU', year: new Date().getFullYear().toString(),
+    name: "",
+    documentType: "PMU",
+    year: new Date().getFullYear().toString(),
   });
 
   const buildingTypes = [
-    'Tour à bureaux', 'Immeuble résidentiel', 'Industriel',
-    'Commercial', 'Institutionnel', 'Hôtel', 'Centre commercial', 'Autre',
+    "Tour à bureaux",
+    "Immeuble résidentiel",
+    "Industriel",
+    "Commercial",
+    "Institutionnel",
+    "Hôtel",
+    "Centre commercial",
+    "Autre",
   ];
 
-    const documentTypes = [
-    { value: 'PMU', label: "PMU — Plan de mesures d'urgence", available: true },
-    { value: 'PSI', label: 'PSI — Plan de sécurité incendie', available: true },
-    { value: 'PCA', label: 'PCA — Plan de continuité des activités', available: true },
-    { value: 'PGC', label: 'PGC — Plan de gestion de crise', available: false },
-    { value: 'PRA', label: 'PRA — Plan de reprise des activités', available: false },
-    { value: 'PUE', label: "PUE — Plan d'urgence environnementale", available: false },
+  const documentTypes = [
+    { value: "PMU", label: "PMU — Plan de mesures d'urgence", available: true },
+    { value: "PSI", label: "PSI — Plan de sécurité incendie", available: true },
+    {
+      value: "PCA",
+      label: "PCA — Plan de continuité des activités",
+      available: true,
+    },
+    { value: "PGC", label: "PGC — Plan de gestion de crise", available: false },
+    {
+      value: "PRA",
+      label: "PRA — Plan de reprise des activités",
+      available: false,
+    },
+    {
+      value: "PUE",
+      label: "PUE — Plan d'urgence environnementale",
+      available: false,
+    },
   ];
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    setLoadError('');
+    setLoadError("");
     try {
       const [br, pr] = await Promise.all([
         api.get(`/buildings/${buildingId}`),
@@ -90,31 +132,35 @@ export default function BuildingDetailPage() {
       setBuilding(br.data);
       setProjects(pr.data);
       setForm({
-        name:                 br.data.name || '',
-        address:              br.data.address || '',
-        city:                 br.data.city || '',
-        province:             br.data.province || '',
-        postalCode:           br.data.postalCode || '',
-        floors:               br.data.floors?.toString() || '',
-        buildingType:         br.data.buildingType || '',
-        timeZone: br.data.timeZone || 'America/Toronto',
-        photoBase64:          br.data.photoBase64 || '',
-        responsableFirstName: br.data.responsableFirstName || '',
-        responsableLastName:  br.data.responsableLastName || '',
-        responsableTitre:     br.data.responsableTitre || '',
-        responsableEmail:     br.data.responsableEmail || '',
-        responsablePhone:     br.data.responsablePhone || '',
+        name: br.data.name || "",
+        address: br.data.address || "",
+        city: br.data.city || "",
+        province: br.data.province || "",
+        postalCode: br.data.postalCode || "",
+        floors: br.data.floors?.toString() || "",
+        buildingType: br.data.buildingType || "",
+        timeZone: br.data.timeZone || "America/Toronto",
+        photoBase64: br.data.photoBase64 || "",
+        responsableFirstName: br.data.responsableFirstName || "",
+        responsableLastName: br.data.responsableLastName || "",
+        responsableTitre: br.data.responsableTitre || "",
+        responsableEmail: br.data.responsableEmail || "",
+        responsablePhone: br.data.responsablePhone || "",
       });
     } catch (err: unknown) {
-      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setLoadError(message || 'Impossible de charger le bâtiment.');
+      const message = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
+      setLoadError(message || "Impossible de charger le bâtiment.");
     } finally {
       setLoading(false);
     }
   }, [buildingId]);
 
   useEffect(() => {
-    if (!isAuthenticated) { router.push('/login'); return; }
+    if (!isAuthenticated) {
+      router.push("/login");
+      return;
+    }
     // The initial authenticated load is intentionally driven by this effect.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchData();
@@ -129,10 +175,11 @@ export default function BuildingDetailPage() {
       });
       setShowEditModal(false);
       fetchData();
-      toast('Bâtiment mis à jour.');
+      toast("Bâtiment mis à jour.");
     } catch (err: any) {
-      const message = err?.response?.data?.message || 'Erreur lors de la mise à jour.';
-      toast(Array.isArray(message) ? message[0] : message, 'error');
+      const message =
+        err?.response?.data?.message || "Erreur lors de la mise à jour.";
+      toast(Array.isArray(message) ? message[0] : message, "error");
     }
   };
 
@@ -140,7 +187,7 @@ export default function BuildingDetailPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {
-      toast('La photo ne doit pas dépasser 10MB.', 'error');
+      toast("La photo ne doit pas dépasser 10MB.", "error");
       return;
     }
     const reader = new FileReader();
@@ -153,32 +200,39 @@ export default function BuildingDetailPage() {
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await api.post('/projects', {
+      const res = await api.post("/projects", {
         ...projectForm,
         year: parseInt(projectForm.year),
         buildingId,
       });
       setShowProjectModal(false);
-      setProjectForm({ name: '', documentType: 'PMU', year: new Date().getFullYear().toString() });
-      toast('Projet créé avec succès.');
+      setProjectForm({
+        name: "",
+        documentType: "PMU",
+        year: new Date().getFullYear().toString(),
+      });
+      toast("Projet créé avec succès.");
       router.push(`/projects/${res.data.id}`);
     } catch (err: any) {
-      const message = err?.response?.data?.message || 'Erreur lors de la création du projet.';
-      toast(Array.isArray(message) ? message[0] : message, 'error');
+      const message =
+        err?.response?.data?.message || "Erreur lors de la création du projet.";
+      toast(Array.isArray(message) ? message[0] : message, "error");
     }
   };
 
   const inputStyle = {
-    border: '1px solid #CED4DA',
-    color: '#2C3E50',
-    backgroundColor: '#FFFFFF',
+    border: "1px solid #CED4DA",
+    color: "#2C3E50",
+    backgroundColor: "#FFFFFF",
   };
 
   if (loading) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center py-24">
-          <p className="text-sm animate-pulse" style={{ color: '#ADB5BD' }}>Chargement...</p>
+          <p className="text-sm animate-pulse" style={{ color: "#ADB5BD" }}>
+            Chargement...
+          </p>
         </div>
       </AppLayout>
     );
@@ -188,10 +242,24 @@ export default function BuildingDetailPage() {
     return (
       <AppLayout>
         <div className="text-center py-24">
-          <p role="alert" style={{ color: loadError ? '#C0392B' : '#6C757D' }}>{loadError || 'Bâtiment introuvable.'}</p>
-          {loadError && <button type="button" onClick={fetchData} className="mt-4 mr-4 text-sm underline" style={{ color: '#C0392B' }}>Réessayer</button>}
-          <button onClick={() => router.push('/buildings')}
-            className="mt-4 text-sm underline" style={{ color: '#C0392B' }}>
+          <p role="alert" style={{ color: loadError ? "#C0392B" : "#6C757D" }}>
+            {loadError || "Bâtiment introuvable."}
+          </p>
+          {loadError && (
+            <button
+              type="button"
+              onClick={fetchData}
+              className="mt-4 mr-4 text-sm underline"
+              style={{ color: "#C0392B" }}
+            >
+              Réessayer
+            </button>
+          )}
+          <button
+            onClick={() => router.push("/buildings")}
+            className="mt-4 text-sm underline"
+            style={{ color: "#C0392B" }}
+          >
             Retour aux bâtiments
           </button>
         </div>
@@ -201,62 +269,90 @@ export default function BuildingDetailPage() {
 
   return (
     <AppLayout>
-
       {/* Retour */}
       <button
-        onClick={() => router.push('/buildings')}
+        onClick={() => router.push("/buildings")}
         className="flex items-center gap-2 text-sm mb-6 transition-colors"
-        style={{ color: '#6C757D' }}
-        onMouseEnter={e => e.currentTarget.style.color = '#2C3E50'}
-        onMouseLeave={e => e.currentTarget.style.color = '#6C757D'}
+        style={{ color: "#6C757D" }}
+        onMouseEnter={(e) => (e.currentTarget.style.color = "#2C3E50")}
+        onMouseLeave={(e) => (e.currentTarget.style.color = "#6C757D")}
       >
         <ArrowLeft size={16} />
         Retour aux bâtiments
       </button>
 
       {/* Carte bâtiment */}
-      <div className="rounded-md p-4 sm:p-6 mb-6"
+      <div
+        className="rounded-md p-4 sm:p-6 mb-6"
         style={{
-          backgroundColor: '#FFFFFF',
-          border: '1px solid #E9ECEF',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-        }}>
+          backgroundColor: "#FFFFFF",
+          border: "1px solid #E9ECEF",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+        }}
+      >
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div className="flex items-start gap-3 sm:gap-4 min-w-0">
             {/* Icône */}
-            <div className="w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: '#FDEDEC' }}>
-              <Building2 size={22} style={{ color: '#C0392B' }} />
+            <div
+              className="w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0"
+              style={{ backgroundColor: "#FDEDEC" }}
+            >
+              <Building2 size={22} style={{ color: "#C0392B" }} />
             </div>
             {/* Infos */}
             <div className="min-w-0">
-              <h2 className="text-xl font-bold break-words" style={{ color: '#2C3E50' }}>
+              <h2
+                className="text-xl font-bold break-words"
+                style={{ color: "#2C3E50" }}
+              >
                 {building.name}
               </h2>
               <div className="flex items-start gap-1.5 mt-1 min-w-0">
-                <MapPin size={13} style={{ color: '#ADB5BD' }} />
-                <p className="text-sm break-words" style={{ color: '#6C757D' }}>
+                <MapPin size={13} style={{ color: "#ADB5BD" }} />
+                <p className="text-sm break-words" style={{ color: "#6C757D" }}>
                   {building.address}, {building.city}, {building.province}
                   {building.postalCode && ` ${building.postalCode}`}
                 </p>
-                {building.timeZoneVerified === false && <p className="text-xs" style={{ color: '#9A6700' }}>Fuseau horaire à confirmer</p>}
+                {building.timeZoneVerified === false && (
+                  <p className="text-xs" style={{ color: "#9A6700" }}>
+                    Fuseau horaire à confirmer
+                  </p>
+                )}
               </div>
               <div className="flex gap-2 mt-3 flex-wrap">
                 {building.buildingType && (
-                  <span className="text-xs px-2.5 py-1 rounded-full font-medium"
-                    style={{ backgroundColor: '#F8F9FA', color: '#495057', border: '1px solid #DEE2E6' }}>
+                  <span
+                    className="text-xs px-2.5 py-1 rounded-full font-medium"
+                    style={{
+                      backgroundColor: "#F8F9FA",
+                      color: "#495057",
+                      border: "1px solid #DEE2E6",
+                    }}
+                  >
                     {building.buildingType}
                   </span>
                 )}
                 {building.floors && (
-                  <span className="text-xs px-2.5 py-1 rounded-full font-medium flex items-center gap-1"
-                    style={{ backgroundColor: '#F8F9FA', color: '#495057', border: '1px solid #DEE2E6' }}>
+                  <span
+                    className="text-xs px-2.5 py-1 rounded-full font-medium flex items-center gap-1"
+                    style={{
+                      backgroundColor: "#F8F9FA",
+                      color: "#495057",
+                      border: "1px solid #DEE2E6",
+                    }}
+                  >
                     <Layers size={11} />
                     {building.floors} étages
                   </span>
                 )}
-                <span className="text-xs px-2.5 py-1 rounded-full font-medium"
-                  style={{ backgroundColor: '#FDEDEC', color: '#C0392B', border: '1px solid #F1948A' }}>
+                <span
+                  className="text-xs px-2.5 py-1 rounded-full font-medium"
+                  style={{
+                    backgroundColor: "#FDEDEC",
+                    color: "#C0392B",
+                    border: "1px solid #F1948A",
+                  }}
+                >
                   {building.client.name}
                 </span>
               </div>
@@ -264,33 +360,67 @@ export default function BuildingDetailPage() {
           </div>
 
           <div className="flex w-full flex-col gap-2 lg:w-auto lg:flex-row">
-            {user?.displayPermissions?.includes('DISPLAY_READ') && (
+            {user?.displayPermissions?.includes("DISPLAY_READ") &&
+            user?.displayBuildingIds?.includes(buildingId) ? (
               <button
                 type="button"
-                onClick={() => router.push(`/display?buildingId=${encodeURIComponent(buildingId)}`)}
+                onClick={() =>
+                  router.push(
+                    `/display?buildingId=${encodeURIComponent(buildingId)}`,
+                  )
+                }
                 className="w-full lg:w-auto justify-center flex items-center gap-2 text-sm font-medium px-3 py-2 rounded transition-colors"
-                style={{ border: '1px solid #C0392B', color: '#C0392B' }}
+                style={{ border: "1px solid #C0392B", color: "#C0392B" }}
               >
                 <Building2 size={14} />
                 Ouvrir dans CORO Display
               </button>
+            ) : ["ADMIN", "SUPER_ADMIN"].includes(user?.role || "") ? (
+              <button
+                type="button"
+                onClick={() => router.push("/settings/users")}
+                className="w-full lg:w-auto justify-center flex items-center gap-2 text-sm font-medium px-3 py-2 rounded transition-colors"
+                style={{
+                  border: "1px solid #D97706",
+                  color: "#92400E",
+                  backgroundColor: "#FFFBEB",
+                }}
+                title="Attribuez DISPLAY_READ et ce batiment depuis Membres de l'equipe"
+              >
+                <Building2 size={14} />
+                Configurer l'acces Display
+              </button>
+            ) : (
+              <span
+                className="w-full lg:w-auto text-sm px-3 py-2 rounded"
+                role="status"
+                style={{
+                  border: "1px solid #DEE2E6",
+                  color: "#6C757D",
+                  backgroundColor: "#F8F9FA",
+                }}
+              >
+                Display non attribue pour ce batiment
+              </span>
             )}
-            {['ADMIN', 'SUPER_ADMIN'].includes(user?.role || '') && <button
-              onClick={() => setShowEditModal(true)}
-              className="w-full lg:w-auto justify-center flex items-center gap-2 text-sm font-medium px-3 py-2 rounded transition-colors"
-              style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
-              onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = '#F8F9FA';
-                e.currentTarget.style.color = '#2C3E50';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = '#6C757D';
-              }}
-            >
-              <Edit2 size={14} />
-              Modifier
-            </button>}
+            {["ADMIN", "SUPER_ADMIN"].includes(user?.role || "") && (
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="w-full lg:w-auto justify-center flex items-center gap-2 text-sm font-medium px-3 py-2 rounded transition-colors"
+                style={{ border: "1px solid #DEE2E6", color: "#6C757D" }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#F8F9FA";
+                  e.currentTarget.style.color = "#2C3E50";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                  e.currentTarget.style.color = "#6C757D";
+                }}
+              >
+                <Edit2 size={14} />
+                Modifier
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -300,17 +430,24 @@ export default function BuildingDetailPage() {
       {/* Section projets */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
-          <h3 className="font-semibold" style={{ color: '#2C3E50' }}>Projets</h3>
-          <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>
-            {projects.length} projet{projects.length !== 1 ? 's' : ''} associé{projects.length !== 1 ? 's' : ''}
+          <h3 className="font-semibold" style={{ color: "#2C3E50" }}>
+            Projets
+          </h3>
+          <p className="text-xs mt-0.5" style={{ color: "#ADB5BD" }}>
+            {projects.length} projet{projects.length !== 1 ? "s" : ""} associé
+            {projects.length !== 1 ? "s" : ""}
           </p>
         </div>
         <button
           onClick={() => setShowProjectModal(true)}
           className="w-full sm:w-auto justify-center flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded transition-colors"
-          style={{ backgroundColor: '#C0392B' }}
-          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
-          onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}
+          style={{ backgroundColor: "#C0392B" }}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.backgroundColor = "#A93226")
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.backgroundColor = "#C0392B")
+          }
         >
           <Plus size={15} />
           Nouveau projet
@@ -319,21 +456,31 @@ export default function BuildingDetailPage() {
 
       {/* Liste projets */}
       {projects.length === 0 ? (
-        <div className="rounded-md p-12 text-center"
-          style={{ backgroundColor: '#FFFFFF', border: '2px dashed #DEE2E6' }}>
-          <FolderOpen size={32} className="mx-auto mb-3" style={{ color: '#ADB5BD' }} />
-          <p className="text-sm font-medium" style={{ color: '#6C757D' }}>
+        <div
+          className="rounded-md p-12 text-center"
+          style={{ backgroundColor: "#FFFFFF", border: "2px dashed #DEE2E6" }}
+        >
+          <FolderOpen
+            size={32}
+            className="mx-auto mb-3"
+            style={{ color: "#ADB5BD" }}
+          />
+          <p className="text-sm font-medium" style={{ color: "#6C757D" }}>
             Aucun projet pour ce bâtiment
           </p>
-          <p className="text-xs mt-1 mb-4" style={{ color: '#ADB5BD' }}>
+          <p className="text-xs mt-1 mb-4" style={{ color: "#ADB5BD" }}>
             Créez un projet pour commencer à générer des documents d'urgence
           </p>
           <button
             onClick={() => setShowProjectModal(true)}
             className="flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded mx-auto transition-colors"
-            style={{ backgroundColor: '#C0392B' }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}
+            style={{ backgroundColor: "#C0392B" }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.backgroundColor = "#A93226")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.backgroundColor = "#C0392B")
+            }
           >
             <Plus size={15} />
             Créer un projet
@@ -341,7 +488,7 @@ export default function BuildingDetailPage() {
         </div>
       ) : (
         <div className="grid gap-3">
-          {projects.map(project => {
+          {projects.map((project) => {
             const status = statusColors[project.status] || statusColors.DRAFT;
             return (
               <div
@@ -349,43 +496,55 @@ export default function BuildingDetailPage() {
                 onClick={() => router.push(`/projects/${project.id}`)}
                 className="rounded-md p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 cursor-pointer transition-all"
                 style={{
-                  backgroundColor: '#FFFFFF',
-                  border: '1px solid #E9ECEF',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #E9ECEF",
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
                 }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                  e.currentTarget.style.borderColor = '#CED4DA';
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow =
+                    "0 4px 12px rgba(0,0,0,0.1)";
+                  e.currentTarget.style.borderColor = "#CED4DA";
                 }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)';
-                  e.currentTarget.style.borderColor = '#E9ECEF';
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow =
+                    "0 1px 4px rgba(0,0,0,0.05)";
+                  e.currentTarget.style.borderColor = "#E9ECEF";
                 }}
               >
                 <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                   {/* Badge type document */}
-                  <div className="w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0 font-bold text-sm"
-                    style={{ backgroundColor: '#FDEDEC', color: '#C0392B' }}>
+                  <div
+                    className="w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0 font-bold text-sm"
+                    style={{ backgroundColor: "#FDEDEC", color: "#C0392B" }}
+                  >
                     {project.documentType}
                   </div>
                   <div className="min-w-0">
-                    <h4 className="font-semibold break-words" style={{ color: '#2C3E50' }}>
+                    <h4
+                      className="font-semibold break-words"
+                      style={{ color: "#2C3E50" }}
+                    >
                       {project.name}
                     </h4>
                     <div className="flex flex-wrap items-center gap-2 mt-1">
-                      <Calendar size={12} style={{ color: '#ADB5BD' }} />
-                      <span className="text-xs" style={{ color: '#ADB5BD' }}>
+                      <Calendar size={12} style={{ color: "#ADB5BD" }} />
+                      <span className="text-xs" style={{ color: "#ADB5BD" }}>
                         {project.year}
                       </span>
-                      <span style={{ color: '#DEE2E6' }}>•</span>
-                      <span className="text-xs" style={{ color: '#ADB5BD' }}>
-                        Modifié le {new Date(project.updatedAt).toLocaleDateString('fr-CA')}
+                      <span style={{ color: "#DEE2E6" }}>•</span>
+                      <span className="text-xs" style={{ color: "#ADB5BD" }}>
+                        Modifié le{" "}
+                        {new Date(project.updatedAt).toLocaleDateString(
+                          "fr-CA",
+                        )}
                       </span>
                     </div>
                   </div>
                 </div>
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap self-start sm:self-auto"
-                  style={{ backgroundColor: status.bg, color: status.color }}>
+                <span
+                  className="text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap self-start sm:self-auto"
+                  style={{ backgroundColor: status.bg, color: status.color }}
+                >
                   {status.label}
                 </span>
               </div>
@@ -395,213 +554,387 @@ export default function BuildingDetailPage() {
       )}
 
       {/* Modal modification bâtiment */}
-      {showEditModal && ['ADMIN', 'SUPER_ADMIN'].includes(user?.role || '') && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
-          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <div className="w-full max-w-lg rounded-md p-5 sm:p-8 overflow-y-auto max-h-[calc(100vh-2rem)]"
-            style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
-            <h3 className="font-semibold text-lg mb-6" style={{ color: '#2C3E50' }}>
+      {showEditModal && ["ADMIN", "SUPER_ADMIN"].includes(user?.role || "") && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+        >
+          <div
+            className="w-full max-w-lg rounded-md p-5 sm:p-8 overflow-y-auto max-h-[calc(100vh-2rem)]"
+            style={{
+              backgroundColor: "#FFFFFF",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+            }}
+          >
+            <h3
+              className="font-semibold text-lg mb-6"
+              style={{ color: "#2C3E50" }}
+            >
               Modifier le bâtiment
             </h3>
             <form onSubmit={handleUpdate} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                <label
+                  className="block text-sm font-medium mb-1.5"
+                  style={{ color: "#495057" }}
+                >
                   Nom du bâtiment *
                 </label>
-                <input type="text" value={form.name} required
-                  onChange={e => setForm({ ...form, name: e.target.value })}
+                <input
+                  type="text"
+                  value={form.name}
+                  required
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={inputStyle}
-                  onFocus={e => e.target.style.borderColor = '#C0392B'}
-                  onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                  onFocus={(e) => (e.target.style.borderColor = "#C0392B")}
+                  onBlur={(e) => (e.target.style.borderColor = "#CED4DA")}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                <label
+                  className="block text-sm font-medium mb-1.5"
+                  style={{ color: "#495057" }}
+                >
                   Type de bâtiment
                 </label>
-                <select value={form.buildingType}
-                  onChange={e => setForm({ ...form, buildingType: e.target.value })}
+                <select
+                  value={form.buildingType}
+                  onChange={(e) =>
+                    setForm({ ...form, buildingType: e.target.value })
+                  }
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={inputStyle}
-                  onFocus={e => e.target.style.borderColor = '#C0392B'}
-                  onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                  onFocus={(e) => (e.target.style.borderColor = "#C0392B")}
+                  onBlur={(e) => (e.target.style.borderColor = "#CED4DA")}
                 >
                   <option value="">Sélectionner un type</option>
-                  {buildingTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                  {buildingTypes.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
                 </select>
               </div>
               {/* Responsable bâtiment */}
-              <div style={{ borderTop: '1px solid #E9ECEF', paddingTop: 16 }}>
-                <p className="text-sm font-semibold mb-3" style={{ color: '#2C3E50' }}>
+              <div style={{ borderTop: "1px solid #E9ECEF", paddingTop: 16 }}>
+                <p
+                  className="text-sm font-semibold mb-3"
+                  style={{ color: "#2C3E50" }}
+                >
                   🏗 Responsable du bâtiment
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                   <div>
-                    <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Prénom</label>
-                    <input type="text" value={form.responsableFirstName}
-                      onChange={e => setForm({ ...form, responsableFirstName: e.target.value })}
+                    <label
+                      className="block text-sm font-medium mb-1.5"
+                      style={{ color: "#495057" }}
+                    >
+                      Prénom
+                    </label>
+                    <input
+                      type="text"
+                      value={form.responsableFirstName}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          responsableFirstName: e.target.value,
+                        })
+                      }
                       placeholder="Ex: Jean"
                       className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                       style={inputStyle}
-                      onFocus={e => e.target.style.borderColor = '#C0392B'}
-                      onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                      onFocus={(e) => (e.target.style.borderColor = "#C0392B")}
+                      onBlur={(e) => (e.target.style.borderColor = "#CED4DA")}
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Nom</label>
-                    <input type="text" value={form.responsableLastName}
-                      onChange={e => setForm({ ...form, responsableLastName: e.target.value })}
+                    <label
+                      className="block text-sm font-medium mb-1.5"
+                      style={{ color: "#495057" }}
+                    >
+                      Nom
+                    </label>
+                    <input
+                      type="text"
+                      value={form.responsableLastName}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          responsableLastName: e.target.value,
+                        })
+                      }
                       placeholder="Ex: Tremblay"
                       className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                       style={inputStyle}
-                      onFocus={e => e.target.style.borderColor = '#C0392B'}
-                      onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                      onFocus={(e) => (e.target.style.borderColor = "#C0392B")}
+                      onBlur={(e) => (e.target.style.borderColor = "#CED4DA")}
+                    />
                   </div>
                 </div>
                 <div className="mb-3">
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Titre</label>
-                  <input type="text" value={form.responsableTitre}
-                    onChange={e => setForm({ ...form, responsableTitre: e.target.value })}
+                  <label
+                    className="block text-sm font-medium mb-1.5"
+                    style={{ color: "#495057" }}
+                  >
+                    Titre
+                  </label>
+                  <input
+                    type="text"
+                    value={form.responsableTitre}
+                    onChange={(e) =>
+                      setForm({ ...form, responsableTitre: e.target.value })
+                    }
                     placeholder="Ex: Directeur de la sécurité"
                     className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={inputStyle}
-                    onFocus={e => e.target.style.borderColor = '#C0392B'}
-                    onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                    onFocus={(e) => (e.target.style.borderColor = "#C0392B")}
+                    onBlur={(e) => (e.target.style.borderColor = "#CED4DA")}
+                  />
                 </div>
                 <div className="mb-3">
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Courriel</label>
-                  <input type="email" value={form.responsableEmail}
-                    onChange={e => setForm({ ...form, responsableEmail: e.target.value })}
+                  <label
+                    className="block text-sm font-medium mb-1.5"
+                    style={{ color: "#495057" }}
+                  >
+                    Courriel
+                  </label>
+                  <input
+                    type="email"
+                    value={form.responsableEmail}
+                    onChange={(e) =>
+                      setForm({ ...form, responsableEmail: e.target.value })
+                    }
                     placeholder="Ex: jean.tremblay@client.com"
                     className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={inputStyle}
-                    onFocus={e => e.target.style.borderColor = '#C0392B'}
-                    onBlur={e => e.target.style.borderColor = '#CED4DA'} />
-                  <p className="text-xs mt-1.5" style={{ color: '#6C757D' }}>
-                    👤 Cette personne a accès au portail client CORO (vue bâtiment — projets liés à ce bâtiment).
+                    onFocus={(e) => (e.target.style.borderColor = "#C0392B")}
+                    onBlur={(e) => (e.target.style.borderColor = "#CED4DA")}
+                  />
+                  <p className="text-xs mt-1.5" style={{ color: "#6C757D" }}>
+                    👤 Cette personne a accès au portail client CORO (vue
+                    bâtiment — projets liés à ce bâtiment).
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Téléphone</label>
-                  <input type="text" value={form.responsablePhone}
-                    onChange={e => setForm({ ...form, responsablePhone: e.target.value })}
+                  <label
+                    className="block text-sm font-medium mb-1.5"
+                    style={{ color: "#495057" }}
+                  >
+                    Téléphone
+                  </label>
+                  <input
+                    type="text"
+                    value={form.responsablePhone}
+                    onChange={(e) =>
+                      setForm({ ...form, responsablePhone: e.target.value })
+                    }
                     placeholder="(514) 555-0100"
                     className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={inputStyle}
-                    onFocus={e => e.target.style.borderColor = '#C0392B'}
-                    onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                    onFocus={(e) => (e.target.style.borderColor = "#C0392B")}
+                    onBlur={(e) => (e.target.style.borderColor = "#CED4DA")}
+                  />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                <label
+                  className="block text-sm font-medium mb-1.5"
+                  style={{ color: "#495057" }}
+                >
                   Photo du bâtiment
                 </label>
-                <p className="text-xs mb-2" style={{ color: '#ADB5BD' }}>
-                  Cette photo sera utilisée comme page de couverture des documents générés.
+                <p className="text-xs mb-2" style={{ color: "#ADB5BD" }}>
+                  Cette photo sera utilisée comme page de couverture des
+                  documents générés.
                 </p>
                 {form.photoBase64 && (
-                  <div className="mb-3 rounded overflow-hidden" style={{ border: '1px solid #DEE2E6' }}>
-                    <img src={form.photoBase64} alt="Aperçu du bâtiment"
-                      className="w-full h-32 object-cover" />
+                  <div
+                    className="mb-3 rounded overflow-hidden"
+                    style={{ border: "1px solid #DEE2E6" }}
+                  >
+                    <img
+                      src={form.photoBase64}
+                      alt="Aperçu du bâtiment"
+                      className="w-full h-32 object-cover"
+                    />
                   </div>
                 )}
                 <label
                   className="flex items-center justify-center gap-2 text-sm font-medium py-2.5 rounded cursor-pointer transition-colors"
-                  style={{ border: '1px dashed #CED4DA', color: '#6C757D' }}
-                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#F8F9FA'; e.currentTarget.style.color = '#2C3E50'; }}
-                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#6C757D'; }}
+                  style={{ border: "1px dashed #CED4DA", color: "#6C757D" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#F8F9FA";
+                    e.currentTarget.style.color = "#2C3E50";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.color = "#6C757D";
+                  }}
                 >
-                  {form.photoBase64 ? 'Changer la photo' : 'Téléverser une photo'}
-                  <input type="file" accept="image/jpeg,image/jpg,image/png"
-                    onChange={handlePhotoChange} className="hidden" />
+                  {form.photoBase64
+                    ? "Changer la photo"
+                    : "Téléverser une photo"}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png"
+                    onChange={handlePhotoChange}
+                    className="hidden"
+                  />
                 </label>
-                <p className="text-xs mt-1.5" style={{ color: '#ADB5BD' }}>
+                <p className="text-xs mt-1.5" style={{ color: "#ADB5BD" }}>
                   JPG ou PNG — Max 10MB
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                <label
+                  className="block text-sm font-medium mb-1.5"
+                  style={{ color: "#495057" }}
+                >
                   Adresse *
                 </label>
-                <input type="text" value={form.address} required
-                  onChange={e => setForm({ ...form, address: e.target.value })}
+                <input
+                  type="text"
+                  value={form.address}
+                  required
+                  onChange={(e) =>
+                    setForm({ ...form, address: e.target.value })
+                  }
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={inputStyle}
-                  onFocus={e => e.target.style.borderColor = '#C0392B'}
-                  onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                  onFocus={(e) => (e.target.style.borderColor = "#C0392B")}
+                  onBlur={(e) => (e.target.style.borderColor = "#CED4DA")}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1.5">Fuseau horaire IANA du bâtiment *</label>
-                <input type="text" list="building-time-zones-edit" value={form.timeZone} onChange={e => setForm({ ...form, timeZone: e.target.value })} required className="w-full rounded px-4 py-2.5 text-sm" style={inputStyle} />
-                <datalist id="building-time-zones-edit"><option value="America/Toronto" /><option value="America/Vancouver" /><option value="America/Edmonton" /><option value="America/Winnipeg" /><option value="America/Halifax" /><option value="America/St_Johns" /></datalist>
+                <label className="block text-sm font-medium mb-1.5">
+                  Fuseau horaire IANA du bâtiment *
+                </label>
+                <input
+                  type="text"
+                  list="building-time-zones-edit"
+                  value={form.timeZone}
+                  onChange={(e) =>
+                    setForm({ ...form, timeZone: e.target.value })
+                  }
+                  required
+                  className="w-full rounded px-4 py-2.5 text-sm"
+                  style={inputStyle}
+                />
+                <datalist id="building-time-zones-edit">
+                  <option value="America/Toronto" />
+                  <option value="America/Vancouver" />
+                  <option value="America/Edmonton" />
+                  <option value="America/Winnipeg" />
+                  <option value="America/Halifax" />
+                  <option value="America/St_Johns" />
+                </datalist>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                  <label
+                    className="block text-sm font-medium mb-1.5"
+                    style={{ color: "#495057" }}
+                  >
                     Ville *
                   </label>
-                  <input type="text" value={form.city} required
-                    onChange={e => setForm({ ...form, city: e.target.value })}
+                  <input
+                    type="text"
+                    value={form.city}
+                    required
+                    onChange={(e) => setForm({ ...form, city: e.target.value })}
                     className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={inputStyle}
-                    onFocus={e => e.target.style.borderColor = '#C0392B'}
-                    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                    onFocus={(e) => (e.target.style.borderColor = "#C0392B")}
+                    onBlur={(e) => (e.target.style.borderColor = "#CED4DA")}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                  <label
+                    className="block text-sm font-medium mb-1.5"
+                    style={{ color: "#495057" }}
+                  >
                     Province *
                   </label>
-                  <input type="text" value={form.province} required
-                    onChange={e => setForm({ ...form, province: e.target.value })}
+                  <input
+                    type="text"
+                    value={form.province}
+                    required
+                    onChange={(e) =>
+                      setForm({ ...form, province: e.target.value })
+                    }
                     className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={inputStyle}
-                    onFocus={e => e.target.style.borderColor = '#C0392B'}
-                    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                    onFocus={(e) => (e.target.style.borderColor = "#C0392B")}
+                    onBlur={(e) => (e.target.style.borderColor = "#CED4DA")}
                   />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                  <label
+                    className="block text-sm font-medium mb-1.5"
+                    style={{ color: "#495057" }}
+                  >
                     Code postal
                   </label>
-                  <input type="text" value={form.postalCode}
-                    onChange={e => setForm({ ...form, postalCode: e.target.value })}
+                  <input
+                    type="text"
+                    value={form.postalCode}
+                    onChange={(e) =>
+                      setForm({ ...form, postalCode: e.target.value })
+                    }
                     className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={inputStyle}
-                    onFocus={e => e.target.style.borderColor = '#C0392B'}
-                    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                    onFocus={(e) => (e.target.style.borderColor = "#C0392B")}
+                    onBlur={(e) => (e.target.style.borderColor = "#CED4DA")}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                  <label
+                    className="block text-sm font-medium mb-1.5"
+                    style={{ color: "#495057" }}
+                  >
                     Nombre d'étages
                   </label>
-                  <input type="number" value={form.floors}
-                    onChange={e => setForm({ ...form, floors: e.target.value })}
+                  <input
+                    type="number"
+                    value={form.floors}
+                    onChange={(e) =>
+                      setForm({ ...form, floors: e.target.value })
+                    }
                     className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={inputStyle}
-                    onFocus={e => e.target.style.borderColor = '#C0392B'}
-                    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                    onFocus={(e) => (e.target.style.borderColor = "#C0392B")}
+                    onBlur={(e) => (e.target.style.borderColor = "#CED4DA")}
                   />
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <button type="button" onClick={() => setShowEditModal(false)}
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
                   className="flex-1 font-medium py-2.5 rounded text-sm"
-                  style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                  style={{ border: "1px solid #DEE2E6", color: "#6C757D" }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.backgroundColor = "#F8F9FA")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.backgroundColor = "transparent")
+                  }
                 >
                   Annuler
                 </button>
-                <button type="submit"
+                <button
+                  type="submit"
                   className="flex-1 text-white font-medium py-2.5 rounded text-sm"
-                  style={{ backgroundColor: '#C0392B' }}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}
+                  style={{ backgroundColor: "#C0392B" }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.backgroundColor = "#A93226")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.backgroundColor = "#C0392B")
+                  }
                 >
                   Sauvegarder
                 </button>
@@ -613,71 +946,122 @@ export default function BuildingDetailPage() {
 
       {/* Modal nouveau projet */}
       {showProjectModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
-          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <div className="w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-md p-5 sm:p-8"
-            style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
-            <h3 className="font-semibold text-lg mb-6" style={{ color: '#2C3E50' }}>
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+        >
+          <div
+            className="w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-md p-5 sm:p-8"
+            style={{
+              backgroundColor: "#FFFFFF",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+            }}
+          >
+            <h3
+              className="font-semibold text-lg mb-6"
+              style={{ color: "#2C3E50" }}
+            >
               Nouveau projet
             </h3>
             <form onSubmit={handleCreateProject} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                <label
+                  className="block text-sm font-medium mb-1.5"
+                  style={{ color: "#495057" }}
+                >
                   Nom du projet *
                 </label>
-                <input type="text" value={projectForm.name} required
-                  onChange={e => setProjectForm({ ...projectForm, name: e.target.value })}
+                <input
+                  type="text"
+                  value={projectForm.name}
+                  required
+                  onChange={(e) =>
+                    setProjectForm({ ...projectForm, name: e.target.value })
+                  }
                   placeholder="Ex: PMU Tour ABC 2026"
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={inputStyle}
-                  onFocus={e => e.target.style.borderColor = '#C0392B'}
-                  onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                  onFocus={(e) => (e.target.style.borderColor = "#C0392B")}
+                  onBlur={(e) => (e.target.style.borderColor = "#CED4DA")}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                <label
+                  className="block text-sm font-medium mb-1.5"
+                  style={{ color: "#495057" }}
+                >
                   Type de document *
                 </label>
-                <select value={projectForm.documentType}
-                  onChange={e => setProjectForm({ ...projectForm, documentType: e.target.value })}
+                <select
+                  value={projectForm.documentType}
+                  onChange={(e) =>
+                    setProjectForm({
+                      ...projectForm,
+                      documentType: e.target.value,
+                    })
+                  }
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={inputStyle}
-                  onFocus={e => e.target.style.borderColor = '#C0392B'}
-                  onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                  onFocus={(e) => (e.target.style.borderColor = "#C0392B")}
+                  onBlur={(e) => (e.target.style.borderColor = "#CED4DA")}
                 >
-                  {documentTypes.map(t => (
-                    <option key={t.value} value={t.value} disabled={!t.available}>
-                      {t.label}{!t.available ? ' (bientôt disponible)' : ''}
+                  {documentTypes.map((t) => (
+                    <option
+                      key={t.value}
+                      value={t.value}
+                      disabled={!t.available}
+                    >
+                      {t.label}
+                      {!t.available ? " (bientôt disponible)" : ""}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                <label
+                  className="block text-sm font-medium mb-1.5"
+                  style={{ color: "#495057" }}
+                >
                   Année *
                 </label>
-                <input type="number" value={projectForm.year} required
-                  onChange={e => setProjectForm({ ...projectForm, year: e.target.value })}
+                <input
+                  type="number"
+                  value={projectForm.year}
+                  required
+                  onChange={(e) =>
+                    setProjectForm({ ...projectForm, year: e.target.value })
+                  }
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={inputStyle}
-                  onFocus={e => e.target.style.borderColor = '#C0392B'}
-                  onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                  onFocus={(e) => (e.target.style.borderColor = "#C0392B")}
+                  onBlur={(e) => (e.target.style.borderColor = "#CED4DA")}
                 />
               </div>
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <button type="button" onClick={() => setShowProjectModal(false)}
+                <button
+                  type="button"
+                  onClick={() => setShowProjectModal(false)}
                   className="flex-1 font-medium py-2.5 rounded text-sm"
-                  style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                  style={{ border: "1px solid #DEE2E6", color: "#6C757D" }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.backgroundColor = "#F8F9FA")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.backgroundColor = "transparent")
+                  }
                 >
                   Annuler
                 </button>
-                <button type="submit"
+                <button
+                  type="submit"
                   className="flex-1 text-white font-medium py-2.5 rounded text-sm"
-                  style={{ backgroundColor: '#C0392B' }}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}
+                  style={{ backgroundColor: "#C0392B" }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.backgroundColor = "#A93226")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.backgroundColor = "#C0392B")
+                  }
                 >
                   Créer
                 </button>
@@ -686,7 +1070,6 @@ export default function BuildingDetailPage() {
           </div>
         </div>
       )}
-
     </AppLayout>
   );
 }
