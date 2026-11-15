@@ -29,6 +29,13 @@ assert.doesNotMatch(
 );
 assert.match(page, /approvePlan/);
 assert.match(page, /publishPlan/);
+assert.match(
+  page,
+  /action === "review"[\s\S]*setSelected\(updated \?\? null\)/,
+  "review must refresh the selected publication without forcing an account switch",
+);
+assert.match(page, /Vous pouvez confirmer la revue puis approuver cette même/);
+assert.match(page, /Le soumissionnaire demeure exclu de/);
 assert.match(page, /generatePdfPreview/);
 assert.match(page, /pdf-render-jobs/);
 assert.match(page, /Choisissez explicitement la page PDF/);

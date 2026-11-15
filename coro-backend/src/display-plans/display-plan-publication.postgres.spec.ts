@@ -114,6 +114,7 @@ describePostgres('DISPLAY-03 publication governance on PostgreSQL', () => {
       DisplayPermission.DISPLAY_PLAN_CREATE,
       DisplayPermission.DISPLAY_PLAN_READ,
       DisplayPermission.DISPLAY_PLAN_REVIEW,
+      DisplayPermission.DISPLAY_PLAN_APPROVE,
     ]);
     const reviewer = await mkUser('reviewer', [
       DisplayPermission.DISPLAY_PLAN_REVIEW,
@@ -298,50 +299,74 @@ describePostgres('DISPLAY-03 publication governance on PostgreSQL', () => {
       },
       actor(reviewer),
     );
+    const approvalInput = {
+      expectedLockVersion: reviewed.lockVersion,
+      reason: 'Approbation après revue indépendante QA',
+      requestId: `reviewer-approve-${suffix}`,
+      sourceVersion: reviewed.sourceVersion,
+      sourceSha256: reviewed.sourceSha256,
+      variantVersion: reviewed.variantVersion,
+      variantSha256: reviewed.variantSha256!,
+      profile: 'SOURCE_NATIVE' as const,
+      locationId: reviewed.locationId,
+    };
     await expect(
       service.approve(
         org.id,
         building.id,
         draft.id,
-        {
-          expectedLockVersion: reviewed.lockVersion,
-          reason: 'Réviseur approbateur interdit QA',
-          requestId: `reviewer-approve-${suffix}`,
-          sourceVersion: reviewed.sourceVersion,
-          sourceSha256: reviewed.sourceSha256,
-          variantVersion: reviewed.variantVersion,
-          variantSha256: reviewed.variantSha256!,
-          profile: 'SOURCE_NATIVE',
-          locationId: reviewed.locationId,
-        },
+        { ...approvalInput, requestId: `author-approve-${suffix}` },
+        actor(author),
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await prisma.user.update({
+      where: { id: reviewer.id },
+      data: {
+        displayPermissions: [DisplayPermission.DISPLAY_PLAN_REVIEW],
+      },
+    });
+    await expect(
+      service.approve(
+        org.id,
+        building.id,
+        draft.id,
+        { ...approvalInput, requestId: `revoked-approve-${suffix}` },
         actor(reviewer),
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
+    await prisma.user.update({
+      where: { id: reviewer.id },
+      data: {
+        displayPermissions: [
+          DisplayPermission.DISPLAY_PLAN_REVIEW,
+          DisplayPermission.DISPLAY_PLAN_APPROVE,
+        ],
+      },
+    });
     const approved = await service.approve(
       org.id,
       building.id,
       draft.id,
-      {
-        expectedLockVersion: reviewed.lockVersion,
-        reason: 'Approbation indépendante QA',
-        requestId: `approve-${suffix}`,
-        sourceVersion: reviewed.sourceVersion,
-        sourceSha256: reviewed.sourceSha256,
-        variantVersion: reviewed.variantVersion,
-        variantSha256: reviewed.variantSha256!,
-        profile: 'SOURCE_NATIVE',
-        locationId: reviewed.locationId,
-      },
-      actor(approver),
+      approvalInput,
+      actor(reviewer),
     );
-    const approvalEvent = await prisma.displayPlanPublicationEvent.findUnique({
+    const governanceEvents = await prisma.displayPlanPublicationEvent.findMany({
       where: {
-        publicationId_requestId: {
-          publicationId: draft.id,
-          requestId: `approve-${suffix}`,
-        },
+        publicationId: draft.id,
+        action: { in: ['REVIEWED', 'APPROVED'] },
       },
+      orderBy: { createdAt: 'asc' },
     });
+    expect(governanceEvents).toHaveLength(2);
+    expect(governanceEvents.map((event) => event.actorUserId)).toEqual([
+      reviewer.id,
+      reviewer.id,
+    ]);
+    expect(governanceEvents.map((event) => event.action)).toEqual([
+      'REVIEWED',
+      'APPROVED',
+    ]);
+    const approvalEvent = governanceEvents[1];
     expect(approvalEvent?.metadata).toMatchObject({
       visualAcceptance: {
         status: 'APPROVED',

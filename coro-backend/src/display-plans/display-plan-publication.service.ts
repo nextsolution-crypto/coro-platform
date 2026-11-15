@@ -311,10 +311,6 @@ export class DisplayPlanPublicationService {
           throw new ForbiddenException(
             "L'auteur ne peut pas approuver sa publication.",
           );
-        if (row.reviewedById === actor.userId)
-          throw new ForbiddenException(
-            "Le réviseur ne peut pas approuver la publication qu'il a révisée.",
-          );
         if (!row.reviewedById || !row.variantSha256)
           throw new ConflictException(
             'La revue humaine et la variante sont obligatoires.',
