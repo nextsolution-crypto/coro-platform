@@ -29,7 +29,24 @@ run_case() (
 )
 
 MOCK_STATUS=200 MOCK_BODY=EXPECTED-WITNESS run_case
-if MOCK_STATUS=404 MOCK_BODY=EXPECTED-WITNESS run_case; then exit 1; fi
-if MOCK_STATUS=200 MOCK_BODY=SUBSTITUTED run_case; then exit 1; fi
-if MOCK_STATUS=200 MOCK_BODY=EXPECTED-WITNESS MOCK_REDIRECT=true run_case; then exit 1; fi
-printf '%s\n' 'DISPLAY09_HTTP01_RESPONSE_TESTS=PASS positive=1 negative=3'
+set +e
+MOCK_STATUS=404 MOCK_BODY=EXPECTED-WITNESS run_case; status_404=$?
+MOCK_STATUS=200 MOCK_BODY=SUBSTITUTED run_case; status_body=$?
+MOCK_STATUS=200 MOCK_BODY=EXPECTED-WITNESS MOCK_REDIRECT=true run_case; status_redirect=$?
+set -e
+[[ "$status_404" -ne 0 && "$status_body" -ne 0 && "$status_redirect" -ne 0 ]]
+
+marker="$(mktemp)"
+set +e
+(
+  eval "$library"
+  trap 'printf triggered >"$marker"' ERR
+  fail ACME_TEST_ROLLBACK_TRAP
+)
+status_trap=$?
+set -e
+[[ "$status_trap" -ne 0 ]]
+grep -Fxq triggered "$marker"
+rm -f -- "$marker"
+
+printf '%s\n' 'DISPLAY09_HTTP01_RESPONSE_TESTS=PASS positive=1 negative=3 rollback_trap=PASS'

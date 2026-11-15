@@ -19,7 +19,7 @@ changed=false
 challenge_file=''
 probe_dir=''
 
-fail() { printf 'DISPLAY09_TLS_FAILED code=%s\n' "$1" >&2; exit 1; }
+fail() { printf 'DISPLAY09_TLS_FAILED code=%s\n' "$1" >&2; return 1; }
 require_pass() { [[ "${!1:-}" == PASS ]] || fail "$1"; }
 require_command() { command -v "$1" >/dev/null 2>&1 || fail "COMMAND_${1^^}_MISSING"; }
 
@@ -113,11 +113,11 @@ probe_http_response() {
 }
 
 probe_http01() {
-  require_command curl; require_command getent
+  require_command curl; require_command getent; require_command ip
   prepare_acme_webroot
   probe_dir="$(mktemp -d "$state_dir/http01-probe.XXXXXX")"
   chmod 0700 "$probe_dir"
-  local token expected_url ip count_v4=0 count_v6=0
+  local token expected_url ip count_v4=0 count_v6=0 count_v6_dns=0 ipv6_applicable=false
   token="coro-display09-$(openssl rand -hex 16)"
   printf 'CORO-DISPLAY09-ACME-PROBE-%s' "$(openssl rand -hex 16)" >"$probe_dir/expected"
   challenge_file="$ACME_WEBROOT/.well-known/acme-challenge/$token"
@@ -137,11 +137,22 @@ probe_http01() {
 
   while read -r ip; do
     [[ -n "$ip" ]] || continue
+    count_v6_dns=$((count_v6_dns + 1))
+    if ! ip -6 route get "$ip" >/dev/null 2>&1; then
+      continue
+    fi
+    ipv6_applicable=true
     count_v6=$((count_v6 + 1))
     probe_http_response "IPV6_${count_v6}" "$probe_dir/expected" --noproxy '*' --resolve "$DOMAIN:80:[$ip]" "$expected_url"
   done < <(getent ahostsv6 "$DOMAIN" | awk '{print $1}' | sort -u | head -n 4)
 
-  printf 'DISPLAY09_HTTP01_PREFLIGHT=PASS ipv4=%s ipv6=%s exact_body=true redirects=false\n' "$count_v4" "$count_v6"
+  if [[ "$count_v6_dns" -gt 0 && "$ipv6_applicable" == false ]]; then
+    printf 'ACME_IPV6=NOT_APPLICABLE reason=origin_has_no_ipv6_route dns_addresses=%s\n' "$count_v6_dns"
+  elif [[ "$count_v6_dns" == 0 ]]; then
+    printf '%s\n' 'ACME_IPV6=NOT_PRESENT dns_addresses=0'
+  fi
+  printf 'DISPLAY09_HTTP01_PREFLIGHT=PASS ipv4=%s ipv6_tested=%s ipv6_dns=%s ipv6_applicable=%s exact_body=true redirects=false\n' \
+    "$count_v4" "$count_v6" "$count_v6_dns" "$ipv6_applicable"
   cleanup_http01_probe
 }
 
