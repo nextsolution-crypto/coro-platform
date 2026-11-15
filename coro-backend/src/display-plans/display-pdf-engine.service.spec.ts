@@ -2,6 +2,7 @@ import {
   DisplayPdfEngineService,
   DisplayPdfRejectedError,
 } from './display-pdf-engine.service';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
 describe('DisplayPdfEngineService', () => {
   const service = new DisplayPdfEngineService();
@@ -53,4 +54,37 @@ describe('DisplayPdfEngineService', () => {
       ),
     ).toBe('PDF_TRAILING_DATA');
   });
+
+  const realPopplerTest = process.platform === 'win32' ? it.skip : it;
+
+  realPopplerTest(
+    'renders a real 17 x 11 PDF page to a legible PNG',
+    async () => {
+      const document = await PDFDocument.create();
+      const page = document.addPage([17 * 72, 11 * 72]);
+      const font = await document.embedFont(StandardFonts.HelveticaBold);
+      page.drawText('PLAN D EVACUATION - SYNTHETIQUE', {
+        x: 72,
+        y: 11 * 72 - 108,
+        size: 36,
+        font,
+        color: rgb(0.05, 0.15, 0.3),
+      });
+      const bytes = Buffer.from(
+        await document.save({ useObjectStreams: false }),
+      );
+      const rendered = await service.render(bytes, 1, 150);
+      expect(rendered.bytes.subarray(1, 4).toString('ascii')).toBe('PNG');
+      expect(rendered.width).toBe(2550);
+      expect(rendered.height).toBe(1650);
+      expect(rendered.pageCount).toBe(1);
+      expect(rendered.parameters).toEqual({
+        pageNumber: 1,
+        dpi: 150,
+        format: 'PNG',
+      });
+      expect(rendered.engine).toBe('POPPLER');
+    },
+    45_000,
+  );
 });

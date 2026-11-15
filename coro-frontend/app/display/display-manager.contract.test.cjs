@@ -29,6 +29,16 @@ assert.doesNotMatch(
 );
 assert.match(page, /approvePlan/);
 assert.match(page, /publishPlan/);
+assert.match(page, /generatePdfPreview/);
+assert.match(page, /pdf-render-jobs/);
+assert.match(page, /Choisissez explicitement la page PDF/);
+assert.match(page, /targetDpi:\s*300/);
+assert.match(page, /aria-live="polite"/);
+assert.doesNotMatch(
+  page,
+  /act\("preview"\)/,
+  "PDF preview must use the isolated asynchronous rasterizer",
+);
 assert.match(page, /window\.confirm/);
 assert.match(page, /DeviceSupervision/);
 assert.match(page, /buildingId/);
@@ -45,7 +55,7 @@ assert.match(
 );
 assert.doesNotMatch(
   page,
-  /publicUrl|variantStorageKey/,
+  /publicUrl|variantStorageKey|sourceStorageKey|outputStorageKey/,
   "no private storage key or public URL is exposed",
 );
 assert.match(css, /@media\s*\(max-width:\s*760px\)/);

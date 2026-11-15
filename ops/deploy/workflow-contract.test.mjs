@@ -6,6 +6,7 @@ const workflow = fs.readFileSync(new URL('../../.github/workflows/deploy.yml', i
 const release = fs.readFileSync(new URL('./coro-production-release.sh', import.meta.url), 'utf8');
 const control = fs.readFileSync(new URL('./coro-release-control.sh', import.meta.url), 'utf8').replaceAll('\r\n', '\n');
 const reconcile = fs.readFileSync(new URL('./coro-release-reconcile.sh', import.meta.url), 'utf8');
+const rollback = fs.readFileSync(new URL('./coro-governed-application-rollback.sh', import.meta.url), 'utf8');
 
 test('push validates but cannot build or deploy', () => {
   assert.match(workflow, /build-images:\n\s+if: github\.event_name == 'workflow_dispatch'/);
@@ -22,6 +23,24 @@ test('uses a complete immutable image set', () => {
   assert.doesNotMatch(workflow, /coro-(backend|frontend|website|client-portal):latest/);
   for (const value of ['BACKEND_IMAGE', 'FRONTEND_IMAGE', 'CLIENT_PORTAL_IMAGE', 'WEBSITE_IMAGE']) assert.match(workflow, new RegExp(value));
   assert.match(release, /docker image inspect/);
+});
+test('deploys the isolated PDF worker and rasterizer from the approved backend image', () => {
+  assert.match(release, /--profile display-pdf-worker/);
+  for (const service of ['display-pdf-spool-init', 'display-pdf-worker', 'display-pdf-rasterizer']) {
+    assert.match(release, new RegExp(`${service}:\\r?\\n    image: \\$BACKEND_IMAGE`));
+  }
+  for (const container of ['coro_display_pdf_worker', 'coro_display_pdf_rasterizer']) {
+    assert.match(release, new RegExp(container));
+  }
+});
+test('rollback quiesces PDF processing and does not leave new workers on the old release', () => {
+  assert.match(rollback, /--profile display-pdf-worker/);
+  assert.match(rollback, /stop display-pdf-worker display-pdf-rasterizer/);
+  assert.match(rollback, /rm -f display-pdf-worker display-pdf-rasterizer/);
+  assert.match(
+    rollback,
+    /up -d --no-deps --no-build backend frontend client-portal website/,
+  );
 });
 test('fails closed through backup, remote evidence and restore gates', () => {
   for (const value of ['REMOTE_VERIFIED', 'VersionId', 'sha256', 'RESTORE_VERIFIED']) assert.match(release, new RegExp(value));

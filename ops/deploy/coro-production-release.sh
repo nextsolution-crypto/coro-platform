@@ -241,6 +241,12 @@ cat >"$COMPOSE_OVERRIDE" <<YAML
 services:
   backend:
     image: $BACKEND_IMAGE
+  display-pdf-spool-init:
+    image: $BACKEND_IMAGE
+  display-pdf-worker:
+    image: $BACKEND_IMAGE
+  display-pdf-rasterizer:
+    image: $BACKEND_IMAGE
   frontend:
     image: $FRONTEND_IMAGE
   client-portal:
@@ -251,7 +257,7 @@ YAML
 KNOWLEDGE_OVERRIDE="$(mktemp /tmp/coro-knowledge-runtime.XXXXXX.json)"
 rm -f -- "$KNOWLEDGE_OVERRIDE"
 node ops/knowledge/runtime-policy.mjs overlay "$BACKEND_IMAGE" "$KNOWLEDGE_OVERRIDE" || fail KNOWLEDGE_RUNTIME_POLICY_INVALID
-compose=(docker compose -f docker-compose.yml -f "$COMPOSE_OVERRIDE" -f "$KNOWLEDGE_OVERRIDE")
+compose=(docker compose --profile display-pdf-worker -f docker-compose.yml -f "$COMPOSE_OVERRIDE" -f "$KNOWLEDGE_OVERRIDE")
 "${compose[@]}" config --quiet || fail COMPOSE_CONFIGURATION_INVALID
 
 # Migrations execute in the approved backend image before any running service is replaced.
@@ -275,11 +281,11 @@ rendement_guard_code="$(curl --silent --output /dev/null --write-out '%{http_cod
 [[ "$booking_guard_code" == 401 ]] || fail BOOKING_SMOKE_FAILED
 [[ "$rendement_guard_code" == 401 ]] || fail RENDEMENT_SMOKE_FAILED
 
-for container in coro_backend coro_frontend coro_client_portal coro_website; do
+for container in coro_backend coro_frontend coro_client_portal coro_website coro_display_pdf_worker coro_display_pdf_rasterizer; do
   [[ "$(docker inspect --format '{{.State.Running}}' "$container")" == true ]] || fail CONTAINER_HEALTH_FAILED
   [[ "$(docker inspect --format '{{.RestartCount}}' "$container")" == 0 ]] || fail RESTART_COUNT_NONZERO
 done
-for container in coro_backend coro_frontend coro_client_portal coro_website; do
+for container in coro_backend coro_frontend coro_client_portal coro_website coro_display_pdf_worker coro_display_pdf_rasterizer; do
   if docker logs --since 5m "$container" 2>&1 | grep -Eqi 'missing table|missing enum|PrismaClientKnownRequestError|uncaught exception|fatal error'; then fail CRITICAL_LOGS_FOUND; fi
 done
 [[ "$(docker compose exec -T backend sh -c 'printf %s "${MFA_QA_CAPTURE_ENABLED:-false}"')" != true ]] || fail MFA_QA_CAPTURE_ENABLED
