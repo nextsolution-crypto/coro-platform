@@ -33,6 +33,40 @@ jobs:
             flock --nonblock /run/lock/coro-release-control.lock true
             systemctl list-units --state=running --plain --no-legend 'coro-release-*.service' | grep -q . && exit 1 || true
             docker system df --format 'CAPACITY_DOCKER type={{.Type}} total={{.TotalCount}} active={{.Active}} size={{.Size}} reclaimable={{.Reclaimable}}'
+            cutoff_epoch="$(( $(date +%s) - 168 * 3600 ))"
+            mapfile -t referenced_ids < <(docker ps --all --no-trunc --format '{{.Image}}' | while IFS= read -r ref; do docker image inspect --format '{{.Id}}' "$ref"; done | sort -u)
+            total_images=0
+            referenced_images=0
+            unreferenced_recent=0
+            unreferenced_old=0
+            old_without_coro_digest=0
+            old_remote_unavailable=0
+            old_remote_recoverable=0
+            while IFS= read -r image_id; do
+              [[ -n "$image_id" ]] || continue
+              total_images=$((total_images + 1))
+              if printf '%s\n' "${referenced_ids[@]}" | grep -Fxq "$image_id"; then
+                referenced_images=$((referenced_images + 1))
+                continue
+              fi
+              created="$(docker image inspect --format '{{.Created}}' "$image_id")"
+              created_epoch="$(date -d "$created" +%s)"
+              if (( created_epoch >= cutoff_epoch )); then
+                unreferenced_recent=$((unreferenced_recent + 1))
+                continue
+              fi
+              unreferenced_old=$((unreferenced_old + 1))
+              mapfile -t digests < <(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$image_id" | grep -E '^ghcr\.io/nextsolution-crypto/coro-[a-z0-9_.-]+@sha256:[0-9a-f]{64}$' | sort -u)
+              if (( ${#digests[@]} == 0 )); then
+                old_without_coro_digest=$((old_without_coro_digest + 1))
+                continue
+              fi
+              recoverable=false
+              for digest in "${digests[@]}"; do docker manifest inspect "$digest" >/dev/null && recoverable=true && break; done
+              if [[ "$recoverable" == true ]]; then old_remote_recoverable=$((old_remote_recoverable + 1)); else old_remote_unavailable=$((old_remote_unavailable + 1)); fi
+            done < <(docker image ls --quiet --no-trunc | sort -u)
+            printf 'CAPACITY_IMAGE_ELIGIBILITY total=%s referenced=%s unreferenced_recent=%s unreferenced_old=%s old_without_coro_digest=%s old_remote_unavailable=%s old_remote_recoverable=%s\n' \
+              "$total_images" "$referenced_images" "$unreferenced_recent" "$unreferenced_old" "$old_without_coro_digest" "$old_remote_unavailable" "$old_remote_recoverable"
             read -r total_kib free_kib < <(df -Pk -- /opt/coro-ops/backups/database | awk 'NR==2 {print $2,$4}')
             printf 'CAPACITY_FILESYSTEM total_bytes=%s free_bytes=%s\n' "$((total_kib * 1024))" "$((free_kib * 1024))"
             printf 'CAPACITY_RECOVERY_MUTATED=false\n'
