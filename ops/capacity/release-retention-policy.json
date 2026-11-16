@@ -1,6 +1,5 @@
 {
-  "schemaVersion": 1,
-  "minimumImageAgeHours": 24,
+  "schemaVersion": 2,
   "minimumBuildCacheAgeHours": 24,
   "warningFreeBytes": 25769803776,
   "criticalFreeBytes": 21474836480,

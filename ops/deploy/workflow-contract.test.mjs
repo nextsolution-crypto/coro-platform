@@ -87,7 +87,8 @@ test('requires health, smoke, restart and log checks', () => {
   assert.doesNotMatch(release, /-d '\{\}' http:\/\/127\.0\.0\.1:3002\/api\/auth\/login/);
 });
 test('records rollback and release evidence without automatic database restore', () => {
-  for (const value of ['previousCommit', 'previousImages', 'previousCompose', 'previousMigrationHead', 'backupVersionId', 'healthChecks']) assert.match(release, new RegExp(value));
+  for (const value of ['previousCommit', 'previousImages', 'rollbackImagesByService', 'previousCompose', 'previousMigrationHead', 'backupVersionId', 'healthChecks']) assert.match(release, new RegExp(value));
+  assert.match(release, /candidate\[key\]===current\.images\[key\]\?prior\[key\]:current\.images\[key\]/);
   assert.doesNotMatch(release, /prisma migrate reset|dropdb|pg_restore.*coro_db/);
 });
 test('launches durable server-side work and reconciles an existing release without retry', () => {

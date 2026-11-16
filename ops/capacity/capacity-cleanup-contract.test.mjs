@@ -22,11 +22,10 @@ test("cleanup is exact and refuses broad pruning and volumes", () => {
   assert.doesNotMatch(source, /docker system prune|docker volume|rm -rf|backup.*rm/);
 });
 
-// Reject invalid recovery requests before any production filesystem access.
-test("policy age comes only from the reviewed policy file", () => {
-  assert.match(source, /p\.minimumImageAgeHours/);
-  assert.doesNotMatch(source, /CAPACITY_CLEANUP_MINIMUM_AGE_HOURS/);
-  assert.match(source, /v<12\|\|v>168/);
+test("image cleanup eligibility is reference based, never age based", () => {
+  assert.doesNotMatch(source, /minimumImageAgeHours|age_hours >=|UNREFERENCED_EXPIRED_IMAGE/);
+  assert.match(source, /UNREFERENCED_UNPROTECTED_IMAGE/);
+  assert.match(source, /SERVICE_ACTIVE_AND_PREVIOUS_ROLLBACK/);
 });
 test("execution approval is checked before production path access", () => {
   assert.ok(source.indexOf("APPROVAL_MISSING") < source.indexOf("PATH_UNSAFE"));
@@ -47,6 +46,13 @@ test("cleanup removes progressively only while below the warning threshold and o
   assert.match(source, /IMAGE_REMOTE_RECOVERY_CHANGED/);
   assert.match(source, /GHCR_RECOVERY_NOT_VERIFIED/);
   assert.match(source, /targetReached=/);
+});
+
+test("plan reports every deployed service and distinguishes logical from physical recovery", () => {
+  assert.match(source, /CAPACITY_RETENTION_SERVICE/);
+  assert.match(source, /docker system df -v/);
+  assert.match(source, /physicallyRecoverableBytes=/);
+  assert.match(source, /IMAGE_PHYSICAL_SIZE_UNAVAILABLE/);
 });
 
 test("temporary JSON evidence is parsed independently of file extension", () => {

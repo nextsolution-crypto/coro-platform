@@ -7,3 +7,19 @@ test("explicit candidate is protected until expiry and then released",()=>{const
 test("blocked rollback and permanent candidate protection fail closed",()=>{const active=release("active","2",set("1"));assert.throws(()=>buildRetentionPlan({releases:[active],blockedRollbackImages:[set("1")[0]]}),/ROLLBACK_IMAGE_BLOCKED/);assert.throws(()=>buildRetentionPlan({releases:[active],explicitCandidates:[{reason:"no expiry",images:set("3")}] }),/EXPLICIT_CANDIDATE_INVALID/);});
 test("incomplete rollback fails closed",()=>assert.throws(()=>buildRetentionPlan({releases:[release("bad","2",[])]}),/ROLLBACK_IMAGE_SET_INVALID/));
 test("historical trailing empty rollback line is ignored without weakening digest validation",()=>{const plan=buildRetentionPlan({releases:[release("active","2",[...set("1"),""])]});assert.deepEqual(plan.rollbackImages,set("1"));assert.throws(()=>buildRetentionPlan({releases:[release("active","2",[...set("1"),"not-a-digest"])]}),/ROLLBACK_IMAGE_SET_INVALID/);});
+test("unchanged services keep the last distinct rollback while changed services rotate",()=>{
+  const oldest=release("oldest","0",set("f"),{timestampUtc:"2026-10-10T00:00:00Z"});
+  const prior=release("old","1",set("0"),{timestampUtc:"2026-10-20T00:00:00Z"});
+  const active=release("active","2",set("1"));
+  active.images.backend=prior.images.backend;
+  const plan=buildRetentionPlan({releases:[oldest,prior,active]});
+  assert.equal(plan.servicePlan.backend.rollback,oldest.images.backend);
+  assert.equal(plan.servicePlan.frontend.rollback,prior.images.frontend);
+  assert.equal(plan.servicePlan["display-pdf-worker"].active,plan.servicePlan.backend.active);
+  assert.equal(plan.activeImages.length,4);
+});
+test("shared backend services are represented separately but protected once physically",()=>{
+  const plan=buildRetentionPlan({releases:[release("active","2",set("1"))]});
+  assert.equal(plan.servicePlan["display-pdf-rasterizer"].active,plan.servicePlan.backend.active);
+  assert.equal(plan.protectedImages.filter((ref)=>ref===plan.servicePlan.backend.active).length,1);
+});
