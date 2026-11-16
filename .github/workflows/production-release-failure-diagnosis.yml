@@ -35,7 +35,8 @@ jobs:
             set -Eeuo pipefail
             release_id="production-${RELEASE_COMMIT}"
             state="/opt/coro-ops/releases/state/${release_id}.state.json"
-            unit="coro-release-${RELEASE_COMMIT:0:16}.service"
+            unit_hash="$(printf '%s' "$release_id" | sha256sum | cut -c1-12)"
+            unit="coro-release-${RELEASE_COMMIT:0:12}-${unit_hash}.service"
             test -f "$state" && test ! -L "$state"
             RELEASE_STATE="$state" node -e '
               const fs=require("fs");
