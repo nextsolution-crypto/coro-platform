@@ -7,6 +7,11 @@ on:
         description: Exact failed application SHA
         required: true
         type: string
+      release_id:
+        description: Optional exact governed attempt id; defaults to the canonical release id
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -25,15 +30,19 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           RELEASE_COMMIT: ${{ inputs.release_commit }}
+          RELEASE_ID: ${{ inputs.release_id }}
         with:
           host: ${{ secrets.SERVER_IP }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
-          envs: RELEASE_COMMIT
+          envs: RELEASE_COMMIT,RELEASE_ID
           script: |
             set -Eeuo pipefail
-            release_id="production-${RELEASE_COMMIT}"
+            release_id="${RELEASE_ID:-production-${RELEASE_COMMIT}}"
+            if [[ "$release_id" != "production-${RELEASE_COMMIT}" ]]; then
+              [[ "$release_id" =~ ^production-${RELEASE_COMMIT}-[0-9]{8}T[0-9]{6}Z$ ]]
+            fi
             state="/opt/coro-ops/releases/state/${release_id}.state.json"
             unit_hash="$(printf '%s' "$release_id" | sha256sum | cut -c1-12)"
             unit="coro-release-${RELEASE_COMMIT:0:12}-${unit_hash}.service"
