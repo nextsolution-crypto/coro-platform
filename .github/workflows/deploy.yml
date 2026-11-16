@@ -304,7 +304,7 @@ jobs:
         if: ${{ vars.CORO_RELEASE_RETENTION_AUTOMATION_ENABLED == 'true' }}
         uses: appleboy/ssh-action@v1.0.3
         env:
-          SOURCE_SHA: ${{ inputs.release_commit }}
+          SOURCE_SHA: ${{ github.sha }}
           CAPACITY_CLEANUP_MODE: EXECUTE
           CAPACITY_CLEANUP_APPROVAL: EXECUTE_REVIEWED_RETENTION_POLICY
         with:
@@ -319,7 +319,7 @@ jobs:
             tmp="$(mktemp -d /tmp/coro-capacity-pre.XXXXXX)"
             trap 'rm -f -- "$tmp"/*; rmdir -- "$tmp"' EXIT
             git -C "$repo" fetch --quiet origin main
-            git -C "$repo" fetch --quiet origin "$SOURCE_SHA"
+            test "$(git -C "$repo" rev-parse origin/main)" = "$SOURCE_SHA"
             for file in coro-capacity-cleanup.sh release-retention-plan.mjs release-retention-policy.json; do
               git -C "$repo" show "$SOURCE_SHA:ops/capacity/$file" >"$tmp/$file"
             done
@@ -370,7 +370,7 @@ jobs:
         if: ${{ vars.CORO_RELEASE_RETENTION_AUTOMATION_ENABLED == 'true' }}
         uses: appleboy/ssh-action@v1.0.3
         env:
-          SOURCE_SHA: ${{ inputs.release_commit }}
+          SOURCE_SHA: ${{ github.sha }}
           CAPACITY_CLEANUP_MODE: EXECUTE
           CAPACITY_CLEANUP_APPROVAL: EXECUTE_REVIEWED_RETENTION_POLICY
         with:
@@ -385,7 +385,7 @@ jobs:
             tmp="$(mktemp -d /tmp/coro-capacity-post.XXXXXX)"
             trap 'rm -f -- "$tmp"/*; rmdir -- "$tmp"' EXIT
             git -C "$repo" fetch --quiet origin main
-            git -C "$repo" fetch --quiet origin "$SOURCE_SHA"
+            test "$(git -C "$repo" rev-parse origin/main)" = "$SOURCE_SHA"
             for file in coro-capacity-cleanup.sh release-retention-plan.mjs release-retention-policy.json; do
               git -C "$repo" show "$SOURCE_SHA:ops/capacity/$file" >"$tmp/$file"
             done
