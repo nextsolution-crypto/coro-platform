@@ -9,7 +9,7 @@ const workflow = fs.readFileSync(
 
 test("capacity recovery is gated and limited to old unreferenced Docker data", () => {
   assert.match(workflow, /environment: production-inspection/);
-  assert.match(workflow, /environment: production\n/);
+  assert.match(workflow, /environment: production\r?\n/);
   assert.match(workflow, /docker builder prune --all --force --filter until=168h/);
   assert.doesNotMatch(workflow, /docker image prune/);
   assert.match(workflow, /created_epoch < cutoff_epoch/);
@@ -26,4 +26,11 @@ test("capacity recovery refuses concurrent release activity", () => {
   assert.match(workflow, /coro-production-deployment\.lock/);
   assert.match(workflow, /coro-release-control\.lock/);
   assert.match(workflow, /coro-release-\*\.service/);
+});
+
+test("dry-run explains image eligibility without exposing repositories", () => {
+  assert.match(workflow, /CAPACITY_IMAGE_ELIGIBILITY/);
+  assert.match(workflow, /old_without_coro_digest/);
+  assert.match(workflow, /old_remote_unavailable/);
+  assert.match(workflow, /old_remote_recoverable/);
 });
