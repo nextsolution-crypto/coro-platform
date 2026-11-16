@@ -94,6 +94,10 @@ model Organization {
   displayPdfRenderJobs             DisplayPdfRenderJob[]
   displayCorrectionObservations    DisplayCorrectionObservation[]
   displayCorrectionEvents          DisplayCorrectionObservationEvent[]
+  incidentReports                  IncidentReport[]
+  incidentReportTemplateVersions   IncidentReportTemplateVersion[]
+  incidentReportRetentionPolicies  IncidentReportRetentionPolicy[]
+  incidentReportAuditEvents        IncidentReportAuditEvent[]
 }
 
 enum SpatialResourceStatus {
@@ -767,6 +771,13 @@ enum PlatformPermission {
   EXERCISE_REPORT_REVIEW
   EXERCISE_REPORT_APPROVE
   EXERCISE_REPORT_PUBLISH
+  INCIDENT_REPORT_READ
+  INCIDENT_REPORT_CREATE
+  INCIDENT_REPORT_EDIT
+  INCIDENT_REPORT_REVIEW
+  INCIDENT_REPORT_APPROVE
+  INCIDENT_REPORT_EXPORT
+  INCIDENT_REPORT_ADMIN
 }
 
 enum PlatformPermissionScope {
@@ -3040,6 +3051,7 @@ model Building {
   populationEvidenceRecords   PopulationEvidenceRecord[]
   populationEvidenceManifests PopulationEvidenceManifest[]
   populationEvidenceReports   PopulationEvidenceReport[]
+  incidentReports             IncidentReport[]
 
   @@unique([id, clientId, organizationId])
   @@unique([id, organizationId])
@@ -7599,6 +7611,291 @@ model IncidentEvent {
   notificationDeliveries      IncidentNotificationDelivery[]
   authorityAssignments        IncidentAuthorityAssignment[]
   auditEvents                 IncidentAuditEvent[]
+  reports                     IncidentReport[]
+
+  @@unique([id, organizationId])
+}
+
+enum IncidentReportStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  PUBLISHED
+  SUPERSEDED
+  ARCHIVED
+}
+
+enum IncidentReportVersionStatus {
+  DRAFT
+  SUBMITTED
+  REJECTED
+  APPROVED
+  PUBLISHED
+  SUPERSEDED
+}
+
+enum IncidentReportTemplateStatus {
+  DRAFT
+  PUBLISHED
+  RETIRED
+}
+
+enum IncidentReportApprovalDecision {
+  REVIEWED
+  APPROVED
+  REJECTED
+  CORRECTION_REQUESTED
+}
+
+enum IncidentReportAttachmentScanStatus {
+  PENDING
+  CLEAN
+  INFECTED
+  FAILED
+}
+
+enum IncidentReportExportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum IncidentReportExternalMappingStatus {
+  MAPPED
+  PARTIAL
+  UNMAPPED
+  CONFLICT
+  REJECTED
+}
+
+model IncidentReportTemplateVersion {
+  id                 String                       @id @default(uuid())
+  organizationId     String
+  templateKey        String
+  version            Int
+  name               String
+  reportType         String
+  status             IncidentReportTemplateStatus @default(DRAFT)
+  schemaVersion      String
+  formSchema         Json
+  fieldCatalog       Json
+  mappingMetadata    Json?
+  contentHash        String
+  publishedAt        DateTime?
+  retiredAt          DateTime?
+  createdByActorType CoroActorType
+  createdByActorId   String
+  createdAt          DateTime                     @default(now())
+  organization       Organization                 @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  reports            IncidentReport[]
+  versions           IncidentReportVersion[]
+
+  @@unique([organizationId, templateKey, version])
+  @@unique([id, organizationId])
+  @@index([organizationId, reportType, status])
+}
+
+model IncidentReportRetentionPolicy {
+  id                   String           @id @default(uuid())
+  organizationId       String
+  reportType           String
+  retainForDays        Int
+  legalHoldAllowed     Boolean          @default(true)
+  attachmentRetainDays Int?
+  isActive             Boolean          @default(true)
+  lockVersion          Int              @default(0)
+  createdByActorType   CoroActorType
+  createdByActorId     String
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  organization         Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  reports              IncidentReport[]
+
+  @@unique([organizationId, reportType])
+  @@unique([id, organizationId])
+  @@index([organizationId, isActive])
+}
+
+model IncidentReport {
+  id                   String                        @id @default(uuid())
+  organizationId       String
+  buildingId           String
+  incidentEventId      String?
+  templateVersionId    String
+  retentionPolicyId    String
+  reportNumber         String
+  reportType           String
+  title                String
+  status               IncidentReportStatus          @default(DRAFT)
+  currentVersionNumber Int                           @default(1)
+  lockVersion          Int                           @default(0)
+  legalHold            Boolean                       @default(false)
+  retentionExpiresAt   DateTime?
+  createdByActorType   CoroActorType
+  createdByActorId     String
+  submittedByActorType CoroActorType?
+  submittedByActorId   String?
+  submittedAt          DateTime?
+  publishedAt          DateTime?
+  archivedAt           DateTime?
+  createdAt            DateTime                      @default(now())
+  updatedAt            DateTime                      @updatedAt
+  organization         Organization                  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building             Building                      @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  incidentEvent        IncidentEvent?                @relation(fields: [incidentEventId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  templateVersion      IncidentReportTemplateVersion @relation(fields: [templateVersionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  retentionPolicy      IncidentReportRetentionPolicy @relation(fields: [retentionPolicyId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  versions             IncidentReportVersion[]
+  attachments          IncidentReportAttachment[]
+  approvals            IncidentReportApproval[]
+  exports              IncidentReportExport[]
+  externalReferences   ExternalSourceReference[]
+  auditEvents          IncidentReportAuditEvent[]
+
+  @@unique([organizationId, reportNumber])
+  @@unique([id, organizationId])
+  @@index([organizationId, buildingId, status, createdAt, id])
+  @@index([organizationId, incidentEventId])
+}
+
+model IncidentReportVersion {
+  id                 String                        @id @default(uuid())
+  organizationId     String
+  reportId           String
+  templateVersionId  String
+  versionNumber      Int
+  status             IncidentReportVersionStatus   @default(DRAFT)
+  content            Json
+  legacyPayload      Json?
+  provenanceManifest Json
+  contentHash        String
+  immutableAt        DateTime?
+  createdByActorType CoroActorType
+  createdByActorId   String
+  createdAt          DateTime                      @default(now())
+  report             IncidentReport                @relation(fields: [reportId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  templateVersion    IncidentReportTemplateVersion @relation(fields: [templateVersionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  attachments        IncidentReportAttachment[]
+  approvals          IncidentReportApproval[]
+  exports            IncidentReportExport[]
+  externalReferences ExternalSourceReference[]
+
+  @@unique([reportId, versionNumber])
+  @@unique([id, organizationId])
+  @@index([organizationId, reportId, status])
+}
+
+model IncidentReportAttachment {
+  id                 String                             @id @default(uuid())
+  organizationId     String
+  reportId           String
+  reportVersionId    String
+  originalFileName   String
+  mediaType          String
+  sizeBytes          BigInt
+  sha256             String
+  storageKey         String
+  scanStatus         IncidentReportAttachmentScanStatus @default(PENDING)
+  scannedAt          DateTime?
+  provenance         Json?
+  createdByActorType CoroActorType
+  createdByActorId   String
+  createdAt          DateTime                           @default(now())
+  report             IncidentReport                     @relation(fields: [reportId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  reportVersion      IncidentReportVersion              @relation(fields: [reportVersionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([organizationId, storageKey])
+  @@unique([id, organizationId])
+  @@index([organizationId, reportId, reportVersionId])
+  @@index([organizationId, scanStatus])
+}
+
+model IncidentReportApproval {
+  id                String                         @id @default(uuid())
+  organizationId    String
+  reportId          String
+  reportVersionId   String
+  decision          IncidentReportApprovalDecision
+  comment           String?
+  actorType         CoroActorType
+  actorId           String
+  actorRoleSnapshot String
+  decidedAt         DateTime                       @default(now())
+  idempotencyKey    String
+  report            IncidentReport                 @relation(fields: [reportId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  reportVersion     IncidentReportVersion          @relation(fields: [reportVersionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([organizationId, idempotencyKey])
+  @@unique([id, organizationId])
+  @@index([organizationId, reportId, reportVersionId, decidedAt])
+}
+
+model IncidentReportExport {
+  id                 String                     @id @default(uuid())
+  organizationId     String
+  reportId           String
+  reportVersionId    String
+  format             String
+  status             IncidentReportExportStatus @default(PENDING)
+  storageKey         String?
+  sha256             String?
+  rendererVersion    String
+  sourceManifest     Json
+  failureCode        String?
+  createdByActorType CoroActorType
+  createdByActorId   String
+  createdAt          DateTime                   @default(now())
+  completedAt        DateTime?
+  report             IncidentReport             @relation(fields: [reportId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  reportVersion      IncidentReportVersion      @relation(fields: [reportVersionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([organizationId, storageKey])
+  @@unique([id, organizationId])
+  @@index([organizationId, reportId, status])
+}
+
+model ExternalSourceReference {
+  id                   String                              @id @default(uuid())
+  organizationId       String
+  reportId             String
+  reportVersionId      String?
+  sourceSystem         String
+  sourceSchemaVersion  String?
+  sourceObjectType     String
+  sourceObjectId       String
+  sourceLabel          String?
+  originalValue        Json?
+  rawPayloadStorageKey String?
+  rawPayloadSha256     String?
+  mappingVersion       String?
+  mappingStatus        IncidentReportExternalMappingStatus @default(UNMAPPED)
+  mappingEvidence      Json?
+  importedAt           DateTime                            @default(now())
+  report               IncidentReport                      @relation(fields: [reportId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  reportVersion        IncidentReportVersion?              @relation(fields: [reportVersionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([organizationId, sourceSystem, sourceObjectType, sourceObjectId])
+  @@unique([id, organizationId])
+  @@index([organizationId, reportId, mappingStatus])
+}
+
+model IncidentReportAuditEvent {
+  id             String         @id @default(uuid())
+  organizationId String
+  reportId       String
+  action         String
+  actorType      CoroActorType
+  actorId        String
+  reason         String?
+  metadata       Json?
+  occurredAt     DateTime       @default(now())
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  report         IncidentReport @relation(fields: [reportId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([id, organizationId])
+  @@index([organizationId, reportId, occurredAt])
 }
 
 model PopulationOperationalEvent {
