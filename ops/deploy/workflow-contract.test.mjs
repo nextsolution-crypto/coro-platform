@@ -111,6 +111,12 @@ test('independent reconciliation can target an exact timestamped governed retry'
   assert.match(reconciliation, /RELEASE_ID: \$\{\{ inputs\.release_id \}\}/);
   assert.match(reconciliation, /production-\$\{RELEASE_COMMIT\}/);
 });
+test('failed release diagnosis resolves the same deterministic systemd unit as the controller', () => {
+  const diagnosis = fs.readFileSync(new URL('../../.github/workflows/production-release-failure-diagnosis.yml', import.meta.url), 'utf8');
+  assert.match(diagnosis, /unit_hash="\$\(printf '%s' "\$release_id" \| sha256sum \| cut -c1-12\)"/);
+  assert.match(diagnosis, /unit="coro-release-\$\{RELEASE_COMMIT:0:12\}-\$\{unit_hash\}\.service"/);
+  assert.doesNotMatch(diagnosis, /coro-release-\$\{RELEASE_COMMIT:0:16\}\.service/);
+});
 test('governed release injects and verifies the Client invitation outbox key without printing it', () => {
   assert.match(workflow, /CLIENT_INVITATION_OUTBOX_KEY_BASE64: \$\{\{ secrets\.CLIENT_INVITATION_OUTBOX_KEY_BASE64 \}\}/);
   assert.match(workflow, /DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST: \$\{\{ secrets\.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST \}\}/);
