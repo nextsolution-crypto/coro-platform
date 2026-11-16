@@ -244,7 +244,7 @@ verify_public_player() {
     grep -Eqi '^set-cookie:.*Secure' "$headers" || { rm -f -- "$headers" "$body" "$asset_headers" "$asset_body" "$api_headers"; fail PLAYER_COOKIE_NOT_SECURE; }
     grep -Eqi '^set-cookie:.*SameSite' "$headers" || { rm -f -- "$headers" "$body" "$asset_headers" "$asset_body" "$api_headers"; fail PLAYER_COOKIE_SAMESITE_MISSING; }
   fi
-  asset_path="$(grep -m 1 -oE '/_next/static/[^" ]+\.(js|css)' "$body")"
+  asset_path="$(awk 'match($0, /\/_next\/static\/[^" ]+\.(js|css)/) { print substr($0, RSTART, RLENGTH); exit }' "$body")"
   [[ -n "$asset_path" ]] || { rm -f -- "$headers" "$body" "$asset_headers" "$asset_body" "$api_headers"; fail PLAYER_STATIC_ASSET_NOT_FOUND; }
   curl --fail --silent --show-error --max-time 15 -D "$asset_headers" -o "$asset_body" "https://$DOMAIN$asset_path" || { rm -f -- "$headers" "$body" "$asset_headers" "$asset_body" "$api_headers"; fail PLAYER_STATIC_ASSET_FAILED; }
   ! grep -Eqi '^content-type:[[:space:]]*text/html' "$asset_headers" || { rm -f -- "$headers" "$body" "$asset_headers" "$asset_body" "$api_headers"; fail PLAYER_STATIC_ASSET_HTML_SUBSTITUTION; }
