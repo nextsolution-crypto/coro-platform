@@ -73,17 +73,29 @@ done < <(node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.ar
 free_bytes() { echo $(( $(df -Pk -- "$release_dir" | awk 'NR==2 {print $4}') * 1024 )); }
 before="$(free_bytes)"; previous="$before"; candidates=0; removed=0
 docker system df
-docker system df -v --format '{{json .}}' >"$docker_df" || { echo 'CAPACITY_CLEANUP_FAILED code=DOCKER_PHYSICAL_ACCOUNTING_UNAVAILABLE'; exit 1; }
+docker system df -v >"$docker_df" || { echo 'CAPACITY_CLEANUP_FAILED code=DOCKER_PHYSICAL_ACCOUNTING_UNAVAILABLE'; exit 1; }
 
 unique_bytes_for_image() {
   node - "$docker_df" "$1" <<'NODE'
 const fs=require('fs');
 const [file,id]=process.argv.slice(2);
 const parse=(value)=>{const m=String(value||'').match(/^([0-9]+(?:\.[0-9]+)?)\s*([kKmMgGtT]?B)$/);if(!m)return null;const units={B:1,kB:1e3,KB:1e3,MB:1e6,GB:1e9,TB:1e12};return Math.round(Number(m[1])*units[m[2]]);};
-const rows=fs.readFileSync(file,'utf8').trim().split(/\n/).filter(Boolean).map((line)=>JSON.parse(line));
-const matches=rows.filter((row)=>row.Type==='Images'&&(id===row.ImageID||id.endsWith(row.ImageID)||id.replace(/^sha256:/,'').startsWith(String(row.ImageID||''))));
-const values=[...new Set(matches.map((row)=>parse(row.UniqueSize)).filter((v)=>Number.isSafeInteger(v)&&v>=0))];
-if(values.length!==1)process.exit(2);process.stdout.write(String(values[0]));
+const full=id.replace(/^sha256:/,'');
+const lines=fs.readFileSync(file,'utf8').split(/\r?\n/);
+// `docker system df -v` has a stable image table whose rightmost columns are
+// SIZE, SHARED SIZE, UNIQUE SIZE and CONTAINERS. CREATED is variable-width, so
+// parse from the right and identify the immutable image ID independently.
+const values=[];
+for(const line of lines){
+  const parts=line.trim().split(/\s+/);
+  if(parts.length<7)continue;
+  const imageId=String(parts[2]||'').replace(/^sha256:/,'');
+  if(!imageId||!full.startsWith(imageId))continue;
+  const value=parse(parts.at(-2));
+  if(Number.isSafeInteger(value)&&value>=0)values.push(value);
+}
+const unique=[...new Set(values)];
+if(unique.length!==1)process.exit(2);process.stdout.write(String(unique[0]));
 NODE
 }
 
