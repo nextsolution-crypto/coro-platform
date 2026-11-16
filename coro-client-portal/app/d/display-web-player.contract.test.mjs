@@ -64,3 +64,11 @@ test("activation and player controls stay inside narrow viewports", () => {
   assert.match(styles, /\.activation input\{width:100%;min-width:0/);
   assert.match(styles, /@media \(max-width:480px\)/);
 });
+
+test("public status failures leave the bootstrap screen and offer an explicit retry", () => {
+  assert.match(source, /const \[statusLoading, setStatusLoading\] = useState\(true\)/);
+  assert.match(source, /finally \{[\s\S]*setStatusLoading\(false\)/);
+  assert.match(source, /Connexion impossible/);
+  assert.match(source, /onClick=\{\(\) => void loadStatus\(publicDisplayId\)\}/);
+  assert.match(source, /Réessayer/);
+});

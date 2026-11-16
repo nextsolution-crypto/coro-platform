@@ -102,6 +102,7 @@ export function runtimeConfig(
     'http://localhost:3003',
     'https://app.getcoro.io',
     'https://client.getcoro.io',
+    'https://display.getcoro.io',
     'https://getcoro.io',
     'https://www.getcoro.io',
   ];
