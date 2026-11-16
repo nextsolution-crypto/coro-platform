@@ -128,6 +128,14 @@ export class DisplayManagerService {
                   sha256: true,
                 },
               },
+              events: {
+                orderBy: [
+                  { createdAt: 'desc' as const },
+                  { id: 'asc' as const },
+                ],
+                take: 1,
+                select: { action: true },
+              },
             },
           })
         : Promise.resolve([]),

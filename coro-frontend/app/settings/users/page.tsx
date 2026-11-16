@@ -39,6 +39,39 @@ const displayPermissionOptions = [
   ["DISPLAY_AUDIT_READ", "Consulter le journal Display"],
 ] as const;
 
+const displayProfessionalProfiles = [
+  {
+    id: "CREATOR",
+    label: "Créateur / Mise à jour",
+    description:
+      "Créer, mettre à jour, vérifier l’aperçu et soumettre un plan.",
+    permissions: [
+      "DISPLAY_READ",
+      "DISPLAY_PLAN_READ",
+      "DISPLAY_CONTENT_MANAGE",
+      "DISPLAY_PLAN_CREATE",
+    ],
+  },
+  {
+    id: "APPROVER",
+    label: "Réviseur / Approbateur",
+    description:
+      "Examiner, demander une correction, approuver et publier un plan.",
+    permissions: [
+      "DISPLAY_READ",
+      "DISPLAY_PLAN_READ",
+      "DISPLAY_PLAN_REVIEW",
+      "DISPLAY_PLAN_APPROVE",
+      "DISPLAY_PLAN_PUBLISH",
+      "DISPLAY_AUDIT_READ",
+    ],
+  },
+] as const;
+
+const displayWorkflowPermissions = new Set<string>(
+  displayProfessionalProfiles.flatMap((profile) => [...profile.permissions]),
+);
+
 const roleLabels: Record<string, string> = {
   SUPER_ADMIN: "Super-admin",
   ADMIN: "Administrateur",
@@ -153,6 +186,15 @@ export default function TeamUsersPage() {
     setDisplayBuildingIds(member.displayBuildingIds || []);
     setDisplayReason("");
     setError("");
+  };
+
+  const applyDisplayProfessionalProfile = (permissions: readonly string[]) => {
+    setDisplayPermissions((current) => [
+      ...current.filter(
+        (permission) => !displayWorkflowPermissions.has(permission),
+      ),
+      ...permissions,
+    ]);
   };
 
   const saveDisplayAuthority = async () => {
@@ -735,8 +777,8 @@ export default function TeamUsersPage() {
               Autorites Display - {displayUser.firstName} {displayUser.lastName}
             </h3>
             <p className="mt-2 text-sm text-slate-600">
-              L'acces exige au minimum <strong>Ouvrir CORO Display</strong> et
-              une affectation explicite a un batiment. Les droits d'urgence ne
+              L’accès exige au minimum <strong>Ouvrir CORO Display</strong> et
+              une affectation explicite à un bâtiment. Les droits d’urgence ne
               sont pas delegables ici.
             </p>
             {displayUser.id === user?.id && (
@@ -758,7 +800,46 @@ export default function TeamUsersPage() {
             )}
             <fieldset className="mt-5">
               <legend className="font-semibold text-slate-800">
-                Permissions effectives
+                Profil professionnel Display
+              </legend>
+              <p className="mt-1 text-sm text-slate-600">
+                Deux niveaux seulement. Une affectation au bâtiment demeure
+                obligatoire et le créateur ne peut jamais approuver sa propre
+                soumission.
+              </p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                {displayProfessionalProfiles.map((profile) => {
+                  const selected = profile.permissions.every((permission) =>
+                    displayPermissions.includes(permission),
+                  );
+                  return (
+                    <button
+                      key={profile.id}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() =>
+                        applyDisplayProfessionalProfile(profile.permissions)
+                      }
+                      className={`min-h-24 rounded border p-4 text-left ${
+                        selected
+                          ? "border-blue-700 bg-blue-50"
+                          : "border-slate-200 bg-white"
+                      }`}
+                    >
+                      <strong className="block text-slate-900">
+                        {profile.label}
+                      </strong>
+                      <span className="mt-1 block text-sm text-slate-600">
+                        {profile.description}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+            <fieldset className="mt-5">
+              <legend className="font-semibold text-slate-800">
+                Permissions effectives (avancé)
               </legend>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 {displayPermissionOptions.map(([value, label]) => (

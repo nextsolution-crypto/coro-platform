@@ -119,6 +119,9 @@ describePostgres('DISPLAY-03 publication governance on PostgreSQL', () => {
     const reviewer = await mkUser('reviewer', [
       DisplayPermission.DISPLAY_PLAN_REVIEW,
       DisplayPermission.DISPLAY_PLAN_APPROVE,
+      DisplayPermission.DISPLAY_PLAN_PUBLISH,
+      DisplayPermission.DISPLAY_PLAN_READ,
+      DisplayPermission.DISPLAY_AUDIT_READ,
     ]);
     const approver = await mkUser('approver', [
       DisplayPermission.DISPLAY_PLAN_APPROVE,
@@ -311,7 +314,7 @@ describePostgres('DISPLAY-03 publication governance on PostgreSQL', () => {
       locationId: reviewed.locationId,
     };
     await expect(
-      service.approve(
+      service.approveAndPublish(
         org.id,
         building.id,
         draft.id,
@@ -326,7 +329,7 @@ describePostgres('DISPLAY-03 publication governance on PostgreSQL', () => {
       },
     });
     await expect(
-      service.approve(
+      service.approveAndPublish(
         org.id,
         building.id,
         draft.id,
@@ -340,31 +343,45 @@ describePostgres('DISPLAY-03 publication governance on PostgreSQL', () => {
         displayPermissions: [
           DisplayPermission.DISPLAY_PLAN_REVIEW,
           DisplayPermission.DISPLAY_PLAN_APPROVE,
+          DisplayPermission.DISPLAY_PLAN_PUBLISH,
+          DisplayPermission.DISPLAY_PLAN_READ,
+          DisplayPermission.DISPLAY_AUDIT_READ,
         ],
       },
     });
-    const approved = await service.approve(
+    const published = await service.approveAndPublish(
       org.id,
       building.id,
       draft.id,
       approvalInput,
       actor(reviewer),
     );
+    expect(published.status).toBe('PUBLISHED');
+    const repeated = await service.approveAndPublish(
+      org.id,
+      building.id,
+      draft.id,
+      approvalInput,
+      actor(reviewer),
+    );
+    expect(repeated.id).toBe(published.id);
     const governanceEvents = await prisma.displayPlanPublicationEvent.findMany({
       where: {
         publicationId: draft.id,
-        action: { in: ['REVIEWED', 'APPROVED'] },
+        action: { in: ['REVIEWED', 'APPROVED', 'PUBLISHED'] },
       },
       orderBy: { createdAt: 'asc' },
     });
-    expect(governanceEvents).toHaveLength(2);
+    expect(governanceEvents).toHaveLength(3);
     expect(governanceEvents.map((event) => event.actorUserId)).toEqual([
+      reviewer.id,
       reviewer.id,
       reviewer.id,
     ]);
     expect(governanceEvents.map((event) => event.action)).toEqual([
       'REVIEWED',
       'APPROVED',
+      'PUBLISHED',
     ]);
     const approvalEvent = governanceEvents[1];
     expect(approvalEvent?.metadata).toMatchObject({
@@ -376,18 +393,6 @@ describePostgres('DISPLAY-03 publication governance on PostgreSQL', () => {
         locationId: reviewed.locationId,
       },
     });
-    const published = await service.publish(
-      org.id,
-      building.id,
-      draft.id,
-      {
-        expectedLockVersion: approved.lockVersion,
-        reason: 'Publication contrôlée QA',
-        requestId: `publish-${suffix}`,
-      },
-      actor(publisher),
-    );
-    expect(published.status).toBe('PUBLISHED');
     const contract = await service.playerContract(
       org.id,
       building.id,

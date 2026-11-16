@@ -55,6 +55,7 @@ type Plan = {
   building: { name: string };
   floor: { name: string };
   projectFile: { name: string };
+  events: { action: string }[];
 };
 type Source = {
   id: string;
@@ -99,13 +100,17 @@ type Workspace = {
 };
 const LABELS: Record<string, string> = {
   DRAFT: "Brouillon",
-  REVIEW: "En revue",
-  APPROVED: "Approuvé",
+  REVIEW: "En attente d’approbation",
+  APPROVED: "En attente d’approbation",
   PUBLISHED: "Publié",
-  SUSPENDED: "Suspendu",
-  SUPERSEDED: "Remplacé",
-  REVOKED: "Révoqué",
+  SUSPENDED: "Archivé / Révoqué",
+  SUPERSEDED: "Archivé / Révoqué",
+  REVOKED: "Archivé / Révoqué",
 };
+const visibleStatus = (plan: Plan) =>
+  plan.status === "DRAFT" && plan.events[0]?.action === "REJECTED"
+    ? "Corrections demandées"
+    : LABELS[plan.status] || plan.status;
 const errorMessage = (e: unknown, fallback: string) => {
   const candidate = e as { response?: { data?: { message?: string } } };
   return candidate.response?.data?.message || fallback;
@@ -171,11 +176,15 @@ export default function DisplayManagerPage() {
     const buildingId = new URLSearchParams(window.location.search).get(
       "buildingId",
     );
+    // Initialize the building context once from the authenticated route.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (buildingId) setRequestedBuildingId(buildingId);
   }, []);
   useEffect(() => {
     if (!data || !requestedBuildingId) return;
     if (data.buildings.some((item) => item.id === requestedBuildingId)) {
+      // Reconcile the route context after the authorized building list loads.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setBuilding(requestedBuildingId);
       return;
     }
@@ -298,7 +307,14 @@ export default function DisplayManagerPage() {
       setSpatialZoneId("");
       await load();
     } catch (e: unknown) {
-      setError(errorMessage(e, e instanceof Error ? e.message : "Impossible de creer l'emplacement Display."));
+      setError(
+        errorMessage(
+          e,
+          e instanceof Error
+            ? e.message
+            : "Impossible de creer l'emplacement Display.",
+        ),
+      );
     } finally {
       setBusy(false);
     }
@@ -390,7 +406,9 @@ export default function DisplayManagerPage() {
       const workspace = await load();
       const updated = workspace?.plans.find((plan) => plan.id === selected.id);
       if (!updated?.variantSha256)
-        throw new Error("Le rendu est terminé, mais la variante demeure introuvable.");
+        throw new Error(
+          "Le rendu est terminé, mais la variante demeure introuvable.",
+        );
       await showPreview(updated);
     } catch (e: unknown) {
       setError(
@@ -401,23 +419,24 @@ export default function DisplayManagerPage() {
       setBusy(false);
     }
   };
-  const approvePlan = async () => {
+  const approveAndPublishPlan = async () => {
     if (!selected || !orgId || !selected.variantSha256 || !reason.trim()) {
       setError(
-        "La variante, le profil et une observation sont requis pour approuver.",
+        "La variante, le profil et une observation sont requis pour approuver et publier.",
       );
       return;
     }
     if (
       !window.confirm(
-        "Confirmer l’approbation de cette preuve visuelle exacte?",
+        "Confirmer l’approbation et la publication de cette version exacte?",
       )
     )
       return;
     setBusy(true);
+    setError("");
     try {
       await api.post(
-        `/organizations/${orgId}/buildings/${selected.buildingId}/display-plan-publications/${selected.id}/approve`,
+        `/organizations/${orgId}/buildings/${selected.buildingId}/display-plan-publications/${selected.id}/approve-and-publish`,
         {
           requestId: crypto.randomUUID(),
           expectedLockVersion: selected.lockVersion,
@@ -435,37 +454,17 @@ export default function DisplayManagerPage() {
       setReason("");
       await load();
     } catch (e: unknown) {
-      setError(errorMessage(e, "Approbation refusée; aucune donnée modifiée."));
-    } finally {
-      setBusy(false);
-    }
-  };
-  const publishPlan = async () => {
-    if (!selected || !orgId || !reason.trim()) {
-      setError("Un motif est requis pour publier.");
-      return;
-    }
-    if (
-      !window.confirm(
-        "Confirmer la publication interne de cette version approuvée?",
-      )
-    )
-      return;
-    setBusy(true);
-    try {
-      await api.post(
-        `/organizations/${orgId}/buildings/${selected.buildingId}/display-plan-publications/${selected.id}/publish`,
-        {
-          requestId: crypto.randomUUID(),
-          expectedLockVersion: selected.lockVersion,
-          reason: reason.trim(),
-        },
+      const workspace = await load();
+      const updated = workspace?.plans.find((plan) => plan.id === selected.id);
+      setSelected(updated ?? null);
+      setError(
+        updated?.status === "APPROVED"
+          ? "Approbation conservée. La publication peut être reprise sans nouvelle approbation."
+          : errorMessage(
+              e,
+              "Approbation ou publication refusée; aucune publication en double n’a été créée.",
+            ),
       );
-      setSelected(null);
-      setReason("");
-      await load();
-    } catch (e: unknown) {
-      setError(errorMessage(e, "Publication refusée; aucune donnée modifiée."));
     } finally {
       setBusy(false);
     }
@@ -610,7 +609,8 @@ export default function DisplayManagerPage() {
         {requestedBuildingId && building !== "ALL" && (
           <div className={styles.contextBanner} role="status">
             <span>
-              Contexte bâtiment : {data.buildings.find((item) => item.id === building)?.name}
+              Contexte bâtiment :{" "}
+              {data.buildings.find((item) => item.id === building)?.name}
             </span>
             <button
               type="button"
@@ -728,7 +728,7 @@ export default function DisplayManagerPage() {
                 {plans.map((p) => (
                   <article className={styles.card} key={p.id}>
                     <div className={styles.cardTop}>
-                      <span>{LABELS[p.status] || p.status}</span>
+                      <span>{visibleStatus(p)}</span>
                       <small>
                         v{p.versionNumber} · source v{p.sourceVersion}
                       </small>
@@ -780,11 +780,16 @@ export default function DisplayManagerPage() {
           </section>
         </div>
         {data.capabilities.DISPLAY_DEVICE_MANAGE && (
-          <section className={styles.bottom} aria-labelledby="display-location-title">
+          <section
+            className={styles.bottom}
+            aria-labelledby="display-location-title"
+          >
             <article>
               <h2 id="display-location-title">Ajouter un ecran</h2>
               <p>
-                {"Definissez son emplacement dans le batiment. Ces donnees seront reutilisees pour les publications et l'activation du Player."}
+                {
+                  "Definissez son emplacement dans le batiment. Ces donnees seront reutilisees pour les publications et l'activation du Player."
+                }
               </p>
               <div className={styles.createForm}>
                 <label>
@@ -799,7 +804,9 @@ export default function DisplayManagerPage() {
                   >
                     <option value="">Choisir...</option>
                     {data.buildings.map((item) => (
-                      <option key={item.id} value={item.id}>{item.name}</option>
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -815,7 +822,9 @@ export default function DisplayManagerPage() {
                   >
                     <option value="__NEW__">Creer un nouvel etage</option>
                     {locationBuilding?.spatialFloors.map((item) => (
-                      <option key={item.id} value={item.id}>{item.name}</option>
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -823,11 +832,19 @@ export default function DisplayManagerPage() {
                   <div>
                     <label>
                       Code etage
-                      <input value={floorCode} onChange={(event) => setFloorCode(event.target.value)} placeholder="E03" />
+                      <input
+                        value={floorCode}
+                        onChange={(event) => setFloorCode(event.target.value)}
+                        placeholder="E03"
+                      />
                     </label>
                     <label>
                       {"Nom de l'etage"}
-                      <input value={floorName} onChange={(event) => setFloorName(event.target.value)} placeholder="Etage 3" />
+                      <input
+                        value={floorName}
+                        onChange={(event) => setFloorName(event.target.value)}
+                        placeholder="Etage 3"
+                      />
                     </label>
                   </div>
                 )}
@@ -841,7 +858,9 @@ export default function DisplayManagerPage() {
                     <option value="">Aucune zone</option>
                     <option value="__NEW__">Creer une nouvelle zone</option>
                     {locationFloor?.zones.map((item) => (
-                      <option key={item.id} value={item.id}>{item.name}</option>
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -849,22 +868,38 @@ export default function DisplayManagerPage() {
                   <div>
                     <label>
                       Code zone
-                      <input value={zoneCode} onChange={(event) => setZoneCode(event.target.value)} placeholder="E03-DEMO" />
+                      <input
+                        value={zoneCode}
+                        onChange={(event) => setZoneCode(event.target.value)}
+                        placeholder="E03-DEMO"
+                      />
                     </label>
                     <label>
                       Nom de la zone
-                      <input value={zoneName} onChange={(event) => setZoneName(event.target.value)} placeholder="Zone pilote" />
+                      <input
+                        value={zoneName}
+                        onChange={(event) => setZoneName(event.target.value)}
+                        placeholder="Zone pilote"
+                      />
                     </label>
                   </div>
                 )}
                 <div>
                   <label>
                     Code emplacement
-                    <input value={locationCode} onChange={(event) => setLocationCode(event.target.value)} placeholder="E03-DISPLAY-PILOT" />
+                    <input
+                      value={locationCode}
+                      onChange={(event) => setLocationCode(event.target.value)}
+                      placeholder="E03-DISPLAY-PILOT"
+                    />
                   </label>
                   <label>
                     Nom visible
-                    <input value={locationLabel} onChange={(event) => setLocationLabel(event.target.value)} placeholder="Ecran pilote Tour Premont" />
+                    <input
+                      value={locationLabel}
+                      onChange={(event) => setLocationLabel(event.target.value)}
+                      placeholder="Ecran pilote Tour Premont"
+                    />
                   </label>
                 </div>
                 <div>
@@ -908,7 +943,10 @@ export default function DisplayManagerPage() {
                     }
                   />
                 </label>
-                <button disabled={busy || !locationBuildingId} onClick={() => void createDisplayLocation()}>
+                <button
+                  disabled={busy || !locationBuildingId}
+                  onClick={() => void createDisplayLocation()}
+                >
                   {"Creer l'emplacement"}
                 </button>
               </div>
@@ -977,14 +1015,17 @@ export default function DisplayManagerPage() {
                 {sourceId && !allSourceLocations.length && (
                   <p className={styles.locationGuidance}>
                     {"Aucun emplacement n'existe dans ce batiment. "}
-                    <a href="#display-location-title">Ajouter un emplacement</a>.
+                    <a href="#display-location-title">Ajouter un emplacement</a>
+                    .
                   </p>
                 )}
                 {sourceId && incompleteSourceLocations.length > 0 && (
                   <div className={styles.locationGuidance} role="status">
                     <strong>Emplacement non admissible</strong>
                     <p>
-                      {"Completez le repere « Vous etes ici » et l'orientation avant de creer une publication."}
+                      {
+                        "Completez le repere « Vous etes ici » et l'orientation avant de creer une publication."
+                      }
                     </p>
                     {incompleteSourceLocations.map((location) => (
                       <div className={styles.locationIssue} key={location.id}>
@@ -1149,7 +1190,7 @@ export default function DisplayManagerPage() {
               <dl className={styles.detail}>
                 <div>
                   <dt>Statut</dt>
-                  <dd>{LABELS[selected.status]}</dd>
+                  <dd>{visibleStatus(selected)}</dd>
                 </div>
                 <div>
                   <dt>Empreinte source</dt>
@@ -1211,7 +1252,9 @@ export default function DisplayManagerPage() {
                           step="1"
                           inputMode="numeric"
                           value={renderPage}
-                          onChange={(event) => setRenderPage(event.target.value)}
+                          onChange={(event) =>
+                            setRenderPage(event.target.value)
+                          }
                           placeholder="Ex. 1"
                           disabled={busy}
                         />
@@ -1240,34 +1283,37 @@ export default function DisplayManagerPage() {
                     </>
                   )}
                 {selected.status === "REVIEW" &&
-                  data.capabilities.DISPLAY_PLAN_REVIEW && (
-                    <>
-                      <button onClick={() => void act("review")}>
-                        Confirmer la revue
-                      </button>
-                      <button onClick={() => void act("reject")}>
-                        Refuser
-                      </button>
-                    </>
-                  )}
-                {selected.status === "REVIEW" &&
-                  data.capabilities.DISPLAY_PLAN_APPROVE && (
-                    <button onClick={() => void approvePlan()}>
-                      Approuver la preuve
-                    </button>
-                  )}
-                {selected.status === "REVIEW" &&
                   data.capabilities.DISPLAY_PLAN_REVIEW &&
-                  data.capabilities.DISPLAY_PLAN_APPROVE && (
-                    <p className={styles.note} role="status">
-                      Vous pouvez confirmer la revue puis approuver cette même
-                      version. Le soumissionnaire demeure exclu de
-                      l’approbation.
-                    </p>
+                  data.capabilities.DISPLAY_PLAN_APPROVE &&
+                  data.capabilities.DISPLAY_PLAN_PUBLISH && (
+                    <>
+                      <button
+                        onClick={() => void approveAndPublishPlan()}
+                        disabled={busy}
+                      >
+                        Approuver et publier
+                      </button>
+                      <button
+                        onClick={() => void act("reject")}
+                        disabled={busy}
+                      >
+                        Demander correction
+                      </button>
+                      <p className={styles.note} role="status">
+                        Deux personnes suffisent : le soumissionnaire demeure
+                        exclu de l’approbation, tandis que le réviseur habilité
+                        peut approuver et publier.
+                      </p>
+                    </>
                   )}
                 {selected.status === "APPROVED" &&
                   data.capabilities.DISPLAY_PLAN_PUBLISH && (
-                    <button onClick={() => void publishPlan()}>Publier</button>
+                    <button
+                      onClick={() => void approveAndPublishPlan()}
+                      disabled={busy}
+                    >
+                      Reprendre la publication
+                    </button>
                   )}
                 {selected.status === "PUBLISHED" &&
                   data.capabilities.DISPLAY_PLAN_REVOKE && (

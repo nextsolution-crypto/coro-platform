@@ -5,7 +5,10 @@ const page = fs.readFileSync(path.join(__dirname, "page.tsx"), "utf8");
 const css = fs.readFileSync(path.join(__dirname, "display.module.css"), "utf8");
 
 assert.match(page, /display-manager/);
-assert.match(page, /import AppLayout from ["']@\/components\/layout\/AppLayout["']/);
+assert.match(
+  page,
+  /import AppLayout from ["']@\/components\/layout\/AppLayout["']/,
+);
 assert.match(page, /<AppLayout>/);
 assert.match(page, /DISPLAY_PLAN_CREATE/);
 assert.match(page, /DISPLAY_PLAN_REVIEW/);
@@ -27,15 +30,20 @@ assert.doesNotMatch(
   /f\.displayLocations\s*\.filter\(/,
   "an incomplete location must remain visible with its ineligibility reason",
 );
-assert.match(page, /approvePlan/);
-assert.match(page, /publishPlan/);
+assert.match(page, /approveAndPublishPlan/);
+assert.match(page, /approve-and-publish/);
+assert.match(page, /Approuver et publier/);
+assert.match(page, /Reprendre la publication/);
+assert.match(page, /Approbation conservée/);
 assert.match(
   page,
-  /action === "review"[\s\S]*setSelected\(updated \?\? null\)/,
-  "review must refresh the selected publication without forcing an account switch",
+  /DISPLAY_PLAN_REVIEW[\s\S]*DISPLAY_PLAN_APPROVE[\s\S]*DISPLAY_PLAN_PUBLISH/,
+  "the professional approver action requires all granular authorities",
 );
-assert.match(page, /Vous pouvez confirmer la revue puis approuver cette même/);
-assert.match(page, /Le soumissionnaire demeure exclu de/);
+assert.match(page, /Deux personnes suffisent/);
+assert.match(page, /Corrections demandées/);
+assert.doesNotMatch(page, /Confirmer la revue/);
+assert.doesNotMatch(page, /Approuver la preuve/);
 assert.match(page, /generatePdfPreview/);
 assert.match(page, /pdf-render-jobs/);
 assert.match(page, /Choisissez explicitement la page PDF/);

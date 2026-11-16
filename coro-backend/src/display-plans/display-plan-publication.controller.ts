@@ -16,6 +16,7 @@ import type { Response } from 'express';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 import type { SpatialActor } from '../spatial/spatial-authorization.service';
 import {
+  ApproveAndPublishDisplayPlanDto,
   ApproveDisplayPlanDto,
   CreateDisplayPlanPublicationDto,
   EnqueueDisplayPdfRenderDto,
@@ -214,6 +215,17 @@ export class DisplayPlanPublicationController {
     @Request() req: DisplayRequest,
   ) {
     return this.plans.approve(org, building, id, dto, req.user);
+  }
+
+  @Post(':id/approve-and-publish')
+  approveAndPublish(
+    @Param('organizationId') org: string,
+    @Param('buildingId') building: string,
+    @Param('id') id: string,
+    @Body() dto: ApproveAndPublishDisplayPlanDto,
+    @Request() req: DisplayRequest,
+  ) {
+    return this.plans.approveAndPublish(org, building, id, dto, req.user);
   }
 
   @Post(':id/publish')
