@@ -94,7 +94,7 @@ jobs:
           const fs=require('fs');
           const releases=JSON.parse(fs.readFileSync('ops/deploy/approved-immutable-releases.json','utf8'));
           const commit=process.env.CANDIDATE_COMMIT;
-          const release=releases.releases?.production?.[commit];
+          const release=releases.releases?.[commit];
           if(!release?.images) process.exit(1);
           const images=['backend','frontend','clientPortal','website'].map(k=>release.images[k]);
           if(images.some(v=>!/^ghcr\.io\/nextsolution-crypto\/coro-[a-z0-9_.-]+@sha256:[0-9a-f]{64}$/.test(v))) process.exit(1);
