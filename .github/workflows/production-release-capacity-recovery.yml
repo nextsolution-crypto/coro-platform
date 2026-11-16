@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Read-only inventory or governed removal of unused build cache older than seven days
+        description: Read-only inventory or governed removal of unused cache and unreferenced images older than seven days
         required: true
         type: choice
         options:
@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Recover only unused build cache older than seven days
+      - name: Recover only unused cache and unreferenced images older than seven days
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
@@ -57,18 +57,49 @@ jobs:
             flock --nonblock /run/lock/coro-production-deployment.lock true
             flock --nonblock /run/lock/coro-release-control.lock true
             systemctl list-units --state=running --plain --no-legend 'coro-release-*.service' | grep -q . && exit 1 || true
-            before_images="$(docker image ls --quiet --no-trunc | sort -u | sha256sum | cut -d' ' -f1)"
+            before_container_images="$(docker ps --all --no-trunc --format '{{.Image}}' | sort -u | sha256sum | cut -d' ' -f1)"
             before_containers="$(docker ps --format '{{.ID}}:{{.Image}}' | sort | sha256sum | cut -d' ' -f1)"
             read -r total_kib free_before_kib < <(df -Pk -- /opt/coro-ops/backups/database | awk 'NR==2 {print $2,$4}')
             docker builder prune --all --force --filter until=168h >/dev/null
-            after_images="$(docker image ls --quiet --no-trunc | sort -u | sha256sum | cut -d' ' -f1)"
+            cutoff_epoch="$(( $(date +%s) - 168 * 3600 ))"
+            mapfile -t referenced_ids < <(docker ps --all --no-trunc --format '{{.Image}}' | while IFS= read -r ref; do docker image inspect --format '{{.Id}}' "$ref"; done | sort -u)
+            removed_count=0
+            removed_bytes=0
+            while IFS= read -r image_id; do
+              [[ -n "$image_id" ]] || continue
+              printf '%s\n' "${referenced_ids[@]}" | grep -Fxq "$image_id" && continue
+              created="$(docker image inspect --format '{{.Created}}' "$image_id")"
+              created_epoch="$(date -d "$created" +%s)"
+              (( created_epoch < cutoff_epoch )) || continue
+              mapfile -t remote_digests < <(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$image_id" | grep -E '^ghcr\.io/nextsolution-crypto/coro-[a-z0-9_.-]+@sha256:[0-9a-f]{64}$' | sort -u)
+              (( ${#remote_digests[@]} > 0 )) || continue
+              recoverable=false
+              for digest in "${remote_digests[@]}"; do
+                if docker manifest inspect "$digest" >/dev/null; then
+                  recoverable=true
+                  break
+                fi
+              done
+              [[ "$recoverable" == true ]] || continue
+              size="$(docker image inspect --format '{{.Size}}' "$image_id")"
+              [[ "$size" =~ ^[0-9]+$ ]]
+              docker image rm "$image_id" >/dev/null
+              removed_count=$((removed_count + 1))
+              removed_bytes=$((removed_bytes + size))
+              printf 'CAPACITY_IMAGE_REMOVED digest=%s size_bytes=%s remote_recoverable=true\n' "$digest" "$size"
+            done < <(docker image ls --quiet --no-trunc | sort -u)
+            after_container_images="$(docker ps --all --no-trunc --format '{{.Image}}' | sort -u | sha256sum | cut -d' ' -f1)"
             after_containers="$(docker ps --format '{{.ID}}:{{.Image}}' | sort | sha256sum | cut -d' ' -f1)"
-            [[ "$before_images" == "$after_images" ]]
+            [[ "$before_container_images" == "$after_container_images" ]]
             [[ "$before_containers" == "$after_containers" ]]
             read -r total_after_kib free_after_kib < <(df -Pk -- /opt/coro-ops/backups/database | awk 'NR==2 {print $2,$4}')
             [[ "$total_kib" == "$total_after_kib" ]]
             free_before=$((free_before_kib * 1024))
             free_after=$((free_after_kib * 1024))
             (( free_after >= free_before ))
-            printf 'CAPACITY_RECOVERY_APPLIED=true free_before_bytes=%s free_after_bytes=%s reclaimed_bytes=%s images_unchanged=true containers_unchanged=true\n' \
-              "$free_before" "$free_after" "$((free_after - free_before))"
+            for container in coro_backend coro_frontend coro_client_portal coro_website coro_postgres; do
+              [[ "$(docker inspect --format '{{.State.Running}}' "$container")" == true ]]
+              [[ "$(docker inspect --format '{{.RestartCount}}' "$container")" == 0 ]]
+            done
+            printf 'CAPACITY_RECOVERY_APPLIED=true free_before_bytes=%s free_after_bytes=%s reclaimed_bytes=%s removed_count=%s removed_image_bytes=%s container_images_unchanged=true containers_unchanged=true services_healthy=true\n' \
+              "$free_before" "$free_after" "$((free_after - free_before))" "$removed_count" "$removed_bytes"

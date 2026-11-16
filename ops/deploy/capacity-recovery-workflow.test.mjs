@@ -7,13 +7,18 @@ const workflow = fs.readFileSync(
   "utf8",
 );
 
-test("capacity recovery is gated and limited to old build cache", () => {
+test("capacity recovery is gated and limited to old unreferenced Docker data", () => {
   assert.match(workflow, /environment: production-inspection/);
   assert.match(workflow, /environment: production\n/);
   assert.match(workflow, /docker builder prune --all --force --filter until=168h/);
-  assert.doesNotMatch(workflow, /docker (?:image|system|volume|container) prune/);
-  assert.match(workflow, /before_images=.*docker image ls/);
-  assert.match(workflow, /\[\[ "\$before_images" == "\$after_images" \]\]/);
+  assert.doesNotMatch(workflow, /docker image prune/);
+  assert.match(workflow, /created_epoch < cutoff_epoch/);
+  assert.match(workflow, /docker manifest inspect "\$digest"/);
+  assert.match(workflow, /docker image rm "\$image_id"/);
+  assert.match(workflow, /remote_recoverable=true/);
+  assert.doesNotMatch(workflow, /docker (?:system|volume|container) prune/);
+  assert.match(workflow, /before_container_images=.*docker ps --all/);
+  assert.match(workflow, /\[\[ "\$before_container_images" == "\$after_container_images" \]\]/);
   assert.match(workflow, /\[\[ "\$before_containers" == "\$after_containers" \]\]/);
 });
 
