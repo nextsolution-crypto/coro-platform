@@ -316,6 +316,66 @@
   font-size: 0.78rem;
   color: #718087;
 }
+.activationDialog {
+  position: relative;
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  border-radius: 18px;
+  background: #fff;
+  padding: 28px;
+  box-shadow: 0 24px 80px rgba(13, 34, 39, 0.28);
+}
+.activationEyebrow {
+  margin: 0 0 8px;
+  color: #087c72;
+  font-size: 0.75rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+}
+.activationCode {
+  display: block;
+  margin: 22px 0;
+  border: 2px solid #087c72;
+  border-radius: 14px;
+  background: #edf9f7;
+  padding: 18px;
+  color: #2c3e50;
+  font-size: clamp(2rem, 8vw, 3.25rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-align: center;
+}
+.activationDetails {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 20px;
+}
+.activationDetails div {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 10px;
+}
+.activationDetails dt {
+  color: #718087;
+  font-size: 0.78rem;
+}
+.activationDetails dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+.playerUrl {
+  display: block;
+  margin-top: 8px;
+  border-radius: 9px;
+  background: #f3f7f7;
+  padding: 10px 14px;
+  color: #2c3e50;
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
 .shell :focus-visible {
   outline: 3px solid #6fcac1;
   outline-offset: 2px;
