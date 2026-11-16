@@ -151,6 +151,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { pattern: '/admin/commercial/subscriptions/[organizationId]', family: 'super-admin', shell: 'app', status: 'beta', render: 'skin', styling: ['tailwind'], sensitivity: ['permissions', 'financial-legal'], validation: ['test:commercial-contracts', 'test:skin', 'test:design-system'] },
   { pattern: '/admin/control-center', family: 'super-admin', shell: 'app', status: 'beta', render: 'skin', styling: ['tailwind'], sensitivity: ['permissions', 'supervision'], validation: ['test:control-center', 'test:skin', 'test:design-system'] },
   { pattern: '/admin/test-scenario-pilots', family: 'super-admin', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'css-module'], sensitivity: ['permissions', 'supervision'], validation: ['test:pilot-scenarios', 'test:skin', 'test:design-system'] },
+  { pattern: '/pilot-scenarios', family: 'admin', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'css-module'], sensitivity: ['permissions', 'supervision'], validation: ['test:pilot-scenarios', 'test:skin', 'test:design-system'] },
   {
     pattern: '/admin/platform-permission-grants', family: 'super-admin', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind', 'css-module'], sensitivity: ['financial-legal', 'permissions'], validation: ['test:platform-permission-grants', 'test:skin', 'test:design-system'],
   },
