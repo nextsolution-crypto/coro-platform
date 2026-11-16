@@ -11,6 +11,9 @@ const rollback = fs.readFileSync(new URL('./coro-governed-application-rollback.s
 test('push validates but cannot build or deploy', () => {
   assert.match(workflow, /build-images:\n\s+if: github\.event_name == 'workflow_dispatch'/);
   assert.match(workflow, /production-release:\n\s+if: github\.event_name == 'workflow_dispatch'/);
+assert.match(workflow, /TOOLING_COMMIT: \$\{\{ github\.sha \}\}/);
+assert.match(workflow, /show "\$RELEASE_COMMIT:ops\/deploy\/coro-production-release\.sh"/);
+assert.match(workflow, /show "\$TOOLING_COMMIT:ops\/deploy\/coro-release-control\.sh"/);
 });
 test('requires manual approval, environment and two concurrency locks', () => {
   assert.match(workflow, /production_approval:/);

@@ -23,13 +23,14 @@ const TRANSITIONS = Object.freeze({
 const SHA40 = /^[0-9a-f]{40}$/;
 const SHA64 = /^[0-9a-f]{64}$/;
 const IMAGE = /^ghcr\.io\/[a-z0-9_.-]+\/[a-z0-9_.-]+@sha256:[0-9a-f]{64}$/;
+const RELEASE_ID = /^production-([0-9a-f]{40})(?:-[0-9]{8}T[0-9]{6}Z)?$/;
 
 export function checksum(bytes) {
   return crypto.createHash("sha256").update(bytes).digest("hex");
 }
 
 function statePaths(root, releaseId) {
-  if (!/^production-[0-9a-f]{40}$/.test(releaseId))
+  if (!RELEASE_ID.test(releaseId))
     throw new Error("RELEASE_ID_INVALID");
   return {
     state: path.join(root, `${releaseId}.state.json`),
@@ -86,7 +87,10 @@ export function prepareState(root, input, now = new Date()) {
   ) {
     throw new Error("RELEASE_IMAGES_INVALID");
   }
-  const releaseId = `production-${input.gitCommit}`;
+  const releaseId = input.releaseId || `production-${input.gitCommit}`;
+  const releaseMatch = RELEASE_ID.exec(releaseId);
+  if (!releaseMatch || releaseMatch[1] !== input.gitCommit)
+    throw new Error("RELEASE_ID_INVALID");
   const files = statePaths(root, releaseId);
   fs.mkdirSync(root, { recursive: true, mode: 0o700 });
   if (fs.existsSync(files.state) || fs.existsSync(files.checksum)) {
