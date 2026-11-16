@@ -49,3 +49,46 @@ jobs:
             printf 'RELEASE_DIAGNOSIS_CODE=%s\n' "$code"
             systemctl is-active --quiet "$unit" && exit 1 || true
             printf 'RELEASE_DIAGNOSIS_MUTATION_ACTIVE=false\n'
+            if [[ "$code" == RELEASE_CAPACITY_INSUFFICIENT ]]; then
+              set -a
+              # Thresholds are operational policy, not credentials. Do not emit
+              # any other value sourced from the protected backup environment.
+              source /etc/coro-backup/backup.env
+              set +a
+              min_bytes="${CORO_BACKUP_MIN_FREE_BYTES:-5368709120}"
+              min_percent="${CORO_BACKUP_MIN_FREE_PERCENT:-10}"
+              [[ "$min_bytes" =~ ^[0-9]+$ && "$min_percent" =~ ^[0-9]+$ ]]
+              backup_dir=/opt/coro-ops/backups/database
+              read -r total_kib free_kib < <(df -Pk -- "$backup_dir" | awk 'NR==2 {print $2,$4}')
+              total_bytes=$((total_kib * 1024))
+              free_bytes=$((free_kib * 1024))
+              percent_bytes=$((total_bytes * min_percent / 100))
+              backup_required="$min_bytes"
+              (( percent_bytes > backup_required )) && backup_required="$percent_bytes"
+              active_image_bytes=0
+              for container in coro_backend coro_frontend coro_client_portal coro_website; do
+                image_id="$(docker inspect --format '{{.Image}}' "$container")"
+                size="$(docker image inspect --format '{{.Size}}' "$image_id")"
+                [[ "$size" =~ ^[0-9]+$ ]]
+                active_image_bytes=$((active_image_bytes + size))
+              done
+              image_stage_required=$((active_image_bytes * 125 / 100))
+              database_bytes="$(docker compose -f /opt/coro-platform/docker-compose.yml exec -T postgres sh -ceu 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT pg_database_size(current_database())"')"
+              [[ "$database_bytes" =~ ^[0-9]+$ ]]
+              database_growth=$((database_bytes / 5))
+              (( database_growth < 2147483648 )) && database_growth=2147483648
+              operational_reserve=$((total_bytes / 10))
+              (( operational_reserve < 5368709120 )) && operational_reserve=5368709120
+              required_bytes=$((backup_required + image_stage_required + database_growth + operational_reserve))
+              unused_image_bytes=0
+              unused_image_count=0
+              while IFS= read -r image_id; do
+                [[ -n "$image_id" ]] || continue
+                size="$(docker image inspect --format '{{.Size}}' "$image_id")"
+                [[ "$size" =~ ^[0-9]+$ ]]
+                unused_image_bytes=$((unused_image_bytes + size))
+                unused_image_count=$((unused_image_count + 1))
+              done < <(docker image ls --filter dangling=true --quiet --no-trunc | sort -u)
+              printf 'RELEASE_CAPACITY_METRICS total_bytes=%s free_bytes=%s required_bytes=%s active_image_bytes=%s database_bytes=%s dangling_image_count=%s dangling_image_bytes=%s\n' \
+                "$total_bytes" "$free_bytes" "$required_bytes" "$active_image_bytes" "$database_bytes" "$unused_image_count" "$unused_image_bytes"
+            fi
