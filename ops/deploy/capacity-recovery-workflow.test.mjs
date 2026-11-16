@@ -12,7 +12,11 @@ test("capacity recovery is gated and limited to old unreferenced Docker data", (
   assert.match(workflow, /environment: production\r?\n/);
   assert.match(workflow, /docker builder prune --all --force --filter until=168h/);
   assert.doesNotMatch(workflow, /docker image prune/);
-  assert.match(workflow, /created_epoch < cutoff_epoch/);
+  assert.match(workflow, /candidate_commit:/);
+  assert.match(workflow, /approved-immutable-releases\.json/);
+  assert.match(workflow, /candidate_ids/);
+  assert.match(workflow, /target_bytes=\$\(\(required_bytes \+ 1073741824\)\)/);
+  assert.match(workflow, /sort -n -o "\$inventory"/);
   assert.match(workflow, /docker manifest inspect "\$digest"/);
   assert.match(workflow, /docker image rm "\$image_id"/);
   assert.match(workflow, /remote_recoverable=true/);

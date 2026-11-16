@@ -10,6 +10,10 @@ on:
         options:
           - DRY_RUN
           - APPLY
+      candidate_commit:
+        description: Approved immutable product SHA whose images must be preserved
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -76,14 +80,38 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Resolve approved candidate images
+        id: candidate
+        env:
+          CANDIDATE_COMMIT: ${{ inputs.candidate_commit }}
+        run: |
+          [[ "$CANDIDATE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          node - <<'NODE'
+          const fs=require('fs');
+          const releases=JSON.parse(fs.readFileSync('ops/deploy/approved-immutable-releases.json','utf8'));
+          const commit=process.env.CANDIDATE_COMMIT;
+          const release=releases.releases?.production?.[commit];
+          if(!release?.images) process.exit(1);
+          const images=['backend','frontend','clientPortal','website'].map(k=>release.images[k]);
+          if(images.some(v=>!/^ghcr\.io\/nextsolution-crypto\/coro-[a-z0-9_.-]+@sha256:[0-9a-f]{64}$/.test(v))) process.exit(1);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`images=${images.join('|')}\n`);
+          NODE
+
       - name: Recover only unused cache and unreferenced images older than seven days
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          CANDIDATE_IMAGES: ${{ steps.candidate.outputs.images }}
         with:
           host: ${{ secrets.SERVER_IP }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
           command_timeout: 20m
+          envs: CANDIDATE_IMAGES
           script: |
             set -Eeuo pipefail
             exec 8>/run/lock/coro-capacity-recovery.lock
@@ -95,16 +123,55 @@ jobs:
             before_containers="$(docker ps --format '{{.ID}}:{{.Image}}' | sort | sha256sum | cut -d' ' -f1)"
             read -r total_kib free_before_kib < <(df -Pk -- /opt/coro-ops/backups/database | awk 'NR==2 {print $2,$4}')
             docker builder prune --all --force --filter until=168h >/dev/null
-            cutoff_epoch="$(( $(date +%s) - 168 * 3600 ))"
             mapfile -t referenced_ids < <(docker ps --all --no-trunc --format '{{.Image}}' | while IFS= read -r ref; do docker image inspect --format '{{.Id}}' "$ref"; done | sort -u)
-            removed_count=0
-            removed_bytes=0
+            IFS='|' read -r -a candidate_refs <<<"$CANDIDATE_IMAGES"
+            (( ${#candidate_refs[@]} == 4 ))
+            candidate_ids=()
+            for ref in "${candidate_refs[@]}"; do
+              [[ "$ref" =~ ^ghcr\.io/nextsolution-crypto/coro-[a-z0-9_.-]+@sha256:[0-9a-f]{64}$ ]]
+              docker manifest inspect "$ref" >/dev/null
+              if docker image inspect "$ref" >/dev/null 2>&1; then candidate_ids+=("$(docker image inspect --format '{{.Id}}' "$ref")"); fi
+            done
+            set -a
+            source /etc/coro-backup/backup.env
+            set +a
+            min_bytes="${CORO_BACKUP_MIN_FREE_BYTES:-5368709120}"
+            min_percent="${CORO_BACKUP_MIN_FREE_PERCENT:-10}"
+            [[ "$min_bytes" =~ ^[0-9]+$ && "$min_percent" =~ ^[0-9]+$ ]]
+            total_bytes=$((total_kib * 1024))
+            backup_percent=$((total_bytes * min_percent / 100))
+            backup_required="$min_bytes"
+            (( backup_percent > backup_required )) && backup_required="$backup_percent"
+            active_image_bytes=0
+            for container in coro_backend coro_frontend coro_client_portal coro_website; do
+              image_id="$(docker inspect --format '{{.Image}}' "$container")"
+              size="$(docker image inspect --format '{{.Size}}' "$image_id")"
+              active_image_bytes=$((active_image_bytes + size))
+            done
+            image_stage_required=$((active_image_bytes * 125 / 100))
+            database_bytes="$(docker compose -f /opt/coro-platform/docker-compose.yml exec -T postgres sh -ceu 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT pg_database_size(current_database())"')"
+            [[ "$database_bytes" =~ ^[0-9]+$ ]]
+            database_growth=$((database_bytes / 5)); (( database_growth < 2147483648 )) && database_growth=2147483648
+            operational_reserve=$((total_bytes / 10)); (( operational_reserve < 5368709120 )) && operational_reserve=5368709120
+            required_bytes=$((backup_required + image_stage_required + database_growth + operational_reserve))
+            target_bytes=$((required_bytes + 1073741824))
+            inventory="$(mktemp /tmp/coro-capacity-images.XXXXXX)"
+            chmod 0600 "$inventory"
+            trap 'rm -f -- "$inventory"' EXIT
             while IFS= read -r image_id; do
               [[ -n "$image_id" ]] || continue
               printf '%s\n' "${referenced_ids[@]}" | grep -Fxq "$image_id" && continue
+              printf '%s\n' "${candidate_ids[@]}" | grep -Fxq "$image_id" && continue
               created="$(docker image inspect --format '{{.Created}}' "$image_id")"
-              created_epoch="$(date -d "$created" +%s)"
-              (( created_epoch < cutoff_epoch )) || continue
+              printf '%s|%s\n' "$(date -d "$created" +%s)" "$image_id" >>"$inventory"
+            done < <(docker image ls --quiet --no-trunc | sort -u)
+            sort -n -o "$inventory" "$inventory"
+            removed_count=0
+            removed_bytes=0
+            while IFS='|' read -r created_epoch image_id; do
+              [[ -n "$image_id" ]] || continue
+              current_free=$(( $(df -Pk -- /opt/coro-ops/backups/database | awk 'NR==2 {print $4}') * 1024 ))
+              (( current_free < target_bytes )) || break
               mapfile -t remote_digests < <(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$image_id" | grep -E '^ghcr\.io/nextsolution-crypto/coro-[a-z0-9_.-]+@sha256:[0-9a-f]{64}$' | sort -u)
               (( ${#remote_digests[@]} > 0 )) || continue
               recoverable=false
@@ -121,7 +188,7 @@ jobs:
               removed_count=$((removed_count + 1))
               removed_bytes=$((removed_bytes + size))
               printf 'CAPACITY_IMAGE_REMOVED digest=%s size_bytes=%s remote_recoverable=true\n' "$digest" "$size"
-            done < <(docker image ls --quiet --no-trunc | sort -u)
+            done <"$inventory"
             after_container_images="$(docker ps --all --no-trunc --format '{{.Image}}' | sort -u | sha256sum | cut -d' ' -f1)"
             after_containers="$(docker ps --format '{{.ID}}:{{.Image}}' | sort | sha256sum | cut -d' ' -f1)"
             [[ "$before_container_images" == "$after_container_images" ]]
@@ -131,9 +198,10 @@ jobs:
             free_before=$((free_before_kib * 1024))
             free_after=$((free_after_kib * 1024))
             (( free_after >= free_before ))
+            (( free_after >= target_bytes ))
             for container in coro_backend coro_frontend coro_client_portal coro_website coro_postgres; do
               [[ "$(docker inspect --format '{{.State.Running}}' "$container")" == true ]]
               [[ "$(docker inspect --format '{{.RestartCount}}' "$container")" == 0 ]]
             done
-            printf 'CAPACITY_RECOVERY_APPLIED=true free_before_bytes=%s free_after_bytes=%s reclaimed_bytes=%s removed_count=%s removed_image_bytes=%s container_images_unchanged=true containers_unchanged=true services_healthy=true\n' \
-              "$free_before" "$free_after" "$((free_after - free_before))" "$removed_count" "$removed_bytes"
+            printf 'CAPACITY_RECOVERY_APPLIED=true free_before_bytes=%s free_after_bytes=%s required_bytes=%s target_bytes=%s reclaimed_bytes=%s removed_count=%s removed_image_bytes=%s candidate_preserved=true rollback_preserved=true container_images_unchanged=true containers_unchanged=true services_healthy=true\n' \
+              "$free_before" "$free_after" "$required_bytes" "$target_bytes" "$((free_after - free_before))" "$removed_count" "$removed_bytes"
