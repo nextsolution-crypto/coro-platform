@@ -63,7 +63,12 @@ test('fails closed through backup, remote evidence and restore gates', () => {
 });
 test('fails before backup when release capacity headroom is insufficient', () => {
   assert.match(release, /RELEASE_CAPACITY_INSUFFICIENT/);
-  assert.match(release, /active_image_bytes \* 125/);
+  assert.match(release, /candidate_image_refs=/);
+  assert.match(release, /docker image ls --no-trunc --quiet "\$candidate_ref"/);
+  assert.match(release, /CAPACITY_IMAGE_PRESENCE_UNAVAILABLE/);
+  assert.match(release, /CAPACITY_IMAGE_SIZE_UNAVAILABLE/);
+  assert.match(release, /image_stage_required \+ size \* 125/);
+  assert.doesNotMatch(release, /active_image_bytes \* 125/);
   assert.match(release, /database_growth/);
   assert.match(release, /operational_reserve/);
   assert.ok(release.indexOf('RELEASE_CAPACITY_INSUFFICIENT') < release.indexOf('systemctl start coro-db-backup.service'));
