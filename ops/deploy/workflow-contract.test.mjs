@@ -116,6 +116,16 @@ test('independent reconciliation can target an exact timestamped governed retry'
   assert.match(reconciliation, /RELEASE_ID: \$\{\{ inputs\.release_id \}\}/);
   assert.match(reconciliation, /production-\$\{RELEASE_COMMIT\}/);
 });
+test('failed release diagnosis can target an exact timestamped governed attempt', () => {
+  const diagnosis = fs.readFileSync(
+    new URL('../../.github/workflows/production-release-failure-diagnosis.yml', import.meta.url),
+    'utf8',
+  );
+  assert.match(diagnosis, /release_id:/);
+  assert.match(diagnosis, /RELEASE_ID: \$\{\{ inputs\.release_id \}\}/);
+  assert.match(diagnosis, /production-\$\{RELEASE_COMMIT\}-\[0-9\]\{8\}T\[0-9\]\{6\}Z/);
+  assert.match(diagnosis, /state\/\$\{release_id\}\.state\.json/);
+});
 test('failed release diagnosis resolves the same deterministic systemd unit as the controller', () => {
   const diagnosis = fs.readFileSync(new URL('../../.github/workflows/production-release-failure-diagnosis.yml', import.meta.url), 'utf8');
   assert.match(diagnosis, /unit_hash="\$\(printf '%s' "\$release_id" \| sha256sum \| cut -c1-12\)"/);
