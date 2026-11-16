@@ -186,9 +186,26 @@ read -r capacity_total_kib capacity_free_kib < <(df -Pk -- "$BACKUP_DIR" | awk '
 capacity_total=$((capacity_total_kib * 1024)); capacity_free=$((capacity_free_kib * 1024))
 backup_percent=$((capacity_total * backup_min_percent / 100)); backup_required="$backup_min_bytes"
 (( backup_percent > backup_required )) && backup_required="$backup_percent"
-active_image_bytes=0
-while read -r ref; do [[ -n "$ref" ]] || continue; size="$(docker image inspect --format '{{.Size}}' "$ref")" || fail CAPACITY_IMAGE_SIZE_UNAVAILABLE; active_image_bytes=$((active_image_bytes + size)); done <<<"$previous_images"
-image_stage_required=$((active_image_bytes * 125 / 100))
+mapfile -t previous_image_refs < <(printf '%s\n' "$previous_images" | sed '/^$/d')
+candidate_image_refs=("$BACKEND_IMAGE" "$FRONTEND_IMAGE" "$CLIENT_PORTAL_IMAGE" "$WEBSITE_IMAGE")
+[[ "${#previous_image_refs[@]}" -eq 4 && "${#candidate_image_refs[@]}" -eq 4 ]] || fail CAPACITY_IMAGE_SET_INVALID
+image_stage_required=0
+for index in "${!candidate_image_refs[@]}"; do
+  candidate_ref="${candidate_image_refs[$index]}"
+  [[ "$candidate_ref" =~ @sha256:[0-9a-f]{64}$ ]] || fail CAPACITY_IMAGE_SET_INVALID
+  # Images already present consume no additional staging capacity. For a
+  # missing service image, reserve 125% of the currently active image for the
+  # same service. This remains conservative without charging unchanged images
+  # a second time.
+  candidate_id="$(docker image ls --no-trunc --quiet "$candidate_ref")" || fail CAPACITY_IMAGE_PRESENCE_UNAVAILABLE
+  if [[ -z "$candidate_id" ]]; then
+    size="$(docker image inspect --format '{{.Size}}' "${previous_image_refs[$index]}")" || fail CAPACITY_IMAGE_SIZE_UNAVAILABLE
+    [[ "$size" =~ ^[0-9]+$ ]] || fail CAPACITY_IMAGE_SIZE_UNAVAILABLE
+    image_stage_required=$((image_stage_required + size * 125 / 100))
+  else
+    [[ "$candidate_id" =~ ^sha256:[0-9a-f]{64}$ ]] || fail CAPACITY_IMAGE_PRESENCE_UNAVAILABLE
+  fi
+done
 database_bytes="$(docker compose exec -T postgres sh -ceu 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT pg_database_size(current_database())"')" || fail CAPACITY_DATABASE_SIZE_UNAVAILABLE
 [[ "$database_bytes" =~ ^[0-9]+$ ]] || fail CAPACITY_DATABASE_SIZE_INVALID
 database_growth=$((database_bytes / 5)); (( database_growth < 2147483648 )) && database_growth=2147483648
