@@ -115,6 +115,21 @@ const errorMessage = (e: unknown, fallback: string) => {
   const candidate = e as { response?: { data?: { message?: string } } };
   return candidate.response?.data?.message || fallback;
 };
+const visualProfileFor = (plan: Plan) => {
+  const width = plan.widthPixels;
+  const height = plan.heightPixels;
+  if (!width || !height) return "SOURCE_NATIVE";
+  if (width * 11 === height * 17) return "ORIGINAL_17X11";
+  if (width * 9 === height * 16) return "SCREEN_16X9";
+  if (width * 10 === height * 16) return "SCREEN_16X10";
+  return "SOURCE_NATIVE";
+};
+const VISUAL_PROFILE_LABELS: Record<string, string> = {
+  SOURCE_NATIVE: "Format source",
+  ORIGINAL_17X11: "Plan 17 × 11",
+  SCREEN_16X9: "Écran 16:9",
+  SCREEN_16X10: "Écran 16:10",
+};
 
 export default function DisplayManagerPage() {
   const user = useAuthStore((s) => s.user);
@@ -130,7 +145,6 @@ export default function DisplayManagerPage() {
   const [preview, setPreview] = useState("");
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState("");
-  const [profile, setProfile] = useState("SCREEN_16X9");
   const [sourceId, setSourceId] = useState("");
   const [locationId, setLocationId] = useState("");
   const [orientation, setOrientation] = useState("LANDSCAPE");
@@ -445,7 +459,7 @@ export default function DisplayManagerPage() {
           sourceSha256: selected.sourceSha256,
           variantVersion: selected.variantVersion,
           variantSha256: selected.variantSha256,
-          profile,
+          profile: visualProfileFor(selected),
           locationId: selected.locationId,
           observations: reason.trim(),
         },
@@ -1193,36 +1207,26 @@ export default function DisplayManagerPage() {
                   <dd>{visibleStatus(selected)}</dd>
                 </div>
                 <div>
-                  <dt>Empreinte source</dt>
-                  <dd>
-                    <code>{selected.sourceSha256}</code>
-                  </dd>
+                  <dt>Version du document</dt>
+                  <dd>{selected.sourceVersion}</dd>
                 </div>
                 <div>
-                  <dt>Empreinte variante</dt>
-                  <dd>
-                    <code>{selected.variantSha256 || "ABSENTE"}</code>
-                  </dd>
+                  <dt>Version de l’aperçu</dt>
+                  <dd>{selected.variantVersion}</dd>
                 </div>
                 <div>
-                  <dt>Verrou</dt>
-                  <dd>{selected.lockVersion}</dd>
+                  <dt>Format</dt>
+                  <dd>{VISUAL_PROFILE_LABELS[visualProfileFor(selected)]}</dd>
                 </div>
               </dl>
               {selected.status === "REVIEW" &&
                 data.capabilities.DISPLAY_PLAN_APPROVE && (
-                  <label className={styles.reason}>
-                    Profil visuel
-                    <select
-                      value={profile}
-                      onChange={(e) => setProfile(e.target.value)}
-                    >
-                      <option value="SOURCE_NATIVE">Source native</option>
-                      <option value="ORIGINAL_17X11">Original 17×11</option>
-                      <option value="SCREEN_16X9">Écran 16:9</option>
-                      <option value="SCREEN_16X10">Écran 16:10</option>
-                    </select>
-                  </label>
+                  <p className={styles.note}>
+                    Format vérifié : {VISUAL_PROFILE_LABELS[visualProfileFor(selected)]}
+                    {selected.widthPixels && selected.heightPixels
+                      ? ` · ${selected.widthPixels} × ${selected.heightPixels} px`
+                      : ""}
+                  </p>
                 )}
               <label className={styles.reason}>
                 Motif / observation
@@ -1237,7 +1241,9 @@ export default function DisplayManagerPage() {
                     onClick={() => void showPreview(selected)}
                     disabled={busy}
                   >
-                    Charger l’aperçu
+                    {selected.status === "REVIEW"
+                      ? "Vérifier à nouveau l’aperçu"
+                      : "Charger l’aperçu"}
                   </button>
                 )}
                 {selected.status === "DRAFT" &&

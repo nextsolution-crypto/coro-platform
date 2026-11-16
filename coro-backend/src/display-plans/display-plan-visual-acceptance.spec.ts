@@ -49,4 +49,22 @@ describe('assertCurrentVisualAcceptance', () => {
       }),
     ).toThrow(ConflictException);
   });
+
+  it('accepts a 17 by 11 render at the governed 300 DPI output size', () => {
+    expect(() =>
+      assertCurrentVisualAcceptance(
+        { ...authority, widthPixels: 5100, heightPixels: 3300 },
+        { ...acceptance, profile: 'ORIGINAL_17X11' },
+      ),
+    ).not.toThrow();
+  });
+
+  it('rejects a render whose aspect ratio changed even when its versions and hashes did not', () => {
+    expect(() =>
+      assertCurrentVisualAcceptance(
+        { ...authority, widthPixels: 5100, heightPixels: 3299 },
+        { ...acceptance, profile: 'ORIGINAL_17X11' },
+      ),
+    ).toThrow(ConflictException);
+  });
 });
