@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { githubOutputs, loadApprovedRelease } from './approved-immutable-release.mjs';
 
-const approved = '82125e27d70f4c763fd4c14da48dc8f152f8435a';
+const approved = 'f366b357ada4ec2c6d27ed32f01823b6367477c0';
 
 test('resolves the exact approved application commit and immutable digests', () => {
   const release = loadApprovedRelease(approved);
