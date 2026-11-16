@@ -1,0 +1,51 @@
+name: Diagnose Failed Production Release Read Only
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_commit:
+        description: Exact failed application SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    environment: production-inspection
+    steps:
+      - name: Validate request
+        env:
+          RELEASE_COMMIT: ${{ inputs.release_commit }}
+        run: '[[ "$RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]]'
+
+      - name: Read sanitized failed release evidence
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          RELEASE_COMMIT: ${{ inputs.release_commit }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: RELEASE_COMMIT
+          script: |
+            set -Eeuo pipefail
+            release_id="production-${RELEASE_COMMIT}"
+            state="/opt/coro-ops/releases/state/${release_id}.state.json"
+            unit="coro-release-${RELEASE_COMMIT:0:16}.service"
+            test -f "$state" && test ! -L "$state"
+            RELEASE_STATE="$state" node -e '
+              const fs=require("fs");
+              const value=JSON.parse(fs.readFileSync(process.env.RELEASE_STATE,"utf8"));
+              const allowed={releaseId:value.releaseId,state:value.state,stage:value.stage,failureCode:value.failureCode,gitCommit:value.gitCommit,updatedAt:value.updatedAt};
+              if(allowed.gitCommit!==process.env.RELEASE_COMMIT||allowed.state!=="FAILED")process.exit(1);
+              console.log(`RELEASE_DIAGNOSIS_STATE ${JSON.stringify(allowed)}`);
+            '
+            code="$(journalctl -u "$unit" --no-pager -n 250 -o cat | sed -n 's/^RELEASE_FAILED code=\([A-Z0-9_]*\).*$/\1/p' | tail -n 1)"
+            test -n "$code"
+            printf 'RELEASE_DIAGNOSIS_CODE=%s\n' "$code"
+            systemctl is-active --quiet "$unit" && exit 1 || true
+            printf 'RELEASE_DIAGNOSIS_MUTATION_ACTIVE=false\n'
