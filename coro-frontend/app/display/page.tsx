@@ -176,6 +176,12 @@ export default function DisplayManagerPage() {
   const [activation, setActivation] = useState<WebActivation | null>(null);
   const [activationPending, setActivationPending] = useState(false);
   const [activationUncertain, setActivationUncertain] = useState(false);
+  const [revocationReason, setRevocationReason] = useState("");
+  const [revocationPending, setRevocationPending] = useState(false);
+  const [revocationUncertain, setRevocationUncertain] = useState(false);
+  const [revokedSessionCount, setRevokedSessionCount] = useState<number | null>(
+    null,
+  );
   const load = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
@@ -311,6 +317,63 @@ export default function DisplayManagerPage() {
 
   const closeActivation = () => {
     setActivation(null);
+  };
+  const revokeWebSessions = async () => {
+    if (
+      !orgId ||
+      !activationLocationId ||
+      revocationPending ||
+      revocationUncertain
+    )
+      return;
+    const normalizedReason = revocationReason.trim();
+    if (normalizedReason.length < 3 || normalizedReason.length > 500) {
+      setError("La justification doit contenir entre 3 et 500 caracteres.");
+      return;
+    }
+    const location = activeDisplayLocations.find(
+      (item) => item.id === activationLocationId,
+    );
+    if (!location) {
+      setError("Selectionnez un emplacement actif et autorise.");
+      return;
+    }
+    if (
+      !window.confirm(
+        `Revoquer toutes les sessions Web de ${location.label} ? La publication et l'URL permanente seront conservees. Cette action est auditee.`,
+      )
+    )
+      return;
+
+    setRevocationPending(true);
+    setRevokedSessionCount(null);
+    setError("");
+    try {
+      const response = await api.post<{ revoked: number }>(
+        `/organizations/${orgId}/display-web/locations/${location.id}/revoke-devices`,
+        { reason: normalizedReason },
+      );
+      setRevokedSessionCount(response.data.revoked);
+      setRevocationReason("");
+      await load();
+    } catch (requestError: unknown) {
+      const candidate = requestError as { response?: { status?: number } };
+      if (!candidate.response) {
+        setRevocationUncertain(true);
+        setError(
+          "Resultat reseau incertain. Ne recommencez pas la revocation : verifiez d'abord l'audit et l'etat des sessions.",
+        );
+      } else {
+        setError(
+          errorMessage(
+            requestError,
+            "Impossible de revoquer les sessions Web de cet emplacement.",
+          ),
+        );
+      }
+    } finally {
+      setRevocationPending(false);
+    }
   };
   const showPreview = async (p: Plan) => {
     if (!orgId || !p.variantSha256) return;
@@ -1115,6 +1178,46 @@ export default function DisplayManagerPage() {
                     ? "Creation en cours..."
                     : "Activer un ecran"}
                 </button>
+                <hr />
+                <h3>Revoquer les sessions Web</h3>
+                <p className={styles.note}>
+                  Coupe les sessions et invitations Web de cet emplacement,
+                  sans retirer la publication ni modifier son URL permanente.
+                </p>
+                <label>
+                  Justification auditee
+                  <textarea
+                    minLength={3}
+                    maxLength={500}
+                    required
+                    value={revocationReason}
+                    onChange={(event) =>
+                      setRevocationReason(event.target.value)
+                    }
+                    placeholder="Ex. Fin de la recette iPad du pilote"
+                  />
+                </label>
+                <button
+                  type="button"
+                  disabled={
+                    revocationPending ||
+                    revocationUncertain ||
+                    !activationLocationId ||
+                    revocationReason.trim().length < 3
+                  }
+                  onClick={() => void revokeWebSessions()}
+                >
+                  {revocationPending
+                    ? "Revocation en cours..."
+                    : "Revoquer les sessions Web"}
+                </button>
+                {revokedSessionCount !== null && (
+                  <p role="status" aria-live="polite">
+                    Revocation confirmee : {revokedSessionCount} session(s)
+                    coupee(s). Rechargez maintenant le meme Player sur
+                    l&apos;iPad pour verifier le refus serveur.
+                  </p>
+                )}
               </div>
             </article>
           </section>

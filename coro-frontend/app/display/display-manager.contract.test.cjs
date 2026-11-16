@@ -30,6 +30,18 @@ assert.doesNotMatch(page, /href=\{activation\.url\}/);
 assert.doesNotMatch(page, /localStorage\.setItem\([^\n]*activation/i);
 assert.doesNotMatch(page, /sessionStorage\.setItem\([^\n]*activation/i);
 assert.doesNotMatch(page, /console\.(log|info|debug)\([^\n]*activation/i);
+assert.match(page, /Revoquer les sessions Web/);
+assert.match(
+  page,
+  /display-web\/locations\/\$\{location\.id\}\/revoke-devices/,
+);
+assert.match(page, /\{ reason: normalizedReason \}/);
+assert.match(page, /normalizedReason\.length < 3 \|\| normalizedReason\.length > 500/);
+assert.match(page, /revocationPending \|\|\s*revocationUncertain/);
+assert.match(page, /Resultat reseau incertain\. Ne recommencez pas la revocation/);
+assert.match(page, /La publication et l'URL permanente seront conservees/);
+assert.match(page, /Justification auditee/);
+assert.match(page, /Rechargez maintenant le meme Player/);
 assert.match(page, /Ajouter un ecran/);
 assert.match(page, /\/spatial`/);
 assert.match(page, /\/floors`/);
