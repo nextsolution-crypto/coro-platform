@@ -19,6 +19,10 @@ on:
         description: Type INSPECT_DISPLAY09_ORIGIN_TLS_DEEP_READ_ONLY to inventory terminator, renewal and SNI certificates
         required: false
         type: string
+      display09_published_location:
+        description: Type RESOLVE_DISPLAY09_PUBLISHED_LOCATION_READ_ONLY to resolve the fixed pilot location and player path
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -28,6 +32,37 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  display09-published-location:
+    if: inputs.display09_published_location == 'RESOLVE_DISPLAY09_PUBLISHED_LOCATION_READ_ONLY'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: node ops/display/display09-published-location.test.cjs
+      - name: Resolve the published V1 location in a PostgreSQL read-only transaction
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          WORKFLOW_SHA: ${{ github.sha }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: WORKFLOW_SHA
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            script_path="$(mktemp /tmp/display09-published-location.XXXXXX.cjs)"
+            output_path="$(mktemp /tmp/display09-published-location.XXXXXX.json)"
+            trap 'rm -f -- "$script_path" "$output_path"' EXIT
+            git -C "$repo" fetch --quiet origin "$WORKFLOW_SHA"
+            git -C "$repo" show "$WORKFLOW_SHA:ops/display/display09-published-location.cjs" >"$script_path"
+            cd "$repo"
+            docker compose exec -T -e DISPLAY09_PUBLISHED_LOCATION_RUN=true backend node - <"$script_path" >"$output_path"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||r.readOnly!==true||r.organizationId!=="916f54ec-af22-45e0-99db-a369d9630002"||r.locationCode!=="E03-DISPLAY-PILOT"||r.locationCardinality!==1||!r.locationId||!r.publicDisplayId||r.playerPath!==`/d/${r.publicDisplayId}`||r.locationStatus!=="ACTIVE"||r.buildingMatches!==true||r.buildingActive!==true||r.publicationStatus!=="PUBLISHED"||r.publishedVersion<1)process.exit(1)' "$output_path"
+            cat "$output_path"
   display09-origin-tls-deep-inspection:
     if: inputs.display09_origin_tls_deep_inspection == 'INSPECT_DISPLAY09_ORIGIN_TLS_DEEP_READ_ONLY'
     runs-on: ubuntu-latest
