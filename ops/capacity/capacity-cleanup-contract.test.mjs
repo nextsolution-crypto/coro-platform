@@ -51,6 +51,7 @@ test("cleanup removes progressively only while below the warning threshold and o
 test("plan reports every deployed service and distinguishes logical from physical recovery", () => {
   assert.match(source, /CAPACITY_RETENTION_SERVICE/);
   assert.match(source, /docker system df -v/);
+  assert.match(source, /parts\.at\(-2\)/);
   assert.match(source, /physicallyRecoverableBytes=/);
   assert.match(source, /IMAGE_PHYSICAL_SIZE_UNAVAILABLE/);
 });
