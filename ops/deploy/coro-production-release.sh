@@ -172,6 +172,28 @@ for container in coro_backend coro_frontend coro_client_portal coro_website; do
 done
 [[ "$(printf '%s\n' "$previous_images" | sed '/^$/d' | wc -l)" -eq 4 ]] || fail ROLLBACK_METADATA_MISSING
 
+# Retention rollback is service-specific. An unchanged service keeps its prior
+# rollback instead of rotating merely because another service is released.
+active_manifest="$(find "$RELEASE_DIR" -maxdepth 1 -type f -name 'production-*.json' -printf '%T@ %p\n' | sort -rn | cut -d' ' -f2- | while read -r candidate; do node -e 'const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.exit(m.status==="SUCCESS"?0:1)' "$candidate" 2>/dev/null && { echo "$candidate"; break; } || true; done)"
+[[ -n "$active_manifest" && -f "$active_manifest" && ! -L "$active_manifest" ]] || fail RETENTION_ACTIVE_MANIFEST_MISSING
+export RETENTION_ACTIVE_MANIFEST="$active_manifest"
+export RETENTION_CANDIDATE_IMAGES="$(node -e 'process.stdout.write(JSON.stringify({backend:process.env.BACKEND_IMAGE,frontend:process.env.FRONTEND_IMAGE,clientPortal:process.env.CLIENT_PORTAL_IMAGE,website:process.env.WEBSITE_IMAGE}))')"
+export RETENTION_ROLLBACK_BY_SERVICE_JSON="$(node <<'NODE'
+const fs=require('fs');
+const current=JSON.parse(fs.readFileSync(process.env.RETENTION_ACTIVE_MANIFEST,'utf8'));
+const candidate=JSON.parse(process.env.RETENTION_CANDIDATE_IMAGES);
+const keys=['backend','frontend','clientPortal','website'];
+const legacy=Object.fromEntries(keys.map((key,index)=>[key,(current.previousImages||[]).filter(Boolean)[index]]));
+const prior=current.rollbackImagesByService||legacy;
+const next={};
+for(const key of keys){
+  if(!/^ghcr\.io\/.+@sha256:[0-9a-f]{64}$/.test(current.images?.[key]||'') || !/^ghcr\.io\/.+@sha256:[0-9a-f]{64}$/.test(prior?.[key]||'')) process.exit(1);
+  next[key]=candidate[key]===current.images[key]?prior[key]:current.images[key];
+}
+process.stdout.write(JSON.stringify(next));
+NODE
+)" || fail RETENTION_ROLLBACK_METADATA_INVALID
+
 # Fail before backup, pulls, migration or rollout unless the host can stage a
 # backup, a conservatively expanded image set, database growth and an
 # operational reserve. This augments and never weakens the backup's own gate.
@@ -325,7 +347,7 @@ node <<'NODE'
 const fs=require('fs'); const p=process.env;
 const knowledgeRuntime=JSON.parse(fs.readFileSync(`/opt/coro-ops/releases/${p.RELEASE_ID}.knowledge-runtime.json`,'utf8'));
 const knowledgeSmoke=JSON.parse(fs.readFileSync(`/opt/coro-ops/releases/${p.RELEASE_ID}.knowledge-smoke.json`,'utf8'));
-const manifest={releaseId:p.RELEASE_ID,gitCommit:p.RELEASE_COMMIT,timestampUtc:p.RELEASE_TIMESTAMP,operator:p.RELEASE_OPERATOR,status:'SUCCESS',images:{backend:p.BACKEND_IMAGE,frontend:p.FRONTEND_IMAGE,clientPortal:p.CLIENT_PORTAL_IMAGE,website:p.WEBSITE_IMAGE},composeIdentity:p.COMPOSE_IDENTITY,expectedMigrationHead:p.EXPECTED_MIGRATION_HEAD,previousCommit:p.PREVIOUS_COMMIT,previousImages:p.PREVIOUS_IMAGES.split('\n'),previousCompose:p.PREVIOUS_COMPOSE,previousMigrationHead:p.PREVIOUS_MIGRATION_HEAD,backupCheckpointId:p.BACKUP_ID,backupSha256:p.BACKUP_SHA,backupRemoteObject:p.BACKUP_REMOTE_OBJECT,backupVersionId:p.BACKUP_VERSION_ID,restoreEvidence:{status:'RESTORE_VERIFIED',report:p.RESTORE_REPORT},outboxConfiguration:{status:'PASS',keyId:p.CLIENT_INVITATION_OUTBOX_KEY_ID},healthChecks:{database:'PASS',backend:'PASS',frontend:'PASS',clientPortal:'PASS',website:'PASS',internalAuthReachable:'PASS',clientAuthReachable:'PASS',unauthenticatedBookingDenied:'PASS',authenticatedBooking:'NOT_VERIFIED_REQUIRES_APPROVED_SYNTHETIC_IDENTITY',containers:'PASS',restartCount:'PASS',criticalLogs:'PASS',mfaQaCaptureDisabled:'PASS'}};
+const manifest={releaseId:p.RELEASE_ID,gitCommit:p.RELEASE_COMMIT,timestampUtc:p.RELEASE_TIMESTAMP,operator:p.RELEASE_OPERATOR,status:'SUCCESS',images:{backend:p.BACKEND_IMAGE,frontend:p.FRONTEND_IMAGE,clientPortal:p.CLIENT_PORTAL_IMAGE,website:p.WEBSITE_IMAGE},rollbackImagesByService:JSON.parse(p.RETENTION_ROLLBACK_BY_SERVICE_JSON),composeIdentity:p.COMPOSE_IDENTITY,expectedMigrationHead:p.EXPECTED_MIGRATION_HEAD,previousCommit:p.PREVIOUS_COMMIT,previousImages:p.PREVIOUS_IMAGES.split('\n'),previousCompose:p.PREVIOUS_COMPOSE,previousMigrationHead:p.PREVIOUS_MIGRATION_HEAD,backupCheckpointId:p.BACKUP_ID,backupSha256:p.BACKUP_SHA,backupRemoteObject:p.BACKUP_REMOTE_OBJECT,backupVersionId:p.BACKUP_VERSION_ID,restoreEvidence:{status:'RESTORE_VERIFIED',report:p.RESTORE_REPORT},outboxConfiguration:{status:'PASS',keyId:p.CLIENT_INVITATION_OUTBOX_KEY_ID},healthChecks:{database:'PASS',backend:'PASS',frontend:'PASS',clientPortal:'PASS',website:'PASS',internalAuthReachable:'PASS',clientAuthReachable:'PASS',unauthenticatedBookingDenied:'PASS',authenticatedBooking:'NOT_VERIFIED_REQUIRES_APPROVED_SYNTHETIC_IDENTITY',containers:'PASS',restartCount:'PASS',criticalLogs:'PASS',mfaQaCaptureDisabled:'PASS'}};
 manifest.knowledgeRuntime={...knowledgeRuntime,smoke:knowledgeSmoke};
 const path=`/opt/coro-ops/releases/${p.RELEASE_ID}.json`; fs.writeFileSync(path,JSON.stringify(manifest,null,2)+'\n',{flag:'wx',mode:0o600});
 NODE

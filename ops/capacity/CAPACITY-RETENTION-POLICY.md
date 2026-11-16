@@ -8,24 +8,26 @@ The production filesystem is approximately 80 GiB. The latest observed state had
 
 The recommended policy is:
 
-- preserve the four images used by every container;
-- preserve the four images from the immediate healthy rollback set recorded by the newest successfully **reconciled** release;
+- preserve the immutable active digest for every deployed service;
+- preserve, per service, its last distinct healthy digest as the explicit rollback;
+- represent backend, PDF worker, rasterizer and spool initialization separately while deduplicating their shared backend digest physically;
 - preserve a named candidate only with a reason and an ISO expiry;
-- make other unreferenced images and build cache eligible after 24 hours;
+- make other images immediately eligible when no running or stopped container, service rollback, candidate or deployment protects them and GHCR recovery is demonstrated;
+- keep the filtered 24-hour rule for build cache only;
 - warn below 24 GiB free and treat below 20 GiB as critical;
 - retain at least the release gate requirement plus 5 GiB operational reserve.
 
-The 24-hour delay does not shorten rollback retention: active and rollback images remain protected regardless of age. It bounds only orphaned and superseded cache. At the observed delivery rate it prevents the 72-hour accumulation while retaining a full day for investigation. If release frequency or physical image size changes, the policy values must be reviewed through a PR.
+Image age is not a retention authority. Active and rollback references remain protected regardless of age, and unreferenced images do not gain protection merely by being recent. If release frequency or physical image size changes, the policy values must be reviewed through a PR.
 
 ## Rotation authority
 
-`coro-release-reconcile.sh` writes an atomic, checksummed reconciliation marker only after container digests, migration head, checkout and health evidence match. Cleanup selects only such a release. Its `images` become active and its `previousImages` become rollback. Failed, running, unknown and unreconciled releases never rotate protection. A rollback image listed as unsafe causes cleanup to fail closed.
+`coro-release-reconcile.sh` writes an atomic, checksummed reconciliation marker only after container digests, migration head, checkout and health evidence match. Cleanup selects only such releases. Its `images` become active. For each changed service, the old active becomes rollback; an unchanged service keeps its last distinct rollback. Failed, running, unknown and unreconciled releases never rotate protection. A rollback image listed as unsafe causes cleanup to fail closed.
 
 Explicit candidate protection requires `id`, `reason`, `expiresAt` and four immutable digest references. Expired entries are reported and cease protection. This prevents permanent forgotten pins.
 
 ## Eligible categories
 
-- Images: exact immutable IDs, absent from all containers and all protected sets, older than policy. References are rechecked immediately before `docker image rm`.
+- Images: exact immutable IDs absent from all containers (including stopped containers), active/rollback/candidate sets and any in-progress deployment. GHCR recoverability, reference state and physical unique size must be proven; references are rechecked immediately before exact `docker image rm`.
 - Build cache: only records older than policy through filtered `docker builder prune`; images and volumes are outside that command.
 - Stopped containers: only containers explicitly labelled `io.getcoro.disposable=true`, still exited at deletion time.
 - Temporaries: only regular files under the dedicated non-symlink `/opt/coro-ops/tmp/release-cache`, older than one day.

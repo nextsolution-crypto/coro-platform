@@ -19,7 +19,6 @@ temp_root="${CORO_CAPACITY_TEMP_ROOT:-/opt/coro-ops/tmp/release-cache}"
 exec 9>/run/lock/coro-production-deployment.lock
 flock --nonblock 9 || { echo 'CAPACITY_CLEANUP_FAILED code=DEPLOYMENT_LOCK_BUSY'; exit 1; }
 
-minimum_age_hours="$(node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));const v=p.minimumImageAgeHours;if(!Number.isInteger(v)||v<12||v>168)process.exit(1);process.stdout.write(String(v))' "$policy_file")" || { echo 'CAPACITY_CLEANUP_FAILED code=MINIMUM_AGE_INVALID'; exit 1; }
 cache_age_hours="$(node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));const v=p.minimumBuildCacheAgeHours;if(!Number.isInteger(v)||v<12||v>168)process.exit(1);process.stdout.write(String(v))' "$policy_file")" || { echo 'CAPACITY_CLEANUP_FAILED code=CACHE_AGE_INVALID'; exit 1; }
 target_free_bytes="$(node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));const v=p.warningFreeBytes;if(!Number.isSafeInteger(v)||v<1073741824)process.exit(1);process.stdout.write(String(v))' "$policy_file")" || { echo 'CAPACITY_CLEANUP_FAILED code=WARNING_THRESHOLD_INVALID'; exit 1; }
 
@@ -38,16 +37,31 @@ manifest="$(node -e 'const fs=require("fs"),m=JSON.parse(fs.readFileSync(process
 expected_sha="$(node -e 'const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(m.manifestSha256||"")' "$marker")"
 [[ -f "$manifest" && ! -L "$manifest" && "$(sha256sum "$manifest" | cut -d' ' -f1)" == "$expected_sha" ]] || { echo 'CAPACITY_CLEANUP_FAILED code=RECONCILED_EVIDENCE_INVALID'; exit 1; }
 
-input="$(mktemp)"; plan="$(mktemp)"
-trap 'rm -f -- "$input" "$plan" "${bootstrap_marker:-}"' EXIT
-node - "$manifest" "$marker" "$policy_file" "$input" <<'NODE'
+input="$(mktemp)"; plan="$(mktemp)"; docker_df="$(mktemp)"
+trap 'rm -f -- "$input" "$plan" "$docker_df" "${bootstrap_marker:-}"' EXIT
+node - "$manifest" "$marker" "$policy_file" "$input" "$state_root" <<'NODE'
 const fs=require('fs');
+const crypto=require('crypto');
+const path=require('path');
 const read=(file)=>JSON.parse(fs.readFileSync(file,'utf8'));
-const manifest=read(process.argv[2]), marker=read(process.argv[3]), policy=read(process.argv[4]);
-const release={releaseId:marker.releaseId,status:manifest.status,reconciled:true,timestampUtc:marker.reconciledAt,images:manifest.images,previousImages:manifest.previousImages};
-fs.writeFileSync(process.argv[5],JSON.stringify({releases:[release],explicitCandidates:policy.explicitCandidates||[],blockedRollbackImages:policy.blockedRollbackImages||[]},null,2));
+const policy=read(process.argv[4]);
+const root=process.argv[6];
+const releases=[];
+for(const name of fs.readdirSync(root).filter((name)=>/^production-[0-9a-f]{40}(?:-[0-9]{8}T[0-9]{6}Z)?\.reconciled\.json$/.test(name))){
+  const marker=read(path.join(root,name));
+  const bytes=fs.readFileSync(marker.manifestPath);
+  if(crypto.createHash('sha256').update(bytes).digest('hex')!==marker.manifestSha256) throw new Error('RECONCILED_EVIDENCE_INVALID');
+  const manifest=JSON.parse(bytes);
+  releases.push({releaseId:marker.releaseId,status:manifest.status,reconciled:true,timestampUtc:marker.reconciledAt,images:manifest.images,previousImages:manifest.previousImages,rollbackImagesByService:manifest.rollbackImagesByService});
+}
+if(!releases.length){
+  const manifest=read(process.argv[2]), marker=read(process.argv[3]);
+  releases.push({releaseId:marker.releaseId,status:manifest.status,reconciled:true,timestampUtc:marker.reconciledAt,images:manifest.images,previousImages:manifest.previousImages,rollbackImagesByService:manifest.rollbackImagesByService});
+}
+fs.writeFileSync(process.argv[5],JSON.stringify({releases,explicitCandidates:policy.explicitCandidates||[],blockedRollbackImages:policy.blockedRollbackImages||[]},null,2));
 NODE
 node "$plan_tool" "$input" >"$plan" || { echo 'CAPACITY_CLEANUP_FAILED code=RETENTION_PLAN_INVALID'; exit 1; }
+node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));for(const [service,v] of Object.entries(p.servicePlan))console.log(`CAPACITY_RETENTION_SERVICE service=${service} imageKey=${v.imageKey} active=${v.active} rollback=${v.rollback} unchanged=${v.unchangedAcrossLatestRelease}`)' "$plan"
 
 declare -A protected=()
 while read -r id; do [[ -n "$id" ]] && protected["$id"]=CONTAINER_REFERENCE; done < <(docker ps -aq | xargs -r docker inspect --format '{{.Image}}' | sort -u)
@@ -57,15 +71,26 @@ while read -r ref; do
 done < <(node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));for(const r of p.protectedImages)console.log(r)' "$plan")
 
 free_bytes() { echo $(( $(df -Pk -- "$release_dir" | awk 'NR==2 {print $4}') * 1024 )); }
-before="$(free_bytes)"; previous="$before"; now="$(date +%s)"; candidates=0; removed=0
+before="$(free_bytes)"; previous="$before"; candidates=0; removed=0
 docker system df
+docker system df -v --format '{{json .}}' >"$docker_df" || { echo 'CAPACITY_CLEANUP_FAILED code=DOCKER_PHYSICAL_ACCOUNTING_UNAVAILABLE'; exit 1; }
+
+unique_bytes_for_image() {
+  node - "$docker_df" "$1" <<'NODE'
+const fs=require('fs');
+const [file,id]=process.argv.slice(2);
+const parse=(value)=>{const m=String(value||'').match(/^([0-9]+(?:\.[0-9]+)?)\s*([kKmMgGtT]?B)$/);if(!m)return null;const units={B:1,kB:1e3,KB:1e3,MB:1e6,GB:1e9,TB:1e12};return Math.round(Number(m[1])*units[m[2]]);};
+const rows=fs.readFileSync(file,'utf8').trim().split(/\n/).filter(Boolean).map((line)=>JSON.parse(line));
+const matches=rows.filter((row)=>row.Type==='Images'&&(id===row.ImageID||id.endsWith(row.ImageID)||id.replace(/^sha256:/,'').startsWith(String(row.ImageID||''))));
+const values=[...new Set(matches.map((row)=>parse(row.UniqueSize)).filter((v)=>Number.isSafeInteger(v)&&v>=0))];
+if(values.length!==1)process.exit(2);process.stdout.write(String(values[0]));
+NODE
+}
 
 while read -r id; do
   [[ -n "$id" && -z "${protected[$id]:-}" ]] || continue
-  created="$(docker image inspect --format '{{.Created}}' "$id")"
   size="$(docker image inspect --format '{{.Size}}' "$id")"
-  epoch="$(date -d "$created" +%s 2>/dev/null || echo "$now")"; age_hours=$(((now-epoch)/3600))
-  (( age_hours >= minimum_age_hours )) || continue
+  unique_size="$(unique_bytes_for_image "$id")" || { echo "CAPACITY_CLEANUP_FAILED code=IMAGE_PHYSICAL_SIZE_UNAVAILABLE id=$id"; exit 1; }
   (( $(free_bytes) < target_free_bytes )) || break
   candidates=$((candidates + 1))
   mapfile -t remote_digests < <(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$id" | grep -E '^ghcr\.io/nextsolution-crypto/coro-[a-z0-9_.-]+@sha256:[0-9a-f]{64}$' | sort -u)
@@ -74,10 +99,10 @@ while read -r id; do
     if docker manifest inspect "$digest" >/dev/null 2>&1; then recoverable_digest="$digest"; break; fi
   done
   if [[ -z "$recoverable_digest" ]]; then
-    echo "CAPACITY_CLEANUP_SKIPPED category=image id=$id ageHours=$age_hours reason=GHCR_RECOVERY_NOT_VERIFIED"
+    echo "CAPACITY_CLEANUP_SKIPPED category=image id=$id reason=GHCR_RECOVERY_NOT_VERIFIED"
     continue
   fi
-  echo "CAPACITY_CLEANUP_CANDIDATE category=image id=$id logicalSizeBytes=$size ageHours=$age_hours remoteRecoverable=true reason=UNREFERENCED_EXPIRED_IMAGE"
+  echo "CAPACITY_CLEANUP_CANDIDATE category=image id=$id logicalSizeBytes=$size physicallyRecoverableBytes=$unique_size remoteRecoverable=true reason=UNREFERENCED_UNPROTECTED_IMAGE"
   if [[ "$mode" == EXECUTE ]]; then
     # Recheck every reference immediately before the exact removal.
     docker ps -aq | xargs -r docker inspect --format '{{.Image}}' | grep -Fxq "$id" && { echo "CAPACITY_CLEANUP_FAILED code=IMAGE_BECAME_REFERENCED id=$id"; exit 1; }
@@ -112,4 +137,4 @@ if [[ -d "$temp_root" && ! -L "$temp_root" ]]; then
 fi
 after="$(free_bytes)"
 echo "CAPACITY_CLEANUP_CATEGORY category=temporaries physicallyRecoveredBytes=$((after-previous))"
-echo "CAPACITY_CLEANUP_RESULT mode=$mode minimumAgeHours=$minimum_age_hours targetFreeBytes=$target_free_bytes candidates=$candidates removed=$removed physicallyRecoveredBytes=$((after-before)) beforeFreeBytes=$before afterFreeBytes=$after targetReached=$([[ $after -ge $target_free_bytes ]] && echo true || echo false) activeReleaseId=$(node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(p.activeReleaseId)' "$plan")"
+echo "CAPACITY_CLEANUP_RESULT mode=$mode retentionBasis=SERVICE_ACTIVE_AND_PREVIOUS_ROLLBACK targetFreeBytes=$target_free_bytes candidates=$candidates removed=$removed physicallyRecoveredBytes=$((after-before)) beforeFreeBytes=$before afterFreeBytes=$after targetReached=$([[ $after -ge $target_free_bytes ]] && echo true || echo false) activeReleaseId=$(node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(p.activeReleaseId)' "$plan")"
