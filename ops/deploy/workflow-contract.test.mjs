@@ -94,6 +94,13 @@ test('reconciliation is read-only and verifies runtime against immutable evidenc
   }
   assert.doesNotMatch(reconcile, /docker compose .*up|migrate deploy|pg_restore|ROLLBACK_APPLICATIONS/);
 });
+
+test('independent reconciliation can target an exact timestamped governed retry', () => {
+  const reconciliation = fs.readFileSync(new URL('../../.github/workflows/production-release-reconciliation.yml', import.meta.url), 'utf8');
+  assert.match(reconciliation, /release_id:/);
+  assert.match(reconciliation, /RELEASE_ID: \$\{\{ inputs\.release_id \}\}/);
+  assert.match(reconciliation, /production-\$\{RELEASE_COMMIT\}/);
+});
 test('governed release injects and verifies the Client invitation outbox key without printing it', () => {
   assert.match(workflow, /CLIENT_INVITATION_OUTBOX_KEY_BASE64: \$\{\{ secrets\.CLIENT_INVITATION_OUTBOX_KEY_BASE64 \}\}/);
   assert.match(workflow, /DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST: \$\{\{ secrets\.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST \}\}/);

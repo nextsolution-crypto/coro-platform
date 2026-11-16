@@ -21,6 +21,7 @@ flock --nonblock 9 || { echo 'CAPACITY_CLEANUP_FAILED code=DEPLOYMENT_LOCK_BUSY'
 
 minimum_age_hours="$(node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));const v=p.minimumImageAgeHours;if(!Number.isInteger(v)||v<12||v>168)process.exit(1);process.stdout.write(String(v))' "$policy_file")" || { echo 'CAPACITY_CLEANUP_FAILED code=MINIMUM_AGE_INVALID'; exit 1; }
 cache_age_hours="$(node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));const v=p.minimumBuildCacheAgeHours;if(!Number.isInteger(v)||v<12||v>168)process.exit(1);process.stdout.write(String(v))' "$policy_file")" || { echo 'CAPACITY_CLEANUP_FAILED code=CACHE_AGE_INVALID'; exit 1; }
+target_free_bytes="$(node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));const v=p.warningFreeBytes;if(!Number.isSafeInteger(v)||v<1073741824)process.exit(1);process.stdout.write(String(v))' "$policy_file")" || { echo 'CAPACITY_CLEANUP_FAILED code=WARNING_THRESHOLD_INVALID'; exit 1; }
 
 bootstrap_marker=""
 marker="$(find "$state_root" -maxdepth 1 -type f -name 'production-*.reconciled.json' -printf '%T@ %p\n' | sort -rn | sed -n '1p' | cut -d' ' -f2-)"
@@ -65,12 +66,23 @@ while read -r id; do
   size="$(docker image inspect --format '{{.Size}}' "$id")"
   epoch="$(date -d "$created" +%s 2>/dev/null || echo "$now")"; age_hours=$(((now-epoch)/3600))
   (( age_hours >= minimum_age_hours )) || continue
+  (( $(free_bytes) < target_free_bytes )) || break
   candidates=$((candidates + 1))
-  echo "CAPACITY_CLEANUP_CANDIDATE category=image id=$id logicalSizeBytes=$size ageHours=$age_hours reason=UNREFERENCED_EXPIRED_IMAGE"
+  mapfile -t remote_digests < <(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$id" | grep -E '^ghcr\.io/nextsolution-crypto/coro-[a-z0-9_.-]+@sha256:[0-9a-f]{64}$' | sort -u)
+  recoverable_digest=""
+  for digest in "${remote_digests[@]}"; do
+    if docker manifest inspect "$digest" >/dev/null 2>&1; then recoverable_digest="$digest"; break; fi
+  done
+  if [[ -z "$recoverable_digest" ]]; then
+    echo "CAPACITY_CLEANUP_SKIPPED category=image id=$id ageHours=$age_hours reason=GHCR_RECOVERY_NOT_VERIFIED"
+    continue
+  fi
+  echo "CAPACITY_CLEANUP_CANDIDATE category=image id=$id logicalSizeBytes=$size ageHours=$age_hours remoteRecoverable=true reason=UNREFERENCED_EXPIRED_IMAGE"
   if [[ "$mode" == EXECUTE ]]; then
     # Recheck every reference immediately before the exact removal.
     docker ps -aq | xargs -r docker inspect --format '{{.Image}}' | grep -Fxq "$id" && { echo "CAPACITY_CLEANUP_FAILED code=IMAGE_BECAME_REFERENCED id=$id"; exit 1; }
     [[ -z "${protected[$id]:-}" ]] || { echo "CAPACITY_CLEANUP_FAILED code=IMAGE_BECAME_PROTECTED id=$id"; exit 1; }
+    docker manifest inspect "$recoverable_digest" >/dev/null 2>&1 || { echo "CAPACITY_CLEANUP_FAILED code=IMAGE_REMOTE_RECOVERY_CHANGED id=$id"; exit 1; }
     docker image rm "$id" >/dev/null || { echo "CAPACITY_CLEANUP_FAILED code=IMAGE_REMOVE_FAILED id=$id"; exit 1; }
     removed=$((removed + 1))
   fi
@@ -100,4 +112,4 @@ if [[ -d "$temp_root" && ! -L "$temp_root" ]]; then
 fi
 after="$(free_bytes)"
 echo "CAPACITY_CLEANUP_CATEGORY category=temporaries physicallyRecoveredBytes=$((after-previous))"
-echo "CAPACITY_CLEANUP_RESULT mode=$mode minimumAgeHours=$minimum_age_hours candidates=$candidates removed=$removed physicallyRecoveredBytes=$((after-before)) beforeFreeBytes=$before afterFreeBytes=$after activeReleaseId=$(node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(p.activeReleaseId)' "$plan")"
+echo "CAPACITY_CLEANUP_RESULT mode=$mode minimumAgeHours=$minimum_age_hours targetFreeBytes=$target_free_bytes candidates=$candidates removed=$removed physicallyRecoveredBytes=$((after-before)) beforeFreeBytes=$before afterFreeBytes=$after targetReached=$([[ $after -ge $target_free_bytes ]] && echo true || echo false) activeReleaseId=$(node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(p.activeReleaseId)' "$plan")"

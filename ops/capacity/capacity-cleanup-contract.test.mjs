@@ -40,6 +40,15 @@ test("cleanup is resumable, lock-aware and rechecks references before mutation",
   assert.match(source, /status=exited/);
 });
 
+test("cleanup removes progressively only while below the warning threshold and only after GHCR recovery proof", () => {
+  assert.match(source, /p\.warningFreeBytes/);
+  assert.match(source, /free_bytes\) < target_free_bytes/);
+  assert.match(source, /docker manifest inspect "\$digest"/);
+  assert.match(source, /IMAGE_REMOTE_RECOVERY_CHANGED/);
+  assert.match(source, /GHCR_RECOVERY_NOT_VERIFIED/);
+  assert.match(source, /targetReached=/);
+});
+
 test("temporary JSON evidence is parsed independently of file extension", () => {
   assert.doesNotMatch(source, /require\(process\.argv\[1\]\)/);
   assert.doesNotMatch(source, /marker=require\(process\.argv\[3\]\)/);

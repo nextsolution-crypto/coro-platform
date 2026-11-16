@@ -28,6 +28,14 @@ test('requires an explicit retry approval without replacing the immutable applic
   assert.match(workflow, /RELEASE_TOOLING_COMMIT: \$\{\{ github\.sha \}\}/);
 });
 
+test('runs the reviewed retention policy around immutable releases using governed tooling', () => {
+  assert.match(workflow, /Run eligible pre-release capacity maintenance/);
+  assert.match(workflow, /Rotate eligible images after reconciled release/);
+  assert.match(workflow, /CORO_RELEASE_RETENTION_AUTOMATION_ENABLED/);
+  assert.match(workflow, /SOURCE_SHA: \$\{\{ github\.sha \}\}/);
+  assert.match(workflow, /coro-capacity-cleanup\.sh/);
+});
+
 test('migration head discovery excludes migration_lock.toml', () => {
   assert.match(workflow, /git ls-tree -d --name-only/);
 });

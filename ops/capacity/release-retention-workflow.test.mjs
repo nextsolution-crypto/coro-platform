@@ -15,9 +15,10 @@ test("pre, post and periodic maintenance share the deployment lock", () => {
   assert.match(maintenance, /cron:/);
 });
 
-test("release maintenance fetches the exact candidate before reading its scripts", () => {
-  assert.equal((deploy.match(/git -C "\$repo" fetch --quiet origin "\$SOURCE_SHA"/g) || []).length, 2);
+test("release maintenance uses the exact governed tooling revision rather than stale product tooling", () => {
   assert.equal((deploy.match(/git -C "\$repo" fetch --quiet origin main/g) || []).length, 2);
+  assert.equal((deploy.match(/test "\$\(git -C "\$repo" rev-parse origin\/main\)" = "\$SOURCE_SHA"/g) || []).length, 2);
+  assert.equal((deploy.match(/SOURCE_SHA: \$\{\{ github\.sha \}\}/g) || []).length, 2);
 });
 
 test("all automatic mutation remains inert until explicit activation", () => {
