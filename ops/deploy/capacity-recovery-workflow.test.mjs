@@ -14,6 +14,7 @@ test("capacity recovery is gated and limited to old unreferenced Docker data", (
   assert.doesNotMatch(workflow, /docker image prune/);
   assert.match(workflow, /candidate_commit:/);
   assert.match(workflow, /approved-immutable-releases\.json/);
+  assert.match(workflow, /releases\.releases\?\.\[commit\]/);
   assert.match(workflow, /candidate_ids/);
   assert.match(workflow, /target_bytes=\$\(\(required_bytes \+ 1073741824\)\)/);
   assert.match(workflow, /sort -n -o "\$inventory"/);
