@@ -88,6 +88,19 @@ test('verifies all five SNI plus player cache, CSP and cookie policy', () => {
   assert.match(script, /DISPLAY09_PLAYER_BOOTSTRAP=PASS static_asset=true status_cors=true/);
 });
 
+test('selects exactly one static asset when Next renders several assets on one HTML line', () => {
+  assert.match(script, /asset_path="\$\(awk 'match\(\$0,[\s\S]+print substr\(\$0, RSTART, RLENGTH\); exit/);
+  assert.doesNotMatch(script, /grep -m 1 -oE '\\?\/_next\/static/);
+
+  const html = '<link href="/_next/static/chunks/first.css"><script src="/_next/static/chunks/second.js"></script>';
+  const matches = [...html.matchAll(/\/_next\/static\/[^" ]+\.(?:js|css)/g)].map((match) => match[0]);
+  assert.deepEqual(matches, [
+    '/_next/static/chunks/first.css',
+    '/_next/static/chunks/second.js',
+  ]);
+  assert.equal(matches[0], '/_next/static/chunks/first.css');
+});
+
 test('isolated NGINX test renders the template and validates the actual upstream', () => {
   assert.match(isolated, /nginx -t/);
   assert.match(isolated, /server_name display\.getcoro\.io/);
