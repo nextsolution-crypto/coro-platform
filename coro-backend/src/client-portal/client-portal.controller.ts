@@ -13,6 +13,8 @@ import {
   UploadedFile,
   UseInterceptors,
   ForbiddenException,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
@@ -45,6 +47,13 @@ import {
   UpdateIncidentRexDto,
 } from '../occupancy/incident-detail.dto';
 import { TriggerIncidentDto } from '../occupancy/incident-trigger.dto';
+import {
+  ActivateIncidentPcaDto,
+  ConfigureIncidentEscalationDto,
+  ReassignIncidentTaskDto,
+  SendIncidentAccessDto,
+  TriggerIncidentPanicDto,
+} from '../occupancy/incident-command.dto';
 import { OccupancyEmployeesService } from '../occupancy/occupancy-employees.service';
 import { OccupancyService } from '../occupancy/occupancy.service';
 import {
@@ -1336,9 +1345,10 @@ export class ClientPortalController {
   // ── Module Incident ──────────────────────────────────────────────────────
 
   @Post('buildings/:buildingId/panic')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
   async triggerPanic(
     @Param('buildingId') buildingId: string,
-    @Body() body: any,
+    @Body() body: TriggerIncidentPanicDto,
     @Request() req: any,
   ) {
     await this.clientPortalService.assertIncidentPermission(
@@ -1364,6 +1374,7 @@ export class ClientPortalController {
   }
 
   @Post('incidents/trigger')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
   async triggerIncident(@Body() body: TriggerIncidentDto, @Request() req: any) {
     await this.clientPortalService.assertIncidentPermission(
       req.clientUser,
@@ -1818,9 +1829,10 @@ export class ClientPortalController {
   }
 
   @Put('incidents/tasks/:taskId/reassign')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
   async reassignIncidentTask(
     @Param('taskId') taskId: string,
-    @Body() body: { employeeId: string; lockVersion: number },
+    @Body() body: ReassignIncidentTaskDto,
     @Request() req: any,
   ) {
     await this.clientPortalService.assertIncidentPermission(
@@ -1857,17 +1869,11 @@ export class ClientPortalController {
   }
 
   @Put('incidents/tasks/:taskId/escalation-policy')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
   async configureIncidentTaskEscalation(
     @Param('taskId') taskId: string,
     @Body()
-    body: {
-      severity: 'CRITICAL' | 'HIGH' | 'NORMAL' | 'LOW';
-      alternateEmployeeIds?: string[];
-      acknowledgmentSubjectType: 'USER' | 'CLIENT_USER';
-      acknowledgmentSubjectId: string;
-      lockVersion: number;
-      reason: string;
-    },
+    body: ConfigureIncidentEscalationDto,
     @Request() req: any,
   ) {
     await this.clientPortalService.assertIncidentPermission(
@@ -1930,14 +1936,9 @@ export class ClientPortalController {
   }
 
   @Post('incidents/pca/activate')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
   async activateIncidentPca(
-    @Body()
-    body: {
-      buildingId: string;
-      projectId: string;
-      incidentEventId?: string;
-      reason: string;
-    },
+    @Body() body: ActivateIncidentPcaDto,
     @Request() req: any,
   ) {
     await this.clientPortalService.assertIncidentPermission(
@@ -2190,9 +2191,10 @@ export class ClientPortalController {
   }
 
   @Post('incidents/:incidentId/send-access')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
   async sendInterventionAccess(
     @Param('incidentId') incidentId: string,
-    @Body() body: { emails: string[] },
+    @Body() body: SendIncidentAccessDto,
     @Request() req: any,
   ) {
     await this.clientPortalService.assertIncidentPermission(

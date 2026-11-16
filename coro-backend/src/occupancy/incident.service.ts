@@ -18,6 +18,9 @@ import {
 import { AddIncidentLogDto, ContainIncidentDto, ResolveIncidentDto, UpdateIncidentRexDto } from './incident-detail.dto';
 import { DemoCommunicationPolicyService } from '../demo-environment/demo-communication-policy.service';
 import { DemoCommunicationChannel } from '@prisma/client';
+import { TriggerIncidentDto } from './incident-trigger.dto';
+import { TriggerIncidentPanicDto } from './incident-command.dto';
+import { escapeIncidentHtml } from './incident-html';
 
 type IncidentAuditContext = {
   actorType: CoroActorType;
@@ -662,7 +665,7 @@ export class IncidentService {
   }
 
   // ── Bouton panique ────────────────────────────────────────────────────────
-  async triggerPanic(buildingId: string, body: any, organizationId: string) {
+  async triggerPanic(buildingId: string, body: TriggerIncidentPanicDto, organizationId: string) {
     const building = await this.prisma.building.findFirst({
       where: { id: buildingId, organizationId },
     });
@@ -670,6 +673,10 @@ export class IncidentService {
 
     const triggeredBy  = body.triggeredBy || 'Inconnu';
     const emergencyType = body.emergencyType || 'URGENCE GÉNÉRALE';
+    const safeBuildingName = escapeIncidentHtml(building.name);
+    const safeAddress = escapeIncidentHtml(`${building.address || ''}, ${building.city || ''}, ${building.province || ''}`.trim().replace(/^,|,$/g, ''));
+    const safeTriggeredBy = escapeIncidentHtml(triggeredBy);
+    const safeEmergencyType = escapeIncidentHtml(emergencyType);
     const now          = new Date().toLocaleString('fr-CA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const address      = `${building.address || ''}, ${building.city || ''}, ${building.province || ''}`.trim().replace(/^,|,$/g, '');
 
@@ -679,29 +686,29 @@ export class IncidentService {
       <div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;">
         <div style="background:#C0392B;padding:24px;border-radius:8px 8px 0 0;">
           <span style="color:#FFFFFF;font-size:28px;font-weight:900;">CO<span>RO</span></span>
-          <span style="background:#FFFFFF;color:#C0392B;font-size:13px;font-weight:800;padding:4px 10px;border-radius:4px;margin-left:12px;">🚨 ALERTE PANIQUE</span>
+          <span style="background:#FFFFFF;color:#C0392B;font-size:13px;font-weight:800;padding:4px 10px;border-radius:4px;margin-left:12px;">🚨 ${safeEmergencyType}</span>
         </div>
         <div style="background:#FFFFFF;padding:32px;border:1px solid #E9ECEF;border-radius:0 0 8px 8px;">
           <div style="background:#FDEDEC;border-left:6px solid #C0392B;padding:16px 20px;border-radius:4px;margin-bottom:24px;">
             <p style="margin:0;font-size:22px;font-weight:900;color:#C0392B;">🚨 MENACE ACTIVE — ACTIVE THREAT</p>
-            <p style="margin:6px 0 0;font-size:15px;color:#6C757D;">${building.name}</p>
+            <p style="margin:6px 0 0;font-size:15px;color:#6C757D;">${safeBuildingName}</p>
           </div>
           <div style="background:#F8F9FA;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
-            <p style="margin:0 0 8px;font-size:14px;color:#6C757D;">📍 <strong style="color:#2C3E50;">${address}</strong></p>
+            <p style="margin:0 0 8px;font-size:14px;color:#6C757D;">📍 <strong style="color:#2C3E50;">${safeAddress}</strong></p>
             <p style="margin:0 0 8px;font-size:14px;color:#6C757D;">🕐 Déclenché à <strong style="color:#2C3E50;">${now}</strong></p>
-            <p style="margin:0;font-size:14px;color:#6C757D;">👤 Par <strong style="color:#2C3E50;">${triggeredBy}</strong></p>
+            <p style="margin:0;font-size:14px;color:#6C757D;">👤 Par <strong style="color:#2C3E50;">${safeTriggeredBy}</strong></p>
           </div>
           <div style="background:#1A1A1A;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
             <p style="margin:0 0 6px;font-size:11px;font-weight:800;color:#FFFFFF;text-transform:uppercase;letter-spacing:0.1em;">📞 Composez le 911 et dites :</p>
-            <p style="margin:0 0 10px;font-size:16px;font-weight:700;color:#FFD700;">"Menace active au ${address}"</p>
-            <p style="margin:0;font-size:12px;color:#ADB5BD;">Call 911 and say: "Active threat at ${address}"</p>
+            <p style="margin:0 0 10px;font-size:16px;font-weight:700;color:#FFD700;">"Menace active au ${safeAddress}"</p>
+            <p style="margin:0;font-size:12px;color:#ADB5BD;">Call 911 and say: "Active threat at ${safeAddress}"</p>
           </div>
           <a href="tel:911" style="display:block;text-align:center;background:#C0392B;color:#FFFFFF;padding:16px;border-radius:8px;text-decoration:none;font-size:20px;font-weight:900;margin-bottom:16px;">
             📞 APPELER LE 911
           </a>
           <p style="color:#ADB5BD;font-size:12px;text-align:center;margin:0;">
             Cette alerte a été envoyée automatiquement par CORO Sentinelle.<br>
-            ${building.name} · ${address}
+            ${safeBuildingName} · ${safeAddress}
           </p>
         </div>
       </div>`;
@@ -792,7 +799,7 @@ export class IncidentService {
   // créés tout de suite (snapshot fidèle au moment du signal) mais les
   // notifications de masse attendent la confirmation ou l'escalade automatique.
   async triggerIncident(
-    body: any,
+    body: TriggerIncidentDto & { triggeredBy: string },
     organizationId: string,
     opts?: { status?: 'ACTIVE' | 'PRE_ALERT'; deferNotifications?: boolean },
     audit?: IncidentAuditContext,

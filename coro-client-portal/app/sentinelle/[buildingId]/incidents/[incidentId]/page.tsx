@@ -11,6 +11,7 @@ import {
   isIncidentAuthorizationError,
   normalizeIncidentDetailCapabilities,
 } from './incidentDetailCapabilities';
+import { escapeIncidentPrintHtml as escapeHtml } from './incidentPrintHtml';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
 
@@ -35,13 +36,6 @@ const clientFetch = async (path: string, method = 'GET', body?: any, signal?: Ab
 };
 
 const asArray = <T,>(value: unknown): T[] => Array.isArray(value) ? value : [];
-const escapeHtml = (value: unknown): string => String(value ?? '')
-  .replaceAll('&', '&amp;')
-  .replaceAll('<', '&lt;')
-  .replaceAll('>', '&gt;')
-  .replaceAll('"', '&quot;')
-  .replaceAll("'", '&#039;');
-
 const STATUS_LABELS: Record<string, string> = {
   PRE_ALERT: 'Préalerte', ACTIVE: 'En cours', CONTAINED: 'Contenu',
   RESOLVED: 'Résolu', CANCELLED: 'Annulé',
