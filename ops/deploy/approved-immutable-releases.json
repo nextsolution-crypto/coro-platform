@@ -64,6 +64,15 @@
         "website": "ghcr.io/nextsolution-crypto/coro-website@sha256:f1091451eea1a82624498a237f3112d2522ecc09038f4dfecc8e1674e4888f0d"
       }
     },
+    "03caa2903c4568d082c18162a430673c5b66b551": {
+      "migrationHead": "20261207010000_display_permanent_url_web_player",
+      "images": {
+        "backend": "ghcr.io/nextsolution-crypto/coro-backend@sha256:29b968ed8d7fbb7459218da1669c21bb17579b046599a46ed9d572189ee19c04",
+        "frontend": "ghcr.io/nextsolution-crypto/coro-frontend@sha256:4f7f7e3056b1dcf340d1294a3db90f0ccafedbad2ca3990902cc393dc6836e42",
+        "clientPortal": "ghcr.io/nextsolution-crypto/coro-client-portal@sha256:eb75f75ca65e8fe43c6820c12b6e4d33494752fbb1790a365e9b39296c90ed14",
+        "website": "ghcr.io/nextsolution-crypto/coro-website@sha256:5edd7fd9e4cfe32282cc0e933d62515302c03e0bd730a1cd3fb393605c218d83"
+      }
+    },
     "61625accb36daa1c84d30e025b6959ddc8b40e9c": {
       "migrationHead": "20261207010000_display_permanent_url_web_player",
       "images": {
