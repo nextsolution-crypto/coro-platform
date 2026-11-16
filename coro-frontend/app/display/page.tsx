@@ -78,6 +78,12 @@ type PdfRenderJob = {
   failureCode: string | null;
   failureDetail: string | null;
 };
+type WebActivation = {
+  code: string;
+  expiresAt: string;
+  publicDisplayId: string;
+  url: string | null;
+};
 type Workspace = {
   capabilities: Record<string, boolean>;
   dashboard: {
@@ -165,6 +171,11 @@ export default function DisplayManagerPage() {
   const [locationToCompleteId, setLocationToCompleteId] = useState("");
   const [renderPage, setRenderPage] = useState("");
   const [renderStatus, setRenderStatus] = useState("");
+  const [activationLocationId, setActivationLocationId] = useState("");
+  const [activationTtlSeconds, setActivationTtlSeconds] = useState("600");
+  const [activation, setActivation] = useState<WebActivation | null>(null);
+  const [activationPending, setActivationPending] = useState(false);
+  const [activationUncertain, setActivationUncertain] = useState(false);
   const load = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
@@ -225,6 +236,82 @@ export default function DisplayManagerPage() {
       }),
     [data, query, filter, building],
   );
+  const activeDisplayLocations = useMemo(
+    () =>
+      (data?.buildings || []).flatMap((displayBuilding) =>
+        displayBuilding.spatialFloors.flatMap((floor) =>
+          floor.displayLocations
+            .filter((location) => location.status === "ACTIVE")
+            .map((location) => ({
+              ...location,
+              buildingId: displayBuilding.id,
+              buildingName: displayBuilding.name,
+              floorName: floor.name,
+            })),
+        ),
+      ),
+    [data],
+  );
+
+  const createWebActivation = async () => {
+    if (
+      !orgId ||
+      !activationLocationId ||
+      activationPending ||
+      activationUncertain
+    )
+      return;
+    const ttlSeconds = Number(activationTtlSeconds);
+    if (!Number.isInteger(ttlSeconds) || ttlSeconds < 60 || ttlSeconds > 900) {
+      setError("La validite doit etre comprise entre 60 et 900 secondes.");
+      return;
+    }
+    const location = activeDisplayLocations.find(
+      (item) => item.id === activationLocationId,
+    );
+    if (!location) {
+      setError("Selectionnez un emplacement actif et autorise.");
+      return;
+    }
+    if (
+      !window.confirm(
+        `Creer un code a usage unique pour ${location.label} ? Aucun nouvel essai automatique ne sera effectue.`,
+      )
+    )
+      return;
+
+    setActivationPending(true);
+    setActivation(null);
+    setError("");
+    try {
+      const response = await api.post<WebActivation>(
+        `/organizations/${orgId}/display-web/locations/${location.id}/activations`,
+        { ttlSeconds },
+      );
+      setActivation(response.data);
+    } catch (requestError: unknown) {
+      const candidate = requestError as { response?: { status?: number } };
+      if (!candidate.response) {
+        setActivationUncertain(true);
+        setError(
+          "Resultat reseau incertain. Ne recommencez pas : actualisez d'abord l'etat avec un administrateur habilite.",
+        );
+      } else {
+        setError(
+          errorMessage(
+            requestError,
+            "Impossible de creer l'invitation WEB_VIEW_ONLY.",
+          ),
+        );
+      }
+    } finally {
+      setActivationPending(false);
+    }
+  };
+
+  const closeActivation = () => {
+    setActivation(null);
+  };
   const showPreview = async (p: Plan) => {
     if (!orgId || !p.variantSha256) return;
     setBusy(true);
@@ -973,7 +1060,124 @@ export default function DisplayManagerPage() {
               </p>
               <Link href="/projects">Ouvrir CORO Documents</Link>
             </article>
+            <article aria-labelledby="display-web-activation-title">
+              <h2 id="display-web-activation-title">Activer un ecran</h2>
+              <p>
+                Creez un code temporaire a usage unique pour ouvrir le Player
+                en lecture seule sur Safari iPad.
+              </p>
+              <div className={styles.createForm}>
+                <label>
+                  Emplacement actif
+                  <select
+                    value={activationLocationId}
+                    onChange={(event) =>
+                      setActivationLocationId(event.target.value)
+                    }
+                  >
+                    <option value="">Choisir...</option>
+                    {activeDisplayLocations.map((location) => (
+                      <option key={location.id} value={location.id}>
+                        {location.buildingName} · {location.floorName} ·{" "}
+                        {location.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Validite du code
+                  <select
+                    value={activationTtlSeconds}
+                    onChange={(event) =>
+                      setActivationTtlSeconds(event.target.value)
+                    }
+                  >
+                    <option value="300">5 minutes</option>
+                    <option value="600">10 minutes</option>
+                    <option value="900">15 minutes</option>
+                  </select>
+                </label>
+                <p className={styles.note}>
+                  Profil strict WEB_VIEW_ONLY. Ce code ne confere aucune
+                  autorite d&apos;urgence et ne sera pas conserve par le
+                  navigateur.
+                </p>
+                <button
+                  type="button"
+                  disabled={
+                    activationPending ||
+                    activationUncertain ||
+                    !activationLocationId
+                  }
+                  onClick={() => void createWebActivation()}
+                >
+                  {activationPending
+                    ? "Creation en cours..."
+                    : "Activer un ecran"}
+                </button>
+              </div>
+            </article>
           </section>
+        )}
+        {activation && (
+          <div
+            className={styles.backdrop}
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) closeActivation();
+            }}
+          >
+            <section
+              className={styles.activationDialog}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="web-activation-result-title"
+              aria-describedby="web-activation-result-description"
+            >
+              <button
+                type="button"
+                className={styles.close}
+                onClick={closeActivation}
+                aria-label="Fermer la fenetre d'activation"
+              >
+                ×
+              </button>
+              <p className={styles.activationEyebrow}>WEB_VIEW_ONLY</p>
+              <h2 id="web-activation-result-title">Invitation prete</h2>
+              <p id="web-activation-result-description">
+                Saisissez ce code une seule fois, avant son expiration. Il
+                disparaitra de CORO lorsque cette fenetre sera fermee.
+              </p>
+              <output
+                className={styles.activationCode}
+                aria-label="Code d'activation"
+              >
+                {activation.code}
+              </output>
+              <dl className={styles.activationDetails}>
+                <div>
+                  <dt>Expiration</dt>
+                  <dd>
+                    {new Date(activation.expiresAt).toLocaleString("fr-CA")}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Profil</dt>
+                  <dd>WEB_VIEW_ONLY · urgence non admissible</dd>
+                </div>
+              </dl>
+              {activation.url ? (
+                <div>
+                  <strong>URL permanente à ouvrir sur l&apos;iPad</strong>
+                  <output className={styles.playerUrl}>{activation.url}</output>
+                </div>
+              ) : (
+                <p className={styles.locationGuidance}>
+                  URL permanente indisponible. Fermez cette fenetre et
+                  contactez un administrateur sans recreer de code.
+                </p>
+              )}
+            </section>
+          </div>
         )}
         <DeviceSupervision
           devices={data.devices}
