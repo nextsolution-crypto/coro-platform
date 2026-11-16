@@ -19,6 +19,7 @@ import {
 } from '../spatial/spatial-authorization.service';
 import { StorageService } from '../storage/storage.service';
 import {
+  ApproveAndPublishDisplayPlanDto,
   ApproveDisplayPlanDto,
   CreateDisplayPlanPublicationDto,
   DisplayPlanListQueryDto,
@@ -332,6 +333,101 @@ export class DisplayPlanPublicationService {
           reservations: dto.reservations ?? null,
         },
       }),
+    );
+  }
+
+  async approveAndPublish(
+    organizationId: string,
+    buildingId: string,
+    id: string,
+    dto: ApproveAndPublishDisplayPlanDto,
+    actor: SpatialActor,
+  ) {
+    // Fail closed before the first mutation: the professional approver profile
+    // needs all three granular authorities, scoped to the same building.
+    for (const permission of [
+      DisplayPermission.DISPLAY_PLAN_REVIEW,
+      DisplayPermission.DISPLAY_PLAN_APPROVE,
+      DisplayPermission.DISPLAY_PLAN_PUBLISH,
+    ]) {
+      await this.authorization.require(
+        actor,
+        organizationId,
+        buildingId,
+        permission,
+      );
+    }
+
+    let current = await this.load(id, organizationId, buildingId);
+    if (current.createdById === actor.userId)
+      throw new ForbiddenException(
+        'Le soumissionnaire ne peut pas approuver sa propre publication.',
+      );
+
+    const publishedEventRequestId = `${dto.requestId}:publish`;
+    if (current.status === 'PUBLISHED') {
+      const completed =
+        await this.prisma.displayPlanPublicationEvent.findUnique({
+          where: {
+            publicationId_requestId: {
+              publicationId: id,
+              requestId: publishedEventRequestId,
+            },
+          },
+        });
+      if (completed?.action === 'PUBLISHED') return current;
+      throw new ConflictException('Cette publication est dÃ©jÃ  publiÃ©e.');
+    }
+
+    this.assertLock(current, dto.expectedLockVersion);
+    if (current.status === 'REVIEW' && !current.reviewedById) {
+      current = await this.markReviewed(
+        organizationId,
+        buildingId,
+        id,
+        {
+          expectedLockVersion: current.lockVersion,
+          reason: dto.reason,
+          requestId: `${dto.requestId}:review`,
+        },
+        actor,
+      );
+    }
+
+    if (current.status === 'REVIEW') {
+      current = await this.approve(
+        organizationId,
+        buildingId,
+        id,
+        {
+          ...dto,
+          expectedLockVersion: current.lockVersion,
+          requestId: `${dto.requestId}:approve`,
+        },
+        actor,
+      );
+    }
+
+    if (current.status !== 'APPROVED')
+      throw new ConflictException(
+        `Approbation et publication interdites depuis ${current.status}.`,
+      );
+
+    // Approval is intentionally committed before publication. If the final
+    // authority check or publication fails, the UI can safely resume from the
+    // APPROVED state without losing the human decision.
+    return this.publish(
+      organizationId,
+      buildingId,
+      id,
+      {
+        expectedLockVersion: current.lockVersion,
+        reason: dto.reason,
+        requestId: publishedEventRequestId,
+        validFrom: dto.validFrom,
+        validUntil: dto.validUntil,
+      },
+      actor,
     );
   }
 

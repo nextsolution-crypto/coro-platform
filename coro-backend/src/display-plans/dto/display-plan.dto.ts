@@ -151,6 +151,16 @@ export class PublishDisplayPlanDto extends DisplayPlanMutationDto {
   validUntil?: string;
 }
 
+export class ApproveAndPublishDisplayPlanDto extends ApproveDisplayPlanDto {
+  @IsOptional()
+  @IsString()
+  validFrom?: string;
+
+  @IsOptional()
+  @IsString()
+  validUntil?: string;
+}
+
 export class EnqueueDisplayPdfRenderDto {
   @IsString()
   @IsNotEmpty()
