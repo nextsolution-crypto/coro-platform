@@ -15,6 +15,16 @@ assert.match(workflow, /TOOLING_COMMIT: \$\{\{ github\.sha \}\}/);
 assert.match(workflow, /show "\$RELEASE_COMMIT:ops\/deploy\/coro-production-release\.sh"/);
 assert.match(workflow, /show "\$TOOLING_COMMIT:ops\/deploy\/coro-release-control\.sh"/);
 });
+test('production release transmits the governed tooling commit to the remote controller', () => {
+  const releaseJob = workflow.slice(workflow.indexOf('  production-release:'));
+  const failClosedStep = releaseJob.slice(
+    releaseJob.indexOf('      - name: Run fail-closed production release'),
+    releaseJob.indexOf('      - name: Rotate and clean after reconciled release'),
+  );
+  assert.match(failClosedStep, /TOOLING_COMMIT: \$\{\{ github\.sha \}\}/);
+  assert.match(failClosedStep, /envs: [^\n]*TOOLING_COMMIT/);
+  assert.match(failClosedStep, /test "\$TOOLING_COMMIT" = "\$\(git -C \/opt\/coro-platform rev-parse origin\/main\)"/);
+});
 test('requires manual approval, environment and two concurrency locks', () => {
   assert.match(workflow, /production_approval:/);
   assert.match(workflow, /environment: production/);

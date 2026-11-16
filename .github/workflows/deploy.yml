@@ -330,6 +330,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           RELEASE_COMMIT: ${{ inputs.release_commit }}
+          TOOLING_COMMIT: ${{ github.sha }}
           PRODUCTION_APPROVAL: ${{ inputs.production_approval }}
           MIGRATION_COMPATIBILITY_APPROVAL: ${{ inputs.migration_compatibility_approval }}
           RETRY_FAILED_RELEASE_APPROVAL: ${{ inputs.retry_failed_release_approval }}
