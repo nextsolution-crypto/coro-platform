@@ -33,6 +33,11 @@ assert.doesNotMatch(
 assert.match(page, /approveAndPublishPlan/);
 assert.match(page, /approve-and-publish/);
 assert.match(page, /Approuver et publier/);
+assert.match(page, /visualProfileFor/);
+assert.match(page, /width \* 11 === height \* 17/);
+assert.match(page, /Vérifier à nouveau l’aperçu/);
+assert.doesNotMatch(page, /<dt>Empreinte source<\/dt>/);
+assert.doesNotMatch(page, /setProfile/);
 assert.match(page, /Reprendre la publication/);
 assert.match(page, /Approbation conservée/);
 assert.match(

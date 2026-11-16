@@ -11,18 +11,18 @@ export type VisualAcceptanceAuthority = {
   heightPixels: number | null;
 };
 
-const PROFILE_DIMENSIONS = {
+const PROFILE_ASPECT_RATIOS = {
   SOURCE_NATIVE: null,
-  ORIGINAL_17X11: [4080, 2640],
-  SCREEN_16X9: [3840, 2160],
-  SCREEN_16X10: [3840, 2400],
+  ORIGINAL_17X11: [17, 11],
+  SCREEN_16X9: [16, 9],
+  SCREEN_16X10: [16, 10],
 } as const;
 
 export function assertCurrentVisualAcceptance(
   authority: VisualAcceptanceAuthority,
   acceptance: ApproveDisplayPlanDto,
 ) {
-  const expectedDimensions = PROFILE_DIMENSIONS[acceptance.profile];
+  const expectedAspectRatio = PROFILE_ASPECT_RATIOS[acceptance.profile];
   if (
     authority.sourceVersion !== acceptance.sourceVersion ||
     authority.sourceSha256 !== acceptance.sourceSha256 ||
@@ -31,11 +31,11 @@ export function assertCurrentVisualAcceptance(
     authority.locationId !== acceptance.locationId ||
     !authority.widthPixels ||
     !authority.heightPixels ||
-    (expectedDimensions !== null &&
-      (authority.widthPixels !== expectedDimensions[0] ||
-        authority.heightPixels !== expectedDimensions[1]))
+    (expectedAspectRatio !== null &&
+      authority.widthPixels * expectedAspectRatio[1] !==
+        authority.heightPixels * expectedAspectRatio[0])
   )
     throw new ConflictException(
-      'La recette visuelle ne correspond plus au document, au rendu ou à l’emplacement courant.',
+      'Le plan ou son emplacement a été modifié depuis votre dernière vérification. Veuillez vérifier l’aperçu actuel avant de l’approuver.',
     );
 }
