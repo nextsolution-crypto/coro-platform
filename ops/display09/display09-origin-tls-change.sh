@@ -231,19 +231,28 @@ verify_sni() {
 verify_public_player() {
   local path="${DISPLAY_PLAYER_TEST_PATH:-}"
   [[ "$path" =~ ^/d/[A-Za-z0-9_-]{16,128}$ ]] || fail PLAYER_TEST_PATH_REQUIRED
-  local headers body
-  headers="$(mktemp)"; body="$(mktemp)"; chmod 0600 "$headers" "$body"
+  local headers body asset_path asset_headers asset_body api_headers
+  headers="$(mktemp)"; body="$(mktemp)"; asset_headers="$(mktemp)"; asset_body="$(mktemp)"; api_headers="$(mktemp)"
+  chmod 0600 "$headers" "$body" "$asset_headers" "$asset_body" "$api_headers"
   if ! curl --fail --silent --show-error --max-time 15 -D "$headers" -o "$body" "https://$DOMAIN$path"; then
-    rm -f -- "$headers" "$body"
+    rm -f -- "$headers" "$body" "$asset_headers" "$asset_body" "$api_headers"
     fail PLAYER_ROUTE_FAILED
   fi
-  grep -Eqi '^cache-control:.*no-store' "$headers" || { rm -f -- "$headers" "$body"; fail PLAYER_NO_STORE_MISSING; }
-  grep -Eqi '^content-security-policy:' "$headers" || { rm -f -- "$headers" "$body"; fail PLAYER_CSP_MISSING; }
+  grep -Eqi '^cache-control:.*no-store' "$headers" || { rm -f -- "$headers" "$body" "$asset_headers" "$asset_body" "$api_headers"; fail PLAYER_NO_STORE_MISSING; }
+  grep -Eqi '^content-security-policy:' "$headers" || { rm -f -- "$headers" "$body" "$asset_headers" "$asset_body" "$api_headers"; fail PLAYER_CSP_MISSING; }
   if grep -Eqi '^set-cookie:' "$headers"; then
-    grep -Eqi '^set-cookie:.*Secure' "$headers" || { rm -f -- "$headers" "$body"; fail PLAYER_COOKIE_NOT_SECURE; }
-    grep -Eqi '^set-cookie:.*SameSite' "$headers" || { rm -f -- "$headers" "$body"; fail PLAYER_COOKIE_SAMESITE_MISSING; }
+    grep -Eqi '^set-cookie:.*Secure' "$headers" || { rm -f -- "$headers" "$body" "$asset_headers" "$asset_body" "$api_headers"; fail PLAYER_COOKIE_NOT_SECURE; }
+    grep -Eqi '^set-cookie:.*SameSite' "$headers" || { rm -f -- "$headers" "$body" "$asset_headers" "$asset_body" "$api_headers"; fail PLAYER_COOKIE_SAMESITE_MISSING; }
   fi
-  rm -f -- "$headers" "$body"
+  asset_path="$(grep -m 1 -oE '/_next/static/[^" ]+\.(js|css)' "$body")"
+  [[ -n "$asset_path" ]] || { rm -f -- "$headers" "$body" "$asset_headers" "$asset_body" "$api_headers"; fail PLAYER_STATIC_ASSET_NOT_FOUND; }
+  curl --fail --silent --show-error --max-time 15 -D "$asset_headers" -o "$asset_body" "https://$DOMAIN$asset_path" || { rm -f -- "$headers" "$body" "$asset_headers" "$asset_body" "$api_headers"; fail PLAYER_STATIC_ASSET_FAILED; }
+  ! grep -Eqi '^content-type:[[:space:]]*text/html' "$asset_headers" || { rm -f -- "$headers" "$body" "$asset_headers" "$asset_body" "$api_headers"; fail PLAYER_STATIC_ASSET_HTML_SUBSTITUTION; }
+  [[ -s "$asset_body" ]] || { rm -f -- "$headers" "$body" "$asset_headers" "$asset_body" "$api_headers"; fail PLAYER_STATIC_ASSET_EMPTY; }
+  curl --fail --silent --show-error --max-time 15 -H "Origin: https://$DOMAIN" -D "$api_headers" -o /dev/null "https://api.getcoro.io/api/display-public$path" || { rm -f -- "$headers" "$body" "$asset_headers" "$asset_body" "$api_headers"; fail PLAYER_STATUS_API_FAILED; }
+  grep -Eqi "^access-control-allow-origin:[[:space:]]*https://$DOMAIN[[:space:]]*$" "$api_headers" || { rm -f -- "$headers" "$body" "$asset_headers" "$asset_body" "$api_headers"; fail PLAYER_STATUS_CORS_MISSING; }
+  rm -f -- "$headers" "$body" "$asset_headers" "$asset_body" "$api_headers"
+  printf 'DISPLAY09_PLAYER_BOOTSTRAP=PASS static_asset=true status_cors=true\n'
 }
 
 validate_common

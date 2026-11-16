@@ -30,5 +30,36 @@ server {
     add_header Cache-Control "no-store" always;
   }
 
+  # Player HTML lives below /d/, while Next.js hydration, styles and chunks
+  # are requested from the application root. Keep this allow-list narrow so
+  # the dedicated Display origin does not expose the rest of the portal.
+  location ^~ /_next/static/ {
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_pass http://127.0.0.1:3003;
+  }
+
+  location = /manifest.webmanifest {
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_pass http://127.0.0.1:3003;
+    add_header Cache-Control "no-store" always;
+  }
+
+  location ^~ /icons/ {
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_pass http://127.0.0.1:3003;
+  }
+
+  location = /favicon.ico {
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_pass http://127.0.0.1:3003;
+  }
+
   location / { return 404; }
 }

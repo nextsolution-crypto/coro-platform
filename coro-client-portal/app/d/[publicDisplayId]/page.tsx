@@ -47,18 +47,35 @@ export default function DisplayWebPlayer({ params }: { params: Promise<{ publicD
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [content, setContent] = useState("");
   const [error, setError] = useState("");
+  const [statusLoading, setStatusLoading] = useState(true);
   const [offline, setOffline] = useState(false);
   const contentRef = useRef("");
   const publicationRef = useRef("");
   const syncInFlight = useRef(false);
 
+  const loadStatus = useCallback(async (id: string) => {
+    setStatusLoading(true);
+    setError("");
+    try {
+      setStatus(await json<PublicStatus>(`${API}/display-public/d/${id}`));
+    } catch (cause) {
+      setStatus(null);
+      setError(cause instanceof Error ? cause.message : "Connexion au service Display impossible.");
+    } finally {
+      setStatusLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     void params.then(({ publicDisplayId: id }) => {
       setPublicDisplayId(id);
       setToken(localStorage.getItem(`${SESSION_PREFIX}${id}`) ?? "");
-      void json<PublicStatus>(`${API}/display-public/d/${id}`).then(setStatus).catch((cause: Error) => setError(cause.message));
+      void loadStatus(id);
+    }).catch(() => {
+      setError("Adresse CORO Display invalide.");
+      setStatusLoading(false);
     });
-  }, [params]);
+  }, [loadStatus, params]);
 
   const sync = useCallback(async () => {
     if (!publicDisplayId || !token || syncInFlight.current) return;
@@ -145,7 +162,18 @@ export default function DisplayWebPlayer({ params }: { params: Promise<{ publicD
     }
   }
 
-  if (!status) return <main className={styles.shell}><p>Connexion sécurisée à CORO Display…</p></main>;
+  if (statusLoading) return <main className={styles.shell}><p>Connexion sécurisée à CORO Display…</p></main>;
+  if (!status)
+    return (
+      <main className={styles.shell}>
+        <section className={styles.activation}>
+          <p className={styles.brand}>CORO Display</p>
+          <h1>Connexion impossible</h1>
+          <p role="alert" className={styles.error}>{error || "Le service Display ne répond pas."}</p>
+          <button type="button" disabled={!publicDisplayId} onClick={() => void loadStatus(publicDisplayId)}>Réessayer</button>
+        </section>
+      </main>
+    );
   if (!status.available) return <main className={styles.shell}><h1>CORO Display</h1><p role="alert">Cet affichage n’est pas disponible.</p></main>;
   if (!token)
     return (

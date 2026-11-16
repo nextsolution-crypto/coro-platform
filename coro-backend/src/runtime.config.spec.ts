@@ -37,6 +37,15 @@ describe('runtime configuration', () => {
     );
   });
 
+  it('allows the dedicated public Display player origin outside QA', () => {
+    expect(runtimeConfig({}).corsOrigins).toContain(
+      'https://display.getcoro.io',
+    );
+    expect(runtimeConfig(qa).corsOrigins).not.toContain(
+      'https://display.getcoro.io',
+    );
+  });
+
   it.each([
     ['FRONTEND_URL', 'not-a-url'],
     ['FRONTEND_URL', 'https://example.test/path'],

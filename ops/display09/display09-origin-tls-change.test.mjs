@@ -26,6 +26,11 @@ test('uses the shared deployment lock, separate certificate and narrow upstream'
   assert.match(template, /\/etc\/letsencrypt\/live\/display\.getcoro\.io\/fullchain\.pem/);
   assert.match(template, /location \^~ \/d\//);
   assert.match(template, /proxy_pass http:\/\/127\.0\.0\.1:3003/);
+  assert.match(template, /location \^~ \/_next\/static\//);
+  assert.match(template, /location = \/manifest\.webmanifest/);
+  assert.match(template, /location \^~ \/icons\//);
+  assert.match(template, /location = \/favicon\.ico/);
+  assert.match(template, /location \/ \{ return 404; \}/);
   assert.doesNotMatch(template, /proxy_pass.*300[0124-9]/);
 });
 
@@ -78,6 +83,9 @@ test('backs up, validates, reloads and rolls back only the Display vhost', () =>
 test('verifies all five SNI plus player cache, CSP and cookie policy', () => {
   for (const host of ['getcoro.io', 'api.getcoro.io', 'app.getcoro.io', 'client.getcoro.io', 'display.getcoro.io']) assert.match(script, new RegExp(host.replaceAll('.', '\\.')));
   for (const gate of ['PLAYER_NO_STORE_MISSING', 'PLAYER_CSP_MISSING', 'PLAYER_COOKIE_NOT_SECURE', 'PLAYER_COOKIE_SAMESITE_MISSING']) assert.match(script, new RegExp(gate));
+  for (const gate of ['PLAYER_STATIC_ASSET_NOT_FOUND', 'PLAYER_STATIC_ASSET_FAILED', 'PLAYER_STATIC_ASSET_HTML_SUBSTITUTION', 'PLAYER_STATIC_ASSET_EMPTY', 'PLAYER_STATUS_API_FAILED', 'PLAYER_STATUS_CORS_MISSING']) assert.match(script, new RegExp(gate));
+  assert.match(script, /access-control-allow-origin/);
+  assert.match(script, /DISPLAY09_PLAYER_BOOTSTRAP=PASS static_asset=true status_cors=true/);
 });
 
 test('isolated NGINX test renders the template and validates the actual upstream', () => {
@@ -88,6 +96,8 @@ test('isolated NGINX test renders the template and validates the actual upstream
   assert.match(isolated, /proxy regression was not reproduced/);
   assert.match(isolated, /--noproxy '\*'/);
   assert.match(isolated, /ACME_LOCAL_HTTP=PASS/);
+  assert.match(isolated, /\/_next\/static\/chunks\/player-test\.js/);
+  assert.match(isolated, /PLAYER_STATIC_ROUTING=PASS/);
 });
 
 test('protected workflow keeps controlled verification explicit and never rewrites origin evidence', () => {
