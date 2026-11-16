@@ -15,6 +15,11 @@ on:
         description: Type CONFIRMED_BACKWARD_COMPATIBLE
         required: true
         type: string
+      retry_failed_release_approval:
+        description: Type RETRY_CONFIRMED only when the canonical attempt is terminal FAILED
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -38,6 +43,7 @@ jobs:
           RELEASE_COMMIT: ${{ inputs.application_commit }}
           PRODUCTION_APPROVAL: ${{ inputs.production_approval }}
           MIGRATION_COMPATIBILITY_APPROVAL: ${{ inputs.migration_compatibility_approval }}
+          RETRY_FAILED_RELEASE_APPROVAL: ${{ inputs.retry_failed_release_approval }}
         run: |
           node ops/deploy/release-policy.mjs request
           node ops/deploy/approved-immutable-release.mjs "$RELEASE_COMMIT"
@@ -93,6 +99,7 @@ jobs:
           RELEASE_TOOLING_COMMIT: ${{ github.sha }}
           PRODUCTION_APPROVAL: ${{ inputs.production_approval }}
           MIGRATION_COMPATIBILITY_APPROVAL: ${{ inputs.migration_compatibility_approval }}
+          RETRY_FAILED_RELEASE_APPROVAL: ${{ inputs.retry_failed_release_approval }}
           RELEASE_OPERATOR: ${{ github.actor }}
           BACKEND_IMAGE: ${{ needs.preflight.outputs.backend_image }}
           FRONTEND_IMAGE: ${{ needs.preflight.outputs.frontend_image }}
@@ -108,7 +115,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
           command_timeout: 60m
-          envs: RELEASE_COMMIT,RELEASE_TOOLING_COMMIT,PRODUCTION_APPROVAL,MIGRATION_COMPATIBILITY_APPROVAL,RELEASE_OPERATOR,BACKEND_IMAGE,FRONTEND_IMAGE,CLIENT_PORTAL_IMAGE,WEBSITE_IMAGE,CLIENT_INVITATION_OUTBOX_KEY_BASE64,CLIENT_INVITATION_OUTBOX_KEY_ID,CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64,DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST
+          envs: RELEASE_COMMIT,RELEASE_TOOLING_COMMIT,PRODUCTION_APPROVAL,MIGRATION_COMPATIBILITY_APPROVAL,RETRY_FAILED_RELEASE_APPROVAL,RELEASE_OPERATOR,BACKEND_IMAGE,FRONTEND_IMAGE,CLIENT_PORTAL_IMAGE,WEBSITE_IMAGE,CLIENT_INVITATION_OUTBOX_KEY_BASE64,CLIENT_INVITATION_OUTBOX_KEY_ID,CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64,DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST
           script: |
             set -Eeuo pipefail
             tmp="$(mktemp -d /tmp/coro-approved-release.XXXXXX)"

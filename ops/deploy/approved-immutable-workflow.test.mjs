@@ -20,6 +20,14 @@ test('reuses only policy-bound remote manifests and never builds images', () => 
   for (const name of ['BACKEND_IMAGE', 'FRONTEND_IMAGE', 'CLIENT_PORTAL_IMAGE', 'WEBSITE_IMAGE']) assert.match(workflow, new RegExp(name));
 });
 
+test('requires an explicit retry approval without replacing the immutable application candidate', () => {
+  assert.match(workflow, /retry_failed_release_approval:/);
+  assert.match(workflow, /RETRY_FAILED_RELEASE_APPROVAL: \$\{\{ inputs\.retry_failed_release_approval \}\}/);
+  assert.match(workflow, /envs: [^\n]*RETRY_FAILED_RELEASE_APPROVAL/);
+  assert.match(workflow, /RELEASE_COMMIT: \$\{\{ inputs\.application_commit \}\}/);
+  assert.match(workflow, /RELEASE_TOOLING_COMMIT: \$\{\{ github\.sha \}\}/);
+});
+
 test('migration head discovery excludes migration_lock.toml', () => {
   assert.match(workflow, /git ls-tree -d --name-only/);
 });

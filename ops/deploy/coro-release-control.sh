@@ -45,8 +45,19 @@ if(values.length!==6||values.some(v=>!/[a-f0-9]{64}/.test(v)))process.exit(1);pr
 ')" || { echo 'RELEASE_CONTROL_FAILED code=DEMO_AUTH_EMAIL_ALLOWLIST_INVALID' >&2; exit 1; }
 unset persisted_allowlist
 
-release_id="production-${RELEASE_COMMIT}"
-unit="coro-release-${RELEASE_COMMIT:0:16}"
+base_release_id="production-${RELEASE_COMMIT}"
+release_id="$base_release_id"
+base_state="$STATE_ROOT/${base_release_id}.state.json"
+if [[ -f "$base_state" ]]; then
+  base_status="$(node "$STATE_SOURCE" read --root "$STATE_ROOT" --release-id "$base_release_id" | node -e 'let data="";process.stdin.on("data",c=>data+=c).on("end",()=>process.stdout.write(JSON.parse(data).state))')"
+  if [[ "$base_status" == FAILED ]]; then
+    [[ "${RETRY_FAILED_RELEASE_APPROVAL:-}" == RETRY_CONFIRMED ]] || { echo 'RELEASE_CONTROL_FAILED code=FAILED_RETRY_APPROVAL_MISSING' >&2; exit 1; }
+    release_id="${base_release_id}-$(date -u +%Y%m%dT%H%M%SZ)"
+  fi
+fi
+unit_hash="$(printf '%s' "$release_id" | sha256sum | cut -c1-12)"
+unit="coro-release-${RELEASE_COMMIT:0:12}-${unit_hash}"
+export RELEASE_ID="$release_id"
 mkdir -p "$STATE_ROOT" "$RUNTIME_DIR"
 chmod 0700 "$STATE_ROOT" "$RUNTIME_DIR"
 state_tool="$RUNTIME_DIR/${release_id}.state.mjs"
@@ -78,7 +89,7 @@ worker="$RUNTIME_DIR/${release_id}.worker.sh"
 node -e '
 const fs=require("fs");
 const images=[process.env.BACKEND_IMAGE,process.env.FRONTEND_IMAGE,process.env.CLIENT_PORTAL_IMAGE,process.env.WEBSITE_IMAGE];
-fs.writeFileSync(process.argv[1],JSON.stringify({gitCommit:process.env.RELEASE_COMMIT,images,operator:process.env.RELEASE_OPERATOR},null,2)+"\n",{mode:0o600});
+fs.writeFileSync(process.argv[1],JSON.stringify({releaseId:process.env.RELEASE_ID,gitCommit:process.env.RELEASE_COMMIT,images,operator:process.env.RELEASE_OPERATOR},null,2)+"\n",{mode:0o600});
 ' "$input"
 prepare="$(node "$state_tool" prepare --root "$STATE_ROOT" --input "$input")"
 current="$(node -e 'const r=JSON.parse(process.argv[1]);process.stdout.write(r.state.state)' "$prepare")"

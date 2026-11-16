@@ -19,6 +19,11 @@ on:
         description: Type CONFIRMED_BACKWARD_COMPATIBLE after reviewing migrations against the running release
         required: true
         type: string
+      retry_failed_release_approval:
+        description: Type RETRY_CONFIRMED only after a failed attempt is reconciled as inactive
+        required: false
+        default: INITIAL
+        type: string
 
 permissions:
   contents: read
@@ -200,8 +205,10 @@ jobs:
       - name: Validate release request
         env:
           RELEASE_COMMIT: ${{ inputs.release_commit }}
+          TOOLING_COMMIT: ${{ github.sha }}
           PRODUCTION_APPROVAL: ${{ inputs.production_approval }}
           MIGRATION_COMPATIBILITY_APPROVAL: ${{ inputs.migration_compatibility_approval }}
+          RETRY_FAILED_RELEASE_APPROVAL: ${{ inputs.retry_failed_release_approval }}
         run: node ops/deploy/release-policy.mjs request
 
       - name: Login to GHCR
@@ -325,6 +332,7 @@ jobs:
           RELEASE_COMMIT: ${{ inputs.release_commit }}
           PRODUCTION_APPROVAL: ${{ inputs.production_approval }}
           MIGRATION_COMPATIBILITY_APPROVAL: ${{ inputs.migration_compatibility_approval }}
+          RETRY_FAILED_RELEASE_APPROVAL: ${{ inputs.retry_failed_release_approval }}
           RELEASE_OPERATOR: ${{ github.actor }}
           BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-backend@${{ needs.build-images.outputs.backend_digest }}
           FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/coro-frontend@${{ needs.build-images.outputs.frontend_digest }}
@@ -339,17 +347,19 @@ jobs:
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 60m
-          envs: RELEASE_COMMIT,PRODUCTION_APPROVAL,MIGRATION_COMPATIBILITY_APPROVAL,RELEASE_OPERATOR,BACKEND_IMAGE,FRONTEND_IMAGE,CLIENT_PORTAL_IMAGE,WEBSITE_IMAGE,CLIENT_INVITATION_OUTBOX_KEY_BASE64,CLIENT_INVITATION_OUTBOX_KEY_ID,CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64,DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST
+          envs: RELEASE_COMMIT,TOOLING_COMMIT,PRODUCTION_APPROVAL,MIGRATION_COMPATIBILITY_APPROVAL,RETRY_FAILED_RELEASE_APPROVAL,RELEASE_OPERATOR,BACKEND_IMAGE,FRONTEND_IMAGE,CLIENT_PORTAL_IMAGE,WEBSITE_IMAGE,CLIENT_INVITATION_OUTBOX_KEY_BASE64,CLIENT_INVITATION_OUTBOX_KEY_ID,CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64,DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST
           script: |
             set -euo pipefail
             trap 'rm -f /tmp/coro-production-release.sh /tmp/coro-release-control.sh /tmp/coro-release-reconcile.sh /tmp/release-state.mjs' EXIT
             test -d /opt/coro-platform/.git
             git -C /opt/coro-platform fetch --quiet origin main
-            test "$(git -C /opt/coro-platform rev-parse origin/main)" = "$RELEASE_COMMIT"
+            git -C /opt/coro-platform cat-file -e "$RELEASE_COMMIT^{commit}"
+            git -C /opt/coro-platform merge-base --is-ancestor "$RELEASE_COMMIT" origin/main
+            test "$TOOLING_COMMIT" = "$(git -C /opt/coro-platform rev-parse origin/main)"
             git -C /opt/coro-platform show "$RELEASE_COMMIT:ops/deploy/coro-production-release.sh" > /tmp/coro-production-release.sh
-            git -C /opt/coro-platform show "$RELEASE_COMMIT:ops/deploy/coro-release-control.sh" > /tmp/coro-release-control.sh
-            git -C /opt/coro-platform show "$RELEASE_COMMIT:ops/deploy/coro-release-reconcile.sh" > /tmp/coro-release-reconcile.sh
-            git -C /opt/coro-platform show "$RELEASE_COMMIT:ops/deploy/release-state.mjs" > /tmp/release-state.mjs
+            git -C /opt/coro-platform show "$TOOLING_COMMIT:ops/deploy/coro-release-control.sh" > /tmp/coro-release-control.sh
+            git -C /opt/coro-platform show "$TOOLING_COMMIT:ops/deploy/coro-release-reconcile.sh" > /tmp/coro-release-reconcile.sh
+            git -C /opt/coro-platform show "$TOOLING_COMMIT:ops/deploy/release-state.mjs" > /tmp/release-state.mjs
             chmod 0700 /tmp/coro-production-release.sh /tmp/coro-release-control.sh /tmp/coro-release-reconcile.sh /tmp/release-state.mjs
             CORO_RELEASE_SCRIPT_SOURCE=/tmp/coro-production-release.sh \
             CORO_RELEASE_STATE_SOURCE=/tmp/release-state.mjs \

@@ -138,6 +138,18 @@ test("duplicate release ID with identical evidence is idempotent", () => {
   assert.equal(prepareState(root, input).created, false);
 });
 
+test("a timestamped retry preserves the failed attempt as a separate state", () => {
+  const root = fixture();
+  prepareState(root, input);
+  transitionState(root, releaseId, "RUNNING");
+  transitionState(root, releaseId, "FAILED", { failureCode: "CAPACITY" });
+  const retryId = `${releaseId}-20261116T013700Z`;
+  const retry = prepareState(root, { ...input, releaseId: retryId });
+  assert.equal(retry.created, true);
+  assert.equal(retry.state.releaseId, retryId);
+  assert.equal(readState(root, releaseId).state, "FAILED");
+});
+
 test("duplicate workflow dispatch with changed images is rejected", () => {
   const root = fixture();
   prepareState(root, input);

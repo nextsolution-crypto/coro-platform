@@ -8,7 +8,8 @@ LOCK_FILE="${CORO_RELEASE_LOCK_FILE:-/run/lock/coro-production-deployment.lock}"
 STATE_TOOL="${CORO_RELEASE_STATE_TOOL:-$RELEASE_DIR/runtime/release-state.mjs}"
 
 [[ "${RELEASE_COMMIT:-}" =~ ^[0-9a-f]{40}$ ]] || { echo 'RECONCILIATION_FAILED code=RELEASE_COMMIT_INVALID' >&2; exit 1; }
-release_id="production-${RELEASE_COMMIT}"
+release_id="${RELEASE_ID:-production-${RELEASE_COMMIT}}"
+[[ "$release_id" =~ ^production-${RELEASE_COMMIT}(-[0-9]{8}T[0-9]{6}Z)?$ ]] || { echo 'RECONCILIATION_FAILED code=RELEASE_ID_INVALID' >&2; exit 1; }
 state_json="$(node "$STATE_TOOL" read --root "$STATE_ROOT" --release-id "$release_id")" || exit 1
 state="$(node -e 'const s=JSON.parse(process.argv[1]);process.stdout.write(s.state)' "$state_json")"
 [[ "$state" == SUCCEEDED ]] || { echo "RECONCILIATION_UNKNOWN code=STATE_${state}" >&2; exit 1; }
