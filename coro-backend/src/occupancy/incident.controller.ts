@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  Request,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { IncidentService } from './incident.service';
 import { OperationalContinuityAccess } from '../auth/organization-access.decorator';
@@ -8,9 +20,24 @@ import { RequirePlatformPermission } from '../auth/platform-permission.decorator
 import { IncidentHistoryQueryDto } from './incident-history.dto';
 import { AddIncidentLogDto, ContainIncidentDto, ResolveIncidentDto, UpdateIncidentRexDto } from './incident-detail.dto';
 import { TriggerIncidentDto } from './incident-trigger.dto';
+import {
+  ActivateIncidentPcaDto,
+  AssignIncidentAuthorityDto,
+  ConfigureIncidentEscalationDto,
+  ReassignIncidentTaskDto,
+  RevokeIncidentAuthorityDto,
+  SendIncidentAccessDto,
+} from './incident-command.dto';
 
 @Controller('incidents')
 @OperationalContinuityAccess()
+@UsePipes(
+  new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }),
+)
 export class IncidentController {
   constructor(private readonly service: IncidentService) {}
 
@@ -80,7 +107,11 @@ export class IncidentController {
   @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
   @RequirePlatformPermission(PlatformPermission.INCIDENT_SUPERVISE)
   @Put('tasks/:taskId/reassign')
-  async reassign(@Param('taskId') taskId: string, @Body() body: { employeeId: string; lockVersion: number }, @Request() req: any) {
+  async reassign(
+    @Param('taskId') taskId: string,
+    @Body() body: ReassignIncidentTaskDto,
+    @Request() req: any,
+  ) {
     const actorId = req.user.userId || req.user.sub;
     const assignment = await this.service.requireTaskAuthority(taskId, 'USER', actorId, req.user.organizationId, IncidentPermission.INCIDENT_SUPERVISE);
     return this.service.reassignTask(taskId, body.employeeId, body.lockVersion, req.user.organizationId, actorId, { actorType: 'USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_SUPERVISE, reason: 'Task reassignment', requestId: req.id || req.headers?.['x-request-id'] });
@@ -89,7 +120,11 @@ export class IncidentController {
   @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
   @RequirePlatformPermission(PlatformPermission.INCIDENT_SUPERVISE)
   @Put('tasks/:taskId/escalation-policy')
-  async configureEscalation(@Param('taskId') taskId: string, @Body() body: { severity: 'CRITICAL' | 'HIGH' | 'NORMAL' | 'LOW'; alternateEmployeeIds?: string[]; acknowledgmentSubjectType: 'USER' | 'CLIENT_USER'; acknowledgmentSubjectId: string; lockVersion: number; reason: string }, @Request() req: any) {
+  async configureEscalation(
+    @Param('taskId') taskId: string,
+    @Body() body: ConfigureIncidentEscalationDto,
+    @Request() req: any,
+  ) {
     const actorId = req.user.userId || req.user.sub;
     const assignment = await this.service.requireTaskAuthority(taskId, 'USER', actorId, req.user.organizationId, IncidentPermission.INCIDENT_SUPERVISE);
     return this.service.configureTaskEscalation(taskId, body, req.user.organizationId, { actorType: 'USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.INCIDENT_SUPERVISE, reason: body.reason, requestId: req.id || req.headers?.['x-request-id'] });
@@ -108,7 +143,7 @@ export class IncidentController {
   @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
   @RequirePlatformPermission(PlatformPermission.PCA_ACTIVATE)
   @Post('pca/activate')
-  async activatePca(@Body() body: { buildingId: string; projectId: string; incidentEventId?: string; reason: string }, @Request() req: any) {
+  async activatePca(@Body() body: ActivateIncidentPcaDto, @Request() req: any) {
     const actorId = req.user.userId || req.user.sub;
     const assignment = await this.service.requireIncidentAuthority({ actorType: 'USER', actorId, organizationId: req.user.organizationId, buildingId: body.buildingId, incidentEventId: body.incidentEventId, permission: IncidentPermission.PCA_ACTIVATE });
     return this.service.activatePca(body, req.user.organizationId, actorId, 'USER', { actorType: 'USER', actorId, assignmentId: assignment.id, permission: IncidentPermission.PCA_ACTIVATE, reason: body.reason, requestId: req.id || req.headers?.['x-request-id'] });
@@ -117,7 +152,7 @@ export class IncidentController {
   @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
   @RequirePlatformPermission(PlatformPermission.INCIDENT_SUPERVISE)
   @Post('authority/assign')
-  async assignAuthority(@Body() body: { buildingId: string; incidentEventId?: string; subjectType: 'USER' | 'CLIENT_USER'; subjectId: string; operationalRole: string; permissions: any[]; reason: string }, @Request() req: any) {
+  async assignAuthority(@Body() body: AssignIncidentAuthorityDto, @Request() req: any) {
     const actorId = req.user.userId || req.user.sub;
     const assignment = await this.service.requireIncidentAuthority({ actorType: 'USER', actorId, organizationId: req.user.organizationId, buildingId: body.buildingId, permission: IncidentPermission.INCIDENT_SUPERVISE });
     return this.service.grantIncidentAuthority({ ...body, organizationId: req.user.organizationId, grantedByType: 'USER', grantedById: actorId, authorizationAssignmentId: assignment.id, requestId: req.id || req.headers?.['x-request-id'] });
@@ -126,7 +161,11 @@ export class IncidentController {
   @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
   @RequirePlatformPermission(PlatformPermission.INCIDENT_SUPERVISE)
   @Put('authority/:assignmentId/revoke')
-  async revokeAuthority(@Param('assignmentId') assignmentId: string, @Body() body: { reason: string; lockVersion: number; buildingId: string; incidentEventId?: string }, @Request() req: any) {
+  async revokeAuthority(
+    @Param('assignmentId') assignmentId: string,
+    @Body() body: RevokeIncidentAuthorityDto,
+    @Request() req: any,
+  ) {
     const actorId = req.user.userId || req.user.sub;
     const assignment = await this.service.requireIncidentAuthority({ actorType: 'USER', actorId, organizationId: req.user.organizationId, buildingId: body.buildingId, incidentEventId: body.incidentEventId, permission: IncidentPermission.INCIDENT_SUPERVISE });
     return this.service.revokeIncidentAuthority(assignmentId, req.user.organizationId, 'USER', actorId, body.reason, body.lockVersion, assignment.id, req.id || req.headers?.['x-request-id']);
@@ -186,7 +225,11 @@ export class IncidentController {
   @UseGuards(PlatformRolesGuard)
   @RequirePlatformPermission(PlatformPermission.INCIDENT_SUPERVISE)
   @Post(':incidentId/send-access')
-  async sendAccess(@Param('incidentId') incidentId: string, @Body() body: { emails: string[] }, @Request() req: any) {
+  async sendAccess(
+    @Param('incidentId') incidentId: string,
+    @Body() body: SendIncidentAccessDto,
+    @Request() req: any,
+  ) {
     await this.service.requireIncidentAuthority({ actorType: 'USER', actorId: req.user.userId || req.user.sub, organizationId: req.user.organizationId, incidentEventId: incidentId, permission: PlatformPermission.INCIDENT_SUPERVISE as any });
     return this.service.sendInterventionAccessByEmail(incidentId, body.emails, req.user.organizationId);
   }
