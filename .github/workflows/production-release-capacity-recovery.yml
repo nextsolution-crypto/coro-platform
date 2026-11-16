@@ -1,0 +1,74 @@
+name: Production Release Capacity Recovery
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Read-only inventory or governed removal of unused build cache older than seven days
+        required: true
+        type: choice
+        options:
+          - DRY_RUN
+          - APPLY
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    if: inputs.mode == 'DRY_RUN'
+    runs-on: ubuntu-latest
+    environment: production-inspection
+    steps:
+      - name: Inspect release capacity without mutation
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          script: |
+            set -Eeuo pipefail
+            flock --nonblock /run/lock/coro-production-deployment.lock true
+            flock --nonblock /run/lock/coro-release-control.lock true
+            systemctl list-units --state=running --plain --no-legend 'coro-release-*.service' | grep -q . && exit 1 || true
+            docker system df --format 'CAPACITY_DOCKER type={{.Type}} total={{.TotalCount}} active={{.Active}} size={{.Size}} reclaimable={{.Reclaimable}}'
+            read -r total_kib free_kib < <(df -Pk -- /opt/coro-ops/backups/database | awk 'NR==2 {print $2,$4}')
+            printf 'CAPACITY_FILESYSTEM total_bytes=%s free_bytes=%s\n' "$((total_kib * 1024))" "$((free_kib * 1024))"
+            printf 'CAPACITY_RECOVERY_MUTATED=false\n'
+
+  apply:
+    if: inputs.mode == 'APPLY'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Recover only unused build cache older than seven days
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          command_timeout: 20m
+          script: |
+            set -Eeuo pipefail
+            exec 8>/run/lock/coro-capacity-recovery.lock
+            flock --nonblock 8
+            flock --nonblock /run/lock/coro-production-deployment.lock true
+            flock --nonblock /run/lock/coro-release-control.lock true
+            systemctl list-units --state=running --plain --no-legend 'coro-release-*.service' | grep -q . && exit 1 || true
+            before_images="$(docker image ls --quiet --no-trunc | sort -u | sha256sum | cut -d' ' -f1)"
+            before_containers="$(docker ps --format '{{.ID}}:{{.Image}}' | sort | sha256sum | cut -d' ' -f1)"
+            read -r total_kib free_before_kib < <(df -Pk -- /opt/coro-ops/backups/database | awk 'NR==2 {print $2,$4}')
+            docker builder prune --all --force --filter until=168h >/dev/null
+            after_images="$(docker image ls --quiet --no-trunc | sort -u | sha256sum | cut -d' ' -f1)"
+            after_containers="$(docker ps --format '{{.ID}}:{{.Image}}' | sort | sha256sum | cut -d' ' -f1)"
+            [[ "$before_images" == "$after_images" ]]
+            [[ "$before_containers" == "$after_containers" ]]
+            read -r total_after_kib free_after_kib < <(df -Pk -- /opt/coro-ops/backups/database | awk 'NR==2 {print $2,$4}')
+            [[ "$total_kib" == "$total_after_kib" ]]
+            free_before=$((free_before_kib * 1024))
+            free_after=$((free_after_kib * 1024))
+            (( free_after >= free_before ))
+            printf 'CAPACITY_RECOVERY_APPLIED=true free_before_bytes=%s free_after_bytes=%s reclaimed_bytes=%s images_unchanged=true containers_unchanged=true\n' \
+              "$free_before" "$free_after" "$((free_after - free_before))"
