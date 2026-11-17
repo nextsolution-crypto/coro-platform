@@ -92,7 +92,7 @@ test("la destination active pilote sa visibilité sans déplacer le contenu prin
   assert.doesNotMatch(layout, /scrollIntoView\(/);
 });
 
-test("les 92 pages applicatives réelles ont au plus une destination active", () => {
+test("les 93 pages applicatives réelles ont au plus une destination active", () => {
   const appRoot = path.resolve(__dirname, "../../app");
   const pages = [];
   const visit = (directory) => {
@@ -103,7 +103,7 @@ test("les 92 pages applicatives réelles ont au plus une destination active", ()
     }
   };
   visit(appRoot);
-  assert.equal(pages.length, 92);
+  assert.equal(pages.length, 93);
 
   for (const page of pages) {
     const relative = path.relative(appRoot, path.dirname(page)).replaceAll("\\", "/");

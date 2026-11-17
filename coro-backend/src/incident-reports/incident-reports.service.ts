@@ -70,7 +70,7 @@ export class IncidentReportsService {
     });
     if (existing) return existing;
 
-    return this.serializable(async (tx) => {
+    const creation = this.serializable(async (tx) => {
       const replay = await tx.incidentReport.findUnique({
         where: {
           organizationId_creationIdempotencyKey: {
@@ -167,6 +167,27 @@ export class IncidentReportsService {
       });
       return report;
     });
+
+    try {
+      return await creation;
+    } catch (error) {
+      const idempotencyCollision =
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002';
+      if (!idempotencyCollision) throw error;
+
+      const replay = await this.prisma.incidentReport.findUnique({
+        where: {
+          organizationId_creationIdempotencyKey: {
+            organizationId,
+            creationIdempotencyKey: dto.idempotencyKey,
+          },
+        },
+        select: reportSummarySelect,
+      });
+      if (replay) return replay;
+      throw error;
+    }
   }
 
   async list(
@@ -316,9 +337,19 @@ export class IncidentReportsService {
       if (replay) return replay;
       const report = await this.lockReport(tx, id, organizationId);
       if (report.lockVersion !== dto.expectedLockVersion) this.conflict();
+      if (report.status === IncidentReportStatus.ARCHIVED) this.conflict();
+      const priorVersion = await tx.incidentReportVersion.findUniqueOrThrow({
+        where: {
+          reportId_versionNumber: {
+            reportId: id,
+            versionNumber: report.currentVersionNumber,
+          },
+        },
+        select: { status: true },
+      });
       if (
-        report.status === IncidentReportStatus.ARCHIVED ||
-        report.status === IncidentReportStatus.DRAFT
+        report.status === IncidentReportStatus.DRAFT &&
+        priorVersion.status !== IncidentReportVersionStatus.REJECTED
       ) {
         this.conflict();
       }

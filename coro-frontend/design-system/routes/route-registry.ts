@@ -98,6 +98,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { pattern: '/library', family: 'compliance', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex'], sensitivity: ['emergency-content'], validation: ['test:skin', 'test:design-system'] },
   { pattern: '/exercise-reports', family: 'compliance', shell: 'app', status: 'beta', render: 'skin', styling: ['css-module', 'inline-hex'], sensitivity: ['documents', 'emergency-content', 'permissions'], validation: ['test:skin', 'test:design-system'] },
   { pattern: '/exercise-reports/[id]', family: 'compliance', shell: 'app', status: 'beta', render: 'skin', styling: ['css-module', 'inline-hex'], sensitivity: ['documents', 'emergency-content', 'permissions'], validation: ['test:skin', 'test:design-system'] },
+  { pattern: '/incident-reports', family: 'compliance', shell: 'app', status: 'beta', render: 'skin', styling: ['css-module', 'inline-hex'], sensitivity: ['documents', 'permissions'], validation: ['test:design-system'] },
   // ── admin (28) ──
   { pattern: '/admin/capacity', family: 'admin', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'], sensitivity: ['permissions'], validation: ['test:skin', 'test:design-system'] },
   { pattern: '/admin/changelog', family: 'admin', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'], sensitivity: ['destructive', 'permissions'], validation: ['test:skin', 'test:design-system'] },

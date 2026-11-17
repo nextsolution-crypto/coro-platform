@@ -7739,6 +7739,8 @@ model IncidentReport {
   submittedByActorType CoroActorType?
   submittedByActorId   String?
   submittedAt          DateTime?
+  reviewerUserId       String?
+  reviewAssignedAt     DateTime?
   publishedAt          DateTime?
   archivedAt           DateTime?
   createdAt            DateTime                      @default(now())
@@ -7801,6 +7803,9 @@ model IncidentReportAttachment {
   storageKey         String
   scanStatus         IncidentReportAttachmentScanStatus @default(PENDING)
   scannedAt          DateTime?
+  revokedAt          DateTime?
+  revokedByActorId   String?
+  revocationReason   String?
   provenance         Json?
   createdByActorType CoroActorType
   createdByActorId   String

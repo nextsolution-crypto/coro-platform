@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { createHash } from 'node:crypto';
+import { validateFormContent } from './incident-report-form-engine';
 
 const MAX_CONTENT_BYTES = 256 * 1024;
 const FORBIDDEN_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
@@ -29,6 +30,13 @@ export function validateAndHashIncidentReportContent(
     throw new BadRequestException('Le contenu du rapport doit être un objet.');
   }
   const canonical = normalized(content) as Record<string, unknown>;
+  if (
+    formSchema &&
+    typeof formSchema === 'object' &&
+    (formSchema as { schemaVersion?: unknown }).schemaVersion === '1.0'
+  ) {
+    validateFormContent(formSchema, canonical);
+  }
   const serialized = JSON.stringify(canonical);
   if (Buffer.byteLength(serialized, 'utf8') > MAX_CONTENT_BYTES) {
     throw new BadRequestException('Le contenu du rapport dépasse 256 Ko.');
