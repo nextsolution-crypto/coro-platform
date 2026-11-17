@@ -316,9 +316,19 @@ export class IncidentReportsService {
       if (replay) return replay;
       const report = await this.lockReport(tx, id, organizationId);
       if (report.lockVersion !== dto.expectedLockVersion) this.conflict();
+      if (report.status === IncidentReportStatus.ARCHIVED) this.conflict();
+      const priorVersion = await tx.incidentReportVersion.findUniqueOrThrow({
+        where: {
+          reportId_versionNumber: {
+            reportId: id,
+            versionNumber: report.currentVersionNumber,
+          },
+        },
+        select: { status: true },
+      });
       if (
-        report.status === IncidentReportStatus.ARCHIVED ||
-        report.status === IncidentReportStatus.DRAFT
+        report.status === IncidentReportStatus.DRAFT &&
+        priorVersion.status !== IncidentReportVersionStatus.REJECTED
       ) {
         this.conflict();
       }
