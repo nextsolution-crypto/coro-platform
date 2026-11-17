@@ -107,6 +107,11 @@ model Organization {
   operationalShiftHistory          OperationalShiftHistory[]
   operationalHandovers             OperationalHandover[]
   operationalHandoverActions       OperationalHandoverAction[]
+  operationalDirectives            OperationalDirective[]
+  operationalDirectiveVersions     OperationalDirectiveVersion[]
+  operationalDirectiveReceipts     OperationalDirectiveReceipt[]
+  operationalFollowUps             OperationalFollowUp[]
+  operationalFollowUpEvents        OperationalFollowUpEvent[]
 }
 
 enum SpatialResourceStatus {
@@ -601,6 +606,14 @@ model User {
   operationalHandoversOutgoing       OperationalHandover[]               @relation("OperationalHandoverOutgoingUser")
   operationalHandoversIncoming       OperationalHandover[]               @relation("OperationalHandoverIncomingUser")
   operationalHandoverActions         OperationalHandoverAction[]         @relation("OperationalHandoverActionActor")
+  operationalDirectivesCreated       OperationalDirective[]              @relation("OperationalDirectiveCreator")
+  operationalDirectivesApproved      OperationalDirective[]              @relation("OperationalDirectiveApprover")
+  operationalDirectiveVersionsAuthored OperationalDirectiveVersion[]     @relation("OperationalDirectiveVersionAuthor")
+  operationalDirectiveReceipts       OperationalDirectiveReceipt[]       @relation("OperationalDirectiveReceiptUser")
+  operationalFollowUpsCreated        OperationalFollowUp[]               @relation("OperationalFollowUpCreator")
+  operationalFollowUpsAssigned       OperationalFollowUp[]               @relation("OperationalFollowUpAssignee")
+  operationalFollowUpsVerified       OperationalFollowUp[]               @relation("OperationalFollowUpVerifier")
+  operationalFollowUpEvents          OperationalFollowUpEvent[]          @relation("OperationalFollowUpEventActor")
 
   resetToken       String?
   resetTokenExpiry DateTime?
@@ -814,6 +827,21 @@ enum PlatformPermission {
   OPERATIONAL_SHIFT_SUPERVISE
   OPERATIONAL_SHIFT_EXCEPTION_CLOSE
   OPERATIONAL_SHIFT_ADMIN
+  OPERATIONAL_DIRECTIVE_READ
+  OPERATIONAL_DIRECTIVE_CREATE
+  OPERATIONAL_DIRECTIVE_EDIT
+  OPERATIONAL_DIRECTIVE_REVIEW
+  OPERATIONAL_DIRECTIVE_APPROVE
+  OPERATIONAL_DIRECTIVE_PUBLISH
+  OPERATIONAL_DIRECTIVE_REVOKE
+  OPERATIONAL_DIRECTIVE_ACKNOWLEDGE
+  OPERATIONAL_FOLLOWUP_READ
+  OPERATIONAL_FOLLOWUP_CREATE
+  OPERATIONAL_FOLLOWUP_ASSIGN
+  OPERATIONAL_FOLLOWUP_EXECUTE
+  OPERATIONAL_FOLLOWUP_VERIFY
+  OPERATIONAL_FOLLOWUP_CLOSE
+  OPERATIONAL_FOLLOWUP_ADMIN
 }
 
 enum PlatformPermissionScope {
@@ -3095,6 +3123,11 @@ model Building {
   operationalShiftHistory     OperationalShiftHistory[]
   operationalHandovers        OperationalHandover[]
   operationalHandoverActions  OperationalHandoverAction[]
+  operationalDirectives       OperationalDirective[]
+  operationalDirectiveVersions OperationalDirectiveVersion[]
+  operationalDirectiveReceipts OperationalDirectiveReceipt[]
+  operationalFollowUps        OperationalFollowUp[]
+  operationalFollowUpEvents   OperationalFollowUpEvent[]
 
   @@unique([id, clientId, organizationId])
   @@unique([id, organizationId])
@@ -8234,6 +8267,197 @@ model OperationalHandoverAction {
 
   @@unique([organizationId, idempotencyKey])
   @@index([organizationId, handoverId, occurredAt])
+}
+
+enum OperationalDirectiveType {
+  PERMANENT
+  TEMPORARY
+  SHIFT_DIRECTIVE
+  SPECIAL_INSTRUCTION
+  OPERATIONAL_NOTICE
+}
+enum OperationalDirectivePriority {
+  NORMAL
+  IMPORTANT
+  CRITICAL
+}
+enum OperationalDirectiveStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  PUBLISHED
+  EXPIRED
+  REVOKED
+  SUPERSEDED
+  ARCHIVED
+}
+enum OperationalDirectiveReceiptStatus {
+  TO_REVIEW
+  VIEWED
+  CONFIRMED
+  OVERDUE
+  NOT_APPLICABLE
+  REVOKED
+}
+
+model OperationalDirective {
+  id String @id @default(uuid())
+  organizationId String
+  buildingId String
+  zoneLabel String?
+  securityPost String?
+  title String
+  type OperationalDirectiveType
+  priority OperationalDirectivePriority @default(NORMAL)
+  status OperationalDirectiveStatus @default(DRAFT)
+  effectiveAt DateTime?
+  expiresAt DateTime?
+  targetCriteria Json
+  acknowledgementRequired Boolean @default(false)
+  currentVersionNumber Int @default(1)
+  lockVersion Int @default(0)
+  creationIdempotencyKey String
+  createdByUserId String
+  approvedByUserId String?
+  approvedAt DateTime?
+  publishedAt DateTime?
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building Building @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdBy User @relation("OperationalDirectiveCreator", fields: [createdByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  approvedBy User? @relation("OperationalDirectiveApprover", fields: [approvedByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  versions OperationalDirectiveVersion[]
+  receipts OperationalDirectiveReceipt[]
+  @@unique([id, organizationId])
+  @@unique([organizationId, creationIdempotencyKey])
+  @@index([organizationId, buildingId, status, priority, effectiveAt])
+}
+
+model OperationalDirectiveVersion {
+  id String @id @default(uuid())
+  organizationId String
+  buildingId String
+  directiveId String
+  versionNumber Int
+  title String
+  description String
+  targetSnapshot Json
+  attachments Json?
+  knowledgeReference Json?
+  contentHash String
+  authorUserId String
+  createdAt DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building Building @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  directive OperationalDirective @relation(fields: [directiveId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  author User @relation("OperationalDirectiveVersionAuthor", fields: [authorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  receipts OperationalDirectiveReceipt[]
+  @@unique([directiveId, versionNumber])
+  @@unique([id, organizationId])
+  @@index([organizationId, buildingId, createdAt])
+}
+
+model OperationalDirectiveReceipt {
+  id String @id @default(uuid())
+  organizationId String
+  buildingId String
+  directiveId String
+  versionId String
+  userId String
+  status OperationalDirectiveReceiptStatus @default(TO_REVIEW)
+  publishedAt DateTime
+  viewedAt DateTime?
+  confirmedAt DateTime?
+  comment String?
+  reservation String?
+  lockVersion Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building Building @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  directive OperationalDirective @relation(fields: [directiveId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  version OperationalDirectiveVersion @relation(fields: [versionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  user User @relation("OperationalDirectiveReceiptUser", fields: [userId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  @@unique([versionId, userId])
+  @@unique([id, organizationId])
+  @@index([organizationId, buildingId, userId, status])
+}
+
+enum OperationalFollowUpSource {
+  OPERATIONAL_LOG
+  INCIDENT_REPORT
+  INCIDENT_EVENT
+  HANDOVER
+  DIRECTIVE
+  OBSERVATION
+  TECHNICAL_ANOMALY
+}
+enum OperationalFollowUpStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  VERIFIED
+  CLOSED
+  CANCELLED
+}
+
+model OperationalFollowUp {
+  id String @id @default(uuid())
+  organizationId String
+  buildingId String
+  sourceType OperationalFollowUpSource
+  sourceId String
+  description String
+  priority OperationalDirectivePriority @default(NORMAL)
+  responsibleUserId String?
+  dueAt DateTime?
+  status OperationalFollowUpStatus @default(OPEN)
+  closureValidation String?
+  completedAt DateTime?
+  verifiedAt DateTime?
+  closedAt DateTime?
+  verifiedByUserId String?
+  lockVersion Int @default(0)
+  creationIdempotencyKey String
+  createdByUserId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building Building @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdBy User @relation("OperationalFollowUpCreator", fields: [createdByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  responsible User? @relation("OperationalFollowUpAssignee", fields: [responsibleUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  verifiedBy User? @relation("OperationalFollowUpVerifier", fields: [verifiedByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  events OperationalFollowUpEvent[]
+  @@unique([id, organizationId])
+  @@unique([organizationId, creationIdempotencyKey])
+  @@index([organizationId, buildingId, status, dueAt])
+  @@index([organizationId, responsibleUserId, status])
+  @@index([organizationId, sourceType, sourceId])
+}
+
+model OperationalFollowUpEvent {
+  id String @id @default(uuid())
+  organizationId String
+  buildingId String
+  followUpId String
+  action String
+  actorUserId String
+  fromStatus OperationalFollowUpStatus?
+  toStatus OperationalFollowUpStatus?
+  reason String?
+  evidence Json?
+  idempotencyKey String
+  occurredAt DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building Building @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  followUp OperationalFollowUp @relation(fields: [followUpId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  actor User @relation("OperationalFollowUpEventActor", fields: [actorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  @@unique([organizationId, idempotencyKey])
+  @@unique([id, organizationId])
+  @@index([organizationId, followUpId, occurredAt])
 }
 
 model OperationalLogEntryRevision {
