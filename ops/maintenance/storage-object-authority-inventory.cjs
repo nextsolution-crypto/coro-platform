@@ -16,6 +16,8 @@ const AUTHORITY_QUERIES = Object.freeze([
   ['correctiveActionTrackingReports', 'correctiveActionTrackingReport', ['storageKey']],
   ['operationalReviewReports', 'operationalReviewReport', ['storageKey']],
   ['documentPdfExports', 'documentPdfExport', ['artifacts']],
+  ['incidentReportAttachments', 'incidentReportAttachment', ['storageKey']],
+  ['incidentReportExports', 'incidentReportExport', ['storageKey']],
 ]);
 
 function fingerprint(value) { return crypto.createHash('sha256').update(value).digest('hex'); }
@@ -260,5 +262,5 @@ async function main() {
   } finally { await prisma.$disconnect(); }
 }
 
-module.exports = { AUTHORITY_QUERIES, ageBucket, artifactKeys, candidateCategory, inventory, parseListPage, parseVersionPage, readAuthorityKeys, referenceKey, runReadOnlyInventory, safeKey, signedListPage, versionSummary };
+module.exports = { AUTHORITY_QUERIES, ageBucket, artifactKeys, candidateCategory, inventory, listBucketObjects, parseListPage, parseVersionPage, readAuthorityKeys, referenceKey, runReadOnlyInventory, safeKey, signedListPage, versionSummary };
 if (require.main === module || process.env.CORO_STORAGE_AUTHORITY_INVENTORY_RUN === 'true') main().catch(() => { process.stdout.write('{"schemaVersion":1,"execution":"FAILED","readOnly":true,"deletionCapability":false}\n'); process.exitCode = 1; });

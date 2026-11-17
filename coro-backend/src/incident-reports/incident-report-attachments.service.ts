@@ -16,6 +16,7 @@ import {
 import { IncidentReportAccessService } from './incident-report-access.service';
 import { IncidentReportAttachmentScanner } from './incident-report-attachment-scanner.service';
 import { incidentReportsEnabled } from './incident-reports.config';
+import { assertIncidentReportBinary } from './incident-report-binary-validator';
 
 const MAX_BYTES = 10 * 1024 * 1024;
 @Injectable()
@@ -52,6 +53,7 @@ export class IncidentReportAttachmentsService {
     const bytes = Buffer.from(dto.fileBase64, 'base64');
     if (!bytes.length || bytes.length > MAX_BYTES)
       throw new BadRequestException('Fichier vide ou supérieur à 10 Mo.');
+    assertIncidentReportBinary(bytes, dto.mediaType, dto.originalFileName);
     const version = await this.prisma.incidentReportVersion.findFirst({
       where: {
         id: dto.reportVersionId,

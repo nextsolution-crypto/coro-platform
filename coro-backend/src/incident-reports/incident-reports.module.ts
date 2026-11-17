@@ -8,6 +8,7 @@ import { IncidentReportWorkflowService } from './incident-report-workflow.servic
 import { IncidentReportAttachmentsService } from './incident-report-attachments.service';
 import { IncidentReportAttachmentScanner } from './incident-report-attachment-scanner.service';
 import { IncidentReportTemplatesService } from './incident-report-templates.service';
+import { IncidentReportExportsService } from './incident-report-exports.service';
 
 @Module({
   imports: [PrismaModule, StorageModule],
@@ -19,6 +20,7 @@ import { IncidentReportTemplatesService } from './incident-report-templates.serv
     IncidentReportAttachmentsService,
     IncidentReportAttachmentScanner,
     IncidentReportTemplatesService,
+    IncidentReportExportsService,
   ],
   exports: [IncidentReportsService],
 })

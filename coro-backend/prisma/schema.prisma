@@ -7845,10 +7845,13 @@ model IncidentReportExport {
   reportId           String
   reportVersionId    String
   format             String
+  pageFormat         String                     @default("LETTER")
+  locale             String                     @default("fr-CA")
   status             IncidentReportExportStatus @default(PENDING)
   storageKey         String?
   sha256             String?
   rendererVersion    String
+  requestIdempotencyKey String
   sourceManifest     Json
   failureCode        String?
   createdByActorType CoroActorType
@@ -7859,6 +7862,7 @@ model IncidentReportExport {
   reportVersion      IncidentReportVersion      @relation(fields: [reportVersionId, organizationId], references: [id, organizationId], onDelete: Restrict)
 
   @@unique([organizationId, storageKey])
+  @@unique([organizationId, requestIdempotencyKey])
   @@unique([id, organizationId])
   @@index([organizationId, reportId, status])
 }
