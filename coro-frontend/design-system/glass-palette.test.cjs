@@ -110,16 +110,7 @@ test('Legacy : les emojis de navigation, routes et libellés sont identiques à 
   const cut = (src) => src.slice(0, src.indexOf('export default function AppLayout'));
   const items = (src) => [...cut(src).matchAll(/\{ label: '([^']*)',\s*path: '([^']*)',\s*icon: '([^']*)'/g)].map((m) => m.slice(1).join('|'));
   assert.ok(items(head).length > 40);
-  const previousItems = items(head);
-  const currentItems = items(layoutSrc);
-  assert.deepEqual(
-    currentItems.filter((item) => !item.includes('|/security-workstation|')),
-    previousItems,
-  );
-  assert.equal(
-    currentItems.filter((item) => item.includes('|/security-workstation|')).length,
-    1,
-  );
+  assert.deepEqual(items(layoutSrc), items(head));
 });
 
 test('icônes : Lucide n’est rendu qu’en Glass, les emojis restent la branche Legacy', () => {
