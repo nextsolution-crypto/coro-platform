@@ -7726,6 +7726,7 @@ model IncidentReport {
   templateVersionId    String
   retentionPolicyId    String
   reportNumber         String
+  creationIdempotencyKey String
   reportType           String
   title                String
   status               IncidentReportStatus          @default(DRAFT)
@@ -7755,6 +7756,7 @@ model IncidentReport {
   auditEvents          IncidentReportAuditEvent[]
 
   @@unique([organizationId, reportNumber])
+  @@unique([organizationId, creationIdempotencyKey])
   @@unique([id, organizationId])
   @@index([organizationId, buildingId, status, createdAt, id])
   @@index([organizationId, incidentEventId])
@@ -7889,12 +7891,14 @@ model IncidentReportAuditEvent {
   actorType      CoroActorType
   actorId        String
   reason         String?
+  idempotencyKey String?
   metadata       Json?
   occurredAt     DateTime       @default(now())
   organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   report         IncidentReport @relation(fields: [reportId, organizationId], references: [id, organizationId], onDelete: Restrict)
 
   @@unique([id, organizationId])
+  @@unique([organizationId, idempotencyKey])
   @@index([organizationId, reportId, occurredAt])
 }
 

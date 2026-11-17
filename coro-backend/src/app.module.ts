@@ -84,6 +84,7 @@ import { DisplayPlansModule } from './display-plans/display-plans.module';
 import { DisplayDeviceModule } from './display-device/display-device.module';
 import { DisplayWebModule } from './display-web/display-web.module';
 import { DisplayOrchestrationModule } from './display-orchestration/display-orchestration.module';
+import { IncidentReportsModule } from './incident-reports/incident-reports.module';
 
 @Module({
   imports: [
@@ -185,6 +186,7 @@ import { DisplayOrchestrationModule } from './display-orchestration/display-orch
     PopulationModule,
     OperationalReviewsModule,
     ExerciseReportsModule,
+    IncidentReportsModule,
   ],
   controllers: [AppController],
   providers: [
