@@ -1,8 +1,12 @@
 import { CoroActorType, PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const databaseUrl = process.env.DATABASE_URL;
+const describePostgres = databaseUrl ? describe : describe.skip;
+const prisma = databaseUrl
+  ? new PrismaClient({ datasources: { db: { url: databaseUrl } } })
+  : new PrismaClient();
 
-describe('INC-RP-01 PostgreSQL constraints', () => {
+describePostgres('INC-RP-01 PostgreSQL constraints', () => {
   beforeAll(async () => {
     await prisma.organization.createMany({
       data: [
@@ -92,6 +96,7 @@ describe('INC-RP-01 PostgreSQL constraints', () => {
         templateVersionId: 'rp-template-a',
         retentionPolicyId: 'rp-retention-a',
         reportNumber: 'RP-1',
+        creationIdempotencyKey: 'legacy-test-report-a',
         reportType: 'SECURITY',
         title: 'Synthetic report',
         createdByActorType: CoroActorType.SYSTEM,
@@ -131,6 +136,7 @@ describe('INC-RP-01 PostgreSQL constraints', () => {
           templateVersionId: 'rp-template-a',
           retentionPolicyId: 'rp-retention-a',
           reportNumber: 'RP-CROSS-TENANT',
+          creationIdempotencyKey: 'legacy-test-cross-tenant',
           reportType: 'SECURITY',
           title: 'Must fail',
           createdByActorType: CoroActorType.SYSTEM,
