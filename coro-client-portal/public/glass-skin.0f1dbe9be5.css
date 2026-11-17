@@ -2176,6 +2176,10 @@
   [style*=";color:#52675D" i],
   [style^="color: rgb(82, 103, 93)" i],
   [style*="; color: rgb(82, 103, 93)" i],
+  [style^="color:#576B63" i],
+  [style*=";color:#576B63" i],
+  [style^="color: rgb(87, 107, 99)" i],
+  [style*="; color: rgb(87, 107, 99)" i],
   .text-emerald-600,
   .text-emerald-700,
   .text-emerald-800,
@@ -2244,7 +2248,8 @@
   [class*="text-[#455B51]" i],
   [class*="text-[#496A63]" i],
   [class*="text-[#4B9B7B]" i],
-  [class*="text-[#52675D]" i]
+  [class*="text-[#52675D]" i],
+  [class*="text-[#576B63]" i]
 ):not([data-cg-paper] *):not([data-cg-emergency] *):not([data-cg-emergency]):not([data-cg-keep] *):not([data-cg-keep]) {
   color: var(--cg-skin-text-success) !important;
 }
@@ -5858,7 +5863,9 @@
   svg[stroke="#4B9B7B" i],
   svg [stroke="#4B9B7B" i],
   svg[stroke="#52675D" i],
-  svg [stroke="#52675D" i]
+  svg [stroke="#52675D" i],
+  svg[stroke="#576B63" i],
+  svg [stroke="#576B63" i]
 ):not([data-cg-paper] *):not([data-cg-emergency] *):not([data-cg-emergency]):not([data-cg-keep] *):not([data-cg-keep]) {
   stroke: var(--cg-skin-text-success) !important;
 }
@@ -5961,7 +5968,9 @@
   svg[fill="#4B9B7B" i],
   svg [fill="#4B9B7B" i],
   svg[fill="#52675D" i],
-  svg [fill="#52675D" i]
+  svg [fill="#52675D" i],
+  svg[fill="#576B63" i],
+  svg [fill="#576B63" i]
 ):not([data-cg-paper] *):not([data-cg-emergency] *):not([data-cg-emergency]):not([data-cg-keep] *):not([data-cg-keep]) {
   fill: var(--cg-skin-text-success) !important;
 }

@@ -18,6 +18,10 @@ import {
 } from './dto/operational-shifts.dto';
 import { operationalShiftsEnabled } from './operational-shifts.config';
 import { OperationalShiftsAccessService } from './operational-shifts-access.service';
+import {
+  operationalDirectivesEnabled,
+  operationalFollowUpsEnabled,
+} from '../operational-directives/operational-directives.config';
 
 const SHIFT_INCLUDE = {
   responsibleUser: { select: { id: true, firstName: true, lastName: true } },
@@ -230,6 +234,27 @@ export class OperationalShiftsService {
   ) {
     const shift = await this.find(organizationId, id);
     await this.requireParticipant(organizationId, shift.id, actor.userId!);
+    const directiveSnapshot = operationalDirectivesEnabled()
+      ? await this.prisma.operationalDirective.findMany({
+          where: {
+            organizationId,
+            buildingId: shift.buildingId,
+            status: 'PUBLISHED',
+            OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+          },
+          select: {
+            id: true,
+            currentVersionNumber: true,
+            title: true,
+            priority: true,
+            acknowledgementRequired: true,
+            receipts: {
+              where: { userId: actor.userId! },
+              select: { status: true, versionId: true },
+            },
+          },
+        })
+      : [];
     return this.transition(
       organizationId,
       id,
@@ -241,9 +266,11 @@ export class OperationalShiftsService {
       'OPERATIONAL_SHIFT_OPEN',
       {
         actualStartAt: new Date(),
-        openingSnapshot: dto.openingSnapshot as
-          | Prisma.InputJsonValue
-          | undefined,
+        openingSnapshot: {
+          ...(dto.openingSnapshot ?? {}),
+          applicableDirectiveReferences: directiveSnapshot,
+          capturedAt: new Date().toISOString(),
+        } as Prisma.InputJsonValue,
       },
     );
   }
@@ -281,8 +308,26 @@ export class OperationalShiftsService {
           'Le quart entrant doit appartenir au même bâtiment.',
         );
     }
+    const directiveReferences = operationalDirectivesEnabled()
+      ? await this.prisma.operationalDirective.findMany({
+          where: { organizationId, buildingId: shift.buildingId, status: 'PUBLISHED' },
+          select: { id: true, currentVersionNumber: true, title: true, priority: true, updatedAt: true },
+        })
+      : [];
+    const followUpReferences = operationalFollowUpsEnabled()
+      ? await this.prisma.operationalFollowUp.findMany({
+          where: { organizationId, buildingId: shift.buildingId, status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'VERIFIED'] } },
+          select: { id: true, sourceType: true, sourceId: true, status: true, responsibleUserId: true, dueAt: true, lockVersion: true },
+        })
+      : [];
+    const governedSnapshot = {
+      ...dto.snapshot,
+      directiveReferences,
+      followUpReferences,
+      capturedAt: new Date().toISOString(),
+    };
     const snapshotHash = createHash('sha256')
-      .update(JSON.stringify(dto.snapshot))
+      .update(JSON.stringify(governedSnapshot))
       .digest('hex');
     return this.prisma.$transaction(
       async (tx) => {
@@ -318,7 +363,7 @@ export class OperationalShiftsService {
             outgoingUserId: actor.userId!,
             incomingUserId: dto.incomingUserId,
             status: 'SUBMITTED',
-            snapshot: dto.snapshot as Prisma.InputJsonValue,
+            snapshot: governedSnapshot as Prisma.InputJsonValue,
             snapshotHash,
             creationIdempotencyKey: dto.idempotencyKey,
             submittedAt: new Date(),
