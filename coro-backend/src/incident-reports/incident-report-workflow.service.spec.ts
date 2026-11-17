@@ -20,7 +20,10 @@ describe('IncidentReportWorkflowService separation of duties', () => {
   const transaction = jest.fn();
   const findApproval = jest.fn();
   const prisma = {
-    incidentReport: { findFirst: jest.fn().mockResolvedValue(report) },
+    incidentReport: {
+      findFirst: jest.fn().mockResolvedValue(report),
+      findMany: jest.fn(),
+    },
     incidentReportApproval: { findUnique: findApproval },
     $transaction: transaction,
   };
@@ -115,5 +118,15 @@ describe('IncidentReportWorkflowService separation of duties', () => {
       'building',
       'INCIDENT_REPORT_APPROVE',
     );
+  });
+  it('keeps the review queue dormant while the feature flag is disabled', async () => {
+    process.env.INCIDENT_REPORTS_ENABLED = 'false';
+
+    await expect(
+      service().queue('org', 'building', actor),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(access.require).not.toHaveBeenCalled();
+    expect(prisma.incidentReport.findMany).not.toHaveBeenCalled();
   });
 });

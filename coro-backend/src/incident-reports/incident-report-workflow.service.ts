@@ -253,6 +253,8 @@ export class IncidentReportWorkflowService {
   }
 
   async queue(organizationId: string, buildingId: string, actor: AdviserActor) {
+    if (!incidentReportsEnabled())
+      throw new NotFoundException('Rapport incident introuvable.');
     await this.access.require(
       actor,
       organizationId,

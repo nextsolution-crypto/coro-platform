@@ -33,8 +33,7 @@ export class IncidentReportAttachmentsService {
     dto: CreateIncidentReportAttachmentDto,
     actor: AdviserActor,
   ) {
-    if (!incidentReportsEnabled())
-      throw new NotFoundException('Rapport incident introuvable.');
+    this.assertEnabled();
     const report = await this.prisma.incidentReport.findFirst({
       where: { id: reportId, organizationId },
       select: { buildingId: true, status: true, currentVersionNumber: true },
@@ -126,6 +125,7 @@ export class IncidentReportAttachmentsService {
     attachmentId: string,
     actor: AdviserActor,
   ) {
+    this.assertEnabled();
     const row = await this.prisma.incidentReportAttachment.findFirst({
       where: {
         id: attachmentId,
@@ -157,6 +157,7 @@ export class IncidentReportAttachmentsService {
     dto: RevokeIncidentReportAttachmentDto,
     actor: AdviserActor,
   ) {
+    this.assertEnabled();
     const row = await this.prisma.incidentReportAttachment.findFirst({
       where: { id: attachmentId, reportId, organizationId },
       include: { report: { select: { buildingId: true } } },
@@ -192,5 +193,10 @@ export class IncidentReportAttachmentsService {
       }),
     ]);
     return { revoked: true };
+  }
+
+  private assertEnabled() {
+    if (!incidentReportsEnabled())
+      throw new NotFoundException('Rapport incident introuvable.');
   }
 }
