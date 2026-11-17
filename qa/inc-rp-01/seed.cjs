@@ -3,6 +3,24 @@ const bcrypt = require('../../coro-backend/node_modules/bcryptjs');
 const { createHash } = require('node:crypto');
 
 const prisma = new PrismaClient();
+
+function assertQaTarget(environment = process.env) {
+  if (environment.NODE_ENV === 'production') throw new Error('QA seed is forbidden in production.');
+  if (environment.INC_RP_QA_CONFIRM !== 'SYNTHETIC_LOCAL_ONLY')
+    throw new Error('INC_RP_QA_CONFIRM=SYNTHETIC_LOCAL_ONLY is required.');
+  const raw = environment.DATABASE_URL;
+  if (!raw) throw new Error('DATABASE_URL is required.');
+  const url = new URL(raw);
+  const database = decodeURIComponent(url.pathname.slice(1));
+  const user = decodeURIComponent(url.username);
+  if (
+    !['postgres:', 'postgresql:'].includes(url.protocol) ||
+    !['127.0.0.1', 'localhost', '::1'].includes(url.hostname) ||
+    url.port !== '55433' ||
+    database !== 'coro_report_qa' ||
+    user !== 'coro_report_qa'
+  ) throw new Error('QA seed requires the isolated local CORO Report database.');
+}
 const ids = {
   organization: '71000000-0000-4000-8000-000000000001', client: '71000000-0000-4000-8000-000000000002', building: '71000000-0000-4000-8000-000000000003',
   agent: '71000000-0000-4000-8000-000000000011', supervisor: '71000000-0000-4000-8000-000000000012', unauthorized: '71000000-0000-4000-8000-000000000013', admin: '71000000-0000-4000-8000-000000000014',
@@ -37,6 +55,7 @@ const formSchema = { schemaVersion: '1.0', sections: [
 ] };
 
 async function main() {
+  assertQaTarget();
   const password = process.env.INC_RP_QA_PASSWORD;
   if (!password || password.length < 12) throw new Error('INC_RP_QA_PASSWORD (12+ chars) is required.');
   const passwordHash = await bcrypt.hash(password, 10);
@@ -64,4 +83,8 @@ async function main() {
   for (const subjectId of [ids.agent, ids.supervisor, ids.admin]) await prisma.incidentAuthorityAssignment.create({ data: { organizationId: ids.organization, buildingId: ids.building, subjectType: CoroActorType.USER, subjectId, operationalRole: 'REPORT_QA', permissions: [IncidentPermission.INCIDENT_READ], grantedByType: CoroActorType.SYSTEM, grantedById: ids.admin, grantReason: 'Recette synthétique INC-RP-01' } });
   console.log(JSON.stringify({ organizationId: ids.organization, buildingId: ids.building, accounts: users.map(([, email, firstName, lastName, role]) => ({ email, name: `${firstName} ${lastName}`, role })) }, null, 2));
 }
-main().finally(() => prisma.$disconnect());
+if (require.main === module) {
+  main().catch((error) => { console.error(error.message); process.exitCode = 1; }).finally(() => prisma.$disconnect());
+}
+
+module.exports = { assertQaTarget };

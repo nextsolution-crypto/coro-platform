@@ -74,6 +74,8 @@ conditionnels, personnes et véhicules répétables.
 - actualisation des listes et erreurs lisibles;
 - stack locale reproductible PostgreSQL/Garage/ClamAV;
 - fixtures synthétiques idempotentes.
+- garde du seed imposant `NODE_ENV!=production`, une confirmation explicite
+  et la cible locale exacte `coro_report_qa@127.0.0.1:55433`.
 
 ## Parcours navigateur à exécuter dès rétablissement
 
