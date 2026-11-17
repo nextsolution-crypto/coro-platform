@@ -1,79 +1,69 @@
 'use client';
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import api from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
 import styles from './reports.module.css';
 
 type Field = { key: string; label: string; type: string; required?: boolean; options?: { value: string; label: string }[]; visibleWhen?: { fieldKey: string; operator: string; value?: unknown }; children?: Field[] };
-type Template = { id: string; name: string; reportType: string; formSchema: { sections: { key: string; title: string; fields: Field[] }[] }; retentionPolicyId?: string };
-type Report = { id: string; reportNumber: string; title: string; status: string; lockVersion: number; updatedAt: string };
+type Template = { id: string; name: string; reportType: string; retentionPolicyId?: string; formSchema: { sections: { key: string; title: string; fields: Field[] }[] } };
+type Version = { id: string; content: Record<string, unknown> };
+type Report = { id: string; reportNumber: string; title: string; status: string; lockVersion: number; templateVersionId?: string; versions?: Version[] };
+
 const errorMessage = (error: unknown, fallback: string) => {
   if (typeof error !== 'object' || error === null || !('response' in error)) return fallback;
   const response = (error as { response?: { data?: { message?: unknown } } }).response;
   return typeof response?.data?.message === 'string' ? response.data.message : fallback;
 };
-
-const visible = (field: Field, values: Record<string, unknown>) => {
-  const condition = field.visibleWhen; if (!condition) return true;
-  const current = values[condition.fieldKey];
-  return condition.operator === 'PRESENT' ? current !== undefined && current !== '' : condition.operator === 'NEQ' ? current !== condition.value : current === condition.value;
+const isVisible = (field: Field, values: Record<string, unknown>) => {
+  const c = field.visibleWhen; if (!c) return true; const current = values[c.fieldKey];
+  return c.operator === 'PRESENT' ? current !== undefined && current !== '' : c.operator === 'NEQ' ? current !== c.value : current === c.value;
 };
+const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader(); reader.onerror = () => reject(new Error('Lecture impossible.'));
+  reader.onload = () => resolve(String(reader.result).split(',', 2)[1] ?? ''); reader.readAsDataURL(file);
+});
 
-function DynamicField({ field, values, setValues }: { field: Field; values: Record<string, unknown>; setValues: (value: Record<string, unknown>) => void }) {
-  if (!visible(field, values)) return null;
-  const value = values[field.key] ?? '';
-  const update = (next: unknown) => setValues({ ...values, [field.key]: next });
-  if (field.type === 'LONG_TEXT') return <label>{field.label}{field.required && ' *'}<textarea value={String(value)} onChange={event => update(event.target.value)} required={field.required}/></label>;
-  if (field.type === 'CHECKBOX') return <label className={styles.check}><input type="checkbox" checked={Boolean(value)} onChange={event => update(event.target.checked)}/>{field.label}</label>;
-  if (field.type === 'SELECT' || field.type === 'RADIO') return <label>{field.label}{field.required && ' *'}<select value={String(value)} onChange={event => update(event.target.value)} required={field.required}><option value="">Sélectionner</option>{field.options?.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
-  if (field.type === 'REPEATABLE_SECTION') {
-    const rows = Array.isArray(value) ? value as Record<string, unknown>[] : [];
-    return <fieldset><legend>{field.label}</legend>{rows.map((row, index) => <div className={styles.repeat} key={index}>{field.children?.map(child => <DynamicField key={child.key} field={child} values={row} setValues={next => update(rows.map((item, itemIndex) => itemIndex === index ? next : item))}/>) }<button type="button" className={styles.secondary} onClick={() => update(rows.filter((_, itemIndex) => itemIndex !== index))}>Retirer</button></div>)}<button type="button" className={styles.secondary} onClick={() => update([...rows, {}])}>Ajouter</button></fieldset>;
-  }
-  const inputType = field.type === 'NUMBER' ? 'number' : field.type === 'DATE' ? 'date' : field.type === 'TIME' ? 'time' : field.type === 'DATETIME' ? 'datetime-local' : 'text';
-  return <label>{field.label}{field.required && ' *'}<input type={inputType} value={String(value)} onChange={event => update(inputType === 'number' ? Number(event.target.value) : event.target.value)} required={field.required}/></label>;
+function DynamicField({ field, values, setValues }: { field: Field; values: Record<string, unknown>; setValues: (v: Record<string, unknown>) => void }) {
+  if (!isVisible(field, values)) return null;
+  const value = values[field.key] ?? ''; const update = (next: unknown) => setValues({ ...values, [field.key]: next });
+  if (field.type === 'LONG_TEXT') return <label>{field.label}{field.required && ' *'}<textarea value={String(value)} onChange={e => update(e.target.value)} required={field.required}/></label>;
+  if (field.type === 'CHECKBOX') return <label className={styles.check}><input type="checkbox" checked={Boolean(value)} onChange={e => update(e.target.checked)}/>{field.label}</label>;
+  if (field.type === 'SELECT' || field.type === 'RADIO') return <label>{field.label}{field.required && ' *'}<select value={String(value)} onChange={e => update(e.target.value)} required={field.required}><option value="">Sélectionner</option>{field.options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>;
+  if (field.type === 'REPEATABLE_SECTION') { const rows = Array.isArray(value) ? value as Record<string, unknown>[] : []; return <fieldset><legend>{field.label}</legend>{rows.map((row, i) => <div className={styles.repeat} key={i}>{field.children?.map(child => <DynamicField key={child.key} field={child} values={row} setValues={next => update(rows.map((item, j) => j === i ? next : item))}/>)}<button type="button" className={styles.secondary} onClick={() => update(rows.filter((_, j) => j !== i))}>Retirer</button></div>)}<button type="button" className={styles.secondary} onClick={() => update([...rows, {}])}>Ajouter</button></fieldset>; }
+  const type = field.type === 'NUMBER' ? 'number' : field.type === 'DATE' ? 'date' : field.type === 'TIME' ? 'time' : field.type === 'DATETIME' ? 'datetime-local' : 'text';
+  return <label>{field.label}{field.required && ' *'}<input type={type} value={String(value)} onChange={e => update(type === 'number' ? Number(e.target.value) : e.target.value)} required={field.required}/></label>;
 }
 
 export default function IncidentReportsPage() {
-  const user = useAuthStore(state => state.user);
-  const organizationId = user?.organizationId ?? '';
-  const [buildings, setBuildings] = useState<{ id: string; name: string }[]>([]);
-  const [buildingId, setBuildingId] = useState('');
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [templateId, setTemplateId] = useState('');
-  const [reports, setReports] = useState<Report[]>([]);
-  const [queue, setQueue] = useState<Report[]>([]);
-  const [values, setValues] = useState<Record<string, unknown>>({});
-  const [title, setTitle] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState('');
-  const template = useMemo(() => templates.find(item => item.id === templateId), [templates, templateId]);
+  const user = useAuthStore(s => s.user); const organizationId = user?.organizationId ?? '';
+  const [buildings, setBuildings] = useState<{ id: string; name: string }[]>([]); const [buildingId, setBuildingId] = useState('');
+  const [templates, setTemplates] = useState<Template[]>([]); const [templateId, setTemplateId] = useState('');
+  const [reports, setReports] = useState<Report[]>([]); const [queue, setQueue] = useState<Report[]>([]); const [active, setActive] = useState<Report | null>(null);
+  const [values, setValues] = useState<Record<string, unknown>>({}); const [title, setTitle] = useState(''); const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false); const [message, setMessage] = useState(''); const template = useMemo(() => templates.find(t => t.id === templateId), [templates, templateId]);
 
-  useEffect(() => { void api.get('/buildings').then(response => setBuildings(response.data)).catch(() => setMessage('Impossible de charger vos bâtiments autorisés.')); }, []);
-  useEffect(() => { if (!organizationId || !buildingId) return; void Promise.all([api.get(`/organizations/${organizationId}/incident-reports/forms/templates`, { params: { buildingId } }), api.get(`/organizations/${organizationId}/incident-reports`, { params: { buildingId } }), api.get(`/organizations/${organizationId}/incident-reports/review/queue`, { params: { buildingId } })]).then(([templateResponse, reportResponse, queueResponse]) => { setTemplates(templateResponse.data); setReports(reportResponse.data.items); setQueue(queueResponse.data); setMessage(''); }).catch(error => setMessage(error.response?.data?.message ?? 'Accès aux rapports refusé.')); }, [organizationId, buildingId]);
+  const refresh = useCallback(async () => { if (!organizationId || !buildingId) return; const [t, r, q] = await Promise.all([
+    api.get(`/organizations/${organizationId}/incident-reports/forms/templates`, { params: { buildingId } }), api.get(`/organizations/${organizationId}/incident-reports`, { params: { buildingId } }),
+    api.get(`/organizations/${organizationId}/incident-reports/review/queue`, { params: { buildingId } }).catch(() => ({ data: [] })),
+  ]); setTemplates(t.data); setReports(r.data.items); setQueue(q.data); }, [buildingId, organizationId]);
+  useEffect(() => { void api.get('/buildings').then(r => setBuildings(r.data)).catch(() => setMessage('Impossible de charger vos bâtiments autorisés.')); }, []);
+  useEffect(() => { if (!buildingId) return; setActive(null); setValues({}); setTitle(''); setFile(null); void refresh().then(() => setMessage('')).catch(e => setMessage(errorMessage(e, 'Accès aux rapports refusé.'))); }, [buildingId, refresh]);
 
-  async function create(event: FormEvent) {
-    event.preventDefault(); if (!template || !organizationId) return; setBusy(true); setMessage('');
-    try {
-      await api.post(`/organizations/${organizationId}/incident-reports`, { buildingId, templateVersionId: template.id, retentionPolicyId: template.retentionPolicyId, reportType: template.reportType, title, content: values, idempotencyKey: crypto.randomUUID() });
-      setMessage('Brouillon enregistré.'); setValues({}); setTitle('');
-      const response = await api.get(`/organizations/${organizationId}/incident-reports`, { params: { buildingId } }); setReports(response.data.items);
-    } catch (error: unknown) { setMessage(errorMessage(error, 'Le brouillon n’a pas pu être enregistré.')); } finally { setBusy(false); }
-  }
+  async function detail(report: Report) { return (await api.get(`/organizations/${organizationId}/incident-reports/${report.id}`)).data as Report; }
+  async function open(report: Report) { setBusy(true); try { const d = await detail(report); setActive(d); setTitle(d.title); setTemplateId(d.templateVersionId ?? ''); setValues(d.versions?.[0]?.content ?? {}); setFile(null); setMessage('Brouillon chargé.'); } catch (e) { setMessage(errorMessage(e, 'Ouverture impossible.')); } finally { setBusy(false); } }
+  async function upload(report: Report, selected: File) { const d = await detail(report); const version = d.versions?.[0]; if (!version) throw new Error('Version introuvable.'); await api.post(`/organizations/${organizationId}/incident-reports/${report.id}/attachments`, { reportVersionId: version.id, originalFileName: selected.name, mediaType: selected.type, fileBase64: await toBase64(selected), idempotencyKey: crypto.randomUUID() }); }
+  async function save(event: FormEvent) { event.preventDefault(); if (!template || !organizationId) return; setBusy(true); try { let report: Report; if (active) report = (await api.patch(`/organizations/${organizationId}/incident-reports/${active.id}`, { expectedLockVersion: active.lockVersion, title, content: values, idempotencyKey: crypto.randomUUID() })).data; else report = (await api.post(`/organizations/${organizationId}/incident-reports`, { buildingId, templateVersionId: template.id, retentionPolicyId: template.retentionPolicyId, reportType: template.reportType, title, content: values, idempotencyKey: crypto.randomUUID() })).data; if (file) await upload(report, file); await refresh(); await open(report); setMessage(file ? 'Brouillon et pièce jointe enregistrés après analyse antivirus.' : 'Brouillon enregistré.'); } catch (e) { setMessage(errorMessage(e, 'Enregistrement impossible.')); } finally { setBusy(false); } }
+  async function submit() { if (!active) return; setBusy(true); try { await api.post(`/organizations/${organizationId}/incident-reports/${active.id}/submit`, { expectedLockVersion: active.lockVersion, idempotencyKey: crypto.randomUUID() }); setActive(null); await refresh(); setMessage('Rapport soumis pour révision.'); } catch (e) { setMessage(errorMessage(e, 'Soumission refusée.')); } finally { setBusy(false); } }
+  async function take(report: Report) { if (!user?.id) return; setBusy(true); try { await api.post(`/organizations/${organizationId}/incident-reports/${report.id}/reviewer`, { reviewerUserId: user.id, expectedLockVersion: report.lockVersion, idempotencyKey: crypto.randomUUID() }); await refresh(); setMessage('Rapport pris en charge.'); } catch (e) { setMessage(errorMessage(e, 'Prise en charge refusée.')); } finally { setBusy(false); } }
+  async function decide(report: Report, decision: 'APPROVED' | 'CORRECTION_REQUESTED') { setBusy(true); try { await api.post(`/organizations/${organizationId}/incident-reports/${report.id}/decisions`, { decision, expectedLockVersion: report.lockVersion, idempotencyKey: crypto.randomUUID() }); await refresh(); setMessage(decision === 'APPROVED' ? 'Rapport approuvé.' : 'Corrections demandées.'); } catch (e) { setMessage(errorMessage(e, 'Décision refusée.')); } finally { setBusy(false); } }
+  function selectFile(event: ChangeEvent<HTMLInputElement>) { const selected = event.target.files?.[0] ?? null; if (!selected) return setFile(null); if (selected.size > 10 * 1024 * 1024) { setMessage('Le fichier dépasse 10 Mo.'); return setFile(null); } if (!['image/jpeg', 'image/png', 'application/pdf'].includes(selected.type)) { setMessage('Format non admis. Utilisez PDF, JPEG ou PNG.'); return setFile(null); } setFile(selected); setMessage(`Pièce prête : ${selected.name}.`); }
+  const reset = () => { setActive(null); setValues({}); setTitle(''); setTemplateId(''); setFile(null); };
 
-  async function decide(report: Report, decision: 'APPROVED' | 'CORRECTION_REQUESTED') {
-    if (!organizationId) return; setBusy(true);
-    try { await api.post(`/organizations/${organizationId}/incident-reports/${report.id}/decisions`, { decision, expectedLockVersion: report.lockVersion, idempotencyKey: crypto.randomUUID() }); setMessage(decision === 'APPROVED' ? 'Rapport approuvé.' : 'Corrections demandées.'); }
-    catch (error: unknown) { setMessage(errorMessage(error, 'Décision refusée.')); } finally { setBusy(false); }
-  }
-
-  function attachment(event: ChangeEvent<HTMLInputElement>) { const file = event.target.files?.[0]; if (!file) return; if (file.size > 10 * 1024 * 1024) setMessage('Le fichier dépasse 10 Mo.'); else setMessage(`Pièce prête : ${file.name}. Elle sera analysée avant son ajout au brouillon.`); }
-
-  return <AppLayout><main className={styles.page}><header><span>CORO REPORT</span><h1>Rapports professionnels</h1><p>Rédigez rapidement, reprenez un brouillon et soumettez-le selon vos affectations.</p></header>{message && <p role="status" className={styles.message}>{message}</p>}
-    <section className={styles.card}><h2>Nouveau rapport</h2><div className={styles.grid}><label>Bâtiment<select value={buildingId} onChange={event => setBuildingId(event.target.value)}><option value="">Sélectionner</option>{buildings.map(building => <option value={building.id} key={building.id}>{building.name}</option>)}</select></label><label>Type de rapport<select value={templateId} onChange={event => { setTemplateId(event.target.value); setValues({}); }} disabled={!buildingId}><option value="">Sélectionner</option>{templates.map(item => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label></div>{template && <form onSubmit={create}><label>Titre *<input value={title} onChange={event => setTitle(event.target.value)} required/></label>{template.formSchema.sections.map(section => <section className={styles.formSection} key={section.key}><h3>{section.title}</h3><div className={styles.grid}>{section.fields.map(field => <DynamicField key={field.key} field={field} values={values} setValues={setValues}/>)}</div></section>)}<label>Photographies et pièces jointes<input type="file" accept="image/jpeg,image/png,application/pdf" onChange={attachment}/></label><div className={styles.actions}><button disabled={busy}>Sauvegarder le brouillon</button><button type="button" className={styles.secondary}>Soumettre</button></div></form>}</section>
-    <section className={styles.card}><h2>Mes rapports</h2>{!reports.length ? <p className={styles.empty}>Aucun rapport dans ce bâtiment.</p> : <div className={styles.list}>{reports.map(report => <article key={report.id}><div><strong>{report.title}</strong><small>{report.reportNumber} · {report.status}</small></div><button className={styles.secondary}>Reprendre</button></article>)}</div>}</section>
-    <section className={styles.card}><h2>Révision et approbation</h2>{!queue.length ? <p className={styles.empty}>Aucun rapport en attente dans votre périmètre.</p> : <div className={styles.list}>{queue.map(report => <article key={report.id}><div><strong>{report.title}</strong><small>{report.reportNumber} · {report.status}</small></div><div className={styles.actions}><button onClick={() => void decide(report, 'APPROVED')} disabled={busy}>Approuver</button><button className={styles.secondary} onClick={() => void decide(report, 'CORRECTION_REQUESTED')} disabled={busy}>Demander correction</button></div></article>)}</div>}</section>
+  return <AppLayout><main className={styles.page}><header><span>CORO REPORT</span><h1>Rapports professionnels</h1><p>Créez, reprenez et soumettez un rapport selon vos affectations.</p></header>{message && <p role="status" aria-live="polite" className={styles.message}>{message}</p>}
+    <section className={styles.card}><h2>{active ? `Modifier ${active.reportNumber}` : 'Nouveau rapport'}</h2><div className={styles.grid}><label>Bâtiment<select value={buildingId} onChange={e => setBuildingId(e.target.value)} disabled={Boolean(active)}><option value="">Sélectionner</option>{buildings.map(b => <option value={b.id} key={b.id}>{b.name}</option>)}</select></label><label>Type de rapport<select value={templateId} onChange={e => { setTemplateId(e.target.value); setValues({}); }} disabled={!buildingId || Boolean(active)}><option value="">Sélectionner</option>{templates.map(t => <option value={t.id} key={t.id}>{t.name}</option>)}</select></label></div>{template && <form onSubmit={save}><label>Titre *<input value={title} onChange={e => setTitle(e.target.value)} required/></label>{template.formSchema.sections.map(section => <section className={styles.formSection} key={section.key}><h3>{section.title}</h3><div className={styles.grid}>{section.fields.map(field => <DynamicField key={field.key} field={field} values={values} setValues={setValues}/>)}</div></section>)}<label>Pièce jointe<input type="file" accept="image/jpeg,image/png,application/pdf" onChange={selectFile}/></label><div className={styles.actions}><button disabled={busy}>Sauvegarder</button>{active && <button type="button" className={styles.secondary} onClick={() => void submit()} disabled={busy}>Soumettre</button>}<button type="button" className={styles.secondary} onClick={reset} disabled={busy}>Annuler</button></div></form>}</section>
+    <section className={styles.card}><h2>Mes rapports</h2>{!reports.length ? <p className={styles.empty}>Aucun rapport.</p> : <div className={styles.list}>{reports.map(r => <article key={r.id}><div><strong>{r.title}</strong><small>{r.reportNumber} · {r.status}</small></div>{r.status === 'DRAFT' && <button className={styles.secondary} onClick={() => void open(r)} disabled={busy}>Reprendre</button>}</article>)}</div>}</section>
+    <section className={styles.card}><h2>Révision et approbation</h2>{!queue.length ? <p className={styles.empty}>Aucun rapport en attente.</p> : <div className={styles.list}>{queue.map(r => <article key={r.id}><div><strong>{r.title}</strong><small>{r.reportNumber} · {r.status}</small></div><div className={styles.actions}>{r.status === 'SUBMITTED' && <button onClick={() => void take(r)} disabled={busy}>Prendre en charge</button>}{r.status === 'IN_REVIEW' && <><button onClick={() => void decide(r, 'APPROVED')} disabled={busy}>Approuver</button><button className={styles.secondary} onClick={() => void decide(r, 'CORRECTION_REQUESTED')} disabled={busy}>Demander correction</button></>}</div></article>)}</div>}</section>
   </main></AppLayout>;
 }
