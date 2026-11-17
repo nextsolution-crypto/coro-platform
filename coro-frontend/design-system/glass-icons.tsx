@@ -17,6 +17,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   '/activities/portfolio': CalendarDays,
   '/timelog': Timer,
   '/planning': CalendarRange,
+  '/operational-directives': ListChecks,
   '/operational-shifts': ArrowLeftRight,
   '/clients': Users,
   '/buildings': Building2,
