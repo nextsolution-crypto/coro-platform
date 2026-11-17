@@ -23,6 +23,7 @@ export class CreateOperationalLogEntryDto {
   @IsOptional() @IsUUID() floorId?: string;
   @IsOptional() @IsUUID() zoneId?: string;
   @IsOptional() @IsUUID() incidentEventId?: string;
+  @IsOptional() @IsUUID() shiftId?: string;
   @IsISO8601({ strict: true }) eventAt!: string;
   @IsOptional() @IsString() @MaxLength(120) shiftReference?: string;
   @IsOptional() @IsString() @MaxLength(240) locationLabel?: string;

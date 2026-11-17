@@ -25,6 +25,7 @@ const entrySelect = {
   zoneId: true,
   incidentEventId: true,
   incidentReportId: true,
+  shiftId: true,
   eventAt: true,
   recordedAt: true,
   authorUserId: true,
@@ -99,6 +100,7 @@ export class OperationalLogService {
               floorId: dto.floorId,
               zoneId: dto.zoneId,
               incidentEventId: dto.incidentEventId,
+              shiftId: dto.shiftId,
               eventAt: new Date(dto.eventAt),
               authorUserId: actor.userId,
               shiftReference: dto.shiftReference?.trim(),
@@ -380,7 +382,7 @@ export class OperationalLogService {
     if (dto.zoneId && !dto.floorId) {
       throw new BadRequestException('floorId est requis avec zoneId.');
     }
-    const [floor, zone, incident] = await Promise.all([
+    const [floor, zone, incident, shift] = await Promise.all([
       dto.floorId
         ? this.prisma.buildingFloor.findFirst({
             where: {
@@ -414,11 +416,23 @@ export class OperationalLogService {
             select: { id: true },
           })
         : null,
+      dto.shiftId
+        ? this.prisma.operationalShift.findFirst({
+            where: {
+              id: dto.shiftId,
+              organizationId,
+              buildingId: dto.buildingId,
+              status: { in: ['OPEN', 'HANDOVER_PENDING'] },
+            },
+            select: { id: true },
+          })
+        : null,
     ]);
     if (
       (dto.floorId && !floor) ||
       (dto.zoneId && !zone) ||
-      (dto.incidentEventId && !incident)
+      (dto.incidentEventId && !incident) ||
+      (dto.shiftId && !shift)
     ) {
       throw new NotFoundException('Périmètre de main courante introuvable.');
     }

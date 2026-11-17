@@ -86,6 +86,7 @@ import { DisplayWebModule } from './display-web/display-web.module';
 import { DisplayOrchestrationModule } from './display-orchestration/display-orchestration.module';
 import { IncidentReportsModule } from './incident-reports/incident-reports.module';
 import { OperationalLogModule } from './operational-log/operational-log.module';
+import { OperationalShiftsModule } from './operational-shifts/operational-shifts.module';
 
 @Module({
   imports: [
@@ -189,6 +190,7 @@ import { OperationalLogModule } from './operational-log/operational-log.module';
     ExerciseReportsModule,
     IncidentReportsModule,
     OperationalLogModule,
+    OperationalShiftsModule,
   ],
   controllers: [AppController],
   providers: [
