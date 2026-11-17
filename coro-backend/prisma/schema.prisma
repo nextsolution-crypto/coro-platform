@@ -101,6 +101,7 @@ model Organization {
   operationalLogEntries            OperationalLogEntry[]
   operationalLogRevisions          OperationalLogEntryRevision[]
   operationalLogAssignments        OperationalLogBuildingAssignment[]
+  clientOperationalAssignments     ClientOperationalBuildingAssignment[]
   operationalLogAuditEvents        OperationalLogAuditEvent[]
   operationalShifts                OperationalShift[]
   operationalShiftParticipants     OperationalShiftParticipant[]
@@ -594,6 +595,8 @@ model User {
   operationalLogAssignments         OperationalLogBuildingAssignment[] @relation("OperationalLogAssignmentSubject")
   operationalLogAssignmentsGranted  OperationalLogBuildingAssignment[] @relation("OperationalLogAssignmentGrantor")
   operationalLogAssignmentsRevoked  OperationalLogBuildingAssignment[] @relation("OperationalLogAssignmentRevoker")
+  clientOperationalAssignmentsGranted ClientOperationalBuildingAssignment[] @relation("ClientOperationalAssignmentGrantor")
+  clientOperationalAssignmentsRevoked ClientOperationalBuildingAssignment[] @relation("ClientOperationalAssignmentRevoker")
   operationalLogEntriesAuthored      OperationalLogEntry[]              @relation("OperationalLogEntryAuthor")
   operationalLogRevisionsAuthored    OperationalLogEntryRevision[]      @relation("OperationalLogRevisionAuthor")
   operationalLogAuditEvents          OperationalLogAuditEvent[]         @relation("OperationalLogAuditActor")
@@ -852,6 +855,46 @@ enum PlatformPermissionScope {
 enum PlatformPermissionGrantStatus {
   ACTIVE
   REVOKED
+}
+
+/// Explicit CORO Report and operational authorities available to a portal
+/// identity. These permissions never imply an internal PlatformPermission.
+enum ClientOperationalPermission {
+  INCIDENT_REPORT_READ
+  INCIDENT_REPORT_CREATE
+  INCIDENT_REPORT_EDIT
+  INCIDENT_REPORT_REVIEW
+  INCIDENT_REPORT_APPROVE
+  INCIDENT_REPORT_EXPORT
+  INCIDENT_REPORT_ADMIN
+  OPERATIONAL_LOG_READ
+  OPERATIONAL_LOG_CREATE
+  OPERATIONAL_LOG_EDIT
+  OPERATIONAL_LOG_ADMIN
+  OPERATIONAL_SHIFT_READ
+  OPERATIONAL_SHIFT_OPEN
+  OPERATIONAL_SHIFT_EDIT_OWN
+  OPERATIONAL_HANDOVER_PREPARE
+  OPERATIONAL_HANDOVER_ACKNOWLEDGE
+  OPERATIONAL_SHIFT_SUPERVISE
+  OPERATIONAL_SHIFT_EXCEPTION_CLOSE
+  OPERATIONAL_SHIFT_ADMIN
+  OPERATIONAL_DIRECTIVE_READ
+  OPERATIONAL_DIRECTIVE_CREATE
+  OPERATIONAL_DIRECTIVE_EDIT
+  OPERATIONAL_DIRECTIVE_REVIEW
+  OPERATIONAL_DIRECTIVE_APPROVE
+  OPERATIONAL_DIRECTIVE_PUBLISH
+  OPERATIONAL_DIRECTIVE_REVOKE
+  OPERATIONAL_DIRECTIVE_ACKNOWLEDGE
+  OPERATIONAL_FOLLOWUP_READ
+  OPERATIONAL_FOLLOWUP_CREATE
+  OPERATIONAL_FOLLOWUP_ASSIGN
+  OPERATIONAL_FOLLOWUP_EXECUTE
+  OPERATIONAL_FOLLOWUP_VERIFY
+  OPERATIONAL_FOLLOWUP_CLOSE
+  OPERATIONAL_FOLLOWUP_ADMIN
+  CLIENT_OPERATIONAL_AUTHORITY_MANAGE
 }
 
 model PlatformAuthorityConfiguration {
@@ -3118,6 +3161,7 @@ model Building {
   incidentReports             IncidentReport[]
   operationalLogEntries       OperationalLogEntry[]
   operationalLogAssignments   OperationalLogBuildingAssignment[]
+  clientOperationalAssignments ClientOperationalBuildingAssignment[]
   operationalShifts           OperationalShift[]
   operationalShiftParticipants OperationalShiftParticipant[]
   operationalShiftHistory     OperationalShiftHistory[]
@@ -4782,6 +4826,7 @@ model ClientUser {
   incidentPermissions           IncidentPermission[]                @default([])
   displayPermissions            DisplayPermission[]                 @default([])
   displayBuildingIds            String[]                            @default([])
+  operationalPermissions        ClientOperationalPermission[]       @default([])
   buildingIds                   String[]
   isActive                      Boolean                             @default(true)
   clientId                      String
@@ -4813,6 +4858,7 @@ model ClientUser {
   invitationEvents              ClientInvitationEvent[]
   displayCorrectionObservations DisplayCorrectionObservation[]
   displayCorrectionEvents       DisplayCorrectionObservationEvent[]
+  operationalAssignments        ClientOperationalBuildingAssignment[] @relation("ClientOperationalAssignmentSubject")
 
   @@unique([id, organizationId])
 }
@@ -8037,6 +8083,36 @@ model OperationalLogBuildingAssignment {
   @@unique([organizationId, buildingId, userId])
   @@unique([id, organizationId])
   @@index([organizationId, userId, status])
+}
+
+/// Building-scoped authority for a ClientUser. It is deliberately separate
+/// from the internal User assignment so neither identity category inherits
+/// the other's grants.
+model ClientOperationalBuildingAssignment {
+  id               String                         @id @default(uuid())
+  organizationId   String
+  buildingId       String
+  clientUserId     String
+  status           OperationalLogAssignmentStatus @default(ACTIVE)
+  effectiveFrom    DateTime                       @default(now())
+  effectiveUntil   DateTime?
+  grantedByUserId  String
+  grantReason      String
+  revokedAt        DateTime?
+  revokedByUserId  String?
+  revocationReason String?
+  lockVersion      Int                            @default(0)
+  createdAt        DateTime                       @default(now())
+  updatedAt        DateTime                       @updatedAt
+  organization     Organization                   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building         Building                       @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  clientUser       ClientUser                     @relation("ClientOperationalAssignmentSubject", fields: [clientUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  grantedBy        User                           @relation("ClientOperationalAssignmentGrantor", fields: [grantedByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  revokedBy        User?                          @relation("ClientOperationalAssignmentRevoker", fields: [revokedByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([organizationId, buildingId, clientUserId])
+  @@unique([id, organizationId])
+  @@index([organizationId, clientUserId, status])
 }
 
 model OperationalLogEntry {
