@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { CanActivate, ExecutionContext } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
+import { clientAuthorityFromCanonicalIdentity } from '../auth/coro-authority';
 
 @Injectable()
 export class ClientJwtGuard implements CanActivate {
@@ -27,6 +28,7 @@ export class ClientJwtGuard implements CanActivate {
       ) {
         throw new UnauthorizedException('Token invalide.');
       }
+      const now = new Date();
       const user = await this.prisma.clientUser.findFirst({
         where: {
           id: payload.sub,
@@ -46,6 +48,18 @@ export class ClientJwtGuard implements CanActivate {
           correctiveActionPermissions: true,
           displayPermissions: true,
           displayBuildingIds: true,
+          operationalPermissions: true,
+          operationalAssignments: {
+            where: {
+              status: 'ACTIVE',
+              effectiveFrom: { lte: now },
+              OR: [
+                { effectiveUntil: null },
+                { effectiveUntil: { gt: now } },
+              ],
+            },
+            select: { buildingId: true },
+          },
           sessionVersion: true,
         },
       });
@@ -66,7 +80,9 @@ export class ClientJwtGuard implements CanActivate {
         correctiveActionPermissions: user.correctiveActionPermissions,
         displayPermissions: user.displayPermissions,
         displayBuildingIds: user.displayBuildingIds,
+        operationalPermissions: user.operationalPermissions,
       };
+      request.coroAuthority = clientAuthorityFromCanonicalIdentity(user);
       return true;
     } catch {
       throw new UnauthorizedException('Token client invalide ou expiré.');

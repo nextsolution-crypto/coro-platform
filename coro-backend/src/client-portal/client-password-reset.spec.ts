@@ -426,6 +426,18 @@ describe('Client password reset', () => {
         correctiveActionPermissions: true,
         displayPermissions: true,
         displayBuildingIds: true,
+        operationalPermissions: true,
+        operationalAssignments: {
+          where: {
+            status: 'ACTIVE',
+            effectiveFrom: { lte: expect.any(Date) },
+            OR: [
+              { effectiveUntil: null },
+              { effectiveUntil: { gt: expect.any(Date) } },
+            ],
+          },
+          select: { buildingId: true },
+        },
         sessionVersion: true,
       },
     });
