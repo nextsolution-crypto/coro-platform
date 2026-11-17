@@ -70,7 +70,7 @@ export class IncidentReportsService {
     });
     if (existing) return existing;
 
-    return this.serializable(async (tx) => {
+    const creation = this.serializable(async (tx) => {
       const replay = await tx.incidentReport.findUnique({
         where: {
           organizationId_creationIdempotencyKey: {
@@ -167,6 +167,27 @@ export class IncidentReportsService {
       });
       return report;
     });
+
+    try {
+      return await creation;
+    } catch (error) {
+      const idempotencyCollision =
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002';
+      if (!idempotencyCollision) throw error;
+
+      const replay = await this.prisma.incidentReport.findUnique({
+        where: {
+          organizationId_creationIdempotencyKey: {
+            organizationId,
+            creationIdempotencyKey: dto.idempotencyKey,
+          },
+        },
+        select: reportSummarySelect,
+      });
+      if (replay) return replay;
+      throw error;
+    }
   }
 
   async list(
