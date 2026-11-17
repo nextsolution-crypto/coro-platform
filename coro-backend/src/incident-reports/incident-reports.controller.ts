@@ -28,11 +28,13 @@ import {
   CreateIncidentReportAttachmentDto,
   RevokeIncidentReportAttachmentDto,
   PublishIncidentReportTemplateDto,
+  CreateIncidentReportExportDto,
 } from './dto/incident-report.dto';
 import { IncidentReportsService } from './incident-reports.service';
 import { IncidentReportWorkflowService } from './incident-report-workflow.service';
 import { IncidentReportAttachmentsService } from './incident-report-attachments.service';
 import { IncidentReportTemplatesService } from './incident-report-templates.service';
+import { IncidentReportExportsService } from './incident-report-exports.service';
 import type { Response } from 'express';
 
 interface AuthenticatedRequest {
@@ -54,6 +56,7 @@ export class IncidentReportsController {
     private readonly workflow: IncidentReportWorkflowService,
     private readonly attachments: IncidentReportAttachmentsService,
     private readonly templates: IncidentReportTemplatesService,
+    private readonly exports: IncidentReportExportsService,
   ) {}
 
   @Get('forms/catalog')
@@ -236,5 +239,47 @@ export class IncidentReportsController {
       dto,
       request.user,
     );
+  }
+
+  @Post(':id/exports')
+  createExport(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateIncidentReportExportDto,
+    @Request() request: AuthenticatedRequest,
+  ) {
+    return this.exports.create(organizationId, id, dto, request.user);
+  }
+
+  @Get(':id/exports')
+  listExports(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Request() request: AuthenticatedRequest,
+  ) {
+    return this.exports.list(organizationId, id, request.user);
+  }
+
+  @Get(':id/exports/:exportId/download')
+  async downloadExport(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('exportId', ParseUUIDPipe) exportId: string,
+    @Request() request: AuthenticatedRequest,
+    @Res() response: Response,
+  ) {
+    const file = await this.exports.download(
+      organizationId,
+      id,
+      exportId,
+      request.user,
+    );
+    response.setHeader('Content-Type', 'application/pdf');
+    response.setHeader(
+      'Content-Disposition',
+      `attachment; filename*=UTF-8''${encodeURIComponent(file.fileName)}`,
+    );
+    response.setHeader('Cache-Control', 'private, no-store');
+    response.send(file.bytes);
   }
 }

@@ -78,6 +78,13 @@ export class RevokeIncidentReportAttachmentDto {
   @IsUUID() idempotencyKey!: string;
 }
 
+export class CreateIncidentReportExportDto {
+  @IsUUID() reportVersionId!: string;
+  @IsIn(['LETTER', 'A4']) pageFormat!: 'LETTER' | 'A4';
+  @IsIn(['fr-CA', 'en-CA']) locale!: 'fr-CA' | 'en-CA';
+  @IsUUID() idempotencyKey!: string;
+}
+
 export class PublishIncidentReportTemplateDto {
   @IsUUID() buildingId!: string;
   @IsString() @Length(2, 80) templateKey!: string;

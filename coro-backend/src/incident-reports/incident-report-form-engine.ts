@@ -35,6 +35,7 @@ export interface FormCondition {
 export interface FormFieldDefinition {
   key: string;
   label: string;
+  labelEn?: string;
   type: IncidentReportFieldType;
   required?: boolean;
   options?: Array<{ value: string; label: string }>;
@@ -50,6 +51,7 @@ export interface FormFieldDefinition {
 export interface FormSectionDefinition {
   key: string;
   title: string;
+  titleEn?: string;
   fields: FormFieldDefinition[];
 }
 export interface IncidentReportFormSchema {
