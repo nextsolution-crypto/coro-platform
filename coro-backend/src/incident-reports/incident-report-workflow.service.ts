@@ -40,6 +40,13 @@ export class IncidentReportWorkflowService {
     });
     if (!reviewer)
       throw new NotFoundException('Réviseur admissible introuvable.');
+    await this.access.require(
+      { ...actor, userId: reviewer.id, organizationId },
+      organizationId,
+      report.buildingId,
+      PlatformPermission.INCIDENT_REPORT_REVIEW,
+      report.incidentEventId,
+    );
     return this.prisma.$transaction(
       async (tx) => {
         const updated = await tx.incidentReport.updateMany({
@@ -89,7 +96,7 @@ export class IncidentReportWorkflowService {
       report.buildingId,
       required,
     );
-    if (report.reviewerUserId && report.reviewerUserId !== actor.userId)
+    if (report.reviewerUserId !== actor.userId)
       throw new NotFoundException('Rapport incident introuvable.');
     if (
       dto.decision === 'APPROVED' &&

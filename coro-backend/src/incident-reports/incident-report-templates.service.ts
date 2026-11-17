@@ -18,7 +18,18 @@ export class IncidentReportTemplatesService {
     private readonly prisma: PrismaService,
     private readonly access: IncidentReportAccessService,
   ) {}
-  catalog() {
+  async catalog(
+    organizationId: string,
+    actor: AdviserActor,
+    buildingId: string,
+  ) {
+    this.enabled();
+    await this.access.require(
+      actor,
+      organizationId,
+      buildingId,
+      PlatformPermission.INCIDENT_REPORT_READ,
+    );
     return {
       fieldTypes: INCIDENT_REPORT_FIELD_TYPES,
       initialTemplates: INITIAL_INCIDENT_REPORT_TEMPLATES,

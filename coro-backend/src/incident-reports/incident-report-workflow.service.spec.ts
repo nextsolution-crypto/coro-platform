@@ -76,6 +76,25 @@ describe('IncidentReportWorkflowService separation of duties', () => {
       ),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
+  it('refuses a decision until a reviewer is explicitly assigned', async () => {
+    prisma.incidentReport.findFirst.mockResolvedValue({
+      ...report,
+      reviewerUserId: null,
+    });
+    await expect(
+      service().decide(
+        'org',
+        'report',
+        {
+          decision: 'APPROVED',
+          expectedLockVersion: 2,
+          idempotencyKey: '00000000-0000-4000-8000-000000000004',
+        },
+        actor,
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(transaction).not.toHaveBeenCalled();
+  });
   it('requires the dedicated approval permission', async () => {
     transaction.mockRejectedValueOnce(new ConflictException());
     await expect(

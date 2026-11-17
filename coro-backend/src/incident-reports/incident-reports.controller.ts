@@ -57,8 +57,12 @@ export class IncidentReportsController {
   ) {}
 
   @Get('forms/catalog')
-  formCatalog() {
-    return this.templates.catalog();
+  formCatalog(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @Query('buildingId', ParseUUIDPipe) buildingId: string,
+    @Request() request: AuthenticatedRequest,
+  ) {
+    return this.templates.catalog(organizationId, request.user, buildingId);
   }
 
   @Get('forms/templates')
