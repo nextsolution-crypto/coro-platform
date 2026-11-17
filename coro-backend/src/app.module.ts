@@ -85,6 +85,7 @@ import { DisplayDeviceModule } from './display-device/display-device.module';
 import { DisplayWebModule } from './display-web/display-web.module';
 import { DisplayOrchestrationModule } from './display-orchestration/display-orchestration.module';
 import { IncidentReportsModule } from './incident-reports/incident-reports.module';
+import { OperationalLogModule } from './operational-log/operational-log.module';
 
 @Module({
   imports: [
@@ -187,6 +188,7 @@ import { IncidentReportsModule } from './incident-reports/incident-reports.modul
     OperationalReviewsModule,
     ExerciseReportsModule,
     IncidentReportsModule,
+    OperationalLogModule,
   ],
   controllers: [AppController],
   providers: [

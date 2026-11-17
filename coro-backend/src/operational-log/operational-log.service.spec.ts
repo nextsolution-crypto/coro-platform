@@ -1,0 +1,138 @@
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
+import { OperationalLogPriority } from '@prisma/client';
+import { OperationalLogService } from './operational-log.service';
+
+describe('OperationalLogService', () => {
+  const prisma = {
+    operationalLogEntry: {
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      count: jest.fn(),
+    },
+    operationalLogEntryRevision: { findUnique: jest.fn(), findMany: jest.fn() },
+    buildingFloor: { findFirst: jest.fn() },
+    buildingZone: { findFirst: jest.fn() },
+    incidentEvent: { findFirst: jest.fn() },
+    incidentReport: { findFirst: jest.fn() },
+    $transaction: jest.fn(),
+  };
+  const access = { require: jest.fn() };
+  const service = new OperationalLogService(prisma as never, access as never);
+  const actor = { userId: 'user-a', organizationId: 'org-a' } as never;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env.OPERATIONAL_LOG_ENABLED = 'true';
+  });
+  afterAll(() => delete process.env.OPERATIONAL_LOG_ENABLED);
+
+  it('fails closed when the feature is disabled', async () => {
+    process.env.OPERATIONAL_LOG_ENABLED = 'false';
+    await expect(
+      service.list(
+        'org-a',
+        { buildingId: 'building-a', page: 1, pageSize: 25 },
+        actor,
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('rejects a zone without a floor before creating an entry', async () => {
+    prisma.operationalLogEntry.findUnique.mockResolvedValue(null);
+    await expect(
+      service.create(
+        'org-a',
+        {
+          buildingId: 'building-a',
+          zoneId: 'zone-a',
+          eventAt: new Date().toISOString(),
+          activityType: 'PATROL',
+          category: 'SECURITY',
+          priority: OperationalLogPriority.NORMAL,
+          description: 'Ronde terminée.',
+          idempotencyKey: '11111111-1111-4111-8111-111111111111',
+        },
+        actor,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects script-like descriptions before persistence', async () => {
+    await expect(
+      service.create(
+        'org-a',
+        {
+          buildingId: 'building-a',
+          eventAt: new Date().toISOString(),
+          activityType: 'PATROL',
+          category: 'SECURITY',
+          priority: OperationalLogPriority.NORMAL,
+          description: '<script>alert(1)</script>',
+          idempotencyKey: '11111111-1111-4111-8111-111111111111',
+        },
+        actor,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('returns a deterministic bounded page', async () => {
+    prisma.operationalLogEntry.findMany.mockResolvedValue([]);
+    prisma.operationalLogEntry.count.mockResolvedValue(0);
+    await expect(
+      service.list(
+        'org-a',
+        { buildingId: 'building-a', page: 2, pageSize: 20 },
+        actor,
+      ),
+    ).resolves.toEqual({ items: [], page: 2, pageSize: 20, total: 0 });
+    expect(prisma.operationalLogEntry.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 20,
+        take: 20,
+        orderBy: [{ eventAt: 'desc' }, { id: 'desc' }],
+      }),
+    );
+  });
+
+  it('preserves optimistic concurrency conflicts', async () => {
+    const current = {
+      id: 'entry-a',
+      organizationId: 'org-a',
+      buildingId: 'building-a',
+      lockVersion: 3,
+      description: 'Avant',
+      category: 'SECURITY',
+      activityType: 'PATROL',
+      priority: 'NORMAL',
+    };
+    prisma.operationalLogEntry.findFirst.mockResolvedValue(current);
+    prisma.operationalLogEntryRevision.findUnique.mockResolvedValue(null);
+    prisma.$transaction.mockImplementation(
+      (callback: (tx: unknown) => unknown) =>
+        callback({
+          operationalLogEntry: {
+            updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+          },
+        }),
+    );
+    await expect(
+      service.update(
+        'org-a',
+        'entry-a',
+        {
+          expectedLockVersion: 2,
+          correctionReason: 'Correction factuelle',
+          description: 'Après',
+          idempotencyKey: '22222222-2222-4222-8222-222222222222',
+        },
+        actor,
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+});

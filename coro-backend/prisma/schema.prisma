@@ -98,6 +98,10 @@ model Organization {
   incidentReportTemplateVersions   IncidentReportTemplateVersion[]
   incidentReportRetentionPolicies  IncidentReportRetentionPolicy[]
   incidentReportAuditEvents        IncidentReportAuditEvent[]
+  operationalLogEntries            OperationalLogEntry[]
+  operationalLogRevisions          OperationalLogEntryRevision[]
+  operationalLogAssignments        OperationalLogBuildingAssignment[]
+  operationalLogAuditEvents        OperationalLogAuditEvent[]
 }
 
 enum SpatialResourceStatus {
@@ -577,6 +581,12 @@ model User {
   organizationContractsCreated OrganizationContract[]         @relation("OrganizationContractCreator")
   contractRevisionsCreated     OrganizationContractRevision[] @relation("ContractRevisionCreator")
   contractDocumentsUploaded    OrganizationContractDocument[] @relation("ContractDocumentUploader")
+  operationalLogAssignments         OperationalLogBuildingAssignment[] @relation("OperationalLogAssignmentSubject")
+  operationalLogAssignmentsGranted  OperationalLogBuildingAssignment[] @relation("OperationalLogAssignmentGrantor")
+  operationalLogAssignmentsRevoked  OperationalLogBuildingAssignment[] @relation("OperationalLogAssignmentRevoker")
+  operationalLogEntriesAuthored      OperationalLogEntry[]              @relation("OperationalLogEntryAuthor")
+  operationalLogRevisionsAuthored    OperationalLogEntryRevision[]      @relation("OperationalLogRevisionAuthor")
+  operationalLogAuditEvents          OperationalLogAuditEvent[]         @relation("OperationalLogAuditActor")
 
   resetToken       String?
   resetTokenExpiry DateTime?
@@ -778,6 +788,10 @@ enum PlatformPermission {
   INCIDENT_REPORT_APPROVE
   INCIDENT_REPORT_EXPORT
   INCIDENT_REPORT_ADMIN
+  OPERATIONAL_LOG_READ
+  OPERATIONAL_LOG_CREATE
+  OPERATIONAL_LOG_EDIT
+  OPERATIONAL_LOG_ADMIN
 }
 
 enum PlatformPermissionScope {
@@ -3052,6 +3066,8 @@ model Building {
   populationEvidenceManifests PopulationEvidenceManifest[]
   populationEvidenceReports   PopulationEvidenceReport[]
   incidentReports             IncidentReport[]
+  operationalLogEntries       OperationalLogEntry[]
+  operationalLogAssignments   OperationalLogBuildingAssignment[]
 
   @@unique([id, clientId, organizationId])
   @@unique([id, organizationId])
@@ -3076,6 +3092,7 @@ model BuildingFloor {
   displayLocations        DisplayLocation[]
   displayPlanPublications DisplayPlanPublication[]
   correctionObservations  DisplayCorrectionObservation[]
+  operationalLogEntries   OperationalLogEntry[]
 
   @@unique([buildingId, code])
   @@unique([id, organizationId, buildingId])
@@ -3101,6 +3118,7 @@ model BuildingZone {
   floor                   BuildingFloor            @relation(fields: [floorId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
   displayLocations        DisplayLocation[]
   displayPlanPublications DisplayPlanPublication[]
+  operationalLogEntries   OperationalLogEntry[]
 
   @@unique([floorId, code])
   @@unique([id, organizationId, buildingId, floorId])
@@ -7612,6 +7630,7 @@ model IncidentEvent {
   authorityAssignments        IncidentAuthorityAssignment[]
   auditEvents                 IncidentAuditEvent[]
   reports                     IncidentReport[]
+  operationalLogEntries       OperationalLogEntry[]
 
   @@unique([id, organizationId])
 }
@@ -7756,6 +7775,7 @@ model IncidentReport {
   exports              IncidentReportExport[]
   externalReferences   ExternalSourceReference[]
   auditEvents          IncidentReportAuditEvent[]
+  operationalLogEntries OperationalLogEntry[]
 
   @@unique([organizationId, reportNumber])
   @@unique([organizationId, creationIdempotencyKey])
@@ -7909,6 +7929,142 @@ model IncidentReportAuditEvent {
   @@unique([id, organizationId])
   @@unique([organizationId, idempotencyKey])
   @@index([organizationId, reportId, occurredAt])
+}
+
+enum OperationalLogPriority {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+enum OperationalLogEntryStatus {
+  OPEN
+  FOLLOW_UP
+  RESOLVED
+  ARCHIVED
+}
+
+enum OperationalLogAssignmentStatus {
+  ACTIVE
+  REVOKED
+}
+
+/// Building authority dedicated to the operational log. Sentinelle presence
+/// and incident command authority are intentionally not reused.
+model OperationalLogBuildingAssignment {
+  id               String                         @id @default(uuid())
+  organizationId   String
+  buildingId       String
+  userId           String
+  status           OperationalLogAssignmentStatus @default(ACTIVE)
+  effectiveFrom    DateTime                       @default(now())
+  effectiveUntil   DateTime?
+  grantedByUserId  String
+  grantReason      String
+  revokedAt        DateTime?
+  revokedByUserId  String?
+  revocationReason String?
+  lockVersion      Int                            @default(0)
+  createdAt        DateTime                       @default(now())
+  updatedAt        DateTime                       @updatedAt
+  organization     Organization                   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building         Building                       @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  user             User                           @relation("OperationalLogAssignmentSubject", fields: [userId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  grantedBy        User                           @relation("OperationalLogAssignmentGrantor", fields: [grantedByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  revokedBy        User?                          @relation("OperationalLogAssignmentRevoker", fields: [revokedByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([organizationId, buildingId, userId])
+  @@unique([id, organizationId])
+  @@index([organizationId, userId, status])
+}
+
+model OperationalLogEntry {
+  id                     String                        @id @default(uuid())
+  organizationId         String
+  buildingId             String
+  floorId                String?
+  zoneId                 String?
+  incidentEventId        String?
+  incidentReportId       String?
+  eventAt                DateTime
+  recordedAt             DateTime                      @default(now())
+  authorUserId           String
+  shiftReference         String?
+  locationLabel          String?
+  activityType           String
+  category               String
+  subcategory            String?
+  priority               OperationalLogPriority        @default(NORMAL)
+  description            String
+  people                 Json?
+  vehicles               Json?
+  equipment              Json?
+  actionsTaken           Json?
+  status                 OperationalLogEntryStatus     @default(OPEN)
+  followUpRequired       Boolean                       @default(false)
+  followUpSummary        String?
+  creationIdempotencyKey String
+  lockVersion            Int                           @default(0)
+  archivedAt             DateTime?
+  createdAt              DateTime                      @default(now())
+  updatedAt              DateTime                      @updatedAt
+  organization           Organization                  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building               Building                      @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  floor                  BuildingFloor?                @relation(fields: [floorId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
+  zone                   BuildingZone?                 @relation(fields: [zoneId, organizationId, buildingId, floorId], references: [id, organizationId, buildingId, floorId], onDelete: Restrict)
+  incidentEvent          IncidentEvent?                @relation(fields: [incidentEventId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  incidentReport         IncidentReport?               @relation(fields: [incidentReportId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  author                 User                          @relation("OperationalLogEntryAuthor", fields: [authorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  revisions              OperationalLogEntryRevision[]
+  auditEvents            OperationalLogAuditEvent[]
+
+  @@unique([organizationId, creationIdempotencyKey])
+  @@unique([id, organizationId])
+  @@index([organizationId, buildingId, eventAt, id])
+  @@index([organizationId, buildingId, status, priority, eventAt])
+  @@index([organizationId, incidentReportId])
+}
+
+model OperationalLogEntryRevision {
+  id             String              @id @default(uuid())
+  organizationId String
+  entryId        String
+  revisionNumber Int
+  reason         String
+  beforeSnapshot Json
+  afterSnapshot  Json
+  contentHash    String
+  authorUserId   String
+  idempotencyKey String
+  createdAt      DateTime            @default(now())
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  entry          OperationalLogEntry @relation(fields: [entryId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  author         User                @relation("OperationalLogRevisionAuthor", fields: [authorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([entryId, revisionNumber])
+  @@unique([organizationId, idempotencyKey])
+  @@unique([id, organizationId])
+  @@index([organizationId, entryId, createdAt])
+}
+
+model OperationalLogAuditEvent {
+  id             String              @id @default(uuid())
+  organizationId String
+  entryId        String
+  action         String
+  actorUserId    String
+  reason         String?
+  idempotencyKey String?
+  metadata       Json?
+  occurredAt     DateTime            @default(now())
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  entry          OperationalLogEntry @relation(fields: [entryId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  actor          User                @relation("OperationalLogAuditActor", fields: [actorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([organizationId, idempotencyKey])
+  @@unique([id, organizationId])
+  @@index([organizationId, entryId, occurredAt])
 }
 
 model PopulationOperationalEvent {
