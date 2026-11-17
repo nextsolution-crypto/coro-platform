@@ -26,8 +26,8 @@ const destinationsWithAliases = destinations.map((destination) => {
 });
 
 test("les 58 destinations réelles sont toutes auditées et uniques", () => {
-  assert.equal(destinations.length, 58);
-  assert.equal(new Set(destinations.map(({ path: destination }) => destination)).size, 58);
+  assert.equal(destinations.length, 59);
+  assert.equal(new Set(destinations.map(({ path: destination }) => destination)).size, 59);
 });
 
 for (const [pathname, expected] of [
@@ -103,7 +103,7 @@ test("les 95 pages applicatives réelles ont au plus une destination active", ()
     }
   };
   visit(appRoot);
-  assert.equal(pages.length, 95);
+  assert.equal(pages.length, 96);
 
   for (const page of pages) {
     const relative = path.relative(appRoot, path.dirname(page)).replaceAll("\\", "/");
