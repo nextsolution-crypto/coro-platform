@@ -78,6 +78,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { pattern: '/projects/[id]/activities', family: 'work', shell: 'none', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind', 'css-module'], sensitivity: ['destructive'] },
   { pattern: '/projects/[id]/mandate', family: 'work', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'], sensitivity: ['destructive', 'emergency-content'], validation: ['test:skin', 'test:design-system'] },
   { pattern: '/projects/[id]/procedures', family: 'work', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'], sensitivity: ['destructive', 'emergency-content'], validation: ['test:skin', 'test:design-system'] },
+  { pattern: '/security-workstation', family: 'work', shell: 'app', status: 'beta', render: 'skin', styling: ['css-module', 'inline-hex'], sensitivity: ['documents', 'emergency-content', 'permissions'], validation: ['test:security-workstation', 'test:skin', 'test:design-system'] },
   { pattern: '/timelog', family: 'work', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'], sensitivity: ['destructive'] },
   // ── portfolio (9) ──
   { pattern: '/bookings', family: 'portfolio', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'], sensitivity: ['destructive', 'emergency-content'], validation: ['test:bookings', 'test:skin', 'test:design-system'] },

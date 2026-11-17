@@ -1,0 +1,10 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const test = require('node:test');
+const page = fs.readFileSync(path.join(__dirname, 'page.tsx'), 'utf8');
+const css = fs.readFileSync(path.join(__dirname, 'security-workstation.module.css'), 'utf8');
+test('orchestrates five governed modules without bypassing APIs', () => { for (const contract of ['operational-log/entries','operational-shifts','operations/directives','operations/follow-ups','incident-reports']) assert.ok(page.includes(contract)); assert.match(page,/Promise\.allSettled/); assert.doesNotMatch(page,/fetch\s*\(|localStorage|sessionStorage|Authorization/); });
+test('keeps authorization and feature boundaries visible', () => { assert.match(page,/status === 404 \? 'unavailable'/); assert.match(page,/status === 401 \|\| status === 403 \? 'denied'/); assert.match(page,/Votre rôle ou votre affectation/); });
+test('uses idempotent existing transitions', () => { assert.match(page,/idempotencyKey: crypto\.randomUUID\(\)/); for (const value of ['ACKNOWLEDGED','CLARIFICATION_REQUESTED',"'start'","'complete'","'verify'","'close'"]) assert.ok(page.includes(value)); });
+test('is responsive and accessible', () => { assert.match(page,/aria-live="polite"/); assert.match(page,/aria-label="Actions rapides"/); assert.match(css,/@media\(max-width:720px\)/); assert.match(css,/prefers-reduced-motion/); });
