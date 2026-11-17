@@ -102,6 +102,11 @@ model Organization {
   operationalLogRevisions          OperationalLogEntryRevision[]
   operationalLogAssignments        OperationalLogBuildingAssignment[]
   operationalLogAuditEvents        OperationalLogAuditEvent[]
+  operationalShifts                OperationalShift[]
+  operationalShiftParticipants     OperationalShiftParticipant[]
+  operationalShiftHistory          OperationalShiftHistory[]
+  operationalHandovers             OperationalHandover[]
+  operationalHandoverActions       OperationalHandoverAction[]
 }
 
 enum SpatialResourceStatus {
@@ -587,6 +592,15 @@ model User {
   operationalLogEntriesAuthored      OperationalLogEntry[]              @relation("OperationalLogEntryAuthor")
   operationalLogRevisionsAuthored    OperationalLogEntryRevision[]      @relation("OperationalLogRevisionAuthor")
   operationalLogAuditEvents          OperationalLogAuditEvent[]         @relation("OperationalLogAuditActor")
+  operationalShiftsResponsible       OperationalShift[]                  @relation("OperationalShiftResponsible")
+  operationalShiftsCreated           OperationalShift[]                  @relation("OperationalShiftCreator")
+  operationalShiftsClosed            OperationalShift[]                  @relation("OperationalShiftCloser")
+  operationalShiftsCancelled         OperationalShift[]                  @relation("OperationalShiftCanceller")
+  operationalShiftParticipants       OperationalShiftParticipant[]       @relation("OperationalShiftParticipantUser")
+  operationalShiftHistory            OperationalShiftHistory[]           @relation("OperationalShiftHistoryActor")
+  operationalHandoversOutgoing       OperationalHandover[]               @relation("OperationalHandoverOutgoingUser")
+  operationalHandoversIncoming       OperationalHandover[]               @relation("OperationalHandoverIncomingUser")
+  operationalHandoverActions         OperationalHandoverAction[]         @relation("OperationalHandoverActionActor")
 
   resetToken       String?
   resetTokenExpiry DateTime?
@@ -792,6 +806,14 @@ enum PlatformPermission {
   OPERATIONAL_LOG_CREATE
   OPERATIONAL_LOG_EDIT
   OPERATIONAL_LOG_ADMIN
+  OPERATIONAL_SHIFT_READ
+  OPERATIONAL_SHIFT_OPEN
+  OPERATIONAL_SHIFT_EDIT_OWN
+  OPERATIONAL_HANDOVER_PREPARE
+  OPERATIONAL_HANDOVER_ACKNOWLEDGE
+  OPERATIONAL_SHIFT_SUPERVISE
+  OPERATIONAL_SHIFT_EXCEPTION_CLOSE
+  OPERATIONAL_SHIFT_ADMIN
 }
 
 enum PlatformPermissionScope {
@@ -3068,6 +3090,11 @@ model Building {
   incidentReports             IncidentReport[]
   operationalLogEntries       OperationalLogEntry[]
   operationalLogAssignments   OperationalLogBuildingAssignment[]
+  operationalShifts           OperationalShift[]
+  operationalShiftParticipants OperationalShiftParticipant[]
+  operationalShiftHistory     OperationalShiftHistory[]
+  operationalHandovers        OperationalHandover[]
+  operationalHandoverActions  OperationalHandoverAction[]
 
   @@unique([id, clientId, organizationId])
   @@unique([id, organizationId])
@@ -7991,6 +8018,7 @@ model OperationalLogEntry {
   recordedAt             DateTime                      @default(now())
   authorUserId           String
   shiftReference         String?
+  shiftId                String?
   locationLabel          String?
   activityType           String
   category               String
@@ -8018,12 +8046,194 @@ model OperationalLogEntry {
   author                 User                          @relation("OperationalLogEntryAuthor", fields: [authorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
   revisions              OperationalLogEntryRevision[]
   auditEvents            OperationalLogAuditEvent[]
+  shift                  OperationalShift?             @relation(fields: [shiftId, organizationId], references: [id, organizationId], onDelete: Restrict)
 
   @@unique([organizationId, creationIdempotencyKey])
   @@unique([id, organizationId])
   @@index([organizationId, buildingId, eventAt, id])
   @@index([organizationId, buildingId, status, priority, eventAt])
   @@index([organizationId, incidentReportId])
+  @@index([organizationId, shiftId, eventAt])
+}
+
+enum OperationalShiftStatus {
+  PLANNED
+  OPEN
+  HANDOVER_PENDING
+  CLOSED
+  CANCELLED
+}
+
+enum OperationalShiftParticipantRole {
+  RESPONSIBLE
+  PARTICIPANT
+  REPLACEMENT
+  SUPERVISOR
+}
+
+enum OperationalShiftParticipantStatus {
+  EXPECTED
+  ACTIVE
+  REPLACED
+  ABSENT
+  COMPLETED
+}
+
+enum OperationalHandoverStatus {
+  DRAFT
+  SUBMITTED
+  ACKNOWLEDGED
+  RESERVED
+  REFUSED
+  CLARIFICATION_REQUESTED
+}
+
+enum OperationalHandoverActionType {
+  SUBMITTED
+  ACKNOWLEDGED
+  RESERVED
+  REFUSED
+  CLARIFICATION_REQUESTED
+  CLARIFIED
+}
+
+model OperationalShift {
+  id                    String                 @id @default(uuid())
+  organizationId        String
+  buildingId            String
+  securityPost          String
+  teamName               String?
+  responsibleUserId     String
+  plannedStartAt         DateTime
+  plannedEndAt           DateTime
+  actualStartAt          DateTime?
+  actualEndAt            DateTime?
+  buildingTimeZone       String
+  status                 OperationalShiftStatus @default(PLANNED)
+  instructionsSnapshot  Json?
+  openingSnapshot        Json?
+  notes                  String?
+  closeReason            String?
+  cancellationReason     String?
+  lockVersion            Int                    @default(0)
+  creationIdempotencyKey String
+  createdByUserId        String
+  closedByUserId         String?
+  cancelledByUserId      String?
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  organization           Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building               Building               @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  responsibleUser        User                   @relation("OperationalShiftResponsible", fields: [responsibleUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdBy              User                   @relation("OperationalShiftCreator", fields: [createdByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  closedBy               User?                  @relation("OperationalShiftCloser", fields: [closedByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  cancelledBy            User?                  @relation("OperationalShiftCanceller", fields: [cancelledByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  participants           OperationalShiftParticipant[]
+  history                OperationalShiftHistory[]
+  logEntries             OperationalLogEntry[]
+  outgoingHandovers      OperationalHandover[]  @relation("OutgoingOperationalShift")
+  incomingHandovers      OperationalHandover[]  @relation("IncomingOperationalShift")
+
+  @@unique([id, organizationId])
+  @@unique([organizationId, creationIdempotencyKey])
+  @@index([organizationId, buildingId, status, plannedStartAt])
+  @@index([organizationId, responsibleUserId, status])
+}
+
+model OperationalShiftParticipant {
+  id             String                            @id @default(uuid())
+  organizationId String
+  buildingId     String
+  shiftId        String
+  userId         String
+  role           OperationalShiftParticipantRole
+  status         OperationalShiftParticipantStatus @default(EXPECTED)
+  replacedById   String?
+  joinedAt       DateTime?
+  leftAt         DateTime?
+  createdAt      DateTime                          @default(now())
+  updatedAt      DateTime                          @updatedAt
+  organization   Organization                      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building       Building                          @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  shift          OperationalShift                  @relation(fields: [shiftId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  user           User                              @relation("OperationalShiftParticipantUser", fields: [userId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([shiftId, userId])
+  @@unique([id, organizationId])
+  @@index([organizationId, buildingId, userId, status])
+}
+
+model OperationalShiftHistory {
+  id             String           @id @default(uuid())
+  organizationId String
+  buildingId     String
+  shiftId        String
+  action         String
+  fromStatus     OperationalShiftStatus?
+  toStatus       OperationalShiftStatus?
+  actorUserId    String
+  reason         String?
+  metadata       Json?
+  idempotencyKey String?
+  occurredAt     DateTime         @default(now())
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building       Building         @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  shift          OperationalShift @relation(fields: [shiftId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  actor          User             @relation("OperationalShiftHistoryActor", fields: [actorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, shiftId, occurredAt])
+}
+
+model OperationalHandover {
+  id                     String                    @id @default(uuid())
+  organizationId         String
+  buildingId             String
+  outgoingShiftId        String
+  incomingShiftId        String?
+  outgoingUserId         String
+  incomingUserId         String?
+  status                 OperationalHandoverStatus @default(DRAFT)
+  snapshot               Json
+  snapshotHash           String
+  version                Int                       @default(1)
+  lockVersion            Int                       @default(0)
+  creationIdempotencyKey String
+  submittedAt            DateTime?
+  decidedAt              DateTime?
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  organization           Organization              @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building               Building                  @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  outgoingShift          OperationalShift          @relation("OutgoingOperationalShift", fields: [outgoingShiftId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  incomingShift          OperationalShift?         @relation("IncomingOperationalShift", fields: [incomingShiftId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  outgoingUser           User                      @relation("OperationalHandoverOutgoingUser", fields: [outgoingUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  incomingUser           User?                     @relation("OperationalHandoverIncomingUser", fields: [incomingUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  actions                OperationalHandoverAction[]
+
+  @@unique([id, organizationId])
+  @@unique([organizationId, creationIdempotencyKey])
+  @@index([organizationId, buildingId, status, createdAt])
+}
+
+model OperationalHandoverAction {
+  id             String                        @id @default(uuid())
+  organizationId String
+  buildingId     String
+  handoverId     String
+  type           OperationalHandoverActionType
+  actorUserId    String
+  reason         String?
+  metadata       Json?
+  idempotencyKey String
+  occurredAt     DateTime                      @default(now())
+  organization   Organization                  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building       Building                      @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  handover       OperationalHandover            @relation(fields: [handoverId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  actor          User                           @relation("OperationalHandoverActionActor", fields: [actorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, handoverId, occurredAt])
 }
 
 model OperationalLogEntryRevision {

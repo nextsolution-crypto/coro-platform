@@ -44,6 +44,7 @@ const NAV_GROUPS = [
       { label: 'Activités', path: '/activities/portfolio', icon: '📅' },
       { label: 'Timelog',   path: '/timelog',              icon: '⏱' },
       { label: 'Planification d’équipe', path: '/planning', icon: '🗓' },
+      { label: 'Quarts et relève', path: '/operational-shifts', icon: '⇄' },
     ],
   },
   {
