@@ -125,6 +125,9 @@ jobs:
                 docker compose -f "$repo/docker-compose.yml" up -d --no-deps backend
                 exit 1
               fi
+              docker exec "$backend" mkdir -m 0700 "$container_tmp"
+              docker cp "$tmp/script.cjs" "$backend:$container_tmp/coro-demo-report-03.cjs"
+              docker cp "$tmp/manifest.json" "$backend:$container_tmp/coro-demo-report-03-manifest.json"
             }
             case "$PHASE" in
               preflight) run_script preflight ;;

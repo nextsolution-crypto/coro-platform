@@ -35,5 +35,6 @@ test('workflow is locked, backed up and fail-closed', () => {
   assert.match(workflow, /ROLLBACK_CORO_DEMO_REPORT_03/);
   assert.match(workflow, /state\.OPERATIONAL_LOG_ENABLED\|\|state\.OPERATIONAL_SHIFTS_ENABLED/);
   assert.match(workflow, /docker compose .* up -d --no-deps backend/);
+  assert.match(workflow, /set_flag false; run_script rollback/);
   assert.doesNotMatch(workflow, /docker system prune|prisma migrate/);
 });
