@@ -15,6 +15,12 @@ describe('Phase 2A schema and seed contract', () => {
   );
   const codes = [
     'COMPLIANCE_OPERATIONS',
+    'INCIDENT_REPORTS',
+    'OPERATIONAL_LOG',
+    'OPERATIONAL_SHIFTS',
+    'OPERATIONAL_DIRECTIVES',
+    'OPERATIONAL_FOLLOWUPS',
+    'SECURITY_WORKSTATION',
     'PERFORMANCE',
     'INCIDENT',
     'KNOWLEDGE',
@@ -30,11 +36,11 @@ describe('Phase 2A schema and seed contract', () => {
     );
     expect(schema).toContain('commercialRelationship CommercialRelationship?');
   });
-  it('déclare exactement les neuf codes commerciaux et aucune capability interdite', () => {
+  it('déclare exactement les quinze codes commerciaux et aucune capability interdite', () => {
     const block = schema.match(/enum CapabilityCode \{([\s\S]*?)\}/)?.[1] ?? '';
     expect(codes.every((code) => block.includes(code))).toBe(true);
     expect(block).not.toMatch(/BOOKING|PLANNER|DOCUMENTS|PROJECTS/);
-    expect(block.split('\n').filter((line) => line.trim())).toHaveLength(9);
+    expect(block.split('\n').filter((line) => line.trim())).toHaveLength(15);
   });
   it('seed neuf capabilities, 27 policies, aucun PriceBook et aucun prix', () => {
     const capabilityValues =

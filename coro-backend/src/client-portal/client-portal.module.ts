@@ -23,6 +23,7 @@ import { ClientJwtGuard } from './client-jwt.guard';
 import {
   ClientIncidentReportsController,
   ClientOperationalDirectivesController,
+  ClientOperationalCapabilitiesController,
   ClientOperationalLogController,
   ClientOperationalShiftsController,
 } from './client-operations.controller';
@@ -30,6 +31,7 @@ import { IncidentReportsModule } from '../incident-reports/incident-reports.modu
 import { OperationalLogModule } from '../operational-log/operational-log.module';
 import { OperationalShiftsModule } from '../operational-shifts/operational-shifts.module';
 import { OperationalDirectivesModule } from '../operational-directives/operational-directives.module';
+import { CapabilityEntitlementsModule } from '../capability-entitlements/capability-entitlements.module';
 
 @Module({
   imports: [
@@ -45,6 +47,7 @@ import { OperationalDirectivesModule } from '../operational-directives/operation
     OperationalLogModule,
     OperationalShiftsModule,
     OperationalDirectivesModule,
+    CapabilityEntitlementsModule,
     JwtModule.register({
       secret: requireJwtSecret(),
       signOptions: { expiresIn: '7d' },
@@ -58,6 +61,7 @@ import { OperationalDirectivesModule } from '../operational-directives/operation
     ClientOperationalLogController,
     ClientOperationalShiftsController,
     ClientOperationalDirectivesController,
+    ClientOperationalCapabilitiesController,
   ],
   providers: [
     ClientPortalService,

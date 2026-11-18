@@ -23,7 +23,7 @@ describePostgres('INC-RP-01 Lot 2 on PostgreSQL', () => {
     : new PrismaService();
   const service = new IncidentReportsService(
     prisma,
-    new IncidentReportAccessService(prisma),
+    new IncidentReportAccessService(prisma, { require: jest.fn() } as never),
   );
   const suffix = randomUUID();
   const ids = {

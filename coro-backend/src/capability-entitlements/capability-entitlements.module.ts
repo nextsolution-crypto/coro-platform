@@ -11,6 +11,7 @@ import { CapabilityEntitlementsService } from './capability-entitlements.service
 import { EntitlementResolver } from './entitlement-resolver.service';
 import { EntitlementCommandService } from './entitlement-command.service';
 import { CapabilityObservationModule } from '../control-center/capability-observation.module';
+import { ClientFeatureEntitlementService } from './client-feature-entitlement.service';
 @Module({
   imports: [PrismaModule, AdminAuditModule, CapabilityObservationModule],
   controllers: [
@@ -23,11 +24,13 @@ import { CapabilityObservationModule } from '../control-center/capability-observ
     CapabilityEntitlementsService,
     EntitlementResolver,
     EntitlementCommandService,
+    ClientFeatureEntitlementService,
   ],
   exports: [
     CapabilityEntitlementsService,
     EntitlementResolver,
     EntitlementCommandService,
+    ClientFeatureEntitlementService,
   ],
 })
 export class CapabilityEntitlementsModule {}

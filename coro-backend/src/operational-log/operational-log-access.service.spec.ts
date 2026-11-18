@@ -9,7 +9,12 @@ describe('OperationalLogAccessService', () => {
     platformPermissionGrant: { findFirst: jest.fn() },
     operationalLogBuildingAssignment: { findFirst: jest.fn() },
   };
-  const service = new OperationalLogAccessService(prisma as never);
+  const service = new OperationalLogAccessService(
+    prisma as never,
+    {
+      require: jest.fn(),
+    } as never,
+  );
   const actor = { userId: 'user-a', organizationId: 'org-a' } as never;
 
   beforeEach(() => jest.clearAllMocks());

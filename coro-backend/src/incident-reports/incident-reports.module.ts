@@ -9,9 +9,10 @@ import { IncidentReportAttachmentsService } from './incident-report-attachments.
 import { IncidentReportAttachmentScanner } from './incident-report-attachment-scanner.service';
 import { IncidentReportTemplatesService } from './incident-report-templates.service';
 import { IncidentReportExportsService } from './incident-report-exports.service';
+import { CapabilityEntitlementsModule } from '../capability-entitlements/capability-entitlements.module';
 
 @Module({
-  imports: [PrismaModule, StorageModule],
+  imports: [PrismaModule, StorageModule, CapabilityEntitlementsModule],
   controllers: [IncidentReportsController],
   providers: [
     IncidentReportsService,

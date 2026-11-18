@@ -48,9 +48,9 @@ describe('Phase 2A PostgreSQL invariants', () => {
   });
   afterAll(() => prisma.$disconnect());
 
-  it('seed exactement 9 capabilities, 27 scopes et aucun prix', async () => {
-    await expect(prisma.commercialCapability.count()).resolves.toBe(9);
-    await expect(prisma.capabilityScopePolicy.count()).resolves.toBe(27);
+  it('seed exactement 15 capabilities, 45 scopes et aucun prix', async () => {
+    await expect(prisma.commercialCapability.count()).resolves.toBe(15);
+    await expect(prisma.capabilityScopePolicy.count()).resolves.toBe(45);
     const migrations = await prisma.$queryRaw<Array<{ finishedAt: Date }>>`
       SELECT "finished_at" AS "finishedAt"
       FROM "_prisma_migrations"
@@ -74,6 +74,21 @@ describe('Phase 2A PostgreSQL invariants', () => {
     expect(
       campus.scopePolicies.find((item) => item.scope === 'CLIENT')?.status,
     ).toBe('UNDECIDED');
+    const clientReport = await prisma.commercialCapability.findUniqueOrThrow({
+      where: { code: 'INCIDENT_REPORTS' },
+      include: { scopePolicies: true, entitlements: true },
+    });
+    expect(clientReport.scopePolicies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ scope: 'SITE', status: 'ALLOWED' }),
+        expect.objectContaining({
+          scope: 'ORGANIZATION',
+          status: 'NOT_ALLOWED',
+        }),
+        expect.objectContaining({ scope: 'CLIENT', status: 'NOT_ALLOWED' }),
+      ]),
+    );
+    expect(clientReport.entitlements).toHaveLength(0);
   });
 
   it('publie dans le futur en SCHEDULED et audite atomiquement', async () => {

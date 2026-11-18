@@ -10,7 +10,12 @@ describe('IncidentReportAccessService', () => {
     platformPermissionGrant: { findFirst: jest.fn() },
     incidentAuthorityAssignment: { findFirst: jest.fn() },
   };
-  const service = new IncidentReportAccessService(prisma as never);
+  const service = new IncidentReportAccessService(
+    prisma as never,
+    {
+      require: jest.fn(),
+    } as never,
+  );
 
   beforeEach(() => {
     jest.clearAllMocks();

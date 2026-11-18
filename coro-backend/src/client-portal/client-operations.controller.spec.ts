@@ -2,6 +2,7 @@ import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { ClientJwtGuard } from './client-jwt.guard';
 import {
   ClientIncidentReportsController,
+  ClientOperationalCapabilitiesController,
   ClientOperationalDirectivesController,
   ClientOperationalLogController,
   ClientOperationalShiftsController,
@@ -9,11 +10,42 @@ import {
 
 describe('Client operational controllers', () => {
   const controllers = [
+    ClientOperationalCapabilitiesController,
     ClientIncidentReportsController,
     ClientOperationalLogController,
     ClientOperationalShiftsController,
     ClientOperationalDirectivesController,
   ];
+
+  it('exposes only a non-disclosing capability decision to the portal', async () => {
+    const evaluate = jest.fn().mockResolvedValue({
+      feature: 'INCIDENT_REPORTS',
+      technicallyAvailable: true,
+      entitled: false,
+      individuallyAuthorized: true,
+      buildingAssigned: true,
+      available: false,
+      reason: 'NOT_ENTITLED',
+    });
+    const controller = new ClientOperationalCapabilitiesController({
+      evaluate,
+    } as never);
+    const authority = {
+      actorId: 'client-user-a',
+      organizationId: '00000000-0000-4000-8000-000000000001',
+    } as never;
+    const response = await controller.list(
+      '00000000-0000-4000-8000-000000000001',
+      '00000000-0000-4000-8000-000000000002',
+      { coroAuthority: authority },
+    );
+    expect(response.capabilities).toContainEqual({
+      feature: 'INCIDENT_REPORTS',
+      available: false,
+      reason: 'NOT_AVAILABLE',
+    });
+    expect(JSON.stringify(response)).not.toContain('NOT_ENTITLED');
+  });
 
   it.each(controllers)(
     '%p is protected exclusively by ClientJwtGuard',
