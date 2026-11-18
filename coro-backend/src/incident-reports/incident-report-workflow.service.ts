@@ -4,7 +4,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CoroActorType, PlatformPermission, Prisma } from '@prisma/client';
-import { AdviserActor } from '../auth/project-access';
+import type { ProvenanceActor } from '../auth/coro-actor-provenance';
+import {
+  ensureProvenanceActor,
+  provenanceActor,
+  provenanceData,
+} from '../auth/coro-actor-provenance';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   AssignIncidentReportReviewerDto,
@@ -25,7 +30,7 @@ export class IncidentReportWorkflowService {
     organizationId: string,
     reportId: string,
     dto: AssignIncidentReportReviewerDto,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
   ) {
     const report = await this.report(organizationId, reportId);
     await this.access.require(
@@ -41,7 +46,11 @@ export class IncidentReportWorkflowService {
     if (!reviewer)
       throw new NotFoundException('Réviseur admissible introuvable.');
     await this.access.require(
-      { ...actor, userId: reviewer.id, organizationId },
+      {
+        userId: reviewer.id,
+        organizationId,
+        role: provenanceActor(actor).role,
+      },
       organizationId,
       report.buildingId,
       PlatformPermission.INCIDENT_REPORT_REVIEW,
@@ -49,6 +58,12 @@ export class IncidentReportWorkflowService {
     );
     return this.prisma.$transaction(
       async (tx) => {
+        await ensureProvenanceActor(tx, actor);
+        await ensureProvenanceActor(tx, {
+          userId: reviewer.id,
+          organizationId,
+          role: provenanceActor(actor).role,
+        });
         const updated = await tx.incidentReport.updateMany({
           where: {
             id: reportId,
@@ -58,6 +73,8 @@ export class IncidentReportWorkflowService {
           },
           data: {
             reviewerUserId: reviewer.id,
+            reviewerActorType: CoroActorType.USER,
+            reviewerActorId: reviewer.id,
             reviewAssignedAt: new Date(),
             status: 'IN_REVIEW',
             lockVersion: { increment: 1 },
@@ -83,7 +100,7 @@ export class IncidentReportWorkflowService {
     organizationId: string,
     reportId: string,
     dto: IncidentReportDecisionDto,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
   ) {
     const report = await this.report(organizationId, reportId);
     const required =
@@ -96,11 +113,16 @@ export class IncidentReportWorkflowService {
       report.buildingId,
       required,
     );
-    if (report.reviewerUserId !== actor.userId)
+    const authority = provenanceActor(actor);
+    if (
+      report.reviewerActorType !== authority.actorType ||
+      report.reviewerActorId !== authority.actorId
+    )
       throw new NotFoundException('Rapport incident introuvable.');
     if (
       dto.decision === 'APPROVED' &&
-      report.submittedByActorId === actor.userId
+      report.submittedByActorType === authority.actorType &&
+      report.submittedByActorId === authority.actorId
     )
       throw new ConflictException(
         'Le créateur ne peut pas approuver sa propre version.',
@@ -122,6 +144,7 @@ export class IncidentReportWorkflowService {
           : 'IN_REVIEW';
     return this.prisma.$transaction(
       async (tx) => {
+        await ensureProvenanceActor(tx, actor);
         const version = await tx.incidentReportVersion.findFirst({
           where: {
             reportId,
@@ -144,7 +167,12 @@ export class IncidentReportWorkflowService {
             status: target,
             lockVersion: { increment: 1 },
             ...(target === 'DRAFT'
-              ? { reviewerUserId: null, reviewAssignedAt: null }
+              ? {
+                  reviewerUserId: null,
+                  reviewerActorType: null,
+                  reviewerActorId: null,
+                  reviewAssignedAt: null,
+                }
               : {}),
           },
         });
@@ -166,8 +194,8 @@ export class IncidentReportWorkflowService {
             reportVersionId: version.id,
             decision: dto.decision,
             comment: dto.comment?.trim(),
-            actorType: CoroActorType.USER,
-            actorId: actor.userId,
+            actorType: provenanceData(actor).actorType,
+            actorId: provenanceData(actor).actorId,
             actorRoleSnapshot: required,
             idempotencyKey: dto.idempotencyKey,
           },
@@ -194,7 +222,7 @@ export class IncidentReportWorkflowService {
     organizationId: string,
     reportId: string,
     dto: PublishIncidentReportDto,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
   ) {
     const report = await this.report(organizationId, reportId);
     await this.access.require(
@@ -214,6 +242,7 @@ export class IncidentReportWorkflowService {
     if (existing) return this.report(organizationId, reportId);
     return this.prisma.$transaction(
       async (tx) => {
+        await ensureProvenanceActor(tx, actor);
         const update = await tx.incidentReport.updateMany({
           where: {
             id: reportId,
@@ -224,6 +253,8 @@ export class IncidentReportWorkflowService {
           data: {
             status: 'PUBLISHED',
             publishedAt: new Date(),
+            publishedByActorType: provenanceData(actor).actorType,
+            publishedByActorId: provenanceData(actor).actorId,
             lockVersion: { increment: 1 },
           },
         });
@@ -252,7 +283,11 @@ export class IncidentReportWorkflowService {
     );
   }
 
-  async queue(organizationId: string, buildingId: string, actor: AdviserActor) {
+  async queue(
+    organizationId: string,
+    buildingId: string,
+    actor: ProvenanceActor,
+  ) {
     if (!incidentReportsEnabled())
       throw new NotFoundException('Rapport incident introuvable.');
     await this.access.require(
@@ -312,7 +347,7 @@ export class IncidentReportWorkflowService {
     organizationId: string,
     reportId: string,
     action: string,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
     idempotencyKey: string | null,
     metadata: Prisma.InputJsonValue,
   ) {
@@ -321,8 +356,8 @@ export class IncidentReportWorkflowService {
         organizationId,
         reportId,
         action,
-        actorType: CoroActorType.USER,
-        actorId: actor.userId,
+        actorType: provenanceData(actor).actorType,
+        actorId: provenanceData(actor).actorId,
         idempotencyKey,
         metadata,
       },

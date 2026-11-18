@@ -15,6 +15,9 @@ describe('IncidentReportWorkflowService separation of duties', () => {
     lockVersion: 2,
     currentVersionNumber: 1,
     reviewerUserId: 'approver',
+    reviewerActorType: 'USER',
+    reviewerActorId: 'approver',
+    submittedByActorType: 'USER',
     submittedByActorId: 'creator',
   };
   const transaction = jest.fn();
@@ -65,6 +68,7 @@ describe('IncidentReportWorkflowService separation of duties', () => {
     prisma.incidentReport.findFirst.mockResolvedValue({
       ...report,
       reviewerUserId: 'other',
+      reviewerActorId: 'other',
     });
     await expect(
       service().decide(
@@ -83,6 +87,8 @@ describe('IncidentReportWorkflowService separation of duties', () => {
     prisma.incidentReport.findFirst.mockResolvedValue({
       ...report,
       reviewerUserId: null,
+      reviewerActorType: null,
+      reviewerActorId: null,
     });
     await expect(
       service().decide(

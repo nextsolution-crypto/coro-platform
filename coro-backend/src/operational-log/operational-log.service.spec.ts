@@ -116,6 +116,7 @@ describe('OperationalLogService', () => {
     prisma.$transaction.mockImplementation(
       (callback: (tx: unknown) => unknown) =>
         callback({
+          coroActorIdentity: { upsert: jest.fn().mockResolvedValue({}) },
           operationalLogEntry: {
             updateMany: jest.fn().mockResolvedValue({ count: 0 }),
           },

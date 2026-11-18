@@ -65,21 +65,21 @@ model Organization {
   mandateServices                  ProjectMandateService[]
   mandateServiceOperations         MandateServiceOperation[]
   // Programme de recommandation
-  referralsSent                    Referral[]                          @relation("ReferralReferrer")
-  referralReceived                 Referral?                           @relation("ReferralReferred")
-  referralCredits                  ReferralCredit[]                    @relation("ReferralCreditOrganization")
+  referralsSent                    Referral[]                            @relation("ReferralReferrer")
+  referralReceived                 Referral?                             @relation("ReferralReferred")
+  referralCredits                  ReferralCredit[]                      @relation("ReferralCreditOrganization")
   contracts                        OrganizationContract[]
   capabilityEntitlements           CapabilityEntitlement[]
   commercialSubscriptions          CommercialSubscription[]
   commercialInvoices               CommercialInvoice[]
   commercialTaxConfigurations      CommercialTaxConfiguration[]
   commercialProposals              CommercialProposal[]
-  convertedCommercialProspects     CommercialProspect[]                @relation("CommercialProspectConversion")
+  convertedCommercialProspects     CommercialProspect[]                  @relation("CommercialProspectConversion")
   meteringResults                  MeteringResult[]
   commercialSimulationWorkspaces   CommercialSimulationWorkspace[]
   advisorInternalCostRates         AdvisorInternalCostRate[]
-  platformAuthority                PlatformAuthorityConfiguration?     @relation("PlatformOperatorOrganization")
-  platformPermissionScopes         PlatformPermissionGrant[]           @relation("PlatformPermissionTargetOrganization")
+  platformAuthority                PlatformAuthorityConfiguration?       @relation("PlatformOperatorOrganization")
+  platformPermissionScopes         PlatformPermissionGrant[]             @relation("PlatformPermissionTargetOrganization")
   userInvitationEvents             OrganizationUserInvitationEvent[]
   settingsConflicts                OrganizationSettingsConflict[]
   demoEnvironment                  DemoEnvironment?
@@ -558,65 +558,65 @@ model User {
   approvedProjects                             Project[]                                @relation("approvedProjects")
   notifications                                Notification[]
 
-  projects                     Project[]
-  feedbacks                    Feedback[]
-  lastEditedProjects           Project[]                      @relation("lastEditedProjects")
-  submittedProjects            Project[]                      @relation("submittedProjects")
-  createdTemplates             ProjectTemplate[]              @relation("createdTemplates")
-  auditLogs                    AuditLog[]                     @relation("AuditLogUserActor")
-  taskAssignees                ProjectTaskAssignee[]
-  timeEntries                  TaskTimeEntry[]
-  projectComments              ProjectComment[]
-  ownedMandates                ProjectMandate[]               @relation("mandateOwner")
-  assignedTasks                ProjectTask[]                  @relation("taskAssignee")
-  horaireBase                  Float                          @default(40)
-  timeZone                     String                         @default("America/Toronto")
-  timeZoneVerified             Boolean                        @default(false)
-  workSchedules                UserWorkSchedule[]             @relation("WorkScheduleUser")
-  workSchedulesVerified        UserWorkSchedule[]             @relation("WorkScheduleVerifier")
-  unavailabilities             UserUnavailability[]           @relation("UnavailableUser")
-  unavailabilitiesCreated      UserUnavailability[]           @relation("UnavailabilityCreator")
-  unavailabilitiesCancelled    UserUnavailability[]           @relation("UnavailabilityCanceller")
-  timelogEntries               TimelogEntry[]
-  customProcedures             CustomProcedure[]
-  refreshTokens                RefreshToken[]
-  trustedDevices               TrustedDevice[]
-  mfaChallenge                 PlatformMfaChallenge?
-  adminAuditEvents             AdminAuditEvent[]              @relation("AdminAuditInternalActor")
-  pilotScenariosCreated        PilotScenario[]                @relation("PilotScenarioCreator")
-  pilotScenarioRunsCreated     PilotScenarioRun[]             @relation("PilotScenarioRunCreator")
-  pilotScenarioChecksObserved  PilotScenarioCheck[]           @relation("PilotScenarioCheckObserver")
-  networkAssignmentsGranted    CustomerPortfolioAssignment[]  @relation("NetworkAssignmentGrantedByUser")
-  networkAssignmentsRevoked    CustomerPortfolioAssignment[]  @relation("NetworkAssignmentRevokedByUser")
-  priceBookVersionsCreated     PriceBookVersion[]             @relation("PriceBookVersionCreator")
-  organizationContractsCreated OrganizationContract[]         @relation("OrganizationContractCreator")
-  contractRevisionsCreated     OrganizationContractRevision[] @relation("ContractRevisionCreator")
-  contractDocumentsUploaded    OrganizationContractDocument[] @relation("ContractDocumentUploader")
-  operationalLogAssignments         OperationalLogBuildingAssignment[] @relation("OperationalLogAssignmentSubject")
-  operationalLogAssignmentsGranted  OperationalLogBuildingAssignment[] @relation("OperationalLogAssignmentGrantor")
-  operationalLogAssignmentsRevoked  OperationalLogBuildingAssignment[] @relation("OperationalLogAssignmentRevoker")
-  clientOperationalAssignmentsGranted ClientOperationalBuildingAssignment[] @relation("ClientOperationalAssignmentGrantor")
-  clientOperationalAssignmentsRevoked ClientOperationalBuildingAssignment[] @relation("ClientOperationalAssignmentRevoker")
-  operationalLogEntriesAuthored      OperationalLogEntry[]              @relation("OperationalLogEntryAuthor")
-  operationalLogRevisionsAuthored    OperationalLogEntryRevision[]      @relation("OperationalLogRevisionAuthor")
-  operationalLogAuditEvents          OperationalLogAuditEvent[]         @relation("OperationalLogAuditActor")
-  operationalShiftsResponsible       OperationalShift[]                  @relation("OperationalShiftResponsible")
-  operationalShiftsCreated           OperationalShift[]                  @relation("OperationalShiftCreator")
-  operationalShiftsClosed            OperationalShift[]                  @relation("OperationalShiftCloser")
-  operationalShiftsCancelled         OperationalShift[]                  @relation("OperationalShiftCanceller")
-  operationalShiftParticipants       OperationalShiftParticipant[]       @relation("OperationalShiftParticipantUser")
-  operationalShiftHistory            OperationalShiftHistory[]           @relation("OperationalShiftHistoryActor")
-  operationalHandoversOutgoing       OperationalHandover[]               @relation("OperationalHandoverOutgoingUser")
-  operationalHandoversIncoming       OperationalHandover[]               @relation("OperationalHandoverIncomingUser")
-  operationalHandoverActions         OperationalHandoverAction[]         @relation("OperationalHandoverActionActor")
-  operationalDirectivesCreated       OperationalDirective[]              @relation("OperationalDirectiveCreator")
-  operationalDirectivesApproved      OperationalDirective[]              @relation("OperationalDirectiveApprover")
-  operationalDirectiveVersionsAuthored OperationalDirectiveVersion[]     @relation("OperationalDirectiveVersionAuthor")
-  operationalDirectiveReceipts       OperationalDirectiveReceipt[]       @relation("OperationalDirectiveReceiptUser")
-  operationalFollowUpsCreated        OperationalFollowUp[]               @relation("OperationalFollowUpCreator")
-  operationalFollowUpsAssigned       OperationalFollowUp[]               @relation("OperationalFollowUpAssignee")
-  operationalFollowUpsVerified       OperationalFollowUp[]               @relation("OperationalFollowUpVerifier")
-  operationalFollowUpEvents          OperationalFollowUpEvent[]          @relation("OperationalFollowUpEventActor")
+  projects                             Project[]
+  feedbacks                            Feedback[]
+  lastEditedProjects                   Project[]                             @relation("lastEditedProjects")
+  submittedProjects                    Project[]                             @relation("submittedProjects")
+  createdTemplates                     ProjectTemplate[]                     @relation("createdTemplates")
+  auditLogs                            AuditLog[]                            @relation("AuditLogUserActor")
+  taskAssignees                        ProjectTaskAssignee[]
+  timeEntries                          TaskTimeEntry[]
+  projectComments                      ProjectComment[]
+  ownedMandates                        ProjectMandate[]                      @relation("mandateOwner")
+  assignedTasks                        ProjectTask[]                         @relation("taskAssignee")
+  horaireBase                          Float                                 @default(40)
+  timeZone                             String                                @default("America/Toronto")
+  timeZoneVerified                     Boolean                               @default(false)
+  workSchedules                        UserWorkSchedule[]                    @relation("WorkScheduleUser")
+  workSchedulesVerified                UserWorkSchedule[]                    @relation("WorkScheduleVerifier")
+  unavailabilities                     UserUnavailability[]                  @relation("UnavailableUser")
+  unavailabilitiesCreated              UserUnavailability[]                  @relation("UnavailabilityCreator")
+  unavailabilitiesCancelled            UserUnavailability[]                  @relation("UnavailabilityCanceller")
+  timelogEntries                       TimelogEntry[]
+  customProcedures                     CustomProcedure[]
+  refreshTokens                        RefreshToken[]
+  trustedDevices                       TrustedDevice[]
+  mfaChallenge                         PlatformMfaChallenge?
+  adminAuditEvents                     AdminAuditEvent[]                     @relation("AdminAuditInternalActor")
+  pilotScenariosCreated                PilotScenario[]                       @relation("PilotScenarioCreator")
+  pilotScenarioRunsCreated             PilotScenarioRun[]                    @relation("PilotScenarioRunCreator")
+  pilotScenarioChecksObserved          PilotScenarioCheck[]                  @relation("PilotScenarioCheckObserver")
+  networkAssignmentsGranted            CustomerPortfolioAssignment[]         @relation("NetworkAssignmentGrantedByUser")
+  networkAssignmentsRevoked            CustomerPortfolioAssignment[]         @relation("NetworkAssignmentRevokedByUser")
+  priceBookVersionsCreated             PriceBookVersion[]                    @relation("PriceBookVersionCreator")
+  organizationContractsCreated         OrganizationContract[]                @relation("OrganizationContractCreator")
+  contractRevisionsCreated             OrganizationContractRevision[]        @relation("ContractRevisionCreator")
+  contractDocumentsUploaded            OrganizationContractDocument[]        @relation("ContractDocumentUploader")
+  operationalLogAssignments            OperationalLogBuildingAssignment[]    @relation("OperationalLogAssignmentSubject")
+  operationalLogAssignmentsGranted     OperationalLogBuildingAssignment[]    @relation("OperationalLogAssignmentGrantor")
+  operationalLogAssignmentsRevoked     OperationalLogBuildingAssignment[]    @relation("OperationalLogAssignmentRevoker")
+  clientOperationalAssignmentsGranted  ClientOperationalBuildingAssignment[] @relation("ClientOperationalAssignmentGrantor")
+  clientOperationalAssignmentsRevoked  ClientOperationalBuildingAssignment[] @relation("ClientOperationalAssignmentRevoker")
+  operationalLogEntriesAuthored        OperationalLogEntry[]                 @relation("OperationalLogEntryAuthor")
+  operationalLogRevisionsAuthored      OperationalLogEntryRevision[]         @relation("OperationalLogRevisionAuthor")
+  operationalLogAuditEvents            OperationalLogAuditEvent[]            @relation("OperationalLogAuditActor")
+  operationalShiftsResponsible         OperationalShift[]                    @relation("OperationalShiftResponsible")
+  operationalShiftsCreated             OperationalShift[]                    @relation("OperationalShiftCreator")
+  operationalShiftsClosed              OperationalShift[]                    @relation("OperationalShiftCloser")
+  operationalShiftsCancelled           OperationalShift[]                    @relation("OperationalShiftCanceller")
+  operationalShiftParticipants         OperationalShiftParticipant[]         @relation("OperationalShiftParticipantUser")
+  operationalShiftHistory              OperationalShiftHistory[]             @relation("OperationalShiftHistoryActor")
+  operationalHandoversOutgoing         OperationalHandover[]                 @relation("OperationalHandoverOutgoingUser")
+  operationalHandoversIncoming         OperationalHandover[]                 @relation("OperationalHandoverIncomingUser")
+  operationalHandoverActions           OperationalHandoverAction[]           @relation("OperationalHandoverActionActor")
+  operationalDirectivesCreated         OperationalDirective[]                @relation("OperationalDirectiveCreator")
+  operationalDirectivesApproved        OperationalDirective[]                @relation("OperationalDirectiveApprover")
+  operationalDirectiveVersionsAuthored OperationalDirectiveVersion[]         @relation("OperationalDirectiveVersionAuthor")
+  operationalDirectiveReceipts         OperationalDirectiveReceipt[]         @relation("OperationalDirectiveReceiptUser")
+  operationalFollowUpsCreated          OperationalFollowUp[]                 @relation("OperationalFollowUpCreator")
+  operationalFollowUpsAssigned         OperationalFollowUp[]                 @relation("OperationalFollowUpAssignee")
+  operationalFollowUpsVerified         OperationalFollowUp[]                 @relation("OperationalFollowUpVerifier")
+  operationalFollowUpEvents            OperationalFollowUpEvent[]            @relation("OperationalFollowUpEventActor")
 
   resetToken       String?
   resetTokenExpiry DateTime?
@@ -3154,24 +3154,24 @@ model Building {
   // Profil réglementaire et opérationnel de l'installation.
   // Cette relation reste optionnelle : un bâtiment standard n'a pas
   // automatiquement de profil RUE.
-  rueFacilityProfile          RueFacilityProfile?
-  populationEvidenceRecords   PopulationEvidenceRecord[]
-  populationEvidenceManifests PopulationEvidenceManifest[]
-  populationEvidenceReports   PopulationEvidenceReport[]
-  incidentReports             IncidentReport[]
-  operationalLogEntries       OperationalLogEntry[]
-  operationalLogAssignments   OperationalLogBuildingAssignment[]
+  rueFacilityProfile           RueFacilityProfile?
+  populationEvidenceRecords    PopulationEvidenceRecord[]
+  populationEvidenceManifests  PopulationEvidenceManifest[]
+  populationEvidenceReports    PopulationEvidenceReport[]
+  incidentReports              IncidentReport[]
+  operationalLogEntries        OperationalLogEntry[]
+  operationalLogAssignments    OperationalLogBuildingAssignment[]
   clientOperationalAssignments ClientOperationalBuildingAssignment[]
-  operationalShifts           OperationalShift[]
+  operationalShifts            OperationalShift[]
   operationalShiftParticipants OperationalShiftParticipant[]
-  operationalShiftHistory     OperationalShiftHistory[]
-  operationalHandovers        OperationalHandover[]
-  operationalHandoverActions  OperationalHandoverAction[]
-  operationalDirectives       OperationalDirective[]
+  operationalShiftHistory      OperationalShiftHistory[]
+  operationalHandovers         OperationalHandover[]
+  operationalHandoverActions   OperationalHandoverAction[]
+  operationalDirectives        OperationalDirective[]
   operationalDirectiveVersions OperationalDirectiveVersion[]
   operationalDirectiveReceipts OperationalDirectiveReceipt[]
-  operationalFollowUps        OperationalFollowUp[]
-  operationalFollowUpEvents   OperationalFollowUpEvent[]
+  operationalFollowUps         OperationalFollowUp[]
+  operationalFollowUpEvents    OperationalFollowUpEvent[]
 
   @@unique([id, clientId, organizationId])
   @@unique([id, organizationId])
@@ -3284,25 +3284,25 @@ model DisplayWebActivation {
 }
 
 model DisplayWebSession {
-  id               String    @id @default(uuid())
-  organizationId   String
-  buildingId       String
-  locationId       String
-  deviceId         String
-  tokenHash        String    @unique @db.Char(64)
-  keyId            String    @db.VarChar(128)
+  id                String    @id @default(uuid())
+  organizationId    String
+  buildingId        String
+  locationId        String
+  deviceId          String
+  tokenHash         String    @unique @db.Char(64)
+  keyId             String    @db.VarChar(128)
   publicKeyJwk      Json
-  capability       String    @default("WEB_VIEW_ONLY")
-  status           String    @default("ACTIVE")
-  expiresAt        DateTime
-  lastSeenAt       DateTime?
-  lastConfirmedAt  DateTime?
+  capability        String    @default("WEB_VIEW_ONLY")
+  status            String    @default("ACTIVE")
+  expiresAt         DateTime
+  lastSeenAt        DateTime?
+  lastConfirmedAt   DateTime?
   lastPublicationId String?
-  lastVersion      Int?
-  revokedAt        DateTime?
-  revocationReason String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  lastVersion       Int?
+  revokedAt         DateTime?
+  revocationReason  String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   location DisplayLocation @relation(fields: [locationId, organizationId, buildingId], references: [id, organizationId, buildingId], onDelete: Restrict)
 
@@ -4814,46 +4814,46 @@ model Notification {
 }
 
 model ClientUser {
-  id                            String                              @id @default(uuid())
-  email                         String                              @unique
+  id                            String                                @id @default(uuid())
+  email                         String                                @unique
   password                      String
   firstName                     String
   lastName                      String
-  role                          ClientUserRole                      @default(CLIENT_MANAGER)
-  populationPermissions         PopulationPermission[]              @default([])
-  operationalReviewPermissions  OperationalReviewPermission[]       @default([])
-  correctiveActionPermissions   CorrectiveActionPermission[]        @default([])
-  incidentPermissions           IncidentPermission[]                @default([])
-  displayPermissions            DisplayPermission[]                 @default([])
-  displayBuildingIds            String[]                            @default([])
-  operationalPermissions        ClientOperationalPermission[]       @default([])
+  role                          ClientUserRole                        @default(CLIENT_MANAGER)
+  populationPermissions         PopulationPermission[]                @default([])
+  operationalReviewPermissions  OperationalReviewPermission[]         @default([])
+  correctiveActionPermissions   CorrectiveActionPermission[]          @default([])
+  incidentPermissions           IncidentPermission[]                  @default([])
+  displayPermissions            DisplayPermission[]                   @default([])
+  displayBuildingIds            String[]                              @default([])
+  operationalPermissions        ClientOperationalPermission[]         @default([])
   buildingIds                   String[]
-  isActive                      Boolean                             @default(true)
+  isActive                      Boolean                               @default(true)
   clientId                      String
-  client                        Client                              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client                        Client                                @relation(fields: [clientId], references: [id], onDelete: Cascade)
   organizationId                String
-  organization                  Organization                        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization                  Organization                          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   signatures                    DocumentSignature[]
-  createdAt                     DateTime                            @default(now())
-  updatedAt                     DateTime                            @updatedAt
+  createdAt                     DateTime                              @default(now())
+  updatedAt                     DateTime                              @updatedAt
   magicLinks                    MagicLink[]
   engagements                   DocumentEngagement[]
   bookings                      Booking[]
   mfaCode                       String?
   mfaCodeExpiry                 DateTime?
   documentaryGrants             BuildingDocumentGrant[]
-  uploadedFiles                 ProjectFile[]                       @relation("ClientFileUploader")
+  uploadedFiles                 ProjectFile[]                         @relation("ClientFileUploader")
   trustedDevices                ClientTrustedDevice[]
   passwordResetTokens           ClientPasswordResetToken[]
   securityAuditEvents           ClientSecurityAuditEvent[]
-  auditLogs                     AuditLog[]                          @relation("AuditLogClientActor")
-  sessionVersion                Int                                 @default(0)
+  auditLogs                     AuditLog[]                            @relation("AuditLogClientActor")
+  sessionVersion                Int                                   @default(0)
   offlineDocumentDevices        OfflineDocumentDevice[]
   offlineDocumentLeases         OfflineDocumentLease[]
   offlineDocumentAuditEvents    OfflineDocumentAuditEvent[]
-  adminAuditEvents              AdminAuditEvent[]                   @relation("AdminAuditClientActor")
-  networkAssignmentsGranted     CustomerPortfolioAssignment[]       @relation("NetworkAssignmentGrantedByClientUser")
-  networkAssignmentsRevoked     CustomerPortfolioAssignment[]       @relation("NetworkAssignmentRevokedByClientUser")
+  adminAuditEvents              AdminAuditEvent[]                     @relation("AdminAuditClientActor")
+  networkAssignmentsGranted     CustomerPortfolioAssignment[]         @relation("NetworkAssignmentGrantedByClientUser")
+  networkAssignmentsRevoked     CustomerPortfolioAssignment[]         @relation("NetworkAssignmentRevokedByClientUser")
   projectComments               ProjectComment[]
   invitationEvents              ClientInvitationEvent[]
   displayCorrectionObservations DisplayCorrectionObservation[]
@@ -5796,6 +5796,25 @@ enum CoroActorType {
   USER
   CLIENT_USER
   SYSTEM
+}
+
+/// Canonical, tenant-scoped identity bridge used by business provenance.
+/// Exactly one concrete identity is enforced by PostgreSQL. Business tables
+/// reference (organizationId, actorType, actorId), never an unchecked
+/// polymorphic identifier.
+model CoroActorIdentity {
+  id             String        @id @default(uuid())
+  organizationId String
+  actorType      CoroActorType
+  actorId        String
+  userId         String?
+  clientUserId   String?
+  systemActorKey String?
+  createdAt      DateTime      @default(now())
+
+  @@unique([organizationId, actorType, actorId])
+  @@index([organizationId, userId])
+  @@index([organizationId, clientUserId])
 }
 
 enum OperationalReviewPermission {
@@ -7844,44 +7863,48 @@ model IncidentReportRetentionPolicy {
 }
 
 model IncidentReport {
-  id                   String                        @id @default(uuid())
-  organizationId       String
-  buildingId           String
-  incidentEventId      String?
-  templateVersionId    String
-  retentionPolicyId    String
-  reportNumber         String
+  id                     String                        @id @default(uuid())
+  organizationId         String
+  buildingId             String
+  incidentEventId        String?
+  templateVersionId      String
+  retentionPolicyId      String
+  reportNumber           String
   creationIdempotencyKey String
-  reportType           String
-  title                String
-  status               IncidentReportStatus          @default(DRAFT)
-  currentVersionNumber Int                           @default(1)
-  lockVersion          Int                           @default(0)
-  legalHold            Boolean                       @default(false)
-  retentionExpiresAt   DateTime?
-  createdByActorType   CoroActorType
-  createdByActorId     String
-  submittedByActorType CoroActorType?
-  submittedByActorId   String?
-  submittedAt          DateTime?
-  reviewerUserId       String?
-  reviewAssignedAt     DateTime?
-  publishedAt          DateTime?
-  archivedAt           DateTime?
-  createdAt            DateTime                      @default(now())
-  updatedAt            DateTime                      @updatedAt
-  organization         Organization                  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  building             Building                      @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  incidentEvent        IncidentEvent?                @relation(fields: [incidentEventId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  templateVersion      IncidentReportTemplateVersion @relation(fields: [templateVersionId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  retentionPolicy      IncidentReportRetentionPolicy @relation(fields: [retentionPolicyId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  versions             IncidentReportVersion[]
-  attachments          IncidentReportAttachment[]
-  approvals            IncidentReportApproval[]
-  exports              IncidentReportExport[]
-  externalReferences   ExternalSourceReference[]
-  auditEvents          IncidentReportAuditEvent[]
-  operationalLogEntries OperationalLogEntry[]
+  reportType             String
+  title                  String
+  status                 IncidentReportStatus          @default(DRAFT)
+  currentVersionNumber   Int                           @default(1)
+  lockVersion            Int                           @default(0)
+  legalHold              Boolean                       @default(false)
+  retentionExpiresAt     DateTime?
+  createdByActorType     CoroActorType
+  createdByActorId       String
+  submittedByActorType   CoroActorType?
+  submittedByActorId     String?
+  submittedAt            DateTime?
+  reviewerUserId         String?
+  reviewerActorType      CoroActorType?
+  reviewerActorId        String?
+  reviewAssignedAt       DateTime?
+  publishedByActorType   CoroActorType?
+  publishedByActorId     String?
+  publishedAt            DateTime?
+  archivedAt             DateTime?
+  createdAt              DateTime                      @default(now())
+  updatedAt              DateTime                      @updatedAt
+  organization           Organization                  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building               Building                      @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  incidentEvent          IncidentEvent?                @relation(fields: [incidentEventId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  templateVersion        IncidentReportTemplateVersion @relation(fields: [templateVersionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  retentionPolicy        IncidentReportRetentionPolicy @relation(fields: [retentionPolicyId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  versions               IncidentReportVersion[]
+  attachments            IncidentReportAttachment[]
+  approvals              IncidentReportApproval[]
+  exports                IncidentReportExport[]
+  externalReferences     ExternalSourceReference[]
+  auditEvents            IncidentReportAuditEvent[]
+  operationalLogEntries  OperationalLogEntry[]
 
   @@unique([organizationId, reportNumber])
   @@unique([organizationId, creationIdempotencyKey])
@@ -7930,6 +7953,7 @@ model IncidentReportAttachment {
   scanStatus         IncidentReportAttachmentScanStatus @default(PENDING)
   scannedAt          DateTime?
   revokedAt          DateTime?
+  revokedByActorType CoroActorType?
   revokedByActorId   String?
   revocationReason   String?
   provenance         Json?
@@ -7966,26 +7990,26 @@ model IncidentReportApproval {
 }
 
 model IncidentReportExport {
-  id                 String                     @id @default(uuid())
-  organizationId     String
-  reportId           String
-  reportVersionId    String
-  format             String
-  pageFormat         String                     @default("LETTER")
-  locale             String                     @default("fr-CA")
-  status             IncidentReportExportStatus @default(PENDING)
-  storageKey         String?
-  sha256             String?
-  rendererVersion    String
+  id                    String                     @id @default(uuid())
+  organizationId        String
+  reportId              String
+  reportVersionId       String
+  format                String
+  pageFormat            String                     @default("LETTER")
+  locale                String                     @default("fr-CA")
+  status                IncidentReportExportStatus @default(PENDING)
+  storageKey            String?
+  sha256                String?
+  rendererVersion       String
   requestIdempotencyKey String
-  sourceManifest     Json
-  failureCode        String?
-  createdByActorType CoroActorType
-  createdByActorId   String
-  createdAt          DateTime                   @default(now())
-  completedAt        DateTime?
-  report             IncidentReport             @relation(fields: [reportId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  reportVersion      IncidentReportVersion      @relation(fields: [reportVersionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  sourceManifest        Json
+  failureCode           String?
+  createdByActorType    CoroActorType
+  createdByActorId      String
+  createdAt             DateTime                   @default(now())
+  completedAt           DateTime?
+  report                IncidentReport             @relation(fields: [reportId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  reportVersion         IncidentReportVersion      @relation(fields: [reportVersionId, organizationId], references: [id, organizationId], onDelete: Restrict)
 
   @@unique([organizationId, storageKey])
   @@unique([organizationId, requestIdempotencyKey])
@@ -8125,7 +8149,9 @@ model OperationalLogEntry {
   incidentReportId       String?
   eventAt                DateTime
   recordedAt             DateTime                      @default(now())
-  authorUserId           String
+  authorUserId           String?
+  authorActorType        CoroActorType                 @default(USER)
+  authorActorId          String
   shiftReference         String?
   shiftId                String?
   locationLabel          String?
@@ -8152,7 +8178,7 @@ model OperationalLogEntry {
   zone                   BuildingZone?                 @relation(fields: [zoneId, organizationId, buildingId, floorId], references: [id, organizationId, buildingId, floorId], onDelete: Restrict)
   incidentEvent          IncidentEvent?                @relation(fields: [incidentEventId, organizationId], references: [id, organizationId], onDelete: Restrict)
   incidentReport         IncidentReport?               @relation(fields: [incidentReportId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  author                 User                          @relation("OperationalLogEntryAuthor", fields: [authorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  author                 User?                         @relation("OperationalLogEntryAuthor", fields: [authorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
   revisions              OperationalLogEntryRevision[]
   auditEvents            OperationalLogAuditEvent[]
   shift                  OperationalShift?             @relation(fields: [shiftId, organizationId], references: [id, organizationId], onDelete: Restrict)
@@ -8207,41 +8233,49 @@ enum OperationalHandoverActionType {
 }
 
 model OperationalShift {
-  id                    String                 @id @default(uuid())
-  organizationId        String
-  buildingId            String
-  securityPost          String
+  id                     String                        @id @default(uuid())
+  organizationId         String
+  buildingId             String
+  securityPost           String
   teamName               String?
-  responsibleUserId     String
+  responsibleUserId      String?
+  responsibleActorType   CoroActorType                 @default(USER)
+  responsibleActorId     String
   plannedStartAt         DateTime
   plannedEndAt           DateTime
   actualStartAt          DateTime?
   actualEndAt            DateTime?
   buildingTimeZone       String
-  status                 OperationalShiftStatus @default(PLANNED)
-  instructionsSnapshot  Json?
+  status                 OperationalShiftStatus        @default(PLANNED)
+  instructionsSnapshot   Json?
   openingSnapshot        Json?
   notes                  String?
   closeReason            String?
   cancellationReason     String?
-  lockVersion            Int                    @default(0)
+  lockVersion            Int                           @default(0)
   creationIdempotencyKey String
-  createdByUserId        String
+  createdByUserId        String?
+  createdByActorType     CoroActorType                 @default(USER)
+  createdByActorId       String
   closedByUserId         String?
+  closedByActorType      CoroActorType?
+  closedByActorId        String?
   cancelledByUserId      String?
-  createdAt              DateTime               @default(now())
-  updatedAt              DateTime               @updatedAt
-  organization           Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  building               Building               @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  responsibleUser        User                   @relation("OperationalShiftResponsible", fields: [responsibleUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  createdBy              User                   @relation("OperationalShiftCreator", fields: [createdByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  closedBy               User?                  @relation("OperationalShiftCloser", fields: [closedByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  cancelledBy            User?                  @relation("OperationalShiftCanceller", fields: [cancelledByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  cancelledByActorType   CoroActorType?
+  cancelledByActorId     String?
+  createdAt              DateTime                      @default(now())
+  updatedAt              DateTime                      @updatedAt
+  organization           Organization                  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building               Building                      @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  responsibleUser        User?                         @relation("OperationalShiftResponsible", fields: [responsibleUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdBy              User?                         @relation("OperationalShiftCreator", fields: [createdByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  closedBy               User?                         @relation("OperationalShiftCloser", fields: [closedByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  cancelledBy            User?                         @relation("OperationalShiftCanceller", fields: [cancelledByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
   participants           OperationalShiftParticipant[]
   history                OperationalShiftHistory[]
   logEntries             OperationalLogEntry[]
-  outgoingHandovers      OperationalHandover[]  @relation("OutgoingOperationalShift")
-  incomingHandovers      OperationalHandover[]  @relation("IncomingOperationalShift")
+  outgoingHandovers      OperationalHandover[]         @relation("OutgoingOperationalShift")
+  incomingHandovers      OperationalHandover[]         @relation("IncomingOperationalShift")
 
   @@unique([id, organizationId])
   @@unique([organizationId, creationIdempotencyKey])
@@ -8250,74 +8284,82 @@ model OperationalShift {
 }
 
 model OperationalShiftParticipant {
-  id             String                            @id @default(uuid())
-  organizationId String
-  buildingId     String
-  shiftId        String
-  userId         String
-  role           OperationalShiftParticipantRole
-  status         OperationalShiftParticipantStatus @default(EXPECTED)
-  replacedById   String?
-  joinedAt       DateTime?
-  leftAt         DateTime?
-  createdAt      DateTime                          @default(now())
-  updatedAt      DateTime                          @updatedAt
-  organization   Organization                      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  building       Building                          @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  shift          OperationalShift                  @relation(fields: [shiftId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  user           User                              @relation("OperationalShiftParticipantUser", fields: [userId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  id                   String                            @id @default(uuid())
+  organizationId       String
+  buildingId           String
+  shiftId              String
+  userId               String?
+  participantActorType CoroActorType                     @default(USER)
+  participantActorId   String
+  role                 OperationalShiftParticipantRole
+  status               OperationalShiftParticipantStatus @default(EXPECTED)
+  replacedById         String?
+  joinedAt             DateTime?
+  leftAt               DateTime?
+  createdAt            DateTime                          @default(now())
+  updatedAt            DateTime                          @updatedAt
+  organization         Organization                      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building             Building                          @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  shift                OperationalShift                  @relation(fields: [shiftId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  user                 User?                             @relation("OperationalShiftParticipantUser", fields: [userId, organizationId], references: [id, organizationId], onDelete: Restrict)
 
-  @@unique([shiftId, userId])
+  @@unique([shiftId, participantActorType, participantActorId])
   @@unique([id, organizationId])
   @@index([organizationId, buildingId, userId, status])
 }
 
 model OperationalShiftHistory {
-  id             String           @id @default(uuid())
+  id             String                  @id @default(uuid())
   organizationId String
   buildingId     String
   shiftId        String
   action         String
   fromStatus     OperationalShiftStatus?
   toStatus       OperationalShiftStatus?
-  actorUserId    String
+  actorUserId    String?
+  actorType      CoroActorType           @default(USER)
+  actorId        String
   reason         String?
   metadata       Json?
   idempotencyKey String?
-  occurredAt     DateTime         @default(now())
-  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  building       Building         @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  shift          OperationalShift @relation(fields: [shiftId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  actor          User             @relation("OperationalShiftHistoryActor", fields: [actorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  occurredAt     DateTime                @default(now())
+  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building       Building                @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  shift          OperationalShift        @relation(fields: [shiftId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  actor          User?                   @relation("OperationalShiftHistoryActor", fields: [actorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
 
   @@unique([organizationId, idempotencyKey])
   @@index([organizationId, shiftId, occurredAt])
 }
 
 model OperationalHandover {
-  id                     String                    @id @default(uuid())
+  id                     String                      @id @default(uuid())
   organizationId         String
   buildingId             String
   outgoingShiftId        String
   incomingShiftId        String?
-  outgoingUserId         String
+  outgoingUserId         String?
+  outgoingActorType      CoroActorType               @default(USER)
+  outgoingActorId        String
   incomingUserId         String?
-  status                 OperationalHandoverStatus @default(DRAFT)
+  incomingActorType      CoroActorType?
+  incomingActorId        String?
+  status                 OperationalHandoverStatus   @default(DRAFT)
   snapshot               Json
   snapshotHash           String
-  version                Int                       @default(1)
-  lockVersion            Int                       @default(0)
+  version                Int                         @default(1)
+  lockVersion            Int                         @default(0)
   creationIdempotencyKey String
   submittedAt            DateTime?
   decidedAt              DateTime?
-  createdAt               DateTime                  @default(now())
-  updatedAt               DateTime                  @updatedAt
-  organization           Organization              @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  building               Building                  @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  outgoingShift          OperationalShift          @relation("OutgoingOperationalShift", fields: [outgoingShiftId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  incomingShift          OperationalShift?         @relation("IncomingOperationalShift", fields: [incomingShiftId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  outgoingUser           User                      @relation("OperationalHandoverOutgoingUser", fields: [outgoingUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  incomingUser           User?                     @relation("OperationalHandoverIncomingUser", fields: [incomingUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdAt              DateTime                    @default(now())
+  updatedAt              DateTime                    @updatedAt
+  organization           Organization                @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building               Building                    @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  outgoingShift          OperationalShift            @relation("OutgoingOperationalShift", fields: [outgoingShiftId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  incomingShift          OperationalShift?           @relation("IncomingOperationalShift", fields: [incomingShiftId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  outgoingUser           User?                       @relation("OperationalHandoverOutgoingUser", fields: [outgoingUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  incomingUser           User?                       @relation("OperationalHandoverIncomingUser", fields: [incomingUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
   actions                OperationalHandoverAction[]
 
   @@unique([id, organizationId])
@@ -8331,15 +8373,17 @@ model OperationalHandoverAction {
   buildingId     String
   handoverId     String
   type           OperationalHandoverActionType
-  actorUserId    String
+  actorUserId    String?
+  actorType      CoroActorType                 @default(USER)
+  actorId        String
   reason         String?
   metadata       Json?
   idempotencyKey String
   occurredAt     DateTime                      @default(now())
   organization   Organization                  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   building       Building                      @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  handover       OperationalHandover            @relation(fields: [handoverId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  actor          User                           @relation("OperationalHandoverActionActor", fields: [actorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  handover       OperationalHandover           @relation(fields: [handoverId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  actor          User?                         @relation("OperationalHandoverActionActor", fields: [actorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
 
   @@unique([organizationId, idempotencyKey])
   @@index([organizationId, handoverId, occurredAt])
@@ -8352,11 +8396,13 @@ enum OperationalDirectiveType {
   SPECIAL_INSTRUCTION
   OPERATIONAL_NOTICE
 }
+
 enum OperationalDirectivePriority {
   NORMAL
   IMPORTANT
   CRITICAL
 }
+
 enum OperationalDirectiveStatus {
   DRAFT
   SUBMITTED
@@ -8367,6 +8413,7 @@ enum OperationalDirectiveStatus {
   SUPERSEDED
   ARCHIVED
 }
+
 enum OperationalDirectiveReceiptStatus {
   TO_REVIEW
   VIEWED
@@ -8377,86 +8424,97 @@ enum OperationalDirectiveReceiptStatus {
 }
 
 model OperationalDirective {
-  id String @id @default(uuid())
-  organizationId String
-  buildingId String
-  zoneLabel String?
-  securityPost String?
-  title String
-  type OperationalDirectiveType
-  priority OperationalDirectivePriority @default(NORMAL)
-  status OperationalDirectiveStatus @default(DRAFT)
-  effectiveAt DateTime?
-  expiresAt DateTime?
-  targetCriteria Json
-  acknowledgementRequired Boolean @default(false)
-  currentVersionNumber Int @default(1)
-  lockVersion Int @default(0)
-  creationIdempotencyKey String
-  createdByUserId String
-  approvedByUserId String?
-  approvedAt DateTime?
-  publishedAt DateTime?
-  revokedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  building Building @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  createdBy User @relation("OperationalDirectiveCreator", fields: [createdByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  approvedBy User? @relation("OperationalDirectiveApprover", fields: [approvedByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  versions OperationalDirectiveVersion[]
-  receipts OperationalDirectiveReceipt[]
+  id                      String                        @id @default(uuid())
+  organizationId          String
+  buildingId              String
+  zoneLabel               String?
+  securityPost            String?
+  title                   String
+  type                    OperationalDirectiveType
+  priority                OperationalDirectivePriority  @default(NORMAL)
+  status                  OperationalDirectiveStatus    @default(DRAFT)
+  effectiveAt             DateTime?
+  expiresAt               DateTime?
+  targetCriteria          Json
+  acknowledgementRequired Boolean                       @default(false)
+  currentVersionNumber    Int                           @default(1)
+  lockVersion             Int                           @default(0)
+  creationIdempotencyKey  String
+  createdByUserId         String?
+  createdByActorType      CoroActorType                 @default(USER)
+  createdByActorId        String
+  approvedByUserId        String?
+  approvedByActorType     CoroActorType?
+  approvedByActorId       String?
+  approvedAt              DateTime?
+  publishedAt             DateTime?
+  revokedAt               DateTime?
+  createdAt               DateTime                      @default(now())
+  updatedAt               DateTime                      @updatedAt
+  organization            Organization                  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building                Building                      @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdBy               User?                         @relation("OperationalDirectiveCreator", fields: [createdByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  approvedBy              User?                         @relation("OperationalDirectiveApprover", fields: [approvedByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  versions                OperationalDirectiveVersion[]
+  receipts                OperationalDirectiveReceipt[]
+
   @@unique([id, organizationId])
   @@unique([organizationId, creationIdempotencyKey])
   @@index([organizationId, buildingId, status, priority, effectiveAt])
 }
 
 model OperationalDirectiveVersion {
-  id String @id @default(uuid())
-  organizationId String
-  buildingId String
-  directiveId String
-  versionNumber Int
-  title String
-  description String
-  targetSnapshot Json
-  attachments Json?
+  id                 String                        @id @default(uuid())
+  organizationId     String
+  buildingId         String
+  directiveId        String
+  versionNumber      Int
+  title              String
+  description        String
+  targetSnapshot     Json
+  attachments        Json?
   knowledgeReference Json?
-  contentHash String
-  authorUserId String
-  createdAt DateTime @default(now())
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  building Building @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  directive OperationalDirective @relation(fields: [directiveId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  author User @relation("OperationalDirectiveVersionAuthor", fields: [authorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  receipts OperationalDirectiveReceipt[]
+  contentHash        String
+  authorUserId       String?
+  authorActorType    CoroActorType                 @default(USER)
+  authorActorId      String
+  createdAt          DateTime                      @default(now())
+  organization       Organization                  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building           Building                      @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  directive          OperationalDirective          @relation(fields: [directiveId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  author             User?                         @relation("OperationalDirectiveVersionAuthor", fields: [authorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  receipts           OperationalDirectiveReceipt[]
+
   @@unique([directiveId, versionNumber])
   @@unique([id, organizationId])
   @@index([organizationId, buildingId, createdAt])
 }
 
 model OperationalDirectiveReceipt {
-  id String @id @default(uuid())
-  organizationId String
-  buildingId String
-  directiveId String
-  versionId String
-  userId String
-  status OperationalDirectiveReceiptStatus @default(TO_REVIEW)
-  publishedAt DateTime
-  viewedAt DateTime?
-  confirmedAt DateTime?
-  comment String?
-  reservation String?
-  lockVersion Int @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  building Building @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  directive OperationalDirective @relation(fields: [directiveId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  version OperationalDirectiveVersion @relation(fields: [versionId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  user User @relation("OperationalDirectiveReceiptUser", fields: [userId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  @@unique([versionId, userId])
+  id                 String                            @id @default(uuid())
+  organizationId     String
+  buildingId         String
+  directiveId        String
+  versionId          String
+  userId             String?
+  recipientActorType CoroActorType                     @default(USER)
+  recipientActorId   String
+  status             OperationalDirectiveReceiptStatus @default(TO_REVIEW)
+  publishedAt        DateTime
+  viewedAt           DateTime?
+  confirmedAt        DateTime?
+  comment            String?
+  reservation        String?
+  lockVersion        Int                               @default(0)
+  createdAt          DateTime                          @default(now())
+  updatedAt          DateTime                          @updatedAt
+  organization       Organization                      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building           Building                          @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  directive          OperationalDirective              @relation(fields: [directiveId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  version            OperationalDirectiveVersion       @relation(fields: [versionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  user               User?                             @relation("OperationalDirectiveReceiptUser", fields: [userId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([versionId, recipientActorType, recipientActorId])
   @@unique([id, organizationId])
   @@index([organizationId, buildingId, userId, status])
 }
@@ -8470,6 +8528,7 @@ enum OperationalFollowUpSource {
   OBSERVATION
   TECHNICAL_ANOMALY
 }
+
 enum OperationalFollowUpStatus {
   OPEN
   ASSIGNED
@@ -8481,32 +8540,39 @@ enum OperationalFollowUpStatus {
 }
 
 model OperationalFollowUp {
-  id String @id @default(uuid())
-  organizationId String
-  buildingId String
-  sourceType OperationalFollowUpSource
-  sourceId String
-  description String
-  priority OperationalDirectivePriority @default(NORMAL)
-  responsibleUserId String?
-  dueAt DateTime?
-  status OperationalFollowUpStatus @default(OPEN)
-  closureValidation String?
-  completedAt DateTime?
-  verifiedAt DateTime?
-  closedAt DateTime?
-  verifiedByUserId String?
-  lockVersion Int @default(0)
+  id                     String                       @id @default(uuid())
+  organizationId         String
+  buildingId             String
+  sourceType             OperationalFollowUpSource
+  sourceId               String
+  description            String
+  priority               OperationalDirectivePriority @default(NORMAL)
+  responsibleUserId      String?
+  responsibleActorType   CoroActorType?
+  responsibleActorId     String?
+  dueAt                  DateTime?
+  status                 OperationalFollowUpStatus    @default(OPEN)
+  closureValidation      String?
+  completedAt            DateTime?
+  verifiedAt             DateTime?
+  closedAt               DateTime?
+  verifiedByUserId       String?
+  verifiedByActorType    CoroActorType?
+  verifiedByActorId      String?
+  lockVersion            Int                          @default(0)
   creationIdempotencyKey String
-  createdByUserId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  building Building @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  createdBy User @relation("OperationalFollowUpCreator", fields: [createdByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  responsible User? @relation("OperationalFollowUpAssignee", fields: [responsibleUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  verifiedBy User? @relation("OperationalFollowUpVerifier", fields: [verifiedByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  events OperationalFollowUpEvent[]
+  createdByUserId        String?
+  createdByActorType     CoroActorType                @default(USER)
+  createdByActorId       String
+  createdAt              DateTime                     @default(now())
+  updatedAt              DateTime                     @updatedAt
+  organization           Organization                 @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building               Building                     @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdBy              User?                        @relation("OperationalFollowUpCreator", fields: [createdByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  responsible            User?                        @relation("OperationalFollowUpAssignee", fields: [responsibleUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  verifiedBy             User?                        @relation("OperationalFollowUpVerifier", fields: [verifiedByUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  events                 OperationalFollowUpEvent[]
+
   @@unique([id, organizationId])
   @@unique([organizationId, creationIdempotencyKey])
   @@index([organizationId, buildingId, status, dueAt])
@@ -8515,42 +8581,47 @@ model OperationalFollowUp {
 }
 
 model OperationalFollowUpEvent {
-  id String @id @default(uuid())
+  id             String                     @id @default(uuid())
   organizationId String
-  buildingId String
-  followUpId String
-  action String
-  actorUserId String
-  fromStatus OperationalFollowUpStatus?
-  toStatus OperationalFollowUpStatus?
-  reason String?
-  evidence Json?
+  buildingId     String
+  followUpId     String
+  action         String
+  actorUserId    String?
+  actorType      CoroActorType              @default(USER)
+  actorId        String
+  fromStatus     OperationalFollowUpStatus?
+  toStatus       OperationalFollowUpStatus?
+  reason         String?
+  evidence       Json?
   idempotencyKey String
-  occurredAt DateTime @default(now())
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  building Building @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  followUp OperationalFollowUp @relation(fields: [followUpId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  actor User @relation("OperationalFollowUpEventActor", fields: [actorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  occurredAt     DateTime                   @default(now())
+  organization   Organization               @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building       Building                   @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  followUp       OperationalFollowUp        @relation(fields: [followUpId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  actor          User?                      @relation("OperationalFollowUpEventActor", fields: [actorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
   @@unique([organizationId, idempotencyKey])
   @@unique([id, organizationId])
   @@index([organizationId, followUpId, occurredAt])
 }
 
 model OperationalLogEntryRevision {
-  id             String              @id @default(uuid())
-  organizationId String
-  entryId        String
-  revisionNumber Int
-  reason         String
-  beforeSnapshot Json
-  afterSnapshot  Json
-  contentHash    String
-  authorUserId   String
-  idempotencyKey String
-  createdAt      DateTime            @default(now())
-  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  entry          OperationalLogEntry @relation(fields: [entryId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  author         User                @relation("OperationalLogRevisionAuthor", fields: [authorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  id              String              @id @default(uuid())
+  organizationId  String
+  entryId         String
+  revisionNumber  Int
+  reason          String
+  beforeSnapshot  Json
+  afterSnapshot   Json
+  contentHash     String
+  authorUserId    String?
+  authorActorType CoroActorType       @default(USER)
+  authorActorId   String
+  idempotencyKey  String
+  createdAt       DateTime            @default(now())
+  organization    Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  entry           OperationalLogEntry @relation(fields: [entryId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  author          User?               @relation("OperationalLogRevisionAuthor", fields: [authorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
 
   @@unique([entryId, revisionNumber])
   @@unique([organizationId, idempotencyKey])
@@ -8563,14 +8634,16 @@ model OperationalLogAuditEvent {
   organizationId String
   entryId        String
   action         String
-  actorUserId    String
+  actorUserId    String?
+  actorType      CoroActorType       @default(USER)
+  actorId        String
   reason         String?
   idempotencyKey String?
   metadata       Json?
   occurredAt     DateTime            @default(now())
   organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   entry          OperationalLogEntry @relation(fields: [entryId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  actor          User                @relation("OperationalLogAuditActor", fields: [actorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  actor          User?               @relation("OperationalLogAuditActor", fields: [actorUserId, organizationId], references: [id, organizationId], onDelete: Restrict)
 
   @@unique([organizationId, idempotencyKey])
   @@unique([id, organizationId])

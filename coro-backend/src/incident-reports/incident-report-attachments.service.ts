@@ -4,9 +4,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CoroActorType, PlatformPermission } from '@prisma/client';
+import { PlatformPermission } from '@prisma/client';
 import { createHash, randomUUID } from 'node:crypto';
-import { AdviserActor } from '../auth/project-access';
+import type { ProvenanceActor } from '../auth/coro-actor-provenance';
+import {
+  ensureProvenanceActor,
+  provenanceData,
+} from '../auth/coro-actor-provenance';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import {
@@ -32,7 +36,7 @@ export class IncidentReportAttachmentsService {
     organizationId: string,
     reportId: string,
     dto: CreateIncidentReportAttachmentDto,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
   ) {
     this.assertEnabled();
     const report = await this.prisma.incidentReport.findFirst({
@@ -84,6 +88,8 @@ export class IncidentReportAttachmentsService {
     const storageKey = `tenant-${organizationId}/incident-reports/${reportId}/${version.id}/${id}`;
     await this.storage.uploadPrivateImmutable(bytes, storageKey, dto.mediaType);
     return this.prisma.$transaction(async (tx) => {
+      await ensureProvenanceActor(tx, actor);
+      const provenance = provenanceData(actor);
       const attachment = await tx.incidentReportAttachment.create({
         data: {
           id,
@@ -98,8 +104,8 @@ export class IncidentReportAttachmentsService {
           scanStatus: 'CLEAN',
           scannedAt: new Date(),
           provenance: { source: 'CORO_NATIVE', scanner: 'CLAMAV_INSTREAM' },
-          createdByActorType: CoroActorType.USER,
-          createdByActorId: actor.userId,
+          createdByActorType: provenance.actorType,
+          createdByActorId: provenance.actorId,
         },
       });
       await tx.incidentReportAuditEvent.create({
@@ -107,8 +113,8 @@ export class IncidentReportAttachmentsService {
           organizationId,
           reportId,
           action: 'ATTACHMENT_ADDED',
-          actorType: CoroActorType.USER,
-          actorId: actor.userId,
+          actorType: provenance.actorType,
+          actorId: provenance.actorId,
           idempotencyKey: dto.idempotencyKey,
           metadata: { attachmentId: id, sha256 },
         },
@@ -125,7 +131,7 @@ export class IncidentReportAttachmentsService {
     organizationId: string,
     reportId: string,
     attachmentId: string,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
   ) {
     this.assertEnabled();
     const row = await this.prisma.incidentReportAttachment.findFirst({
@@ -157,7 +163,7 @@ export class IncidentReportAttachmentsService {
     reportId: string,
     attachmentId: string,
     dto: RevokeIncidentReportAttachmentDto,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
   ) {
     this.assertEnabled();
     const row = await this.prisma.incidentReportAttachment.findFirst({
@@ -172,28 +178,31 @@ export class IncidentReportAttachmentsService {
       PlatformPermission.INCIDENT_REPORT_EDIT,
     );
     if (row.revokedAt) return { revoked: true };
-    await this.prisma.$transaction([
-      this.prisma.incidentReportAttachment.update({
+    await this.prisma.$transaction(async (tx) => {
+      await ensureProvenanceActor(tx, actor);
+      const provenance = provenanceData(actor);
+      await tx.incidentReportAttachment.update({
         where: { id: attachmentId },
         data: {
           revokedAt: new Date(),
-          revokedByActorId: actor.userId,
+          revokedByActorType: provenance.actorType,
+          revokedByActorId: provenance.actorId,
           revocationReason: dto.reason,
         },
-      }),
-      this.prisma.incidentReportAuditEvent.create({
+      });
+      await tx.incidentReportAuditEvent.create({
         data: {
           organizationId,
           reportId,
           action: 'ATTACHMENT_REVOKED',
-          actorType: CoroActorType.USER,
-          actorId: actor.userId,
+          actorType: provenance.actorType,
+          actorId: provenance.actorId,
           reason: dto.reason,
           idempotencyKey: dto.idempotencyKey,
           metadata: { attachmentId },
         },
-      }),
-    ]);
+      });
+    });
     return { revoked: true };
   }
 

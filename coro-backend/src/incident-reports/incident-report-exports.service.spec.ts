@@ -71,6 +71,7 @@ describe('IncidentReportExportsService', () => {
     completedAt: new Date(),
   };
   const prisma: any = {
+    coroActorIdentity: { upsert: jest.fn() },
     incidentReport: { findFirst: jest.fn() },
     incidentReportExport: {
       findUnique: jest.fn(),
