@@ -43,5 +43,7 @@ test('workflow is locked, backed up and fail-closed', () => {
   assert.match(workflow, /state\.OPERATIONAL_LOG_ENABLED\|\|state\.OPERATIONAL_SHIFTS_ENABLED/);
   assert.match(workflow, /docker compose .* up -d --no-deps backend/);
   assert.match(workflow, /set_flag false; run_script rollback/);
+  assert.match(source, /execution: 'FAIL', mode, errorCode/);
+  assert.match(workflow, /\[A-Z\]\[A-Z0-9_\]\{2,80\}/);
   assert.doesNotMatch(workflow, /docker system prune|prisma migrate/);
 });
