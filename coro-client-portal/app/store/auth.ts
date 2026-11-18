@@ -176,6 +176,30 @@ export async function apiPost(path: string, body: unknown) {
   return data;
 }
 
+export async function apiPatch(path: string, body: unknown) {
+  const token = getToken();
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (res.status === 401) {
+    handleUnauthorized();
+    throw new ApiError("Non autorisé", 401);
+  }
+  const data = await parseResponse(res);
+  if (!res.ok) {
+    throw new ApiError(
+      typeof data === "string" ? data : data?.message || "Erreur API",
+      res.status,
+    );
+  }
+  return data;
+}
+
 export async function apiPut(path: string, body: unknown) {
   const token = getToken();
   const res = await fetch(`${API_URL}${path}`, {

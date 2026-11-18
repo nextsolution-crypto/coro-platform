@@ -21,6 +21,7 @@ import {
   HardDriveDownload,
   BookOpenCheck,
   MonitorUp,
+  ClipboardCheck,
 } from "lucide-react";
 import workspace from "./PortalWorkspace.module.css";
 import { resolveActivePortalNavigationPath } from "./active-navigation";
@@ -41,6 +42,7 @@ export default function PortalLayout({
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
   const [networkEnabled, setNetworkEnabled] = useState(false);
+  const [operationsEnabled, setOperationsEnabled] = useState(false);
   const [offlineVaultMode, setOfflineVaultMode] = useState(false);
   const { toasts, showToast, removeToast } = useToast();
 
@@ -105,6 +107,37 @@ export default function PortalLayout({
   }, [pathname, router, sessionAttempt]);
 
   useEffect(() => {
+    if (!user?.organizationId || offlineVaultMode) {
+      setOperationsEnabled(false);
+      return;
+    }
+    let active = true;
+    void apiGet("/client-portal/buildings")
+      .then(async (response) => {
+        const buildings = Array.isArray(response) ? response : response?.items ?? [];
+        const decisions = await Promise.all(
+          buildings.map((building: { id: string }) =>
+            apiGet(
+              `/client-portal/organizations/${user.organizationId}/operational-capabilities?buildingId=${building.id}`,
+            ).catch(() => ({ capabilities: [] })),
+          ),
+        );
+        if (!active) return;
+        setOperationsEnabled(
+          decisions.some((decision) =>
+            (decision.capabilities ?? []).some(
+              (capability: { available?: boolean }) => capability.available === true,
+            ),
+          ),
+        );
+      })
+      .catch(() => active && setOperationsEnabled(false));
+    return () => {
+      active = false;
+    };
+  }, [offlineVaultMode, user?.organizationId]);
+
+  useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
 
@@ -125,6 +158,9 @@ export default function PortalLayout({
       ? [{ label: "CORO Display", path: "/display", icon: MonitorUp }]
       : []),
     { label: "Bâtiments", path: "/buildings", icon: Building2 },
+    ...(operationsEnabled
+      ? [{ label: "Poste de sécurité", path: "/security-workstation", icon: ClipboardCheck }]
+      : []),
     { label: "Conformité", path: "/documents", icon: FileText },
     { label: "CORO AI", path: "/knowledge", icon: BookOpenCheck },
     { label: "Manuel d’utilisation", path: "/manual", icon: BookOpenCheck },

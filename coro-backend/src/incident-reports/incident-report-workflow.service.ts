@@ -3,7 +3,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CoroActorType, PlatformPermission, Prisma } from '@prisma/client';
+import {
+  ClientOperationalPermission,
+  CoroActorType,
+  PlatformPermission,
+  Prisma,
+} from '@prisma/client';
 import type { ProvenanceActor } from '../auth/coro-actor-provenance';
 import {
   ensureProvenanceActor,
@@ -12,10 +17,12 @@ import {
 } from '../auth/coro-actor-provenance';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  AssignClientIncidentReportReviewerDto,
   AssignIncidentReportReviewerDto,
   IncidentReportDecisionDto,
   PublishIncidentReportDto,
 } from './dto/incident-report.dto';
+import type { ClientUserAuthority } from '../auth/coro-authority';
 import { IncidentReportAccessService } from './incident-report-access.service';
 import { incidentReportsEnabled } from './incident-reports.config';
 
@@ -89,6 +96,136 @@ export class IncidentReportWorkflowService {
           actor,
           dto.idempotencyKey,
           { reviewerUserId: reviewer.id },
+        );
+        return this.reportTx(tx, organizationId, reportId);
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  }
+
+  async eligibleClientReviewers(
+    organizationId: string,
+    buildingId: string,
+    actor: ClientUserAuthority,
+  ) {
+    await this.access.require(
+      actor,
+      organizationId,
+      buildingId,
+      PlatformPermission.INCIDENT_REPORT_REVIEW,
+    );
+    const now = new Date();
+    return this.prisma.clientUser.findMany({
+      where: {
+        organizationId,
+        clientId: actor.clientId,
+        isActive: true,
+        operationalPermissions: {
+          has: ClientOperationalPermission.INCIDENT_REPORT_REVIEW,
+        },
+        operationalAssignments: {
+          some: {
+            organizationId,
+            buildingId,
+            status: 'ACTIVE',
+            effectiveFrom: { lte: now },
+            OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: now } }],
+          },
+        },
+      },
+      select: { id: true, firstName: true, lastName: true, role: true },
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+      take: 100,
+    });
+  }
+
+  async assignClientReviewer(
+    organizationId: string,
+    reportId: string,
+    dto: AssignClientIncidentReportReviewerDto,
+    actor: ClientUserAuthority,
+  ) {
+    const report = await this.report(organizationId, reportId);
+    await this.access.require(
+      actor,
+      organizationId,
+      report.buildingId,
+      PlatformPermission.INCIDENT_REPORT_REVIEW,
+    );
+    const reviewer = await this.prisma.clientUser.findFirst({
+      where: {
+        id: dto.reviewerClientUserId,
+        organizationId,
+        clientId: actor.clientId,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        clientId: true,
+        organizationId: true,
+        role: true,
+        sessionVersion: true,
+        operationalPermissions: true,
+        operationalAssignments: {
+          where: {
+            organizationId,
+            buildingId: report.buildingId,
+            status: 'ACTIVE',
+          },
+          select: { buildingId: true },
+        },
+      },
+    });
+    if (!reviewer)
+      throw new NotFoundException('Réviseur admissible introuvable.');
+    const reviewerAuthority: ClientUserAuthority = {
+      actorType: 'CLIENT_USER',
+      actorId: reviewer.id,
+      clientId: reviewer.clientId,
+      organizationId: reviewer.organizationId,
+      role: reviewer.role,
+      sessionVersion: reviewer.sessionVersion,
+      permissions: reviewer.operationalPermissions,
+      buildingIds: reviewer.operationalAssignments.map(
+        (assignment) => assignment.buildingId,
+      ),
+    };
+    await this.access.require(
+      reviewerAuthority,
+      organizationId,
+      report.buildingId,
+      PlatformPermission.INCIDENT_REPORT_REVIEW,
+      report.incidentEventId,
+    );
+    return this.prisma.$transaction(
+      async (tx) => {
+        await ensureProvenanceActor(tx, actor);
+        await ensureProvenanceActor(tx, reviewerAuthority);
+        const updated = await tx.incidentReport.updateMany({
+          where: {
+            id: reportId,
+            organizationId,
+            lockVersion: dto.expectedLockVersion,
+            status: 'SUBMITTED',
+          },
+          data: {
+            reviewerUserId: null,
+            reviewerActorType: CoroActorType.CLIENT_USER,
+            reviewerActorId: reviewer.id,
+            reviewAssignedAt: new Date(),
+            status: 'IN_REVIEW',
+            lockVersion: { increment: 1 },
+          },
+        });
+        if (updated.count !== 1) this.conflict();
+        await this.audit(
+          tx,
+          organizationId,
+          reportId,
+          'CLIENT_REVIEW_ASSIGNED',
+          actor,
+          dto.idempotencyKey,
+          { reviewerActorType: 'CLIENT_USER', reviewerActorId: reviewer.id },
         );
         return this.reportTx(tx, organizationId, reportId);
       },

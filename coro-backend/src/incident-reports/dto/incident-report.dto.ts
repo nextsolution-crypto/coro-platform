@@ -50,6 +50,13 @@ export class AssignIncidentReportReviewerDto {
   @IsUUID() idempotencyKey!: string;
 }
 
+/** Portal-only contract. The actor type is fixed server-side to CLIENT_USER. */
+export class AssignClientIncidentReportReviewerDto {
+  @IsUUID() reviewerClientUserId!: string;
+  @IsInt() @Min(0) expectedLockVersion!: number;
+  @IsUUID() idempotencyKey!: string;
+}
+
 export class IncidentReportDecisionDto {
   @IsIn(['REVIEWED', 'APPROVED', 'REJECTED', 'CORRECTION_REQUESTED'])
   decision!: 'REVIEWED' | 'APPROVED' | 'REJECTED' | 'CORRECTION_REQUESTED';
