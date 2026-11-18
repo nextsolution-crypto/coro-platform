@@ -135,6 +135,7 @@ export class OperationalShiftsService {
             securityPost: dto.securityPost.trim(),
             teamName: dto.teamName?.trim(),
             responsibleUserId: dto.responsibleUserId,
+            responsibleActorId: dto.responsibleUserId,
             plannedStartAt: start,
             plannedEndAt: end,
             buildingTimeZone: building.timeZone,
@@ -143,11 +144,13 @@ export class OperationalShiftsService {
               | undefined,
             notes: dto.notes?.trim(),
             creationIdempotencyKey: dto.idempotencyKey,
-            createdByUserId: actor.userId!,
+            createdByUserId: actor.userId,
+            createdByActorId: actor.userId,
             participants: {
               create: [
                 {
                   userId: dto.responsibleUserId,
+                  participantActorId: dto.responsibleUserId,
                   buildingId: dto.buildingId,
                   role: 'RESPONSIBLE',
                 },
@@ -156,6 +159,7 @@ export class OperationalShiftsService {
                   .map((p) => ({
                     buildingId: dto.buildingId,
                     userId: p.userId,
+                    participantActorId: p.userId,
                     role: p.role,
                   })),
               ],
@@ -165,7 +169,8 @@ export class OperationalShiftsService {
                 buildingId: dto.buildingId,
                 action: 'SHIFT_PLANNED',
                 toStatus: 'PLANNED',
-                actorUserId: actor.userId!,
+                actorUserId: actor.userId,
+                actorId: actor.userId,
                 idempotencyKey: dto.idempotencyKey,
               },
             },
@@ -233,7 +238,7 @@ export class OperationalShiftsService {
     actor: AdviserActor,
   ) {
     const shift = await this.find(organizationId, id);
-    await this.requireParticipant(organizationId, shift.id, actor.userId!);
+    await this.requireParticipant(organizationId, shift.id, actor.userId);
     const directiveSnapshot = operationalDirectivesEnabled()
       ? await this.prisma.operationalDirective.findMany({
           where: {
@@ -249,7 +254,7 @@ export class OperationalShiftsService {
             priority: true,
             acknowledgementRequired: true,
             receipts: {
-              where: { userId: actor.userId! },
+              where: { userId: actor.userId },
               select: { status: true, versionId: true },
             },
           },
@@ -270,7 +275,7 @@ export class OperationalShiftsService {
           ...(dto.openingSnapshot ?? {}),
           applicableDirectiveReferences: directiveSnapshot,
           capturedAt: new Date().toISOString(),
-        } as Prisma.InputJsonValue,
+        },
       },
     );
   }
@@ -289,7 +294,7 @@ export class OperationalShiftsService {
       shift.buildingId,
       'OPERATIONAL_HANDOVER_PREPARE',
     );
-    await this.requireParticipant(organizationId, shift.id, actor.userId!);
+    await this.requireParticipant(organizationId, shift.id, actor.userId);
     if (shift.status !== 'OPEN')
       throw new ConflictException(
         'Seul un quart ouvert peut préparer une relève.',
@@ -310,14 +315,38 @@ export class OperationalShiftsService {
     }
     const directiveReferences = operationalDirectivesEnabled()
       ? await this.prisma.operationalDirective.findMany({
-          where: { organizationId, buildingId: shift.buildingId, status: 'PUBLISHED' },
-          select: { id: true, currentVersionNumber: true, title: true, priority: true, updatedAt: true },
+          where: {
+            organizationId,
+            buildingId: shift.buildingId,
+            status: 'PUBLISHED',
+          },
+          select: {
+            id: true,
+            currentVersionNumber: true,
+            title: true,
+            priority: true,
+            updatedAt: true,
+          },
         })
       : [];
     const followUpReferences = operationalFollowUpsEnabled()
       ? await this.prisma.operationalFollowUp.findMany({
-          where: { organizationId, buildingId: shift.buildingId, status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'VERIFIED'] } },
-          select: { id: true, sourceType: true, sourceId: true, status: true, responsibleUserId: true, dueAt: true, lockVersion: true },
+          where: {
+            organizationId,
+            buildingId: shift.buildingId,
+            status: {
+              in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'VERIFIED'],
+            },
+          },
+          select: {
+            id: true,
+            sourceType: true,
+            sourceId: true,
+            status: true,
+            responsibleUserId: true,
+            dueAt: true,
+            lockVersion: true,
+          },
         })
       : [];
     const governedSnapshot = {
@@ -360,10 +389,13 @@ export class OperationalShiftsService {
             buildingId: shift.buildingId,
             outgoingShiftId: id,
             incomingShiftId: dto.incomingShiftId,
-            outgoingUserId: actor.userId!,
+            outgoingUserId: actor.userId,
+            outgoingActorId: actor.userId,
             incomingUserId: dto.incomingUserId,
+            incomingActorType: dto.incomingUserId ? 'USER' : undefined,
+            incomingActorId: dto.incomingUserId,
             status: 'SUBMITTED',
-            snapshot: governedSnapshot as Prisma.InputJsonValue,
+            snapshot: governedSnapshot,
             snapshotHash,
             creationIdempotencyKey: dto.idempotencyKey,
             submittedAt: new Date(),
@@ -371,7 +403,8 @@ export class OperationalShiftsService {
               create: {
                 buildingId: shift.buildingId,
                 type: 'SUBMITTED',
-                actorUserId: actor.userId!,
+                actorUserId: actor.userId,
+                actorId: actor.userId,
                 reason: dto.reason,
                 idempotencyKey: dto.idempotencyKey,
               },
@@ -387,7 +420,8 @@ export class OperationalShiftsService {
             action: 'HANDOVER_SUBMITTED',
             fromStatus: 'OPEN',
             toStatus: 'HANDOVER_PENDING',
-            actorUserId: actor.userId!,
+            actorUserId: actor.userId,
+            actorId: actor.userId,
             reason: dto.reason,
             idempotencyKey: `${dto.idempotencyKey}:shift`,
           },
@@ -412,10 +446,10 @@ export class OperationalShiftsService {
     await this.access.require(
       actor,
       organizationId,
-      handover!.buildingId,
+      handover.buildingId,
       'OPERATIONAL_HANDOVER_ACKNOWLEDGE',
     );
-    if (handover!.outgoingUserId === actor.userId)
+    if (handover.outgoingUserId === actor.userId)
       throw new BadRequestException(
         'La relève doit être décidée par l’entrant réel.',
       );
@@ -451,7 +485,7 @@ export class OperationalShiftsService {
           },
           data: {
             status: dto.decision,
-            incomingUserId: actor.userId!,
+            incomingUserId: actor.userId,
             decidedAt: new Date(),
             lockVersion: { increment: 1 },
           },
@@ -463,10 +497,11 @@ export class OperationalShiftsService {
         await tx.operationalHandoverAction.create({
           data: {
             organizationId,
-            buildingId: handover!.buildingId,
+            buildingId: handover.buildingId,
             handoverId,
             type: dto.decision,
-            actorUserId: actor.userId!,
+            actorUserId: actor.userId,
+            actorId: actor.userId,
             reason: dto.reason,
             idempotencyKey: dto.idempotencyKey,
           },
@@ -512,7 +547,7 @@ export class OperationalShiftsService {
         shift.buildingId,
         'OPERATIONAL_SHIFT_EDIT_OWN',
       );
-      await this.requireParticipant(organizationId, shift.id, actor.userId!);
+      await this.requireParticipant(organizationId, shift.id, actor.userId);
     }
     return this.transitionKnown(
       organizationId,
@@ -524,7 +559,7 @@ export class OperationalShiftsService {
       'SHIFT_CLOSED',
       {
         actualEndAt: new Date(),
-        closedByUserId: actor.userId!,
+        closedByUserId: actor.userId,
         closeReason: dto.reason,
       },
     );
@@ -557,7 +592,7 @@ export class OperationalShiftsService {
       'SHIFT_CANCELLED',
       {
         actualEndAt: new Date(),
-        cancelledByUserId: actor.userId!,
+        cancelledByUserId: actor.userId,
         cancellationReason: dto.reason,
       },
     );
@@ -640,7 +675,8 @@ export class OperationalShiftsService {
             action,
             fromStatus: from,
             toStatus: to,
-            actorUserId: actor.userId!,
+            actorUserId: actor.userId,
+            actorId: actor.userId,
             reason: dto.reason,
             idempotencyKey: dto.idempotencyKey,
           },
@@ -659,7 +695,7 @@ export class OperationalShiftsService {
       where: { id, organizationId },
     });
     if (!shift) this.access.deny();
-    return shift!;
+    return shift;
   }
 
   private async requireParticipant(

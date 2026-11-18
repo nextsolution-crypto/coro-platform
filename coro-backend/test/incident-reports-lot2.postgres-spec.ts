@@ -80,6 +80,14 @@ describePostgres('INC-RP-01 Lot 2 on PostgreSQL', () => {
         role: 'OPERATOR',
       },
     });
+    await prisma.coroActorIdentity.create({
+      data: {
+        organizationId: ids.org,
+        actorType: CoroActorType.USER,
+        actorId: ids.user,
+        userId: ids.user,
+      },
+    });
     await prisma.platformPermissionGrant.createMany({
       data: [
         PlatformPermission.INCIDENT_REPORT_CREATE,

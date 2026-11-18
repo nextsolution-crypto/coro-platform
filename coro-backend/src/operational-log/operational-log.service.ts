@@ -6,7 +6,12 @@ import {
 } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { PlatformPermission, Prisma } from '@prisma/client';
-import { AdviserActor } from '../auth/project-access';
+import {
+  ensureProvenanceActor,
+  ProvenanceActor,
+  provenanceActor,
+  provenanceData,
+} from '../auth/coro-actor-provenance';
 import { PrismaService } from '../prisma/prisma.service';
 import { operationalLogEnabled } from './operational-log.config';
 import { OperationalLogAccessService } from './operational-log-access.service';
@@ -58,7 +63,7 @@ export class OperationalLogService {
   async create(
     organizationId: string,
     dto: CreateOperationalLogEntryDto,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
   ) {
     this.assertEnabled();
     await this.access.require(
@@ -83,6 +88,8 @@ export class OperationalLogService {
     try {
       return await this.prisma.$transaction(
         async (tx) => {
+          await ensureProvenanceActor(tx, actor);
+          const provenance = provenanceActor(actor);
           const duplicate = await tx.operationalLogEntry.findUnique({
             where: {
               organizationId_creationIdempotencyKey: {
@@ -102,7 +109,10 @@ export class OperationalLogService {
               incidentEventId: dto.incidentEventId,
               shiftId: dto.shiftId,
               eventAt: new Date(dto.eventAt),
-              authorUserId: actor.userId,
+              authorUserId:
+                provenance.actorType === 'USER' ? provenance.actorId : null,
+              authorActorType: provenanceData(actor).actorType,
+              authorActorId: provenance.actorId,
               shiftReference: dto.shiftReference?.trim(),
               locationLabel: dto.locationLabel?.trim(),
               activityType: dto.activityType.trim(),
@@ -120,7 +130,9 @@ export class OperationalLogService {
               auditEvents: {
                 create: {
                   action: 'OPERATIONAL_LOG_ENTRY_CREATED',
-                  actorUserId: actor.userId,
+                  actorUserId:
+                    provenance.actorType === 'USER' ? provenance.actorId : null,
+                  ...provenanceData(actor),
                   idempotencyKey: dto.idempotencyKey,
                 },
               },
@@ -153,7 +165,7 @@ export class OperationalLogService {
   async list(
     organizationId: string,
     query: OperationalLogListQueryDto,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
   ) {
     this.assertEnabled();
     await this.access.require(
@@ -200,7 +212,7 @@ export class OperationalLogService {
     return { items, page: query.page, pageSize: query.pageSize, total };
   }
 
-  async get(organizationId: string, id: string, actor: AdviserActor) {
+  async get(organizationId: string, id: string, actor: ProvenanceActor) {
     this.assertEnabled();
     const entry = await this.prisma.operationalLogEntry.findFirst({
       where: { id, organizationId },
@@ -216,7 +228,7 @@ export class OperationalLogService {
     return entry;
   }
 
-  async history(organizationId: string, id: string, actor: AdviserActor) {
+  async history(organizationId: string, id: string, actor: ProvenanceActor) {
     const entry = await this.get(organizationId, id, actor);
     return this.prisma.operationalLogEntryRevision.findMany({
       where: { organizationId, entryId: entry.id },
@@ -228,7 +240,7 @@ export class OperationalLogService {
     organizationId: string,
     id: string,
     dto: UpdateOperationalLogEntryDto,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
   ) {
     this.assertEnabled();
     if (dto.description) this.validateText(dto.description);
@@ -264,6 +276,8 @@ export class OperationalLogService {
     try {
       return await this.prisma.$transaction(
         async (tx) => {
+          await ensureProvenanceActor(tx, actor);
+          const provenance = provenanceActor(actor);
           const updated = await tx.operationalLogEntry.updateMany({
             where: {
               id,
@@ -289,7 +303,10 @@ export class OperationalLogService {
               beforeSnapshot: this.snapshot(existing),
               afterSnapshot: this.snapshot(after),
               contentHash,
-              authorUserId: actor.userId,
+              authorUserId:
+                provenance.actorType === 'USER' ? provenance.actorId : null,
+              authorActorType: provenanceData(actor).actorType,
+              authorActorId: provenance.actorId,
               idempotencyKey: dto.idempotencyKey,
             },
           });
@@ -298,7 +315,9 @@ export class OperationalLogService {
               organizationId,
               entryId: id,
               action: 'OPERATIONAL_LOG_ENTRY_CORRECTED',
-              actorUserId: actor.userId,
+              actorUserId:
+                provenance.actorType === 'USER' ? provenance.actorId : null,
+              ...provenanceData(actor),
               reason: dto.correctionReason.trim(),
               idempotencyKey: dto.idempotencyKey,
               metadata: { revisionNumber },
@@ -326,7 +345,7 @@ export class OperationalLogService {
     organizationId: string,
     id: string,
     dto: AssociateOperationalLogReportDto,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
   ) {
     this.assertEnabled();
     const entry = await this.prisma.operationalLogEntry.findFirst({
@@ -351,6 +370,8 @@ export class OperationalLogService {
       );
     }
     return this.prisma.$transaction(async (tx) => {
+      await ensureProvenanceActor(tx, actor);
+      const provenance = provenanceActor(actor);
       const updated = await tx.operationalLogEntry.updateMany({
         where: { id, organizationId, lockVersion: dto.expectedLockVersion },
         data: { incidentReportId: report.id, lockVersion: { increment: 1 } },
@@ -362,7 +383,9 @@ export class OperationalLogService {
           organizationId,
           entryId: id,
           action: 'OPERATIONAL_LOG_REPORT_ASSOCIATED',
-          actorUserId: actor.userId,
+          actorUserId:
+            provenance.actorType === 'USER' ? provenance.actorId : null,
+          ...provenanceData(actor),
           reason: dto.reason.trim(),
           idempotencyKey: dto.idempotencyKey,
           metadata: { reportId: report.id },

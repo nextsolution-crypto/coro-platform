@@ -1,7 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CoroActorType, PlatformPermission, Prisma } from '@prisma/client';
+import { PlatformPermission, Prisma } from '@prisma/client';
 import { createHash } from 'node:crypto';
-import { AdviserActor } from '../auth/project-access';
+import type { ProvenanceActor } from '../auth/coro-actor-provenance';
+import {
+  ensureProvenanceActor,
+  provenanceData,
+} from '../auth/coro-actor-provenance';
 import { PrismaService } from '../prisma/prisma.service';
 import { PublishIncidentReportTemplateDto } from './dto/incident-report.dto';
 import { IncidentReportAccessService } from './incident-report-access.service';
@@ -20,7 +24,7 @@ export class IncidentReportTemplatesService {
   ) {}
   async catalog(
     organizationId: string,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
     buildingId: string,
   ) {
     this.enabled();
@@ -35,7 +39,11 @@ export class IncidentReportTemplatesService {
       initialTemplates: INITIAL_INCIDENT_REPORT_TEMPLATES,
     };
   }
-  async list(organizationId: string, actor: AdviserActor, buildingId: string) {
+  async list(
+    organizationId: string,
+    actor: ProvenanceActor,
+    buildingId: string,
+  ) {
     this.enabled();
     await this.access.require(
       actor,
@@ -64,7 +72,7 @@ export class IncidentReportTemplatesService {
   async publish(
     organizationId: string,
     dto: PublishIncidentReportTemplateDto,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
   ) {
     this.enabled();
     await this.access.require(
@@ -82,6 +90,7 @@ export class IncidentReportTemplatesService {
     const contentHash = createHash('sha256').update(canonical).digest('hex');
     return this.prisma.$transaction(
       async (tx) => {
+        await ensureProvenanceActor(tx, actor);
         const latest = await tx.incidentReportTemplateVersion.findFirst({
           where: { organizationId, templateKey: dto.templateKey },
           orderBy: { version: 'desc' },
@@ -107,8 +116,8 @@ export class IncidentReportTemplatesService {
               | undefined,
             contentHash,
             publishedAt: new Date(),
-            createdByActorType: CoroActorType.USER,
-            createdByActorId: actor.userId,
+            createdByActorType: provenanceData(actor).actorType,
+            createdByActorId: provenanceData(actor).actorId,
           },
         });
       },

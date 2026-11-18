@@ -3,9 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CoroActorType, PlatformPermission, Prisma } from '@prisma/client';
+import { PlatformPermission, Prisma } from '@prisma/client';
 import { createHash, randomUUID } from 'node:crypto';
-import { AdviserActor } from '../auth/project-access';
+import type { ProvenanceActor } from '../auth/coro-actor-provenance';
+import {
+  ensureProvenanceActor,
+  provenanceData,
+} from '../auth/coro-actor-provenance';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { CreateIncidentReportExportDto } from './dto/incident-report.dto';
@@ -30,7 +34,7 @@ export class IncidentReportExportsService {
     organizationId: string,
     reportId: string,
     dto: CreateIncidentReportExportDto,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
   ) {
     this.enabled();
     const report = await this.prisma.incidentReport.findFirst({
@@ -72,6 +76,8 @@ export class IncidentReportExportsService {
     });
     if (replay) return this.publicRow(replay);
     const id = randomUUID();
+    await this.prisma.$transaction((tx) => ensureProvenanceActor(tx, actor));
+    const provenance = provenanceData(actor);
     const generatedAt = new Date();
     const sourceManifest = {
       schemaVersion: 1,
@@ -98,8 +104,8 @@ export class IncidentReportExportsService {
           rendererVersion: INCIDENT_REPORT_RENDERER_VERSION,
           requestIdempotencyKey: dto.idempotencyKey,
           sourceManifest,
-          createdByActorType: CoroActorType.USER,
-          createdByActorId: actor.userId,
+          createdByActorType: provenance.actorType,
+          createdByActorId: provenance.actorId,
         },
       });
     } catch (error) {
@@ -145,6 +151,7 @@ export class IncidentReportExportsService {
         'application/pdf',
       );
       const completed = await this.prisma.$transaction(async (tx) => {
+        await ensureProvenanceActor(tx, actor);
         const row = await tx.incidentReportExport.update({
           where: { id },
           data: {
@@ -159,8 +166,8 @@ export class IncidentReportExportsService {
             organizationId,
             reportId,
             action: 'EXPORT_COMPLETED',
-            actorType: CoroActorType.USER,
-            actorId: actor.userId,
+            actorType: provenance.actorType,
+            actorId: provenance.actorId,
             idempotencyKey: dto.idempotencyKey,
             metadata: {
               exportId: id,
@@ -184,7 +191,7 @@ export class IncidentReportExportsService {
     }
   }
 
-  async list(organizationId: string, reportId: string, actor: AdviserActor) {
+  async list(organizationId: string, reportId: string, actor: ProvenanceActor) {
     await this.authorizeRead(organizationId, reportId, actor);
     return this.prisma.incidentReportExport.findMany({
       where: { organizationId, reportId },
@@ -210,7 +217,7 @@ export class IncidentReportExportsService {
     organizationId: string,
     reportId: string,
     exportId: string,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
   ) {
     await this.authorizeRead(organizationId, reportId, actor);
     const row = await this.prisma.incidentReportExport.findFirst({
@@ -224,15 +231,18 @@ export class IncidentReportExportsService {
       throw new ConflictException(
         "L'integrite de l'export ne peut pas etre confirmee.",
       );
-    await this.prisma.incidentReportAuditEvent.create({
-      data: {
-        organizationId,
-        reportId,
-        action: 'EXPORT_DOWNLOADED',
-        actorType: CoroActorType.USER,
-        actorId: actor.userId,
-        metadata: { exportId, sha256 },
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await ensureProvenanceActor(tx, actor);
+      await tx.incidentReportAuditEvent.create({
+        data: {
+          organizationId,
+          reportId,
+          action: 'EXPORT_DOWNLOADED',
+          actorType: provenanceData(actor).actorType,
+          actorId: provenanceData(actor).actorId,
+          metadata: { exportId, sha256 },
+        },
+      });
     });
     return { bytes, fileName: `CORO-${reportId}-${row.reportVersionId}.pdf` };
   }
@@ -240,7 +250,7 @@ export class IncidentReportExportsService {
   private async authorizeRead(
     organizationId: string,
     reportId: string,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
   ) {
     this.enabled();
     const report = await this.prisma.incidentReport.findFirst({

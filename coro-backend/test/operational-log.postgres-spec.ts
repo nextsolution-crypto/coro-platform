@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { CoroActorType, PrismaClient } from '@prisma/client';
 
 const databaseUrl = process.env.DATABASE_URL;
 const describePostgres = databaseUrl ? describe : describe.skip;
@@ -69,6 +69,17 @@ describePostgres('INC-RP-02A PostgreSQL constraints', () => {
       ],
       skipDuplicates: true,
     });
+    await prisma.coroActorIdentity.createMany({
+      data: [
+        {
+          organizationId: 'oplog-org-a',
+          actorType: CoroActorType.USER,
+          actorId: 'oplog-user-a',
+          userId: 'oplog-user-a',
+        },
+      ],
+      skipDuplicates: true,
+    });
   });
 
   afterAll(async () => prisma.$disconnect());
@@ -87,6 +98,7 @@ describePostgres('INC-RP-02A PostgreSQL constraints', () => {
         buildingId: 'oplog-building-a',
         eventAt: new Date('2026-11-17T12:00:00Z'),
         authorUserId: 'oplog-user-a',
+        authorActorId: 'oplog-user-a',
         activityType: 'PATROL',
         category: 'SECURITY',
         description: 'Ronde synthétique terminée.',
@@ -104,6 +116,7 @@ describePostgres('INC-RP-02A PostgreSQL constraints', () => {
           buildingId: 'oplog-building-b',
           eventAt: new Date(),
           authorUserId: 'oplog-user-a',
+          authorActorId: 'oplog-user-a',
           activityType: 'PATROL',
           category: 'SECURITY',
           description: 'Must fail.',
@@ -121,6 +134,7 @@ describePostgres('INC-RP-02A PostgreSQL constraints', () => {
           buildingId: 'oplog-building-a',
           eventAt: new Date(),
           authorUserId: 'oplog-user-a',
+          authorActorId: 'oplog-user-a',
           activityType: 'OTHER',
           category: 'OTHER',
           description: 'Duplicate.',

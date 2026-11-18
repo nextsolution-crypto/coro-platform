@@ -5,14 +5,17 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
-  CoroActorType,
   IncidentReportStatus,
   IncidentReportVersionStatus,
   PlatformPermission,
   Prisma,
 } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
-import { AdviserActor } from '../auth/project-access';
+import type { ProvenanceActor } from '../auth/coro-actor-provenance';
+import {
+  ensureProvenanceActor,
+  provenanceData,
+} from '../auth/coro-actor-provenance';
 import { PrismaService } from '../prisma/prisma.service';
 import { incidentReportsEnabled } from './incident-reports.config';
 import { IncidentReportAccessService } from './incident-report-access.service';
@@ -49,7 +52,7 @@ export class IncidentReportsService {
   async create(
     organizationId: string,
     dto: CreateIncidentReportDto,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
   ) {
     this.assertEnabled();
     await this.access.require(
@@ -71,6 +74,8 @@ export class IncidentReportsService {
     if (existing) return existing;
 
     const creation = this.serializable(async (tx) => {
+      await ensureProvenanceActor(tx, actor);
+      const provenance = provenanceData(actor);
       const replay = await tx.incidentReport.findUnique({
         where: {
           organizationId_creationIdempotencyKey: {
@@ -137,8 +142,8 @@ export class IncidentReportsService {
           reportType: dto.reportType,
           title: dto.title.trim(),
           retentionExpiresAt,
-          createdByActorType: CoroActorType.USER,
-          createdByActorId: actor.userId,
+          createdByActorType: provenance.actorType,
+          createdByActorId: provenance.actorId,
           versions: {
             create: {
               templateVersionId: template.id,
@@ -149,15 +154,15 @@ export class IncidentReportsService {
                 templateContentHash: template.contentHash,
               },
               contentHash: content.sha256,
-              createdByActorType: CoroActorType.USER,
-              createdByActorId: actor.userId,
+              createdByActorType: provenance.actorType,
+              createdByActorId: provenance.actorId,
             },
           },
           auditEvents: {
             create: {
               action: 'REPORT_CREATED',
-              actorType: CoroActorType.USER,
-              actorId: actor.userId,
+              actorType: provenance.actorType,
+              actorId: provenance.actorId,
               idempotencyKey: dto.idempotencyKey,
               metadata: { versionNumber: 1 },
             },
@@ -193,7 +198,7 @@ export class IncidentReportsService {
   async list(
     organizationId: string,
     query: IncidentReportListQueryDto,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
   ) {
     this.assertEnabled();
     if (!query.buildingId) {
@@ -242,7 +247,7 @@ export class IncidentReportsService {
     };
   }
 
-  async get(organizationId: string, id: string, actor: AdviserActor) {
+  async get(organizationId: string, id: string, actor: ProvenanceActor) {
     this.assertEnabled();
     const report = await this.canonical(id, organizationId);
     await this.access.require(
@@ -279,7 +284,7 @@ export class IncidentReportsService {
     organizationId: string,
     id: string,
     dto: UpdateIncidentReportDraftDto,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
   ) {
     return this.mutateDraft(
       organizationId,
@@ -316,7 +321,7 @@ export class IncidentReportsService {
     organizationId: string,
     id: string,
     dto: CreateIncidentReportVersionDto,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
   ) {
     this.assertEnabled();
     const canonical = await this.canonical(id, organizationId);
@@ -328,6 +333,7 @@ export class IncidentReportsService {
       canonical.incidentEventId,
     );
     return this.serializable(async (tx) => {
+      await ensureProvenanceActor(tx, actor);
       const replay = await this.idempotentResult(
         tx,
         organizationId,
@@ -377,8 +383,8 @@ export class IncidentReportsService {
             templateContentHash: template.contentHash,
           },
           contentHash: content.sha256,
-          createdByActorType: CoroActorType.USER,
-          createdByActorId: actor.userId,
+          createdByActorType: provenanceData(actor).actorType,
+          createdByActorId: provenanceData(actor).actorId,
         },
       });
       const result = await tx.incidentReport.update({
@@ -410,7 +416,7 @@ export class IncidentReportsService {
     organizationId: string,
     id: string,
     dto: SubmitIncidentReportDto,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
   ) {
     this.assertEnabled();
     const canonical = await this.canonical(id, organizationId);
@@ -422,6 +428,7 @@ export class IncidentReportsService {
       canonical.incidentEventId,
     );
     return this.serializable(async (tx) => {
+      await ensureProvenanceActor(tx, actor);
       const replay = await this.idempotentResult(
         tx,
         organizationId,
@@ -457,8 +464,8 @@ export class IncidentReportsService {
         where: { id },
         data: {
           status: IncidentReportStatus.SUBMITTED,
-          submittedByActorType: CoroActorType.USER,
-          submittedByActorId: actor.userId,
+          submittedByActorType: provenanceData(actor).actorType,
+          submittedByActorId: provenanceData(actor).actorId,
           submittedAt: now,
           lockVersion: { increment: 1 },
         },
@@ -479,7 +486,7 @@ export class IncidentReportsService {
     });
   }
 
-  async versions(organizationId: string, id: string, actor: AdviserActor) {
+  async versions(organizationId: string, id: string, actor: ProvenanceActor) {
     this.assertEnabled();
     const report = await this.canonical(id, organizationId);
     await this.access.require(
@@ -510,7 +517,7 @@ export class IncidentReportsService {
     id: string,
     expectedLockVersion: number,
     idempotencyKey: string,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
     action: string,
     mutation: (
       tx: Prisma.TransactionClient,
@@ -529,6 +536,7 @@ export class IncidentReportsService {
       canonical.incidentEventId,
     );
     return this.serializable(async (tx) => {
+      await ensureProvenanceActor(tx, actor);
       const replay = await this.idempotentResult(
         tx,
         organizationId,
@@ -629,7 +637,7 @@ export class IncidentReportsService {
     tx: Prisma.TransactionClient,
     organizationId: string,
     reportId: string,
-    actor: AdviserActor,
+    actor: ProvenanceActor,
     action: string,
     idempotencyKey: string,
     metadata: Prisma.InputJsonValue,
@@ -639,8 +647,8 @@ export class IncidentReportsService {
         organizationId,
         reportId,
         action,
-        actorType: CoroActorType.USER,
-        actorId: actor.userId,
+        actorType: provenanceData(actor).actorType,
+        actorId: provenanceData(actor).actorId,
         idempotencyKey,
         metadata,
       },

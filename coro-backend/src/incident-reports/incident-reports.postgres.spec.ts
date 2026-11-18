@@ -55,6 +55,22 @@ describePostgres('INC-RP-01 PostgreSQL constraints', () => {
       ],
       skipDuplicates: true,
     });
+    await prisma.coroActorIdentity.upsert({
+      where: {
+        organizationId_actorType_actorId: {
+          organizationId: 'rp-org-a',
+          actorType: CoroActorType.SYSTEM,
+          actorId: 'system',
+        },
+      },
+      create: {
+        organizationId: 'rp-org-a',
+        actorType: CoroActorType.SYSTEM,
+        actorId: 'system',
+        systemActorKey: 'system',
+      },
+      update: {},
+    });
     await prisma.incidentReportTemplateVersion.create({
       data: {
         id: 'rp-template-a',

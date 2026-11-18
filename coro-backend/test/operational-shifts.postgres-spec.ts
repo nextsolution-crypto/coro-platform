@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { CoroActorType, PrismaClient } from '@prisma/client';
 
 const url = process.env.DATABASE_URL;
 const describePg = url ? describe : describe.skip;
@@ -80,6 +80,15 @@ describePg('INC-RP-02B PostgreSQL governance', () => {
       ],
       skipDuplicates: true,
     });
+    await prisma.coroActorIdentity.createMany({
+      data: ['shift-user-a', 'shift-user-b'].map((userId) => ({
+        organizationId: 'shift-org-a',
+        actorType: CoroActorType.USER,
+        actorId: userId,
+        userId,
+      })),
+      skipDuplicates: true,
+    });
   });
   afterAll(async () => prisma.$disconnect());
 
@@ -97,11 +106,13 @@ describePg('INC-RP-02B PostgreSQL governance', () => {
         buildingId: 'shift-building-a',
         securityPost: 'Poste principal',
         responsibleUserId: 'shift-user-a',
+        responsibleActorId: 'shift-user-a',
         plannedStartAt: new Date('2026-11-01T23:00:00-04:00'),
         plannedEndAt: new Date('2026-11-02T07:00:00-05:00'),
         buildingTimeZone: 'America/Toronto',
         creationIdempotencyKey: 'shift-night-1',
         createdByUserId: 'shift-user-a',
+        createdByActorId: 'shift-user-a',
       },
     });
     expect(shift.plannedEndAt.getTime()).toBeGreaterThan(
@@ -117,11 +128,13 @@ describePg('INC-RP-02B PostgreSQL governance', () => {
           buildingId: 'shift-building-b',
           securityPost: 'Invalid',
           responsibleUserId: 'shift-user-a',
+          responsibleActorId: 'shift-user-a',
           plannedStartAt: new Date(),
           plannedEndAt: new Date(Date.now() + 3600000),
           buildingTimeZone: 'America/Toronto',
           creationIdempotencyKey: 'shift-cross',
           createdByUserId: 'shift-user-a',
+          createdByActorId: 'shift-user-a',
         },
       }),
     ).rejects.toThrow();
@@ -149,7 +162,10 @@ describePg('INC-RP-02B PostgreSQL governance', () => {
         buildingId: 'shift-building-a',
         outgoingShiftId: shift.id,
         outgoingUserId: 'shift-user-a',
+        outgoingActorId: 'shift-user-a',
         incomingUserId: 'shift-user-b',
+        incomingActorType: CoroActorType.USER,
+        incomingActorId: 'shift-user-b',
         status: 'SUBMITTED',
         snapshot: { unresolved: ['synthetic'] },
         snapshotHash: 'synthetic-hash',
