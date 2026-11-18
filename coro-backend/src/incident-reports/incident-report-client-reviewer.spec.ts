@@ -100,6 +100,24 @@ describe('IncidentReportWorkflowService ClientUser reviewer', () => {
       authority,
     );
 
+    expect(prisma.clientUser.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          operationalAssignments: expect.objectContaining({
+            where: expect.objectContaining({
+              organizationId,
+              buildingId,
+              status: 'ACTIVE',
+              effectiveFrom: { lte: expect.any(Date) },
+              OR: [
+                { effectiveUntil: null },
+                { effectiveUntil: { gt: expect.any(Date) } },
+              ],
+            }),
+          }),
+        }),
+      }),
+    );
     expect(requireAccess).toHaveBeenCalledTimes(2);
     expect(updateMany).toHaveBeenCalledWith(
       expect.objectContaining({

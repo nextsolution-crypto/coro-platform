@@ -152,6 +152,7 @@ export class IncidentReportWorkflowService {
       report.buildingId,
       PlatformPermission.INCIDENT_REPORT_REVIEW,
     );
+    const now = new Date();
     const reviewer = await this.prisma.clientUser.findFirst({
       where: {
         id: dto.reviewerClientUserId,
@@ -171,6 +172,8 @@ export class IncidentReportWorkflowService {
             organizationId,
             buildingId: report.buildingId,
             status: 'ACTIVE',
+            effectiveFrom: { lte: now },
+            OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: now } }],
           },
           select: { buildingId: true },
         },
