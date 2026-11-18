@@ -6,6 +6,9 @@ const layout = fs.readFileSync(new URL("../components/PortalLayout.tsx", import.
 
 assert.match(layout, /Poste de sécurité/);
 assert.match(page, /operational-capabilities\?buildingId=/);
+assert.match(page, /available\.some\(\(capability\) => capability\.available\)/);
+assert.match(page, /setBuildingId\(preferred\?\.building\.id \?\? ""\)/);
+assert.doesNotMatch(page, /setBuildingId\(next\[0\]\?\.id/);
 assert.match(page, /client-portal\/organizations\/\$\{organizationId\}/);
 assert.match(page, /incident-reports\/forms\/templates/);
 assert.match(page, /operational-log\/entries/);

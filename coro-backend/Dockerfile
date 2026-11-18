@@ -17,6 +17,7 @@ COPY . .
 
 RUN npx prisma@6.19.3 generate
 RUN npm run build
+RUN node scripts/verify-client-operational-routes.cjs
 
 # ── Production stage ─────────────────────────────────
 FROM node:22-bookworm-slim AS production

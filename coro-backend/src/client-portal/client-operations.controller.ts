@@ -15,6 +15,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
 import type { ClientUserAuthority } from '../auth/coro-authority';
 import {
   AssignClientIncidentReportReviewerDto,
@@ -70,6 +71,13 @@ interface ClientOperationsRequest {
   coroAuthority: ClientUserAuthority;
 }
 
+class OperationalCapabilitiesQueryDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(128)
+  buildingId!: string;
+}
+
 const clientValidation = new ValidationPipe({
   whitelist: true,
   forbidNonWhitelisted: true,
@@ -87,9 +95,10 @@ export class ClientOperationalCapabilitiesController {
   @Get()
   async list(
     @Param('organizationId', ParseUUIDPipe) organizationId: string,
-    @Query('buildingId', ParseUUIDPipe) buildingId: string,
+    @Query() query: OperationalCapabilitiesQueryDto,
     @Request() req: ClientOperationsRequest,
   ) {
+    const { buildingId } = query;
     const decisions = await Promise.all(
       CLIENT_COMMERCIAL_FEATURES.map((feature) =>
         this.features.evaluate({

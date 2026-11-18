@@ -77,15 +77,46 @@ export default function SecurityWorkstationPage() {
   const selectedBuilding = buildings.find((building) => building.id === buildingId);
 
   useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError("");
     void apiGet("/client-portal/buildings")
-      .then((value) => {
+      .then(async (value) => {
         const next = (asItems(value).length ? asItems(value) : value) as Building[];
+        const evaluated = await Promise.all(
+          next.map(async (building) => {
+            try {
+              const decision = await apiGet(
+                `/client-portal/organizations/${organizationId}/operational-capabilities?buildingId=${building.id}`,
+              );
+              return {
+                building,
+                capabilities: (decision.capabilities ?? []) as Capability[],
+              };
+            } catch {
+              return { building, capabilities: [] as Capability[] };
+            }
+          }),
+        );
+        if (!active) return;
         setBuildings(next);
-        setBuildingId(next[0]?.id ?? "");
+        const preferred = evaluated.find(({ capabilities: available }) =>
+          available.some((capability) => capability.available),
+        );
+        setCapabilities(preferred?.capabilities ?? []);
+        setBuildingId(preferred?.building.id ?? "");
+        if (next.length > 0 && !preferred) {
+          setError(
+            "Aucun bâtiment accessible ne dispose actuellement d’un module opérationnel autorisé.",
+          );
+        }
       })
       .catch((reason) => setError(errorMessage(reason)))
       .finally(() => setLoading(false));
-  }, []);
+    return () => {
+      active = false;
+    };
+  }, [organizationId]);
 
   useEffect(() => {
     if (!organizationId || !buildingId) return;
