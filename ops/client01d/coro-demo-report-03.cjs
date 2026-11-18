@@ -153,7 +153,14 @@ async function run(prisma, mode, environment = process.env, runId = 'manual') {
 async function main() {
   if (process.env.CORO_DEMO_REPORT_03_RUN !== 'true') throw new Error('EXPLICIT_RUNTIME_SWITCH_REQUIRED');
   const mode = process.argv[2]; const { PrismaClient } = require('/app/node_modules/@prisma/client'); const prisma = new PrismaClient();
-  try { process.stdout.write(`${JSON.stringify(await run(prisma, mode, process.env, process.env.GITHUB_RUN_ID))}\n`); } finally { await prisma.$disconnect(); }
+  try {
+    process.stdout.write(`${JSON.stringify(await run(prisma, mode, process.env, process.env.GITHUB_RUN_ID))}\n`);
+  } catch (error) {
+    const candidate = error instanceof Error ? error.message : '';
+    const errorCode = /^[A-Z][A-Z0-9_]{2,80}$/.test(candidate) ? candidate : 'INTERNAL_ERROR';
+    process.stdout.write(`${JSON.stringify({ schemaVersion: 1, execution: 'FAIL', mode, errorCode })}\n`);
+    process.exitCode = 1;
+  } finally { await prisma.$disconnect(); }
 }
 
 module.exports = { fingerprint, normalize, resolveTarget, run };

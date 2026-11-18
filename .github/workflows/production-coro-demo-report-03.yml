@@ -100,9 +100,12 @@ jobs:
             docker cp "$tmp/script.cjs" "$backend:$container_tmp/coro-demo-report-03.cjs"
             docker cp "$tmp/manifest.json" "$backend:$container_tmp/coro-demo-report-03-manifest.json"
             run_script() {
-              docker exec -e CORO_DEMO_REPORT_03_RUN=true -e GITHUB_RUN_ID="$GITHUB_RUN_ID" "$backend" node "$container_tmp/coro-demo-report-03.cjs" "$1" >"$tmp/evidence.json"
-              node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS")process.exit(1);if(/@|password|secret|token|access[_-]?key|private[_-]?key/i.test(JSON.stringify(r)))process.exit(1)' "$tmp/evidence.json"
+              local exit_code=0
+              docker exec -e CORO_DEMO_REPORT_03_RUN=true -e GITHUB_RUN_ID="$GITHUB_RUN_ID" "$backend" node "$container_tmp/coro-demo-report-03.cjs" "$1" >"$tmp/evidence.json" || exit_code=$?
+              node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||!["PASS","FAIL"].includes(r.execution))process.exit(1);if(r.execution==="FAIL"&&!/^[A-Z][A-Z0-9_]{2,80}$/.test(r.errorCode||""))process.exit(1);if(/@|password|secret|token|access[_-]?key|private[_-]?key/i.test(JSON.stringify(r)))process.exit(1)' "$tmp/evidence.json"
               cat "$tmp/evidence.json"
+              test "$exit_code" -eq 0
+              node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.execution!=="PASS")process.exit(1)' "$tmp/evidence.json"
             }
             set_flag() {
               local desired="$1"
