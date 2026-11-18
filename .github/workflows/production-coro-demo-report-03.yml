@@ -1,0 +1,139 @@
+name: Production CORO Demo Report 03
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: Exact governed phase
+        required: true
+        type: choice
+        options: [preflight, provision, verify, enable, disable, rollback]
+      approval:
+        description: Exact phase-specific approval token
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      script_sha256: ${{ steps.hash.outputs.script_sha256 }}
+      manifest_sha256: ${{ steps.hash.outputs.manifest_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Validate governed request and tests
+        env:
+          PHASE: ${{ inputs.phase }}
+          APPROVAL: ${{ inputs.approval }}
+        run: |
+          set -Eeuo pipefail
+          case "$PHASE:$APPROVAL" in
+            preflight:PREFLIGHT_CORO_DEMO_REPORT_03|provision:PROVISION_CORO_DEMO_REPORT_03|verify:VERIFY_CORO_DEMO_REPORT_03|enable:ENABLE_CORO_DEMO_REPORT_03|disable:DISABLE_CORO_DEMO_REPORT_03|rollback:ROLLBACK_CORO_DEMO_REPORT_03) ;;
+            *) exit 1 ;;
+          esac
+          node ops/client01d/coro-demo-report-03.test.cjs
+      - id: hash
+        run: |
+          echo "script_sha256=$(sha256sum ops/client01d/coro-demo-report-03.cjs | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "manifest_sha256=$(sha256sum ops/client01d/coro-demo-report-03-manifest.json | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+  execute:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Execute fixed tenant-scoped authority
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SCRIPT_SHA256: ${{ needs.validate.outputs.script_sha256 }}
+          MANIFEST_SHA256: ${{ needs.validate.outputs.manifest_sha256 }}
+          PHASE: ${{ inputs.phase }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,SCRIPT_SHA256,MANIFEST_SHA256,PHASE,GITHUB_RUN_ID
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            tmp="$(mktemp -d /tmp/coro-demo-report-03.XXXXXX)"
+            backend=""
+            container_tmp="/tmp/coro-demo-report-03-$GITHUB_RUN_ID"
+            env_backup=""
+            cleanup() {
+              if [[ -n "$backend" ]]; then docker exec "$backend" rm -rf -- "$container_tmp" >/dev/null 2>&1 || true; fi
+              rm -rf -- "$tmp"
+            }
+            trap cleanup EXIT
+            exec 9>/run/lock/coro-production-deployment.lock
+            flock -n 9
+            git -C "$repo" fetch --quiet origin main
+            test "$(git -C "$repo" rev-parse origin/main)" = "$SOURCE_SHA"
+            git -C "$repo" show "$SOURCE_SHA:ops/client01d/coro-demo-report-03.cjs" >"$tmp/script.cjs"
+            git -C "$repo" show "$SOURCE_SHA:ops/client01d/coro-demo-report-03-manifest.json" >"$tmp/manifest.json"
+            test "$(sha256sum "$tmp/script.cjs" | cut -d' ' -f1)" = "$SCRIPT_SHA256"
+            test "$(sha256sum "$tmp/manifest.json" | cut -d' ' -f1)" = "$MANIFEST_SHA256"
+            backend="$(docker compose -f "$repo/docker-compose.yml" ps -q backend)"
+            test -n "$backend"
+            test "$(docker inspect -f '{{.State.Running}}' "$backend")" = true
+            test "$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$backend")" = healthy
+            if [[ "$PHASE" != preflight && "$PHASE" != verify ]]; then
+              systemctl start coro-db-backup.service
+              test "$(systemctl show -p Result --value coro-db-backup.service)" = success
+              systemctl start coro-db-restore-test.service
+              test "$(systemctl show -p Result --value coro-db-restore-test.service)" = success
+            fi
+            docker exec "$backend" mkdir -m 0700 "$container_tmp"
+            docker cp "$tmp/script.cjs" "$backend:$container_tmp/coro-demo-report-03.cjs"
+            docker cp "$tmp/manifest.json" "$backend:$container_tmp/coro-demo-report-03-manifest.json"
+            run_script() {
+              docker exec -e CORO_DEMO_REPORT_03_RUN=true -e GITHUB_RUN_ID="$GITHUB_RUN_ID" "$backend" node "$container_tmp/coro-demo-report-03.cjs" "$1" >"$tmp/evidence.json"
+              node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS")process.exit(1);if(/@|password|secret|token|access[_-]?key|private[_-]?key/i.test(JSON.stringify(r)))process.exit(1)' "$tmp/evidence.json"
+              cat "$tmp/evidence.json"
+            }
+            set_flag() {
+              local desired="$1"
+              local env_file="$repo/.env"
+              env_backup="$tmp/env.backup"
+              cp --preserve=mode,ownership,timestamps "$env_file" "$env_backup"
+              awk -v desired="$desired" 'BEGIN{done=0} /^INCIDENT_REPORTS_ENABLED=/{if(!done){print "INCIDENT_REPORTS_ENABLED=" desired;done=1}next} {print} END{if(!done)print "INCIDENT_REPORTS_ENABLED=" desired}' "$env_file" >"$tmp/env.new"
+              chown --reference="$env_file" "$tmp/env.new"
+              chmod --reference="$env_file" "$tmp/env.new"
+              mv "$tmp/env.new" "$env_file"
+              apply_runtime() {
+                docker compose -f "$repo/docker-compose.yml" up -d --no-deps backend
+                backend="$(docker compose -f "$repo/docker-compose.yml" ps -q backend)"
+                for _ in $(seq 1 30); do [[ "$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$backend")" = healthy ]] && break; sleep 2; done
+                test "$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$backend")" = healthy
+                docker exec "$backend" node -e 'const expected=process.argv[1];const names=["INCIDENT_REPORTS_ENABLED","OPERATIONAL_LOG_ENABLED","OPERATIONAL_SHIFTS_ENABLED","OPERATIONAL_DIRECTIVES_ENABLED","OPERATIONAL_FOLLOWUPS_ENABLED"];const state=Object.fromEntries(names.map(n=>[n,process.env[n]==="true"]));if(state.INCIDENT_REPORTS_ENABLED!==(expected==="true")||state.OPERATIONAL_LOG_ENABLED||state.OPERATIONAL_SHIFTS_ENABLED||state.OPERATIONAL_DIRECTIVES_ENABLED||state.OPERATIONAL_FOLLOWUPS_ENABLED)process.exit(1);console.log(JSON.stringify({schemaVersion:1,execution:"PASS",flags:state}))' "$desired"
+              }
+              if ! apply_runtime; then
+                cp --preserve=mode,ownership,timestamps "$env_backup" "$env_file"
+                docker compose -f "$repo/docker-compose.yml" up -d --no-deps backend
+                exit 1
+              fi
+              docker exec "$backend" mkdir -m 0700 "$container_tmp"
+              docker cp "$tmp/script.cjs" "$backend:$container_tmp/coro-demo-report-03.cjs"
+              docker cp "$tmp/manifest.json" "$backend:$container_tmp/coro-demo-report-03-manifest.json"
+            }
+            case "$PHASE" in
+              preflight) run_script preflight ;;
+              provision) run_script preflight; run_script provision; run_script verify ;;
+              verify) run_script verify ;;
+              enable) run_script verify; set_flag true ;;
+              disable) set_flag false ;;
+              rollback) set_flag false; run_script rollback ;;
+            esac

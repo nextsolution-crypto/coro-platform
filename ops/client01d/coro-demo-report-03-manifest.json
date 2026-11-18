@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "organizationId": "916f54ec-af22-45e0-99db-a369d9630002",
+  "organizationName": "CORO Démo",
+  "clientName": "Groupe Immobilier Prémont",
+  "buildingName": "Tour Prémont",
+  "buildingFingerprint": "5ba4072e9e0027d5b74ff469e5424463f671eb76b9c052db8f024b2450b0f3ec",
+  "fixtureNamespace": "coro-demo-report-03",
+  "durationDays": 30,
+  "identities": {
+    "agent": {
+      "email": "demo-client@getcoro.io",
+      "role": "CLIENT_MANAGER",
+      "permissions": ["INCIDENT_REPORT_READ", "INCIDENT_REPORT_CREATE", "INCIDENT_REPORT_EDIT"]
+    },
+    "supervisor": {
+      "email": "demo-clientcorp@getcoro.io",
+      "role": "CLIENT_CORPORATE",
+      "permissions": ["INCIDENT_REPORT_READ", "INCIDENT_REPORT_REVIEW", "INCIDENT_REPORT_APPROVE", "INCIDENT_REPORT_EXPORT"]
+    }
+  },
+  "capability": "INCIDENT_REPORTS",
+  "templateKey": "coro-demo-property-incident-v1",
+  "reportType": "PROPERTY_SECURITY_INCIDENT"
+}
