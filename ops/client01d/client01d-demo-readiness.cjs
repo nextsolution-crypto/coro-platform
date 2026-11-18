@@ -32,14 +32,22 @@ async function runReadOnly(prisma, environment = process.env) {
       ORDER BY dfr."entityId"
     `);
     const identityRows = await tx.$queryRawUnsafe(`
-      SELECT cu.id, cu.role, cu."isActive", cardinality(cu."operationalPermissions") AS "permissionCount",
+      SELECT cu.id, cu.email, cu."clientId", cu.role, cu."isActive",
+        cardinality(cu."operationalPermissions") AS "permissionCount",
         COUNT(a.id) FILTER (WHERE a.status = 'ACTIVE' AND a."effectiveFrom" <= now()
-          AND (a."effectiveUntil" IS NULL OR a."effectiveUntil" > now())) AS "activeAssignments"
+          AND (a."effectiveUntil" IS NULL OR a."effectiveUntil" > now())) AS "activeAssignments",
+        COUNT(DISTINCT fb.id) AS "fixtureBuildingsForClient"
       FROM "ClientUser" cu
       LEFT JOIN "ClientOperationalBuildingAssignment" a
         ON a."clientUserId" = cu.id AND a."organizationId" = cu."organizationId"
+      LEFT JOIN "DemoFixtureRecord" dfr
+        ON dfr."organizationId" = cu."organizationId" AND dfr."entityType" = 'Building'
+        AND dfr.state = 'ACTIVE'
+      LEFT JOIN "Building" fb
+        ON fb.id = dfr."entityId" AND fb."organizationId" = dfr."organizationId"
+        AND fb."clientId" = cu."clientId" AND fb."isActive" = true
       WHERE cu."organizationId" = '${manifest.organizationId}'
-      GROUP BY cu.id, cu.role, cu."isActive", cu."operationalPermissions"
+      GROUP BY cu.id, cu.email, cu."clientId", cu.role, cu."isActive", cu."operationalPermissions"
       ORDER BY cu.id
     `);
     const capabilityRows = await tx.$queryRawUnsafe(`
@@ -90,7 +98,9 @@ async function runReadOnly(prisma, environment = process.env) {
       canonicalTenant: organization?.id === manifest.organizationId && organization?.name === 'CORO Démo',
       demoSafety: organization?.status === 'ACTIVE' && organization?.communicationMode === 'SIMULATE' && organization?.externalProvidersDisabled === true,
       threeFixtureBuildings: fixtureRows.length >= 3,
-      sixClientUsersAvailable: identityRows.filter((row) => row.isActive === true).length >= 6,
+      sixClientUsersAvailable: identityRows.length === 6,
+      identitiesBoundToFixtureClients: identityRows.every((row) => number(row.fixtureBuildingsForClient) > 0),
+      identitiesUseControlledAliasDomain: identityRows.every((row) => String(row.email).toLowerCase().endsWith('@getcoro.io')),
       sixCapabilitiesSiteReady: capabilityRows.length === 6 && capabilityRows.every((row) => row.isAvailable === true && row.siteAllowed === true),
       flagsDisabled: Object.values(flags).every((value) => value === false),
       noCrossTenantEntitlement: activeOtherTenantEntitlements === 0,
@@ -102,7 +112,16 @@ async function runReadOnly(prisma, environment = process.env) {
       organization: organization ? { id: organization.id, name: organization.name, active: organization.isActive } : null,
       demoSafety: organization ? { status: organization.status, communicationMode: organization.communicationMode, externalProvidersDisabled: organization.externalProvidersDisabled } : null,
       fixtureBuildings: fixtureRows.map((row) => ({ fingerprint: fingerprint(row.entityId), active: row.isActive === true })),
-      identities: identityRows.map((row) => ({ fingerprint: fingerprint(row.id), role: row.role, active: row.isActive === true, permissionCount: number(row.permissionCount), activeAssignments: number(row.activeAssignments) })),
+      identities: identityRows.map((row) => ({
+        fingerprint: fingerprint(row.id),
+        emailFingerprint: fingerprint(String(row.email).toLowerCase()),
+        clientFingerprint: fingerprint(row.clientId),
+        role: row.role,
+        active: row.isActive === true,
+        permissionCount: number(row.permissionCount),
+        activeAssignments: number(row.activeAssignments),
+        fixtureBuildingsForClient: number(row.fixtureBuildingsForClient),
+      })),
       capabilities: capabilityRows,
       flags,
       entitlements: { activeTarget: activeTargetEntitlements, activeOtherTenants: activeOtherTenantEntitlements },
