@@ -22,6 +22,12 @@ import { IncidentReportExportsService } from './incident-report-exports.service'
     IncidentReportTemplatesService,
     IncidentReportExportsService,
   ],
-  exports: [IncidentReportsService],
+  exports: [
+    IncidentReportsService,
+    IncidentReportWorkflowService,
+    IncidentReportAttachmentsService,
+    IncidentReportTemplatesService,
+    IncidentReportExportsService,
+  ],
 })
 export class IncidentReportsModule {}
