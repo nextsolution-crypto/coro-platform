@@ -68,6 +68,8 @@ jobs:
           envs: SOURCE_SHA,SCRIPT_SHA256,MANIFEST_SHA256,PHASE,GITHUB_RUN_ID
           script: |
             set -Eeuo pipefail
+            stage=initialize
+            trap 'rc=$?; echo "CORO_DEMO_REPORT_03_WORKFLOW_FAILED stage=$stage rc=$rc"; exit "$rc"' ERR
             repo=/opt/coro-platform
             tmp="$(mktemp -d /tmp/coro-demo-report-03.XXXXXX)"
             backend=""
@@ -78,24 +80,29 @@ jobs:
               rm -rf -- "$tmp"
             }
             trap cleanup EXIT
+            stage=deployment_lock
             exec 9>/run/lock/coro-production-deployment.lock
             flock -n 9
+            stage=source_integrity
             git -C "$repo" fetch --quiet origin main
             test "$(git -C "$repo" rev-parse origin/main)" = "$SOURCE_SHA"
             git -C "$repo" show "$SOURCE_SHA:ops/client01d/coro-demo-report-03.cjs" >"$tmp/script.cjs"
             git -C "$repo" show "$SOURCE_SHA:ops/client01d/coro-demo-report-03-manifest.json" >"$tmp/manifest.json"
             test "$(sha256sum "$tmp/script.cjs" | cut -d' ' -f1)" = "$SCRIPT_SHA256"
             test "$(sha256sum "$tmp/manifest.json" | cut -d' ' -f1)" = "$MANIFEST_SHA256"
+            stage=backend_health
             backend="$(docker compose -f "$repo/docker-compose.yml" ps -q backend)"
             test -n "$backend"
             test "$(docker inspect -f '{{.State.Running}}' "$backend")" = true
             test "$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$backend")" = healthy
             if [[ "$PHASE" != preflight && "$PHASE" != verify ]]; then
+              stage=backup_restore
               systemctl start coro-db-backup.service
               test "$(systemctl show -p Result --value coro-db-backup.service)" = success
               systemctl start coro-db-restore-test.service
               test "$(systemctl show -p Result --value coro-db-restore-test.service)" = success
             fi
+            stage=install_authority
             docker exec "$backend" mkdir -m 0700 "$container_tmp"
             docker cp "$tmp/script.cjs" "$backend:$container_tmp/coro-demo-report-03.cjs"
             docker cp "$tmp/manifest.json" "$backend:$container_tmp/coro-demo-report-03-manifest.json"
@@ -133,10 +140,10 @@ jobs:
               docker cp "$tmp/manifest.json" "$backend:$container_tmp/coro-demo-report-03-manifest.json"
             }
             case "$PHASE" in
-              preflight) run_script preflight ;;
-              provision) run_script preflight; run_script provision; run_script verify ;;
-              verify) run_script verify ;;
-              enable) run_script verify; set_flag true ;;
-              disable) set_flag false ;;
-              rollback) set_flag false; run_script rollback ;;
+              preflight) stage=preflight; run_script preflight ;;
+              provision) stage=provision_preflight; run_script preflight; stage=provision; run_script provision; stage=provision_verify; run_script verify ;;
+              verify) stage=verify; run_script verify ;;
+              enable) stage=enable_verify; run_script verify; stage=enable_flag; set_flag true ;;
+              disable) stage=disable_flag; set_flag false ;;
+              rollback) stage=rollback_flag; set_flag false; stage=rollback_data; run_script rollback ;;
             esac
