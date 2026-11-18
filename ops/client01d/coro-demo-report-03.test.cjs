@@ -41,7 +41,12 @@ test('workflow is locked, backed up and fail-closed', () => {
   assert.match(workflow, /PROVISION_CORO_DEMO_REPORT_03/);
   assert.match(workflow, /ROLLBACK_CORO_DEMO_REPORT_03/);
   assert.match(workflow, /state\.OPERATIONAL_LOG_ENABLED\|\|state\.OPERATIONAL_SHIFTS_ENABLED/);
-  assert.match(workflow, /docker compose .* up -d --no-deps backend/);
+  assert.match(workflow, /ACTIVE_BACKEND_RELEASE_MISMATCH/);
+  assert.match(workflow, /production-\*\.reconciled\.json/);
+  assert.match(workflow, /expected_backend/);
+  assert.match(workflow, /backend-immutable\.yml/);
+  assert.match(workflow, /up -d --no-deps --no-build backend/);
+  assert.doesNotMatch(workflow, /docker compose -f "\$repo\/docker-compose\.yml" up -d --no-deps backend/);
   assert.match(workflow, /set_flag false; stage=rollback_data; run_script rollback/);
   assert.match(source, /execution: 'FAIL', mode, errorCode/);
   assert.match(workflow, /\[A-Z\]\[A-Z0-9_\]\{2,80\}/);

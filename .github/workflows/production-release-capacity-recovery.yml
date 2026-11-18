@@ -4,91 +4,37 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Read-only inventory or governed removal of unused cache and unreferenced images older than seven days
+        description: Read-only plan or governed execution of the canonical retention policy
         required: true
         type: choice
-        options:
-          - DRY_RUN
-          - APPLY
+        options: [DRY_RUN, APPLY]
       candidate_commit:
-        description: Approved immutable product SHA whose images must be preserved
+        description: Approved immutable product SHA whose images must be protected
         required: true
         type: string
 
 permissions:
   contents: read
 
-jobs:
-  dry-run:
-    if: inputs.mode == 'DRY_RUN'
-    runs-on: ubuntu-latest
-    environment: production-inspection
-    steps:
-      - name: Inspect release capacity without mutation
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: root
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
-          script: |
-            set -Eeuo pipefail
-            flock --nonblock /run/lock/coro-production-deployment.lock true
-            flock --nonblock /run/lock/coro-release-control.lock true
-            systemctl list-units --state=running --plain --no-legend 'coro-release-*.service' | grep -q . && exit 1 || true
-            docker system df --format 'CAPACITY_DOCKER type={{.Type}} total={{.TotalCount}} active={{.Active}} size={{.Size}} reclaimable={{.Reclaimable}}'
-            cutoff_epoch="$(( $(date +%s) - 168 * 3600 ))"
-            mapfile -t referenced_ids < <(docker ps --all --no-trunc --format '{{.Image}}' | while IFS= read -r ref; do docker image inspect --format '{{.Id}}' "$ref"; done | sort -u)
-            total_images=0
-            referenced_images=0
-            unreferenced_recent=0
-            unreferenced_old=0
-            old_without_coro_digest=0
-            old_remote_unavailable=0
-            old_remote_recoverable=0
-            while IFS= read -r image_id; do
-              [[ -n "$image_id" ]] || continue
-              total_images=$((total_images + 1))
-              if printf '%s\n' "${referenced_ids[@]}" | grep -Fxq "$image_id"; then
-                referenced_images=$((referenced_images + 1))
-                continue
-              fi
-              created="$(docker image inspect --format '{{.Created}}' "$image_id")"
-              created_epoch="$(date -d "$created" +%s)"
-              if (( created_epoch >= cutoff_epoch )); then
-                unreferenced_recent=$((unreferenced_recent + 1))
-                continue
-              fi
-              unreferenced_old=$((unreferenced_old + 1))
-              mapfile -t digests < <(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$image_id" | grep -E '^ghcr\.io/nextsolution-crypto/coro-[a-z0-9_.-]+@sha256:[0-9a-f]{64}$' | sort -u)
-              if (( ${#digests[@]} == 0 )); then
-                old_without_coro_digest=$((old_without_coro_digest + 1))
-                continue
-              fi
-              recoverable=false
-              for digest in "${digests[@]}"; do docker manifest inspect "$digest" >/dev/null && recoverable=true && break; done
-              if [[ "$recoverable" == true ]]; then old_remote_recoverable=$((old_remote_recoverable + 1)); else old_remote_unavailable=$((old_remote_unavailable + 1)); fi
-            done < <(docker image ls --quiet --no-trunc | sort -u)
-            printf 'CAPACITY_IMAGE_ELIGIBILITY total=%s referenced=%s unreferenced_recent=%s unreferenced_old=%s old_without_coro_digest=%s old_remote_unavailable=%s old_remote_recoverable=%s\n' \
-              "$total_images" "$referenced_images" "$unreferenced_recent" "$unreferenced_old" "$old_without_coro_digest" "$old_remote_unavailable" "$old_remote_recoverable"
-            read -r total_kib free_kib < <(df -Pk -- /opt/coro-ops/backups/database | awk 'NR==2 {print $2,$4}')
-            printf 'CAPACITY_FILESYSTEM total_bytes=%s free_bytes=%s\n' "$((total_kib * 1024))" "$((free_kib * 1024))"
-            printf 'CAPACITY_RECOVERY_MUTATED=false\n'
+concurrency:
+  group: coro-production-deployment
+  cancel-in-progress: false
 
-  apply:
-    if: inputs.mode == 'APPLY'
+jobs:
+  validate:
     runs-on: ubuntu-latest
-    environment: production
+    outputs:
+      images: ${{ steps.candidate.outputs.images }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
-
-      - name: Resolve approved candidate images
+          persist-credentials: false
+      - name: Resolve approved immutable candidate
         id: candidate
         env:
           CANDIDATE_COMMIT: ${{ inputs.candidate_commit }}
         run: |
+          set -Eeuo pipefail
           [[ "$CANDIDATE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
           node - <<'NODE'
           const fs=require('fs');
@@ -96,112 +42,82 @@ jobs:
           const commit=process.env.CANDIDATE_COMMIT;
           const release=releases.releases?.[commit];
           if(!release?.images) process.exit(1);
-          const images=['backend','frontend','clientPortal','website'].map(k=>release.images[k]);
-          if(images.some(v=>!/^ghcr\.io\/nextsolution-crypto\/coro-[a-z0-9_.-]+@sha256:[0-9a-f]{64}$/.test(v))) process.exit(1);
+          const images=['backend','frontend','clientPortal','website'].map((key)=>release.images[key]);
+          if(images.some((value)=>!/^ghcr\.io\/nextsolution-crypto\/coro-[a-z0-9_.-]+@sha256:[0-9a-f]{64}$/.test(value))) process.exit(1);
           fs.appendFileSync(process.env.GITHUB_OUTPUT,`images=${images.join('|')}\n`);
           NODE
+          bash -n ops/capacity/coro-capacity-cleanup.sh
+          node --test ops/capacity/*.test.mjs ops/deploy/capacity-recovery-workflow.test.mjs
 
-      - name: Recover only unused cache and unreferenced images older than seven days
+  recover:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.mode == 'DRY_RUN' && 'production-inspection' || 'production' }}
+    steps:
+      - name: Validate pinned host identity
+        env:
+          HOST_FINGERPRINT: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+        run: '[[ "$HOST_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]'
+      - name: Execute canonical active-plus-rollback retention policy
         uses: appleboy/ssh-action@v1.0.3
         env:
-          CANDIDATE_IMAGES: ${{ steps.candidate.outputs.images }}
+          SOURCE_SHA: ${{ github.sha }}
+          MODE: ${{ inputs.mode }}
+          CANDIDATE_COMMIT: ${{ inputs.candidate_commit }}
+          CANDIDATE_IMAGES: ${{ needs.validate.outputs.images }}
         with:
           host: ${{ secrets.SERVER_IP }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
           command_timeout: 20m
-          envs: CANDIDATE_IMAGES
+          envs: SOURCE_SHA,MODE,CANDIDATE_COMMIT,CANDIDATE_IMAGES
           script: |
             set -Eeuo pipefail
-            exec 8>/run/lock/coro-capacity-recovery.lock
+            repo=/opt/coro-platform
+            tmp="$(mktemp -d /tmp/coro-release-capacity.XXXXXX)"
+            trap 'rm -rf -- "$tmp"' EXIT
+            exec 8>/run/lock/coro-release-control.lock
             flock --nonblock 8
-            flock --nonblock /run/lock/coro-production-deployment.lock true
-            flock --nonblock /run/lock/coro-release-control.lock true
-            systemctl list-units --state=running --plain --no-legend 'coro-release-*.service' | grep -q . && exit 1 || true
-            before_container_images="$(docker ps --all --no-trunc --format '{{.Image}}' | sort -u | sha256sum | cut -d' ' -f1)"
-            before_containers="$(docker ps --format '{{.ID}}:{{.Image}}' | sort | sha256sum | cut -d' ' -f1)"
-            read -r total_kib free_before_kib < <(df -Pk -- /opt/coro-ops/backups/database | awk 'NR==2 {print $2,$4}')
-            docker builder prune --all --force --filter until=168h >/dev/null
-            mapfile -t referenced_ids < <(docker ps --all --no-trunc --format '{{.Image}}' | while IFS= read -r ref; do docker image inspect --format '{{.Id}}' "$ref"; done | sort -u)
+            git -C "$repo" fetch --quiet origin main
+            test "$(git -C "$repo" rev-parse origin/main)" = "$SOURCE_SHA"
+            for file in coro-capacity-cleanup.sh release-retention-plan.mjs release-retention-policy.json; do
+              git -C "$repo" show "$SOURCE_SHA:ops/capacity/$file" >"$tmp/$file"
+            done
+            chmod 0700 "$tmp/coro-capacity-cleanup.sh"
+            chmod 0600 "$tmp/release-retention-policy.json"
             IFS='|' read -r -a candidate_refs <<<"$CANDIDATE_IMAGES"
             (( ${#candidate_refs[@]} == 4 ))
-            candidate_ids=()
             for ref in "${candidate_refs[@]}"; do
               [[ "$ref" =~ ^ghcr\.io/nextsolution-crypto/coro-[a-z0-9_.-]+@sha256:[0-9a-f]{64}$ ]]
               docker manifest inspect "$ref" >/dev/null
-              if docker image inspect "$ref" >/dev/null 2>&1; then candidate_ids+=("$(docker image inspect --format '{{.Id}}' "$ref")"); fi
             done
-            set -a
-            source /etc/coro-backup/backup.env
-            set +a
-            min_bytes="${CORO_BACKUP_MIN_FREE_BYTES:-5368709120}"
-            min_percent="${CORO_BACKUP_MIN_FREE_PERCENT:-10}"
-            [[ "$min_bytes" =~ ^[0-9]+$ && "$min_percent" =~ ^[0-9]+$ ]]
-            total_bytes=$((total_kib * 1024))
-            backup_percent=$((total_bytes * min_percent / 100))
-            backup_required="$min_bytes"
-            (( backup_percent > backup_required )) && backup_required="$backup_percent"
-            active_image_bytes=0
-            for container in coro_backend coro_frontend coro_client_portal coro_website; do
-              image_id="$(docker inspect --format '{{.Image}}' "$container")"
-              size="$(docker image inspect --format '{{.Size}}' "$image_id")"
-              active_image_bytes=$((active_image_bytes + size))
-            done
-            image_stage_required=$((active_image_bytes * 125 / 100))
-            database_bytes="$(docker compose -f /opt/coro-platform/docker-compose.yml exec -T postgres sh -ceu 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT pg_database_size(current_database())"')"
-            [[ "$database_bytes" =~ ^[0-9]+$ ]]
-            database_growth=$((database_bytes / 5)); (( database_growth < 2147483648 )) && database_growth=2147483648
-            operational_reserve=$((total_bytes / 10)); (( operational_reserve < 5368709120 )) && operational_reserve=5368709120
-            required_bytes=$((backup_required + image_stage_required + database_growth + operational_reserve))
-            target_bytes=$((required_bytes + 1073741824))
-            inventory="$(mktemp /tmp/coro-capacity-images.XXXXXX)"
-            chmod 0600 "$inventory"
-            trap 'rm -f -- "$inventory"' EXIT
-            while IFS= read -r image_id; do
-              [[ -n "$image_id" ]] || continue
-              printf '%s\n' "${referenced_ids[@]}" | grep -Fxq "$image_id" && continue
-              printf '%s\n' "${candidate_ids[@]}" | grep -Fxq "$image_id" && continue
-              created="$(docker image inspect --format '{{.Created}}' "$image_id")"
-              printf '%s|%s\n' "$(date -d "$created" +%s)" "$image_id" >>"$inventory"
-            done < <(docker image ls --quiet --no-trunc | sort -u)
-            sort -n -o "$inventory" "$inventory"
-            removed_count=0
-            removed_bytes=0
-            while IFS='|' read -r created_epoch image_id; do
-              [[ -n "$image_id" ]] || continue
-              current_free=$(( $(df -Pk -- /opt/coro-ops/backups/database | awk 'NR==2 {print $4}') * 1024 ))
-              (( current_free < target_bytes )) || break
-              mapfile -t remote_digests < <(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$image_id" | grep -E '^ghcr\.io/nextsolution-crypto/coro-[a-z0-9_.-]+@sha256:[0-9a-f]{64}$' | sort -u)
-              (( ${#remote_digests[@]} > 0 )) || continue
-              recoverable=false
-              for digest in "${remote_digests[@]}"; do
-                if docker manifest inspect "$digest" >/dev/null; then
-                  recoverable=true
-                  break
-                fi
-              done
-              [[ "$recoverable" == true ]] || continue
-              size="$(docker image inspect --format '{{.Size}}' "$image_id")"
-              [[ "$size" =~ ^[0-9]+$ ]]
-              docker image rm "$image_id" >/dev/null
-              removed_count=$((removed_count + 1))
-              removed_bytes=$((removed_bytes + size))
-              printf 'CAPACITY_IMAGE_REMOVED digest=%s size_bytes=%s remote_recoverable=true\n' "$digest" "$size"
-            done <"$inventory"
-            after_container_images="$(docker ps --all --no-trunc --format '{{.Image}}' | sort -u | sha256sum | cut -d' ' -f1)"
-            after_containers="$(docker ps --format '{{.ID}}:{{.Image}}' | sort | sha256sum | cut -d' ' -f1)"
-            [[ "$before_container_images" == "$after_container_images" ]]
-            [[ "$before_containers" == "$after_containers" ]]
-            read -r total_after_kib free_after_kib < <(df -Pk -- /opt/coro-ops/backups/database | awk 'NR==2 {print $2,$4}')
-            [[ "$total_kib" == "$total_after_kib" ]]
-            free_before=$((free_before_kib * 1024))
-            free_after=$((free_after_kib * 1024))
-            (( free_after >= free_before ))
-            (( free_after >= target_bytes ))
-            for container in coro_backend coro_frontend coro_client_portal coro_website coro_postgres; do
-              [[ "$(docker inspect --format '{{.State.Running}}' "$container")" == true ]]
-              [[ "$(docker inspect --format '{{.RestartCount}}' "$container")" == 0 ]]
-            done
-            printf 'CAPACITY_RECOVERY_APPLIED=true free_before_bytes=%s free_after_bytes=%s required_bytes=%s target_bytes=%s reclaimed_bytes=%s removed_count=%s removed_image_bytes=%s candidate_preserved=true rollback_preserved=true container_images_unchanged=true containers_unchanged=true services_healthy=true\n' \
-              "$free_before" "$free_after" "$required_bytes" "$target_bytes" "$((free_after - free_before))" "$removed_count" "$removed_bytes"
+            node - "$tmp/release-retention-policy.json" "$CANDIDATE_COMMIT" "${candidate_refs[@]}" <<'NODE'
+            const fs=require('fs');
+            const [file,commit,...images]=process.argv.slice(2);
+            const policy=JSON.parse(fs.readFileSync(file,'utf8'));
+            policy.explicitCandidates=[...(policy.explicitCandidates||[]),{
+              id:`release-${commit}`,
+              reason:'approved immutable release capacity recovery',
+              expiresAt:new Date(Date.now()+24*60*60*1000).toISOString(),
+              images,
+            }];
+            fs.writeFileSync(file,JSON.stringify(policy,null,2));
+            NODE
+            before="$(df -Pk -- /opt/coro-ops/releases | awk 'NR==2 {print $4*1024}')"
+            if [[ "$MODE" == APPLY ]]; then
+              cleanup_mode=EXECUTE
+              cleanup_approval=EXECUTE_REVIEWED_RETENTION_POLICY
+            else
+              cleanup_mode=DRY_RUN
+              cleanup_approval=''
+            fi
+            CORO_REPO="$repo" \
+            CAPACITY_CLEANUP_MODE="$cleanup_mode" \
+            CAPACITY_CLEANUP_APPROVAL="$cleanup_approval" \
+            CORO_RETENTION_PLAN_TOOL="$tmp/release-retention-plan.mjs" \
+            CORO_RETENTION_POLICY_FILE="$tmp/release-retention-policy.json" \
+              "$tmp/coro-capacity-cleanup.sh"
+            after="$(df -Pk -- /opt/coro-ops/releases | awk 'NR==2 {print $4*1024}')"
+            printf 'RELEASE_CAPACITY_RECOVERY mode=%s beforeFreeBytes=%s afterFreeBytes=%s physicallyRecoveredBytes=%s volumesDeleted=false backupsDeleted=false activeAndRollbackProtected=true candidateProtected=true\n' \
+              "$MODE" "$before" "$after" "$((after-before))"

@@ -7,35 +7,31 @@ const workflow = fs.readFileSync(
   "utf8",
 );
 
-test("capacity recovery is gated and limited to old unreferenced Docker data", () => {
-  assert.match(workflow, /environment: production-inspection/);
-  assert.match(workflow, /environment: production\r?\n/);
-  assert.match(workflow, /docker builder prune --all --force --filter until=168h/);
-  assert.doesNotMatch(workflow, /docker image prune/);
+test("capacity recovery delegates to the canonical active-plus-rollback retention policy", () => {
+  assert.match(workflow, /'production-inspection'/);
+  assert.match(workflow, /'production'/);
+  assert.match(workflow, /coro-capacity-cleanup\.sh/);
+  assert.match(workflow, /release-retention-plan\.mjs/);
+  assert.match(workflow, /release-retention-policy\.json/);
   assert.match(workflow, /candidate_commit:/);
   assert.match(workflow, /approved-immutable-releases\.json/);
   assert.match(workflow, /releases\.releases\?\.\[commit\]/);
-  assert.match(workflow, /candidate_ids/);
-  assert.match(workflow, /target_bytes=\$\(\(required_bytes \+ 1073741824\)\)/);
-  assert.match(workflow, /sort -n -o "\$inventory"/);
-  assert.match(workflow, /docker manifest inspect "\$digest"/);
-  assert.match(workflow, /docker image rm "\$image_id"/);
-  assert.match(workflow, /remote_recoverable=true/);
-  assert.doesNotMatch(workflow, /docker (?:system|volume|container) prune/);
-  assert.match(workflow, /before_container_images=.*docker ps --all/);
-  assert.match(workflow, /\[\[ "\$before_container_images" == "\$after_container_images" \]\]/);
-  assert.match(workflow, /\[\[ "\$before_containers" == "\$after_containers" \]\]/);
+  assert.match(workflow, /explicitCandidates/);
+  assert.match(workflow, /candidateProtected=true/);
+  assert.match(workflow, /activeAndRollbackProtected=true/);
+  assert.match(workflow, /volumesDeleted=false/);
+  assert.match(workflow, /backupsDeleted=false/);
+  assert.doesNotMatch(workflow, /docker (?:system|volume|container|image) prune/);
 });
 
 test("capacity recovery refuses concurrent release activity", () => {
-  assert.match(workflow, /coro-production-deployment\.lock/);
+  assert.match(workflow, /group: coro-production-deployment/);
   assert.match(workflow, /coro-release-control\.lock/);
-  assert.match(workflow, /coro-release-\*\.service/);
+  assert.match(workflow, /flock --nonblock 8/);
 });
 
-test("dry-run explains image eligibility without exposing repositories", () => {
-  assert.match(workflow, /CAPACITY_IMAGE_ELIGIBILITY/);
-  assert.match(workflow, /old_without_coro_digest/);
-  assert.match(workflow, /old_remote_unavailable/);
-  assert.match(workflow, /old_remote_recoverable/);
+test("dry-run and apply use separate protected environments", () => {
+  assert.match(workflow, /inputs\.mode == 'DRY_RUN'/);
+  assert.match(workflow, /CAPACITY_CLEANUP_MODE="\$cleanup_mode"/);
+  assert.match(workflow, /EXECUTE_REVIEWED_RETENTION_POLICY/);
 });
