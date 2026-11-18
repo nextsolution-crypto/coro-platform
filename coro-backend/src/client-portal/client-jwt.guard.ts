@@ -35,6 +35,7 @@ export class ClientJwtGuard implements CanActivate {
           organizationId: payload.organizationId,
           isActive: true,
           client: { isActive: true },
+          organization: { isActive: true },
         },
         select: {
           id: true,
@@ -53,10 +54,7 @@ export class ClientJwtGuard implements CanActivate {
             where: {
               status: 'ACTIVE',
               effectiveFrom: { lte: now },
-              OR: [
-                { effectiveUntil: null },
-                { effectiveUntil: { gt: now } },
-              ],
+              OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: now } }],
             },
             select: { buildingId: true },
           },

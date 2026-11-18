@@ -19,6 +19,17 @@ import { AuthModule } from '../auth/auth.module';
 import { ClientPilotPolicyService } from './client-pilot-policy.service';
 import { ClientDisplayController } from './client-display.controller';
 import { ClientDisplayService } from './client-display.service';
+import { ClientJwtGuard } from './client-jwt.guard';
+import {
+  ClientIncidentReportsController,
+  ClientOperationalDirectivesController,
+  ClientOperationalLogController,
+  ClientOperationalShiftsController,
+} from './client-operations.controller';
+import { IncidentReportsModule } from '../incident-reports/incident-reports.module';
+import { OperationalLogModule } from '../operational-log/operational-log.module';
+import { OperationalShiftsModule } from '../operational-shifts/operational-shifts.module';
+import { OperationalDirectivesModule } from '../operational-directives/operational-directives.module';
 
 @Module({
   imports: [
@@ -30,6 +41,10 @@ import { ClientDisplayService } from './client-display.service';
     NotificationsModule,
     PopulationModule,
     AuthModule,
+    IncidentReportsModule,
+    OperationalLogModule,
+    OperationalShiftsModule,
+    OperationalDirectivesModule,
     JwtModule.register({
       secret: requireJwtSecret(),
       signOptions: { expiresIn: '7d' },
@@ -39,6 +54,10 @@ import { ClientDisplayService } from './client-display.service';
     ClientPortalController,
     ClientAuthController,
     ClientDisplayController,
+    ClientIncidentReportsController,
+    ClientOperationalLogController,
+    ClientOperationalShiftsController,
+    ClientOperationalDirectivesController,
   ],
   providers: [
     ClientPortalService,
@@ -48,6 +67,7 @@ import { ClientDisplayService } from './client-display.service';
     CorrectiveActionsService,
     CorrectiveActionEvidenceService,
     ClientDisplayService,
+    ClientJwtGuard,
   ],
   exports: [ClientPortalService, EmailService, ClientPilotPolicyService],
 })

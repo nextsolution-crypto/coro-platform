@@ -82,8 +82,12 @@ describe('Client password reset', () => {
       mfaCodeExpiry: new Date(Date.now() + 600000),
       client: { name: 'Client', isActive: false },
     });
-    await expect(suspended.service.login(user.email, 'OldPassword1!')).rejects.toBeInstanceOf(UnauthorizedException);
-    await expect(suspended.service.verifyMfa(user.email, '123456')).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(
+      suspended.service.login(user.email, 'OldPassword1!'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(
+      suspended.service.verifyMfa(user.email, '123456'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
     expect(suspended.prisma.clientUser.update).toBeUndefined();
   });
 
@@ -413,6 +417,7 @@ describe('Client password reset', () => {
         organizationId: 'synthetic-reset-org',
         isActive: true,
         client: { isActive: true },
+        organization: { isActive: true },
       },
       select: {
         id: true,
@@ -445,15 +450,18 @@ describe('Client password reset', () => {
 
   it('actualise le périmètre bâtiment depuis la base à chaque requête', async () => {
     const h = harness();
-    const guard = new ClientJwtGuard({
-      verify: jest.fn().mockReturnValue({
-        type: 'CLIENT',
-        sub: user.id,
-        organizationId: user.organizationId,
-        sessionVersion: user.sessionVersion,
-        buildingIds: ['ancienne-affectation'],
-      }),
-    } as any, h.prisma);
+    const guard = new ClientJwtGuard(
+      {
+        verify: jest.fn().mockReturnValue({
+          type: 'CLIENT',
+          sub: user.id,
+          organizationId: user.organizationId,
+          sessionVersion: user.sessionVersion,
+          buildingIds: ['ancienne-affectation'],
+        }),
+      } as any,
+      h.prisma,
+    );
     h.prisma.clientUser.findFirst.mockResolvedValue({
       ...user,
       buildingIds: [],
