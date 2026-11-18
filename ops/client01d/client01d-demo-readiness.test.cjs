@@ -69,4 +69,5 @@ test('production readiness workflow is fixed, read-only and emits no activation 
   assert.match(source, /SET TRANSACTION READ ONLY/);
   assert.doesNotMatch(workflow, /\b(activate|provision|enable)\b/i);
   assert.doesNotMatch(source, /tx\.\w+\.(create|update|delete|upsert)\s*\(/);
+  assert.match(source, /upper\(dfr\."entityType"\) = 'BUILDING'/);
 });

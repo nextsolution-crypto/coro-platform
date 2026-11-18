@@ -28,7 +28,7 @@ async function runReadOnly(prisma, environment = process.env) {
       FROM "DemoFixtureRecord" dfr
       JOIN "Building" b ON b.id = dfr."entityId" AND b."organizationId" = dfr."organizationId"
       WHERE dfr."organizationId" = '${manifest.organizationId}'
-        AND dfr."entityType" = 'Building' AND dfr.state = 'ACTIVE'
+        AND upper(dfr."entityType") = 'BUILDING' AND dfr.state = 'ACTIVE'
       ORDER BY dfr."entityId"
     `);
     const identityRows = await tx.$queryRawUnsafe(`
@@ -41,7 +41,7 @@ async function runReadOnly(prisma, environment = process.env) {
       LEFT JOIN "ClientOperationalBuildingAssignment" a
         ON a."clientUserId" = cu.id AND a."organizationId" = cu."organizationId"
       LEFT JOIN "DemoFixtureRecord" dfr
-        ON dfr."organizationId" = cu."organizationId" AND dfr."entityType" = 'Building'
+        ON dfr."organizationId" = cu."organizationId" AND upper(dfr."entityType") = 'BUILDING'
         AND dfr.state = 'ACTIVE'
       LEFT JOIN "Building" fb
         ON fb.id = dfr."entityId" AND fb."organizationId" = dfr."organizationId"
