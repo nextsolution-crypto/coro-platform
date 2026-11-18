@@ -142,15 +142,17 @@ export class ClientFeatureEntitlementService {
         (permission) => PERMISSION_FEATURE[permission] === feature,
       ),
     );
-    const entitlement = assignment
-      ? await this.resolver.resolve({
-          organizationId,
-          clientId: canonicalIdentity.clientId,
-          buildingId,
-          capabilityCode: feature,
-          atTime: now,
-        })
-      : null;
+    const clientId = canonicalIdentity?.clientId;
+    const entitlement =
+      assignment && clientId
+        ? await this.resolver.resolve({
+            organizationId,
+            clientId,
+            buildingId,
+            capabilityCode: feature,
+            atTime: now,
+          })
+        : null;
     const entitled = Boolean(
       entitlement?.availability.isAvailable &&
       entitlement.licensed &&
