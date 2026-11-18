@@ -123,6 +123,22 @@ jobs:
             set_flag() {
               local desired="$1"
               local env_file="$repo/.env"
+              local release_root=/opt/coro-ops/releases
+              local marker manifest expected_sha expected_backend active_image override
+              marker="$(find "$release_root/state" -maxdepth 1 -type f -name 'production-*.reconciled.json' -printf '%T@ %p\n' | sort -rn | sed -n '1p' | cut -d' ' -f2-)"
+              [[ -n "$marker" && -f "$marker" && ! -L "$marker" ]]
+              manifest="$(node -e 'const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(m.manifestPath||"")' "$marker")"
+              expected_sha="$(node -e 'const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(m.manifestSha256||"")' "$marker")"
+              [[ -f "$manifest" && ! -L "$manifest" && "$expected_sha" =~ ^[0-9a-f]{64}$ ]]
+              [[ "$(sha256sum "$manifest" | cut -d' ' -f1)" == "$expected_sha" ]]
+              expected_backend="$(node -e 'const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(m.images?.backend||"")' "$manifest")"
+              [[ "$expected_backend" =~ ^ghcr\.io/nextsolution-crypto/coro-backend@sha256:[0-9a-f]{64}$ ]]
+              active_image="$(docker inspect --format '{{.Image}}' "$backend")"
+              docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$active_image" | grep -Fxq "$expected_backend" || { echo 'CORO_DEMO_REPORT_03_FAILED code=ACTIVE_BACKEND_RELEASE_MISMATCH'; return 1; }
+              docker manifest inspect "$expected_backend" >/dev/null
+              override="$tmp/backend-immutable.yml"
+              printf 'services:\n  backend:\n    image: %s\n' "$expected_backend" >"$override"
+              chmod 0600 "$override"
               env_backup="$tmp/env.backup"
               cp --preserve=mode,ownership,timestamps "$env_file" "$env_backup"
               awk -v desired="$desired" 'BEGIN{done=0} /^INCIDENT_REPORTS_ENABLED=/{if(!done){print "INCIDENT_REPORTS_ENABLED=" desired;done=1}next} {print} END{if(!done)print "INCIDENT_REPORTS_ENABLED=" desired}' "$env_file" >"$tmp/env.new"
@@ -130,15 +146,15 @@ jobs:
               chmod --reference="$env_file" "$tmp/env.new"
               mv "$tmp/env.new" "$env_file"
               apply_runtime() {
-                docker compose -f "$repo/docker-compose.yml" up -d --no-deps backend
-                backend="$(docker compose -f "$repo/docker-compose.yml" ps -q backend)"
+                docker compose -f "$repo/docker-compose.yml" -f "$override" up -d --no-deps --no-build backend
+                backend="$(docker compose -f "$repo/docker-compose.yml" -f "$override" ps -q backend)"
                 for _ in $(seq 1 30); do backend_ready && break; sleep 2; done
                 backend_ready
                 docker exec "$backend" node -e 'const expected=process.argv[1];const names=["INCIDENT_REPORTS_ENABLED","OPERATIONAL_LOG_ENABLED","OPERATIONAL_SHIFTS_ENABLED","OPERATIONAL_DIRECTIVES_ENABLED","OPERATIONAL_FOLLOWUPS_ENABLED"];const state=Object.fromEntries(names.map(n=>[n,process.env[n]==="true"]));if(state.INCIDENT_REPORTS_ENABLED!==(expected==="true")||state.OPERATIONAL_LOG_ENABLED||state.OPERATIONAL_SHIFTS_ENABLED||state.OPERATIONAL_DIRECTIVES_ENABLED||state.OPERATIONAL_FOLLOWUPS_ENABLED)process.exit(1);console.log(JSON.stringify({schemaVersion:1,execution:"PASS",flags:state}))' "$desired"
               }
               if ! apply_runtime; then
                 cp --preserve=mode,ownership,timestamps "$env_backup" "$env_file"
-                docker compose -f "$repo/docker-compose.yml" up -d --no-deps backend
+                docker compose -f "$repo/docker-compose.yml" -f "$override" up -d --no-deps --no-build backend
                 exit 1
               fi
               docker exec "$backend" mkdir -m 0700 "$container_tmp"
