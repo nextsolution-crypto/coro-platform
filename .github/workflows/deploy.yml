@@ -147,6 +147,10 @@ jobs:
         working-directory: coro-backend
         run: npm run build
 
+      - name: Verify compiled client operational routes
+        working-directory: coro-backend
+        run: node scripts/verify-client-operational-routes.cjs
+
       - name: Verify durable Knowledge runtime policy
         run: node --test ops/knowledge/*.test.mjs
 
