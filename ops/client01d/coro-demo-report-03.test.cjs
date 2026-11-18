@@ -48,6 +48,7 @@ test('workflow is locked, backed up and fail-closed', () => {
   assert.match(workflow, /CORO_DEMO_REPORT_03_WORKFLOW_FAILED stage=\$stage rc=\$rc/);
   assert.match(workflow, /RestartCount/);
   assert.match(workflow, /127\.0\.0\.1:3002\/api\/auth\/login/);
+  assert.match(workflow, /release-smoke-nonexistent@example\.invalid/);
   assert.doesNotMatch(workflow, /State\.Health|Health\.Status/);
   assert.doesNotMatch(workflow, /docker system prune|prisma migrate/);
 });
