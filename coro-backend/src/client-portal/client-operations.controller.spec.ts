@@ -96,4 +96,44 @@ describe('Client operational controllers', () => {
       authority,
     );
   });
+
+  it('assigns a typed CLIENT_USER reviewer without falling back to an internal User', async () => {
+    const authority = Object.freeze({
+      actorType: 'CLIENT_USER' as const,
+      actorId: 'client-user-a',
+      clientId: 'client-a',
+      organizationId: '00000000-0000-4000-8000-000000000001',
+      role: 'CLIENT_MANAGER' as const,
+      sessionVersion: 2,
+      permissions: [],
+      buildingIds: [],
+    });
+    const workflow = {
+      assignClientReviewer: jest.fn().mockResolvedValue({ id: 'report-a' }),
+    };
+    const controller = new ClientIncidentReportsController(
+      {} as never,
+      workflow as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+    const dto = {
+      reviewerClientUserId: '00000000-0000-4000-8000-000000000004',
+      expectedLockVersion: 1,
+      idempotencyKey: '00000000-0000-4000-8000-000000000005',
+    };
+    await controller.reviewer(
+      authority.organizationId,
+      '00000000-0000-4000-8000-000000000003',
+      dto,
+      { coroAuthority: authority },
+    );
+    expect(workflow.assignClientReviewer).toHaveBeenCalledWith(
+      authority.organizationId,
+      '00000000-0000-4000-8000-000000000003',
+      dto,
+      authority,
+    );
+  });
 });

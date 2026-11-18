@@ -40,6 +40,11 @@ const reportSummarySelect = {
   lockVersion: true,
   createdAt: true,
   updatedAt: true,
+  versions: {
+    orderBy: { versionNumber: 'desc' as const },
+    take: 1,
+    select: { id: true },
+  },
 } satisfies Prisma.IncidentReportSelect;
 
 @Injectable()

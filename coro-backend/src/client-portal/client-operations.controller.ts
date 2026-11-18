@@ -17,7 +17,7 @@ import {
 import type { Response } from 'express';
 import type { ClientUserAuthority } from '../auth/coro-authority';
 import {
-  AssignIncidentReportReviewerDto,
+  AssignClientIncidentReportReviewerDto,
   CreateIncidentReportAttachmentDto,
   CreateIncidentReportDto,
   CreateIncidentReportExportDto,
@@ -211,10 +211,22 @@ export class ClientIncidentReportsController {
   reviewer(
     @Param('organizationId', ParseUUIDPipe) org: string,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: AssignIncidentReportReviewerDto,
+    @Body() dto: AssignClientIncidentReportReviewerDto,
     @Request() req: ClientOperationsRequest,
   ) {
-    return this.workflow.assign(org, id, dto, req.coroAuthority);
+    return this.workflow.assignClientReviewer(org, id, dto, req.coroAuthority);
+  }
+  @Get('reviewers/eligible')
+  eligibleReviewers(
+    @Param('organizationId', ParseUUIDPipe) org: string,
+    @Query('buildingId', ParseUUIDPipe) building: string,
+    @Request() req: ClientOperationsRequest,
+  ) {
+    return this.workflow.eligibleClientReviewers(
+      org,
+      building,
+      req.coroAuthority,
+    );
   }
   @Post(':id/decisions')
   decide(
