@@ -7,10 +7,14 @@ import {
 import type { ProvenanceActor } from '../auth/coro-actor-provenance';
 import { provenanceActor } from '../auth/coro-actor-provenance';
 import { PrismaService } from '../prisma/prisma.service';
+import { ClientFeatureEntitlementService } from '../capability-entitlements/client-feature-entitlement.service';
 
 @Injectable()
 export class IncidentReportAccessService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly clientFeatures: ClientFeatureEntitlementService,
+  ) {}
 
   async require(
     actor: ProvenanceActor,
@@ -24,6 +28,15 @@ export class IncidentReportAccessService {
       this.deny();
     const now = new Date();
     const client = authority.actorType === 'CLIENT_USER';
+    if (client) {
+      await this.clientFeatures.require({
+        authority,
+        organizationId,
+        buildingId,
+        feature: 'INCIDENT_REPORTS',
+        hiddenMessage: 'Rapport incident introuvable.',
+      });
+    }
     const [identity, building, grant, assignment, incidentAuthority] =
       await Promise.all([
         client

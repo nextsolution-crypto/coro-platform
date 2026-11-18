@@ -61,6 +61,10 @@ import {
 } from '../operational-directives/dto/operational-directives.dto';
 import { OperationalDirectivesService } from '../operational-directives/operational-directives.service';
 import { ClientJwtGuard } from './client-jwt.guard';
+import {
+  CLIENT_COMMERCIAL_FEATURES,
+  ClientFeatureEntitlementService,
+} from '../capability-entitlements/client-feature-entitlement.service';
 
 interface ClientOperationsRequest {
   coroAuthority: ClientUserAuthority;
@@ -71,6 +75,42 @@ const clientValidation = new ValidationPipe({
   forbidNonWhitelisted: true,
   transform: true,
 });
+
+@Controller(
+  'client-portal/organizations/:organizationId/operational-capabilities',
+)
+@UseGuards(ClientJwtGuard)
+@UsePipes(clientValidation)
+export class ClientOperationalCapabilitiesController {
+  constructor(private readonly features: ClientFeatureEntitlementService) {}
+
+  @Get()
+  async list(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @Query('buildingId', ParseUUIDPipe) buildingId: string,
+    @Request() req: ClientOperationsRequest,
+  ) {
+    const decisions = await Promise.all(
+      CLIENT_COMMERCIAL_FEATURES.map((feature) =>
+        this.features.evaluate({
+          authority: req.coroAuthority,
+          organizationId,
+          buildingId,
+          feature,
+        }),
+      ),
+    );
+    return {
+      organizationId,
+      buildingId,
+      capabilities: decisions.map(({ feature, available }) => ({
+        feature,
+        available,
+        reason: available ? 'AVAILABLE' : 'NOT_AVAILABLE',
+      })),
+    };
+  }
+}
 
 @Controller('client-portal/organizations/:organizationId/incident-reports')
 @UseGuards(ClientJwtGuard)

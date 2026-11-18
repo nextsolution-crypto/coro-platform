@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "enabled": false,
+  "organizationId": "916f54ec-af22-45e0-99db-a369d9630002",
+  "requiredEnvironment": {
+    "status": "ACTIVE",
+    "communicationMode": "SIMULATE"
+  },
+  "fixtureNamespace": "coro-rp-client-01d-demo",
+  "resolveBuildingsFromActiveDemoFixtureRecords": true,
+  "communications": {
+    "email": "BLOCK",
+    "sms": "BLOCK",
+    "sentinelle": "BLOCK",
+    "buildingBridge": "BLOCK",
+    "customerWebhooks": "BLOCK"
+  },
+  "profiles": [
+    "SECURITY_AGENT",
+    "SECURITY_SUPERVISOR",
+    "REPORT_REVIEWER",
+    "PROPERTY_MANAGER"
+  ],
+  "datasets": [
+    "REPORT_TEMPLATES",
+    "OPERATIONAL_LOG_EVENTS",
+    "SHIFTS_AND_HANDOVERS",
+    "DIRECTIVES",
+    "FOLLOWUPS",
+    "INCIDENT_REPORTS_AND_PDFS"
+  ]
+}
