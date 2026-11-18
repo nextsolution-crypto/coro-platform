@@ -155,7 +155,7 @@
       }
     },
     "a83008f1a7012f131c3ebd022521728c042d8362": {
-      "migrationHead": "20261219010000_typed_business_actor_provenance",
+      "migrationHead": "20261220020000_client_feature_entitlement_catalog",
       "images": {
         "backend": "ghcr.io/nextsolution-crypto/coro-backend@sha256:501c09096230925560927645d4d9ff0cb039a9c0e439a3e679d5f832af2c3573",
         "frontend": "ghcr.io/nextsolution-crypto/coro-frontend@sha256:8b267d2fb86f6605a9b542bc4d72a4df66f7c63b6b40b451d7e8050128f8e096",
