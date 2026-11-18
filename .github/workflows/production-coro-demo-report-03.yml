@@ -93,8 +93,14 @@ jobs:
             stage=backend_health
             backend="$(docker compose -f "$repo/docker-compose.yml" ps -q backend)"
             test -n "$backend"
-            test "$(docker inspect -f '{{.State.Running}}' "$backend")" = true
-            test "$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$backend")" = healthy
+            backend_ready() {
+              local code
+              [[ "$(docker inspect -f '{{.State.Running}}' "$backend" 2>/dev/null)" = true ]] || return 1
+              [[ "$(docker inspect -f '{{.RestartCount}}' "$backend" 2>/dev/null)" = 0 ]] || return 1
+              code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 10 -H 'content-type: application/json' -d '{}' http://127.0.0.1:3002/api/auth/login)" || return 1
+              [[ "$code" =~ ^(400|401)$ ]]
+            }
+            backend_ready
             if [[ "$PHASE" != preflight && "$PHASE" != verify ]]; then
               stage=backup_restore
               systemctl start coro-db-backup.service
@@ -126,8 +132,8 @@ jobs:
               apply_runtime() {
                 docker compose -f "$repo/docker-compose.yml" up -d --no-deps backend
                 backend="$(docker compose -f "$repo/docker-compose.yml" ps -q backend)"
-                for _ in $(seq 1 30); do [[ "$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$backend")" = healthy ]] && break; sleep 2; done
-                test "$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$backend")" = healthy
+                for _ in $(seq 1 30); do backend_ready && break; sleep 2; done
+                backend_ready
                 docker exec "$backend" node -e 'const expected=process.argv[1];const names=["INCIDENT_REPORTS_ENABLED","OPERATIONAL_LOG_ENABLED","OPERATIONAL_SHIFTS_ENABLED","OPERATIONAL_DIRECTIVES_ENABLED","OPERATIONAL_FOLLOWUPS_ENABLED"];const state=Object.fromEntries(names.map(n=>[n,process.env[n]==="true"]));if(state.INCIDENT_REPORTS_ENABLED!==(expected==="true")||state.OPERATIONAL_LOG_ENABLED||state.OPERATIONAL_SHIFTS_ENABLED||state.OPERATIONAL_DIRECTIVES_ENABLED||state.OPERATIONAL_FOLLOWUPS_ENABLED)process.exit(1);console.log(JSON.stringify({schemaVersion:1,execution:"PASS",flags:state}))' "$desired"
               }
               if ! apply_runtime; then
