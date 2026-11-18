@@ -14,6 +14,7 @@ async function resolveTarget(tx) {
     select: { id: true, name: true, isActive: true, commercialRelationship: true, demoEnvironment: { select: { status: true, communicationMode: true, externalProvidersDisabled: true } } },
   });
   if (!organization || normalize(organization.name) !== normalize(manifest.organizationName) || !organization.isActive || organization.demoEnvironment?.status !== 'ACTIVE' || organization.demoEnvironment?.communicationMode !== 'SIMULATE' || organization.demoEnvironment?.externalProvidersDisabled !== true) throw new Error('DEMO_TENANT_NOT_ADMISSIBLE');
+  if (organization.commercialRelationship === 'INTERNAL') throw new Error('TRIAL_NOT_ALLOWED_FOR_INTERNAL_ORGANIZATION');
   const clientRows = await tx.client.findMany({ where: { organizationId: manifest.organizationId, isActive: true }, select: { id: true, name: true } });
   const clients = clientRows.filter((row) => normalize(row.name) === normalize(manifest.clientName));
   if (clients.length !== 1) throw new Error('CLIENT_CARDINALITY_INVALID');
@@ -73,6 +74,14 @@ async function provision(prisma, environment, runId) {
     const now = new Date(); const until = new Date(now.getTime() + manifest.durationDays * 86400000);
     for (const [profile, identity] of Object.entries(target.identities)) {
       const expected = manifest.identities[profile];
+      const permissionRecord = await tx.demoFixtureRecord.findUnique({ where: fixtureWhere(`permissions-${profile}`) });
+      if (!permissionRecord && identity.operationalPermissions.length !== 0) throw new Error(`PREEXISTING_PERMISSIONS_${profile.toUpperCase()}_NOT_OWNED`);
+      const existingAssignment = await tx.clientOperationalBuildingAssignment.findUnique({ where: { organizationId_buildingId_clientUserId: { organizationId: manifest.organizationId, buildingId: target.building.id, clientUserId: identity.id } } });
+      const assignmentRecord = await tx.demoFixtureRecord.findUnique({ where: fixtureWhere(`assignment-${profile}`) });
+      if (existingAssignment && assignmentRecord?.entityId !== existingAssignment.id) throw new Error(`PREEXISTING_ASSIGNMENT_${profile.toUpperCase()}_NOT_OWNED`);
+      const authorityRecord = await tx.demoFixtureRecord.findUnique({ where: fixtureWhere(`authority-${profile}`) });
+      const activeAuthorities = await tx.incidentAuthorityAssignment.findMany({ where: { organizationId: manifest.organizationId, buildingId: target.building.id, subjectType: 'CLIENT_USER', subjectId: identity.id, status: 'ACTIVE' }, select: { id: true } });
+      if (activeAuthorities.some((row) => row.id !== authorityRecord?.entityId)) throw new Error(`PREEXISTING_AUTHORITY_${profile.toUpperCase()}_NOT_OWNED`);
       await register(tx, `permissions-${profile}`, 'CLIENT_USER_REPORT_PROFILE', identity.id, { operationalPermissions: identity.operationalPermissions });
       await tx.clientUser.update({ where: { id: identity.id }, data: { operationalPermissions: expected.permissions } });
       const assignment = await tx.clientOperationalBuildingAssignment.upsert({ where: { organizationId_buildingId_clientUserId: { organizationId: manifest.organizationId, buildingId: target.building.id, clientUserId: identity.id } }, create: { organizationId: manifest.organizationId, buildingId: target.building.id, clientUserId: identity.id, status: 'ACTIVE', effectiveFrom: now, effectiveUntil: until, grantedByUserId: target.actor.id, grantReason: 'CORO-DEMO-REPORT-03 controlled browser acceptance' }, update: { status: 'ACTIVE', effectiveFrom: now, effectiveUntil: until, revokedAt: null, revokedByUserId: null, revocationReason: null, lockVersion: { increment: 1 } } });

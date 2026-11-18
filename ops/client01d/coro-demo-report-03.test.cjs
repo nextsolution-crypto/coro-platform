@@ -26,6 +26,13 @@ test('least privilege and site trial are fixed', () => {
   assert.equal(Object.values(manifest.identities).flatMap((identity) => identity.permissions).some((permission) => permission.startsWith('OPERATIONAL_')), false);
 });
 
+test('provisioning refuses to overwrite unrelated access state', () => {
+  assert.match(source, /TRIAL_NOT_ALLOWED_FOR_INTERNAL_ORGANIZATION/);
+  assert.match(source, /PREEXISTING_PERMISSIONS_\$\{profile\.toUpperCase\(\)\}_NOT_OWNED/);
+  assert.match(source, /PREEXISTING_ASSIGNMENT_\$\{profile\.toUpperCase\(\)\}_NOT_OWNED/);
+  assert.match(source, /PREEXISTING_AUTHORITY_\$\{profile\.toUpperCase\(\)\}_NOT_OWNED/);
+});
+
 test('workflow is locked, backed up and fail-closed', () => {
   assert.match(workflow, /environment: production/);
   assert.match(workflow, /coro-production-deployment\.lock/);
