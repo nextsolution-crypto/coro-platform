@@ -8,8 +8,7 @@ const workflow = fs.readFileSync(
 );
 
 test("capacity recovery delegates to the canonical active-plus-rollback retention policy", () => {
-  assert.match(workflow, /'production-inspection'/);
-  assert.match(workflow, /'production'/);
+  assert.match(workflow, /environment: production/);
   assert.match(workflow, /coro-capacity-cleanup\.sh/);
   assert.match(workflow, /release-retention-plan\.mjs/);
   assert.match(workflow, /release-retention-policy\.json/);
@@ -30,8 +29,8 @@ test("capacity recovery refuses concurrent release activity", () => {
   assert.match(workflow, /flock --nonblock 8/);
 });
 
-test("dry-run and apply use separate protected environments", () => {
-  assert.match(workflow, /inputs\.mode == 'DRY_RUN'/);
+test("dry-run and apply share the pinned protected host identity but retain distinct modes", () => {
+  assert.match(workflow, /environment: production/);
   assert.match(workflow, /CAPACITY_CLEANUP_MODE="\$cleanup_mode"/);
   assert.match(workflow, /EXECUTE_REVIEWED_RETENTION_POLICY/);
 });

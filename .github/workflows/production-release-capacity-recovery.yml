@@ -52,7 +52,9 @@ jobs:
   recover:
     needs: validate
     runs-on: ubuntu-latest
-    environment: ${{ inputs.mode == 'DRY_RUN' && 'production-inspection' || 'production' }}
+    # The pinned SSH host identity is deliberately scoped to the protected
+    # production environment. DRY_RUN remains non-mutating in the script.
+    environment: production
     steps:
       - name: Validate pinned host identity
         env:
