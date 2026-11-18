@@ -1,5 +1,9 @@
 import { GUARDS_METADATA } from '@nestjs/common/constants';
+import { INestApplication } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import request from 'supertest';
 import { ClientJwtGuard } from './client-jwt.guard';
+import { ClientFeatureEntitlementService } from '../capability-entitlements/client-feature-entitlement.service';
 import {
   ClientIncidentReportsController,
   ClientOperationalCapabilitiesController,
@@ -36,7 +40,7 @@ describe('Client operational controllers', () => {
     } as never;
     const response = await controller.list(
       '00000000-0000-4000-8000-000000000001',
-      '00000000-0000-4000-8000-000000000002',
+      { buildingId: '00000000-0000-4000-8000-000000000002' },
       { coroAuthority: authority },
     );
     expect(response.capabilities).toContainEqual({
@@ -135,5 +139,61 @@ describe('Client operational controllers', () => {
       dto,
       authority,
     );
+  });
+});
+
+describe('Client operational capabilities HTTP routing', () => {
+  let app: INestApplication;
+  const evaluate = jest.fn().mockResolvedValue({
+    feature: 'INCIDENT_REPORTS',
+    available: true,
+  });
+
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({
+      controllers: [ClientOperationalCapabilitiesController],
+      providers: [
+        {
+          provide: ClientFeatureEntitlementService,
+          useValue: { evaluate },
+        },
+      ],
+    })
+      .overrideGuard(ClientJwtGuard)
+      .useValue({
+        canActivate: (context: any) => {
+          context.switchToHttp().getRequest().coroAuthority = {
+            actorId: 'client-user-a',
+            organizationId: '00000000-0000-4000-8000-000000000001',
+          };
+          return true;
+        },
+      })
+      .compile();
+    app = moduleRef.createNestApplication();
+    await app.init();
+  });
+
+  afterAll(async () => app.close());
+
+  it('accepts the canonical non-UUID building identifier used by CORO Demo', async () => {
+    await request(app.getHttpServer())
+      .get(
+        '/client-portal/organizations/00000000-0000-4000-8000-000000000001/operational-capabilities?buildingId=demo-premont-industrial-001',
+      )
+      .expect(200);
+    expect(evaluate).toHaveBeenCalledWith(
+      expect.objectContaining({ buildingId: 'demo-premont-industrial-001' }),
+    );
+  });
+
+  it('rejects a missing building identifier before entitlement evaluation', async () => {
+    evaluate.mockClear();
+    await request(app.getHttpServer())
+      .get(
+        '/client-portal/organizations/00000000-0000-4000-8000-000000000001/operational-capabilities',
+      )
+      .expect(400);
+    expect(evaluate).not.toHaveBeenCalled();
   });
 });

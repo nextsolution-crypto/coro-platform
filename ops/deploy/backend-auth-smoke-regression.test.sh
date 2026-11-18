@@ -72,6 +72,10 @@ for(const marker of ['previous_images','previous_compose','BACKUP_NOT_REMOTE_VER
 console.log('PASS release-order-backup-restore-readiness-rollback');
 NODE
 
+grep -Fq 'OPERATIONAL_CAPABILITIES_LOCAL_ROUTE_SMOKE_FAILED' "$RELEASE" || fail "missing local operational capabilities route gate"
+grep -Fq 'OPERATIONAL_CAPABILITIES_PUBLIC_ROUTE_SMOKE_FAILED' "$RELEASE" || fail "missing public operational capabilities route gate"
+grep -Fq 'release-smoke-building' "$RELEASE" || fail "missing synthetic non-UUID building route probe"
+
 grep -q 'rendement_guard_code=' "$RELEASE"
 grep -q 'RENDEMENT_SMOKE_FAILED' "$RELEASE"
 printf 'PASS booking-and-rendement-unauthenticated-guards\n'

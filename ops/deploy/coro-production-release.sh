@@ -316,9 +316,13 @@ docker exec coro_backend node -e 'const v=(process.env.DEMO_AUTH_EMAIL_LIVE_RECI
 client_auth_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{}' http://127.0.0.1:3002/api/client-auth/login)" || fail CLIENT_AUTH_SMOKE_FAILED
 booking_guard_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 http://127.0.0.1:3002/api/planning/my-assignments)" || fail BOOKING_SMOKE_FAILED
 rendement_guard_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 http://127.0.0.1:3002/api/rendement/financial)" || fail RENDEMENT_SMOKE_FAILED
+operational_capabilities_local_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 'http://127.0.0.1:3002/api/client-portal/organizations/00000000-0000-4000-8000-000000000001/operational-capabilities?buildingId=release-smoke-building')" || fail OPERATIONAL_CAPABILITIES_LOCAL_ROUTE_SMOKE_FAILED
+operational_capabilities_public_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 20 'https://api.getcoro.io/api/client-portal/organizations/00000000-0000-4000-8000-000000000001/operational-capabilities?buildingId=release-smoke-building')" || fail OPERATIONAL_CAPABILITIES_PUBLIC_ROUTE_SMOKE_FAILED
 [[ "$client_auth_code" =~ ^(400|401)$ ]] || fail CLIENT_AUTH_SMOKE_FAILED
 [[ "$booking_guard_code" == 401 ]] || fail BOOKING_SMOKE_FAILED
 [[ "$rendement_guard_code" == 401 ]] || fail RENDEMENT_SMOKE_FAILED
+[[ "$operational_capabilities_local_code" == 401 ]] || fail OPERATIONAL_CAPABILITIES_LOCAL_ROUTE_SMOKE_FAILED
+[[ "$operational_capabilities_public_code" == 401 ]] || fail OPERATIONAL_CAPABILITIES_PUBLIC_ROUTE_SMOKE_FAILED
 
 for container in coro_backend coro_frontend coro_client_portal coro_website coro_display_pdf_worker coro_display_pdf_rasterizer; do
   [[ "$(docker inspect --format '{{.State.Running}}' "$container")" == true ]] || fail CONTAINER_HEALTH_FAILED
