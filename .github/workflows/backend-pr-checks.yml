@@ -62,6 +62,9 @@ jobs:
       - name: Production build
         run: npm run build
 
+      - name: Verify compiled client operational routes
+        run: node scripts/verify-client-operational-routes.cjs
+
       - name: Reject high-confidence secrets in the PR patch
         working-directory: .
         env:
