@@ -1,0 +1,78 @@
+name: Production CORO Demo Report Readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      approval:
+        description: Type INVENTORY_CORO_DEMO_REPORT_READ_ONLY
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Validate fixed read-only contract
+        env:
+          APPROVAL: ${{ inputs.approval }}
+        run: |
+          test "$APPROVAL" = INVENTORY_CORO_DEMO_REPORT_READ_ONLY
+          node --test ops/client01d/*.test.cjs
+          grep -F 'INCIDENT_REPORTS_ENABLED: ${INCIDENT_REPORTS_ENABLED:-false}' docker-compose.yml
+          grep -F 'OPERATIONAL_FOLLOWUPS_ENABLED: ${OPERATIONAL_FOLLOWUPS_ENABLED:-false}' docker-compose.yml
+
+  inventory:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Execute fixed PostgreSQL read-only inventory
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,GITHUB_RUN_ID
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            script_path="$(mktemp /tmp/coro-demo-report-readiness.XXXXXX.cjs)"
+            manifest_path="$(mktemp /tmp/coro-demo-report-manifest.XXXXXX.json)"
+            evidence_path="$(mktemp /tmp/coro-demo-report-readiness.XXXXXX.json)"
+            host_module="$(mktemp -d /tmp/coro-demo-report-readiness.XXXXXX)"
+            container_module="/tmp/coro-demo-report-readiness-${GITHUB_RUN_ID}"
+            container=""
+            cleanup() {
+              if [[ -n "$container" ]]; then docker exec "$container" rm -rf -- "$container_module" >/dev/null 2>&1 || true; fi
+              rm -rf -- "$host_module"
+              rm -f -- "$script_path" "$manifest_path" "$evidence_path"
+            }
+            trap cleanup EXIT
+            git -C "$repo" fetch --quiet origin "$SOURCE_SHA"
+            git -C "$repo" show "$SOURCE_SHA:ops/client01d/client01d-demo-readiness.cjs" >"$script_path"
+            git -C "$repo" show "$SOURCE_SHA:ops/client01d/client01d-demo-manifest.json" >"$manifest_path"
+            chmod 0700 "$host_module"
+            cp "$script_path" "$host_module/client01d-demo-readiness.cjs"
+            cp "$manifest_path" "$host_module/client01d-demo-manifest.json"
+            container="$(docker compose -f "$repo/docker-compose.yml" ps -q backend)"
+            test -n "$container"
+            docker exec "$container" mkdir -m 0700 "$container_module"
+            docker cp "$host_module/." "$container:$container_module"
+            docker exec -e CORO_DEMO_REPORT_READINESS_RUN=true "$container" node "$container_module/client01d-demo-readiness.cjs" >"$evidence_path"
+            node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||r.execution!=="PASS"||r.readOnly!==true||r.mutationExecuted!==false)process.exit(1);if(/@|password|secret|token|access[_-]?key|private[_-]?key/i.test(JSON.stringify(r)))process.exit(1)' "$evidence_path"
+            cat "$evidence_path"
