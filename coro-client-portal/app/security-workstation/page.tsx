@@ -18,6 +18,7 @@ import {
   ApiError,
   apiDownload,
   apiGet,
+  apiPatch,
   apiPost,
   getUser,
 } from "../store/auth";
@@ -28,6 +29,11 @@ type Capability = { feature: string; available: boolean; reason: string };
 type Building = { id: string; name: string };
 type Item = Record<string, any>;
 type Tab = "overview" | "log" | "shifts" | "directives" | "followups" | "reports";
+type Mutate = (
+  action: () => Promise<any>,
+  success: string,
+  onError?: (reason: unknown) => void,
+) => Promise<void>;
 
 const FEATURES: Record<Exclude<Tab, "overview">, string> = {
   log: "OPERATIONAL_LOG",
@@ -56,6 +62,41 @@ const formatDate = (value?: string) =>
 const errorMessage = (error: unknown) =>
   error instanceof ApiError ? error.message : error instanceof Error ? error.message : "Une erreur est survenue.";
 
+function prepareReportContent(schema: Item, content: Item) {
+  const normalized = { ...content };
+  const errors: Record<string, string> = {};
+  for (const section of schema.sections ?? []) {
+    for (const field of section.fields ?? []) {
+      const value = content[field.key];
+      if (field.required && (value === undefined || value === null || value === "")) {
+        errors[field.key] = `${field.label} est obligatoire.`;
+        continue;
+      }
+      if (field.type === "DATETIME" && value) {
+        const instant = new Date(value);
+        if (Number.isNaN(instant.getTime())) errors[field.key] = `${field.label} doit contenir une date et une heure valides.`;
+        else normalized[field.key] = instant.toISOString();
+      }
+    }
+  }
+  return { normalized, errors };
+}
+
+function contentForEditing(schema: Item, content: Item) {
+  const editable = { ...content };
+  for (const section of schema.sections ?? []) {
+    for (const field of section.fields ?? []) {
+      if (field.type !== "DATETIME" || !content[field.key]) continue;
+      const instant = new Date(content[field.key]);
+      if (!Number.isNaN(instant.getTime())) {
+        const local = new Date(instant.getTime() - instant.getTimezoneOffset() * 60_000);
+        editable[field.key] = local.toISOString().slice(0, 16);
+      }
+    }
+  }
+  return editable;
+}
+
 export default function SecurityWorkstationPage() {
   const user = getUser();
   const organizationId = user?.organizationId ?? "";
@@ -71,6 +112,7 @@ export default function SecurityWorkstationPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [dialog, setDialog] = useState<Exclude<Tab, "overview"> | null>(null);
+  const [openReportId, setOpenReportId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
   const enabled = useMemo(
@@ -190,7 +232,7 @@ export default function SecurityWorkstationPage() {
     void refresh();
   }, [refresh]);
 
-  async function mutate(action: () => Promise<any>, success: string) {
+  async function mutate(action: () => Promise<any>, success: string, onError?: (reason: unknown) => void) {
     if (busy) return;
     setBusy(true);
     setError("");
@@ -201,7 +243,8 @@ export default function SecurityWorkstationPage() {
       setDialog(null);
       await refresh();
     } catch (reason) {
-      setError(errorMessage(reason));
+      if (onError) onError(reason);
+      else setError(errorMessage(reason));
     } finally {
       setBusy(false);
     }
@@ -256,11 +299,12 @@ export default function SecurityWorkstationPage() {
               <button className={styles.primary} onClick={() => setDialog(tab)}><Plus size={16} />{tab === "log" ? "Nouvelle entrée" : tab === "reports" ? "Nouveau rapport" : tab === "shifts" ? "Nouveau quart" : tab === "directives" ? "Nouvelle consigne" : "Nouveau suivi"}</button>
             </div>
           </div>
-          {loading ? <Loading /> : <ItemList tab={tab} items={items} organizationId={organizationId} reviewers={reviewers} mutate={mutate} />}
+          {loading ? <Loading /> : <ItemList tab={tab} items={items} organizationId={organizationId} reviewers={reviewers} mutate={mutate} onOpenReport={setOpenReportId} />}
         </section>
       )}
 
       {dialog && <CreateDialog kind={dialog} buildingId={buildingId} organizationId={organizationId} templates={templates} busy={busy} onClose={() => setDialog(null)} mutate={mutate} />}
+      {openReportId && <ReportDialog reportId={openReportId} organizationId={organizationId} templates={templates} busy={busy} onClose={() => setOpenReportId(null)} mutate={mutate} />}
     </main></PortalLayout>
   );
 }
@@ -277,25 +321,26 @@ function Overview({ capabilities, onOpen, buildingName }: { capabilities: Capabi
   return <section><div className={styles.context}><ShieldCheck size={20} /><span>Périmètre actif : <strong>{buildingName ?? "Bâtiment"}</strong>. Chaque action est revérifiée par le serveur.</span></div><div className={styles.grid}>{cards.map(([key, Icon, description]) => { const allowed = available.has(FEATURES[key]); return <button key={key} className={styles.card} disabled={!allowed} onClick={() => onOpen(key)}><Icon size={24} /><span><strong>{labels[key]}</strong><small>{allowed ? description : "Non disponible pour ce profil et ce bâtiment"}</small></span></button>; })}</div></section>;
 }
 
-function ItemList({ tab, items, organizationId, reviewers, mutate }: { tab: Exclude<Tab, "overview">; items: Item[]; organizationId: string; reviewers: Item[]; mutate: (action: () => Promise<any>, success: string) => Promise<void> }) {
+function ItemList({ tab, items, organizationId, reviewers, mutate, onOpenReport }: { tab: Exclude<Tab, "overview">; items: Item[]; organizationId: string; reviewers: Item[]; mutate: Mutate; onOpenReport: (id: string) => void }) {
   if (!items.length) return <div className={styles.empty}><ClipboardList size={30} /><h3>Aucun élément</h3><p>Utilisez l’action principale pour commencer. Aucun contenu de démonstration statique n’est affiché.</p></div>;
-  return <div className={styles.list}>{items.map((item) => <article className={styles.row} key={item.id}><div><div className={styles.rowTitle}>{item.title ?? item.description ?? item.activityType ?? item.securityPost ?? item.reportNumber ?? "Élément opérationnel"}</div><div className={styles.meta}><span>{item.status ?? item.priority ?? "ACTIF"}</span><span>{formatDate(item.eventAt ?? item.updatedAt ?? item.createdAt ?? item.plannedStartAt)}</span>{item.createdByDisplayName && <span>{item.createdByDisplayName}</span>}</div></div><RowActions tab={tab} item={item} organizationId={organizationId} reviewers={reviewers} mutate={mutate} /></article>)}</div>;
+  return <div className={styles.list}>{items.map((item) => <article className={styles.row} key={item.id}><div><div className={styles.rowTitle}>{item.title ?? item.description ?? item.activityType ?? item.securityPost ?? item.reportNumber ?? "Élément opérationnel"}</div><div className={styles.meta}><span>{item.status ?? item.priority ?? "ACTIF"}</span><span>{formatDate(item.eventAt ?? item.updatedAt ?? item.createdAt ?? item.plannedStartAt)}</span>{item.createdByDisplayName && <span>{item.createdByDisplayName}</span>}</div></div><RowActions tab={tab} item={item} organizationId={organizationId} reviewers={reviewers} mutate={mutate} onOpenReport={onOpenReport} /></article>)}</div>;
 }
 
-function RowActions({ tab, item, organizationId, reviewers, mutate }: { tab: Exclude<Tab, "overview">; item: Item; organizationId: string; reviewers: Item[]; mutate: (action: () => Promise<any>, success: string) => Promise<void> }) {
+function RowActions({ tab, item, organizationId, reviewers, mutate, onOpenReport }: { tab: Exclude<Tab, "overview">; item: Item; organizationId: string; reviewers: Item[]; mutate: Mutate; onOpenReport: (id: string) => void }) {
   const base = `/client-portal/organizations/${organizationId}`;
   if (tab === "shifts") return <div className={styles.rowActions}>{item.status === "PLANNED" && <button onClick={() => void mutate(() => apiPost(`${base}/operational-shifts/${item.id}/open`, { lockVersion: item.lockVersion, idempotencyKey: uuid() }), "Quart ouvert.")}>Ouvrir</button>}{item.status === "OPEN" && <button onClick={() => void mutate(() => apiPost(`${base}/operational-shifts/${item.id}/handover`, { lockVersion: item.lockVersion, idempotencyKey: uuid(), snapshot: { preparedFromPortal: true } }), "Relève préparée.")}>Préparer la relève</button>}</div>;
   if (tab === "directives") return <div className={styles.rowActions}>{item.status === "PUBLISHED" && item.currentVersionId && <button onClick={() => void mutate(() => apiPost(`${base}/operations/directives/${item.id}/acknowledge`, { versionId: item.currentVersionId, idempotencyKey: uuid() }), "Consigne confirmée.")}>Confirmer</button>}</div>;
   if (tab === "followups") return <div className={styles.rowActions}>{item.status === "OPEN" && <button onClick={() => void mutate(() => apiPost(`${base}/operations/follow-ups/${item.id}/start`, { lockVersion: item.lockVersion, idempotencyKey: uuid() }), "Suivi démarré.")}>Démarrer</button>}{item.status === "IN_PROGRESS" && <button onClick={() => void mutate(() => apiPost(`${base}/operations/follow-ups/${item.id}/complete`, { lockVersion: item.lockVersion, idempotencyKey: uuid(), evidence: { confirmedInPortal: true } }), "Suivi complété.")}>Compléter</button>}</div>;
-  if (tab === "reports") return <ReportActions item={item} base={base} reviewers={reviewers} mutate={mutate} />;
+  if (tab === "reports") return <ReportActions item={item} base={base} reviewers={reviewers} mutate={mutate} onOpen={() => onOpenReport(item.id)} />;
   return null;
 }
 
-function ReportActions({ item, base, reviewers, mutate }: { item: Item; base: string; reviewers: Item[]; mutate: (action: () => Promise<any>, success: string) => Promise<void> }) {
+function ReportActions({ item, base, reviewers, mutate, onOpen }: { item: Item; base: string; reviewers: Item[]; mutate: Mutate; onOpen: () => void }) {
   const [reviewerId, setReviewerId] = useState(reviewers[0]?.id ?? "");
   const versionId = item.versions?.[0]?.id;
   const decide = (decision: string, success: string) => mutate(() => apiPost(`${base}/incident-reports/${item.id}/decisions`, { decision, expectedLockVersion: item.lockVersion, idempotencyKey: uuid() }), success);
   return <div className={styles.rowActions}>
+    <button onClick={onOpen}>Ouvrir</button>
     {item.status === "DRAFT" && <><AttachmentButton item={item} versionId={versionId} base={base} mutate={mutate} /><button onClick={() => void mutate(() => apiPost(`${base}/incident-reports/${item.id}/submit`, { expectedLockVersion: item.lockVersion, idempotencyKey: uuid() }), "Rapport soumis.")}>Soumettre</button></>}
     {item.status === "SUBMITTED" && <><select aria-label="Réviseur" value={reviewerId} onChange={(event) => setReviewerId(event.target.value)}><option value="">Choisir le réviseur</option>{reviewers.map((reviewer) => <option key={reviewer.id} value={reviewer.id}>{reviewer.firstName} {reviewer.lastName}</option>)}</select><button disabled={!reviewerId} onClick={() => void mutate(() => apiPost(`${base}/incident-reports/${item.id}/reviewer`, { reviewerClientUserId: reviewerId, expectedLockVersion: item.lockVersion, idempotencyKey: uuid() }), "Réviseur affecté.")}>Affecter</button></>}
     {item.status === "IN_REVIEW" && <><button onClick={() => void decide("REVIEWED", "Révision enregistrée.")}>Réviser</button><button onClick={() => void decide("CORRECTION_REQUESTED", "Corrections demandées.")}>Demander correction</button><button onClick={() => void decide("APPROVED", "Rapport approuvé.")}>Approuver</button></>}
@@ -304,7 +349,55 @@ function ReportActions({ item, base, reviewers, mutate }: { item: Item; base: st
   </div>;
 }
 
-function AttachmentButton({ item, versionId, base, mutate }: { item: Item; versionId?: string; base: string; mutate: (action: () => Promise<any>, success: string) => Promise<void> }) {
+function ReportDialog({ reportId, organizationId, templates, busy, onClose, mutate }: { reportId: string; organizationId: string; templates: Item[]; busy: boolean; onClose: () => void; mutate: Mutate }) {
+  const [report, setReport] = useState<Item | null>(null);
+  const [content, setContent] = useState<Item>({});
+  const [title, setTitle] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [loadError, setLoadError] = useState("");
+  const base = `/client-portal/organizations/${organizationId}/incident-reports/${reportId}`;
+  const template = templates.find((item) => item.id === report?.templateVersionId);
+  const editable = report?.status === "DRAFT" || report?.status === "CORRECTION_REQUESTED";
+
+  useEffect(() => {
+    let active = true;
+    void apiGet(base).then((value) => {
+      if (!active) return;
+      setReport(value);
+      setTitle(value.title ?? "");
+      const schema = templates.find((item) => item.id === value.templateVersionId)?.formSchema ?? { sections: [] };
+      setContent(contentForEditing(schema, value.versions?.[0]?.content ?? {}));
+    }).catch((reason) => active && setLoadError(errorMessage(reason)));
+    return () => { active = false; };
+  }, [base, templates]);
+
+  const save = () => {
+    if (!report || !template) return;
+    const prepared = prepareReportContent(template.formSchema, content);
+    setFieldErrors(prepared.errors);
+    if (Object.keys(prepared.errors).length) return;
+    void mutate(
+      () => apiPatch(base, { expectedLockVersion: report.lockVersion, title, content: prepared.normalized, idempotencyKey: uuid() }),
+      "Brouillon enregistré.",
+      (reason) => setLoadError(errorMessage(reason)),
+    );
+  };
+
+  return <div className={styles.backdrop} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <section className={styles.dialog} role="dialog" aria-modal="true" aria-label="Détail du rapport">
+      <header><div><p className={styles.eyebrow}>Rapport</p><h2>{report?.reportNumber ?? "Chargement…"}</h2></div><button type="button" className={styles.close} onClick={onClose} aria-label="Fermer">×</button></header>
+      {loadError && <p className={styles.formError} role="alert">{loadError}</p>}
+      {!report ? <Loading /> : <>
+        <Field label="Titre"><input disabled={!editable} value={title} onChange={(event) => setTitle(event.target.value)} /></Field>
+        {template ? <ReportFields disabled={!editable} schema={template.formSchema} content={content} errors={fieldErrors} onChange={(key, value) => { setFieldErrors((current) => { const next = { ...current }; delete next[key]; return next; }); setContent((current) => ({ ...current, [key]: value })); }} /> : <p className={styles.help}>Le formulaire historique n’est pas disponible dans cette session.</p>}
+        <p className={styles.help}>Statut : {report.status}. Version {report.currentVersionNumber}.</p>
+        <footer><button type="button" className={styles.secondary} onClick={onClose}>Fermer</button>{editable && <button type="button" className={styles.primary} disabled={busy || !template} onClick={save}>Enregistrer</button>}</footer>
+      </>}
+    </section>
+  </div>;
+}
+
+function AttachmentButton({ item, versionId, base, mutate }: { item: Item; versionId?: string; base: string; mutate: Mutate }) {
   const upload = async (file?: File) => {
     if (!file || !versionId) return;
     const data = await new Promise<string>((resolve, reject) => {
@@ -318,12 +411,14 @@ function AttachmentButton({ item, versionId, base, mutate }: { item: Item; versi
   return <label className={styles.fileButton} aria-disabled={!versionId}>Pièce jointe<input disabled={!versionId} type="file" accept="image/jpeg,image/png,application/pdf" onChange={(event) => void upload(event.target.files?.[0])} /></label>;
 }
 
-function CreateDialog({ kind, buildingId, organizationId, templates, busy, onClose, mutate }: { kind: Exclude<Tab, "overview">; buildingId: string; organizationId: string; templates: Item[]; busy: boolean; onClose: () => void; mutate: (action: () => Promise<any>, success: string) => Promise<void> }) {
+function CreateDialog({ kind, buildingId, organizationId, templates, busy, onClose, mutate }: { kind: Exclude<Tab, "overview">; buildingId: string; organizationId: string; templates: Item[]; busy: boolean; onClose: () => void; mutate: Mutate }) {
   const eligibleTemplates = templates.filter((item) => item.retentionPolicyId && item.formSchema?.sections?.length);
   const firstTemplate = eligibleTemplates[0];
   const [form, setForm] = useState<Record<string, any>>({ priority: "NORMAL", templateVersionId: firstTemplate?.id ?? "", content: {} });
   const [formError, setFormError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const update = (key: string, value: any) => setForm((current) => ({ ...current, [key]: value }));
+  const updateContent = (key: string, value: any) => setForm((current) => ({ ...current, content: { ...current.content, [key]: value } }));
   const selectedTemplate = templates.find((item) => item.id === form.templateVersionId);
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -337,7 +432,21 @@ function CreateDialog({ kind, buildingId, organizationId, templates, busy, onClo
       setFormError("Sélectionnez un formulaire publié avec une politique de conservation active.");
       return;
     }
-    return mutate(() => apiPost(`${base}/incident-reports`, { buildingId, templateVersionId: template.id, retentionPolicyId: template.retentionPolicyId, reportType: template.reportType, title: form.title, content: form.content, idempotencyKey: uuid() }), "Brouillon de rapport créé.");
+    const prepared = prepareReportContent(template.formSchema, form.content);
+    setFieldErrors(prepared.errors);
+    if (Object.keys(prepared.errors).length) {
+      setFormError("Vérifiez les champs indiqués avant de créer le brouillon.");
+      return;
+    }
+    setFormError("");
+    return mutate(
+      () => apiPost(`${base}/incident-reports`, { buildingId, templateVersionId: template.id, retentionPolicyId: template.retentionPolicyId, reportType: template.reportType, title: form.title, content: prepared.normalized, idempotencyKey: uuid() }),
+      "Brouillon de rapport créé.",
+      (reason) => {
+        const details = reason instanceof ApiError && Array.isArray(reason.details) ? reason.details.filter((value): value is string => typeof value === "string") : [];
+        setFormError(details.length ? `${errorMessage(reason)} ${details.join(" ")}` : errorMessage(reason));
+      },
+    );
   }
   return (
     <div className={styles.backdrop} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
@@ -349,7 +458,7 @@ function CreateDialog({ kind, buildingId, organizationId, templates, busy, onClo
           ) : <>
             <Field label="Formulaire"><select required value={form.templateVersionId} onChange={(event) => { setFormError(""); update("templateVersionId", event.target.value); }}><option value="">Sélectionner</option>{eligibleTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></Field>
             <Field label="Titre du rapport"><input required maxLength={240} onChange={(event) => update("title", event.target.value)} /></Field>
-            {selectedTemplate && <ReportFields schema={selectedTemplate.formSchema} content={form.content} onChange={(content) => update("content", content)} />}
+            {selectedTemplate && <ReportFields schema={selectedTemplate.formSchema} content={form.content} errors={fieldErrors} onChange={(key, value) => { setFormError(""); setFieldErrors((current) => { const next = { ...current }; delete next[key]; return next; }); updateContent(key, value); }} />}
           </>}
           {formError && <p className={styles.formError} role="alert">{formError}</p>}
         </>}
@@ -361,7 +470,7 @@ function CreateDialog({ kind, buildingId, organizationId, templates, busy, onClo
   );
 }
 
-function ReportFields({ schema, content, onChange }: { schema?: Item; content: Item; onChange: (value: Item) => void }) {
+function ReportFields({ schema, content, errors, onChange, disabled = false }: { schema?: Item; content: Item; errors: Record<string, string>; onChange: (key: string, value: any) => void; disabled?: boolean }) {
   if (!schema?.sections) return <p className={styles.help}>Le formulaire sélectionné ne contient aucun champ utilisable.</p>;
   const visible = (field: Item) => {
     const condition = field.visibleWhen;
@@ -372,13 +481,12 @@ function ReportFields({ schema, content, onChange }: { schema?: Item; content: I
     if (condition.operator === "NEQ") return actual !== condition.value;
     return Array.isArray(condition.value) && condition.value.includes(actual);
   };
-  const change = (key: string, value: any) => onChange({ ...content, [key]: value });
-  return <div className={styles.reportForm}>{schema.sections.map((section: Item) => <fieldset key={section.key}><legend>{section.title}</legend>{(section.fields ?? []).filter(visible).map((field: Item) => field.type === "REPEATABLE_SECTION" ? <RepeatableField key={field.key} field={field} value={content[field.key] ?? []} onChange={(value) => change(field.key, value)} /> : <Field key={field.key} label={`${field.label}${field.required ? " *" : ""}`}>{field.type === "LONG_TEXT" ? <textarea required={field.required} rows={4} value={content[field.key] ?? ""} onChange={(event) => change(field.key, event.target.value)} /> : field.type === "SELECT" || field.type === "RADIO" ? <select required={field.required} value={content[field.key] ?? ""} onChange={(event) => change(field.key, event.target.value)}><option value="">Sélectionner</option>{(field.options ?? []).map((option: Item) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : field.type === "CHECKBOX" ? <input type="checkbox" checked={content[field.key] === true} onChange={(event) => change(field.key, event.target.checked)} /> : <input required={field.required} type={field.type === "NUMBER" ? "number" : field.type === "DATE" ? "date" : field.type === "TIME" ? "time" : field.type === "DATETIME" ? "datetime-local" : "text"} value={content[field.key] ?? ""} onChange={(event) => change(field.key, field.type === "NUMBER" ? Number(event.target.value) : event.target.value)} />}</Field>)}</fieldset>)}</div>;
+  return <div className={styles.reportForm}>{schema.sections.map((section: Item) => <fieldset key={section.key} disabled={disabled}><legend>{section.title}</legend>{(section.fields ?? []).filter(visible).map((field: Item) => field.type === "REPEATABLE_SECTION" ? <RepeatableField key={field.key} field={field} value={content[field.key] ?? []} onChange={(value) => onChange(field.key, value)} /> : <Field key={field.key} label={`${field.label}${field.required ? " *" : ""}`} error={errors[field.key]}>{field.type === "LONG_TEXT" ? <textarea aria-invalid={Boolean(errors[field.key])} required={field.required} rows={4} value={content[field.key] ?? ""} onChange={(event) => onChange(field.key, event.target.value)} /> : field.type === "SELECT" || field.type === "RADIO" ? <select aria-invalid={Boolean(errors[field.key])} required={field.required} value={content[field.key] ?? ""} onChange={(event) => onChange(field.key, event.target.value)}><option value="">Sélectionner</option>{(field.options ?? []).map((option: Item) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : field.type === "CHECKBOX" ? <input type="checkbox" checked={content[field.key] === true} onChange={(event) => onChange(field.key, event.target.checked)} /> : <><input aria-invalid={Boolean(errors[field.key])} required={field.required} type={field.type === "NUMBER" ? "number" : field.type === "DATE" ? "date" : field.type === "TIME" ? "time" : field.type === "DATETIME" ? "datetime-local" : "text"} value={content[field.key] ?? ""} onChange={(event) => onChange(field.key, field.type === "NUMBER" && event.target.value !== "" ? Number(event.target.value) : event.target.value)} />{field.type === "DATETIME" && <small className={styles.help}>Heure locale de cet appareil; elle sera enregistrée avec son fuseau.</small>}</>}</Field>)}</fieldset>)}</div>;
 }
 
 function RepeatableField({ field, value, onChange }: { field: Item; value: Item[]; onChange: (value: Item[]) => void }) {
   return <div className={styles.repeatable}><div className={styles.repeatableTitle}><strong>{field.label}</strong><button type="button" className={styles.secondary} onClick={() => onChange([...value, {}])} disabled={value.length >= (field.maxItems ?? 100)}><Plus size={14} />Ajouter</button></div>{value.map((item, index) => <div className={styles.repeatableRow} key={index}>{(field.children ?? []).map((child: Item) => <Field key={child.key} label={`${child.label}${child.required ? " *" : ""}`}><input required={child.required} value={item[child.key] ?? ""} onChange={(event) => onChange(value.map((row, rowIndex) => rowIndex === index ? { ...row, [child.key]: event.target.value } : row))} /></Field>)}<button type="button" className={styles.remove} onClick={() => onChange(value.filter((_, rowIndex) => rowIndex !== index))}>Retirer</button></div>)}</div>;
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className={styles.field}><span>{label}</span>{children}</label>; }
+function Field({ label, children, error }: { label: string; children: React.ReactNode; error?: string }) { return <label className={styles.field}><span>{label}</span>{children}{error && <small className={styles.fieldError} role="alert">{error}</small>}</label>; }
 function Loading() { return <div className={styles.loading}><Loader2 className={styles.spin} size={24} />Chargement sécurisé…</div>; }

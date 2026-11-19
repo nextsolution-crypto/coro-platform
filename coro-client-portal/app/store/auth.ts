@@ -6,6 +6,7 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    public readonly details?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
@@ -146,6 +147,7 @@ export async function apiGet(path: string) {
     throw new ApiError(
       typeof data === "string" ? data : data?.message || "Erreur API",
       res.status,
+      typeof data === "object" ? data?.errors : undefined,
     );
   }
 
@@ -171,6 +173,7 @@ export async function apiPost(path: string, body: unknown) {
     throw new ApiError(
       typeof data === "string" ? data : data?.message || "Erreur API",
       res.status,
+      typeof data === "object" ? data?.errors : undefined,
     );
   }
   return data;
@@ -195,6 +198,7 @@ export async function apiPatch(path: string, body: unknown) {
     throw new ApiError(
       typeof data === "string" ? data : data?.message || "Erreur API",
       res.status,
+      typeof data === "object" ? data?.errors : undefined,
     );
   }
   return data;
