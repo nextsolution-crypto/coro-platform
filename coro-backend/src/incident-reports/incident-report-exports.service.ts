@@ -40,7 +40,14 @@ export class IncidentReportExportsService {
     const report = await this.prisma.incidentReport.findFirst({
       where: { id: reportId, organizationId },
       include: {
-        building: { select: { id: true, name: true } },
+        building: {
+          select: {
+            id: true,
+            name: true,
+            timeZone: true,
+            timeZoneVerified: true,
+          },
+        },
         templateVersion: { select: { formSchema: true, contentHash: true } },
         versions: { where: { id: dto.reportVersionId }, take: 1 },
         approvals: {
@@ -79,6 +86,22 @@ export class IncidentReportExportsService {
     await this.prisma.$transaction((tx) => ensureProvenanceActor(tx, actor));
     const provenance = provenanceData(actor);
     const generatedAt = new Date();
+    const approvals = await Promise.all(
+      report.approvals.map(async (approval) => {
+        const actorDisplayName = await this.resolveActorDisplayName(
+          organizationId,
+          approval.actorType,
+          approval.actorId,
+        );
+        return {
+          ...approval,
+          actorDisplayName,
+          actorDisplayNameSource: actorDisplayName
+            ? ('CURRENT_PROFILE' as const)
+            : ('STABLE_ACTOR_ID' as const),
+        };
+      }),
+    );
     const sourceManifest = {
       schemaVersion: 1,
       reportId,
@@ -88,6 +111,13 @@ export class IncidentReportExportsService {
       templateVersionId: report.templateVersionId,
       templateContentHash: report.templateVersion.contentHash,
       approvalIds: report.approvals.map((item) => item.id),
+      approvalActors: approvals.map((item) => ({
+        approvalId: item.id,
+        actorType: item.actorType,
+        actorId: item.actorId,
+        actorDisplayName: item.actorDisplayName,
+        actorDisplayNameSource: item.actorDisplayNameSource,
+      })),
       generatedAt: generatedAt.toISOString(),
     };
     try {
@@ -136,11 +166,14 @@ export class IncidentReportExportsService {
         reportId,
         reportVersionId: version.id,
         buildingName: report.building.name,
+        timeZone: report.building.timeZoneVerified
+          ? report.building.timeZone
+          : 'UTC',
         contentHash: version.contentHash,
         content: version.content as Record<string, unknown>,
         schema: report.templateVersion
           .formSchema as unknown as IncidentReportFormSchema,
-        approvals: report.approvals,
+        approvals,
         generatedAt,
       });
       const sha256 = createHash('sha256').update(bytes).digest('hex');
@@ -273,6 +306,31 @@ export class IncidentReportExportsService {
     const safe: Partial<T> = { ...row };
     delete safe.storageKey;
     return safe as Omit<T, 'storageKey'>;
+  }
+  private async resolveActorDisplayName(
+    organizationId: string,
+    actorType: string,
+    actorId: string,
+  ): Promise<string | null> {
+    if (actorType === 'USER') {
+      const actor = await this.prisma.user.findFirst({
+        where: { id: actorId, organizationId },
+        select: { firstName: true, lastName: true },
+      });
+      return actor
+        ? `${actor.firstName} ${actor.lastName}`.trim() || null
+        : null;
+    }
+    if (actorType === 'CLIENT_USER') {
+      const actor = await this.prisma.clientUser.findFirst({
+        where: { id: actorId, organizationId },
+        select: { firstName: true, lastName: true },
+      });
+      return actor
+        ? `${actor.firstName} ${actor.lastName}`.trim() || null
+        : null;
+    }
+    return null;
   }
   private enabled() {
     if (!incidentReportsEnabled())
