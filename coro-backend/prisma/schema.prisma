@@ -98,6 +98,7 @@ model Organization {
   incidentReportTemplateVersions   IncidentReportTemplateVersion[]
   incidentReportRetentionPolicies  IncidentReportRetentionPolicy[]
   incidentReportAuditEvents        IncidentReportAuditEvent[]
+  incidentReportImportBatches      IncidentReportImportBatch[]
   operationalLogEntries            OperationalLogEntry[]
   operationalLogRevisions          OperationalLogEntryRevision[]
   operationalLogAssignments        OperationalLogBuildingAssignment[]
@@ -3165,6 +3166,7 @@ model Building {
   populationEvidenceManifests  PopulationEvidenceManifest[]
   populationEvidenceReports    PopulationEvidenceReport[]
   incidentReports              IncidentReport[]
+  incidentReportImportBatches  IncidentReportImportBatch[]
   operationalLogEntries        OperationalLogEntry[]
   operationalLogAssignments    OperationalLogBuildingAssignment[]
   clientOperationalAssignments ClientOperationalBuildingAssignment[]
@@ -7820,6 +7822,23 @@ enum IncidentReportExternalMappingStatus {
   REJECTED
 }
 
+enum IncidentReportImportBatchStatus {
+  STAGED
+  ANALYZED
+  MAPPING
+  READY
+  IMPORTING
+  COMPLETED
+  FAILED
+  ROLLED_BACK
+}
+
+enum IncidentReportImportFileStatus {
+  STAGED
+  ANALYZED
+  INVALID
+}
+
 model IncidentReportTemplateVersion {
   id                 String                       @id @default(uuid())
   organizationId     String
@@ -8065,6 +8084,71 @@ model IncidentReportAuditEvent {
   @@unique([id, organizationId])
   @@unique([organizationId, idempotencyKey])
   @@index([organizationId, reportId, occurredAt])
+}
+
+model IncidentReportImportBatch {
+  id                  String                          @id @default(uuid())
+  organizationId      String
+  buildingId          String
+  sourceSystem        String
+  sourceSchemaVersion String?
+  status              IncidentReportImportBatchStatus @default(STAGED)
+  idempotencyKey      String
+  lockVersion         Int                             @default(0)
+  createdByActorType  CoroActorType
+  createdByActorId    String
+  createdAt           DateTime                        @default(now())
+  updatedAt           DateTime                        @updatedAt
+  organization        Organization                    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building            Building                        @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  files               IncidentReportImportFile[]
+  events              IncidentReportImportEvent[]
+
+  @@unique([organizationId, idempotencyKey])
+  @@unique([id, organizationId])
+  @@index([organizationId, buildingId, status, createdAt])
+}
+
+model IncidentReportImportFile {
+  id               String                             @id @default(uuid())
+  organizationId   String
+  batchId          String
+  originalFileName String
+  mediaType        String
+  sizeBytes        BigInt
+  sha256           String
+  storageKey       String
+  scanStatus       IncidentReportAttachmentScanStatus
+  status           IncidentReportImportFileStatus     @default(STAGED)
+  detectedEncoding String?
+  headers          Json?
+  recordCount      Int?
+  analysis         Json?
+  createdAt        DateTime                           @default(now())
+  analyzedAt       DateTime?
+  batch            IncidentReportImportBatch          @relation(fields: [batchId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([organizationId, storageKey])
+  @@unique([organizationId, batchId, sha256])
+  @@unique([id, organizationId])
+  @@index([organizationId, batchId, status])
+}
+
+model IncidentReportImportEvent {
+  id             String                    @id @default(uuid())
+  organizationId String
+  batchId        String
+  action         String
+  actorType      CoroActorType
+  actorId        String
+  idempotencyKey String?
+  metadata       Json?
+  occurredAt     DateTime                  @default(now())
+  batch          IncidentReportImportBatch @relation(fields: [batchId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([organizationId, idempotencyKey])
+  @@unique([id, organizationId])
+  @@index([organizationId, batchId, occurredAt])
 }
 
 enum OperationalLogPriority {
