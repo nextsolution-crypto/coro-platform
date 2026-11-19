@@ -108,7 +108,7 @@ export class IncidentReportTemplatesService {
             name: dto.name,
             reportType: dto.reportType,
             status: 'PUBLISHED',
-            schemaVersion: '1.0',
+            schemaVersion: formSchema.schemaVersion,
             formSchema: formSchema as unknown as Prisma.InputJsonValue,
             fieldCatalog: dto.fieldCatalog as Prisma.InputJsonValue,
             mappingMetadata: dto.mappingMetadata as
