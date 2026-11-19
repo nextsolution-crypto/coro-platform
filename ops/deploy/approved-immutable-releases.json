@@ -198,6 +198,15 @@
         "clientPortal": "ghcr.io/nextsolution-crypto/coro-client-portal@sha256:aa6e91b9af7e089ae8b47a1c44467eadde1039f767682ac1529693b843cf5973",
         "website": "ghcr.io/nextsolution-crypto/coro-website@sha256:b8bec58a81a508941acd3bee6e0ac38d7ef0a670040df78c401e4617b60748fd"
       }
+    },
+    "535b47decb1409812bd7731fe9583de9c858b894": {
+      "migrationHead": "20261220020000_client_feature_entitlement_catalog",
+      "images": {
+        "backend": "ghcr.io/nextsolution-crypto/coro-backend@sha256:c7d527724fad3fed02c03d892184929143ea9c8e00eb4199baff8f87c233a7b7",
+        "frontend": "ghcr.io/nextsolution-crypto/coro-frontend@sha256:09b85c30c3fafcf33cac4adfa0a434d936c5342e4e0af1cf0d566d329213d328",
+        "clientPortal": "ghcr.io/nextsolution-crypto/coro-client-portal@sha256:b452a3ffe37ae074c817fac857bd2a9b17e2b57c976f9fc83552c8cb68557815",
+        "website": "ghcr.io/nextsolution-crypto/coro-website@sha256:1c91f5cd7fba118283def26bd706673c9ff7243243d3de0e41c32f9b91b9d1ac"
+      }
     }
   }
 }
