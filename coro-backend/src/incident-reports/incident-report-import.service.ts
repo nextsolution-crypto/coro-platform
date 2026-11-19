@@ -265,6 +265,7 @@ export class IncidentReportImportService {
     batchId: string,
     fileId: string,
     maximumRecords = 100,
+    offset = 0,
   ) {
     const file = await this.prisma.incidentReportImportFile.findFirst({
       where: {
@@ -284,7 +285,7 @@ export class IncidentReportImportService {
     return {
       sourceFileHash: actualHash,
       headers: parsed.headers,
-      records: parsed.records.slice(0, maximumRecords),
+      records: parsed.records.slice(offset, offset + maximumRecords),
       totalRecords: parsed.records.length,
     };
   }

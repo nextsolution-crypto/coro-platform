@@ -99,6 +99,8 @@ model Organization {
   incidentReportRetentionPolicies  IncidentReportRetentionPolicy[]
   incidentReportAuditEvents        IncidentReportAuditEvent[]
   incidentReportImportBatches      IncidentReportImportBatch[]
+  incidentReportImportRuns         IncidentReportImportRun[]
+  incidentReportHistoricalRecords  IncidentReportHistoricalRecord[]
   operationalLogEntries            OperationalLogEntry[]
   operationalLogRevisions          OperationalLogEntryRevision[]
   operationalLogAssignments        OperationalLogBuildingAssignment[]
@@ -3161,25 +3163,27 @@ model Building {
   // Profil réglementaire et opérationnel de l'installation.
   // Cette relation reste optionnelle : un bâtiment standard n'a pas
   // automatiquement de profil RUE.
-  rueFacilityProfile           RueFacilityProfile?
-  populationEvidenceRecords    PopulationEvidenceRecord[]
-  populationEvidenceManifests  PopulationEvidenceManifest[]
-  populationEvidenceReports    PopulationEvidenceReport[]
-  incidentReports              IncidentReport[]
-  incidentReportImportBatches  IncidentReportImportBatch[]
-  operationalLogEntries        OperationalLogEntry[]
-  operationalLogAssignments    OperationalLogBuildingAssignment[]
-  clientOperationalAssignments ClientOperationalBuildingAssignment[]
-  operationalShifts            OperationalShift[]
-  operationalShiftParticipants OperationalShiftParticipant[]
-  operationalShiftHistory      OperationalShiftHistory[]
-  operationalHandovers         OperationalHandover[]
-  operationalHandoverActions   OperationalHandoverAction[]
-  operationalDirectives        OperationalDirective[]
-  operationalDirectiveVersions OperationalDirectiveVersion[]
-  operationalDirectiveReceipts OperationalDirectiveReceipt[]
-  operationalFollowUps         OperationalFollowUp[]
-  operationalFollowUpEvents    OperationalFollowUpEvent[]
+  rueFacilityProfile              RueFacilityProfile?
+  populationEvidenceRecords       PopulationEvidenceRecord[]
+  populationEvidenceManifests     PopulationEvidenceManifest[]
+  populationEvidenceReports       PopulationEvidenceReport[]
+  incidentReports                 IncidentReport[]
+  incidentReportImportBatches     IncidentReportImportBatch[]
+  incidentReportImportRuns        IncidentReportImportRun[]
+  incidentReportHistoricalRecords IncidentReportHistoricalRecord[]
+  operationalLogEntries           OperationalLogEntry[]
+  operationalLogAssignments       OperationalLogBuildingAssignment[]
+  clientOperationalAssignments    ClientOperationalBuildingAssignment[]
+  operationalShifts               OperationalShift[]
+  operationalShiftParticipants    OperationalShiftParticipant[]
+  operationalShiftHistory         OperationalShiftHistory[]
+  operationalHandovers            OperationalHandover[]
+  operationalHandoverActions      OperationalHandoverAction[]
+  operationalDirectives           OperationalDirective[]
+  operationalDirectiveVersions    OperationalDirectiveVersion[]
+  operationalDirectiveReceipts    OperationalDirectiveReceipt[]
+  operationalFollowUps            OperationalFollowUp[]
+  operationalFollowUpEvents       OperationalFollowUpEvent[]
 
   @@unique([id, clientId, organizationId])
   @@unique([id, organizationId])
@@ -7839,6 +7843,27 @@ enum IncidentReportImportFileStatus {
   INVALID
 }
 
+enum IncidentReportImportRunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  ROLLED_BACK
+}
+
+enum IncidentReportImportItemStatus {
+  IMPORTED
+  DUPLICATE
+  CONFLICT
+  FAILED
+  ROLLED_BACK
+}
+
+enum IncidentReportHistoricalRecordStatus {
+  ACTIVE
+  ROLLED_BACK
+}
+
 model IncidentReportTemplateVersion {
   id                 String                       @id @default(uuid())
   organizationId     String
@@ -8087,24 +8112,26 @@ model IncidentReportAuditEvent {
 }
 
 model IncidentReportImportBatch {
-  id                  String                          @id @default(uuid())
+  id                  String                           @id @default(uuid())
   organizationId      String
   buildingId          String
   sourceSystem        String
   sourceSchemaVersion String?
-  status              IncidentReportImportBatchStatus @default(STAGED)
+  status              IncidentReportImportBatchStatus  @default(STAGED)
   idempotencyKey      String
-  lockVersion         Int                             @default(0)
+  lockVersion         Int                              @default(0)
   createdByActorType  CoroActorType
   createdByActorId    String
-  createdAt           DateTime                        @default(now())
-  updatedAt           DateTime                        @updatedAt
-  organization        Organization                    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  building            Building                        @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdAt           DateTime                         @default(now())
+  updatedAt           DateTime                         @updatedAt
+  organization        Organization                     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building            Building                         @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
   files               IncidentReportImportFile[]
   events              IncidentReportImportEvent[]
   mappings            IncidentReportImportMapping[]
   previews            IncidentReportImportPreview[]
+  runs                IncidentReportImportRun[]
+  historicalRecords   IncidentReportHistoricalRecord[]
 
   @@unique([organizationId, idempotencyKey])
   @@unique([id, organizationId])
@@ -8130,6 +8157,7 @@ model IncidentReportImportFile {
   analyzedAt       DateTime?
   batch            IncidentReportImportBatch          @relation(fields: [batchId, organizationId], references: [id, organizationId], onDelete: Restrict)
   previews         IncidentReportImportPreview[]
+  runs             IncidentReportImportRun[]
 
   @@unique([organizationId, storageKey])
   @@unique([organizationId, batchId, sha256])
@@ -8167,6 +8195,7 @@ model IncidentReportImportMapping {
   createdAt          DateTime                      @default(now())
   batch              IncidentReportImportBatch     @relation(fields: [batchId, organizationId], references: [id, organizationId], onDelete: Restrict)
   previews           IncidentReportImportPreview[]
+  runs               IncidentReportImportRun[]
 
   @@unique([organizationId, batchId, version])
   @@unique([id, organizationId])
@@ -8193,6 +8222,90 @@ model IncidentReportImportPreview {
   @@unique([organizationId, batchId, fileId, mappingHash, sourceFileHash])
   @@unique([id, organizationId])
   @@index([organizationId, batchId, createdAt])
+}
+
+model IncidentReportImportRun {
+  id                 String                           @id @default(uuid())
+  organizationId     String
+  buildingId         String
+  batchId            String
+  fileId             String
+  mappingId          String
+  status             IncidentReportImportRunStatus    @default(PENDING)
+  cursor             Int                              @default(0)
+  totalRecords       Int
+  importedCount      Int                              @default(0)
+  duplicateCount     Int                              @default(0)
+  conflictCount      Int                              @default(0)
+  failedCount        Int                              @default(0)
+  idempotencyKey     String
+  lockVersion        Int                              @default(0)
+  startedAt          DateTime?
+  completedAt        DateTime?
+  rolledBackAt       DateTime?
+  createdByActorType CoroActorType
+  createdByActorId   String
+  createdAt          DateTime                         @default(now())
+  updatedAt          DateTime                         @updatedAt
+  organization       Organization                     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building           Building                         @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  batch              IncidentReportImportBatch        @relation(fields: [batchId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  file               IncidentReportImportFile         @relation(fields: [fileId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  mapping            IncidentReportImportMapping      @relation(fields: [mappingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  items              IncidentReportImportItem[]
+  historicalRecords  IncidentReportHistoricalRecord[]
+
+  @@unique([organizationId, idempotencyKey])
+  @@unique([id, organizationId])
+  @@index([organizationId, buildingId, status, createdAt])
+}
+
+model IncidentReportImportItem {
+  id                 String                          @id @default(uuid())
+  organizationId     String
+  runId              String
+  sourceRow          Int
+  sourceObjectId     String
+  sourceHash         String
+  status             IncidentReportImportItemStatus
+  historicalRecordId String?
+  errorCode          String?
+  createdAt          DateTime                        @default(now())
+  run                IncidentReportImportRun         @relation(fields: [runId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  historicalRecord   IncidentReportHistoricalRecord? @relation(fields: [historicalRecordId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([organizationId, runId, sourceRow])
+  @@unique([id, organizationId])
+  @@index([organizationId, runId, status])
+}
+
+model IncidentReportHistoricalRecord {
+  id                  String                               @id @default(uuid())
+  organizationId      String
+  buildingId          String
+  importBatchId       String
+  importRunId         String
+  sourceSystem        String
+  sourceObjectType    String
+  sourceObjectId      String
+  sourceSchemaVersion String?
+  sourceHash          String
+  mappedContent       Json
+  originalContent     Json
+  provenanceManifest  Json
+  status              IncidentReportHistoricalRecordStatus @default(ACTIVE)
+  importedAt          DateTime                             @default(now())
+  rolledBackAt        DateTime?
+  organization        Organization                         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  building            Building                             @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  importBatch         IncidentReportImportBatch            @relation(fields: [importBatchId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  importRun           IncidentReportImportRun              @relation(fields: [importRunId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  importItems         IncidentReportImportItem[]
+
+  @@unique([organizationId, sourceSystem, sourceObjectType, sourceObjectId])
+  @@unique([id, organizationId])
+  @@index([organizationId, buildingId, status, importedAt])
+  @@index([organizationId, importRunId])
 }
 
 enum OperationalLogPriority {
