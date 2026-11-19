@@ -8290,6 +8290,7 @@ model IncidentReportHistoricalRecord {
   sourceObjectId      String
   sourceSchemaVersion String?
   sourceHash          String
+  searchText          String
   mappedContent       Json
   originalContent     Json
   provenanceManifest  Json

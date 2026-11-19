@@ -32,6 +32,8 @@ import {
   StartIncidentReportImportRunDto,
 } from './dto/incident-report-import-execution.dto';
 import { IncidentReportImportExecutionService } from './incident-report-import-execution.service';
+import { IncidentReportHistoricalListQueryDto } from './dto/incident-report-historical.dto';
+import { IncidentReportHistoricalService } from './incident-report-historical.service';
 
 interface AuthenticatedRequest {
   user: AdviserActor;
@@ -51,6 +53,7 @@ export class IncidentReportImportController {
     private readonly imports: IncidentReportImportService,
     private readonly mappings: IncidentReportImportMappingService,
     private readonly executions: IncidentReportImportExecutionService,
+    private readonly historical: IncidentReportHistoricalService,
   ) {}
 
   @Post()
@@ -169,5 +172,23 @@ export class IncidentReportImportController {
     @Request() request: AuthenticatedRequest,
   ) {
     return this.executions.rollback(organizationId, runId, dto, request.user);
+  }
+
+  @Get('historical/records')
+  historicalRecords(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @Query() query: IncidentReportHistoricalListQueryDto,
+    @Request() request: AuthenticatedRequest,
+  ) {
+    return this.historical.list(organizationId, query, request.user);
+  }
+
+  @Get('historical/records/:recordId')
+  historicalRecord(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @Param('recordId', ParseUUIDPipe) recordId: string,
+    @Request() request: AuthenticatedRequest,
+  ) {
+    return this.historical.get(organizationId, recordId, request.user);
   }
 }

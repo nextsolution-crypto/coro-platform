@@ -91,6 +91,7 @@ describe('Client operational controllers', () => {
       {} as never,
       {} as never,
       {} as never,
+      {} as never,
     );
     const query = {
       buildingId: '00000000-0000-4000-8000-000000000002',
@@ -123,6 +124,7 @@ describe('Client operational controllers', () => {
     const controller = new ClientIncidentReportsController(
       {} as never,
       workflow as never,
+      {} as never,
       {} as never,
       {} as never,
       {} as never,

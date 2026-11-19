@@ -35,10 +35,20 @@ assert.match(page, /client-portal\/organizations\/\$\{organizationId\}/);
 assert.match(page, /incident-reports\/forms\/templates/);
 assert.match(page, /params\.set\("status", reportStatus\)/);
 assert.match(page, /params\.set\("reportType", reportType\)/);
-assert.match(page, /params\.set\("createdFrom", createdFrom\)/);
-assert.match(page, /params\.set\("createdTo", createdTo\)/);
+assert.match(
+  page,
+  /params\.set\(showHistorical \? "importedFrom" : "createdFrom", createdFrom\)/,
+);
+assert.match(
+  page,
+  /params\.set\(showHistorical \? "importedTo" : "createdTo", createdTo\)/,
+);
 assert.match(page, /Filtrer les rapports par statut/);
 assert.match(page, /Filtrer les rapports par formulaire/);
+assert.match(page, /Afficher les archives/);
+assert.match(page, /incident-reports\$\{showHistorical \? "\/historical" : ""\}/);
+assert.match(page, /provenanceKind === "HISTORICAL_IMPORT"/);
+assert.match(page, /Archive importée|Archive historique/);
 assert.match(page, /<PortalLayout>[\s\S]*<main className=\{styles\.page\}>/);
 assert.match(page, /isCanonicalUuid\(buildingId\)/);
 assert.match(page, /setTab\("overview"\)/);

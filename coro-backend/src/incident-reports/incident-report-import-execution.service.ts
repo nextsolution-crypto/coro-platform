@@ -259,6 +259,11 @@ export class IncidentReportImportExecutionService {
               sourceObjectId,
               sourceSchemaVersion: batch.sourceSchemaVersion,
               sourceHash,
+              searchText: this.searchText(
+                sample.mapped,
+                original,
+                sourceObjectId,
+              ),
               mappedContent: this.json(sample.mapped) as Prisma.InputJsonValue,
               originalContent: original as Prisma.InputJsonValue,
               provenanceManifest: {
@@ -481,6 +486,30 @@ export class IncidentReportImportExecutionService {
 
   private hash(value: unknown) {
     return createHash('sha256').update(JSON.stringify(value)).digest('hex');
+  }
+
+  private searchText(
+    mapped: Record<string, unknown>,
+    original: Record<string, unknown>,
+    sourceObjectId: string,
+  ) {
+    const values = [
+      sourceObjectId,
+      mapped.title,
+      mapped.reportNumber,
+      mapped['incident.title'],
+      mapped['incident.category'],
+      original.title,
+      original.reportNumber,
+      original.category,
+    ];
+    return values
+      .filter((value): value is string | number =>
+        ['string', 'number'].includes(typeof value),
+      )
+      .map(String)
+      .join(' ')
+      .slice(0, 2000);
   }
 
   private json(value: unknown): Record<string, unknown> {
