@@ -9,6 +9,7 @@ import { IncidentReportWorkflowService } from '../incident-reports/incident-repo
 import { IncidentReportAttachmentsService } from '../incident-reports/incident-report-attachments.service';
 import { IncidentReportTemplatesService } from '../incident-reports/incident-report-templates.service';
 import { IncidentReportExportsService } from '../incident-reports/incident-report-exports.service';
+import { IncidentReportHistoricalService } from '../incident-reports/incident-report-historical.service';
 import {
   ClientIncidentReportsController,
   ClientOperationalCapabilitiesController,
@@ -173,6 +174,7 @@ describe('Client operational controllers', () => {
         { provide: IncidentReportAttachmentsService, useValue: {} },
         { provide: IncidentReportTemplatesService, useValue: {} },
         { provide: IncidentReportExportsService, useValue: {} },
+        { provide: IncidentReportHistoricalService, useValue: {} },
       ],
     })
       .overrideGuard(ClientJwtGuard)
