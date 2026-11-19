@@ -1,9 +1,14 @@
 import { GUARDS_METADATA } from '@nestjs/common/constants';
-import { INestApplication } from '@nestjs/common';
+import { ExecutionContext, INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { ClientJwtGuard } from './client-jwt.guard';
 import { ClientFeatureEntitlementService } from '../capability-entitlements/client-feature-entitlement.service';
+import { IncidentReportsService } from '../incident-reports/incident-reports.service';
+import { IncidentReportWorkflowService } from '../incident-reports/incident-report-workflow.service';
+import { IncidentReportAttachmentsService } from '../incident-reports/incident-report-attachments.service';
+import { IncidentReportTemplatesService } from '../incident-reports/incident-report-templates.service';
+import { IncidentReportExportsService } from '../incident-reports/incident-report-exports.service';
 import {
   ClientIncidentReportsController,
   ClientOperationalCapabilitiesController,
@@ -139,6 +144,69 @@ describe('Client operational controllers', () => {
       dto,
       authority,
     );
+  });
+
+  it('routes the client assignment contract with the persistent report UUID', async () => {
+    const organizationId = '00000000-0000-4000-8000-000000000001';
+    const reportId = '00000000-0000-4000-8000-000000000003';
+    const authority = Object.freeze({
+      actorType: 'CLIENT_USER' as const,
+      actorId: '00000000-0000-4000-8000-000000000008',
+      clientId: '00000000-0000-4000-8000-000000000009',
+      organizationId,
+      role: 'CLIENT_MANAGER' as const,
+      sessionVersion: 2,
+      permissions: [],
+      buildingIds: [],
+    });
+    const assignClientReviewer = jest.fn().mockResolvedValue({ id: reportId });
+    const moduleRef = await Test.createTestingModule({
+      controllers: [ClientIncidentReportsController],
+      providers: [
+        { provide: IncidentReportsService, useValue: {} },
+        {
+          provide: IncidentReportWorkflowService,
+          useValue: { assignClientReviewer },
+        },
+        { provide: IncidentReportAttachmentsService, useValue: {} },
+        { provide: IncidentReportTemplatesService, useValue: {} },
+        { provide: IncidentReportExportsService, useValue: {} },
+      ],
+    })
+      .overrideGuard(ClientJwtGuard)
+      .useValue({
+        canActivate: (context: ExecutionContext) => {
+          const req = context
+            .switchToHttp()
+            .getRequest<{ coroAuthority?: typeof authority }>();
+          req.coroAuthority = authority;
+          return true;
+        },
+      })
+      .compile();
+    const app = moduleRef.createNestApplication();
+    await app.init();
+    const dto = {
+      reviewerClientUserId: '00000000-0000-4000-8000-000000000004',
+      expectedLockVersion: 1,
+      idempotencyKey: '00000000-0000-4000-8000-000000000005',
+    };
+
+    await request(app.getHttpServer())
+      .post(
+        `/client-portal/organizations/${organizationId}/incident-reports/${reportId}/reviewer`,
+      )
+      .send(dto)
+      .expect(201)
+      .expect({ id: reportId });
+
+    expect(assignClientReviewer).toHaveBeenCalledWith(
+      organizationId,
+      reportId,
+      dto,
+      authority,
+    );
+    await app.close();
   });
 });
 
