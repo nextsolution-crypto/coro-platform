@@ -13,6 +13,7 @@ import { CapabilityEntitlementsModule } from '../capability-entitlements/capabil
 import { IncidentReportImportController } from './incident-report-import.controller';
 import { IncidentReportImportService } from './incident-report-import.service';
 import { IncidentReportImportMappingService } from './incident-report-import-mapping.service';
+import { IncidentReportImportExecutionService } from './incident-report-import-execution.service';
 
 @Module({
   imports: [PrismaModule, StorageModule, CapabilityEntitlementsModule],
@@ -27,6 +28,7 @@ import { IncidentReportImportMappingService } from './incident-report-import-map
     IncidentReportExportsService,
     IncidentReportImportService,
     IncidentReportImportMappingService,
+    IncidentReportImportExecutionService,
   ],
   exports: [
     IncidentReportsService,
