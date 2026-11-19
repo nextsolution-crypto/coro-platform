@@ -27,6 +27,8 @@ describe('IncidentReportWorkflowService ClientUser reviewer', () => {
         incidentEventId: null,
         status: 'SUBMITTED',
         lockVersion: 0,
+        submittedByActorType: CoroActorType.CLIENT_USER,
+        submittedByActorId: authority.actorId,
       }),
     },
     clientUser: { findFirst: jest.fn(), findMany: jest.fn() },
@@ -143,6 +145,13 @@ describe('IncidentReportWorkflowService ClientUser reviewer', () => {
       }),
     );
     expect(requireAccess).toHaveBeenCalledTimes(2);
+    expect(requireAccess).toHaveBeenNthCalledWith(
+      1,
+      authority,
+      organizationId,
+      buildingId,
+      'INCIDENT_REPORT_EDIT',
+    );
     expect(updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -152,5 +161,33 @@ describe('IncidentReportWorkflowService ClientUser reviewer', () => {
         }),
       }),
     );
+  });
+
+  it('hides a submitted report from a different author during assignment', async () => {
+    prisma.incidentReport.findFirst.mockResolvedValueOnce({
+      id: reportId,
+      organizationId,
+      buildingId,
+      incidentEventId: null,
+      status: 'SUBMITTED',
+      lockVersion: 0,
+      submittedByActorType: CoroActorType.CLIENT_USER,
+      submittedByActorId: '00000000-0000-4000-8000-000000000099',
+    });
+
+    await expect(
+      service.assignClientReviewer(
+        organizationId,
+        reportId,
+        {
+          reviewerClientUserId: '00000000-0000-4000-8000-000000000006',
+          expectedLockVersion: 0,
+          idempotencyKey: '00000000-0000-4000-8000-000000000007',
+        },
+        authority,
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(prisma.clientUser.findFirst).not.toHaveBeenCalled();
   });
 });

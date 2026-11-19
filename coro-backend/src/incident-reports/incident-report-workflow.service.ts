@@ -150,8 +150,14 @@ export class IncidentReportWorkflowService {
       actor,
       organizationId,
       report.buildingId,
-      PlatformPermission.INCIDENT_REPORT_REVIEW,
+      PlatformPermission.INCIDENT_REPORT_EDIT,
     );
+    const assigningAuthority = provenanceActor(actor);
+    if (
+      report.submittedByActorType !== assigningAuthority.actorType ||
+      report.submittedByActorId !== assigningAuthority.actorId
+    )
+      throw new NotFoundException('Rapport incident introuvable.');
     const now = new Date();
     const reviewer = await this.prisma.clientUser.findFirst({
       where: {
