@@ -21,6 +21,11 @@ import {
   StageIncidentReportImportFileDto,
 } from './dto/incident-report-import.dto';
 import { IncidentReportImportService } from './incident-report-import.service';
+import {
+  ConfigureIncidentReportImportMappingDto,
+  PreviewIncidentReportImportDto,
+} from './dto/incident-report-import-mapping.dto';
+import { IncidentReportImportMappingService } from './incident-report-import-mapping.service';
 
 interface AuthenticatedRequest {
   user: AdviserActor;
@@ -36,7 +41,10 @@ interface AuthenticatedRequest {
   }),
 )
 export class IncidentReportImportController {
-  constructor(private readonly imports: IncidentReportImportService) {}
+  constructor(
+    private readonly imports: IncidentReportImportService,
+    private readonly mappings: IncidentReportImportMappingService,
+  ) {}
 
   @Post()
   create(
@@ -81,5 +89,25 @@ export class IncidentReportImportController {
       dto,
       request.user,
     );
+  }
+
+  @Post(':batchId/mappings')
+  configureMapping(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @Param('batchId', ParseUUIDPipe) batchId: string,
+    @Body() dto: ConfigureIncidentReportImportMappingDto,
+    @Request() request: AuthenticatedRequest,
+  ) {
+    return this.mappings.configure(organizationId, batchId, dto, request.user);
+  }
+
+  @Post(':batchId/previews')
+  preview(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @Param('batchId', ParseUUIDPipe) batchId: string,
+    @Body() dto: PreviewIncidentReportImportDto,
+    @Request() request: AuthenticatedRequest,
+  ) {
+    return this.mappings.preview(organizationId, batchId, dto, request.user);
   }
 }

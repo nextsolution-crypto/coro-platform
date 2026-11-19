@@ -260,6 +260,35 @@ export class IncidentReportImportService {
     return this.serialize(updated);
   }
 
+  async loadPreviewRecords(
+    organizationId: string,
+    batchId: string,
+    fileId: string,
+    maximumRecords = 100,
+  ) {
+    const file = await this.prisma.incidentReportImportFile.findFirst({
+      where: {
+        id: fileId,
+        batchId,
+        organizationId,
+        status: 'ANALYZED',
+        scanStatus: 'CLEAN',
+      },
+    });
+    if (!file) throw new NotFoundException('Fichier analysé introuvable.');
+    const bytes = await this.storage.downloadPrivate(file.storageKey);
+    const actualHash = createHash('sha256').update(bytes).digest('hex');
+    if (actualHash !== file.sha256)
+      throw new ConflictException('Intégrité du fichier d’import invalide.');
+    const parsed = this.parseRecords(bytes, file.mediaType);
+    return {
+      sourceFileHash: actualHash,
+      headers: parsed.headers,
+      records: parsed.records.slice(0, maximumRecords),
+      totalRecords: parsed.records.length,
+    };
+  }
+
   private async batch(organizationId: string, id: string) {
     const batch = await this.prisma.incidentReportImportBatch.findFirst({
       where: { id, organizationId },
@@ -269,6 +298,15 @@ export class IncidentReportImportService {
   }
 
   private analyzeBytes(bytes: Buffer, mediaType: string) {
+    const parsed = this.parseRecords(bytes, mediaType);
+    return {
+      headers: parsed.headers,
+      recordCount: parsed.records.length,
+      emptyRows: parsed.emptyRows,
+    };
+  }
+
+  private parseRecords(bytes: Buffer, mediaType: string) {
     let text: string;
     try {
       text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
@@ -296,7 +334,11 @@ export class IncidentReportImportService {
         ...new Set(records.flatMap((record) => Object.keys(record as object))),
       ];
       this.assertHeaders(headers);
-      return { headers, recordCount: records.length, emptyRows: 0 };
+      return {
+        headers,
+        records: records as Record<string, unknown>[],
+        emptyRows: 0,
+      };
     }
     const rows = this.csvRows(text);
     if (!rows.length) throw new BadRequestException('Le CSV est vide.');
@@ -305,7 +347,11 @@ export class IncidentReportImportService {
     const body = rows.slice(1);
     return {
       headers,
-      recordCount: body.length,
+      records: body.map((row) =>
+        Object.fromEntries(
+          headers.map((header, index) => [header, row[index] ?? '']),
+        ),
+      ),
       emptyRows: body.filter((row) => row.every((value) => !value.trim()))
         .length,
     };

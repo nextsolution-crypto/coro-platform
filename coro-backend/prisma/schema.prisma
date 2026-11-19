@@ -8103,6 +8103,8 @@ model IncidentReportImportBatch {
   building            Building                        @relation(fields: [buildingId, organizationId], references: [id, organizationId], onDelete: Restrict)
   files               IncidentReportImportFile[]
   events              IncidentReportImportEvent[]
+  mappings            IncidentReportImportMapping[]
+  previews            IncidentReportImportPreview[]
 
   @@unique([organizationId, idempotencyKey])
   @@unique([id, organizationId])
@@ -8127,6 +8129,7 @@ model IncidentReportImportFile {
   createdAt        DateTime                           @default(now())
   analyzedAt       DateTime?
   batch            IncidentReportImportBatch          @relation(fields: [batchId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  previews         IncidentReportImportPreview[]
 
   @@unique([organizationId, storageKey])
   @@unique([organizationId, batchId, sha256])
@@ -8149,6 +8152,47 @@ model IncidentReportImportEvent {
   @@unique([organizationId, idempotencyKey])
   @@unique([id, organizationId])
   @@index([organizationId, batchId, occurredAt])
+}
+
+model IncidentReportImportMapping {
+  id                 String                        @id @default(uuid())
+  organizationId     String
+  batchId            String
+  version            Int
+  rules              Json
+  rulesHash          String
+  isActive           Boolean                       @default(true)
+  createdByActorType CoroActorType
+  createdByActorId   String
+  createdAt          DateTime                      @default(now())
+  batch              IncidentReportImportBatch     @relation(fields: [batchId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  previews           IncidentReportImportPreview[]
+
+  @@unique([organizationId, batchId, version])
+  @@unique([id, organizationId])
+  @@index([organizationId, batchId, isActive])
+}
+
+model IncidentReportImportPreview {
+  id                 String                      @id @default(uuid())
+  organizationId     String
+  batchId            String
+  fileId             String
+  mappingId          String
+  sourceFileHash     String
+  mappingHash        String
+  summary            Json
+  conflicts          Json
+  createdByActorType CoroActorType
+  createdByActorId   String
+  createdAt          DateTime                    @default(now())
+  batch              IncidentReportImportBatch   @relation(fields: [batchId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  file               IncidentReportImportFile    @relation(fields: [fileId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  mapping            IncidentReportImportMapping @relation(fields: [mappingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([organizationId, batchId, fileId, mappingHash, sourceFileHash])
+  @@unique([id, organizationId])
+  @@index([organizationId, batchId, createdAt])
 }
 
 enum OperationalLogPriority {
