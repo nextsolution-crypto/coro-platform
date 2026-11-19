@@ -31,6 +31,15 @@ test('provisioning refuses to overwrite unrelated access state', () => {
   assert.match(source, /PREEXISTING_PERMISSIONS_\$\{profile\.toUpperCase\(\)\}_NOT_OWNED/);
   assert.match(source, /PREEXISTING_ASSIGNMENT_\$\{profile\.toUpperCase\(\)\}_NOT_OWNED/);
   assert.match(source, /PREEXISTING_AUTHORITY_\$\{profile\.toUpperCase\(\)\}_NOT_OWNED/);
+  assert.match(source, /INACTIVE_RETENTION_POLICY_NOT_OWNED/);
+});
+
+test('provisioning and verification require an active owned retention policy', () => {
+  assert.match(source, /ownedPolicy\?\.entityId !== policy\.id/);
+  assert.match(source, /data: \{ isActive: true \}/);
+  assert.match(source, /!state\.retentionPolicy\?\.isActive/);
+  assert.match(source, /reportType !== manifest\.reportType/);
+  assert.match(source, /templateSections\.length === 0/);
 });
 
 test('workflow is locked, backed up and fail-closed', () => {
