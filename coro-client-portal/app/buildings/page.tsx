@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { apiGet, getUser, type ClientUser } from '../store/auth';
 import PortalLayout from '../components/PortalLayout';
 import { Building2, FileText, MapPin, Users } from 'lucide-react';
+import styles from './buildings.module.css';
 
 export default function BuildingsPage() {
   const router = useRouter();
@@ -47,8 +48,9 @@ export default function BuildingsPage() {
 
   return (
     <PortalLayout>
+      <main className={styles.page}>
       {/* En-tête */}
-      <header style={{ marginBottom: 28 }}>
+      <header className={styles.header} style={{ marginBottom: 28 }}>
         <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           Mes bâtiments
         </p>
@@ -69,9 +71,9 @@ export default function BuildingsPage() {
           <p style={{ margin: 0, color: '#ADB5BD', fontSize: 15 }}>Aucun bâtiment associé à votre compte.</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+        <div className={styles.grid} style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
           {buildings.map((b) => (
-            <div key={b.id} style={{
+            <article className={styles.card} key={b.id} style={{
               backgroundColor: '#FFFFFF', borderRadius: 12,
               border: '1px solid #E9ECEF', overflow: 'hidden',
               boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
@@ -131,7 +133,7 @@ export default function BuildingsPage() {
                 )}
 
                 {/* Actions */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div className={styles.actions} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   <button
                     type="button"
                     onClick={() => router.push(`/buildings/${b.id}`)}
@@ -163,10 +165,11 @@ export default function BuildingsPage() {
                   </button>
                 </div>
               </div>
-            </div>
+            </article>
           ))}
         </div>
       )}
+      </main>
     </PortalLayout>
   );
 }

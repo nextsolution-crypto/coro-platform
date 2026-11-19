@@ -21,6 +21,7 @@ import {
   apiPost,
   getUser,
 } from "../store/auth";
+import PortalLayout from "../components/PortalLayout";
 import styles from "./security-workstation.module.css";
 
 type Capability = { feature: string; available: boolean; reason: string };
@@ -47,6 +48,8 @@ const labels: Record<Tab, string> = {
 
 const asItems = (value: any): Item[] =>
   Array.isArray(value) ? value : Array.isArray(value?.items) ? value.items : [];
+const isCanonicalUuid = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 const uuid = () => crypto.randomUUID();
 const formatDate = (value?: string) =>
   value ? new Intl.DateTimeFormat("fr-CA", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "—";
@@ -146,13 +149,20 @@ export default function SecurityWorkstationPage() {
 
   const refresh = useCallback(async () => {
     if (tab === "overview" || !buildingId) return;
+    if (tab === "reports" && !isCanonicalUuid(buildingId)) {
+      setItems([]);
+      setTemplates([]);
+      setReviewers([]);
+      setError("Les rapports ne sont pas disponibles pour cet ancien identifiant de bâtiment. Sélectionnez un bâtiment CORO compatible.");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
       const value = await apiGet(endpoint(tab));
       setItems(asItems(value));
       if (tab === "reports") {
-        const [nextTemplates, nextReviewers] = await Promise.all([
+        const [templateResult, reviewerResult] = await Promise.allSettled([
           apiGet(
             `/client-portal/organizations/${organizationId}/incident-reports/forms/templates?buildingId=${buildingId}`,
           ),
@@ -160,8 +170,13 @@ export default function SecurityWorkstationPage() {
             `/client-portal/organizations/${organizationId}/incident-reports/reviewers/eligible?buildingId=${buildingId}`,
           ),
         ]);
-        setTemplates(nextTemplates);
-        setReviewers(nextReviewers);
+        setTemplates(templateResult.status === "fulfilled" ? asItems(templateResult.value) : []);
+        setReviewers(reviewerResult.status === "fulfilled" ? asItems(reviewerResult.value) : []);
+        if (templateResult.status === "rejected") {
+          setError(`Les rapports sont accessibles, mais les formulaires n’ont pas pu être chargés. ${errorMessage(templateResult.reason)}`);
+        } else if (reviewerResult.status === "rejected") {
+          setError(`Les rapports sont accessibles, mais la liste des réviseurs n’a pas pu être chargée. ${errorMessage(reviewerResult.reason)}`);
+        }
       }
     } catch (reason) {
       setError(errorMessage(reason));
@@ -200,10 +215,10 @@ export default function SecurityWorkstationPage() {
     setNotice("");
   };
 
-  if (loading && buildings.length === 0) return <Loading />;
+  if (loading && buildings.length === 0) return <PortalLayout><Loading /></PortalLayout>;
 
   return (
-    <main className={styles.page}>
+    <PortalLayout><main className={styles.page}>
       <header className={styles.hero}>
         <div>
           <p className={styles.eyebrow}>CORO REPORT · OPÉRATIONS</p>
@@ -212,7 +227,7 @@ export default function SecurityWorkstationPage() {
         </div>
         <label className={styles.buildingPicker}>
           <span>Bâtiment actif</span>
-          <select value={buildingId} onChange={(event) => setBuildingId(event.target.value)}>
+          <select value={buildingId} onChange={(event) => { setTab("overview"); setItems([]); setTemplates([]); setReviewers([]); setBuildingId(event.target.value); }}>
             {buildings.map((building) => <option key={building.id} value={building.id}>{building.name}</option>)}
           </select>
         </label>
@@ -246,7 +261,7 @@ export default function SecurityWorkstationPage() {
       )}
 
       {dialog && <CreateDialog kind={dialog} buildingId={buildingId} organizationId={organizationId} templates={templates} busy={busy} onClose={() => setDialog(null)} mutate={mutate} />}
-    </main>
+    </main></PortalLayout>
   );
 }
 
@@ -304,9 +319,10 @@ function AttachmentButton({ item, versionId, base, mutate }: { item: Item; versi
 }
 
 function CreateDialog({ kind, buildingId, organizationId, templates, busy, onClose, mutate }: { kind: Exclude<Tab, "overview">; buildingId: string; organizationId: string; templates: Item[]; busy: boolean; onClose: () => void; mutate: (action: () => Promise<any>, success: string) => Promise<void> }) {
-  const firstTemplate = templates.find((item) => item.retentionPolicyId);
+  const eligibleTemplates = templates.filter((item) => item.retentionPolicyId && item.formSchema?.sections?.length);
+  const firstTemplate = eligibleTemplates[0];
   const [form, setForm] = useState<Record<string, any>>({ priority: "NORMAL", templateVersionId: firstTemplate?.id ?? "", content: {} });
-  const [, setFormError] = useState("");
+  const [formError, setFormError] = useState("");
   const update = (key: string, value: any) => setForm((current) => ({ ...current, [key]: value }));
   const selectedTemplate = templates.find((item) => item.id === form.templateVersionId);
   async function submit(event: FormEvent) {
@@ -323,7 +339,26 @@ function CreateDialog({ kind, buildingId, organizationId, templates, busy, onClo
     }
     return mutate(() => apiPost(`${base}/incident-reports`, { buildingId, templateVersionId: template.id, retentionPolicyId: template.retentionPolicyId, reportType: template.reportType, title: form.title, content: form.content, idempotencyKey: uuid() }), "Brouillon de rapport créé.");
   }
-  return <div className={styles.backdrop} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><form className={styles.dialog} onSubmit={(event) => void submit(event)}><header><div><p className={styles.eyebrow}>Nouvel élément</p><h2>{labels[kind]}</h2></div><button type="button" className={styles.close} onClick={onClose} aria-label="Fermer">×</button></header>{kind === "reports" && <><Field label="Formulaire"><select required value={form.templateVersionId} onChange={(event) => update("templateVersionId", event.target.value)}><option value="">Sélectionner</option>{templates.filter((item) => item.retentionPolicyId).map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></Field><Field label="Titre du rapport"><input required maxLength={240} onChange={(event) => update("title", event.target.value)} /></Field><ReportFields schema={selectedTemplate?.formSchema} content={form.content} onChange={(content) => update("content", content)} /></>}{kind === "shifts" ? <><Field label="Poste"><input required maxLength={120} onChange={(event) => update("securityPost", event.target.value)} /></Field><Field label="Identifiant du responsable"><input required type="text" onChange={(event) => update("responsibleUserId", event.target.value)} /></Field><Field label="Équipe"><input maxLength={120} onChange={(event) => update("teamName", event.target.value)} /></Field></> : kind !== "reports" && <><Field label={kind === "log" ? "Type d’activité" : kind === "followups" ? "Description" : "Titre"}><input required maxLength={kind === "log" ? 80 : 200} onChange={(event) => update(kind === "log" ? "activityType" : kind === "followups" ? "description" : "title", event.target.value)} /></Field>{kind === "log" && <Field label="Catégorie"><input required maxLength={80} onChange={(event) => update("category", event.target.value)} /></Field>}{kind !== "followups" && <Field label="Description"><textarea required rows={5} onChange={(event) => update("description", event.target.value)} /></Field>}</>}{kind !== "reports" && kind !== "shifts" && <Field label="Priorité"><select value={form.priority} onChange={(event) => update("priority", event.target.value)}><option>NORMAL</option><option>IMPORTANT</option><option>CRITICAL</option>{kind === "log" && <><option>LOW</option><option>HIGH</option></>}</select></Field>}<footer><button type="button" className={styles.secondary} onClick={onClose}>Annuler</button><button className={styles.primary} disabled={busy}>{busy && <Loader2 className={styles.spin} size={16} />}Créer</button></footer></form></div>;
+  return (
+    <div className={styles.backdrop} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <form className={styles.dialog} onSubmit={(event) => void submit(event)}>
+        <header><div><p className={styles.eyebrow}>Nouvel élément</p><h2>{labels[kind]}</h2></div><button type="button" className={styles.close} onClick={onClose} aria-label="Fermer">×</button></header>
+        {kind === "reports" && <>
+          {eligibleTemplates.length === 0 ? (
+            <div className={styles.emptyForm} role="status"><FileText size={24} /><strong>Aucun formulaire de rapport disponible</strong><p>Aucun formulaire publié ne possède une politique de conservation active.</p></div>
+          ) : <>
+            <Field label="Formulaire"><select required value={form.templateVersionId} onChange={(event) => { setFormError(""); update("templateVersionId", event.target.value); }}><option value="">Sélectionner</option>{eligibleTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></Field>
+            <Field label="Titre du rapport"><input required maxLength={240} onChange={(event) => update("title", event.target.value)} /></Field>
+            {selectedTemplate && <ReportFields schema={selectedTemplate.formSchema} content={form.content} onChange={(content) => update("content", content)} />}
+          </>}
+          {formError && <p className={styles.formError} role="alert">{formError}</p>}
+        </>}
+        {kind === "shifts" ? <><Field label="Poste"><input required maxLength={120} onChange={(event) => update("securityPost", event.target.value)} /></Field><Field label="Identifiant du responsable"><input required type="text" onChange={(event) => update("responsibleUserId", event.target.value)} /></Field><Field label="Équipe"><input maxLength={120} onChange={(event) => update("teamName", event.target.value)} /></Field></> : kind !== "reports" && <><Field label={kind === "log" ? "Type d’activité" : kind === "followups" ? "Description" : "Titre"}><input required maxLength={kind === "log" ? 80 : 200} onChange={(event) => update(kind === "log" ? "activityType" : kind === "followups" ? "description" : "title", event.target.value)} /></Field>{kind === "log" && <Field label="Catégorie"><input required maxLength={80} onChange={(event) => update("category", event.target.value)} /></Field>}{kind !== "followups" && <Field label="Description"><textarea required rows={5} onChange={(event) => update("description", event.target.value)} /></Field>}</>}
+        {kind !== "reports" && kind !== "shifts" && <Field label="Priorité"><select value={form.priority} onChange={(event) => update("priority", event.target.value)}><option>NORMAL</option><option>IMPORTANT</option><option>CRITICAL</option>{kind === "log" && <><option>LOW</option><option>HIGH</option></>}</select></Field>}
+        <footer><button type="button" className={styles.secondary} onClick={onClose}>Annuler</button><button className={styles.primary} disabled={busy || (kind === "reports" && eligibleTemplates.length === 0)}>{busy && <Loader2 className={styles.spin} size={16} />}Créer</button></footer>
+      </form>
+    </div>
+  );
 }
 
 function ReportFields({ schema, content, onChange }: { schema?: Item; content: Item; onChange: (value: Item) => void }) {

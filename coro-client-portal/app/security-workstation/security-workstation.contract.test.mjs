@@ -3,6 +3,8 @@ import fs from "node:fs";
 
 const page = fs.readFileSync(new URL("./page.tsx", import.meta.url), "utf8");
 const layout = fs.readFileSync(new URL("../components/PortalLayout.tsx", import.meta.url), "utf8");
+const buildings = fs.readFileSync(new URL("../buildings/page.tsx", import.meta.url), "utf8");
+const buildingsCss = fs.readFileSync(new URL("../buildings/buildings.module.css", import.meta.url), "utf8");
 
 assert.match(layout, /Poste de sécurité/);
 assert.match(page, /operational-capabilities\?buildingId=/);
@@ -11,11 +13,22 @@ assert.match(page, /setBuildingId\(preferred\?\.building\.id \?\? ""\)/);
 assert.doesNotMatch(page, /setBuildingId\(next\[0\]\?\.id/);
 assert.match(page, /client-portal\/organizations\/\$\{organizationId\}/);
 assert.match(page, /incident-reports\/forms\/templates/);
+assert.match(page, /<PortalLayout><main className=\{styles\.page\}>/);
+assert.match(page, /isCanonicalUuid\(buildingId\)/);
+assert.match(page, /setTab\("overview"\)/);
+assert.match(page, /Promise\.allSettled/);
+assert.match(page, /templateResult\.status === "fulfilled" \? asItems/);
+assert.match(page, /Aucun formulaire de rapport disponible/);
+assert.match(page, /eligibleTemplates\.length === 0/);
 assert.match(page, /operational-log\/entries/);
 assert.match(page, /operational-shifts/);
 assert.match(page, /operations\/directives/);
 assert.match(page, /operations\/follow-ups/);
 assert.doesNotMatch(page, /Authorization:\s*["']Bearer [^$]/);
 assert.doesNotMatch(page, /demo@getcoro\.io|916f54ec/);
+assert.match(buildings, /<PortalLayout>/);
+assert.match(buildings, /className=\{styles\.grid\}/);
+assert.match(buildingsCss, /@media \(max-width: 560px\)/);
+assert.match(buildingsCss, /grid-template-columns: minmax\(0, 1fr\)/);
 
 console.log("security-workstation contract: PASS");

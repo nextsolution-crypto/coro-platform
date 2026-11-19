@@ -1,0 +1,36 @@
+.page {
+  width: min(100%, 1180px);
+  margin: 0 auto;
+  min-width: 0;
+}
+
+.header {
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e3e9ec;
+}
+
+.grid { align-items: stretch; }
+
+.card {
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.card:hover {
+  border-color: #b9ccd6 !important;
+  box-shadow: 0 8px 24px rgba(23, 48, 66, 0.1) !important;
+  transform: translateY(-1px);
+}
+
+.actions button:focus-visible {
+  outline: 3px solid rgba(41, 128, 185, 0.28);
+  outline-offset: 2px;
+}
+
+@media (max-width: 560px) {
+  .page { width: 100%; }
+  .header { margin-bottom: 20px !important; }
+  .grid { display: grid !important; grid-template-columns: minmax(0, 1fr); }
+  .card { max-width: none !important; }
+  .actions { grid-template-columns: minmax(0, 1fr) !important; }
+  .actions button { min-height: 44px; white-space: normal; }
+}
