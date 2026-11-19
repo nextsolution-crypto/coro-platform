@@ -11,6 +11,7 @@ import {
   MaxLength,
   Min,
   IsIn,
+  IsDateString,
 } from 'class-validator';
 import { IncidentReportStatus } from '@prisma/client';
 
@@ -127,6 +128,8 @@ export class IncidentReportListQueryDto {
   @IsString()
   @MaxLength(100)
   q?: string;
+  @IsOptional() @IsDateString({ strict: true }) createdFrom?: string;
+  @IsOptional() @IsDateString({ strict: true }) createdTo?: string;
   @IsOptional() @IsEnum(IncidentReportSortField) sort =
     IncidentReportSortField.CREATED_AT;
   @IsOptional() @IsEnum(SortDirection) order = SortDirection.DESC;

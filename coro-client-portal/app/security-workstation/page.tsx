@@ -138,6 +138,10 @@ export default function SecurityWorkstationPage() {
   const [dialog, setDialog] = useState<Exclude<Tab, "overview"> | null>(null);
   const [openReportId, setOpenReportId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [reportStatus, setReportStatus] = useState("");
+  const [reportType, setReportType] = useState("");
+  const [createdFrom, setCreatedFrom] = useState("");
+  const [createdTo, setCreatedTo] = useState("");
 
   const enabled = useMemo(
     () =>
@@ -220,11 +224,30 @@ export default function SecurityWorkstationPage() {
         return `${base}/operations/directives?${suffix}&limit=50`;
       if (active === "followups")
         return `${base}/operations/follow-ups?${suffix}&limit=50`;
-      if (active === "reports")
-        return `${base}/incident-reports?${suffix}&page=1&pageSize=50${query ? `&q=${encodeURIComponent(query)}` : ""}`;
+      if (active === "reports") {
+        const params = new URLSearchParams({
+          buildingId,
+          page: "1",
+          pageSize: "50",
+        });
+        if (query) params.set("q", query);
+        if (reportStatus) params.set("status", reportStatus);
+        if (reportType) params.set("reportType", reportType);
+        if (createdFrom) params.set("createdFrom", createdFrom);
+        if (createdTo) params.set("createdTo", createdTo);
+        return `${base}/incident-reports?${params.toString()}`;
+      }
       return "";
     },
-    [buildingId, organizationId, query],
+    [
+      buildingId,
+      createdFrom,
+      createdTo,
+      organizationId,
+      query,
+      reportStatus,
+      reportType,
+    ],
   );
 
   const refresh = useCallback(async () => {
@@ -410,6 +433,63 @@ export default function SecurityWorkstationPage() {
                       event.key === "Enter" && void refresh()
                     }
                   />
+                )}
+                {tab === "reports" && (
+                  <>
+                    <select
+                      aria-label="Filtrer les rapports par statut"
+                      value={reportStatus}
+                      onChange={(event) => setReportStatus(event.target.value)}
+                    >
+                      <option value="">Tous les statuts</option>
+                      <option value="DRAFT">Brouillon</option>
+                      <option value="SUBMITTED">Soumis</option>
+                      <option value="IN_REVIEW">En révision</option>
+                      <option value="CORRECTION_REQUESTED">
+                        Corrections demandées
+                      </option>
+                      <option value="APPROVED">Approuvé</option>
+                      <option value="PUBLISHED">Publié</option>
+                      <option value="REJECTED">Refusé</option>
+                    </select>
+                    <select
+                      aria-label="Filtrer les rapports par formulaire"
+                      value={reportType}
+                      onChange={(event) => setReportType(event.target.value)}
+                    >
+                      <option value="">Tous les formulaires</option>
+                      {Array.from(
+                        new Map(
+                          templates
+                            .filter((template) => template.reportType)
+                            .map((template) => [
+                              String(template.reportType),
+                              template,
+                            ]),
+                        ).values(),
+                      ).map((template) => (
+                        <option
+                          key={String(template.reportType)}
+                          value={String(template.reportType)}
+                        >
+                          {template.name ?? template.reportType}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      aria-label="Rapports créés à partir du"
+                      type="date"
+                      value={createdFrom}
+                      onChange={(event) => setCreatedFrom(event.target.value)}
+                    />
+                    <input
+                      aria-label="Rapports créés jusqu’au"
+                      type="date"
+                      min={createdFrom || undefined}
+                      value={createdTo}
+                      onChange={(event) => setCreatedTo(event.target.value)}
+                    />
+                  </>
                 )}
                 <button
                   className={styles.secondary}
