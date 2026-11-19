@@ -2,36 +2,70 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 
 const page = fs.readFileSync(new URL("./page.tsx", import.meta.url), "utf8");
-const layout = fs.readFileSync(new URL("../components/PortalLayout.tsx", import.meta.url), "utf8");
-const buildings = fs.readFileSync(new URL("../buildings/page.tsx", import.meta.url), "utf8");
-const buildingsCss = fs.readFileSync(new URL("../buildings/buildings.module.css", import.meta.url), "utf8");
-const workstationCss = fs.readFileSync(new URL("./security-workstation.module.css", import.meta.url), "utf8");
-const auth = fs.readFileSync(new URL("../store/auth.ts", import.meta.url), "utf8");
+const layout = fs.readFileSync(
+  new URL("../components/PortalLayout.tsx", import.meta.url),
+  "utf8",
+);
+const buildings = fs.readFileSync(
+  new URL("../buildings/page.tsx", import.meta.url),
+  "utf8",
+);
+const buildingsCss = fs.readFileSync(
+  new URL("../buildings/buildings.module.css", import.meta.url),
+  "utf8",
+);
+const workstationCss = fs.readFileSync(
+  new URL("./security-workstation.module.css", import.meta.url),
+  "utf8",
+);
+const auth = fs.readFileSync(
+  new URL("../store/auth.ts", import.meta.url),
+  "utf8",
+);
 
 assert.match(layout, /Poste de sécurité/);
 assert.match(page, /operational-capabilities\?buildingId=/);
-assert.match(page, /available\.some\(\(capability\) => capability\.available\)/);
+assert.match(
+  page,
+  /available\.some\(\(capability\) => capability\.available\)/,
+);
 assert.match(page, /setBuildingId\(preferred\?\.building\.id \?\? ""\)/);
 assert.doesNotMatch(page, /setBuildingId\(next\[0\]\?\.id/);
 assert.match(page, /client-portal\/organizations\/\$\{organizationId\}/);
 assert.match(page, /incident-reports\/forms\/templates/);
-assert.match(page, /<PortalLayout><main className=\{styles\.page\}>/);
+assert.match(page, /<PortalLayout>[\s\S]*<main className=\{styles\.page\}>/);
 assert.match(page, /isCanonicalUuid\(buildingId\)/);
 assert.match(page, /setTab\("overview"\)/);
 assert.match(page, /Promise\.allSettled/);
-assert.match(page, /templateResult\.status === "fulfilled" \? asItems/);
+assert.match(page, /templateResult\.status === "fulfilled"[\s\S]*\? asItems/);
 assert.match(page, /Aucun formulaire de rapport disponible/);
 assert.match(page, /eligibleTemplates\.length === 0/);
-assert.match(page, /setForm\(\(current\) => \(\{ \.\.\.current, content: \{ \.\.\.current\.content, \[key\]: value \} \}\)\)/);
+assert.match(
+  page,
+  /setForm\(\(current\) => \(\{[\s\S]*content:[\s\S]*\[key\]: value/,
+);
 assert.match(page, /instant\.toISOString\(\)/);
-assert.match(page, /aria-invalid=\{Boolean\(errors\[field\.key\]\)\}/);
-assert.match(page, /reason instanceof ApiError && Array\.isArray\(reason\.details\)/);
+assert.match(page, /aria-invalid=\{Boolean\(error\)\}/);
+assert.match(page, /conditionVisible/);
+assert.match(page, /condition\.all/);
+assert.match(page, /Section \{safeIndex \+ 1\} sur \{sections\.length\}/);
+assert.match(page, /Vérifier l’aperçu/);
+assert.match(page, /field\.type === "MULTI_SELECT"/);
+assert.match(page, /Sauvegarde automatique incertaine/);
+assert.match(page, /aucune nouvelle tentative automatique/);
+assert.match(
+  page,
+  /reason instanceof ApiError && Array\.isArray\(reason\.details\)/,
+);
 assert.match(page, /<button onClick=\{onOpen\}>Ouvrir<\/button>/);
-assert.match(page, /apiPatch\(base, \{ expectedLockVersion: report\.lockVersion/);
+assert.match(
+  page,
+  /apiPatch\(base, \{[\s\S]*expectedLockVersion: report\.lockVersion/,
+);
 assert.match(page, /contentForEditing/);
 assert.match(auth, /public readonly details\?: unknown/);
-assert.match(workstationCss, /\.panel,\.dialog\{color:#173042\}/);
-assert.match(workstationCss, /\.fieldError\{color:#922b25/);
+assert.match(workstationCss, /\.panel,\s*\.dialog\s*\{\s*color:\s*#173042/);
+assert.match(workstationCss, /\.fieldError\s*\{\s*color:\s*#922b25/);
 assert.match(page, /operational-log\/entries/);
 assert.match(page, /operational-shifts/);
 assert.match(page, /operations\/directives/);
