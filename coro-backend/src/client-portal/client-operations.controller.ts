@@ -35,6 +35,8 @@ import { IncidentReportExportsService } from '../incident-reports/incident-repor
 import { IncidentReportTemplatesService } from '../incident-reports/incident-report-templates.service';
 import { IncidentReportWorkflowService } from '../incident-reports/incident-report-workflow.service';
 import { IncidentReportsService } from '../incident-reports/incident-reports.service';
+import { IncidentReportHistoricalService } from '../incident-reports/incident-report-historical.service';
+import { IncidentReportHistoricalListQueryDto } from '../incident-reports/dto/incident-report-historical.dto';
 import {
   AssociateOperationalLogReportDto,
   CreateOperationalLogEntryDto,
@@ -131,7 +133,26 @@ export class ClientIncidentReportsController {
     private readonly attachments: IncidentReportAttachmentsService,
     private readonly templates: IncidentReportTemplatesService,
     private readonly exports: IncidentReportExportsService,
+    private readonly historical: IncidentReportHistoricalService,
   ) {}
+
+  @Get('historical')
+  historicalList(
+    @Param('organizationId', ParseUUIDPipe) org: string,
+    @Query() query: IncidentReportHistoricalListQueryDto,
+    @Request() req: ClientOperationsRequest,
+  ) {
+    return this.historical.list(org, query, req.coroAuthority);
+  }
+
+  @Get('historical/:recordId')
+  historicalGet(
+    @Param('organizationId', ParseUUIDPipe) org: string,
+    @Param('recordId', ParseUUIDPipe) recordId: string,
+    @Request() req: ClientOperationsRequest,
+  ) {
+    return this.historical.get(org, recordId, req.coroAuthority);
+  }
 
   @Get('forms/catalog')
   catalog(

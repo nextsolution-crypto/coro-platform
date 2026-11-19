@@ -137,6 +137,8 @@ export default function SecurityWorkstationPage() {
   const [notice, setNotice] = useState("");
   const [dialog, setDialog] = useState<Exclude<Tab, "overview"> | null>(null);
   const [openReportId, setOpenReportId] = useState<string | null>(null);
+  const [openArchiveId, setOpenArchiveId] = useState<string | null>(null);
+  const [showHistorical, setShowHistorical] = useState(false);
   const [query, setQuery] = useState("");
   const [reportStatus, setReportStatus] = useState("");
   const [reportType, setReportType] = useState("");
@@ -231,11 +233,15 @@ export default function SecurityWorkstationPage() {
           pageSize: "50",
         });
         if (query) params.set("q", query);
-        if (reportStatus) params.set("status", reportStatus);
-        if (reportType) params.set("reportType", reportType);
-        if (createdFrom) params.set("createdFrom", createdFrom);
-        if (createdTo) params.set("createdTo", createdTo);
-        return `${base}/incident-reports?${params.toString()}`;
+        if (!showHistorical && reportStatus)
+          params.set("status", reportStatus);
+        if (!showHistorical && reportType)
+          params.set("reportType", reportType);
+        if (createdFrom)
+          params.set(showHistorical ? "importedFrom" : "createdFrom", createdFrom);
+        if (createdTo)
+          params.set(showHistorical ? "importedTo" : "createdTo", createdTo);
+        return `${base}/incident-reports${showHistorical ? "/historical" : ""}?${params.toString()}`;
       }
       return "";
     },
@@ -247,6 +253,7 @@ export default function SecurityWorkstationPage() {
       query,
       reportStatus,
       reportType,
+      showHistorical,
     ],
   );
 
@@ -436,8 +443,19 @@ export default function SecurityWorkstationPage() {
                 )}
                 {tab === "reports" && (
                   <>
+                    <button
+                      type="button"
+                      className={styles.secondary}
+                      aria-pressed={showHistorical}
+                      onClick={() => setShowHistorical((current) => !current)}
+                    >
+                      {showHistorical
+                        ? "Afficher les rapports CORO"
+                        : "Afficher les archives"}
+                    </button>
                     <select
                       aria-label="Filtrer les rapports par statut"
+                      disabled={showHistorical}
                       value={reportStatus}
                       onChange={(event) => setReportStatus(event.target.value)}
                     >
@@ -454,6 +472,7 @@ export default function SecurityWorkstationPage() {
                     </select>
                     <select
                       aria-label="Filtrer les rapports par formulaire"
+                      disabled={showHistorical}
                       value={reportType}
                       onChange={(event) => setReportType(event.target.value)}
                     >
@@ -526,6 +545,7 @@ export default function SecurityWorkstationPage() {
                 reviewers={reviewers}
                 mutate={mutate}
                 onOpenReport={setOpenReportId}
+                onOpenArchive={setOpenArchiveId}
               />
             )}
           </section>
@@ -550,6 +570,13 @@ export default function SecurityWorkstationPage() {
             busy={busy}
             onClose={() => setOpenReportId(null)}
             mutate={mutate}
+          />
+        )}
+        {openArchiveId && (
+          <HistoricalArchiveDialog
+            recordId={openArchiveId}
+            organizationId={organizationId}
+            onClose={() => setOpenArchiveId(null)}
           />
         )}
       </main>
@@ -620,6 +647,7 @@ function ItemList({
   reviewers,
   mutate,
   onOpenReport,
+  onOpenArchive,
 }: {
   tab: Exclude<Tab, "overview">;
   items: Item[];
@@ -627,6 +655,7 @@ function ItemList({
   reviewers: Item[];
   mutate: Mutate;
   onOpenReport: (id: string) => void;
+  onOpenArchive: (id: string) => void;
 }) {
   if (!items.length)
     return (
@@ -659,6 +688,7 @@ function ItemList({
                   item.eventAt ??
                     item.updatedAt ??
                     item.createdAt ??
+                    item.importedAt ??
                     item.plannedStartAt,
                 )}
               </span>
@@ -674,6 +704,7 @@ function ItemList({
             reviewers={reviewers}
             mutate={mutate}
             onOpenReport={onOpenReport}
+            onOpenArchive={onOpenArchive}
           />
         </article>
       ))}
@@ -688,6 +719,7 @@ function RowActions({
   reviewers,
   mutate,
   onOpenReport,
+  onOpenArchive,
 }: {
   tab: Exclude<Tab, "overview">;
   item: Item;
@@ -695,6 +727,7 @@ function RowActions({
   reviewers: Item[];
   mutate: Mutate;
   onOpenReport: (id: string) => void;
+  onOpenArchive: (id: string) => void;
 }) {
   const base = `/client-portal/organizations/${organizationId}`;
   if (tab === "shifts")
@@ -797,6 +830,13 @@ function RowActions({
         )}
       </div>
     );
+  if (tab === "reports")
+    if (item.provenanceKind === "HISTORICAL_IMPORT")
+      return (
+        <div className={styles.rowActions}>
+          <button onClick={() => onOpenArchive(item.id)}>Consulter</button>
+        </div>
+      );
   if (tab === "reports")
     return (
       <ReportActions
@@ -958,6 +998,83 @@ function ReportActions({
             PDF
           </button>
         )}
+    </div>
+  );
+}
+
+function HistoricalArchiveDialog({
+  recordId,
+  organizationId,
+  onClose,
+}: {
+  recordId: string;
+  organizationId: string;
+  onClose: () => void;
+}) {
+  const [record, setRecord] = useState<Item | null>(null);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    void apiGet(
+      `/client-portal/organizations/${organizationId}/incident-reports/historical/${recordId}`,
+    )
+      .then((value) => active && setRecord(value))
+      .catch((reason) => active && setLoadError(errorMessage(reason)));
+    return () => {
+      active = false;
+    };
+  }, [organizationId, recordId]);
+
+  return (
+    <div
+      className={styles.backdrop}
+      role="presentation"
+      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+    >
+      <section
+        className={styles.dialog}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Archive historique"
+      >
+        <header>
+          <div>
+            <p className={styles.eyebrow}>Archive historique</p>
+            <h2>{record?.sourceObjectId ?? "Chargement…"}</h2>
+          </div>
+          <button
+            type="button"
+            className={styles.close}
+            onClick={onClose}
+            aria-label="Fermer"
+          >
+            ×
+          </button>
+        </header>
+        {loadError && (
+          <p className={styles.formError} role="alert">
+            {loadError}
+          </p>
+        )}
+        {record && (
+          <div className={styles.form}>
+            <p className={styles.notice} role="status">
+              {record.warning}
+            </p>
+            <p>
+              Source : <strong>{record.sourceSystem}</strong>
+              {record.sourceSchemaVersion
+                ? ` — version ${record.sourceSchemaVersion}`
+                : ""}
+            </p>
+            <h3>Données normalisées</h3>
+            <pre>{JSON.stringify(record.mappedContent, null, 2)}</pre>
+            <h3>Valeurs originales conservées</h3>
+            <pre>{JSON.stringify(record.originalContent, null, 2)}</pre>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
