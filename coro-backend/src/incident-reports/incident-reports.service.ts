@@ -209,6 +209,18 @@ export class IncidentReportsService {
     if (!query.buildingId) {
       throw new BadRequestException('buildingId est requis.');
     }
+    if (
+      query.createdFrom &&
+      query.createdTo &&
+      new Date(query.createdFrom) > new Date(query.createdTo)
+    )
+      throw new BadRequestException(
+        'La date de début doit précéder la date de fin.',
+      );
+    const createdToExclusive = query.createdTo?.match(/^\d{4}-\d{2}-\d{2}$/)
+      ? new Date(`${query.createdTo}T00:00:00.000Z`)
+      : null;
+    createdToExclusive?.setUTCDate(createdToExclusive.getUTCDate() + 1);
     await this.access.require(
       actor,
       organizationId,
@@ -220,6 +232,18 @@ export class IncidentReportsService {
       buildingId: query.buildingId,
       ...(query.status ? { status: query.status } : {}),
       ...(query.reportType ? { reportType: query.reportType } : {}),
+      ...(query.createdFrom || query.createdTo
+        ? {
+            createdAt: {
+              ...(query.createdFrom ? { gte: new Date(query.createdFrom) } : {}),
+              ...(createdToExclusive
+                ? { lt: createdToExclusive }
+                : query.createdTo
+                  ? { lte: new Date(query.createdTo) }
+                  : {}),
+            },
+          }
+        : {}),
       ...(query.q
         ? {
             OR: [
