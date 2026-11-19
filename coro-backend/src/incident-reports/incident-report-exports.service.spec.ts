@@ -16,7 +16,12 @@ describe('IncidentReportExportsService', () => {
     reportNumber: 'IR-001',
     title: 'Rapport synthetique',
     templateVersionId: 'template-a',
-    building: { id: 'building-a', name: 'Batiment fictif' },
+    building: {
+      id: 'building-a',
+      name: 'Batiment fictif',
+      timeZone: 'America/Toronto',
+      timeZoneVerified: true,
+    },
     templateVersion: {
       contentHash: 'template-hash',
       formSchema: {
@@ -44,6 +49,8 @@ describe('IncidentReportExportsService', () => {
       {
         id: 'approval-a',
         decision: 'APPROVED',
+        actorType: 'CLIENT_USER',
+        actorId: 'reviewer-a',
         actorRoleSnapshot: 'SUPERVISOR',
         decidedAt: new Date('2026-12-15T12:00:00Z'),
       },
@@ -81,6 +88,8 @@ describe('IncidentReportExportsService', () => {
       findMany: jest.fn(),
     },
     incidentReportAuditEvent: { create: jest.fn() },
+    user: { findFirst: jest.fn() },
+    clientUser: { findFirst: jest.fn() },
     $transaction: jest.fn(async (work: (tx: any) => unknown) => work(prisma)),
   };
   const storage = {
@@ -101,6 +110,14 @@ describe('IncidentReportExportsService', () => {
     prisma.incidentReportExport.findUnique.mockResolvedValue(null);
     prisma.incidentReportExport.create.mockResolvedValue({});
     prisma.incidentReportExport.update.mockResolvedValue(exportRow);
+    prisma.user.findFirst.mockResolvedValue(null);
+    prisma.clientUser.findFirst.mockResolvedValue({
+      firstName: 'Marie-Eve',
+      lastName: 'Premont',
+    });
+    (service as any).renderer.render = jest
+      .fn()
+      .mockResolvedValue(Buffer.from('%PDF-test'));
     storage.uploadPrivateImmutable.mockResolvedValue({
       storageKey: exportRow.storageKey,
     });
@@ -168,6 +185,46 @@ describe('IncidentReportExportsService', () => {
     );
     expect(result).not.toHaveProperty('storageKey');
     expect(storage.uploadPrivateImmutable).not.toHaveBeenCalled();
+  });
+
+  it('renders with the verified building time zone and an honestly resolved actor name', async () => {
+    await service.create(
+      'org-a',
+      'report-a',
+      {
+        reportVersionId: 'version-a',
+        pageFormat: 'LETTER',
+        locale: 'fr-CA',
+        idempotencyKey: exportRow.requestIdempotencyKey,
+      },
+      actor,
+    );
+
+    expect((service as any).renderer.render).toHaveBeenCalledWith(
+      expect.objectContaining({
+        timeZone: 'America/Toronto',
+        approvals: [
+          expect.objectContaining({
+            actorDisplayName: 'Marie-Eve Premont',
+            actorDisplayNameSource: 'CURRENT_PROFILE',
+            actorId: 'reviewer-a',
+          }),
+        ],
+      }),
+    );
+    expect(prisma.incidentReportExport.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        sourceManifest: expect.objectContaining({
+          approvalActors: [
+            expect.objectContaining({
+              actorId: 'reviewer-a',
+              actorDisplayName: 'Marie-Eve Premont',
+              actorDisplayNameSource: 'CURRENT_PROFILE',
+            }),
+          ],
+        }),
+      }),
+    });
   });
 
   it('refuses a downloaded object whose digest no longer matches', async () => {
