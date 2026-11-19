@@ -112,7 +112,7 @@ export class IncidentReportWorkflowService {
       actor,
       organizationId,
       buildingId,
-      PlatformPermission.INCIDENT_REPORT_REVIEW,
+      PlatformPermission.INCIDENT_REPORT_READ,
     );
     const now = new Date();
     return this.prisma.clientUser.findMany({

@@ -43,6 +43,30 @@ describe('IncidentReportWorkflowService ClientUser reviewer', () => {
   });
   beforeEach(() => jest.clearAllMocks());
 
+  it('allows a building-scoped reader to resolve an empty reviewer list', async () => {
+    prisma.clientUser.findMany.mockResolvedValue([]);
+
+    await expect(
+      service.eligibleClientReviewers(organizationId, buildingId, authority),
+    ).resolves.toEqual([]);
+    expect(requireAccess).toHaveBeenCalledWith(
+      authority,
+      organizationId,
+      buildingId,
+      'INCIDENT_REPORT_READ',
+    );
+    expect(prisma.clientUser.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          organizationId,
+          clientId: authority.clientId,
+          isActive: true,
+          operationalPermissions: { has: 'INCIDENT_REPORT_REVIEW' },
+        }),
+      }),
+    );
+  });
+
   it('fails closed when the reviewer is not in the same canonical client scope', async () => {
     prisma.clientUser.findFirst.mockResolvedValue(null);
     await expect(
