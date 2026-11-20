@@ -54,6 +54,7 @@ jobs:
         run: |
           npm run test:sms-compliance
           npm run test:sentinelle-auth
+          npm run test:panic-outcome
           npm run test:population-sharing
           npm run test:population-identity
           npm run test:population-profile
