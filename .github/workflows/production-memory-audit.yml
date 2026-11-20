@@ -1,0 +1,61 @@
+name: Production Memory Audit Read Only
+
+on:
+  workflow_dispatch:
+    inputs:
+      approval:
+        description: Exact read-only approval token
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: node --check ops/infrastructure/coro-memory-audit.mjs
+      - run: node --test ops/infrastructure/coro-memory-audit.test.mjs
+
+  audit:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Execute protected read-only memory audit
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          APPROVAL: ${{ inputs.approval }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,APPROVAL
+          script: |
+            set -Eeuo pipefail
+            test "$APPROVAL" = AUDIT_MEMORY_READ_ONLY
+            repo=/opt/coro-platform
+            script="$(mktemp /tmp/coro-memory-audit.XXXXXX.mjs)"
+            evidence="$(mktemp /tmp/coro-memory-audit.XXXXXX.json)"
+            trap 'rm -f -- "$script" "$evidence"' EXIT
+            git -C "$repo" fetch --quiet origin main
+            test "$(git -C "$repo" rev-parse origin/main)" = "$SOURCE_SHA"
+            git -C "$repo" show "$SOURCE_SHA:ops/infrastructure/coro-memory-audit.mjs" >"$script"
+            chmod 0700 "$script"
+            node "$script" >"$evidence"
+            node -e 'const r=require(process.argv[1]);if(r.schemaVersion!==1||r.execution!=="PASS"||r.readOnly!==true||r.mutation!==false||!r.memory||!Array.isArray(r.containers)||!Array.isArray(r.containerPolicies))process.exit(1)' "$evidence"
+            cat "$evidence"
+
+      - name: Record evidence boundary
+        if: always()
+        run: echo 'The immutable GitHub job log contains the sanitized read-only memory report.'
