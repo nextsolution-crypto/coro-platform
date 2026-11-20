@@ -1,0 +1,65 @@
+name: Production ClamAV Readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Read-only ClamAV readiness operation
+        required: true
+        type: choice
+        options: [INSPECT, VERIFY]
+      approval:
+        description: Exact governed approval token
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: bash -n ops/clamav/production-readiness.sh
+      - run: node --test ops/clamav/*.test.mjs
+      - run: docker compose config --format json | node ops/clamav/verify-compose.mjs
+
+  inspect:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Execute protected read-only inspection
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          OPERATION: ${{ inputs.operation }}
+          APPROVAL: ${{ inputs.approval }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,OPERATION,APPROVAL
+          script: |
+            set -Eeuo pipefail
+            case "$OPERATION:$APPROVAL" in
+              INSPECT:INSPECT_CLAMAV_READ_ONLY|VERIFY:VERIFY_CLAMAV_READ_ONLY) ;;
+              *) exit 1 ;;
+            esac
+            repo=/opt/coro-platform
+            script="$(mktemp /tmp/coro-clamav-readiness.XXXXXX.sh)"
+            trap 'rm -f -- "$script"' EXIT
+            git -C "$repo" fetch --quiet origin main
+            test "$(git -C "$repo" rev-parse origin/main)" = "$SOURCE_SHA"
+            git -C "$repo" show "$SOURCE_SHA:ops/clamav/production-readiness.sh" >"$script"
+            chmod 0700 "$script"
+            cd "$repo"
+            CORO_CLAMAV_READINESS_OPERATION="$OPERATION" "$script"
