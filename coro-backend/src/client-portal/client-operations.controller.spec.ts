@@ -43,6 +43,7 @@ describe('Client operational controllers', () => {
     const authority = {
       actorId: 'client-user-a',
       organizationId: '00000000-0000-4000-8000-000000000001',
+      permissions: ['INCIDENT_REPORT_READ', 'INCIDENT_REPORT_CREATE'],
     } as never;
     const response = await controller.list(
       '00000000-0000-4000-8000-000000000001',
@@ -54,6 +55,10 @@ describe('Client operational controllers', () => {
       available: false,
       reason: 'NOT_AVAILABLE',
     });
+    expect(response.reportPermissions).toEqual([
+      'INCIDENT_REPORT_READ',
+      'INCIDENT_REPORT_CREATE',
+    ]);
     expect(JSON.stringify(response)).not.toContain('NOT_ENTITLED');
   });
 
@@ -237,6 +242,7 @@ describe('Client operational capabilities HTTP routing', () => {
           context.switchToHttp().getRequest().coroAuthority = {
             actorId: 'client-user-a',
             organizationId: '00000000-0000-4000-8000-000000000001',
+            permissions: ['INCIDENT_REPORT_READ'],
           };
           return true;
         },
@@ -259,7 +265,9 @@ describe('Client operational capabilities HTTP routing', () => {
       .expect(200);
     const responseBody = JSON.parse(response.text) as unknown as {
       reportFileCapabilities: unknown;
+      reportPermissions: string[];
     };
+    expect(responseBody.reportPermissions).toEqual(['INCIDENT_REPORT_READ']);
     expect(responseBody.reportFileCapabilities).toEqual({
       attachmentUpload: {
         available: false,

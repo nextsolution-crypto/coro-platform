@@ -137,6 +137,20 @@ function buildPlan(catalog, existing) {
   });
 }
 
+function buildRetentionPlan(catalog, existing) {
+  const policies = new Map(existing.map((row) => [row.reportType, row]));
+  return catalog.map((template) => {
+    const existingPolicy = policies.get(template.reportType);
+    if (!existingPolicy)
+      return { template, action: "CREATE", existingId: null };
+    return {
+      template,
+      action: existingPolicy.isActive ? "UNCHANGED" : "INACTIVE",
+      existingId: existingPolicy.id,
+    };
+  });
+}
+
 async function resolveTarget(tx) {
   const organization = await tx.organization.findUnique({
     where: { id: ORGANIZATION_ID },
@@ -334,7 +348,17 @@ async function existingVersions(tx, catalog) {
   });
 }
 
-function evidence(mode, target, plan, mutation, extra = {}) {
+async function existingRetentionPolicies(tx, catalog) {
+  return tx.incidentReportRetentionPolicy.findMany({
+    where: {
+      organizationId: ORGANIZATION_ID,
+      reportType: { in: catalog.map((template) => template.reportType) },
+    },
+    orderBy: { reportType: "asc" },
+  });
+}
+
+function evidence(mode, target, plan, retentionPlan, mutation, extra = {}) {
   return {
     schemaVersion: 1,
     execution: "PASS",
@@ -364,6 +388,17 @@ function evidence(mode, target, plan, mutation, extra = {}) {
         ]),
       ),
     },
+    retention: {
+      total: retentionPlan.length,
+      unchanged: retentionPlan.filter((item) => item.action === "UNCHANGED")
+        .length,
+      create: retentionPlan.filter((item) => item.action === "CREATE").length,
+      inactive: retentionPlan.filter((item) => item.action === "INACTIVE")
+        .length,
+      byReportType: Object.fromEntries(
+        retentionPlan.map((item) => [item.template.reportType, item.action]),
+      ),
+    },
     ...extra,
   };
 }
@@ -372,14 +407,26 @@ async function inspect(tx, environment, catalog) {
   assertRuntimeFlags(environment);
   const target = await resolveTarget(tx);
   const plan = buildPlan(catalog, await existingVersions(tx, catalog));
-  return { target, plan };
+  const retentionPlan = buildRetentionPlan(
+    catalog,
+    await existingRetentionPolicies(tx, catalog),
+  );
+  if (retentionPlan.some((item) => item.action === "INACTIVE"))
+    throw new Error("INACTIVE_RETENTION_POLICY_NOT_OWNED");
+  return { target, plan, retentionPlan };
 }
 
 async function preflight(prisma, environment, catalog) {
   return prisma.$transaction(async (tx) => {
     await tx.$executeRawUnsafe("SET TRANSACTION READ ONLY");
     const result = await inspect(tx, environment, catalog);
-    return evidence("preflight", result.target, result.plan, false);
+    return evidence(
+      "preflight",
+      result.target,
+      result.plan,
+      result.retentionPlan,
+      false,
+    );
   });
 }
 
@@ -387,8 +434,47 @@ async function extend(prisma, environment, catalog, runId) {
   return prisma.$transaction(
     async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`coro-demo-report-20:${ORGANIZATION_ID}`}, 0))`;
-      const { target, plan } = await inspect(tx, environment, catalog);
+      const { target, plan, retentionPlan } = await inspect(
+        tx,
+        environment,
+        catalog,
+      );
       const created = [];
+      const createdPolicies = [];
+      for (const item of retentionPlan) {
+        if (item.action === "UNCHANGED") continue;
+        const fixtureKey = `retention:${item.template.reportType}`;
+        const collision = await tx.demoFixtureRecord.findUnique({
+          where: fixtureWhere(fixtureKey),
+        });
+        if (collision) throw new Error("RETENTION_FIXTURE_COLLISION");
+        const policy = await tx.incidentReportRetentionPolicy.create({
+          data: {
+            organizationId: ORGANIZATION_ID,
+            reportType: item.template.reportType,
+            retainForDays: 365,
+            attachmentRetainDays: null,
+            isActive: true,
+            createdByActorType: "USER",
+            createdByActorId: target.actor.id,
+          },
+        });
+        await tx.demoFixtureRecord.create({
+          data: {
+            organizationId: ORGANIZATION_ID,
+            fixtureNamespace: FIXTURE_NAMESPACE,
+            fixtureKey,
+            entityType: "INCIDENT_REPORT_RETENTION_POLICY_R2",
+            entityId: policy.id,
+            state: "ACTIVE",
+            baseline: {
+              reportType: item.template.reportType,
+              reversible: true,
+            },
+          },
+        });
+        createdPolicies.push(policy.id);
+      }
       for (const item of plan) {
         if (item.action === "UNCHANGED") continue;
         const fixtureKey = `template:${item.template.templateKey}:${item.template.contentHash}`;
@@ -446,14 +532,23 @@ async function extend(prisma, environment, catalog, runId) {
           requestId: String(runId),
           afterData: {
             createdCount: created.length,
+            createdRetentionPolicyCount: createdPolicies.length,
             unchangedCount: plan.length - created.length,
             buildingFingerprint: BUILDING_FINGERPRINT,
           },
         },
       });
-      return evidence("extend", target, plan, created.length > 0, {
-        createdCount: created.length,
-      });
+      return evidence(
+        "extend",
+        target,
+        plan,
+        retentionPlan,
+        created.length > 0 || createdPolicies.length > 0,
+        {
+          createdCount: created.length,
+          createdRetentionPolicyCount: createdPolicies.length,
+        },
+      );
     },
     { isolationLevel: "Serializable", timeout: 60_000 },
   );
@@ -462,10 +557,17 @@ async function extend(prisma, environment, catalog, runId) {
 async function verify(prisma, environment, catalog) {
   return prisma.$transaction(async (tx) => {
     await tx.$executeRawUnsafe("SET TRANSACTION READ ONLY");
-    const { target, plan } = await inspect(tx, environment, catalog);
-    if (plan.some((item) => item.action !== "UNCHANGED"))
+    const { target, plan, retentionPlan } = await inspect(
+      tx,
+      environment,
+      catalog,
+    );
+    if (
+      plan.some((item) => item.action !== "UNCHANGED") ||
+      retentionPlan.some((item) => item.action !== "UNCHANGED")
+    )
       throw new Error("CATALOG_POSTCONDITION_FAILED");
-    return evidence("verify", target, plan, false);
+    return evidence("verify", target, plan, retentionPlan, false);
   });
 }
 
@@ -482,6 +584,14 @@ async function rollback(prisma, environment, catalog, runId) {
           state: "ACTIVE",
         },
       });
+      const policyRecords = await tx.demoFixtureRecord.findMany({
+        where: {
+          organizationId: ORGANIZATION_ID,
+          fixtureNamespace: FIXTURE_NAMESPACE,
+          entityType: "INCIDENT_REPORT_RETENTION_POLICY_R2",
+          state: "ACTIVE",
+        },
+      });
       for (const record of records) {
         const references = await tx.incidentReport.count({
           where: {
@@ -491,6 +601,15 @@ async function rollback(prisma, environment, catalog, runId) {
         });
         if (references !== 0) throw new Error("ROLLBACK_TEMPLATE_IN_USE");
       }
+      for (const record of policyRecords) {
+        const references = await tx.incidentReport.count({
+          where: {
+            organizationId: ORGANIZATION_ID,
+            retentionPolicyId: record.entityId,
+          },
+        });
+        if (references !== 0) throw new Error("ROLLBACK_POLICY_IN_USE");
+      }
       for (const record of records) {
         await tx.incidentReportTemplateVersion.updateMany({
           where: {
@@ -498,6 +617,15 @@ async function rollback(prisma, environment, catalog, runId) {
             organizationId: ORGANIZATION_ID,
           },
           data: { status: "RETIRED", retiredAt: new Date() },
+        });
+      }
+      for (const record of policyRecords) {
+        await tx.incidentReportRetentionPolicy.updateMany({
+          where: {
+            id: record.entityId,
+            organizationId: ORGANIZATION_ID,
+          },
+          data: { isActive: false, lockVersion: { increment: 1 } },
         });
       }
       await tx.demoFixtureRecord.updateMany({
@@ -527,8 +655,9 @@ async function rollback(prisma, environment, catalog, runId) {
         schemaVersion: 1,
         execution: "PASS",
         mode: "rollback",
-        mutation: records.length > 0,
+        mutation: records.length > 0 || policyRecords.length > 0,
         retiredCount: records.length,
+        deactivatedRetentionPolicyCount: policyRecords.length,
         historicalPreserved: true,
       };
     },
@@ -576,6 +705,7 @@ async function main() {
 module.exports = {
   assertRuntimeFlags,
   buildPlan,
+  buildRetentionPlan,
   canonicalTemplate,
   fieldCatalog,
   fingerprint,

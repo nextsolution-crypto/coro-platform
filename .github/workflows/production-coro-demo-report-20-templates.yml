@@ -53,7 +53,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           SOURCE_SHA: ${{ github.sha }}
-          EXPECTED_ACTIVE_SHA: e13c2f88ce1a86c3d190977b542581586503722e
+          EXPECTED_ACTIVE_SHA: ${{ github.sha }}
           SCRIPT_SHA256: ${{ needs.validate.outputs.script_sha256 }}
           PHASE: ${{ inputs.phase }}
           GITHUB_RUN_ID: ${{ github.run_id }}

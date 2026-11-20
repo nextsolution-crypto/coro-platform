@@ -23,6 +23,10 @@ import {
   getUser,
 } from "../store/auth";
 import PortalLayout from "../components/PortalLayout";
+import {
+  reviewActionPresentation,
+  visibleReviewActions,
+} from "./reportReviewActions.mjs";
 import styles from "./security-workstation.module.css";
 
 type Capability = { feature: string; available: boolean; reason: string };
@@ -132,6 +136,7 @@ export default function SecurityWorkstationPage() {
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [buildingId, setBuildingId] = useState("");
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
+  const [reportPermissions, setReportPermissions] = useState<string[]>([]);
   const [reportFileCapabilities, setReportFileCapabilities] =
     useState<ReportFileCapabilities | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
@@ -192,12 +197,15 @@ export default function SecurityWorkstationPage() {
                 reportFileCapabilities:
                   (decision.reportFileCapabilities as ReportFileCapabilities) ??
                   null,
+                reportPermissions: (decision.reportPermissions ??
+                  []) as string[],
               };
             } catch {
               return {
                 building,
                 capabilities: [] as Capability[],
                 reportFileCapabilities: null,
+                reportPermissions: [] as string[],
               };
             }
           }),
@@ -209,6 +217,7 @@ export default function SecurityWorkstationPage() {
         );
         setCapabilities(preferred?.capabilities ?? []);
         setReportFileCapabilities(preferred?.reportFileCapabilities ?? null);
+        setReportPermissions(preferred?.reportPermissions ?? []);
         setBuildingId(preferred?.building.id ?? "");
         if (next.length > 0 && !preferred) {
           setError(
@@ -233,6 +242,7 @@ export default function SecurityWorkstationPage() {
       .then((value) => {
         setCapabilities(value.capabilities ?? []);
         setReportFileCapabilities(value.reportFileCapabilities ?? null);
+        setReportPermissions(value.reportPermissions ?? []);
       })
       .catch((reason) => setError(errorMessage(reason)))
       .finally(() => setLoading(false));
@@ -257,12 +267,13 @@ export default function SecurityWorkstationPage() {
           pageSize: "50",
         });
         if (query) params.set("q", query);
-        if (!showHistorical && reportStatus)
-          params.set("status", reportStatus);
-        if (!showHistorical && reportType)
-          params.set("reportType", reportType);
+        if (!showHistorical && reportStatus) params.set("status", reportStatus);
+        if (!showHistorical && reportType) params.set("reportType", reportType);
         if (createdFrom)
-          params.set(showHistorical ? "importedFrom" : "createdFrom", createdFrom);
+          params.set(
+            showHistorical ? "importedFrom" : "createdFrom",
+            createdFrom,
+          );
         if (createdTo)
           params.set(showHistorical ? "importedTo" : "createdTo", createdTo);
         return `${base}/incident-reports${showHistorical ? "/historical" : ""}?${params.toString()}`;
@@ -547,6 +558,10 @@ export default function SecurityWorkstationPage() {
                 <button
                   className={styles.primary}
                   onClick={() => setDialog(tab)}
+                  disabled={
+                    tab === "reports" &&
+                    !reportPermissions.includes("INCIDENT_REPORT_CREATE")
+                  }
                 >
                   <Plus size={16} />
                   {tab === "log"
@@ -572,6 +587,7 @@ export default function SecurityWorkstationPage() {
                 attachmentUploadAvailable={
                   reportFileCapabilities?.attachmentUpload.available === true
                 }
+                reportPermissions={reportPermissions}
                 mutate={mutate}
                 onOpenReport={setOpenReportId}
                 onOpenArchive={setOpenArchiveId}
@@ -675,6 +691,7 @@ function ItemList({
   organizationId,
   reviewers,
   attachmentUploadAvailable,
+  reportPermissions,
   mutate,
   onOpenReport,
   onOpenArchive,
@@ -684,6 +701,7 @@ function ItemList({
   organizationId: string;
   reviewers: Item[];
   attachmentUploadAvailable: boolean;
+  reportPermissions: string[];
   mutate: Mutate;
   onOpenReport: (id: string) => void;
   onOpenArchive: (id: string) => void;
@@ -734,6 +752,7 @@ function ItemList({
             organizationId={organizationId}
             reviewers={reviewers}
             attachmentUploadAvailable={attachmentUploadAvailable}
+            reportPermissions={reportPermissions}
             mutate={mutate}
             onOpenReport={onOpenReport}
             onOpenArchive={onOpenArchive}
@@ -750,6 +769,7 @@ function RowActions({
   organizationId,
   reviewers,
   attachmentUploadAvailable,
+  reportPermissions,
   mutate,
   onOpenReport,
   onOpenArchive,
@@ -759,6 +779,7 @@ function RowActions({
   organizationId: string;
   reviewers: Item[];
   attachmentUploadAvailable: boolean;
+  reportPermissions: string[];
   mutate: Mutate;
   onOpenReport: (id: string) => void;
   onOpenArchive: (id: string) => void;
@@ -878,6 +899,7 @@ function RowActions({
         base={base}
         reviewers={reviewers}
         attachmentUploadAvailable={attachmentUploadAvailable}
+        reportPermissions={reportPermissions}
         mutate={mutate}
         onOpen={() => onOpenReport(item.id)}
       />
@@ -890,6 +912,7 @@ function ReportActions({
   base,
   reviewers,
   attachmentUploadAvailable,
+  reportPermissions,
   mutate,
   onOpen,
 }: {
@@ -897,10 +920,15 @@ function ReportActions({
   base: string;
   reviewers: Item[];
   attachmentUploadAvailable: boolean;
+  reportPermissions: string[];
   mutate: Mutate;
   onOpen: () => void;
 }) {
   const [reviewerId, setReviewerId] = useState(reviewers[0]?.id ?? "");
+  const canEdit = reportPermissions.includes("INCIDENT_REPORT_EDIT");
+  const canApprove = reportPermissions.includes("INCIDENT_REPORT_APPROVE");
+  const canExport = reportPermissions.includes("INCIDENT_REPORT_EXPORT");
+  const reviewActions = visibleReviewActions(reportPermissions);
   const versionId = item.versions?.[0]?.id;
   const decide = (decision: string, success: string) =>
     mutate(
@@ -915,7 +943,7 @@ function ReportActions({
   return (
     <div className={styles.rowActions}>
       <button onClick={onOpen}>Ouvrir</button>
-      {item.status === "DRAFT" && (
+      {item.status === "DRAFT" && canEdit && (
         <>
           <AttachmentButton
             item={item}
@@ -940,7 +968,7 @@ function ReportActions({
           </button>
         </>
       )}
-      {item.status === "SUBMITTED" && (
+      {item.status === "SUBMITTED" && canEdit && (
         <>
           <select
             aria-label="Réviseur"
@@ -972,26 +1000,19 @@ function ReportActions({
           </button>
         </>
       )}
-      {item.status === "IN_REVIEW" && (
-        <>
-          <button
-            onClick={() => void decide("REVIEWED", "Révision enregistrée.")}
-          >
-            Réviser
-          </button>
-          <button
-            onClick={() =>
-              void decide("CORRECTION_REQUESTED", "Corrections demandées.")
-            }
-          >
-            Demander correction
-          </button>
-          <button onClick={() => void decide("APPROVED", "Rapport approuvé.")}>
-            Approuver
-          </button>
-        </>
-      )}
-      {item.status === "APPROVED" && (
+      {item.status === "IN_REVIEW" &&
+        reviewActions.map((action) => {
+          const presentation = reviewActionPresentation[action];
+          return (
+            <button
+              key={action}
+              onClick={() => void decide(action, presentation.success)}
+            >
+              {presentation.label}
+            </button>
+          );
+        })}
+      {item.status === "APPROVED" && canApprove && (
         <button
           onClick={() =>
             void mutate(
@@ -1008,7 +1029,8 @@ function ReportActions({
         </button>
       )}
       {(item.status === "APPROVED" || item.status === "PUBLISHED") &&
-        versionId && (
+        versionId &&
+        canExport && (
           <button
             onClick={() =>
               void mutate(async () => {
@@ -1400,6 +1422,9 @@ function CreateDialog({
   const eligibleTemplates = templates.filter(
     (item) => item.retentionPolicyId && item.formSchema?.sections?.length,
   );
+  const ineligibleTemplates = templates.filter(
+    (item) => !item.retentionPolicyId || !item.formSchema?.sections?.length,
+  );
   const firstTemplate = eligibleTemplates[0];
   const [form, setForm] = useState<Record<string, any>>({
     priority: "NORMAL",
@@ -1574,6 +1599,25 @@ function CreateDialog({
                     ))}
                   </select>
                 </Field>
+                {ineligibleTemplates.length > 0 && (
+                  <div className={styles.templateWarning} role="status">
+                    <strong>
+                      {ineligibleTemplates.length} formulaire
+                      {ineligibleTemplates.length === 1 ? "" : "s"} non
+                      disponible{ineligibleTemplates.length === 1 ? "" : "s"}
+                    </strong>
+                    <ul>
+                      {ineligibleTemplates.map((template) => (
+                        <li key={template.id}>
+                          {template.name}:{" "}
+                          {!template.retentionPolicyId
+                            ? "politique de conservation active requise"
+                            : "schéma de formulaire utilisable requis"}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <Field label="Titre du rapport">
                   <input
                     required

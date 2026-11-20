@@ -6,6 +6,7 @@ const test = require("node:test");
 const {
   assertRuntimeFlags,
   buildPlan,
+  buildRetentionPlan,
   canonicalTemplate,
 } = require("./coro-demo-report-20-templates.cjs");
 
@@ -119,6 +120,25 @@ test("plan is idempotent and versions changed hashes without overwriting", () =>
   );
 });
 
+test("retention plan creates only missing report-type policies and fails closed on inactive policies", () => {
+  const catalog = [
+    { reportType: "GENERAL_INCIDENT" },
+    { reportType: "FIRE_ALARM" },
+    { reportType: "EVACUATION" },
+  ];
+  assert.deepEqual(
+    buildRetentionPlan(catalog, [
+      { id: "policy-general", reportType: "GENERAL_INCIDENT", isActive: true },
+      { id: "policy-fire", reportType: "FIRE_ALARM", isActive: false },
+    ]).map(({ action, existingId }) => ({ action, existingId })),
+    [
+      { action: "UNCHANGED", existingId: "policy-general" },
+      { action: "INACTIVE", existingId: "policy-fire" },
+      { action: "CREATE", existingId: null },
+    ],
+  );
+});
+
 test("scope and historical safeguards are fixed in the authority", () => {
   assert.match(
     source,
@@ -129,6 +149,10 @@ test("scope and historical safeguards are fixed in the authority", () => {
   assert.match(source, /HISTORICAL_REPORT_MISSING/);
   assert.match(source, /CROSS_TENANT_REPORT_ENTITLEMENT_ACTIVE/);
   assert.match(source, /ROLLBACK_TEMPLATE_IN_USE/);
+  assert.match(source, /ROLLBACK_POLICY_IN_USE/);
+  assert.match(source, /INCIDENT_REPORT_RETENTION_POLICY_R2/);
+  assert.match(source, /retainForDays: 365/);
+  assert.match(source, /retentionPolicyId: record\.entityId/);
   assert.match(source, /fixtureNamespace: FIXTURE_NAMESPACE/);
   assert.doesNotMatch(source, /deleteMany|\.delete\(/);
 });
@@ -138,7 +162,7 @@ test("workflow is production-protected, locked, backed up and has exact approval
   assert.match(workflow, /coro-production-deployment\.lock/);
   assert.match(workflow, /coro-db-backup\.service/);
   assert.match(workflow, /coro-db-restore-test\.service/);
-  assert.match(workflow, /e13c2f88ce1a86c3d190977b542581586503722e/);
+  assert.match(workflow, /EXPECTED_ACTIVE_SHA: \$\{\{ github\.sha \}\}/);
   assert.match(workflow, /migration_count.*202/);
   assert.match(workflow, /20261224010000_incident_report_historical_search/);
   assert.match(workflow, /rollback_refs/);
