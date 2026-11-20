@@ -217,20 +217,20 @@ describe('ClientPortalService annex resource authorization', () => {
     });
   });
 
-  it('preserves explicit corporate organization scope without client narrowing', async () => {
+  it('narrows corporate access to projects of its own client', async () => {
     prisma.project.findFirst.mockResolvedValue({
-      id: 'project-b',
+      id: 'project-a2',
       organizationId: 'org-a',
-      clientId: 'client-b',
-      buildingId: 'building-b',
+      clientId: 'client-a',
+      buildingId: 'building-a2',
     });
     prisma.projectVersion.findMany.mockResolvedValue([]);
 
     await expect(
-      service.getProjectVersionHistory('project-b', corporate),
+      service.getProjectVersionHistory('project-a2', corporate),
     ).resolves.toEqual([]);
     expect(prisma.project.findFirst).toHaveBeenCalledWith({
-      where: { id: 'project-b', organizationId: 'org-a' },
+      where: { id: 'project-a2', organizationId: 'org-a', clientId: 'client-a' },
       select: {
         id: true,
         organizationId: true,
