@@ -23,11 +23,12 @@ Contexte complet et détaillé : `CORO_CONTEXTE_REPRISE_v4.md` (racine). Ce fich
 
 - Monorepo : 4 apps, commits depuis la racine `F:\coro-platform` avec `git add -A`.
 - Vérif obligatoire après modif : `npx tsc --noEmit` dans le sous-dossier concerné.
-- Admin local : `admin@coro.app` / `Admin2026!`.
+- Admin local : `admin@coro.app`, mot de passe dans le gestionnaire de Mathieu (jamais dans le dépôt, qui est public). Base locale vide : `SEED_ADMIN_PASSWORD=… npx ts-node seed.ts`.
 - LanguageTool 6.6 (correcteur orthographique) : à lancer manuellement chaque session sur le port 8081 (Java 17 requis) — voir v4 pour la commande.
 - Design system : fond `#F8F9FA`, cards `#FFFFFF`, rouge primaire `#C0392B`/hover `#A93226`, textes `#2C3E50`/`#6C757D`/`#ADB5BD`. Inline CSS préféré à Tailwind pour la précision des couleurs. `rounded-md` (6px) cards/modals, `rounded` (4px) boutons/inputs.
 - PowerShell + dossiers `[id]`/`[projectId]` : toujours utiliser `-LiteralPath`.
 - Rate limiting global actif (`@nestjs/throttler` : 120 req/min, 2000 req/h par IP).
+- **Dépôt GitHub public** : aucun mot de passe, jeton, clé ni adresse IP de serveur dans un fichier versionné.
 - Prod : `app.getcoro.io` / `api.getcoro.io` / `client.getcoro.io` / `getcoro.io` — VPS DigitalOcean Toronto, déploiement auto CI/CD sur push `main`, Prisma épinglé à `6.19.3` (v7 casse le schema).
 
 ## 3. État d'avancement réel des modules (scan du code — 13 sept. 2026)
