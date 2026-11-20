@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { AdviserActor } from '../auth/project-access';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
@@ -34,6 +34,7 @@ describe('IncidentReportAttachmentsService feature flag', () => {
 
   afterAll(() => {
     delete process.env.INCIDENT_REPORTS_ENABLED;
+    delete process.env.INCIDENT_REPORT_ATTACHMENTS_ENABLED;
   });
 
   it.each([
@@ -56,5 +57,47 @@ describe('IncidentReportAttachmentsService feature flag', () => {
     expect(storage.downloadPrivate).not.toHaveBeenCalled();
     expect(scanner.scan).not.toHaveBeenCalled();
     expect(access.require).not.toHaveBeenCalled();
+  });
+
+  it('fails closed before reading or persisting a new file when antivirus-backed uploads are disabled', async () => {
+    process.env.INCIDENT_REPORTS_ENABLED = 'true';
+    process.env.INCIDENT_REPORT_ATTACHMENTS_ENABLED = 'false';
+
+    await expect(
+      service().create('org', 'report', {} as never, actor),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+    expect(prisma.incidentReport.findFirst).not.toHaveBeenCalled();
+    expect(storage.uploadPrivateImmutable).not.toHaveBeenCalled();
+    expect(scanner.scan).not.toHaveBeenCalled();
+    expect(access.require).not.toHaveBeenCalled();
+  });
+
+  it('keeps a previously CLEAN private attachment readable under current RBAC', async () => {
+    process.env.INCIDENT_REPORTS_ENABLED = 'true';
+    process.env.INCIDENT_REPORT_ATTACHMENTS_ENABLED = 'false';
+    prisma.incidentReportAttachment.findFirst.mockResolvedValue({
+      storageKey: 'private/key',
+      mediaType: 'application/pdf',
+      originalFileName: 'evidence.pdf',
+      report: { buildingId: 'building-a' },
+    });
+    storage.downloadPrivate.mockResolvedValue(Buffer.from('safe-existing'));
+
+    const result = await service().download(
+      'org',
+      'report',
+      'attachment',
+      actor,
+    );
+
+    expect(prisma.incidentReportAttachment.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ scanStatus: 'CLEAN', revokedAt: null }),
+      }),
+    );
+    expect(access.require).toHaveBeenCalled();
+    expect(result.bytes.toString()).toBe('safe-existing');
+    expect(scanner.scan).not.toHaveBeenCalled();
   });
 });

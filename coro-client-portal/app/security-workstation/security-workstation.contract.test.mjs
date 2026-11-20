@@ -33,6 +33,10 @@ assert.match(page, /setBuildingId\(preferred\?\.building\.id \?\? ""\)/);
 assert.doesNotMatch(page, /setBuildingId\(next\[0\]\?\.id/);
 assert.match(page, /client-portal\/organizations\/\$\{organizationId\}/);
 assert.match(page, /incident-reports\/forms\/templates/);
+assert.match(page, /reportFileCapabilities/);
+assert.match(page, /attachmentUpload\.available === true/);
+assert.match(page, /Pièce jointe indisponible/);
+assert.match(page, /historicalArchiveAvailable/);
 assert.match(page, /params\.set\("status", reportStatus\)/);
 assert.match(page, /params\.set\("reportType", reportType\)/);
 assert.match(

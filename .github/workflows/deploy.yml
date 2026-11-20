@@ -24,6 +24,14 @@ on:
         required: false
         default: INITIAL
         type: string
+      incident_report_file_security_mode:
+        description: DISABLED blocks untrusted uploads/imports; CLAMAV_REQUIRED enforces the full antivirus gate
+        required: true
+        default: DISABLED
+        type: choice
+        options:
+          - DISABLED
+          - CLAMAV_REQUIRED
 
 permissions:
   contents: read
@@ -65,7 +73,7 @@ jobs:
       - name: Validate isolated ClamAV contract
         if: matrix.app == 'coro-backend'
         shell: bash
-        run: docker compose config --format json | node ops/clamav/verify-compose.mjs
+        run: docker compose --profile incident-report-untrusted-files config --format json | node ops/clamav/verify-compose.mjs
 
       - name: Validate controlled Population configuration propagation
         if: matrix.app == 'coro-backend'
@@ -352,12 +360,13 @@ jobs:
           CLIENT_INVITATION_OUTBOX_KEY_ID: ${{ vars.CLIENT_INVITATION_OUTBOX_KEY_ID }}
           CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64: ${{ secrets.CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64 }}
           DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST: ${{ secrets.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST }}
+          INCIDENT_REPORT_FILE_SECURITY_MODE: ${{ inputs.incident_report_file_security_mode }}
         with:
           host: ${{ secrets.SERVER_IP }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 60m
-          envs: RELEASE_COMMIT,TOOLING_COMMIT,PRODUCTION_APPROVAL,MIGRATION_COMPATIBILITY_APPROVAL,RETRY_FAILED_RELEASE_APPROVAL,RELEASE_OPERATOR,BACKEND_IMAGE,FRONTEND_IMAGE,CLIENT_PORTAL_IMAGE,WEBSITE_IMAGE,CLIENT_INVITATION_OUTBOX_KEY_BASE64,CLIENT_INVITATION_OUTBOX_KEY_ID,CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64,DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST
+          envs: RELEASE_COMMIT,TOOLING_COMMIT,PRODUCTION_APPROVAL,MIGRATION_COMPATIBILITY_APPROVAL,RETRY_FAILED_RELEASE_APPROVAL,RELEASE_OPERATOR,BACKEND_IMAGE,FRONTEND_IMAGE,CLIENT_PORTAL_IMAGE,WEBSITE_IMAGE,CLIENT_INVITATION_OUTBOX_KEY_BASE64,CLIENT_INVITATION_OUTBOX_KEY_ID,CLIENT_INVITATION_OUTBOX_PREVIOUS_KEYS_BASE64,DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST,INCIDENT_REPORT_FILE_SECURITY_MODE
           script: |
             set -euo pipefail
             trap 'rm -f /tmp/coro-production-release.sh /tmp/coro-release-control.sh /tmp/coro-release-reconcile.sh /tmp/release-state.mjs' EXIT

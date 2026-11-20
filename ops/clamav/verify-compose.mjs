@@ -9,6 +9,9 @@ export function verifyCompose(config) {
   const backend = config?.services?.backend;
   if (!clamav || !backend) throw new Error('CLAMAV_SERVICE_MISSING');
   if (clamav.image !== CLAMAV_IMAGE) throw new Error('CLAMAV_IMAGE_NOT_PINNED');
+  if (!clamav.profiles?.includes('incident-report-untrusted-files')) {
+    throw new Error('CLAMAV_MUST_BE_EXPLICIT_PROFILE');
+  }
   if (clamav.ports?.length) throw new Error('CLAMAV_PORT_MUST_NOT_BE_PUBLISHED');
   if (!Object.prototype.hasOwnProperty.call(clamav.networks ?? {}, 'coro_clamav_internal')) {
     throw new Error('CLAMAV_PRIVATE_NETWORK_MISSING');
@@ -40,8 +43,14 @@ export function verifyCompose(config) {
   if (backend.environment?.INCIDENT_REPORT_IMPORT_ENABLED !== 'false') {
     throw new Error('IMPORT_FLAG_DEFAULT_MUST_BE_FALSE');
   }
-  if (backend.depends_on?.clamav?.condition !== 'service_healthy') {
-    throw new Error('BACKEND_MUST_WAIT_FOR_CLAMAV');
+  if (backend.environment?.INCIDENT_REPORT_ATTACHMENTS_ENABLED !== 'false') {
+    throw new Error('ATTACHMENT_FLAG_DEFAULT_MUST_BE_FALSE');
+  }
+  if (backend.environment?.INCIDENT_REPORT_ARCHIVES_ENABLED !== 'false') {
+    throw new Error('ARCHIVE_FLAG_DEFAULT_MUST_BE_FALSE');
+  }
+  if (backend.depends_on?.clamav) {
+    throw new Error('BACKEND_MUST_NOT_REQUIRE_OPTIONAL_CLAMAV');
   }
   return { execution: 'PASS', image: CLAMAV_IMAGE };
 }

@@ -38,6 +38,11 @@ import { IncidentReportsService } from '../incident-reports/incident-reports.ser
 import { IncidentReportHistoricalService } from '../incident-reports/incident-report-historical.service';
 import { IncidentReportHistoricalListQueryDto } from '../incident-reports/dto/incident-report-historical.dto';
 import {
+  incidentReportAttachmentsEnabled,
+  incidentReportArchivesEnabled,
+  incidentReportImportEnabled,
+} from '../incident-reports/incident-reports.config';
+import {
   AssociateOperationalLogReportDto,
   CreateOperationalLogEntryDto,
   OperationalLogListQueryDto,
@@ -119,6 +124,26 @@ export class ClientOperationalCapabilitiesController {
         available,
         reason: available ? 'AVAILABLE' : 'NOT_AVAILABLE',
       })),
+      reportFileCapabilities: {
+        attachmentUpload: {
+          available: incidentReportAttachmentsEnabled(),
+          reason: incidentReportAttachmentsEnabled()
+            ? 'ANTIVIRUS_PROTECTION_AVAILABLE'
+            : 'ANTIVIRUS_PROTECTION_UNAVAILABLE',
+        },
+        historicalImport: {
+          available: incidentReportImportEnabled(),
+          reason: incidentReportImportEnabled()
+            ? 'ANTIVIRUS_PROTECTION_AVAILABLE'
+            : 'IMPORT_DISABLED',
+        },
+        historicalArchive: {
+          available: incidentReportArchivesEnabled(),
+          reason: incidentReportArchivesEnabled()
+            ? 'AVAILABLE'
+            : 'ARCHIVE_ACCESS_DISABLED',
+        },
+      },
     };
   }
 }

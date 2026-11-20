@@ -29,7 +29,7 @@ jobs:
           persist-credentials: false
       - run: bash -n ops/clamav/production-readiness.sh
       - run: node --test ops/clamav/*.test.mjs
-      - run: docker compose config --format json | node ops/clamav/verify-compose.mjs
+      - run: docker compose --profile incident-report-untrusted-files config --format json | node ops/clamav/verify-compose.mjs
 
   inspect:
     needs: validate

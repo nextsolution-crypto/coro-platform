@@ -8,7 +8,7 @@ import type { ProvenanceActor } from '../auth/coro-actor-provenance';
 import { PrismaService } from '../prisma/prisma.service';
 import { IncidentReportHistoricalListQueryDto } from './dto/incident-report-historical.dto';
 import { IncidentReportAccessService } from './incident-report-access.service';
-import { incidentReportImportEnabled } from './incident-reports.config';
+import { incidentReportArchivesEnabled } from './incident-reports.config';
 
 @Injectable()
 export class IncidentReportHistoricalService {
@@ -141,7 +141,7 @@ export class IncidentReportHistoricalService {
   }
 
   private assertEnabled() {
-    if (!incidentReportImportEnabled())
+    if (!incidentReportArchivesEnabled())
       throw new NotFoundException('Archive historique introuvable.');
   }
 }

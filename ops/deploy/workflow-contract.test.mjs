@@ -87,6 +87,22 @@ test('fails closed on ClamAV capacity, immutable image and synthetic protocol ga
   assert.ok(release.indexOf('CLAMAV_MEMORY_INSUFFICIENT') < release.indexOf('systemctl start coro-db-backup.service'));
   assert.ok(release.indexOf('clamav-smoke.js') < release.indexOf("status:'SUCCESS'"));
 });
+test('requires an explicit file-security mode and only skips ClamAV when all untrusted file capabilities are disabled', () => {
+  assert.match(release, /INCIDENT_REPORT_FILE_SECURITY_MODE_INVALID/);
+  assert.match(release, /DISABLED\) CLAMAV_REQUIRED=false/);
+  assert.match(release, /CLAMAV_REQUIRED\) CLAMAV_REQUIRED=true/);
+  assert.match(release, /INCIDENT_REPORT_ATTACHMENTS_ENABLED: "\$\(\[\[ "\$CLAMAV_REQUIRED" == true/);
+  assert.match(release, /INCIDENT_REPORT_IMPORT_ENABLED: "false"/);
+  assert.match(release, /UNTRUSTED_FILE_CAPABILITIES_NOT_DISABLED/);
+  assert.match(release, /SKIPPED_NOT_REQUIRED/);
+  assert.match(release, /--profile incident-report-untrusted-files/);
+  assert.match(workflow, /incident_report_file_security_mode/);
+  assert.match(workflow, /INCIDENT_REPORT_FILE_SECURITY_MODE/);
+  assert.ok(
+    release.indexOf('if [[ "$CLAMAV_REQUIRED" == true ]]') <
+      release.indexOf('CLAMAV_MEMORY_INSUFFICIENT'),
+  );
+});
 test('migrates and verifies migration head before application rollout', () => {
   const migrate = release.indexOf('migrate deploy');
   const rollout = release.indexOf('up -d --no-build');
