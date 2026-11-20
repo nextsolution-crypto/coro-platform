@@ -1,4 +1,5 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
+import { emergencyReply, isLiveEmergency } from '../common/emergency-guard';
 import { randomUUID } from 'node:crypto';
 import { PublicKnowledgeSearchService } from '../public-knowledge/public-knowledge-search.service';
 import type { PublicKnowledgeAnswerContext } from '../public-knowledge/public-knowledge.types';
@@ -38,6 +39,27 @@ export class PublicAssistantOrchestratorService {
   }): Promise<PublicAssistantResponse> {
     const startedAt = Date.now();
     const classification = classifyWebAIIntent(input.message);
+    if (isLiveEmergency(input.message)) {
+      const session = this.sessions.open(input.sessionId);
+      const response: PublicAssistantResponse = {
+        requestId: randomUUID(),
+        sessionId: session.id,
+        message: emergencyReply(input.language),
+        language: input.language,
+        status: 'SUPPORTED',
+        citations: [],
+        suggestedLinks: [],
+        suggestedQuestions: [],
+        mode: 'DOCUMENTARY',
+        intent: 'LIVE_EMERGENCY',
+      };
+      this.sessions.append(
+        session.id,
+        { role: 'user', content: input.message },
+        { role: 'assistant', content: response.message },
+      );
+      return response;
+    }
     this.config.assertProviderConfiguration();
     const requestId = randomUUID();
     const session = this.sessions.open(input.sessionId);

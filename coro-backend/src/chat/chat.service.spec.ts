@@ -160,3 +160,16 @@ describe('ChatService security', () => {
     },
   );
 });
+
+describe('ChatService live emergency guard (T6)', () => {
+  it('answers a live emergency with the fixed 911 reply without calling any provider', async () => {
+    const http = jest.fn();
+    process.env.ANTHROPIC_API_KEY = 'test-key';
+    const result = await new ChatService(http as any).handleMessage("Il y a un feu dans l'entrepôt", []);
+    delete process.env.ANTHROPIC_API_KEY;
+    expect(http).not.toHaveBeenCalled();
+    expect(result.reply).toMatch(/composez le 911/);
+    expect(result.reply).toMatch(/call 911/);
+    expect(result.status).toBe('ANSWERED');
+  });
+});

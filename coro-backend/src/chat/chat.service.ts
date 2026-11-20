@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { emergencyReply, isLiveEmergency } from '../common/emergency-guard';
 import { ChatHistoryMessageDto } from './chat.dto';
 
 export const CHAT_HTTP_CLIENT = Symbol('CHAT_HTTP_CLIENT');
@@ -96,6 +97,14 @@ export class ChatService {
     history: ChatHistoryMessageDto[],
   ): Promise<ChatResult> {
     const normalizedMessage = message.trim();
+    if (isLiveEmergency(normalizedMessage)) {
+      return {
+        reply: emergencyReply(),
+        contactSuggested: false,
+        transferToAgent: false,
+        status: 'ANSWERED',
+      };
+    }
     const contactSuggested = CONTACT_KEYWORDS.some((keyword) =>
       normalizedMessage.toLocaleLowerCase('fr-CA').includes(keyword),
     );
