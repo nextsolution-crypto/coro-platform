@@ -30,7 +30,8 @@ percent_required=$((total_bytes * min_percent / 100)); history_required=$((large
 active_manifest="$(find "$release_dir" -maxdepth 1 -type f -name 'production-*.json' -print0 | xargs -0 -r stat -c '%Y %n' | sort -rn | cut -d' ' -f2- | while read -r f; do node -e 'const m=require(process.argv[1]);if(m.status==="SUCCESS"){process.stdout.write(process.argv[1]);process.exit(0)}process.exit(1)' "$f" 2>/dev/null && break || true; done)"
 [[ -n "$active_manifest" && -f "$active_manifest" ]] || { echo 'CAPACITY_AUDIT_FAILED code=ACTIVE_MANIFEST_MISSING'; exit 1; }
 
-mapfile -t active_refs < <(node -e 'const m=require(process.argv[1]);for(const r of Object.values(m.images||{}))if(typeof r==="string")console.log(r)' "$active_manifest")
+mapfile -t active_refs < <(node -e 'const m=require(process.argv[1]);for(const key of ["backend","frontend","clientPortal","website"]){const r=m.images?.[key];if(typeof r!=="string")process.exit(1);console.log(r)}' "$active_manifest")
+[[ "${#active_refs[@]}" -eq 4 ]] || { echo 'CAPACITY_AUDIT_FAILED code=ACTIVE_IMAGE_SET_INVALID'; exit 1; }
 mapfile -t rollback_refs < <(node -e 'const m=require(process.argv[1]);for(const r of m.previousImages||[])if(typeof r==="string"&&r)console.log(r)' "$active_manifest")
 declare -A protected=() reasons=() container_refs=()
 while read -r id; do [[ -n "$id" ]] && protected["$id"]=1 && reasons["$id"]="CONTAINER_REFERENCE" && container_refs["$id"]=1; done < <(docker ps -aq | xargs -r docker inspect --format '{{.Image}}' | sort -u)
