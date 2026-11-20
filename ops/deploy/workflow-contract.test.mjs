@@ -73,6 +73,20 @@ test('fails before backup when release capacity headroom is insufficient', () =>
   assert.match(release, /operational_reserve/);
   assert.ok(release.indexOf('RELEASE_CAPACITY_INSUFFICIENT') < release.indexOf('systemctl start coro-db-backup.service'));
 });
+test('fails closed on ClamAV capacity, immutable image and synthetic protocol gates', () => {
+  assert.match(release, /clamav\/clamav-debian@sha256:6982509b9e1415bf23cb49d0c55872fdd57fd2b92be33fa26d487da42d322076/);
+  assert.match(release, /CLAMAV_MEMORY_UNAVAILABLE/);
+  assert.match(release, /CLAMAV_MEMORY_INSUFFICIENT/);
+  assert.match(release, /CLAMAV_IMAGE_PRESENCE_UNAVAILABLE/);
+  assert.match(release, /docker pull --platform linux\/amd64 "\$CLAMAV_IMAGE"/);
+  assert.match(release, /clamav-smoke\.js/);
+  assert.match(release, /CLAMAV_SMOKE_FAILED/);
+  assert.match(release, /CLAMAV_SMOKE_EVIDENCE_INVALID/);
+  assert.match(release, /coro_clamav/);
+  assert.match(release, /importEnabled!==false/);
+  assert.ok(release.indexOf('CLAMAV_MEMORY_INSUFFICIENT') < release.indexOf('systemctl start coro-db-backup.service'));
+  assert.ok(release.indexOf('clamav-smoke.js') < release.indexOf("status:'SUCCESS'"));
+});
 test('migrates and verifies migration head before application rollout', () => {
   const migrate = release.indexOf('migrate deploy');
   const rollout = release.indexOf('up -d --no-build');

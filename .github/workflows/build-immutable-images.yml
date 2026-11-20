@@ -48,6 +48,9 @@ jobs:
           test -z "$(git status --porcelain=v1 --untracked-files=no)"
           echo "candidate=$CANDIDATE_COMMIT" >> "$GITHUB_OUTPUT"
 
+      - name: Validate isolated ClamAV contract
+        run: docker compose config --format json | node ops/clamav/verify-compose.mjs
+
   build-images:
     needs: validate
     runs-on: ubuntu-latest
