@@ -474,9 +474,12 @@ export class IncidentService {
   }
 
   // ── SMS via Brevo ────────────────────────────────────────────────────────
-  private async sendSms(to: string, content: string, organizationId: string): Promise<void> {
+  // Retourne true seulement si Brevo a accepté l'envoi (ou s'il est simulé
+  // pour une organisation de démonstration). Aucun expéditeur de repli :
+  // sans BREVO_SMS_SENDER, l'envoi est refusé et journalisé (audit T8).
+  private async sendSms(to: string, content: string, organizationId: string): Promise<boolean> {
     const phone = normalizePhone(to);
-    if (!phone) return;
+    if (!phone) return false;
     if (!this.demoCommunicationPolicy) {
       if (process.env.NODE_ENV === 'production') throw new Error('DEMO_COMMUNICATION_POLICY_REQUIRED');
     } else {
@@ -487,24 +490,40 @@ export class IncidentService {
         recipient: phone,
         payload: { content },
       });
-      if (decision.disposition !== 'LIVE') return;
+      if (decision.disposition === 'SIMULATED') return true;
+      if (decision.disposition !== 'LIVE') return false;
+    }
+    const sender = process.env.BREVO_SMS_SENDER?.trim();
+    const apiKey = process.env.BREVO_API_KEY?.trim();
+    if (!sender || !apiKey) {
+      console.error('[IncidentService] SMS non envoyé : BREVO_SMS_SENDER ou BREVO_API_KEY manquant.');
+      return false;
     }
     try {
-      await fetch('https://api.brevo.com/v3/transactionalSMS/send', {
+      const res = await fetch('https://api.brevo.com/v3/transactionalSMS/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'api-key': process.env.BREVO_API_KEY || '' },
+        headers: { 'Content-Type': 'application/json', 'api-key': apiKey },
+        signal: AbortSignal.timeout(10_000),
         body: JSON.stringify({
-          sender:    process.env.BREVO_SMS_SENDER || 'CORO',
+          sender,
           recipient: phone,
           content,
           type: 'transactional',
         }),
       });
-    } catch (e) { console.error('[IncidentService] Erreur SMS:', e); }
+      if (!res.ok) {
+        console.error(`[IncidentService] SMS refusé par Brevo (HTTP ${res.status}).`);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      console.error('[IncidentService] Erreur SMS:', e);
+      return false;
+    }
   }
 
   // ── Courriel générique ────────────────────────────────────────────────────
-  private async sendEmail(data: { to: string; toName: string; subject: string; html: string }, organizationId: string) {
+  private async sendEmail(data: { to: string; toName: string; subject: string; html: string }, organizationId: string): Promise<boolean> {
     if (!this.demoCommunicationPolicy) {
       if (process.env.NODE_ENV === 'production') throw new Error('DEMO_COMMUNICATION_POLICY_REQUIRED');
     } else {
@@ -515,12 +534,19 @@ export class IncidentService {
         recipient: data.to,
         payload: { subject: data.subject },
       });
-      if (decision.disposition !== 'LIVE') return;
+      if (decision.disposition === 'SIMULATED') return true;
+      if (decision.disposition !== 'LIVE') return false;
+    }
+    const apiKey = process.env.BREVO_API_KEY?.trim();
+    if (!apiKey) {
+      console.error('[IncidentService] Courriel non envoyé : BREVO_API_KEY manquant.');
+      return false;
     }
     try {
-      await fetch('https://api.brevo.com/v3/smtp/email', {
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'api-key': process.env.BREVO_API_KEY || '' },
+        headers: { 'Content-Type': 'application/json', 'api-key': apiKey },
+        signal: AbortSignal.timeout(10_000),
         body: JSON.stringify({
           sender: { name: 'CORO Sentinelle', email: 'info@getcoro.io' },
           to: [{ email: data.to, name: data.toName }],
@@ -528,7 +554,15 @@ export class IncidentService {
           htmlContent: data.html,
         }),
       });
-    } catch (e) { console.error('[IncidentService] Erreur courriel:', e); }
+      if (!res.ok) {
+        console.error(`[IncidentService] Courriel refusé par Brevo (HTTP ${res.status}).`);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      console.error('[IncidentService] Erreur courriel:', e);
+      return false;
+    }
   }
 
   // ── Courriel + SMS coordonnateur ─────────────────────────────────────────
@@ -769,15 +803,22 @@ export class IncidentService {
     // Envoyer à tous les contacts (dédupliqués par email)
     const sentEmails = new Set<string>();
     let notifiedCount = 0;
+    // notifiedCount = personnes jointes par au moins un canal ACCEPTÉ par le
+    // fournisseur. Le portail n'affiche « alerte envoyée » que si ce compte
+    // est ≥ 1 ; sinon il demande de composer le 911.
+    const sentPhones = new Set<string>();
     for (const contact of contacts) {
+      let reached = false;
       if (contact.email && !sentEmails.has(contact.email)) {
         sentEmails.add(contact.email);
-        await this.sendEmail({ to: contact.email, toName: contact.name, subject: `🚨 ALERTE PANIQUE — ${building.name}`, html: htmlEmail }, organizationId);
-        notifiedCount++;
+        reached = (await this.sendEmail({ to: contact.email, toName: contact.name, subject: `🚨 ALERTE PANIQUE — ${building.name}`, html: htmlEmail }, organizationId)) || reached;
       }
-      if (contact.phone) {
-        await this.sendSms(contact.phone, smsText, organizationId);
+      const phone = contact.phone ? normalizePhone(contact.phone) : null;
+      if (phone && !sentPhones.has(phone)) {
+        sentPhones.add(phone);
+        reached = (await this.sendSms(phone, smsText, organizationId)) || reached;
       }
+      if (reached) notifiedCount++;
     }
 
     // Log dans l'incident actif si existant
