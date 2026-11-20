@@ -85,7 +85,7 @@ describe('Building document durable authority and live permissions', () => {
     });
     expect(result.projectId).toBeUndefined();
   });
-  it('gives corporate organization-wide read while keeping contribution scoped', async () => {
+  it('limits corporate read to its own client (audit M4-01)', async () => {
     const h = harness();
     expect((await h.service.access(client, 'building')).canUpload).toBe(true);
     h.prisma.clientUser.findFirst.mockResolvedValue({
@@ -94,12 +94,9 @@ describe('Building document durable authority and live permissions', () => {
       buildingIds: [],
       email: 'x',
     });
-    const crossClient = await h.service.access(
-      { ...client, role: 'CLIENT_CORPORATE' },
-      'building',
-    );
-    expect(crossClient.canUpload).toBe(false);
-    expect(crossClient.canManage).toBe(false);
+    await expect(
+      h.service.access({ ...client, role: 'CLIENT_CORPORATE' }, 'building'),
+    ).rejects.toThrow('Accès documentaire non accordé');
   });
   it('ignores stale token scope and permits explicit delegation without management rights', async () => {
     const h = harness();
