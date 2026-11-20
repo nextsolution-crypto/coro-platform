@@ -162,7 +162,13 @@ test("workflow is production-protected, locked, backed up and has exact approval
   assert.match(workflow, /coro-production-deployment\.lock/);
   assert.match(workflow, /coro-db-backup\.service/);
   assert.match(workflow, /coro-db-restore-test\.service/);
-  assert.match(workflow, /EXPECTED_ACTIVE_SHA: \$\{\{ github\.sha \}\}/);
+  assert.match(workflow, /application_commit:/);
+  assert.match(workflow, /fetch-depth: 0/);
+  assert.match(
+    workflow,
+    /EXPECTED_ACTIVE_SHA: \$\{\{ inputs\.application_commit \}\}/,
+  );
+  assert.match(workflow, /validate-demo-report-application-commit\.mjs/);
   assert.match(workflow, /migration_count.*202/);
   assert.match(workflow, /20261224010000_incident_report_historical_search/);
   assert.match(workflow, /rollback_refs/);
