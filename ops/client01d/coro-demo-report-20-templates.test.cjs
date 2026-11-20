@@ -138,6 +138,11 @@ test("workflow is production-protected, locked, backed up and has exact approval
   assert.match(workflow, /coro-production-deployment\.lock/);
   assert.match(workflow, /coro-db-backup\.service/);
   assert.match(workflow, /coro-db-restore-test\.service/);
+  assert.match(workflow, /e13c2f88ce1a86c3d190977b542581586503722e/);
+  assert.match(workflow, /migration_count.*202/);
+  assert.match(workflow, /20261224010000_incident_report_historical_search/);
+  assert.match(workflow, /rollback_refs/);
+  assert.match(workflow, /10485760/);
   assert.match(workflow, /EXTEND_EXISTING_REPORT_TEMPLATES/);
   assert.match(workflow, /VERIFY_EXISTING_REPORT_TEMPLATES/);
   assert.match(workflow, /ROLLBACK_EXISTING_REPORT_TEMPLATES/);
