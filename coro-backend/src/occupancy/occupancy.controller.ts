@@ -55,15 +55,6 @@ export class OccupancyController {
     return this.occupancyService.resolveBuildingFromToken(token);
   }
 
-    // Occupants présents — authentification par token kiosque (portail client)
-  @Get('buildings/:buildingId/current-public')
-  getCurrentOccupantsPublic(
-    @Param('buildingId') buildingId: string,
-    @Query('token') token: string,
-  ) {
-    return this.occupancyService.getCurrentOccupantsPublic(buildingId, token);
-  }
-
   // Recherche occupants pour checkout (public — token dans query)
   @Get('buildings/:buildingId/search')
   searchForCheckout(
@@ -74,40 +65,10 @@ export class OccupancyController {
     return this.occupancyService.searchOccupantsForCheckout(buildingId, token, q);
   }
 
-    @Get('buildings/:buildingId/readiness')
-  getReadiness(
-    @Param('buildingId') buildingId: string,
-    @Query('token') token: string,
-  ) {
-    return this.occupancyService.getReadiness(buildingId, token);
-  }
-
-  @Get('buildings/:buildingId/readiness-enriched')
-  getReadinessEnriched(
-    @Param('buildingId') buildingId: string,
-    @Query('token') token: string,
-  ) {
-    return this.occupancyService.getReadinessEnriched(buildingId, token);
-  }
-
-  @Get('buildings/:buildingId/resilience-history')
-  getResilienceHistory(
-    @Param('buildingId') buildingId: string,
-    @Request() req: any,
-    @Query('days') days?: string,
-  ) {
-    return this.occupancyService.getResilienceHistory(buildingId, req.user?.organizationId, days ? parseInt(days) : 90);
-  }
-
-  @Get('buildings/:buildingId/history-public')
-  getHistoryPublic(
-    @Param('buildingId') buildingId: string,
-    @Query('token') token: string,
-    @Query('from') from: string,
-    @Query('to') to: string,
-  ) {
-    return this.occupancyService.getHistoryPublic(buildingId, token, from, to);
-  }
+  // Les lectures publiques par jeton de borne (présents, historique,
+  // préparation) ont été retirées : elles exposaient des données personnelles
+  // à quiconque possédait le jeton permanent. Le portail client passe par
+  // les façades authentifiées /client-portal/buildings/:id/sentinelle/*.
 
   // ── Routes PROTÉGÉES (dashboard admin CORO) ───────────────────────────────
 

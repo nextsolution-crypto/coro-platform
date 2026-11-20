@@ -69,7 +69,8 @@ export default function SentinelleDashboard() {
 
   const fetchOccupancyWithToken = async (token: string) => {
     try {
-      const res = await apiGet(`/occupancy/buildings/${buildingId}/current-public?token=${token}`);
+      void token;
+      const res = await apiGet(`/client-portal/buildings/${buildingId}/sentinelle/occupancy/current`);
       setOccupancy(res);
     } catch (err) { console.error(err); }
   };

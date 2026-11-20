@@ -115,7 +115,8 @@ export default function ResiliencePage() {
     if (!t) return;
     setError('');
     try {
-      const res = await fetch(`${API}/occupancy/buildings/${buildingId}/readiness-enriched?token=${t}`, {
+      void t;
+      const res = await fetch(`${API}/client-portal/buildings/${buildingId}/sentinelle/readiness-enriched`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('coro_client_token')}` },
       });
       if (!res.ok) throw new Error();

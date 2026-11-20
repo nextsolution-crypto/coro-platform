@@ -40,8 +40,15 @@ test("authenticated Sentinelle pages use Client Portal facades for protected ope
 
 test("public token-based Sentinelle operations remain explicit", () => {
   const landing = sources.find(({ path }) => path.split("\\").join("/").endsWith("[buildingId]/page.tsx"))?.source ?? "";
-  assert.match(landing, /\/occupancy\/buildings\/\$\{buildingId\}\/current-public\?token=/);
   assert.match(landing, /\/occupancy\/alarm-trigger\/\$\{alarmToken\}/);
+});
+
+test("occupancy, history and readiness are read through authenticated facades only", () => {
+  for (const { path, source } of sources) {
+    assert.doesNotMatch(source, /current-public|history-public|readiness\?token=|readiness-enriched\?token=/, path);
+  }
+  const landing = sources.find(({ path }) => path.split("\\").join("/").endsWith("[buildingId]/page.tsx"))?.source ?? "";
+  assert.match(landing, /\/client-portal\/buildings\/\$\{buildingId\}\/sentinelle\/occupancy\/current/);
 });
 
 test("dashboard and direct Sentinelle entry remain authenticated Client Portal surfaces", () => {
