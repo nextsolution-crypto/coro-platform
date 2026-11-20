@@ -289,9 +289,8 @@ export class ClientPortalService {
       where: {
         id: buildingId,
         organizationId: actor.organizationId,
-        ...(actor.role === 'CLIENT_MANAGER'
-          ? { clientId: actor.clientId }
-          : {}),
+        // Tout utilisateur du portail est limité aux bâtiments de son client.
+        clientId: actor.clientId,
       },
       select: {
         id: true,
@@ -1302,10 +1301,9 @@ export class ClientPortalService {
     role: string,
     buildingIds?: string[],
   ) {
-    const where: any = { organizationId };
+    const where: any = { organizationId, clientId };
 
     if (role === 'CLIENT_MANAGER') {
-      where.clientId = clientId;
       where.buildingId = { in: buildingIds ?? [] };
     }
 
@@ -1342,8 +1340,9 @@ export class ClientPortalService {
       where: {
         id: projectId,
         organizationId,
+        clientId,
         ...(role === 'CLIENT_MANAGER'
-          ? { clientId, buildingId: { in: buildingIds ?? [] } }
+          ? { buildingId: { in: buildingIds ?? [] } }
           : {}),
       },
       include: {
@@ -1384,7 +1383,7 @@ export class ClientPortalService {
               buildingId: { in: actor.buildingIds ?? [] },
             }
           : actor.role === 'CLIENT_CORPORATE'
-            ? {}
+            ? { clientId: actor.clientId }
             : { id: '__CLIENT_ROLE_NOT_AUTHORIZED__' }),
       },
       select: {
@@ -1803,11 +1802,9 @@ export class ClientPortalService {
       where: {
         id: projectId,
         organizationId: clientUser.organizationId,
+        clientId: clientUser.clientId,
         ...(clientUser.role === 'CLIENT_MANAGER'
-          ? {
-              clientId: clientUser.clientId,
-              buildingId: { in: clientUser.buildingIds ?? [] },
-            }
+          ? { buildingId: { in: clientUser.buildingIds ?? [] } }
           : {}),
       },
       include: { client: true, building: true, user: true },
@@ -2267,9 +2264,8 @@ export class ClientPortalService {
     role: string,
     buildingIds?: string[],
   ) {
-    const where: any = { organizationId };
+    const where: any = { organizationId, clientId };
     if (role === 'CLIENT_MANAGER') {
-      where.clientId = clientId;
       where.id = { in: buildingIds ?? [] };
     }
     const buildings = await this.prisma.building.findMany({
@@ -2319,9 +2315,8 @@ export class ClientPortalService {
     role: string,
     buildingIds?: string[],
   ) {
-    const where: any = { organizationId };
+    const where: any = { organizationId, clientId };
     if (role === 'CLIENT_MANAGER') {
-      where.clientId = clientId;
       where.id = { in: buildingIds ?? [] };
     }
 
@@ -2423,7 +2418,7 @@ export class ClientPortalService {
     role: string,
     buildingIds?: string[],
   ) {
-    const where: any = { organizationId };
+    const where: any = { organizationId, clientId };
     if (role === 'CLIENT_MANAGER') {
       where.buildingId = { in: buildingIds ?? [] };
     }

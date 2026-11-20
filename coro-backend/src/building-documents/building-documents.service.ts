@@ -103,7 +103,7 @@ export class BuildingDocumentsService {
           },
           select: { id: true },
         }));
-    const corporateRead = user.role === 'CLIENT_CORPORATE';
+    const corporateRead = user.role === 'CLIENT_CORPORATE' && sameClient;
     if (!corporateRead && !defaultManager && !supervisor && !grant?.canUpload)
       throw new ForbiddenException('Accès documentaire non accordé');
     return {

@@ -439,12 +439,14 @@ describe('Client Portal project and building scope', () => {
       role: ClientUserRole.CLIENT_CORPORATE,
       buildingIds: [],
     });
-    expect(corporateOverview.totalBuildings).toBe(2);
+    // Audit M4-01 : le corporatif voit tous les bâtiments de SON client,
+    // jamais ceux des autres clients de l'organisation.
+    expect(corporateOverview.totalBuildings).toBe(1);
     expect(
       corporateOverview.buildings
         .map((building: { buildingId: string }) => building.buildingId)
         .sort(),
-    ).toEqual([ids.buildingA, ids.buildingB].sort());
+    ).toEqual([ids.buildingA]);
     expect(
       corporateOverview.buildings.some(
         (building: { buildingId: string }) =>
@@ -473,7 +475,7 @@ describe('Client Portal project and building scope', () => {
     ).rejects.toThrow('Bâtiment introuvable');
   });
 
-  it('preserves corporate organization scope without crossing organizations', async () => {
+  it('limits corporate scope to its own client, never other clients or organizations (audit M4-01)', async () => {
     const projects = await service.getProjects(
       ids.clientA,
       ids.org,
@@ -482,7 +484,7 @@ describe('Client Portal project and building scope', () => {
     );
     expect(
       projects.map((project: { id: string }) => project.id).sort(),
-    ).toEqual([ids.projectA, ids.projectB].sort());
+    ).toEqual([ids.projectA]);
     await expect(
       service.getProject(
         ids.projectB,
@@ -491,7 +493,7 @@ describe('Client Portal project and building scope', () => {
         ClientUserRole.CLIENT_CORPORATE,
         [],
       ),
-    ).resolves.toMatchObject({ id: ids.projectB });
+    ).resolves.toBeNull();
     await expect(
       service.getProject(
         ids.otherProject,
@@ -541,7 +543,7 @@ describe('Client Portal project and building scope', () => {
     ).resolves.toBe(before);
   });
 
-  it('allows corporate annex reads across clients in the same organization', async () => {
+  it('denies corporate annex reads for another client of the same organization (audit M4-01)', async () => {
     const actor = {
       sub: ids.corporate,
       clientId: ids.clientA,
@@ -550,16 +552,14 @@ describe('Client Portal project and building scope', () => {
       buildingIds: [],
     };
 
-    await expect(service.getComments(ids.projectB, actor)).resolves.toEqual([
-      expect.objectContaining({ id: ids.commentB }),
-    ]);
+    await expect(service.getComments(ids.projectB, actor)).rejects.toThrow(
+      'Projet introuvable',
+    );
     await expect(
       service.getProjectVersionHistory(ids.projectB, actor),
-    ).resolves.toEqual([
-      expect.objectContaining({ versionNumber: 1 }),
-    ]);
-    await expect(service.getEngagement(ids.projectB, actor)).resolves.toEqual(
-      expect.objectContaining({ totalOpens: 1 }),
+    ).rejects.toThrow('Projet introuvable');
+    await expect(service.getEngagement(ids.projectB, actor)).rejects.toThrow(
+      'Projet introuvable',
     );
   });
 });

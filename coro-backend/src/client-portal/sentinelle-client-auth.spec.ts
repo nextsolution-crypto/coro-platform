@@ -136,6 +136,26 @@ describe('Sentinelle Client Portal authentication boundary', () => {
     ).resolves.toEqual({ id: 'building-1', clientId: actor.clientId });
   });
 
+  it('never lets CLIENT_CORPORATE reach a building of another client', async () => {
+    const prisma = { building: { findFirst: jest.fn().mockResolvedValue(null) } };
+    const service = Object.create(ClientPortalService.prototype) as ClientPortalService;
+    (service as any).prisma = prisma;
+    const corporate = { ...actor, role: 'CLIENT_CORPORATE', buildingIds: [] };
+
+    await expect(
+      service.assertBuildingAccess('building-of-client-b', corporate),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.building.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 'building-of-client-b',
+          organizationId: actor.organizationId,
+          clientId: actor.clientId,
+        },
+      }),
+    );
+  });
+
   it('resolves incident and task scope through their owning building', async () => {
     const prisma = {
       incidentEvent: {

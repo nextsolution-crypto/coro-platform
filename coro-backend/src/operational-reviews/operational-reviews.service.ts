@@ -121,6 +121,9 @@ export class OperationalReviewsService {
       select: { id: true, clientId: true },
     });
     if (!building) throw new NotFoundException('Batiment introuvable');
+    // Un utilisateur du portail reste limité aux bâtiments de son client.
+    if (actor.clientId && building.clientId !== actor.clientId)
+      throw new ForbiddenException('Acces refuse a ce batiment');
     if (actor.role !== 'CLIENT_MANAGER') return;
     if (!(actor.buildingIds ?? []).includes(building.id)) {
       throw new ForbiddenException('Acces refuse a ce batiment');

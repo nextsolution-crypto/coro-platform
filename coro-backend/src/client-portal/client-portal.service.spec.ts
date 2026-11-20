@@ -338,11 +338,13 @@ describe('ClientPortalService - Sentinelle Population', () => {
       },
     );
 
-    it('preserves CLIENT_CORPORATE organization-wide project access', async () => {
+    it('limits CLIENT_CORPORATE to every project of its own client only', async () => {
       await service.getProjects('client-1', 'org-1', 'CLIENT_CORPORATE', []);
 
       expect(prisma.project.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { organizationId: 'org-1' } }),
+        expect.objectContaining({
+          where: { organizationId: 'org-1', clientId: 'client-1' },
+        }),
       );
     });
 

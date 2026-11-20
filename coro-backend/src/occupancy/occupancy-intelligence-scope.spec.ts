@@ -41,7 +41,7 @@ describe('OccupancyService Client Portal Intelligence scope', () => {
     });
   });
 
-  it('preserves the expressly authorized organization view for CLIENT_CORPORATE', async () => {
+  it('limits the CLIENT_CORPORATE intelligence view to its own client', async () => {
     prisma.building.findMany.mockResolvedValue([]);
 
     await service.getIntelligenceOverview({
@@ -52,7 +52,7 @@ describe('OccupancyService Client Portal Intelligence scope', () => {
     });
 
     expect(prisma.building.findMany).toHaveBeenCalledWith({
-      where: { organizationId: 'org-a', isActive: true },
+      where: { organizationId: 'org-a', isActive: true, clientId: 'client-a' },
       include: { kioskToken: { select: { token: true } } },
     });
   });
