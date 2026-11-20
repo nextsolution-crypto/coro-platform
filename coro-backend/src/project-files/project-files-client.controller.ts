@@ -102,7 +102,7 @@ export class ProjectFilesClientController {
       where: {
         organizationId: clientUser.organizationId,
         ...(user.role === 'CLIENT_CORPORATE'
-          ? {}
+          ? { clientId: user.clientId }
           : {
               clientId: user.clientId,
               OR: [

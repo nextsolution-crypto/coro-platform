@@ -753,7 +753,7 @@ export class OccupancyService {
             clientId: actor.clientId,
             id: { in: actor.buildingIds ?? [] },
           }
-        : {};
+        : { clientId: actor.clientId };
     const buildings = await this.prisma.building.findMany({
       where: {
         organizationId: actor.organizationId,

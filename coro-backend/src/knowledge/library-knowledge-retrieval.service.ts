@@ -171,11 +171,9 @@ export class LibraryKnowledgeRetrievalService {
         : {
             id: projectId,
             organizationId: actor.organizationId,
+            clientId: actor.clientId ?? '__CLIENT_SCOPE_REQUIRED__',
             ...(actor.role === 'CLIENT_MANAGER'
-              ? {
-                  clientId: actor.clientId,
-                  buildingId: { in: actor.buildingIds },
-                }
+              ? { buildingId: { in: actor.buildingIds } }
               : {}),
           };
     if (!(await this.prisma.project.findFirst({ where, select: { id: true } })))
