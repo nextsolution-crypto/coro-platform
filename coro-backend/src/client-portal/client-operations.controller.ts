@@ -58,7 +58,10 @@ import {
   ShiftTransitionDto,
 } from '../operational-shifts/dto/operational-shifts.dto';
 import { OperationalShiftsService } from '../operational-shifts/operational-shifts.service';
-import { OperationalFollowUpStatus } from '@prisma/client';
+import {
+  ClientOperationalPermission,
+  OperationalFollowUpStatus,
+} from '@prisma/client';
 import {
   AcknowledgeDirectiveDto,
   CreateDirectiveDto,
@@ -119,6 +122,11 @@ export class ClientOperationalCapabilitiesController {
     return {
       organizationId,
       buildingId,
+      reportPermissions: Object.values(ClientOperationalPermission).filter(
+        (permission) =>
+          permission.startsWith('INCIDENT_REPORT_') &&
+          (req.coroAuthority.permissions ?? []).includes(permission),
+      ),
       capabilities: decisions.map(({ feature, available }) => ({
         feature,
         available,

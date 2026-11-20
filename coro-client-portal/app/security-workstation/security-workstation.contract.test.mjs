@@ -34,6 +34,13 @@ assert.doesNotMatch(page, /setBuildingId\(next\[0\]\?\.id/);
 assert.match(page, /client-portal\/organizations\/\$\{organizationId\}/);
 assert.match(page, /incident-reports\/forms\/templates/);
 assert.match(page, /reportFileCapabilities/);
+assert.match(page, /reportPermissions/);
+assert.match(page, /INCIDENT_REPORT_CREATE/);
+assert.match(page, /INCIDENT_REPORT_APPROVE/);
+assert.match(page, /INCIDENT_REPORT_EXPORT/);
+assert.match(page, /item\.status === "APPROVED" && canApprove/);
+assert.match(page, /visibleReviewActions\(reportPermissions\)/);
+assert.match(page, /reviewActions\.map\(\(action\)/);
 assert.match(page, /attachmentUpload\.available === true/);
 assert.match(page, /Pièce jointe indisponible/);
 assert.match(page, /historicalArchiveAvailable/);
@@ -41,7 +48,7 @@ assert.match(page, /params\.set\("status", reportStatus\)/);
 assert.match(page, /params\.set\("reportType", reportType\)/);
 assert.match(
   page,
-  /params\.set\(showHistorical \? "importedFrom" : "createdFrom", createdFrom\)/,
+  /params\.set\(\s*showHistorical \? "importedFrom" : "createdFrom",\s*createdFrom,\s*\)/,
 );
 assert.match(
   page,
@@ -50,7 +57,10 @@ assert.match(
 assert.match(page, /Filtrer les rapports par statut/);
 assert.match(page, /Filtrer les rapports par formulaire/);
 assert.match(page, /Afficher les archives/);
-assert.match(page, /incident-reports\$\{showHistorical \? "\/historical" : ""\}/);
+assert.match(
+  page,
+  /incident-reports\$\{showHistorical \? "\/historical" : ""\}/,
+);
 assert.match(page, /provenanceKind === "HISTORICAL_IMPORT"/);
 assert.match(page, /Archive importée|Archive historique/);
 assert.match(page, /<PortalLayout>[\s\S]*<main className=\{styles\.page\}>/);
@@ -86,6 +96,10 @@ assert.match(page, /contentForEditing/);
 assert.match(auth, /public readonly details\?: unknown/);
 assert.match(workstationCss, /\.panel,\s*\.dialog\s*\{\s*color:\s*#173042/);
 assert.match(workstationCss, /\.fieldError\s*\{\s*color:\s*#922b25/);
+assert.match(workstationCss, /\.actions\s*\{[\s\S]*flex-wrap:\s*wrap/);
+assert.match(workstationCss, /\.actions input\[type="date"\]/);
+assert.match(workstationCss, /grid-template-columns:\s*minmax\(0, 1fr\)/);
+assert.doesNotMatch(workstationCss, /overflow-x:\s*hidden/);
 assert.match(page, /operational-log\/entries/);
 assert.match(page, /operational-shifts/);
 assert.match(page, /operations\/directives/);
