@@ -30,6 +30,7 @@ services:
     restart: unless-stopped
     logging: *coro-logging
     environment:
+      TZ: America/Toronto
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       WEB_AI_PUBLIC_KNOWLEDGE_ENABLED: ${WEB_AI_PUBLIC_KNOWLEDGE_ENABLED:-false}
       PUBLIC_KNOWLEDGE_DATABASE_URL: ${PUBLIC_KNOWLEDGE_DATABASE_URL:-}
@@ -112,7 +113,7 @@ services:
       - coro_qa_storage_internal
       - coro_clamav_internal
     ports:
-      - "3002:3002"
+      - "127.0.0.1:3002:3002"
     volumes:
       - type: bind
         source: ${POPULATION_SMS_VALIDATION_EVIDENCE_HOST_DIR:-/var/lib/coro/sms-validation}
@@ -244,6 +245,7 @@ services:
     restart: unless-stopped
     logging: *coro-logging
     environment:
+      TZ: America/Toronto
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
       NODE_ENV: production
     depends_on:
@@ -251,7 +253,7 @@ services:
     networks:
       - coro_network
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
 
   website:
     image: ghcr.io/nextsolution-crypto/coro-website:latest
@@ -259,13 +261,14 @@ services:
     restart: unless-stopped
     logging: *coro-logging
     environment:
+      TZ: America/Toronto
       NODE_ENV: production
       NEXT_PUBLIC_API_URL: https://api.getcoro.io/api
       INTERNAL_API_URL: http://coro_backend:3002/api
     networks:
       - coro_network
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"
 
   client-portal:
     image: ghcr.io/nextsolution-crypto/coro-client-portal:latest
@@ -273,13 +276,14 @@ services:
     restart: unless-stopped
     logging: *coro-logging
     environment:
+      TZ: America/Toronto
       NODE_ENV: production
       NEXT_PUBLIC_API_URL: https://api.getcoro.io/api
       NEXT_PUBLIC_CLIENT_PORTAL_URL: https://client.getcoro.io
     networks:
       - coro_network
     ports:
-      - "3003:3003"
+      - "127.0.0.1:3003:3003"
 
   private-storage-qa:
     image: dxflrs/garage@sha256:9c96caa2612d3411acc5b0e6701fb238dbfba33e533a6d7d3d811a4b12d0d020

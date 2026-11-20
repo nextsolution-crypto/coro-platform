@@ -7,12 +7,14 @@ import { RequestIdMiddleware } from './common/request-id.middleware';
 import { SafeExceptionFilter } from './common/safe-exception.filter';
 import { runtimeConfig } from './runtime.config';
 import { CORS_ALLOWED_HEADERS } from './cors.config';
+import { configureTrustedProxies } from './common/trusted-proxy';
 
 export async function bootstrap() {
   const runtime = runtimeConfig();
   const app = await NestFactory.create(AppModule, {
     bodyParser: false,
   });
+  configureTrustedProxies(app.getHttpAdapter().getInstance());
   const requestIdMiddleware = new RequestIdMiddleware();
   app.use(requestIdMiddleware.use.bind(requestIdMiddleware));
   app.useGlobalFilters(new SafeExceptionFilter());
