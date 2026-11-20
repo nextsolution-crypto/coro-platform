@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -92,11 +93,19 @@ export class OccupancyService {
 
   // Check-in d'un occupant
   async checkIn(body: any) {
-    const buildingId = body.buildingId;
-    const kioskToken = body.kioskToken;
+    const buildingId = typeof body?.buildingId === 'string' ? body.buildingId : '';
+    const kioskToken = typeof body?.kioskToken === 'string' ? body.kioskToken : '';
 
-    if (!buildingId) throw new Error('buildingId manquant');
-    if (!kioskToken) throw new Error('kioskToken manquant');
+    if (!buildingId) throw new BadRequestException('buildingId manquant');
+    if (!kioskToken) throw new BadRequestException('kioskToken manquant');
+    if (!['EMPLOYE', 'VISITEUR', 'CONTRACTEUR'].includes(body?.type)) {
+      throw new BadRequestException('Type d’occupant invalide');
+    }
+    const text = (value: unknown, max: number) =>
+      typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : undefined;
+    const firstName = text(body?.firstName, 80);
+    const lastName = text(body?.lastName, 80);
+    if (!firstName || !lastName) throw new BadRequestException('Prénom et nom requis');
 
     await this.validateKioskToken(buildingId, kioskToken);
 
@@ -112,41 +121,54 @@ export class OccupancyService {
         organizationId: building.organizationId,
         type: body.type,
         status: 'IN',
-        firstName: body.firstName,
-        lastName: body.lastName,
-        company: body.company,
-        email: body.email,
-        phone: body.phone,
-        reason: body.reason,
-        hostName: body.hostName,
-        floor: body.floor,
+        firstName,
+        lastName,
+        company: text(body?.company, 120),
+        email: text(body?.email, 160),
+        phone: text(body?.phone, 40),
+        reason: text(body?.reason, 200),
+        hostName: text(body?.hostName, 120),
+        floor: text(body?.floor, 40),
       },
+      select: { id: true, type: true, checkedInAt: true },
     });
   }
 
   // Check-out d'un occupant
+  // Sortie manuelle à la borne. Seules les entrées manuelles (sans profil
+  // employé lié) peuvent sortir ici : un employé enregistré sort par son
+  // propre parcours QR + NIP. Cela empêche de vider le registre
+  // d'évacuation à distance avec le seul jeton de borne.
   async checkOut(body: any) {
-    const recordId = body.recordId;
-    const kioskToken = body.kioskToken;
+    const recordId = typeof body?.recordId === 'string' ? body.recordId : '';
+    const kioskToken = typeof body?.kioskToken === 'string' ? body.kioskToken : '';
 
-    if (!recordId) throw new Error('recordId manquant');
-    if (!kioskToken) throw new Error('kioskToken manquant');
+    if (!recordId) throw new BadRequestException('recordId manquant');
+    if (!kioskToken) throw new BadRequestException('kioskToken manquant');
 
     const record = await this.prisma.occupancyRecord.findUnique({
       where: { id: recordId },
+      select: { id: true, buildingId: true, status: true, employeeId: true },
     });
     if (!record) throw new NotFoundException('Enregistrement introuvable');
 
     await this.validateKioskToken(record.buildingId, kioskToken);
 
-    return this.prisma.occupancyRecord.update({
-      where: { id: recordId },
+    if (record.employeeId) {
+      throw new ForbiddenException(
+        'Les employés enregistrés sortent avec leur code QR et leur NIP.',
+      );
+    }
+    const updated = await this.prisma.occupancyRecord.updateMany({
+      where: { id: record.id, status: 'IN', employeeId: null },
       data: {
         status: 'OUT',
         checkedOutAt: new Date(),
-        checkoutSource: 'MANUAL',
+        checkoutSource: 'KIOSK_MANUAL',
       },
     });
+    if (updated.count !== 1) throw new NotFoundException('Présence active introuvable');
+    return { id: record.id, status: 'OUT' };
   }
 
   // Obtenir les occupants actuellement présents
@@ -312,36 +334,34 @@ export class OccupancyService {
   }
 
   // Recherche d'occupants présents pour le checkout (par nom)
+  // Recherche à la borne : uniquement les entrées manuelles présentes, avec
+  // le strict minimum pour se reconnaître (prénom, initiale du nom, type,
+  // heure d'arrivée). Jamais de courriel, téléphone, entreprise ou hôte.
   async searchOccupantsForCheckout(buildingId: string, token: string, query: string) {
     await this.validateKioskToken(buildingId, token);
-    return this.prisma.occupancyRecord.findMany({
+    const q = typeof query === 'string' ? query.trim().slice(0, 60) : '';
+    if (q.length < 2) return [];
+    const records = await this.prisma.occupancyRecord.findMany({
       where: {
         buildingId,
         status: 'IN',
+        employeeId: null,
         OR: [
-          { firstName: { contains: query, mode: 'insensitive' } },
-          { lastName:  { contains: query, mode: 'insensitive' } },
+          { firstName: { contains: q, mode: 'insensitive' } },
+          { lastName:  { contains: q, mode: 'insensitive' } },
         ],
       },
+      select: { id: true, type: true, firstName: true, lastName: true, checkedInAt: true },
       orderBy: { checkedInAt: 'desc' },
       take: 5,
     });
-  }
-
-    // Version publique — authentifiée par token kiosque
-  async getCurrentOccupantsPublic(buildingId: string, token: string) {
-    await this.validateKioskToken(buildingId, token);
-    const records = await this.prisma.occupancyRecord.findMany({
-      where: { buildingId, status: 'IN' },
-      orderBy: { checkedInAt: 'desc' },
-    });
-    const total = records.length;
-    const byType = {
-      EMPLOYE:     records.filter((r) => r.type === 'EMPLOYE').length,
-      VISITEUR:    records.filter((r) => r.type === 'VISITEUR').length,
-      CONTRACTEUR: records.filter((r) => r.type === 'CONTRACTEUR').length,
-    };
-    return { total, byType, records };
+    return records.map((r) => ({
+      id: r.id,
+      type: r.type,
+      firstName: r.firstName,
+      lastName: r.lastName ? `${r.lastName.charAt(0)}.` : '',
+      checkedInAt: r.checkedInAt,
+    }));
   }
 
     // Historique filtré par date
@@ -822,35 +842,4 @@ export class OccupancyService {
     });
   }
 
-  // Historique public — authentifié par token kiosque
-  async getHistoryPublic(buildingId: string, token: string, from: string, to: string) {
-    await this.validateKioskToken(buildingId, token);
-
-    const fromDate = from ? new Date(from) : new Date(new Date().setDate(new Date().getDate() - 30));
-    const toDate = to ? new Date(to) : new Date();
-    toDate.setHours(23, 59, 59, 999);
-
-    const records = await this.prisma.occupancyRecord.findMany({
-      where: {
-        buildingId,
-        checkedInAt: { gte: fromDate, lte: toDate },
-      },
-      orderBy: { checkedInAt: 'desc' },
-    });
-
-    const total = records.length;
-    const byType = {
-      EMPLOYE:     records.filter(r => r.type === 'EMPLOYE').length,
-      VISITEUR:    records.filter(r => r.type === 'VISITEUR').length,
-      CONTRACTEUR: records.filter(r => r.type === 'CONTRACTEUR').length,
-    };
-    const avgDurationMs = records
-      .filter(r => r.checkedOutAt)
-      .reduce((acc, r) => {
-        const diff = new Date(r.checkedOutAt!).getTime() - new Date(r.checkedInAt).getTime();
-        return acc + diff;
-      }, 0) / (records.filter(r => r.checkedOutAt).length || 1);
-
-    return { records, total, byType, avgDurationMs };
-  }
 }

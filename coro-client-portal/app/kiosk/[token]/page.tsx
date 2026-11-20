@@ -293,7 +293,7 @@ export default function KioskPage() {
       setTimeout(resetToHome, 4000);
     } catch (err: any) {
       setMessage({
-        text: err.message || "Errée lors de l'enregistrement.",
+        text: err.message || "Erreur lors de l'enregistrement.",
         type: 'error',
       });
     } finally {
@@ -318,19 +318,23 @@ export default function KioskPage() {
   const handleCheckout = async (recordId: string) => {
     setLoading(true);
     try {
-      await fetch(`${API_URL}/occupancy/checkout`, {
+      const res = await fetch(`${API_URL}/occupancy/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recordId, kioskToken: token }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message || 'Sortie non enregistrée.');
+      }
       setMessage({
         text: 'Sortie enregistrée.',
         type: 'success',
       });
       setScreen('success');
       setTimeout(resetToHome, 4000);
-    } catch {
-      setMessage({ text: "Erreur lors de l'enregistrement.", type: 'error' });
+    } catch (err: any) {
+      setMessage({ text: err?.message || "Erreur lors de l'enregistrement.", type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -925,6 +929,8 @@ export default function KioskPage() {
               }}
             >
               Aucun occupant trouvé avec ce nom.
+              <br />
+              Employé enregistré ? Sortez avec votre code QR et votre NIP.
             </p>
           )}
         </div>

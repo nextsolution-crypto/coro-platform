@@ -160,6 +160,49 @@ export class ClientPortalController {
     );
   }
 
+  // Lectures Sentinelle authentifiées : remplacent les anciennes routes
+  // publiques par jeton de borne (constats M3-01 / M4-05).
+  @Get('buildings/:buildingId/sentinelle/occupancy/current')
+  async getSentinelleCurrentOccupancy(
+    @Param('buildingId') buildingId: string,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    return this.occupancyService.getCurrentOccupants(
+      buildingId,
+      req.clientUser.organizationId,
+    );
+  }
+
+  @Get('buildings/:buildingId/sentinelle/occupancy/history')
+  async getSentinelleOccupancyHistory(
+    @Param('buildingId') buildingId: string,
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    return this.occupancyService.getHistory(
+      buildingId,
+      req.clientUser.organizationId,
+      from,
+      to,
+    );
+  }
+
+  @Get('buildings/:buildingId/sentinelle/readiness-enriched')
+  async getSentinelleReadinessEnriched(
+    @Param('buildingId') buildingId: string,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    const kiosk = await this.occupancyService.getOrCreateKioskToken(
+      buildingId,
+      req.clientUser.organizationId,
+    );
+    return this.occupancyService.getReadinessEnriched(buildingId, kiosk.token);
+  }
+
   @Get('buildings/:buildingId/sentinelle/alarm-token')
   async getSentinelleAlarmToken(
     @Param('buildingId') buildingId: string,

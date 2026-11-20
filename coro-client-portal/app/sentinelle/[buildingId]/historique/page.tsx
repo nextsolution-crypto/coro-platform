@@ -38,10 +38,8 @@ export default function HistoriquePage() {
     setLoading(true);
     setError('');
     try {
-      // Récupérer le token kiosque d'abord
-      const kioskRes = await apiGet(`/client-portal/buildings/${buildingId}/sentinelle/kiosk-token`);
-      const kioskToken = kioskRes.token;
-      const res = await apiGet(`/occupancy/buildings/${buildingId}/history-public?token=${kioskToken}&from=${from}&to=${to}`);
+      const query = new URLSearchParams({ from, to }).toString();
+      const res = await apiGet(`/client-portal/buildings/${buildingId}/sentinelle/occupancy/history?${query}`);
       setData(res);
     } catch (err) {
       console.error(err);

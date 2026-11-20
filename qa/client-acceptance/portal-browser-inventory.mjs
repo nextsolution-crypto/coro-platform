@@ -82,7 +82,7 @@ try {
     ["notifications-error", "/notifications", "/client-portal/notifications", "Impossible de charger les notifications"],
     ["map-error", "/map", "/client-portal/buildings", "Impossible de charger la carte"],
     ["bookings-error", "/bookings", "/client-portal/bookings", "Impossible de charger les réservations"],
-    ["sentinelle-history-error", `/sentinelle/${building}/historique`, "/history-public", "Impossible de charger l'historique"],
+    ["sentinelle-history-error", `/sentinelle/${building}/historique`, "/sentinelle/occupancy/history", "Impossible de charger l'historique"],
     ["sentinelle-reports-error", `/sentinelle/${building}/rapports`, "/sentinelle/evacuations", "Impossible de charger les rapports d'évacuation"],
     ["sentinelle-resilience-error", `/sentinelle/${building}/resilience`, "/readiness-enriched", "Impossible de charger l'indice de résilience"],
   ]) {
