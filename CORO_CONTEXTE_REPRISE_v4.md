@@ -21,7 +21,7 @@ Je suis Mathieu, fondateur et product owner de CORO. Je ne connais pas le dével
   & "C:\Program Files\Java\jdk-17\bin\java.exe" -cp languagetool-server.jar org.languagetool.server.HTTPServer --port 8081 --allow-origin "*"
   ```
 - **4 projets dans le monorepo** — commits depuis la racine `F:\coro-platform` avec `git add -A`
-- **Admin local** : `admin@coro.app` / `Admin2026!`
+- **Admin local** : `admin@coro.app` (mot de passe dans le gestionnaire de Mathieu)
 - **Vérification compilation** : `npx tsc --noEmit` (à lancer dans le bon sous-dossier après toute modification)
 - **Design system** : Background `#F8F9FA`, cards `#FFFFFF`, primary red `#C0392B`/hover `#A93226`, text `#2C3E50`/`#6C757D`/`#ADB5BD` ; inline CSS préféré au Tailwind pour précision des couleurs ; `rounded-md` (6px) pour cards/modals, `rounded` (4px) pour boutons/inputs
 - **PowerShell + crochets** : utiliser `-LiteralPath` pour les dossiers `[id]`, `[projectId]`, etc.
@@ -37,8 +37,8 @@ Je suis Mathieu, fondateur et product owner de CORO. Je ne connais pas le dével
 - **API** : https://api.getcoro.io
 - **Portail client** : https://client.getcoro.io
 - **Site vitrine** : https://getcoro.io
-- **Serveur** : DigitalOcean VPS Ubuntu 24.04 — IP `146.190.254.241` — Toronto
-- **Connexion SSH** : `ssh root@146.190.254.241`
+- **Serveur** : DigitalOcean VPS Ubuntu 24.04 (droplet `coro-production`) — Toronto. IP : voir le tableau de bord DigitalOcean.
+- **Connexion SSH** : par clé seulement, via l'IP du droplet `coro-production`
 - **Code sur serveur** : `/opt/coro-platform`
 - **Containers** : `docker compose ps` — containers (coro_frontend, coro_backend, coro_postgres, coro_client_portal, coro_website)
 - **Logs** : `docker compose logs backend --tail=50`
@@ -48,7 +48,7 @@ Je suis Mathieu, fondateur et product owner de CORO. Je ne connais pas le dével
 - **SSL** : Let's Encrypt via Certbot — renouvellement automatique
 - **Sauvegardes** : cron toutes les 6h → `/opt/backups/postgresql/` — 30 derniers backups conservés
 - **Monitoring** : UptimeRobot sur app.getcoro.io + api.getcoro.io
-- **Admin production** : `admin@coro.app` / `Admin2026!`
+- **Admin production** : `admin@coro.app` (mot de passe dans le gestionnaire de Mathieu)
 - **Compte démo** : `admin@demo.getcoro.io` / `Demo2026!`
 - **Prisma en prod** : toujours utiliser `npx prisma@6.19.3` (pas la dernière version — la v7 a cassé le schema)
 
