@@ -103,6 +103,12 @@ test('requires an explicit file-security mode and only skips ClamAV when all unt
       release.indexOf('CLAMAV_MEMORY_INSUFFICIENT'),
   );
 });
+
+test('keeps the release image authority limited to the four deployed application images', () => {
+  assert.match(release, /images:\{backend:p\.BACKEND_IMAGE,frontend:p\.FRONTEND_IMAGE,clientPortal:p\.CLIENT_PORTAL_IMAGE,website:p\.WEBSITE_IMAGE\}/);
+  assert.doesNotMatch(release, /images:\{[^\n}]*clamav:/);
+  assert.match(release, /fileSecurity:\{mode:p\.INCIDENT_REPORT_FILE_SECURITY_MODE,clamavImage:/);
+});
 test('migrates and verifies migration head before application rollout', () => {
   const migrate = release.indexOf('migrate deploy');
   const rollout = release.indexOf('up -d --no-build');

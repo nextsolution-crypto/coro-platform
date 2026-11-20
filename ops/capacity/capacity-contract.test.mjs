@@ -14,6 +14,12 @@ test("audit is lock-aware and protects active, rollback and container images", (
   assert.match(audit, /rollbackReady/);
 });
 
+test("audit accounts only for the four deployed application images", () => {
+  assert.match(audit, /\["backend","frontend","clientPortal","website"\]/);
+  assert.match(audit, /ACTIVE_IMAGE_SET_INVALID/);
+  assert.doesNotMatch(audit, /Object\.values\(m\.images/);
+});
+
 test("audit never mutates docker, volumes, backups or evidence", () => {
   assert.doesNotMatch(audit, /docker (image )?(rm|prune)|docker system prune|docker volume (rm|prune)|rm -rf|find .* -delete/);
   assert.match(audit, /cleanupCandidates/);
