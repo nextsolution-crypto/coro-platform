@@ -1,3 +1,4 @@
+import { emergencyReply, isLiveEmergency } from '../common/emergency-guard';
 import {
   BadRequestException,
   Injectable,
@@ -42,6 +43,19 @@ export class CoroAiService {
     },
   ) {
     const correlationId = input.correlationId?.trim() || randomUUID();
+    if (isLiveEmergency(input.question)) {
+      return {
+        interactionId: null,
+        correlationId,
+        status: 'ANSWERED',
+        provider: 'EMERGENCY_GUARD',
+        answer: emergencyReply(),
+        uncertainty: null,
+        missingInformation: [],
+        conflicts: [],
+        citations: [],
+      };
+    }
     if (input.operationalContext && !input.operationalResourceId)
       throw new BadRequestException('Ressource opérationnelle requise.');
     const contextBuildingId = input.operationalContext

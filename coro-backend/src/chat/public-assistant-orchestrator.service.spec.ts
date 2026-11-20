@@ -74,6 +74,16 @@ describe('PublicAssistantOrchestratorService', () => {
     delete process.env.WEB_AI_SIMULATED_SCENARIO;
   });
 
+  it('answers a live emergency with the fixed 911 reply before any knowledge search (T6)', async () => {
+    const { service, answerContext } = harness({ status: 'INSUFFICIENT_INFORMATION' } as any);
+    const fr = await service.answer({ message: 'Au secours', language: 'fr-CA' });
+    expect(fr.message).toMatch(/composez le 911/);
+    expect(fr.intent).toBe('LIVE_EMERGENCY');
+    const en = await service.answer({ message: "There's a fire in the lobby", language: 'en-CA' });
+    expect(en.message).toMatch(/call 911/);
+    expect(answerContext).not.toHaveBeenCalled();
+  });
+
   it('returns a grounded bilingual response with server-validated citations', async () => {
     const { service } = harness({
       question: 'Knowledge',
