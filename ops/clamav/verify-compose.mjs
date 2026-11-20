@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
 export const CLAMAV_IMAGE =
   'clamav/clamav-debian@sha256:6982509b9e1415bf23cb49d0c55872fdd57fd2b92be33fa26d487da42d322076';
@@ -45,7 +46,7 @@ export function verifyCompose(config) {
   return { execution: 'PASS', image: CLAMAV_IMAGE };
 }
 
-if (process.argv[1] && import.meta.url === new URL(`file:///${process.argv[1].replaceAll('\\', '/')}`).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const config = JSON.parse(fs.readFileSync(0, 'utf8'));
   process.stdout.write(`${JSON.stringify(verifyCompose(config))}\n`);
 }
