@@ -249,11 +249,28 @@ describe('Client operational capabilities HTTP routing', () => {
   afterAll(async () => app.close());
 
   it('accepts the canonical non-UUID building identifier used by CORO Demo', async () => {
-    await request(app.getHttpServer())
+    process.env.INCIDENT_REPORTS_ENABLED = 'true';
+    process.env.INCIDENT_REPORT_ATTACHMENTS_ENABLED = 'false';
+    process.env.INCIDENT_REPORT_IMPORT_ENABLED = 'false';
+    const response = await request(app.getHttpServer())
       .get(
         '/client-portal/organizations/00000000-0000-4000-8000-000000000001/operational-capabilities?buildingId=demo-premont-industrial-001',
       )
       .expect(200);
+    const responseBody = JSON.parse(response.text) as unknown as {
+      reportFileCapabilities: unknown;
+    };
+    expect(responseBody.reportFileCapabilities).toEqual({
+      attachmentUpload: {
+        available: false,
+        reason: 'ANTIVIRUS_PROTECTION_UNAVAILABLE',
+      },
+      historicalImport: { available: false, reason: 'IMPORT_DISABLED' },
+      historicalArchive: {
+        available: false,
+        reason: 'ARCHIVE_ACCESS_DISABLED',
+      },
+    });
     expect(evaluate).toHaveBeenCalledWith(
       expect.objectContaining({ buildingId: 'demo-premont-industrial-001' }),
     );

@@ -14,6 +14,12 @@ AUTH_SMOKE_BODY=''
 CLAMAV_IMAGE='clamav/clamav-debian@sha256:6982509b9e1415bf23cb49d0c55872fdd57fd2b92be33fa26d487da42d322076'
 CLAMAV_MINIMUM_AVAILABLE_BYTES=$((3 * 1024 * 1024 * 1024))
 CLAMAV_IMAGE_STAGE_RESERVE_BYTES=$((1024 * 1024 * 1024))
+INCIDENT_REPORT_FILE_SECURITY_MODE="${INCIDENT_REPORT_FILE_SECURITY_MODE:-DISABLED}"
+case "$INCIDENT_REPORT_FILE_SECURITY_MODE" in
+  DISABLED) CLAMAV_REQUIRED=false ;;
+  CLAMAV_REQUIRED) CLAMAV_REQUIRED=true ;;
+  *) printf 'RELEASE_FAILED code=INCIDENT_REPORT_FILE_SECURITY_MODE_INVALID\n' >&2; exit 1 ;;
+esac
 
 fail() {
   code="$1"
@@ -231,15 +237,17 @@ for index in "${!candidate_image_refs[@]}"; do
     [[ "$candidate_id" =~ ^sha256:[0-9a-f]{64}$ ]] || fail CAPACITY_IMAGE_PRESENCE_UNAVAILABLE
   fi
 done
-clamav_image_id="$(docker image ls --no-trunc --quiet "$CLAMAV_IMAGE")" || fail CLAMAV_IMAGE_PRESENCE_UNAVAILABLE
-if [[ -z "$clamav_image_id" ]]; then
-  image_stage_required=$((image_stage_required + CLAMAV_IMAGE_STAGE_RESERVE_BYTES))
-else
-  [[ "$clamav_image_id" =~ ^sha256:[0-9a-f]{64}$ ]] || fail CLAMAV_IMAGE_PRESENCE_UNAVAILABLE
+if [[ "$CLAMAV_REQUIRED" == true ]]; then
+  clamav_image_id="$(docker image ls --no-trunc --quiet "$CLAMAV_IMAGE")" || fail CLAMAV_IMAGE_PRESENCE_UNAVAILABLE
+  if [[ -z "$clamav_image_id" ]]; then
+    image_stage_required=$((image_stage_required + CLAMAV_IMAGE_STAGE_RESERVE_BYTES))
+  else
+    [[ "$clamav_image_id" =~ ^sha256:[0-9a-f]{64}$ ]] || fail CLAMAV_IMAGE_PRESENCE_UNAVAILABLE
+  fi
+  clamav_available_kib="$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)"
+  [[ "$clamav_available_kib" =~ ^[0-9]+$ ]] || fail CLAMAV_MEMORY_UNAVAILABLE
+  (( clamav_available_kib * 1024 >= CLAMAV_MINIMUM_AVAILABLE_BYTES )) || fail CLAMAV_MEMORY_INSUFFICIENT
 fi
-clamav_available_kib="$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)"
-[[ "$clamav_available_kib" =~ ^[0-9]+$ ]] || fail CLAMAV_MEMORY_UNAVAILABLE
-(( clamav_available_kib * 1024 >= CLAMAV_MINIMUM_AVAILABLE_BYTES )) || fail CLAMAV_MEMORY_INSUFFICIENT
 database_bytes="$(docker compose exec -T postgres sh -ceu 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT pg_database_size(current_database())"')" || fail CAPACITY_DATABASE_SIZE_UNAVAILABLE
 [[ "$database_bytes" =~ ^[0-9]+$ ]] || fail CAPACITY_DATABASE_SIZE_INVALID
 database_growth=$((database_bytes / 5)); (( database_growth < 2147483648 )) && database_growth=2147483648
@@ -286,14 +294,19 @@ for image in "$BACKEND_IMAGE" "$FRONTEND_IMAGE" "$CLIENT_PORTAL_IMAGE" "$WEBSITE
   docker pull --platform linux/amd64 "$image" >/dev/null || fail IMAGE_UNAVAILABLE
   docker image inspect "$image" --format '{{.Architecture}}' | grep -qx amd64 || fail IMAGE_PLATFORM_MISMATCH
 done
-docker pull --platform linux/amd64 "$CLAMAV_IMAGE" >/dev/null || fail CLAMAV_IMAGE_UNAVAILABLE
-[[ "$(docker image inspect "$CLAMAV_IMAGE" --format '{{.Architecture}}')" == amd64 ]] || fail CLAMAV_IMAGE_PLATFORM_MISMATCH
+if [[ "$CLAMAV_REQUIRED" == true ]]; then
+  docker pull --platform linux/amd64 "$CLAMAV_IMAGE" >/dev/null || fail CLAMAV_IMAGE_UNAVAILABLE
+  [[ "$(docker image inspect "$CLAMAV_IMAGE" --format '{{.Architecture}}')" == amd64 ]] || fail CLAMAV_IMAGE_PLATFORM_MISMATCH
+fi
 
 COMPOSE_OVERRIDE="$(mktemp /tmp/coro-release-compose.XXXXXX.yml)"
 cat >"$COMPOSE_OVERRIDE" <<YAML
 services:
   backend:
     image: $BACKEND_IMAGE
+    environment:
+      INCIDENT_REPORT_ATTACHMENTS_ENABLED: "$([[ "$CLAMAV_REQUIRED" == true ]] && printf true || printf false)"
+      INCIDENT_REPORT_IMPORT_ENABLED: "false"
   display-pdf-spool-init:
     image: $BACKEND_IMAGE
   display-pdf-worker:
@@ -310,7 +323,9 @@ YAML
 KNOWLEDGE_OVERRIDE="$(mktemp /tmp/coro-knowledge-runtime.XXXXXX.json)"
 rm -f -- "$KNOWLEDGE_OVERRIDE"
 node ops/knowledge/runtime-policy.mjs overlay "$BACKEND_IMAGE" "$KNOWLEDGE_OVERRIDE" || fail KNOWLEDGE_RUNTIME_POLICY_INVALID
-compose=(docker compose --profile display-pdf-worker -f docker-compose.yml -f "$COMPOSE_OVERRIDE" -f "$KNOWLEDGE_OVERRIDE")
+compose=(docker compose --profile display-pdf-worker)
+[[ "$CLAMAV_REQUIRED" != true ]] || compose+=(--profile incident-report-untrusted-files)
+compose+=(-f docker-compose.yml -f "$COMPOSE_OVERRIDE" -f "$KNOWLEDGE_OVERRIDE")
 "${compose[@]}" config --quiet || fail COMPOSE_CONFIGURATION_INVALID
 
 # Migrations execute in the approved backend image before any running service is replaced.
@@ -325,8 +340,18 @@ wait_for_application_ready coro_client_portal http://127.0.0.1:3003/ CLIENT_PORT
 wait_for_application_ready coro_website http://127.0.0.1:3001/ WEBSITE
 wait_for_backend_ready coro_backend http://127.0.0.1:3002/api/auth/login
 run_backend_auth_smoke http://127.0.0.1:3002/api/auth/login
-docker exec coro_backend node dist/src/scripts/clamav-smoke.js >"$RELEASE_DIR/${RELEASE_ID}.clamav-smoke.json" || fail CLAMAV_SMOKE_FAILED
-node -e 'const fs=require("fs"),r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.execution!=="PASS"||r.ping!=="PONG"||r.signatures!=="CURRENT"||r.cleanInstream!=="CLEAN"||r.eicarInstream!=="INFECTED"||r.importEnabled!==false)process.exit(1)' "$RELEASE_DIR/${RELEASE_ID}.clamav-smoke.json" || fail CLAMAV_SMOKE_EVIDENCE_INVALID
+if [[ "$CLAMAV_REQUIRED" == true ]]; then
+  for _ in $(seq 1 60); do
+    [[ "$(docker inspect --format '{{.State.Health.Status}}' coro_clamav 2>/dev/null)" == healthy ]] && break
+    sleep 15
+  done
+  [[ "$(docker inspect --format '{{.State.Health.Status}}' coro_clamav 2>/dev/null)" == healthy ]] || fail CLAMAV_HEALTH_TIMEOUT
+  docker exec coro_backend node dist/src/scripts/clamav-smoke.js >"$RELEASE_DIR/${RELEASE_ID}.clamav-smoke.json" || fail CLAMAV_SMOKE_FAILED
+  node -e 'const fs=require("fs"),r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.execution!=="PASS"||r.ping!=="PONG"||r.signatures!=="CURRENT"||r.cleanInstream!=="CLEAN"||r.eicarInstream!=="INFECTED"||r.importEnabled!==false||r.attachmentsEnabled!==true)process.exit(1)' "$RELEASE_DIR/${RELEASE_ID}.clamav-smoke.json" || fail CLAMAV_SMOKE_EVIDENCE_INVALID
+else
+  docker exec coro_backend node -e 'if(process.env.INCIDENT_REPORT_ATTACHMENTS_ENABLED!=="false"||process.env.INCIDENT_REPORT_IMPORT_ENABLED!=="false")process.exit(1)' || fail UNTRUSTED_FILE_CAPABILITIES_NOT_DISABLED
+  printf '%s\n' '{"schemaVersion":1,"execution":"SKIPPED_NOT_REQUIRED","required":false,"attachmentsEnabled":false,"importEnabled":false,"failClosed":true}' >"$RELEASE_DIR/${RELEASE_ID}.clamav-smoke.json"
+fi
 docker exec coro_backend node -e 'const v=process.env.CLIENT_INVITATION_OUTBOX_KEY_BASE64||"";const b=Buffer.from(v,"base64");if(!/^[A-Za-z0-9+/]+={0,2}$/.test(v)||b.length!==32||b.toString("base64")!==v||!process.env.CLIENT_INVITATION_OUTBOX_KEY_ID)process.exit(1)' || fail CLIENT_INVITATION_OUTBOX_CONFIGURATION_INVALID
 docker exec coro_backend node -e 'const v=(process.env.DEMO_AUTH_EMAIL_LIVE_RECIPIENT_SHA256_ALLOWLIST||"").split(",").map(x=>x.trim()).filter(Boolean);if(v.length!==6||new Set(v).size!==6||v.some(x=>!/[a-f0-9]{64}/.test(x)))process.exit(1)' || fail DEMO_AUTH_EMAIL_ALLOWLIST_CONFIGURATION_INVALID
 client_auth_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{}' http://127.0.0.1:3002/api/client-auth/login)" || fail CLIENT_AUTH_SMOKE_FAILED
@@ -340,7 +365,9 @@ operational_capabilities_public_code="$(curl --silent --output /dev/null --write
 [[ "$operational_capabilities_local_code" == 401 ]] || fail OPERATIONAL_CAPABILITIES_LOCAL_ROUTE_SMOKE_FAILED
 [[ "$operational_capabilities_public_code" == 401 ]] || fail OPERATIONAL_CAPABILITIES_PUBLIC_ROUTE_SMOKE_FAILED
 
-for container in coro_backend coro_frontend coro_client_portal coro_website coro_display_pdf_worker coro_display_pdf_rasterizer coro_clamav; do
+required_containers=(coro_backend coro_frontend coro_client_portal coro_website coro_display_pdf_worker coro_display_pdf_rasterizer)
+[[ "$CLAMAV_REQUIRED" != true ]] || required_containers+=(coro_clamav)
+for container in "${required_containers[@]}"; do
   [[ "$(docker inspect --format '{{.State.Running}}' "$container")" == true ]] || fail CONTAINER_HEALTH_FAILED
   [[ "$(docker inspect --format '{{.RestartCount}}' "$container")" == 0 ]] || fail RESTART_COUNT_NONZERO
 done

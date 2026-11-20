@@ -49,7 +49,7 @@ jobs:
           echo "candidate=$CANDIDATE_COMMIT" >> "$GITHUB_OUTPUT"
 
       - name: Validate isolated ClamAV contract
-        run: docker compose config --format json | node ops/clamav/verify-compose.mjs
+        run: docker compose --profile incident-report-untrusted-files config --format json | node ops/clamav/verify-compose.mjs
 
   build-images:
     needs: validate

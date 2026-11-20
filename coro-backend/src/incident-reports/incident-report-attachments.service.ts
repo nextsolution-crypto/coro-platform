@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { PlatformPermission } from '@prisma/client';
 import { createHash, randomUUID } from 'node:crypto';
@@ -19,7 +20,10 @@ import {
 } from './dto/incident-report.dto';
 import { IncidentReportAccessService } from './incident-report-access.service';
 import { IncidentReportAttachmentScanner } from './incident-report-attachment-scanner.service';
-import { incidentReportsEnabled } from './incident-reports.config';
+import {
+  incidentReportAttachmentsEnabled,
+  incidentReportsEnabled,
+} from './incident-reports.config';
 import { assertIncidentReportBinary } from './incident-report-binary-validator';
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -39,6 +43,7 @@ export class IncidentReportAttachmentsService {
     actor: ProvenanceActor,
   ) {
     this.assertEnabled();
+    this.assertUploadsEnabled();
     const report = await this.prisma.incidentReport.findFirst({
       where: { id: reportId, organizationId },
       select: { buildingId: true, status: true, currentVersionNumber: true },
@@ -209,5 +214,12 @@ export class IncidentReportAttachmentsService {
   private assertEnabled() {
     if (!incidentReportsEnabled())
       throw new NotFoundException('Rapport incident introuvable.');
+  }
+
+  private assertUploadsEnabled() {
+    if (!incidentReportAttachmentsEnabled())
+      throw new ServiceUnavailableException(
+        'Le téléversement de pièces jointes est indisponible tant que la protection antivirus n’est pas opérationnelle.',
+      );
   }
 }

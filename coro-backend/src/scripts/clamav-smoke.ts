@@ -9,6 +9,9 @@ async function main() {
   if (process.env.INCIDENT_REPORT_IMPORT_ENABLED === 'true') {
     throw new Error('INCIDENT_REPORT_IMPORT_ENABLED_MUST_REMAIN_FALSE');
   }
+  if (process.env.INCIDENT_REPORT_ATTACHMENTS_ENABLED !== 'true') {
+    throw new Error('INCIDENT_REPORT_ATTACHMENTS_ENABLED_MUST_BE_TRUE');
+  }
   const scanner = new IncidentReportAttachmentScanner();
   await scanner.ping();
   const clean = await scanner.scan(Buffer.from('CORO_CLAMAV_SYNTHETIC_CLEAN'));
@@ -25,6 +28,7 @@ async function main() {
       cleanInstream: 'CLEAN',
       eicarInstream: 'INFECTED',
       importEnabled: false,
+      attachmentsEnabled: true,
       containsCustomerData: false,
     })}\n`,
   );

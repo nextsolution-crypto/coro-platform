@@ -17,13 +17,13 @@ describe('IncidentReportHistoricalService', () => {
 
   beforeEach(() => {
     process.env.INCIDENT_REPORTS_ENABLED = 'true';
-    process.env.INCIDENT_REPORT_IMPORT_ENABLED = 'true';
+    process.env.INCIDENT_REPORT_ARCHIVES_ENABLED = 'true';
     jest.clearAllMocks();
   });
 
   afterAll(() => {
     delete process.env.INCIDENT_REPORTS_ENABLED;
-    delete process.env.INCIDENT_REPORT_IMPORT_ENABLED;
+    delete process.env.INCIDENT_REPORT_ARCHIVES_ENABLED;
   });
 
   it('scopes archive search to the authorized organization and building', async () => {

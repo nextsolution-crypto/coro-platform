@@ -26,6 +26,11 @@ import PortalLayout from "../components/PortalLayout";
 import styles from "./security-workstation.module.css";
 
 type Capability = { feature: string; available: boolean; reason: string };
+type ReportFileCapabilities = {
+  attachmentUpload: { available: boolean; reason: string };
+  historicalImport: { available: boolean; reason: string };
+  historicalArchive: { available: boolean; reason: string };
+};
 type Building = { id: string; name: string };
 type Item = Record<string, any>;
 type Tab =
@@ -127,6 +132,8 @@ export default function SecurityWorkstationPage() {
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [buildingId, setBuildingId] = useState("");
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
+  const [reportFileCapabilities, setReportFileCapabilities] =
+    useState<ReportFileCapabilities | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
   const [items, setItems] = useState<Item[]>([]);
   const [templates, setTemplates] = useState<Item[]>([]);
@@ -157,6 +164,12 @@ export default function SecurityWorkstationPage() {
   const selectedBuilding = buildings.find(
     (building) => building.id === buildingId,
   );
+  const historicalArchiveAvailable =
+    reportFileCapabilities?.historicalArchive.available === true;
+
+  useEffect(() => {
+    if (!historicalArchiveAvailable && showHistorical) setShowHistorical(false);
+  }, [historicalArchiveAvailable, showHistorical]);
 
   useEffect(() => {
     let active = true;
@@ -176,9 +189,16 @@ export default function SecurityWorkstationPage() {
               return {
                 building,
                 capabilities: (decision.capabilities ?? []) as Capability[],
+                reportFileCapabilities:
+                  (decision.reportFileCapabilities as ReportFileCapabilities) ??
+                  null,
               };
             } catch {
-              return { building, capabilities: [] as Capability[] };
+              return {
+                building,
+                capabilities: [] as Capability[],
+                reportFileCapabilities: null,
+              };
             }
           }),
         );
@@ -188,6 +208,7 @@ export default function SecurityWorkstationPage() {
           available.some((capability) => capability.available),
         );
         setCapabilities(preferred?.capabilities ?? []);
+        setReportFileCapabilities(preferred?.reportFileCapabilities ?? null);
         setBuildingId(preferred?.building.id ?? "");
         if (next.length > 0 && !preferred) {
           setError(
@@ -209,7 +230,10 @@ export default function SecurityWorkstationPage() {
     void apiGet(
       `/client-portal/organizations/${organizationId}/operational-capabilities?buildingId=${buildingId}`,
     )
-      .then((value) => setCapabilities(value.capabilities ?? []))
+      .then((value) => {
+        setCapabilities(value.capabilities ?? []);
+        setReportFileCapabilities(value.reportFileCapabilities ?? null);
+      })
       .catch((reason) => setError(errorMessage(reason)))
       .finally(() => setLoading(false));
   }, [buildingId, organizationId]);
@@ -443,16 +467,18 @@ export default function SecurityWorkstationPage() {
                 )}
                 {tab === "reports" && (
                   <>
-                    <button
-                      type="button"
-                      className={styles.secondary}
-                      aria-pressed={showHistorical}
-                      onClick={() => setShowHistorical((current) => !current)}
-                    >
-                      {showHistorical
-                        ? "Afficher les rapports CORO"
-                        : "Afficher les archives"}
-                    </button>
+                    {historicalArchiveAvailable && (
+                      <button
+                        type="button"
+                        className={styles.secondary}
+                        aria-pressed={showHistorical}
+                        onClick={() => setShowHistorical((current) => !current)}
+                      >
+                        {showHistorical
+                          ? "Afficher les rapports CORO"
+                          : "Afficher les archives"}
+                      </button>
+                    )}
                     <select
                       aria-label="Filtrer les rapports par statut"
                       disabled={showHistorical}
@@ -543,6 +569,9 @@ export default function SecurityWorkstationPage() {
                 items={items}
                 organizationId={organizationId}
                 reviewers={reviewers}
+                attachmentUploadAvailable={
+                  reportFileCapabilities?.attachmentUpload.available === true
+                }
                 mutate={mutate}
                 onOpenReport={setOpenReportId}
                 onOpenArchive={setOpenArchiveId}
@@ -645,6 +674,7 @@ function ItemList({
   items,
   organizationId,
   reviewers,
+  attachmentUploadAvailable,
   mutate,
   onOpenReport,
   onOpenArchive,
@@ -653,6 +683,7 @@ function ItemList({
   items: Item[];
   organizationId: string;
   reviewers: Item[];
+  attachmentUploadAvailable: boolean;
   mutate: Mutate;
   onOpenReport: (id: string) => void;
   onOpenArchive: (id: string) => void;
@@ -702,6 +733,7 @@ function ItemList({
             item={item}
             organizationId={organizationId}
             reviewers={reviewers}
+            attachmentUploadAvailable={attachmentUploadAvailable}
             mutate={mutate}
             onOpenReport={onOpenReport}
             onOpenArchive={onOpenArchive}
@@ -717,6 +749,7 @@ function RowActions({
   item,
   organizationId,
   reviewers,
+  attachmentUploadAvailable,
   mutate,
   onOpenReport,
   onOpenArchive,
@@ -725,6 +758,7 @@ function RowActions({
   item: Item;
   organizationId: string;
   reviewers: Item[];
+  attachmentUploadAvailable: boolean;
   mutate: Mutate;
   onOpenReport: (id: string) => void;
   onOpenArchive: (id: string) => void;
@@ -843,6 +877,7 @@ function RowActions({
         item={item}
         base={base}
         reviewers={reviewers}
+        attachmentUploadAvailable={attachmentUploadAvailable}
         mutate={mutate}
         onOpen={() => onOpenReport(item.id)}
       />
@@ -854,12 +889,14 @@ function ReportActions({
   item,
   base,
   reviewers,
+  attachmentUploadAvailable,
   mutate,
   onOpen,
 }: {
   item: Item;
   base: string;
   reviewers: Item[];
+  attachmentUploadAvailable: boolean;
   mutate: Mutate;
   onOpen: () => void;
 }) {
@@ -885,6 +922,7 @@ function ReportActions({
             versionId={versionId}
             base={base}
             mutate={mutate}
+            available={attachmentUploadAvailable}
           />
           <button
             onClick={() =>
@@ -1292,11 +1330,13 @@ function AttachmentButton({
   versionId,
   base,
   mutate,
+  available,
 }: {
   item: Item;
   versionId?: string;
   base: string;
   mutate: Mutate;
+  available: boolean;
 }) {
   const upload = async (file?: File) => {
     if (!file || !versionId) return;
@@ -1320,10 +1360,18 @@ function AttachmentButton({
     );
   };
   return (
-    <label className={styles.fileButton} aria-disabled={!versionId}>
-      Pièce jointe
+    <label
+      className={styles.fileButton}
+      aria-disabled={!versionId || !available}
+      title={
+        available
+          ? undefined
+          : "Téléversement indisponible : la protection antivirus n’est pas opérationnelle."
+      }
+    >
+      {available ? "Pièce jointe" : "Pièce jointe indisponible"}
       <input
-        disabled={!versionId}
+        disabled={!versionId || !available}
         type="file"
         accept="image/jpeg,image/png,application/pdf"
         onChange={(event) => void upload(event.target.files?.[0])}
