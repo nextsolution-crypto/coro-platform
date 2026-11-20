@@ -3,6 +3,10 @@ name: Production CORO Demo Report 2.0 Templates
 on:
   workflow_dispatch:
     inputs:
+      application_commit:
+        description: Exact active application SHA to inspect or extend
+        required: true
+        type: string
       phase:
         description: Exact governed phase
         required: true
@@ -27,18 +31,23 @@ jobs:
       script_sha256: ${{ steps.hash.outputs.script_sha256 }}
     steps:
       - uses: actions/checkout@v4
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
+          fetch-depth: 0
       - name: Validate governed request and tests
         env:
+          APPLICATION_COMMIT: ${{ inputs.application_commit }}
           PHASE: ${{ inputs.phase }}
           APPROVAL: ${{ inputs.approval }}
         run: |
           set -Eeuo pipefail
+          node ops/client01d/validate-demo-report-application-commit.mjs "$APPLICATION_COMMIT"
           case "$PHASE:$APPROVAL" in
             preflight:PREFLIGHT_EXISTING_REPORT_TEMPLATES|extend:EXTEND_EXISTING_REPORT_TEMPLATES|verify:VERIFY_EXISTING_REPORT_TEMPLATES|rollback:ROLLBACK_EXISTING_REPORT_TEMPLATES) ;;
             *) exit 1 ;;
           esac
           node ops/client01d/coro-demo-report-20-templates.test.cjs
+          node ops/client01d/validate-demo-report-application-commit.test.mjs
       - id: hash
         run: echo "script_sha256=$(sha256sum ops/client01d/coro-demo-report-20-templates.cjs | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
@@ -53,7 +62,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           SOURCE_SHA: ${{ github.sha }}
-          EXPECTED_ACTIVE_SHA: ${{ github.sha }}
+          EXPECTED_ACTIVE_SHA: ${{ inputs.application_commit }}
           SCRIPT_SHA256: ${{ needs.validate.outputs.script_sha256 }}
           PHASE: ${{ inputs.phase }}
           GITHUB_RUN_ID: ${{ github.run_id }}
