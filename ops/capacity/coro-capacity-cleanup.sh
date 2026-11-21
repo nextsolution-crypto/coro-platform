@@ -103,7 +103,11 @@ while read -r id; do
   [[ -n "$id" && -z "${protected[$id]:-}" ]] || continue
   size="$(docker image inspect --format '{{.Size}}' "$id")"
   unique_size="$(unique_bytes_for_image "$id")" || { echo "CAPACITY_CLEANUP_FAILED code=IMAGE_PHYSICAL_SIZE_UNAVAILABLE id=$id"; exit 1; }
-  (( $(free_bytes) < target_free_bytes )) || break
+  # Règle du propriétaire (21 nov. 2026) : une image active et une image de
+  # retour arrière par service, rien de plus. Toute autre image CORO
+  # récupérable depuis GHCR est retirée à chaque passage, même quand le
+  # disque a encore de la place ; la cible d'espace ne sert plus que de
+  # rapport (targetReached).
   candidates=$((candidates + 1))
   mapfile -t remote_digests < <(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$id" | grep -E '^ghcr\.io/nextsolution-crypto/coro-[a-z0-9_.-]+@sha256:[0-9a-f]{64}$' | sort -u)
   recoverable_digest=""
