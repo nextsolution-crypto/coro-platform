@@ -7545,6 +7545,9 @@ model EvacuationEvent {
   snapshot       Json
   status         String    @default("ACTIVE")
   resolvedAt     DateTime?
+  resolvedBy     String?
+  /// Motif obligatoire pour clore avec des personnes à confirmer ou manquantes.
+  closureReason  String?
   notes          String?
   organizationId String
   createdAt      DateTime  @default(now())
@@ -7561,9 +7564,49 @@ model EvacuationCheckIn {
   occupantRecordId  String
   occupantRecord    OccupancyRecord @relation(fields: [occupantRecordId], references: [id])
   isAccountedFor    Boolean         @default(false)
+  // Dénombrement détaillé (audit M5-04, décision du 21 nov. 2026).
+  // isAccountedFor reste tenu à jour : vrai pour PRESENT, SAFE_ELSEWHERE,
+  // INJURED et FOUND.
+  status            EvacuationAccountabilityStatus @default(PENDING)
+  lastKnownLocation String?
+  note              String?
+  reportedToFireAt  DateTime?
   checkedAt         DateTime?
   checkedBy         String?
   createdAt         DateTime        @default(now())
+
+  events EvacuationAccountabilityEvent[]
+}
+
+enum EvacuationAccountabilityStatus {
+  PENDING
+  PRESENT
+  SAFE_ELSEWHERE
+  INJURED
+  MISSING
+  FOUND
+}
+
+/// Journal non effaçable des changements de dénombrement : une correction
+/// ajoute une ligne, rien n'est réécrit.
+model EvacuationAccountabilityEvent {
+  id                String                         @id @default(uuid())
+  checkinId         String
+  checkin           EvacuationCheckIn              @relation(fields: [checkinId], references: [id], onDelete: Cascade)
+  evacuationEventId String
+  fromStatus        EvacuationAccountabilityStatus
+  toStatus          EvacuationAccountabilityStatus
+  actorType         String
+  actorId           String?
+  actorName         String
+  source            String                         @default("WARDEN")
+  note              String?
+  lastKnownLocation String?
+  reportedToFire    Boolean                        @default(false)
+  createdAt         DateTime                       @default(now())
+
+  @@index([evacuationEventId, createdAt])
+  @@index([checkinId, createdAt])
 }
 
 model BuildingKioskToken {

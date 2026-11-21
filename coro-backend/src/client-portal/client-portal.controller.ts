@@ -276,9 +276,29 @@ export class ClientPortalController {
       evacuationId,
       req.clientUser,
     );
+    const actor = await this.occupancyService.resolveClientActor(
+      req.clientUser.sub || req.clientUser.id,
+      req.clientUser.organizationId,
+    );
+    const status = (body as any)?.status;
+    if (status) {
+      return this.occupancyService.setAccountabilityStatus(
+        {
+          evacuationEventId: evacuationId,
+          occupantRecordId: body.occupantRecordId,
+          status,
+          note: (body as any).note,
+          lastKnownLocation: (body as any).lastKnownLocation,
+          reportedToFire: (body as any).reportedToFire === true,
+        },
+        req.clientUser.organizationId,
+        actor,
+      );
+    }
     return this.occupancyService.accountForOccupant(
       { ...body, evacuationEventId: evacuationId },
       req.clientUser.organizationId,
+      actor,
     );
   }
 
@@ -286,6 +306,7 @@ export class ClientPortalController {
   async resolveSentinelleEvacuation(
     @Param('buildingId') buildingId: string,
     @Param('evacuationId') evacuationId: string,
+    @Body() body: { closureReason?: string },
     @Request() req: any,
   ) {
     await this.clientPortalService.assertEvacuationAccess(
@@ -293,9 +314,14 @@ export class ClientPortalController {
       evacuationId,
       req.clientUser,
     );
+    const actor = await this.occupancyService.resolveClientActor(
+      req.clientUser.sub || req.clientUser.id,
+      req.clientUser.organizationId,
+    );
     return this.occupancyService.resolveEvacuation(
       evacuationId,
       req.clientUser.organizationId,
+      { closureReason: body?.closureReason, actorName: actor.name },
     );
   }
 

@@ -5,6 +5,22 @@ import { apiGet, getUser } from '../../../store/auth';
 import PortalLayout from '../../../components/PortalLayout';
 import { FileText, CheckCircle, AlertTriangle } from 'lucide-react';
 
+// États de dénombrement (audit M5-04).
+const STATUS_LABELS: Record<string, string> = {
+  PENDING: 'À confirmer',
+  PRESENT: 'Présent au rassemblement',
+  SAFE_ELSEWHERE: 'En sécurité ailleurs',
+  INJURED: 'Blessé ou besoin d’aide',
+  MISSING: 'Manquant — signalé aux pompiers',
+  FOUND: 'Retrouvé',
+};
+const statusOf = (c: any) => c.status || (c.isAccountedFor ? 'PRESENT' : 'PENDING');
+const statusLabel = (c: any) => STATUS_LABELS[statusOf(c)] || statusOf(c);
+const statusColor = (c: any) =>
+  ['MISSING', 'PENDING'].includes(statusOf(c)) ? '#C0392B' : statusOf(c) === 'INJURED' ? '#B9770E' : '#27AE60';
+const esc = (value: unknown) =>
+  String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!);
+
 export default function RapportsPage() {
   const router = useRouter();
   const params = useParams();
@@ -70,13 +86,13 @@ export default function RapportsPage() {
 
     const allRows = selected.checkins.map((c: any) => `
       <tr>
-        <td>${c.occupantRecord?.firstName || ''} ${c.occupantRecord?.lastName || ''}</td>
-        <td>${c.occupantRecord?.type || ''}</td>
-        <td>${c.occupantRecord?.company || '—'}</td>
-        <td style="color:${c.isAccountedFor ? '#27AE60' : '#C0392B'};font-weight:700;">
-          ${c.isAccountedFor ? '✅ Comptabilisé' : '⚠️ Non comptabilisé'}
+        <td>${esc(c.occupantRecord?.firstName)} ${esc(c.occupantRecord?.lastName)}</td>
+        <td>${esc(c.occupantRecord?.type)}</td>
+        <td>${esc(c.occupantRecord?.company) || '—'}</td>
+        <td style="color:${statusColor(c)};font-weight:700;">
+          ${esc(statusLabel(c))}${c.lastKnownLocation ? ` — ${esc(c.lastKnownLocation)}` : ''}
         </td>
-        <td>${c.checkedBy || '—'}</td>
+        <td>${esc(c.checkedBy) || '—'}</td>
       </tr>
     `).join('');
 
@@ -116,7 +132,7 @@ export default function RapportsPage() {
         <div class="stats">
           <div class="stat"><div class="stat-value">${selected.totalPresent}</div><div class="stat-label">Présents</div></div>
           <div class="stat"><div class="stat-value" style="color:#27AE60">${selected.accounted}</div><div class="stat-label">Comptabilisés</div></div>
-          <div class="stat"><div class="stat-value" style="color:#C0392B">${selected.missing}</div><div class="stat-label">Manquants</div></div>
+          <div class="stat"><div class="stat-value" style="color:#C0392B">${selected.missing}</div><div class="stat-label">Non localisés</div></div>
           <div class="stat"><div class="stat-value">${pct}%</div><div class="stat-label">Taux</div></div>
         </div>
         <h2>Informations générales</h2>
@@ -126,7 +142,10 @@ export default function RapportsPage() {
           <tr><th>Durée</th><td>${duration}</td></tr>
           <tr><th>Déclenché par</th><td>${selected.triggeredBy || '—'}</td></tr>
           <tr><th>Statut</th><td>${selected.status === 'RESOLVED' ? '✅ Résolu' : '🔴 En cours'}</td></tr>
-          ${selected.notes ? `<tr><th>Notes</th><td>${selected.notes}</td></tr>` : ''}
+          ${selected.notes ? `<tr><th>Notes</th><td>${esc(selected.notes)}</td></tr>` : ''}
+          ${selected.resolvedBy ? `<tr><th>Clôturé par</th><td>${esc(selected.resolvedBy)}</td></tr>` : ''}
+          ${selected.closureReason ? `<tr><th>Motif de clôture</th><td>${esc(selected.closureReason)}</td></tr>` : ''}
+          ${selected.counts ? `<tr><th>Dénombrement</th><td>${Object.entries(selected.counts).filter(([, n]) => Number(n) > 0).map(([k, n]) => `${esc(STATUS_LABELS[k] || k)} : ${n}`).join(' · ')}</td></tr>` : ''}
         </table>
         <h2>Dénombrement complet</h2>
         <table>
@@ -270,9 +289,9 @@ export default function RapportsPage() {
                           <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#2C3E50' }}>{r.firstName} {r.lastName}</p>
                           <p style={{ margin: '2px 0 0', fontSize: 11, color: '#6C757D' }}>{r.type}{r.company ? ` · ${r.company}` : ''}</p>
                         </div>
-                        {c.isAccountedFor && c.checkedBy && (
-                          <p style={{ margin: 0, fontSize: 11, color: '#27AE60' }}>par {c.checkedBy}</p>
-                        )}
+                        <p style={{ margin: 0, fontSize: 11, color: statusColor(c), fontWeight: 700 }}>
+                          {statusLabel(c)}{c.lastKnownLocation ? ` — ${c.lastKnownLocation}` : ''}{c.checkedBy && statusOf(c) !== 'PENDING' ? ` · par ${c.checkedBy}` : ''}
+                        </p>
                       </div>
                     );
                   })}

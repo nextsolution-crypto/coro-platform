@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
 
 export class CheckInDto {
   @IsString() buildingId: string;
@@ -29,4 +29,8 @@ export class AccountForOccupantDto {
   @IsString() evacuationEventId: string;
   @IsString() occupantRecordId: string;
   @IsString() @IsOptional() checkedBy?: string;
+  @IsString() @IsOptional() status?: string;
+  @IsString() @IsOptional() note?: string;
+  @IsString() @IsOptional() lastKnownLocation?: string;
+  @IsBoolean() @IsOptional() reportedToFire?: boolean;
 }
