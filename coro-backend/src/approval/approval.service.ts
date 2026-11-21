@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
+import { captureFrozenExportData } from '../export/export-frozen-data';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../client-portal/email.service';
@@ -86,7 +87,7 @@ export class ApprovalService {
       const document = project.documents[0];
       if (!document || !['DRAFT', 'IN_PROGRESS'].includes(document.status))
         throw new ForbiddenException('Le document ne peut pas être soumis');
-      const snapshot = this.snapshot(project, document);
+      const snapshot = await this.snapshot(tx, project, document);
       const contentHash = hashReviewSnapshot(snapshot);
       const submittedAt = new Date();
       const request = await tx.documentReviewRequest.create({
@@ -192,7 +193,12 @@ export class ApprovalService {
         where: { id: request.documentId, projectId },
       });
       if (!document) throw new ConflictException('Document soumis introuvable');
-      const currentHash = hashReviewSnapshot(this.snapshot(project, document));
+      // Une demande soumise avant le schéma v3 garde son empreinte v2.
+      const submittedSchema =
+        (request.snapshot as any)?.schemaVersion === 2 ? 2 : 3;
+      const currentHash = hashReviewSnapshot(
+        await this.snapshot(tx, project, document, submittedSchema),
+      );
       if (
         document.version !== request.documentVersion ||
         document.lockVersion !== request.documentLockVersion ||
@@ -534,9 +540,23 @@ export class ApprovalService {
     }
   }
 
-  private snapshot(project: any, document: any) {
+  private async snapshot(
+    tx: Prisma.TransactionClient,
+    project: any,
+    document: any,
+    schemaVersion: 2 | 3 = 3,
+  ) {
     const organizationSettings = project.organization ?? project.user;
+    const exportData =
+      schemaVersion === 3
+        ? await captureFrozenExportData(tx as any, {
+            projectId: project.id,
+            organizationId: project.organizationId,
+            content: document.content,
+          })
+        : undefined;
     return createReviewSnapshot({
+      exportData,
       project: {
         id: project.id,
         name: project.name,

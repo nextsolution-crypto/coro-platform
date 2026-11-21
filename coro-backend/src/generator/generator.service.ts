@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { createHash } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { AdviserActor, mutableProjectAccessWhere, projectAccessWhere } from '../auth/project-access';
+import { AdviserActor, editableProjectAccessWhere, projectAccessWhere } from '../auth/project-access';
 import { generateModule1, DocumentContext } from './module1/module1.index';
 import { generateModule2 } from './module2.templates';
 import { generateModule3 } from './module3.templates';
@@ -425,7 +425,7 @@ export class GeneratorService {
       }
 
       const project = await tx.project.findFirst({
-        where: { id: projectId, ...mutableProjectAccessWhere(actor) },
+        where: { id: projectId, ...editableProjectAccessWhere(actor) },
         select: { id: true },
       });
       if (!project) {
@@ -482,7 +482,7 @@ export class GeneratorService {
         : await tx.document.create({ data });
 
       const updated = await tx.project.updateMany({
-        where: { id: projectId, ...mutableProjectAccessWhere(actor) },
+        where: { id: projectId, ...editableProjectAccessWhere(actor) },
         data: {
           status: 'IN_PROGRESS',
           progress: 50,

@@ -10,12 +10,12 @@ export class Module7Controller {
 
   @Get()
   getData(@Param('projectId') projectId: string, @Request() req: any) {
-    return this.service.getData(projectId, req.user.organizationId);
+    return this.service.getData(projectId, req.user);
   }
 
   @Get('config')
   getConfig(@Param('projectId') projectId: string, @Request() req: any) {
-    return this.service.getConfigForProject(projectId, req.user.organizationId);
+    return this.service.getConfigForProject(projectId, req.user);
   }
 
   @Put()
@@ -24,6 +24,6 @@ export class Module7Controller {
     @Body() dto: any,
     @Request() req: any,
   ) {
-    return this.service.saveData(projectId, dto, req.user.organizationId);
+    return this.service.saveData(projectId, dto, req.user);
   }
 }

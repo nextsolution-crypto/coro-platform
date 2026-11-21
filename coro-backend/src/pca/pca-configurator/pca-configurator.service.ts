@@ -1,6 +1,25 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AdviserActor, mutableProjectAccessWhere, projectAccessWhere } from '../../auth/project-access';
+import { AdviserActor, assertEditableProject, lockEditableProject, projectAccessWhere } from '../../auth/project-access';
+
+/** Champs de PcaConfig qu'un client peut écrire (audit M1-04). */
+export const PCA_CONFIG_WRITABLE_FIELDS: ReadonlySet<string> = new Set<string>(
+  (Object.values(Prisma.PcaConfigScalarFieldEnum) as string[]).filter(
+    (field) => !['id', 'projectId', 'createdAt', 'updatedAt'].includes(field),
+  ),
+);
+
+export function pickPcaConfigFields(data: unknown): Record<string, unknown> {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new BadRequestException('Configuration PCA invalide.');
+  }
+  const picked: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+    if (PCA_CONFIG_WRITABLE_FIELDS.has(key)) picked[key] = value;
+  }
+  return picked;
+}
 
 @Injectable()
 export class PcaConfiguratorService {
@@ -11,14 +30,13 @@ export class PcaConfiguratorService {
     actor: AdviserActor,
     mutable = false,
   ) {
+    if (mutable) {
+      await assertEditableProject(this.prisma, projectId, actor);
+      return;
+    }
     const project = await this.prisma.project.findFirst({
-      where: {
-        id: projectId,
-        ...(mutable ? mutableProjectAccessWhere(actor) : projectAccessWhere(actor)),
-      },
-      select: {
-        id: true,
-      },
+      where: { id: projectId, ...projectAccessWhere(actor) },
+      select: { id: true },
     });
 
     if (!project) {
@@ -89,35 +107,18 @@ export class PcaConfiguratorService {
     actor: AdviserActor,
     data: any,
   ) {
-    const project = await this.prisma.project.findFirst({
-      where: {
-        id: projectId,
-        ...mutableProjectAccessWhere(actor),
-      },
-      select: {
-        id: true,
-      },
-    });
+    // Ne jamais permettre au payload de modifier l'association au projet :
+    // seuls les champs connus de PcaConfig sont retenus.
+    const configData = pickPcaConfigFields(data) as any;
+    await assertEditableProject(this.prisma, projectId, actor);
 
-    if (!project) {
-      throw new NotFoundException('Projet introuvable');
-    }
-
-    // Ne jamais permettre au payload de modifier l'association au projet
-    const { projectId: _ignoredProjectId, ...configData } = data || {};
-
-    // Upsert PcaConfig
-    const config = await this.prisma.pcaConfig.upsert({
-      where: {
-        projectId,
-      },
-      create: {
-        ...configData,
-        projectId,
-      },
-      update: {
-        ...configData,
-      },
+    const config = await this.prisma.$transaction(async (tx) => {
+      await lockEditableProject(tx, projectId, actor);
+      return tx.pcaConfig.upsert({
+        where: { projectId },
+        create: { ...configData, projectId },
+        update: { ...configData },
+      });
     });
 
     // IMPORTANT :

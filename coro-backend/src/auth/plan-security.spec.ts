@@ -369,6 +369,7 @@ describe('plan document security boundaries', () => {
   it('allows a second ADMIN to use the canonical versioned approval workflow', async () => {
     const project = {
       id: 'project-a',
+      organizationId: 'org-a',
       name: 'Projet test',
       status: 'REVIEW',
       submittedById: 'submitter-a',
@@ -449,6 +450,23 @@ describe('plan document security boundaries', () => {
           .mockResolvedValue({ firstName: 'Ada', lastName: 'Admin' }),
       },
       clientUser: { findMany: jest.fn().mockResolvedValue([]) },
+      procedureDefault: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            { id: 'proc-1', code: 'P01', content: { title: 'Évacuation' }, isActive: true, updatedAt: new Date() },
+          ]),
+      },
+      procedureOverride: { findMany: jest.fn().mockResolvedValue([]) },
+      customProcedure: { findMany: jest.fn().mockResolvedValue([]) },
+      module7Data: {
+        findUnique: jest.fn().mockResolvedValue({
+          projectId: 'project-a',
+          quartsData: { jour: 10 },
+          photosData: {},
+          extraData: {},
+        }),
+      },
     };
     const notifications: any = { create: jest.fn().mockResolvedValue({}) };
     const email: any = { send: jest.fn().mockResolvedValue({}) };
@@ -509,6 +527,16 @@ describe('plan document security boundaries', () => {
           lockVersion: document.lockVersion,
           content: document.content,
         },
+        exportData: {
+          version: 1,
+          procedureDefaults: [
+            { id: 'proc-1', code: 'P01', content: { title: 'Évacuation' }, isActive: true },
+          ],
+          organizationOverrides: [],
+          projectOverrides: [],
+          customProcedures: [],
+          module7: { quartsData: { jour: 10 }, photosData: {}, extraData: {} },
+        },
       }),
     );
 
@@ -523,6 +551,12 @@ describe('plan document security boundaries', () => {
       version: 1,
     });
     expect(prisma.projectVersion.create).toHaveBeenCalledTimes(1);
+    // Les surcharges sont lues dans la portée de l'organisation approuvée.
+    expect(prisma.procedureOverride.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { organizationId: 'org-a', projectId: 'project-a' },
+      }),
+    );
     expect(prisma.project.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: 'VALIDATED' }),

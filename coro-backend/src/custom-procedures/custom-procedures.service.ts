@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AdviserActor, mutableProjectAccessWhere, projectAccessWhere } from '../auth/project-access';
+import { AdviserActor, assertEditableProject, projectAccessWhere } from '../auth/project-access';
 import { DemoCommunicationChannel } from '@prisma/client';
 import { DemoCommunicationPolicyService } from '../demo-environment/demo-communication-policy.service';
 
@@ -49,11 +49,7 @@ export class CustomProceduresService {
   }
 
   private async assertMutableProject(projectId: string, actor: AdviserActor) {
-    const project = await this.prisma.project.findFirst({
-      where: { id: projectId, ...mutableProjectAccessWhere(actor) },
-      select: { id: true },
-    });
-    if (!project) throw new NotFoundException('Projet introuvable');
+    await assertEditableProject(this.prisma, projectId, actor);
   }
 
   private requireOrganizationManager(actor: AdviserActor) {

@@ -32,13 +32,23 @@ export interface ReviewSnapshotInput {
     lockVersion: number;
     content: unknown;
   };
+  /** Données hors document lues par le PDF, figées (audit M1-01). */
+  exportData?: unknown;
 }
 
 export function createReviewSnapshot(input: ReviewSnapshotInput) {
+  if (input.exportData === undefined) {
+    return canonicalize({
+      schemaVersion: 2,
+      project: input.project,
+      document: input.document,
+    }) as Record<string, unknown>;
+  }
   return canonicalize({
-    schemaVersion: 2,
+    schemaVersion: 3,
     project: input.project,
     document: input.document,
+    exportData: input.exportData,
   }) as Record<string, unknown>;
 }
 

@@ -529,14 +529,21 @@ export default function ProjectDetailPage() {
     currentVersionIsSigned &&
     Boolean(project.officialPdfFr || project.officialPdfEn);
 
+  // Règle unique des écritures documentaires (audit M1-02) : en révision,
+  // validé ou exporté, le plan est en lecture seule jusqu'au retour en révision.
+  const planIsEditable = ['DRAFT', 'IN_PROGRESS'].includes(project.status);
+  const lockedLabel = 'Verrouillé (plan soumis ou approuvé)';
+
   const steps = [
     {
       num: 1,
       title: 'Configuration',
       desc: 'Configurer le bâtiment et activer les procédures',
       done: project.progress >= 25,
-      enabled: true,
-      label: project.progress >= 25 ? 'Modifier la config' : 'Configurer',
+      enabled: planIsEditable,
+      label: !planIsEditable
+        ? lockedLabel
+        : project.progress >= 25 ? 'Modifier la config' : 'Configurer',
       action: () => {
         if (project.documentType === 'PCA') {
           router.push(`/configurator/pca/${project.id}`);
@@ -550,8 +557,10 @@ export default function ProjectDetailPage() {
       title: 'Génération',
       desc: 'Générer la structure du document automatiquement',
       done: project.progress >= 50,
-      enabled: project.progress >= 25,
-      label: generating ? 'Génération...' : hasDocument ? 'Régénérer' : 'Générer le document',
+      enabled: planIsEditable && project.progress >= 25,
+      label: !planIsEditable
+        ? lockedLabel
+        : generating ? 'Génération...' : hasDocument ? 'Régénérer' : 'Générer le document',
       action: handleGenerate,
       loading: generating,
     },

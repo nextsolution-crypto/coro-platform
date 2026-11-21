@@ -106,7 +106,7 @@ describe('demo tenant transport isolation', () => {
   });
 
   it('blocks custom procedure AI after canonical project authorization', async () => {
-    const prisma = { project: { findFirst: jest.fn().mockResolvedValue({ id: 'project-1' }) } };
+    const prisma = { project: { findFirst: jest.fn().mockResolvedValue({ id: 'project-1', status: 'IN_PROGRESS' }) } };
     const service = new CustomProceduresService(prisma as any, { evaluate } as any);
     await expect(service.generateFromText(
       'Procédure fictive suffisamment longue pour franchir la validation locale sans appeler un fournisseur externe.',
