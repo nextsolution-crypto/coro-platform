@@ -13,7 +13,7 @@ export class BuildingPlansController {
 
   @Get()
   findAll(@Param('projectId') projectId: string, @Request() req: any) {
-    return this.service.findAll(projectId, req.user.organizationId);
+    return this.service.findAll(projectId, req.user);
   }
 
   @Post()
@@ -22,7 +22,7 @@ export class BuildingPlansController {
     @Body() dto: any,
     @Request() req: any,
   ) {
-    return this.service.create(projectId, dto, req.user.organizationId);
+    return this.service.create(projectId, dto, req.user);
   }
 
   @Put(':planId')
@@ -32,7 +32,7 @@ export class BuildingPlansController {
     @Body() dto: any,
     @Request() req: any,
   ) {
-    return this.service.update(projectId, planId, dto, req.user.organizationId);
+    return this.service.update(projectId, planId, dto, req.user);
   }
 
   @Delete(':planId')
@@ -42,7 +42,7 @@ export class BuildingPlansController {
     @Param('planId') planId: string,
     @Request() req: any,
   ) {
-    return this.service.remove(projectId, planId, req.user.organizationId);
+    return this.service.remove(projectId, planId, req.user);
   }
 
   @Patch(':planId/reorder')
@@ -52,6 +52,6 @@ export class BuildingPlansController {
     @Body() dto: { order: number },
     @Request() req: any,
   ) {
-    return this.service.reorder(projectId, planId, dto.order, req.user.organizationId);
+    return this.service.reorder(projectId, planId, dto.order, req.user);
   }
 }
