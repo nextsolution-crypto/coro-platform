@@ -3,11 +3,16 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
+  Optional,
+  ServiceUnavailableException,
 } from '@nestjs/common';
+import { IncidentReportAttachmentScanner } from '../incident-reports/incident-report-attachment-scanner.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { detectAllowedFileType } from './file-type-policy';
 import { createHash, randomUUID } from 'crypto';
 import { Prisma, ProjectFileLifecycleState } from '@prisma/client';
 import { AdviserActor, projectAccessWhere } from '../auth/project-access';
@@ -21,7 +26,38 @@ export class ProjectFilesService {
     private prisma: PrismaService,
     private storage: StorageService,
     private notificationsService: NotificationsService,
+    @Optional() private readonly malwareScanner?: IncidentReportAttachmentScanner,
   ) {}
+
+  private readonly logger = new Logger(ProjectFilesService.name);
+
+  /**
+   * Antivirus (M3-06) : analyse ClamAV quand le service est configuré
+   * (INCIDENT_REPORT_CLAMAV_HOST). Fichier infecté : refusé. Service
+   * indisponible : refus si PROJECT_FILE_MALWARE_SCAN=REQUIRED, sinon
+   * dépôt accepté et journalisé (liste de types déjà appliquée).
+   */
+  private async scanForMalware(bytes: Buffer) {
+    if (!this.malwareScanner || !process.env.INCIDENT_REPORT_CLAMAV_HOST?.trim()) {
+      if (process.env.PROJECT_FILE_MALWARE_SCAN === 'REQUIRED') {
+        throw new ServiceUnavailableException("L'analyse antivirus est indisponible. Réessayez plus tard.");
+      }
+      return;
+    }
+    let verdict: 'CLEAN' | 'INFECTED';
+    try {
+      verdict = await this.malwareScanner.scan(bytes);
+    } catch (error) {
+      if (process.env.PROJECT_FILE_MALWARE_SCAN === 'REQUIRED') {
+        throw new ServiceUnavailableException("L'analyse antivirus est indisponible. Réessayez plus tard.");
+      }
+      this.logger.warn(`Antivirus indisponible, dépôt accepté sans analyse : ${error instanceof Error ? error.message : 'erreur'}`);
+      return;
+    }
+    if (verdict === 'INFECTED') {
+      throw new BadRequestException('Fichier refusé : un logiciel malveillant a été détecté.');
+    }
+  }
 
   async uploadFile(data: {
     projectId?: string;
@@ -76,6 +112,11 @@ export class ProjectFilesService {
       throw new BadRequestException('Visibilité invalide');
     if (!data.buffer?.length || data.buffer.length > 50 * 1024 * 1024)
       throw new BadRequestException('Fichier vide ou supérieur à 50 Mo');
+    // Liste de types autorisés, vérifiée sur le contenu (M3-06), puis
+    // antivirus si le service d'analyse est configuré.
+    const detected = detectAllowedFileType(data.name, data.buffer);
+    data = { ...data, mimeType: detected.mimeType };
+    await this.scanForMalware(data.buffer);
 
     // Déterminer la version
     let version = 1;

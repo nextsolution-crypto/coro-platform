@@ -305,7 +305,9 @@ export default function KioskPage() {
     if (!checkoutSearch.trim() || checkoutSearch.length < 2) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/occupancy/buildings/${buildingId}/search?q=${encodeURIComponent(checkoutSearch)}&token=${token}`);
+      const res = await fetch(`${API_URL}/occupancy/buildings/${buildingId}/search?q=${encodeURIComponent(checkoutSearch)}`, {
+        headers: { 'X-Kiosk-Token': String(token) },
+      });
       const data = await res.json();
       setCheckoutResults(Array.isArray(data) ? data : []);
     } catch {

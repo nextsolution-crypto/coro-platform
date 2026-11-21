@@ -4,6 +4,7 @@ import {
   BuildingDocumentsClientController,
 } from '../building-documents/building-documents.controller';
 import { Module } from '@nestjs/common';
+import { IncidentReportAttachmentScanner } from '../incident-reports/incident-report-attachment-scanner.service';
 import { ProjectFilesService } from './project-files.service';
 import { ProjectFilesController } from './project-files.controller';
 import { ProjectFilesClientController } from './project-files-client.controller';
@@ -42,6 +43,7 @@ import { BuildingDocumentUploadGuard } from '../building-documents/building-docu
     OfflineDocumentsService,
     ProjectFileExpiryRemindersService,
     ProjectDocumentMutationGuard,
+    IncidentReportAttachmentScanner,
   ],
   exports: [ProjectFilesService],
 })
