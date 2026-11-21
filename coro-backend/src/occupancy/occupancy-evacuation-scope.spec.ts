@@ -5,6 +5,7 @@ describe('Sentinelle evacuation mutation scope', () => {
     evacuationCheckIn: { findFirst: jest.fn(), update: jest.fn() },
     evacuationEvent: { findFirst: jest.fn(), update: jest.fn() },
   };
+  (prisma.evacuationCheckIn as any).count = jest.fn();
   const service = new OccupancyService(prisma as any);
   beforeEach(() => jest.resetAllMocks());
   it('scopes accounting to an active event in the caller organization', async () => {
@@ -37,6 +38,7 @@ describe('Sentinelle evacuation mutation scope', () => {
   });
   it('allows closure only after resolving an active scoped event', async () => {
     prisma.evacuationEvent.findFirst.mockResolvedValue({ id: 'event-a' });
+    (prisma.evacuationCheckIn as any).count.mockResolvedValue(0);
     await service.resolveEvacuation('event-a', 'org-a');
     expect(prisma.evacuationEvent.findFirst).toHaveBeenCalledWith({
       where: { id: 'event-a', organizationId: 'org-a', status: 'ACTIVE' },

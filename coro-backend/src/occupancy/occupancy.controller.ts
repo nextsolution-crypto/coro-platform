@@ -143,14 +143,26 @@ export class OccupancyController {
 
   @UseGuards(AuthGuard('jwt'))
   @Post('evacuation/account')
-  accountForOccupant(@Body() dto: AccountForOccupantDto, @Request() req) {
-    return this.occupancyService.accountForOccupant(dto, req.user.organizationId);
+  async accountForOccupant(@Body() dto: AccountForOccupantDto, @Request() req) {
+    const actor = await this.occupancyService.resolveAdvisorActor(req.user.userId ?? req.user.sub, req.user.organizationId);
+    if (dto.status) {
+      return this.occupancyService.setAccountabilityStatus(
+        { ...dto, status: dto.status },
+        req.user.organizationId,
+        actor,
+      );
+    }
+    return this.occupancyService.accountForOccupant(dto, req.user.organizationId, actor);
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Put('evacuation/:id/resolve')
-  resolveEvacuation(@Param('id') id: string, @Request() req) {
-    return this.occupancyService.resolveEvacuation(id, req.user.organizationId);
+  async resolveEvacuation(@Param('id') id: string, @Body() body: { closureReason?: string }, @Request() req) {
+    const actor = await this.occupancyService.resolveAdvisorActor(req.user.userId ?? req.user.sub, req.user.organizationId);
+    return this.occupancyService.resolveEvacuation(id, req.user.organizationId, {
+      closureReason: body?.closureReason,
+      actorName: actor.name,
+    });
   }
 
   @UseGuards(AuthGuard('jwt'))

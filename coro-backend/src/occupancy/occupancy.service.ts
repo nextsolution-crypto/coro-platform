@@ -267,50 +267,156 @@ export class OccupancyService {
       include: {
         checkins: {
           include: { occupantRecord: true },
+          orderBy: { createdAt: 'asc' },
         },
       },
     });
 
     if (!event) return null;
 
-    const accounted = event.checkins.filter((c) => c.isAccountedFor).length;
-    const missing = event.checkins.filter((c) => !c.isAccountedFor).length;
-
-    return { ...event, accounted, missing };
+    return { ...event, ...summarizeAccountability(event.checkins) };
   }
 
-  // Warden coche un occupant comme comptabilisé
-  async accountForOccupant(dto: AccountForOccupantDto, organizationId: string) {
+  /** Identité d'un utilisateur du portail, lue en base (M5-05). */
+  async resolveClientActor(clientUserId: string, organizationId: string): Promise<AccountabilityActor> {
+    const user = clientUserId
+      ? await this.prisma.clientUser.findFirst({
+          where: { id: clientUserId, organizationId },
+          select: { id: true, firstName: true, lastName: true, email: true },
+        })
+      : null;
+    const name = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Utilisateur du portail';
+    return { type: 'CLIENT_USER', id: user?.id ?? clientUserId ?? null, name };
+  }
+
+  /** Identité d'un conseiller, lue en base (M5-05). */
+  async resolveAdvisorActor(userId: string, organizationId: string): Promise<AccountabilityActor> {
+    const user = userId
+      ? await this.prisma.user.findFirst({
+          where: { id: userId, organizationId },
+          select: { id: true, firstName: true, lastName: true, email: true },
+        })
+      : null;
+    const name = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Conseiller';
+    return { type: 'USER', id: user?.id ?? userId ?? null, name };
+  }
+
+  // Ancien parcours « ✓ Présent » : conservé, il passe par le même journal.
+  async accountForOccupant(dto: AccountForOccupantDto, organizationId: string, actor?: AccountabilityActor) {
+    return this.setAccountabilityStatus(
+      {
+        evacuationEventId: dto.evacuationEventId,
+        occupantRecordId: dto.occupantRecordId,
+        status: 'PRESENT',
+      },
+      organizationId,
+      actor ?? { type: 'LEGACY', id: null, name: dto.checkedBy?.trim().slice(0, 120) || 'Responsable' },
+    );
+  }
+
+  /**
+   * Change l'état de dénombrement d'une personne (audit M5-04).
+   * Chaque changement ajoute une ligne au journal ; rien n'est effacé.
+   * L'identité vient de la session (M5-05), jamais du navigateur.
+   */
+  async setAccountabilityStatus(
+    input: {
+      evacuationEventId: string;
+      occupantRecordId: string;
+      status: string;
+      note?: string | null;
+      lastKnownLocation?: string | null;
+      reportedToFire?: boolean;
+      source?: string;
+    },
+    organizationId: string,
+    actor: AccountabilityActor,
+  ) {
+    const status = input.status as AccountabilityStatus;
+    if (!ACCOUNTABILITY_STATUSES.includes(status)) {
+      throw new BadRequestException('État de dénombrement invalide.');
+    }
+    const note = cleanText(input.note, 500);
+    const lastKnownLocation = cleanText(input.lastKnownLocation, 200);
+    if (status === 'MISSING' && !lastKnownLocation) {
+      throw new BadRequestException('Indiquez le dernier emplacement connu (étage, zone, ou « inconnu ») pour une personne manquante.');
+    }
     const checkin = await this.prisma.evacuationCheckIn.findFirst({
       where: {
-        evacuationEventId: dto.evacuationEventId,
+        evacuationEventId: input.evacuationEventId,
         evacuationEvent: { organizationId, status: 'ACTIVE' },
-        occupantRecordId: dto.occupantRecordId,
+        occupantRecordId: input.occupantRecordId,
       },
     });
     if (!checkin)
       throw new NotFoundException('Entrée de dénombrement introuvable');
 
-    return this.prisma.evacuationCheckIn.update({
-      where: { id: checkin.id },
-      data: {
-        isAccountedFor: true,
-        checkedAt: new Date(),
-        checkedBy: dto.checkedBy,
-      },
-    });
+    const now = new Date();
+    const reportedToFire = status === 'MISSING' && input.reportedToFire === true;
+    const accounted = ACCOUNTED_STATUSES.includes(status);
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.evacuationCheckIn.update({
+        where: { id: checkin.id },
+        data: {
+          status,
+          isAccountedFor: accounted,
+          checkedAt: now,
+          checkedBy: actor.name,
+          note: note ?? (status === checkin.status ? checkin.note : null),
+          lastKnownLocation: lastKnownLocation ?? checkin.lastKnownLocation ?? null,
+          ...(reportedToFire && !checkin.reportedToFireAt ? { reportedToFireAt: now } : {}),
+        },
+      }),
+      this.prisma.evacuationAccountabilityEvent.create({
+        data: {
+          checkinId: checkin.id,
+          evacuationEventId: input.evacuationEventId,
+          fromStatus: (checkin.status as AccountabilityStatus) ?? 'PENDING',
+          toStatus: status,
+          actorType: actor.type,
+          actorId: actor.id,
+          actorName: actor.name,
+          source: input.source === 'SMS_REPLY' || input.source === 'MUSTER_QR' ? input.source : 'WARDEN',
+          note,
+          lastKnownLocation,
+          reportedToFire,
+        },
+      }),
+    ]);
+    return updated;
   }
 
-  // Clore une évacuation
-  async resolveEvacuation(evacuationEventId: string, organizationId: string) {
+  /**
+   * Clore une évacuation. Refusé tant qu'il reste des personnes « à
+   * confirmer » ou « manquantes », sauf motif écrit (audit M5-04).
+   */
+  async resolveEvacuation(
+    evacuationEventId: string,
+    organizationId: string,
+    options: { closureReason?: string | null; actorName?: string | null } = {},
+  ) {
     const event = await this.prisma.evacuationEvent.findFirst({
       where: { id: evacuationEventId, organizationId, status: 'ACTIVE' },
       select: { id: true },
     });
     if (!event) throw new NotFoundException('Évacuation active introuvable');
+    const unresolved = await this.prisma.evacuationCheckIn.count({
+      where: { evacuationEventId, status: { in: ['PENDING', 'MISSING'] } },
+    });
+    const closureReason = cleanText(options.closureReason, 1000);
+    if (unresolved > 0 && (!closureReason || closureReason.length < 10)) {
+      throw new BadRequestException(
+        `${unresolved} personne(s) restent à confirmer ou manquantes. Indiquez le motif de clôture et à quelle heure la liste a été remise aux pompiers.`,
+      );
+    }
     return this.prisma.evacuationEvent.update({
       where: { id: evacuationEventId },
-      data: { status: 'RESOLVED', resolvedAt: new Date() },
+      data: {
+        status: 'RESOLVED',
+        resolvedAt: new Date(),
+        resolvedBy: cleanText(options.actorName, 120),
+        closureReason,
+      },
     });
   }
 
@@ -408,19 +514,21 @@ export class OccupancyService {
         building: { select: { name: true, address: true, city: true } },
         checkins: {
           include: { occupantRecord: true },
-          orderBy: { isAccountedFor: 'asc' },
+          orderBy: [{ isAccountedFor: 'asc' }, { createdAt: 'asc' }],
         },
       },
     });
     if (!event) throw new NotFoundException('Évacuation introuvable');
 
-    const accounted = event.checkins.filter(c => c.isAccountedFor).length;
-    const missing   = event.checkins.filter(c => !c.isAccountedFor).length;
     const duration  = event.resolvedAt
       ? Math.round((new Date(event.resolvedAt).getTime() - new Date(event.triggeredAt).getTime()) / 60000)
       : null;
+    const journal = await this.prisma.evacuationAccountabilityEvent.findMany({
+      where: { evacuationEventId },
+      orderBy: { createdAt: 'asc' },
+    });
 
-    return { ...event, accounted, missing, durationMinutes: duration };
+    return { ...event, ...summarizeAccountability(event.checkins), durationMinutes: duration, journal };
   }
 
   // ── Résilience opérationnelle ─────────────────────────────────────────────
@@ -842,4 +950,51 @@ export class OccupancyService {
     });
   }
 
+}
+
+// ── Dénombrement (audit M5-04) ─────────────────────────────────────────────
+
+export type AccountabilityStatus = 'PENDING' | 'PRESENT' | 'SAFE_ELSEWHERE' | 'INJURED' | 'MISSING' | 'FOUND';
+export type AccountabilityActor = { type: string; id: string | null; name: string };
+
+export const ACCOUNTABILITY_STATUSES: AccountabilityStatus[] = ['PENDING', 'PRESENT', 'SAFE_ELSEWHERE', 'INJURED', 'MISSING', 'FOUND'];
+const ACCOUNTED_STATUSES: AccountabilityStatus[] = ['PRESENT', 'SAFE_ELSEWHERE', 'INJURED', 'FOUND'];
+
+function cleanText(value: unknown, max: number): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed.slice(0, max) : null;
+}
+
+/**
+ * Compteurs par état et bilan pour les pompiers : personnes à confirmer,
+ * manquantes (avec dernier emplacement connu) et blessées.
+ * `accounted` / `missing` gardent leur sens historique (comptabilisé ou non).
+ */
+export function summarizeAccountability(checkins: Array<any>) {
+  const counts: Record<AccountabilityStatus, number> = {
+    PENDING: 0, PRESENT: 0, SAFE_ELSEWHERE: 0, INJURED: 0, MISSING: 0, FOUND: 0,
+  };
+  for (const c of checkins) {
+    const status = (c.status as AccountabilityStatus) || (c.isAccountedFor ? 'PRESENT' : 'PENDING');
+    counts[status] = (counts[status] ?? 0) + 1;
+  }
+  const accounted = counts.PRESENT + counts.SAFE_ELSEWHERE + counts.INJURED + counts.FOUND;
+  const missing = counts.PENDING + counts.MISSING;
+  const person = (c: any) => ({
+    occupantRecordId: c.occupantRecordId,
+    name: [c.occupantRecord?.firstName, c.occupantRecord?.lastName].filter(Boolean).join(' '),
+    type: c.occupantRecord?.type ?? null,
+    floor: c.occupantRecord?.floor ?? null,
+    lastKnownLocation: c.lastKnownLocation ?? null,
+    note: c.note ?? null,
+    reportedToFireAt: c.reportedToFireAt ?? null,
+    updatedAt: c.checkedAt ?? null,
+  });
+  const fireBrief = {
+    missing: checkins.filter((c) => c.status === 'MISSING').map(person),
+    injured: checkins.filter((c) => c.status === 'INJURED').map(person),
+    pending: checkins.filter((c) => (c.status ?? 'PENDING') === 'PENDING' && !c.isAccountedFor).map(person),
+  };
+  return { counts, accounted, missing, fireBrief };
 }
