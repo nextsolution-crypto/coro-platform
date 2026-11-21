@@ -39,16 +39,16 @@ describe('demo tenant transport isolation', () => {
         email: 'employee@example.invalid',
         firstName: 'Alex',
         lastName: 'Démo',
-        pin: '1234',
       },
       { id: 'building-1', name: 'Bâtiment Démo' },
+      '123456',
     );
     expect(evaluate).toHaveBeenCalledWith(expect.objectContaining({
       organizationId,
       operation: 'SENTINELLE_EMPLOYEE_PIN',
       payload: { employeeId: 'employee-1', buildingId: 'building-1' },
     }));
-    expect(JSON.stringify(evaluate.mock.calls)).not.toContain('1234');
+    expect(JSON.stringify(evaluate.mock.calls)).not.toContain('123456');
     expect(global.fetch).not.toHaveBeenCalled();
   });
 

@@ -79,7 +79,7 @@ suite('Sentinelle employee to closed exercise on PostgreSQL', () => {
     return { qr, result };
   }
   it('preserves overnight presence through exercise, accounting and closure, then records exit', async () => {
-    const employee = await employees.createEmployee(
+    const { employee, pin } = await employees.createEmployeeRecord(
       {
         buildingId,
         firstName: 'Camille',
@@ -96,7 +96,7 @@ suite('Sentinelle employee to closed exercise on PostgreSQL', () => {
       organizationId,
       'Entrée QA',
     );
-    const arrival = await punch(display.publicToken, employee.pin!);
+    const arrival = await punch(display.publicToken, pin);
     expect(arrival.result.action).toBe('CHECK_IN');
     const overnight = new Date();
     overnight.setDate(overnight.getDate() - 1);
@@ -214,7 +214,7 @@ suite('Sentinelle employee to closed exercise on PostgreSQL', () => {
       { closingNotes: 'Exercice fictif terminé sans communication réelle.' },
       organizationId,
     );
-    const departure = await punch(display.publicToken, employee.pin!);
+    const departure = await punch(display.publicToken, pin);
     expect(departure.result.action).toBe('CHECK_OUT');
     for (const record of (
       await occupancy.getCurrentOccupants(buildingId, organizationId)
@@ -274,14 +274,17 @@ suite('Sentinelle employee to closed exercise on PostgreSQL', () => {
   it('allocates distinct active PINs under concurrent employee creation', async () => {
     const created = await Promise.all(
       Array.from({ length: 8 }, (_, i) =>
-        employees.createEmployee(
+        employees.createEmployeeRecord(
           { buildingId, firstName: `QA${i}`, lastName: 'FICTIF' },
           organizationId,
           false,
         ),
       ),
     );
+    // Audit M5-02 : NIP à 6 chiffres, jamais stockés en clair.
     expect(new Set(created.map((e) => e.pin)).size).toBe(8);
+    expect(created.every((e) => /^\d{6}$/.test(e.pin))).toBe(true);
+    expect(created.every((e) => e.employee.pin === null && /^[0-9a-f]{64}$/.test(e.employee.pinHash ?? ''))).toBe(true);
     await expect(
       prisma.buildingEmployee.create({
         data: {
@@ -289,7 +292,7 @@ suite('Sentinelle employee to closed exercise on PostgreSQL', () => {
           organizationId,
           firstName: 'Duplicate',
           lastName: 'FICTIF',
-          pin: created[0].pin,
+          pinHash: created[0].employee.pinHash,
         },
       }),
     ).rejects.toMatchObject({ code: 'P2002' });

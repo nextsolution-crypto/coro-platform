@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { isValidPinFormat, pinDigest } from './sentinelle-pin';
 
 const CHALLENGE_TTL_MS = 45_000;
 const TRANSACTION_TTL_MS = 5 * 60_000;
@@ -158,7 +159,7 @@ export class PresenceFlowService {
   }
 
   async identify(sessionId: string, pin: string) {
-    if (!/^\d{4}$/.test(pin || '')) throw new BadRequestException('PIN invalide');
+    if (!isValidPinFormat(pin)) throw new BadRequestException('PIN invalide');
     const now = new Date();
     const session = await this.prisma.presenceSession.findFirst({
       where: {
@@ -171,14 +172,25 @@ export class PresenceFlowService {
     });
     if (!session) throw new UnauthorizedException('Transaction expirée ou invalide');
     await this.assertBuildingPinNotLocked(session.buildingId, now);
+    // Empreinte à clé d'abord ; un ancien NIP encore en clair est accepté puis
+    // converti immédiatement (audit M5-02).
+    const digest = pinDigest(session.buildingId, pin);
     const employee = await this.prisma.buildingEmployee.findFirst({
       where: {
         buildingId: session.buildingId,
         organizationId: session.organizationId,
-        pin,
         isActive: true,
+        OR: digest ? [{ pinHash: digest }, { pin, pinHash: null }] : [{ pin }],
       },
     });
+    if (employee && digest && !employee.pinHash && employee.pin === pin) {
+      await this.prisma.buildingEmployee
+        .updateMany({
+          where: { id: employee.id, pin, pinHash: null },
+          data: { pinHash: digest, pin: null },
+        })
+        .catch(() => undefined);
+    }
     if (!employee) {
       const failed = await this.prisma.presenceSession.update({
         where: { id: session.id },

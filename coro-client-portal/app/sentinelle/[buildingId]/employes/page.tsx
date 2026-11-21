@@ -194,8 +194,9 @@ export default function EmployesPage() {
 
   const handleResendPin = async (employee: any) => {
     if (resendingPinId || pinEmailResendDisabled(employee)) return;
+    if (!confirm(`Générer un nouveau PIN pour ${employee.firstName} ${employee.lastName} ? L’ancien PIN cessera de fonctionner et le nouveau sera envoyé par courriel.`)) return;
     setResendingPinId(employee.id);
-    setOperationMessage('Envoi du PIN par courriel en cours…');
+    setOperationMessage('Envoi du nouveau PIN par courriel en cours…');
     try {
       const result = await apiPost(`/client-portal/buildings/${buildingId}/sentinelle/employees/${employee.id}/resend-pin`, {});
       setOperationMessage(`${employee.firstName} ${employee.lastName} : ${pinEmailLabel(result.pinEmailStatus)}`);
@@ -577,10 +578,10 @@ export default function EmployesPage() {
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', maxWidth: '100%' }}>
                   <button type="button" onClick={() => handleResendPin(emp)}
                     disabled={Boolean(resendingPinId) || pinEmailResendDisabled(emp)}
-                    aria-label={`Renvoyer le PIN par courriel à ${emp.firstName} ${emp.lastName}`}
-                    title={!emp.email ? 'Ajoutez un courriel à la fiche.' : emp.pinEmailStatus === 'OUTCOME_UNKNOWN' ? 'Faites vérifier le dernier envoi avant de le relancer.' : 'Renvoyer le PIN existant au courriel enregistré.'}
+                    aria-label={`Générer et envoyer un nouveau PIN à ${emp.firstName} ${emp.lastName}`}
+                    title={!emp.email ? 'Ajoutez un courriel à la fiche.' : emp.pinEmailStatus === 'OUTCOME_UNKNOWN' ? 'Faites vérifier le dernier envoi avant de le relancer.' : 'Générer un nouveau PIN et l’envoyer au courriel enregistré. L’ancien PIN sera désactivé.'}
                     style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 12px', borderRadius: 8, border: '1px solid #AED6F1', backgroundColor: '#EBF5FB', cursor: Boolean(resendingPinId) || pinEmailResendDisabled(emp) ? 'not-allowed' : 'pointer', opacity: Boolean(resendingPinId) || pinEmailResendDisabled(emp) ? 0.55 : 1, fontSize: 12, fontWeight: 600, color: '#2980B9' }}>
-                    <Mail size={14} /> {resendingPinId === emp.id ? 'Envoi…' : 'Renvoyer le PIN'}
+                    <Mail size={14} /> {resendingPinId === emp.id ? 'Envoi…' : 'Nouveau PIN'}
                   </button>
                   <button type="button" onClick={() => handleDownloadQr(emp)} title="Télécharger QR"
                     style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 12px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#F8F9FA', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#2C3E50' }}>

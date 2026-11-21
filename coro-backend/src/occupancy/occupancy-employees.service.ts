@@ -7,7 +7,7 @@ import {
   Optional,
 } from '@nestjs/common';
 import { isEmail } from 'class-validator';
-import { randomInt } from 'node:crypto';
+import { generatePin, pinDigest, withoutPinSecrets } from './sentinelle-pin';
 import { DemoCommunicationChannel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { DemoCommunicationPolicyService } from '../demo-environment/demo-communication-policy.service';
@@ -51,6 +51,7 @@ export class OccupancyEmployeesService {
     return this.prisma.buildingEmployee.findMany({
       where: { buildingId, isActive: true },
       orderBy: { lastName: 'asc' },
+      omit: { pin: true, pinHash: true },
       include: {
         emergencyRoles: { orderBy: { priority: 'asc' } },
         qualifications: true,
@@ -58,7 +59,43 @@ export class OccupancyEmployeesService {
     });
   }
 
+  /**
+   * Tire un NIP libre pour le bâtiment. À appeler sous le verrou consultatif
+   * du bâtiment ; les index uniques restent la garde finale.
+   */
+  private async allocatePin(tx: any, buildingId: string) {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const candidate = generatePin();
+      const digest = pinDigest(buildingId, candidate);
+      const existing = await tx.buildingEmployee.findFirst({
+        where: {
+          buildingId,
+          isActive: true,
+          OR: digest ? [{ pinHash: digest }, { pin: candidate }] : [{ pin: candidate }],
+        },
+        select: { id: true },
+      });
+      if (!existing) {
+        return {
+          pin: candidate,
+          stored: digest ? { pinHash: digest, pin: null } : { pin: candidate, pinHash: null },
+        };
+      }
+    }
+    throw new ConflictException('Aucun PIN disponible; contactez un administrateur.');
+  }
+
   async createEmployee(
+    body: any,
+    organizationId: string,
+    sendExternalEmail: boolean = true,
+  ) {
+    const { employee } = await this.createEmployeeRecord(body, organizationId, sendExternalEmail);
+    return withoutPinSecrets(employee);
+  }
+
+  /** Usage interne (import, tests) : renvoie aussi le NIP en clair émis. */
+  async createEmployeeRecord(
     body: any,
     organizationId: string,
     sendExternalEmail: boolean = true,
@@ -76,27 +113,11 @@ export class OccupancyEmployeesService {
     if (!building) throw new NotFoundException('Bâtiment introuvable');
 
     // Serialize allocation for this building; the database index is the final guard.
+    let issuedPin = '';
     const employee = await this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`sentinelle-pin:${body.buildingId}`}, 0))`;
-      let pin: string | undefined;
-      for (let attempt = 0; attempt < 100; attempt++) {
-        const candidate = randomInt(1000, 10000).toString();
-        const existing = await tx.buildingEmployee.findFirst({
-          where: {
-            buildingId: body.buildingId,
-            pin: candidate,
-            isActive: true,
-          },
-        });
-        if (!existing) {
-          pin = candidate;
-          break;
-        }
-      }
-      if (!pin)
-        throw new ConflictException(
-          'Aucun PIN disponible; contactez un administrateur.',
-        );
+      const allocated = await this.allocatePin(tx, body.buildingId);
+      issuedPin = allocated.pin;
       const created = await tx.buildingEmployee.create({
         data: {
           buildingId: body.buildingId,
@@ -106,7 +127,7 @@ export class OccupancyEmployeesService {
           poste: body.poste,
           email: body.email,
           phone: body.phone,
-          pin,
+          ...allocated.stored,
           isEmergencyMember: body.isEmergencyMember === true,
           smsConsent: body.smsConsent === true,
           pinEmailStatus: 'NOT_REQUESTED',
@@ -132,7 +153,7 @@ export class OccupancyEmployeesService {
       return created;
     });
 
-    if (!body.email || !sendExternalEmail) return employee;
+    if (!body.email || !sendExternalEmail) return { employee, pin: issuedPin };
     // Persist the attempt before I/O. An interrupted/ambiguous request must not
     // delete the identity or invite automatic retries.
     await this.prisma.buildingEmployee.update({
@@ -144,19 +165,26 @@ export class OccupancyEmployeesService {
     });
     let delivery: { status: string; messageId?: string };
     try {
-      delivery = await this.sendPinEmail(employee, building);
+      delivery = await this.sendPinEmail(employee, building, issuedPin);
     } catch {
       delivery = { status: 'OUTCOME_UNKNOWN' };
     }
-    return this.prisma.buildingEmployee.update({
+    const updated = await this.prisma.buildingEmployee.update({
       where: { id: employee.id },
       data: {
         pinEmailStatus: delivery.status,
         pinEmailMessageId: delivery.messageId ?? null,
       },
     });
+    return { employee: updated, pin: issuedPin };
   }
 
+  /**
+   * « Générer un nouveau NIP et l'envoyer » (décision du 21 nov. 2026).
+   * Les NIP n'étant plus conservés en clair, le renvoi du NIP existant est
+   * remplacé par l'émission d'un nouveau NIP à 6 chiffres ; l'ancien cesse
+   * de fonctionner immédiatement.
+   */
   async resendPinEmail(
     employeeId: string,
     buildingId: string,
@@ -170,50 +198,56 @@ export class OccupancyEmployeesService {
       include: { building: true },
     });
     if (!employee) throw new NotFoundException('Employé introuvable');
-    if (!sendExternalEmail) throw new ForbiddenException('Le renvoi du PIN est désactivé pour cet environnement pilote.');
-    if (!employee.email || !isEmail(employee.email)) throw new BadRequestException('Ajoutez une adresse courriel valide à la fiche avant de renvoyer le PIN.');
-    if (!/^\d{4}$/.test(employee.pin || '')) throw new BadRequestException('Aucun PIN disponible; contactez un administrateur.');
-    if (employee.pinEmailStatus === 'OUTCOME_UNKNOWN') throw new ConflictException('Le résultat du dernier envoi est incertain. Faites vérifier sa livraison avant de renvoyer le PIN.');
+    if (!sendExternalEmail) throw new ForbiddenException("L'envoi du PIN est désactivé pour cet environnement pilote.");
+    if (!employee.email || !isEmail(employee.email)) throw new BadRequestException('Ajoutez une adresse courriel valide à la fiche avant d’envoyer un nouveau PIN.');
+    if (employee.pinEmailStatus === 'OUTCOME_UNKNOWN') throw new ConflictException('Le résultat du dernier envoi est incertain. Faites vérifier sa livraison avant d’envoyer un nouveau PIN.');
     const attemptedAt = new Date();
     const cooldownBefore = new Date(attemptedAt.getTime() - 60_000);
-    if (employee.pinEmailAttemptedAt && employee.pinEmailAttemptedAt > cooldownBefore) throw new ConflictException('Veuillez patienter une minute entre deux demandes de renvoi du PIN.');
+    if (employee.pinEmailAttemptedAt && employee.pinEmailAttemptedAt > cooldownBefore) throw new ConflictException('Veuillez patienter une minute entre deux demandes de nouveau PIN.');
 
-    // Claim and audit before transport. Concurrent clicks cannot send twice;
-    // a crash after this commit remains uncertain and cannot auto-retry.
+    // Claim, rotate and audit before transport. Concurrent clicks cannot send
+    // twice; a crash after this commit remains uncertain and cannot auto-retry.
+    let issuedPin = '';
     await this.prisma.$transaction(async (tx) => {
       const claim = await tx.buildingEmployee.updateMany({
         where: {
           id: employeeId, buildingId, organizationId, isActive: true,
-          email: employee.email, pin: employee.pin,
+          email: employee.email,
           pinEmailStatus: { not: 'OUTCOME_UNKNOWN' },
           OR: [{ pinEmailAttemptedAt: null }, { pinEmailAttemptedAt: { lte: cooldownBefore } }],
         },
         data: { pinEmailStatus: 'OUTCOME_UNKNOWN', pinEmailAttemptedAt: attemptedAt, pinEmailMessageId: null, pinEmailDeliveredAt: null },
       });
-      if (claim.count !== 1) throw new ConflictException('Une demande de renvoi est déjà en cours ou la fiche a changé. Actualisez la liste.');
+      if (claim.count !== 1) throw new ConflictException('Une demande est déjà en cours ou la fiche a changé. Actualisez la liste.');
+      if (tx.$executeRaw) {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`sentinelle-pin:${buildingId}`}, 0))`;
+      }
+      const allocated = await this.allocatePin(tx, buildingId);
+      issuedPin = allocated.pin;
+      await tx.buildingEmployee.update({ where: { id: employeeId }, data: allocated.stored });
       await tx.auditLog.create({ data: {
-        organizationId, clientUserId, action: 'SENTINELLE_PIN_RESEND_REQUESTED',
+        organizationId, clientUserId, action: 'SENTINELLE_PIN_REGENERATED',
         entityType: 'BuildingEmployee', entityId: employeeId,
-        description: 'Renvoi manuel du PIN existant par courriel.',
-        metadata: { buildingId, previousStatus: employee.pinEmailStatus, previousProviderMessageId: employee.pinEmailMessageId, attemptedAt: attemptedAt.toISOString() },
+        description: 'Nouveau PIN émis et envoyé par courriel ; l’ancien PIN est désactivé.',
+        metadata: { buildingId, previousStatus: employee.pinEmailStatus, previousProviderMessageId: employee.pinEmailMessageId, attemptedAt: attemptedAt.toISOString(), pinLength: issuedPin.length },
       } });
     });
     let delivery: { status: string; messageId?: string };
-    try { delivery = await this.sendPinEmail(employee, employee.building); }
+    try { delivery = await this.sendPinEmail(employee, employee.building, issuedPin); }
     catch { delivery = { status: 'OUTCOME_UNKNOWN' }; }
     await this.prisma.$transaction(async (tx) => {
       await tx.buildingEmployee.update({ where: { id: employeeId }, data: { pinEmailStatus: delivery.status, pinEmailMessageId: delivery.messageId ?? null } });
       await tx.auditLog.create({ data: {
         organizationId, clientUserId, action: 'SENTINELLE_PIN_RESEND_RESULT',
         entityType: 'BuildingEmployee', entityId: employeeId,
-        description: 'Résultat du renvoi manuel du PIN par courriel.',
+        description: 'Résultat de l’envoi du nouveau PIN par courriel.',
         metadata: { buildingId, status: delivery.status, providerMessageId: delivery.messageId ?? null, attemptedAt: attemptedAt.toISOString() },
       } });
     });
     return { pinEmailStatus: delivery.status, pinEmailAttemptedAt: attemptedAt };
   }
 
-  private async sendPinEmail(employee: any, building: any) {
+  private async sendPinEmail(employee: any, building: any, pin: string) {
     const html = (value: string) => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
     const disposition = await this.allowExternalEmail({
       organizationId: employee.organizationId,
@@ -253,14 +287,14 @@ export class OccupancyEmployeesService {
               </p>
               <div style="background:#F8F9FA;border-radius:12px;padding:32px;margin:0 0 24px;text-align:center;">
                 <p style="margin:0 0 8px;font-size:12px;color:#ADB5BD;text-transform:uppercase;letter-spacing:0.08em;">Votre PIN personnel</p>
-                <p style="margin:0;font-size:56px;font-weight:900;color:#2C3E50;letter-spacing:12px;">${employee.pin}</p>
+                <p style="margin:0;font-size:56px;font-weight:900;color:#2C3E50;letter-spacing:12px;">${html(pin)}</p>
                 <p style="margin:8px 0 0;font-size:12px;color:#ADB5BD;">Gardez ce code confidentiel</p>
               </div>
               <div style="background:#EBF5FB;border-radius:8px;padding:16px;margin:0 0 24px;">
                 <p style="margin:0;font-size:14px;color:#2980B9;font-weight:600;">Comment utiliser votre PIN :</p>
                 <ol style="margin:8px 0 0;padding-left:20px;color:#6C757D;font-size:13px;line-height:1.8;">
                   <li>Scannez le QR code affiché sur la borne d'accueil</li>
-                  <li>Entrez votre PIN à 4 chiffres</li>
+                  <li>Entrez votre PIN à ${pin.length} chiffres</li>
                   <li>Vérifiez votre identité et confirmez votre entrée ou votre sortie</li>
                 </ol>
               </div>
@@ -334,6 +368,7 @@ export class OccupancyEmployeesService {
 
     return this.prisma.buildingEmployee.findUnique({
       where: { id },
+      omit: { pin: true, pinHash: true },
       include: {
         emergencyRoles: { orderBy: { priority: 'asc' } },
         qualifications: true,
