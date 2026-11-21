@@ -358,7 +358,15 @@ client_auth_code="$(curl --silent --output /dev/null --write-out '%{http_code}' 
 booking_guard_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 http://127.0.0.1:3002/api/planning/my-assignments)" || fail BOOKING_SMOKE_FAILED
 rendement_guard_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 http://127.0.0.1:3002/api/rendement/financial)" || fail RENDEMENT_SMOKE_FAILED
 operational_capabilities_local_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 15 'http://127.0.0.1:3002/api/client-portal/organizations/00000000-0000-4000-8000-000000000001/operational-capabilities?buildingId=release-smoke-building')" || fail OPERATIONAL_CAPABILITIES_LOCAL_ROUTE_SMOKE_FAILED
-operational_capabilities_public_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 20 'https://api.getcoro.io/api/client-portal/organizations/00000000-0000-4000-8000-000000000001/operational-capabilities?buildingId=release-smoke-building')" || fail OPERATIONAL_CAPABILITIES_PUBLIC_ROUTE_SMOKE_FAILED
+# Juste après le redémarrage du backend, Nginx peut garder l'amont marqué
+# indisponible quelques secondes (« no live upstreams », 502) alors que la
+# route locale répond déjà. On réessaie jusqu'à 60 s avant de conclure.
+operational_capabilities_public_code=000
+for _ in $(seq 1 12); do
+  operational_capabilities_public_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 20 'https://api.getcoro.io/api/client-portal/organizations/00000000-0000-4000-8000-000000000001/operational-capabilities?buildingId=release-smoke-building')" || operational_capabilities_public_code=000
+  [[ "$operational_capabilities_public_code" == 401 ]] && break
+  sleep 5
+done
 [[ "$client_auth_code" =~ ^(400|401)$ ]] || fail CLIENT_AUTH_SMOKE_FAILED
 [[ "$booking_guard_code" == 401 ]] || fail BOOKING_SMOKE_FAILED
 [[ "$rendement_guard_code" == 401 ]] || fail RENDEMENT_SMOKE_FAILED
