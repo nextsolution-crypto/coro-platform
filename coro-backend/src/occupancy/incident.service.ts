@@ -185,6 +185,32 @@ const OCCUPANT_MESSAGES: Record<string, { alert: string; alarm: string }> = {
 };
 
 // Normalise un numéro de téléphone en format E.164 canadien (+1XXXXXXXXXX)
+const PANIC_ROLE_ORDER = ['COORDINATOR', 'FIRST_AIDER'];
+
+export function sortPanicMembers<T extends { emergencyRoles?: Array<{ role: string; priority?: number | null }> }>(
+  members: T[],
+): T[] {
+  const rank = (member: T) => {
+    let best = Number.MAX_SAFE_INTEGER;
+    for (const role of member.emergencyRoles || []) {
+      const index = PANIC_ROLE_ORDER.indexOf(role.role);
+      const value = (index === -1 ? PANIC_ROLE_ORDER.length : index) * 1000 + (role.priority ?? 999);
+      best = Math.min(best, value);
+    }
+    return best;
+  };
+  return [...members].sort((a, b) => rank(a) - rank(b));
+}
+
+function maskEmail(email: string) {
+  const [local, domain] = email.split('@');
+  return `${(local || '').slice(0, 2)}***@${domain || ''}`;
+}
+
+function maskPhone(phone: string) {
+  return `***${phone.slice(-4)}`;
+}
+
 function normalizePhone(phone: string | null | undefined): string | null {
   if (!phone) return null;
   const digits = phone.replace(/\D/g, '');
@@ -699,19 +725,34 @@ export class IncidentService {
   }
 
   // ── Bouton panique ────────────────────────────────────────────────────────
-  async triggerPanic(buildingId: string, body: TriggerIncidentPanicDto, organizationId: string) {
+  async triggerPanic(
+    buildingId: string,
+    body: TriggerIncidentPanicDto,
+    organizationId: string,
+    actor?: { clientUserId: string },
+  ) {
     const building = await this.prisma.building.findFirst({
       where: { id: buildingId, organizationId },
     });
     if (!building) throw new NotFoundException('Bâtiment introuvable');
 
-    const triggeredBy  = body.triggeredBy || 'Inconnu';
+    // Identité tirée de la session authentifiée, jamais du navigateur (M2-06).
+    const actorUser = actor?.clientUserId
+      ? await this.prisma.clientUser.findFirst({
+          where: { id: actor.clientUserId, organizationId },
+          select: { firstName: true, lastName: true, email: true },
+        })
+      : null;
+    const actorName = actorUser
+      ? `${actorUser.firstName || ''} ${actorUser.lastName || ''}`.trim() || actorUser.email
+      : null;
+    const triggeredBy  = actorName || body.triggeredBy || 'Inconnu';
     const emergencyType = body.emergencyType || 'URGENCE GÉNÉRALE';
     const safeBuildingName = escapeIncidentHtml(building.name);
     const safeAddress = escapeIncidentHtml(`${building.address || ''}, ${building.city || ''}, ${building.province || ''}`.trim().replace(/^,|,$/g, ''));
     const safeTriggeredBy = escapeIncidentHtml(triggeredBy);
     const safeEmergencyType = escapeIncidentHtml(emergencyType);
-    const now          = new Date().toLocaleString('fr-CA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const now          = new Date().toLocaleString('fr-CA', { timeZone: 'America/Toronto', hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const address      = `${building.address || ''}, ${building.city || ''}, ${building.province || ''}`.trim().replace(/^,|,$/g, '');
 
     const smsText = `🚨 ALERTE SÉCURITÉ — MENACE ACTIVE\n${building.name}\n${address}\nDéclenché par ${triggeredBy} à ${now}\n\nCOMPOSEZ LE 911 ET DITES :\n"Menace active au ${address}"\n\nSECURITY ALERT — ACTIVE THREAT\nCall 911 and say: "Active threat at ${address}"`;
@@ -789,36 +830,71 @@ export class IncidentService {
         select: { employeeId: true },
       })).map(r => r.employeeId).filter(Boolean)
     );
-    const emergencyMembers = await this.prisma.buildingEmployee.findMany({
+    const presentMembers = await this.prisma.buildingEmployee.findMany({
       where: { buildingId, isActive: true, isEmergencyMember: true, id: { in: [...presentIds] as string[] } },
       include: { emergencyRoles: true },
-      take: 5,
     });
+    // Coordonnateur d'abord, puis secouriste, puis les autres rôles ; à rôle
+    // égal, la priorité configurée (1 = titulaire). Cinq membres au plus (M2-07).
+    const emergencyMembers = sortPanicMembers(presentMembers).slice(0, 5);
     for (const m of emergencyMembers) {
       if (m.email || m.phone) {
         contacts.push({ email: m.email || undefined, phone: m.smsConsent && m.phone ? m.phone : undefined, name: `${m.firstName} ${m.lastName}` });
       }
     }
 
-    // Envoyer à tous les contacts (dédupliqués par email)
+    // Envoi en parallèle à tous les contacts, dédupliqués par courriel et par
+    // téléphone (M2-04). notifiedCount = personnes jointes par au moins un
+    // canal ACCEPTÉ par le fournisseur : le portail n'affiche « alerte
+    // envoyée » que si ce compte est ≥ 1, sinon il demande le 911.
     const sentEmails = new Set<string>();
-    let notifiedCount = 0;
-    // notifiedCount = personnes jointes par au moins un canal ACCEPTÉ par le
-    // fournisseur. Le portail n'affiche « alerte envoyée » que si ce compte
-    // est ≥ 1 ; sinon il demande de composer le 911.
     const sentPhones = new Set<string>();
-    for (const contact of contacts) {
-      let reached = false;
-      if (contact.email && !sentEmails.has(contact.email)) {
-        sentEmails.add(contact.email);
-        reached = (await this.sendEmail({ to: contact.email, toName: contact.name, subject: `🚨 ALERTE PANIQUE — ${building.name}`, html: htmlEmail }, organizationId)) || reached;
-      }
-      const phone = contact.phone ? normalizePhone(contact.phone) : null;
-      if (phone && !sentPhones.has(phone)) {
-        sentPhones.add(phone);
-        reached = (await this.sendSms(phone, smsText, organizationId)) || reached;
-      }
-      if (reached) notifiedCount++;
+    const deliveries = await Promise.all(
+      contacts.map(async (contact) => {
+        const email = contact.email && !sentEmails.has(contact.email) ? contact.email : null;
+        if (email) sentEmails.add(email);
+        const normalized = contact.phone ? normalizePhone(contact.phone) : null;
+        const phone = normalized && !sentPhones.has(normalized) ? normalized : null;
+        if (phone) sentPhones.add(phone);
+        const [emailAccepted, smsAccepted] = await Promise.all([
+          email
+            ? this.sendEmail({ to: email, toName: contact.name, subject: `🚨 ALERTE PANIQUE — ${building.name}`, html: htmlEmail }, organizationId)
+            : Promise.resolve(null),
+          phone ? this.sendSms(phone, smsText, organizationId) : Promise.resolve(null),
+        ]);
+        return {
+          name: contact.name,
+          email: email ? maskEmail(email) : null,
+          emailAccepted,
+          phone: phone ? maskPhone(phone) : null,
+          smsAccepted,
+          reached: emailAccepted === true || smsAccepted === true,
+        };
+      }),
+    );
+    const notifiedCount = deliveries.filter((d) => d.reached).length;
+
+    // Trace permanente de chaque panique, avec l'issue par destinataire
+    // (coordonnées masquées) : preuve pour le REX, l'assureur ou une enquête.
+    try {
+      await this.prisma.auditLog.create({
+        data: {
+          action: 'PANIC_TRIGGERED',
+          entityType: 'Building',
+          entityId: buildingId,
+          description: `Bouton panique — ${notifiedCount}/${deliveries.length} contact(s) joint(s)`,
+          organizationId,
+          clientUserId: actorUser ? actor!.clientUserId : null,
+          metadata: {
+            triggeredBy,
+            emergencyType,
+            notifiedCount,
+            contacts: deliveries,
+          },
+        },
+      });
+    } catch (error) {
+      console.error('[IncidentService] Trace panique non enregistrée:', error);
     }
 
     // Log dans l'incident actif si existant
