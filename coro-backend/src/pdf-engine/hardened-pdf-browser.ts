@@ -1,5 +1,18 @@
 import { ServiceUnavailableException } from '@nestjs/common';
-import puppeteer from 'puppeteer';
+import type puppeteerType from 'puppeteer';
+
+type Puppeteer = typeof puppeteerType;
+type Launcher = Pick<Puppeteer, 'launch'>;
+
+/**
+ * Chargement paresseux : importer ce module (contrôleurs, specs) ne charge
+ * pas Chromium ni le module ESM de puppeteer tant qu'aucun PDF n'est rendu.
+ */
+function defaultLauncher(): Launcher {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const loaded = require('puppeteer');
+  return (loaded.default ?? loaded) as Launcher;
+}
 
 /**
  * Moteur PDF durci (audit M1-07).
@@ -95,7 +108,7 @@ export function pdfRenderStats() {
   return slots.stats;
 }
 
-type LaunchedBrowser = Awaited<ReturnType<typeof puppeteer.launch>>;
+type LaunchedBrowser = Awaited<ReturnType<Puppeteer['launch']>>;
 type LaunchedPage = Awaited<ReturnType<LaunchedBrowser['newPage']>>;
 
 export async function hardenPdfPage<P extends LaunchedPage>(page: P): Promise<P> {
@@ -115,12 +128,12 @@ export interface HardenedPdfBrowser {
 
 export async function withHardenedPdfBrowser<T>(
   work: (browser: HardenedPdfBrowser) => Promise<T>,
-  launcher: Pick<typeof puppeteer, 'launch'> = puppeteer,
+  launcher?: Launcher,
 ): Promise<T> {
   await slots.acquire();
   let browser: LaunchedBrowser | null = null;
   try {
-    browser = await launcher.launch({
+    browser = await (launcher ?? defaultLauncher()).launch({
       headless: true,
       args: HARDENED_PDF_BROWSER_ARGS,
     });
@@ -139,12 +152,12 @@ export async function withHardenedPdfBrowser<T>(
  * close » : close() ferme le navigateur et libère la place de rendu.
  */
 export async function launchHardenedPdfBrowser(
-  launcher: Pick<typeof puppeteer, 'launch'> = puppeteer,
+  launcher?: Launcher,
 ): Promise<HardenedPdfBrowser & { close(): Promise<void> }> {
   await slots.acquire();
   let browser: LaunchedBrowser;
   try {
-    browser = await launcher.launch({ headless: true, args: HARDENED_PDF_BROWSER_ARGS });
+    browser = await (launcher ?? defaultLauncher()).launch({ headless: true, args: HARDENED_PDF_BROWSER_ARGS });
   } catch (error) {
     slots.release();
     throw error;
