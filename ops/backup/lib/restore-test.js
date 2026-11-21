@@ -211,7 +211,7 @@ function cleanup() {
   ensure(restoreDatabase.startsWith('coro_restore_test_') && !['coro_db', 'postgres', 'template0', 'template1'].includes(restoreDatabase), 'CLEANUP_GUARD_REFUSED', 'Database name failed cleanup guard');
   const labels = runDocker(['inspect', '--format', '{{index .Config.Labels "io.getcoro.restore-owned"}}|{{index .Config.Labels "io.getcoro.restore-id"}}', restoreContainer], 'CLEANUP_GUARD_REFUSED');
   ensure(labels === `true|${restoreId}`, 'CLEANUP_GUARD_REFUSED', 'Disposable ownership labels do not match');
-  runDocker(['rm', '-f', restoreContainer], 'CLEANUP_FAILED');
+  runDocker(['rm', '-f', '-v', restoreContainer], 'CLEANUP_FAILED'); // -v : supprime aussi le volume anonyme qui contient la copie restaurée de la base
   containerCreated = false;
   return 'REMOVED';
 }
