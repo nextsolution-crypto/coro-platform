@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { ChevronDown, ChevronUp, RotateCcw, Edit2, Check, X } from 'lucide-react';
+import { confirmAction } from '@/lib/confirm-dialog';
 
 interface ProcedureStep {
   id: string;
@@ -118,7 +119,13 @@ export default function Module4PcaSection({ projectId, language = 'fr' }: Props)
   };
 
   const handleRestore = async (proc: PcaProcedure) => {
-    if (!confirm(isFr ? 'Restaurer la version par défaut ?' : 'Restore default version?')) return;
+    if (!(await confirmAction({
+      title: isFr ? 'Restaurer' : 'Restore',
+      message: isFr ? 'Restaurer la version par défaut ?' : 'Restore default version?',
+      confirmLabel: isFr ? 'Restaurer' : 'Restore',
+      cancelLabel: isFr ? 'Annuler' : 'Cancel',
+      danger: false,
+    }))) return;
     try {
       await api.delete(`/pca/configurator/${projectId}/procedures/${proc.id}`);
       await fetchProcedures();
@@ -177,8 +184,13 @@ export default function Module4PcaSection({ projectId, language = 'fr' }: Props)
     setEditContent(updated);
   };
 
-  const removeRole = (roleIdx: number) => {
-    if (!confirm(isFr ? 'Supprimer ce rôle ?' : 'Delete this role?')) return;
+  const removeRole = async (roleIdx: number) => {
+    if (!(await confirmAction({
+      title: isFr ? 'Supprimer' : 'Delete',
+      message: isFr ? 'Supprimer ce rôle ?' : 'Delete this role?',
+      confirmLabel: isFr ? 'Supprimer' : 'Delete',
+      cancelLabel: isFr ? 'Annuler' : 'Cancel',
+    }))) return;
     const updated = JSON.parse(JSON.stringify(editContent));
     updated.roleSections.splice(roleIdx, 1);
     setEditContent(updated);

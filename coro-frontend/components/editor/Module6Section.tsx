@@ -5,6 +5,7 @@ import api from '@/lib/api';
 import {
   Upload, Trash2, Edit2, FileText, ChevronDown, ChevronUp, Plus, X, Check
 } from 'lucide-react';
+import { confirmAction } from '@/lib/confirm-dialog';
 
 // ============================================================
 // TYPES
@@ -438,7 +439,12 @@ export default function Module6Section({ projectId, language = 'fr' }: Module6Se
   };
 
   const handleDelete = async (planId: string) => {
-    if (!confirm(isFr ? 'Supprimer ce plan ?' : 'Delete this plan?')) return;
+    if (!(await confirmAction({
+      title: isFr ? 'Supprimer' : 'Delete',
+      message: isFr ? 'Supprimer ce plan ?' : 'Delete this plan?',
+      confirmLabel: isFr ? 'Supprimer' : 'Delete',
+      cancelLabel: isFr ? 'Annuler' : 'Cancel',
+    }))) return;
     setDeleting(planId);
     try {
       await api.delete(`/projects/${projectId}/building-plans/${planId}`);

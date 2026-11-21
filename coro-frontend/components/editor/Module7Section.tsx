@@ -6,6 +6,7 @@ import { Settings, Camera, Upload, X, Check, ExternalLink, Plus } from 'lucide-r
 
 import api from '@/lib/api';
 import SpellCheckedTextarea from './SpellCheckedTextarea';
+import { toast } from '@/lib/toast';
 
 // ============================================================
 // TYPES
@@ -334,7 +335,7 @@ export default function Module7Section({
 
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl);
-      alert('Erreur lors du chargement de l\'image.');
+      toast('Erreur lors du chargement de l\'image.', 'error');
     };
 
     img.src = objectUrl;
