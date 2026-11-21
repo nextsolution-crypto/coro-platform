@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,8 +11,20 @@ type IncidentEnvelope = {
   message?: string;
 };
 
+/** Envois simultanés vers le fournisseur (débit Brevo largement supérieur). */
+const DISPATCH_CONCURRENCY = 10;
+
+/** Priorité : ceux qui agissent d'abord, les occupants ensuite. */
+export function purposeRank(purpose: string): number {
+  if (purpose === 'COORDINATOR_ALERT') return 0;
+  if (purpose === 'MEMBER_ALERT') return 1;
+  if (purpose === 'OCCUPANT_ALERT') return 3;
+  return 2;
+}
+
 @Injectable()
 export class IncidentNotificationDispatcherService {
+  private readonly logger = new Logger(IncidentNotificationDispatcherService.name);
   constructor(private readonly prisma: PrismaService, private readonly provider: PopulationDeliveryService) {}
 
   private key(): { bytes: Buffer; id: string } {
@@ -54,10 +66,43 @@ export class IncidentNotificationDispatcherService {
     });
   }
 
-  @Cron('*/30 * * * * *')
+  /**
+   * Filet de sécurité (reprises après échec, envois laissés en file). Le
+   * premier envoi part dès le déclenchement via dispatchIncidentNow (M2-04).
+   */
+  @Cron('*/15 * * * * *')
   async dispatchDue() {
-    const due = await this.prisma.incidentNotificationDelivery.findMany({ where: { status: { in: ['QUEUED', 'FAILED'] }, nextAttemptAt: { lte: new Date() }, attemptCount: { lt: 3 } }, orderBy: { createdAt: 'asc' }, take: 20 });
-    for (const delivery of due) await this.dispatchOne(delivery.id);
+    const due = await this.prisma.incidentNotificationDelivery.findMany({ where: { status: { in: ['QUEUED', 'FAILED'] }, nextAttemptAt: { lte: new Date() }, attemptCount: { lt: 3 } }, orderBy: { createdAt: 'asc' }, take: 200, select: { id: true, purpose: true, createdAt: true } });
+    await this.dispatchInParallel(due);
+  }
+
+  /**
+   * Envoi immédiat des notifications d'un incident qui vient d'être déclenché
+   * (audit M2-04) : coordonnateur et équipe avant les occupants, en
+   * parallèle. Appelé après la validation de la transaction.
+   */
+  async dispatchIncidentNow(incidentEventId: string) {
+    const queued = await this.prisma.incidentNotificationDelivery.findMany({ where: { incidentEventId, status: 'QUEUED', attemptCount: 0 }, orderBy: { createdAt: 'asc' }, select: { id: true, purpose: true, createdAt: true } });
+    return this.dispatchInParallel(queued);
+  }
+
+  private async dispatchInParallel(deliveries: Array<{ id: string; purpose: string; createdAt: Date }>) {
+    const ordered = [...deliveries].sort((a, b) => (purposeRank(a.purpose) - purposeRank(b.purpose)) || (a.createdAt.getTime() - b.createdAt.getTime()));
+    let next = 0;
+    let accepted = 0;
+    const worker = async () => {
+      while (next < ordered.length) {
+        const delivery = ordered[next++];
+        try {
+          const result = await this.dispatchOne(delivery.id);
+          if ((result as any).accepted) accepted++;
+        } catch (error) {
+          this.logger.error(`Envoi ${delivery.id} interrompu : ${error instanceof Error ? error.message : 'erreur'}`);
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(DISPATCH_CONCURRENCY, ordered.length) }, worker));
+    return { attempted: ordered.length, accepted };
   }
 
   async dispatchOne(id: string) {

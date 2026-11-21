@@ -10893,12 +10893,15 @@ model PanicAlert {
   coordinatorName String?
   notifiedCount  Int      @default(0)
   occupantCount  Int      @default(0)
+  /// Incident ouvert ou rejoint par la panique (audit M2-02).
+  incidentEventId String?
   createdAt      DateTime @default(now())
 
   recipients PanicRecipient[]
 
   @@index([buildingId, createdAt])
   @@index([organizationId, createdAt])
+  @@index([incidentEventId])
 }
 
 model PanicRecipient {

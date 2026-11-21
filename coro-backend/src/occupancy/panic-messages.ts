@@ -19,6 +19,14 @@ export type PanicAudience = 'TEAM' | 'OCCUPANT';
 export const PANIC_RESPONSES = ['TAKING_CHARGE', 'SAFE', 'NEED_HELP'] as const;
 export type PanicResponse = (typeof PANIC_RESPONSES)[number];
 
+/** Type d'incident ouvert par la panique (audit M2-02). */
+export const PANIC_INCIDENT_TYPES: Record<PanicType, string> = {
+  THREAT: 'ACTIVE_THREAT',
+  MEDICAL: 'MEDICAL',
+  FIRE: 'FIRE_ALARM',
+  OTHER: 'OTHER',
+};
+
 export const PANIC_TYPE_LABELS: Record<PanicType, { fr: string; en: string }> = {
   THREAT: { fr: 'MENACE OU VIOLENCE', en: 'THREAT OR VIOLENCE' },
   MEDICAL: { fr: 'URGENCE MÉDICALE', en: 'MEDICAL EMERGENCY' },

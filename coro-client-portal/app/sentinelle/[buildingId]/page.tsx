@@ -702,17 +702,21 @@ export default function SentinelleDashboard() {
         <button type="button" onClick={() => setPanicConfirmOpen(true)} disabled={panicSending} aria-label="Bouton panique — alerte d'urgence / Panic button — emergency alert"
           style={{
             position: 'fixed', bottom: 24, right: 24, zIndex: 999,
-            width: 64, height: 64, borderRadius: '50%',
+            minHeight: 64, padding: '0 22px 0 18px', borderRadius: 32,
             backgroundColor: panicSending ? '#E74C3C' : '#C0392B',
             color: '#FFFFFF', border: '3px solid #FFFFFF',
             boxShadow: '0 4px 20px rgba(192,57,43,0.5)',
             cursor: panicSending ? 'not-allowed' : 'pointer',
-            fontSize: panicSending ? 22 : 28,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
             animation: panicSending ? 'none' : 'pulse 2s infinite',
           }}
           title="Bouton panique — Alerte d'urgence immédiate">
-          {panicSending ? '⏳' : '🚨'}
+          {/* Libellé visible (audit M2-09) : identifiable sous stress. */}
+          <span aria-hidden="true" style={{ fontSize: 24 }}>{panicSending ? '⏳' : '🚨'}</span>
+          <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.1 }}>
+            <span style={{ fontSize: 17, fontWeight: 900, letterSpacing: 0.5 }}>{panicSending ? 'ENVOI…' : 'URGENCE'}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.9 }}>{panicSending ? 'SENDING…' : 'PANIC / SOS'}</span>
+          </span>
         </button>
       )}
 

@@ -9,6 +9,7 @@ import {
   ChevronLeft, ChevronRight,
   Building2, MapPin, Users,
 } from 'lucide-react';
+import { saveEmergencyCard } from '../offline/emergency-card';
 
 const READINESS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; icon: string }> = {
   READY:    { label: 'Opérationnel',     color: '#27AE60', bg: '#EAFAF1', border: '#A9DFBF', icon: '🟢' },
@@ -48,6 +49,7 @@ export default function DashboardPage() {
       setStats(dashRes?.stats);
       setUpcomingActivities(dashRes?.upcomingActivities || []);
       setBuildings(buildingsRes || []);
+      saveEmergencyCard(buildingsRes);
       fetchReadiness();
     } catch (err) { console.error(err); }
     finally { setLoadingDash(false); }
