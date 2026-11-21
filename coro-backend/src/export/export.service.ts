@@ -216,7 +216,11 @@ export class ExportService {
     options: Omit<ExportOptions, 'approval' | 'isPreview'>,
   ): Promise<{ fr?: Buffer; en?: Buffer }> {
     const version = await this.prisma.projectVersion.findFirst({
-      where: { projectId, project: { organizationId } },
+      where: {
+        projectId,
+        project: { organizationId },
+        snapshot: { path: ['type'], equals: 'APPROVAL' },
+      },
       orderBy: { versionNumber: 'desc' },
       select: { versionNumber: true, snapshot: true },
     });
@@ -333,7 +337,9 @@ export class ExportService {
             versionNumber: options.approval.versionNumber,
             approvedAt: options.approval.approvedAt,
             approvedBy: options.approval.approvedBy,
-            shortHash: shortContentHash(options.approval.contentHash),
+            shortHash: options.approval.contentHash
+              ? shortContentHash(options.approval.contentHash)
+              : null,
           }
         : undefined,
     });
@@ -717,7 +723,11 @@ export class ExportService {
         docTypeLabel,
         Boolean(lastPageBytes),
         options.approval
-          ? `${isFr ? 'Version approuvée' : 'Approved version'} v${options.approval.versionNumber} · ${isFr ? 'empreinte' : 'fingerprint'} ${shortContentHash(options.approval.contentHash)}`
+          ? `${isFr ? 'Version approuvée' : 'Approved version'} v${options.approval.versionNumber}${
+              options.approval.contentHash
+                ? ` · ${isFr ? 'empreinte' : 'fingerprint'} ${shortContentHash(options.approval.contentHash)}`
+                : ''
+            }`
           : null,
       );
 

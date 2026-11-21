@@ -26,7 +26,7 @@ export interface CoverData {
     versionNumber: number;
     approvedAt: string | null;
     approvedBy: string | null;
-    shortHash: string;
+    shortHash: string | null;
   };
 }
 
@@ -102,7 +102,9 @@ export function generateCoverPage(data: CoverData): string {
         `<span>${labels.approvedVersion} : v${data.approval.versionNumber}${
           data.approval.approvedAt ? ` — ${labels.approvedOn} ${formatDate(data.approval.approvedAt)}` : ''
         }${data.approval.approvedBy ? ` ${labels.by} ${escapeHtml(data.approval.approvedBy)}` : ''}</span>`,
-        `<span>${labels.fingerprint} : ${escapeHtml(data.approval.shortHash)}</span>`,
+        data.approval.shortHash
+          ? `<span>${labels.fingerprint} : ${escapeHtml(data.approval.shortHash)}</span>`
+          : '',
       ].join('')
     : data.guideMention
       ? `<span>${labels.version} : ${versionLabel}</span>`

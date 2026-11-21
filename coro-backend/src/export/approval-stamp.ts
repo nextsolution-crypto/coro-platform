@@ -3,7 +3,8 @@ export interface ApprovalStamp {
   versionNumber: number;
   approvedAt: string | null;
   approvedBy: string | null;
-  contentHash: string;
+  /** Absente pour les approbations antérieures au registre d'empreintes. */
+  contentHash: string | null;
 }
 
 export function approvalStampFromVersion(version: {
@@ -11,7 +12,7 @@ export function approvalStampFromVersion(version: {
   snapshot: unknown;
 }): ApprovalStamp | undefined {
   const snapshot = (version.snapshot as any) || {};
-  if (snapshot.type !== 'APPROVAL' || typeof snapshot.contentHash !== 'string') {
+  if (snapshot.type !== 'APPROVAL') {
     return undefined;
   }
   return {
@@ -20,7 +21,7 @@ export function approvalStampFromVersion(version: {
     approvedBy: typeof snapshot.approvedBy === 'string' && snapshot.approvedBy.trim()
       ? snapshot.approvedBy.trim()
       : null,
-    contentHash: snapshot.contentHash,
+    contentHash: typeof snapshot.contentHash === 'string' ? snapshot.contentHash : null,
   };
 }
 
