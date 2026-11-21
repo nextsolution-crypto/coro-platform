@@ -1723,8 +1723,11 @@ export class ClientPortalService {
       );
     }
 
-    const result = await this.exportService.generatePdf(
+    // PDF officiel signé : rendu depuis le snapshot approuvé (M1-01), avec
+    // version approuvée, approbateur et empreinte (M1-05).
+    const result = await this.exportService.generateLatestApprovedPdf(
       projectId,
+      project.organizationId,
       {
         selectedModules:
           project.documentType === 'PCA'
@@ -1735,9 +1738,7 @@ export class ClientPortalService {
             ? [1, 2, 3, 4, 5, 6, 7, 8]
             : [1, 2, 3, 4, 6, 7, 8],
         language: 'both',
-        isPreview: false,
       },
-      project.organizationId,
     );
 
     if (!result.fr || !result.en) {

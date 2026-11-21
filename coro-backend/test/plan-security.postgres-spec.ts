@@ -150,6 +150,7 @@ describe('Plan security PostgreSQL authorization', () => {
       { send: jest.fn().mockResolvedValue({}) } as any,
       {
         generatePdf: jest.fn().mockResolvedValue({ fr: null, en: null }),
+        generateLatestApprovedPdf: jest.fn().mockResolvedValue({ fr: null, en: null }),
       } as any,
       { uploadFile: jest.fn() } as any,
     );

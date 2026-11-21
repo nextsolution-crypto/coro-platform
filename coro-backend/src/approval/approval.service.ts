@@ -748,8 +748,9 @@ export class ApprovalService {
 
   private generatePreview(project: any, organizationId: string) {
     void this.exportService
-      .generatePdf(
+      .generateLatestApprovedPdf(
         project.id,
+        organizationId,
         {
           selectedModules:
             project.documentType === 'PCA'
@@ -760,9 +761,7 @@ export class ApprovalService {
               ? [1, 2, 3, 4, 5, 6, 7, 8]
               : [1, 2, 3, 4, 6, 7, 8],
           language: 'both',
-          isPreview: false,
         },
-        organizationId,
       )
       .then(async (pdfResult) => {
         const timestamp = Date.now();

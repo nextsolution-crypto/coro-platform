@@ -1,3 +1,8 @@
+import {
+  ApprovalStamp,
+  approvalStampFromVersion,
+  shortContentHash,
+} from './approval-stamp';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   ExportDataSource,
@@ -48,6 +53,8 @@ export interface ExportOptions {
   moduleOrder: number[]; // ordre choisi par l'utilisateur
   language: 'fr' | 'en' | 'both';
   isPreview?: boolean;
+  /** Version approuvée imprimée en couverture et en pied de page (M1-05). */
+  approval?: ApprovalStamp;
 }
 
 type PdfSegment =
@@ -138,6 +145,7 @@ export class ExportService {
     snapshot: any,
     options: ExportOptions,
     scope: { projectId: string; organizationId: string },
+    certification: CertificationData | null = null,
   ): Promise<{ fr?: Buffer; en?: Buffer }> {
     if (
       snapshot?.project?.id !== scope?.projectId ||
@@ -182,7 +190,41 @@ export class ExportService {
       },
       approvedPlans: snapshot.project.plans,
     };
-    return this.generateFromDocument(doc, options, null, data);
+    return this.generateFromDocument(doc, options, certification, data);
+  }
+
+  /**
+   * Rend la dernière version approuvée depuis son snapshot (M1-01), avec le
+   * tampon d'approbation (M1-05) et, si elle est signée, la certification.
+   * Approbations très anciennes sans snapshot exploitable : rendu courant,
+   * le plan étant de toute façon verrouillé en lecture seule.
+   */
+  async generateLatestApprovedPdf(
+    projectId: string,
+    organizationId: string,
+    options: Omit<ExportOptions, 'approval' | 'isPreview'>,
+  ): Promise<{ fr?: Buffer; en?: Buffer }> {
+    const version = await this.prisma.projectVersion.findFirst({
+      where: { projectId, project: { organizationId } },
+      orderBy: { versionNumber: 'desc' },
+      select: { versionNumber: true, snapshot: true },
+    });
+    const approval = version ? approvalStampFromVersion(version) : undefined;
+    const submitted = (version?.snapshot as any)?.submittedSnapshot;
+    const certification = await this.getCurrentVersionCertification(projectId);
+    if (approval && [2, 3].includes(submitted?.schemaVersion)) {
+      return this.generateApprovedSnapshotPdf(
+        submitted,
+        { ...options, isPreview: false, approval },
+        { projectId, organizationId },
+        certification,
+      );
+    }
+    return this.generatePdf(
+      projectId,
+      { ...options, isPreview: false, approval },
+      organizationId,
+    );
   }
 
   private async generateFromDocument(
@@ -275,6 +317,14 @@ export class ExportService {
       revisionType:
         lastEntry?.type || content.config?.versionDocument || undefined,
       versionNumber,
+      approval: options.approval
+        ? {
+            versionNumber: options.approval.versionNumber,
+            approvedAt: options.approval.approvedAt,
+            approvedBy: options.approval.approvedBy,
+            shortHash: shortContentHash(options.approval.contentHash),
+          }
+        : undefined,
     });
 
     const fullCoverHtml = `
@@ -655,6 +705,9 @@ export class ExportService {
         mergedPdf.pageRanges,
         docTypeLabel,
         Boolean(lastPageBytes),
+        options.approval
+          ? `${isFr ? 'Version approuvée' : 'Approved version'} v${options.approval.versionNumber} · ${isFr ? 'empreinte' : 'fingerprint'} ${shortContentHash(options.approval.contentHash)}`
+          : null,
       );
 
       if (options.isPreview) {
@@ -989,6 +1042,7 @@ export class ExportService {
     pageRanges: { start: number; end: number; sourceIndex: number }[],
     docTypeLabel: string,
     hasLastPage: boolean,
+    approvalLine: string | null = null,
   ): Promise<void> {
     const { rgb, StandardFonts } = await import('pdf-lib');
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -1027,6 +1081,18 @@ export class ExportService {
           font: regularFont,
           color: rgb(0.678, 0.678, 0.678), // équivalent #ADB5BD
         });
+
+        // Version approuvée et empreinte courte, sous le type de document.
+        if (approvalLine) {
+          const approvalWidth = regularFont.widthOfTextAtSize(approvalLine, 7);
+          page.drawText(approvalLine, {
+            x: (width - approvalWidth) / 2,
+            y: FOOTER_Y - 11,
+            size: 7,
+            font: regularFont,
+            color: rgb(0.424, 0.459, 0.49), // #6C757D
+          });
+        }
 
         // Numéro de page — coin droit, même hauteur
         page.drawText(pageNumberLabel, {

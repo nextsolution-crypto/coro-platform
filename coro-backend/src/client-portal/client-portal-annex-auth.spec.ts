@@ -24,7 +24,7 @@ describe('ClientPortalService annex resource authorization', () => {
     documentEngagement: { findMany: jest.fn(), create: jest.fn() },
     documentSignature: { findFirst: jest.fn(), create: jest.fn() },
   };
-  const exportService = { generatePdf: jest.fn() };
+  const exportService = { generateLatestApprovedPdf: jest.fn() };
   const storageService = { uploadFile: jest.fn() };
   const emailService = {
     sendDocumentSigned: jest.fn(),
@@ -116,7 +116,7 @@ describe('ClientPortalService annex resource authorization', () => {
     expect(prisma.documentEngagement.create).not.toHaveBeenCalled();
     expect(prisma.documentSignature.findFirst).not.toHaveBeenCalled();
     expect(prisma.documentSignature.create).not.toHaveBeenCalled();
-    expect(exportService.generatePdf).not.toHaveBeenCalled();
+    expect(exportService.generateLatestApprovedPdf).not.toHaveBeenCalled();
     expect(storageService.uploadFile).not.toHaveBeenCalled();
     expect(emailService.sendDocumentSigned).not.toHaveBeenCalled();
     expect(emailService.sendDocumentRefused).not.toHaveBeenCalled();
@@ -139,7 +139,7 @@ describe('ClientPortalService annex resource authorization', () => {
     expect(prisma.documentSignature.create).not.toHaveBeenCalled();
     expect(prisma.projectVersion.update).not.toHaveBeenCalled();
     expect(prisma.project.update).not.toHaveBeenCalled();
-    expect(exportService.generatePdf).not.toHaveBeenCalled();
+    expect(exportService.generateLatestApprovedPdf).not.toHaveBeenCalled();
     expect(storageService.uploadFile).not.toHaveBeenCalled();
     expect(emailService.sendDocumentSigned).not.toHaveBeenCalled();
     expect(notificationsService.create).not.toHaveBeenCalled();
@@ -164,7 +164,7 @@ describe('ClientPortalService annex resource authorization', () => {
 
     expect(prisma.projectVersion.findFirst).not.toHaveBeenCalled();
     expect(prisma.documentSignature.findFirst).not.toHaveBeenCalled();
-    expect(exportService.generatePdf).not.toHaveBeenCalled();
+    expect(exportService.generateLatestApprovedPdf).not.toHaveBeenCalled();
     expect(storageService.uploadFile).not.toHaveBeenCalled();
   });
 
