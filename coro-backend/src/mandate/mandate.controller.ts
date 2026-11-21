@@ -1,3 +1,4 @@
+import { withHardenedPdfBrowser } from '../pdf-engine/hardened-pdf-browser';
 import {
   Controller,
   Get,
@@ -253,16 +254,15 @@ export class MandateController {
       to,
     );
 
-    const puppeteer = require('puppeteer');
-    const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    const pdf = await page.pdf({
-      format: 'Letter',
-      printBackground: true,
-      margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' },
+    const pdf = await withHardenedPdfBrowser(async (browser) => {
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: 'load' });
+      return page.pdf({
+        format: 'Letter',
+        printBackground: true,
+        margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' },
+      });
     });
-    await browser.close();
 
     res.set({
       'Content-Type': 'application/pdf',
