@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { History, RotateCcw, Trash2, Plus, X } from "lucide-react";
+import { confirmAction } from '@/lib/confirm-dialog';
 
 interface Version {
   id: string;
@@ -74,9 +75,12 @@ export default function VersionHistory({
 
   const handleRestore = async (versionId: string, versionNumber: number) => {
     if (
-      !confirm(
-        `Restaurer la version ${versionNumber} ? La version actuelle sera sauvegardée automatiquement avant la restauration.`,
-      )
+      !(await confirmAction({
+        title: 'Restaurer une version',
+        message: `Restaurer la version ${versionNumber} ? La version actuelle sera sauvegardée automatiquement avant la restauration.`,
+        confirmLabel: 'Restaurer',
+        danger: false,
+      }))
     )
       return;
     setRestoring(versionId);
@@ -101,7 +105,13 @@ export default function VersionHistory({
   };
 
   const handleDelete = async (versionId: string) => {
-    if (!confirm("Supprimer cette version ? Cette action est irréversible."))
+    if (
+      !(await confirmAction({
+        title: 'Supprimer une version',
+        message: 'Supprimer cette version ? Cette action est irréversible.',
+        confirmLabel: 'Supprimer',
+      }))
+    )
       return;
     try {
       const response = await api.delete(
