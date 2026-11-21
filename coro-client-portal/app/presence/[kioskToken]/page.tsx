@@ -82,12 +82,14 @@ export default function PresencePage() {
     }
   };
 
+  // Nouveaux NIP : 6 chiffres (envoi automatique au 6e). Anciens NIP à
+  // 4 chiffres : bouton « Valider » (audit M5-02).
   const digit = (value: string) => {
-    if (view !== 'pin' || pin.length >= 4) return;
+    if (view !== 'pin' || pin.length >= 6) return;
     const next = pin + value;
     setPin(next);
     setError('');
-    if (next.length === 4) void identify(next);
+    if (next.length === 6) void identify(next);
   };
 
   const confirm = async () => {
@@ -185,7 +187,7 @@ export default function PresencePage() {
         {view === 'pin' && (
           <>
             <h1 style={{ fontSize: 26, marginBottom: 6 }}>Identifiez-vous</h1>
-            <p style={{ marginTop: 0, color: '#647786' }}>Saisissez votre PIN personnel. Il n’est pas conservé sur ce téléphone.</p>
+            <p style={{ marginTop: 0, color: '#647786' }}>Saisissez votre PIN personnel (6 chiffres, ou 4 pour un ancien PIN). Il n’est pas conservé sur ce téléphone.</p>
             <div
               style={{
                 display: 'flex',
@@ -195,7 +197,7 @@ export default function PresencePage() {
               }}
               aria-label={`${pin.length} chiffres saisis`}
             >
-              {[0, 1, 2, 3].map((i) => (
+              {[0, 1, 2, 3, 4, 5].map((i) => (
                 <span
                   key={i}
                   style={{
@@ -229,6 +231,11 @@ export default function PresencePage() {
                 ),
               )}
             </div>
+            {pin.length === 4 && (
+              <button type="button" style={{ ...button, marginTop: 12, width: '100%', background: '#20303c', color: '#ffffff' }} onClick={() => void identify(pin)}>
+                Valider mon ancien PIN à 4 chiffres
+              </button>
+            )}
           </>
         )}
         {view === 'confirm' && identity && action && (

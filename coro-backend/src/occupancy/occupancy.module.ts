@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PopulationModule } from '../population/population.module';
 import { IncidentNotificationDispatcherService } from './incident-notification-dispatcher.service';
 import { PresenceFlowService } from './presence-flow.service';
+import { SentinellePinMigrationService } from './sentinelle-pin-migration.service';
 
 @Module({
   imports: [PopulationModule],
@@ -21,6 +22,7 @@ import { PresenceFlowService } from './presence-flow.service';
     OccupancyService,
     OccupancyEmployeesService,
     PresenceFlowService,
+    SentinellePinMigrationService,
     IncidentService,
     IncidentNotificationDispatcherService,
     PrismaService,

@@ -4,9 +4,9 @@ export function pinEmailLabel(status) {
       ACCEPTED:
         "Courriel PIN accepté par le fournisseur; livraison à confirmer.",
       DELIVERED: "Courriel PIN livré selon le fournisseur.",
-      REJECTED: "Courriel PIN refusé; un renvoi peut être demandé.",
+      REJECTED: "Courriel PIN refusé; un nouveau PIN peut être envoyé.",
       FAILED:
-        "Échec de livraison du courriel PIN; un renvoi peut être demandé.",
+        "Échec de livraison du courriel PIN; un nouveau PIN peut être envoyé.",
       OUTCOME_UNKNOWN:
         "Envoi du PIN incertain. Ne pas recréer l’employé ni relancer sans vérification.",
       SIMULATED: "Courriel PIN simulé; aucun courriel réel envoyé.",

@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { OccupancyEmployeesService } from './occupancy-employees.service';
 
-describe('Manual employee PIN resend', () => {
+describe('Manual employee PIN regeneration (audit M5-02)', () => {
   function harness(patch: any = {}) {
     let row: any = { id: 'employee-a', buildingId: 'building-a', organizationId: 'org-a', firstName: 'QA', lastName: 'Fictif', email: 'qa@example.invalid', pin: '1234', isActive: true, pinEmailStatus: 'NOT_VERIFIED', pinEmailMessageId: null, pinEmailAttemptedAt: null, building: { id: 'building-a', name: 'Fictif' }, ...patch };
     const employee = {
@@ -20,14 +20,19 @@ describe('Manual employee PIN resend', () => {
     const resend = (enabled = true) => service.resendPinEmail('employee-a', 'building-a', 'org-a', 'client-a', enabled);
     return { service, send, employee, auditLog, prisma, resend };
   }
-  it('resends the existing PIN without returning it and preserves provider acceptance semantics', async () => {
+  it('issues a new 6-digit PIN, stores only its keyed digest and never returns it', async () => {
     const h = harness({ pinEmailMessageId: '<previous>', pinEmailStatus: 'DELIVERED' });
     const result = await h.resend();
     expect(result.pinEmailStatus).toBe('ACCEPTED');
     expect(result).not.toHaveProperty('pin');
-    expect(h.send).toHaveBeenCalledWith(expect.objectContaining({ pin: '1234' }), expect.objectContaining({ id: 'building-a' }));
-    expect(h.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ metadata: expect.objectContaining({ previousProviderMessageId: '<previous>' }) }) }));
-    expect(h.employee.update.mock.calls.some(([arg]) => 'pin' in arg.data)).toBe(false);
+    const sentPin = h.send.mock.calls[0][2] as string;
+    expect(sentPin).toMatch(/^\d{6}$/);
+    expect(sentPin).not.toBe('1234');
+    const rotation = h.employee.update.mock.calls.find(([arg]) => 'pinHash' in arg.data)?.[0];
+    expect(rotation.data.pin).toBeNull();
+    expect(rotation.data.pinHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(JSON.stringify(h.auditLog.create.mock.calls)).not.toContain(sentPin);
+    expect(h.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'SENTINELLE_PIN_REGENERATED', metadata: expect.objectContaining({ previousProviderMessageId: '<previous>' }) }) }));
   });
   it.each([{ organizationId: 'org-other' }, { buildingId: 'building-other' }, { isActive: false }])('rejects inaccessible or inactive employees %j', async patch => {
     const h = harness(patch);
@@ -40,7 +45,7 @@ describe('Manual employee PIN resend', () => {
     expect(h.employee.updateMany).not.toHaveBeenCalled();
     expect(h.send).not.toHaveBeenCalled();
   });
-  it.each([{ email: null }, { email: 'invalid' }, { pin: null }])('rejects missing contact or credential %j', async patch => {
+  it.each([{ email: null }, { email: 'invalid' }])('rejects missing contact %j', async patch => {
     const h = harness(patch);
     await expect(h.resend()).rejects.toBeInstanceOf(BadRequestException);
     expect(h.send).not.toHaveBeenCalled();
