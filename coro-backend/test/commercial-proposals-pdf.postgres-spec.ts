@@ -12,6 +12,10 @@ jest.mock('puppeteer', () => ({
       Promise.resolve({
         newPage: () =>
           Promise.resolve({
+            // Moteur PDF durci : JavaScript coupé et réseau intercepté.
+            setJavaScriptEnabled: () => Promise.resolve(),
+            setRequestInterception: () => Promise.resolve(),
+            on: () => undefined,
             setContent: (html: string) => {
               renderedHtml.push(html);
               return Promise.resolve();
