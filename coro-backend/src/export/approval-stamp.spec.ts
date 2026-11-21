@@ -32,6 +32,10 @@ describe('traçabilité imprimée (M1-05)', () => {
       contentHash: 'ab'.repeat(32),
     });
     expect(approvalStampFromVersion({ versionNumber: 1, snapshot: { type: 'MANUAL' } })).toBeUndefined();
+    // Approbation antérieure au registre d'empreintes : version sans empreinte.
+    expect(
+      approvalStampFromVersion({ versionNumber: 8, snapshot: { type: 'APPROVAL', approvedBy: 'Ada' } }),
+    ).toEqual({ versionNumber: 8, approvedAt: null, approvedBy: 'Ada', contentHash: null });
     expect(shortContentHash('3F9A01bc77de' + '0'.repeat(52))).toBe('3f9a 01bc 77de');
   });
 
@@ -51,6 +55,16 @@ describe('traçabilité imprimée (M1-05)', () => {
     expect(html).toContain('Ada &lt;Admin&gt;');
     expect(html).toContain('Empreinte : 3f9a 01bc 77de');
     expect(html).not.toContain('7.0');
+  });
+
+  it("omet l'empreinte d'une approbation ancienne sans la présenter comme non approuvée", () => {
+    const html = generateCoverPage({
+      ...base,
+      approval: { versionNumber: 8, approvedAt: null, approvedBy: null, shortHash: null },
+    });
+    expect(html).toContain('Version approuvée : v8');
+    expect(html).not.toContain('Empreinte');
+    expect(html).not.toContain('non approuvée');
   });
 
   it('marque un rendu non approuvé comme version de travail', () => {
