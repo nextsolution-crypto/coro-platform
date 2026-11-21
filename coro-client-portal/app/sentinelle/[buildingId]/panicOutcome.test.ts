@@ -82,3 +82,21 @@ test("failure code is short and readable", () => {
   assert.equal(panicFailureCode({ kind: "UNCONFIRMED", reason: "FORBIDDEN", status: 403 }), "FORBIDDEN · HTTP 403");
   assert.equal(panicFailureCode({ kind: "UNCONFIRMED", reason: "TIMEOUT", status: null }), "TIMEOUT");
 });
+
+test("keeps the alert id, coordinator and occupant count for live follow-up", () => {
+  const outcome = interpretPanicResponse(201, true, {
+    notifiedCount: 3,
+    address: "1 rue Test",
+    panicAlertId: "panic-1",
+    coordinatorName: "Julie Roy",
+    occupantCount: 12,
+  });
+  assert.deepEqual(outcome, {
+    kind: "CONFIRMED",
+    notifiedCount: 3,
+    address: "1 rue Test",
+    panicAlertId: "panic-1",
+    coordinatorName: "Julie Roy",
+    occupantCount: 12,
+  });
+});

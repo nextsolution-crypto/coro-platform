@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { createHash, randomUUID } from 'crypto';
+import { createHash, randomBytes, randomUUID } from 'crypto';
 import {
   CoroActorType,
   IncidentPermission,
@@ -20,7 +20,17 @@ import { DemoCommunicationPolicyService } from '../demo-environment/demo-communi
 import { DemoCommunicationChannel } from '@prisma/client';
 import { TriggerIncidentDto } from './incident-trigger.dto';
 import { TriggerIncidentPanicDto } from './incident-command.dto';
-import { escapeIncidentHtml } from './incident-html';
+import {
+  PANIC_TYPES,
+  PANIC_TYPE_LABELS,
+  buildPanicMessage,
+  effectiveScope,
+  panicResponsesFor,
+  type PanicAudience,
+  type PanicResponse,
+  type PanicScope,
+  type PanicType,
+} from './panic-messages';
 
 type IncidentAuditContext = {
   actorType: CoroActorType;
@@ -746,61 +756,32 @@ export class IncidentService {
     const actorName = actorUser
       ? `${actorUser.firstName || ''} ${actorUser.lastName || ''}`.trim() || actorUser.email
       : null;
-    const triggeredBy  = actorName || body.triggeredBy || 'Inconnu';
-    const emergencyType = body.emergencyType || 'URGENCE GÉNÉRALE';
-    const safeBuildingName = escapeIncidentHtml(building.name);
-    const safeAddress = escapeIncidentHtml(`${building.address || ''}, ${building.city || ''}, ${building.province || ''}`.trim().replace(/^,|,$/g, ''));
-    const safeTriggeredBy = escapeIncidentHtml(triggeredBy);
-    const safeEmergencyType = escapeIncidentHtml(emergencyType);
-    const now          = new Date().toLocaleString('fr-CA', { timeZone: 'America/Toronto', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const address      = `${building.address || ''}, ${building.city || ''}, ${building.province || ''}`.trim().replace(/^,|,$/g, '');
+    const triggeredBy = actorName || body.triggeredBy || 'Inconnu';
 
-    const smsText = `🚨 ALERTE SÉCURITÉ — MENACE ACTIVE\n${building.name}\n${address}\nDéclenché par ${triggeredBy} à ${now}\n\nCOMPOSEZ LE 911 ET DITES :\n"Menace active au ${address}"\n\nSECURITY ALERT — ACTIVE THREAT\nCall 911 and say: "Active threat at ${address}"`;
+    // Type et portée choisis en un toucher (décision du 21 nov. 2026). Sans
+    // type, l'ancien comportement « menace » est conservé, en silencieux.
+    const panicType: PanicType = (PANIC_TYPES as readonly string[]).includes(body.panicType as string)
+      ? (body.panicType as PanicType)
+      : 'THREAT';
+    const scope = effectiveScope(panicType, body.scope as PanicScope | undefined);
+    const time = new Date().toLocaleTimeString('fr-CA', { timeZone: 'America/Toronto', hour: '2-digit', minute: '2-digit' });
+    const address = `${building.address || ''}, ${building.city || ''}, ${building.province || ''}`.trim().replace(/^,\s*|,\s*$/g, '');
 
-    const htmlEmail = `
-      <div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;">
-        <div style="background:#C0392B;padding:24px;border-radius:8px 8px 0 0;">
-          <span style="color:#FFFFFF;font-size:28px;font-weight:900;">CO<span>RO</span></span>
-          <span style="background:#FFFFFF;color:#C0392B;font-size:13px;font-weight:800;padding:4px 10px;border-radius:4px;margin-left:12px;">🚨 ${safeEmergencyType}</span>
-        </div>
-        <div style="background:#FFFFFF;padding:32px;border:1px solid #E9ECEF;border-radius:0 0 8px 8px;">
-          <div style="background:#FDEDEC;border-left:6px solid #C0392B;padding:16px 20px;border-radius:4px;margin-bottom:24px;">
-            <p style="margin:0;font-size:22px;font-weight:900;color:#C0392B;">🚨 MENACE ACTIVE — ACTIVE THREAT</p>
-            <p style="margin:6px 0 0;font-size:15px;color:#6C757D;">${safeBuildingName}</p>
-          </div>
-          <div style="background:#F8F9FA;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
-            <p style="margin:0 0 8px;font-size:14px;color:#6C757D;">📍 <strong style="color:#2C3E50;">${safeAddress}</strong></p>
-            <p style="margin:0 0 8px;font-size:14px;color:#6C757D;">🕐 Déclenché à <strong style="color:#2C3E50;">${now}</strong></p>
-            <p style="margin:0;font-size:14px;color:#6C757D;">👤 Par <strong style="color:#2C3E50;">${safeTriggeredBy}</strong></p>
-          </div>
-          <div style="background:#1A1A1A;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
-            <p style="margin:0 0 6px;font-size:11px;font-weight:800;color:#FFFFFF;text-transform:uppercase;letter-spacing:0.1em;">📞 Composez le 911 et dites :</p>
-            <p style="margin:0 0 10px;font-size:16px;font-weight:700;color:#FFD700;">"Menace active au ${safeAddress}"</p>
-            <p style="margin:0;font-size:12px;color:#ADB5BD;">Call 911 and say: "Active threat at ${safeAddress}"</p>
-          </div>
-          <a href="tel:911" style="display:block;text-align:center;background:#C0392B;color:#FFFFFF;padding:16px;border-radius:8px;text-decoration:none;font-size:20px;font-weight:900;margin-bottom:16px;">
-            📞 APPELER LE 911
-          </a>
-          <p style="color:#ADB5BD;font-size:12px;text-align:center;margin:0;">
-            Cette alerte a été envoyée automatiquement par CORO Sentinelle.<br>
-            ${safeBuildingName} · ${safeAddress}
-          </p>
-        </div>
-      </div>`;
-
-    // Contacts à notifier
-    const contacts: Array<{ email?: string; phone?: string; name: string }> = [];
+    type Contact = { email?: string; phone?: string; name: string; category: string; role?: string; audience: PanicAudience };
+    const contacts: Contact[] = [];
 
     // 1. Responsable du bâtiment
     if (building.responsableEmail || building.responsablePhone) {
       contacts.push({
         email: building.responsableEmail || undefined,
         phone: building.responsablePhone || undefined,
-        name:  `${building.responsableFirstName || ''} ${building.responsableLastName || ''}`.trim() || 'Responsable',
+        name: `${building.responsableFirstName || ''} ${building.responsableLastName || ''}`.trim() || 'Responsable',
+        category: 'BUILDING_MANAGER',
+        audience: 'TEAM',
       });
     }
 
-    // 2. Contact corpo — depuis la fiche client du bâtiment
+    // 2. Contact corporatif — fiche client du bâtiment
     const buildingWithClient = await this.prisma.building.findFirst({
       where: { id: buildingId, organizationId },
       include: {
@@ -810,60 +791,127 @@ export class IncidentService {
       },
     });
     const client = buildingWithClient?.client;
-    if (client) {
-      // Contact principal du client
-      if (client.contactEmail || client.email) {
+    if (client && (client.contactEmail || client.email)) {
+      contacts.push({
+        email: client.contactEmail || client.email || undefined,
+        phone: client.contactPhone || client.phone || undefined,
+        name: `${client.contactFirstName || ''} ${client.contactLastName || ''}`.trim() || client.name || 'Contact corpo',
+        category: 'CORPORATE',
+        audience: 'TEAM',
+      });
+    }
+
+    // 3. Membres d'urgence présents : coordonnateur d'abord (M2-07), 5 au plus
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const presentEmployees = await this.prisma.occupancyRecord.findMany({
+      where: { buildingId, status: 'IN', type: 'EMPLOYE', checkedInAt: { gte: startOfDay } },
+      select: { employeeId: true },
+    });
+    const presentIds = new Set(presentEmployees.map((r) => r.employeeId).filter(Boolean) as string[]);
+    const presentMembers = await this.prisma.buildingEmployee.findMany({
+      where: { buildingId, isActive: true, isEmergencyMember: true, id: { in: [...presentIds] } },
+      include: { emergencyRoles: true },
+    });
+    const emergencyMembers = sortPanicMembers(presentMembers).slice(0, 5);
+    const coordinator = emergencyMembers.find((m: any) => (m.emergencyRoles || []).some((r: any) => r.role === 'COORDINATOR'));
+    const coordinatorName = coordinator ? `${(coordinator as any).firstName} ${(coordinator as any).lastName}` : null;
+    for (const m of emergencyMembers as any[]) {
+      if (m.email || m.phone) {
         contacts.push({
-          email: client.contactEmail || client.email || undefined,
-          phone: client.contactPhone || client.phone || undefined,
-          name:  `${client.contactFirstName || ''} ${client.contactLastName || ''}`.trim() || client.name || 'Contact corpo',
+          email: m.email || undefined,
+          phone: m.smsConsent && m.phone ? m.phone : undefined,
+          name: `${m.firstName} ${m.lastName}`,
+          category: 'EMERGENCY_MEMBER',
+          role: (m.emergencyRoles || []).map((r: any) => r.role).join(', ') || undefined,
+          audience: 'TEAM',
         });
       }
     }
 
-    // 3. Membres d'urgence présents (coordonnateur en priorité)
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const presentIds = new Set(
-      (await this.prisma.occupancyRecord.findMany({
-        where: { buildingId, status: 'IN', type: 'EMPLOYE', checkedInAt: { gte: startOfDay } },
-        select: { employeeId: true },
-      })).map(r => r.employeeId).filter(Boolean)
-    );
-    const presentMembers = await this.prisma.buildingEmployee.findMany({
-      where: { buildingId, isActive: true, isEmergencyMember: true, id: { in: [...presentIds] as string[] } },
-      include: { emergencyRoles: true },
-    });
-    // Coordonnateur d'abord, puis secouriste, puis les autres rôles ; à rôle
-    // égal, la priorité configurée (1 = titulaire). Cinq membres au plus (M2-07).
-    const emergencyMembers = sortPanicMembers(presentMembers).slice(0, 5);
-    for (const m of emergencyMembers) {
-      if (m.email || m.phone) {
-        contacts.push({ email: m.email || undefined, phone: m.smsConsent && m.phone ? m.phone : undefined, name: `${m.firstName} ${m.lastName}` });
+    // 4. « Alerter tout le bâtiment » (menace seulement) : employés présents
+    //    qui ont consenti aux SMS, avec la seule consigne de protection.
+    if (scope === 'BUILDING' && presentIds.size > 0) {
+      const memberIds = new Set(emergencyMembers.map((m: any) => m.id));
+      const occupants = await this.prisma.buildingEmployee.findMany({
+        where: { buildingId, isActive: true, id: { in: [...presentIds].filter((id) => !memberIds.has(id)) } },
+        select: { id: true, firstName: true, lastName: true, email: true, phone: true, smsConsent: true },
+      });
+      for (const o of occupants) {
+        const phone = o.smsConsent && o.phone ? o.phone : undefined;
+        if (phone || o.email) {
+          contacts.push({ email: o.email || undefined, phone, name: `${o.firstName} ${o.lastName}`, category: 'OCCUPANT', audience: 'OCCUPANT' });
+        }
       }
     }
 
-    // Envoi en parallèle à tous les contacts, dédupliqués par courriel et par
-    // téléphone (M2-04). notifiedCount = personnes jointes par au moins un
-    // canal ACCEPTÉ par le fournisseur : le portail n'affiche « alerte
-    // envoyée » que si ce compte est ≥ 1, sinon il demande le 911.
+    const alert = await this.prisma.panicAlert.create({
+      data: {
+        buildingId,
+        organizationId,
+        panicType,
+        scope,
+        triggeredBy,
+        clientUserId: actorUser ? actor!.clientUserId : null,
+        coordinatorName,
+      },
+    });
+
+    // Envoi en parallèle, dédupliqué par courriel et par téléphone (M2-04).
+    // notifiedCount = personnes de l'équipe jointes par au moins un canal
+    // ACCEPTÉ par le fournisseur : le portail n'affiche « alerte envoyée »
+    // que si ce compte est ≥ 1, sinon il demande le 911.
     const sentEmails = new Set<string>();
     const sentPhones = new Set<string>();
+    const portalUrl = (process.env.CLIENT_PORTAL_PUBLIC_URL?.trim() || 'https://client.getcoro.io').replace(/\/$/, '');
+    const responseExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const deliveries = await Promise.all(
       contacts.map(async (contact) => {
-        const email = contact.email && !sentEmails.has(contact.email) ? contact.email : null;
-        if (email) sentEmails.add(email);
+        const email = contact.email && !sentEmails.has(contact.email.toLowerCase()) ? contact.email : null;
+        if (email) sentEmails.add(email.toLowerCase());
         const normalized = contact.phone ? normalizePhone(contact.phone) : null;
         const phone = normalized && !sentPhones.has(normalized) ? normalized : null;
         if (phone) sentPhones.add(phone);
+        if (!email && !phone) return null;
+
+        const responseToken = randomBytes(24).toString('base64url');
+        const recipient = await this.prisma.panicRecipient.create({
+          data: {
+            panicAlertId: alert.id,
+            name: contact.name,
+            category: contact.category,
+            role: contact.role ?? null,
+            audience: contact.audience,
+            emailMasked: email ? maskEmail(email) : null,
+            phoneMasked: phone ? maskPhone(phone) : null,
+            responseTokenHash: createHash('sha256').update(responseToken).digest('hex'),
+            responseExpiresAt,
+          },
+        });
+        const message = buildPanicMessage({
+          type: panicType,
+          scope,
+          audience: contact.audience,
+          buildingName: building.name,
+          address,
+          triggeredBy,
+          time,
+          coordinatorName,
+          responseUrl: `${portalUrl}/alerte/${responseToken}`,
+        });
         const [emailAccepted, smsAccepted] = await Promise.all([
           email
-            ? this.sendEmail({ to: email, toName: contact.name, subject: `🚨 ALERTE PANIQUE — ${building.name}`, html: htmlEmail }, organizationId)
+            ? this.sendEmail({ to: email, toName: contact.name, subject: message.subject, html: message.html }, organizationId)
             : Promise.resolve(null),
-          phone ? this.sendSms(phone, smsText, organizationId) : Promise.resolve(null),
+          phone ? this.sendSms(phone, message.sms, organizationId) : Promise.resolve(null),
         ]);
+        await this.prisma.panicRecipient
+          .update({ where: { id: recipient.id }, data: { emailAccepted, smsAccepted } })
+          .catch(() => undefined);
         return {
           name: contact.name,
+          category: contact.category,
+          audience: contact.audience,
           email: email ? maskEmail(email) : null,
           emailAccepted,
           phone: phone ? maskPhone(phone) : null,
@@ -872,25 +920,25 @@ export class IncidentService {
         };
       }),
     );
-    const notifiedCount = deliveries.filter((d) => d.reached).length;
+    const sent = deliveries.filter((d): d is NonNullable<typeof d> => d !== null);
+    const notifiedCount = sent.filter((d) => d.reached && d.audience === 'TEAM').length;
+    const occupantCount = sent.filter((d) => d.reached && d.audience === 'OCCUPANT').length;
+    await this.prisma.panicAlert
+      .update({ where: { id: alert.id }, data: { notifiedCount, occupantCount } })
+      .catch(() => undefined);
 
-    // Trace permanente de chaque panique, avec l'issue par destinataire
-    // (coordonnées masquées) : preuve pour le REX, l'assureur ou une enquête.
+    // Trace permanente (coordonnées masquées) : preuve pour le REX,
+    // l'assureur ou une enquête.
     try {
       await this.prisma.auditLog.create({
         data: {
           action: 'PANIC_TRIGGERED',
           entityType: 'Building',
           entityId: buildingId,
-          description: `Bouton panique — ${notifiedCount}/${deliveries.length} contact(s) joint(s)`,
+          description: `Bouton panique ${panicType} (${scope}) — ${notifiedCount} membre(s) de l'équipe et ${occupantCount} occupant(s) joints`,
           organizationId,
           clientUserId: actorUser ? actor!.clientUserId : null,
-          metadata: {
-            triggeredBy,
-            emergencyType,
-            notifiedCount,
-            contacts: deliveries,
-          },
+          metadata: { panicAlertId: alert.id, triggeredBy, panicType, scope, coordinatorName, notifiedCount, occupantCount, contacts: sent },
         },
       });
     } catch (error) {
@@ -903,11 +951,76 @@ export class IncidentService {
     });
     if (activeIncident) {
       await this.prisma.incidentLog.create({
-        data: { incidentEventId: activeIncident.id, action: `🚨 BOUTON PANIQUE activé par ${triggeredBy}`, isAutomatic: false },
+        data: { incidentEventId: activeIncident.id, action: `🚨 BOUTON PANIQUE (${PANIC_TYPE_LABELS[panicType].fr}) activé par ${triggeredBy}`, isAutomatic: false },
       });
     }
 
-    return { success: true, notifiedCount, address, contacts: contacts.length };
+    return {
+      success: true,
+      panicAlertId: alert.id,
+      panicType,
+      scope,
+      notifiedCount,
+      occupantCount,
+      coordinatorName,
+      address,
+      contacts: sent.length,
+    };
+  }
+
+  /** Suivi en direct d'une alerte panique pour le déclencheur (portail). */
+  async getPanicStatus(panicAlertId: string, buildingId: string, organizationId: string) {
+    const alert = await this.prisma.panicAlert.findFirst({
+      where: { id: panicAlertId, buildingId, organizationId },
+      include: {
+        recipients: {
+          select: { id: true, name: true, category: true, role: true, audience: true, emailAccepted: true, smsAccepted: true, response: true, respondedAt: true },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+    if (!alert) throw new NotFoundException('Alerte introuvable');
+    const counts = { TAKING_CHARGE: 0, SAFE: 0, NEED_HELP: 0, NO_RESPONSE: 0 };
+    for (const r of alert.recipients) counts[(r.response as keyof typeof counts) || 'NO_RESPONSE'] += 1;
+    return { ...alert, counts };
+  }
+
+  /** Page publique de réponse : contexte minimal, sans coordonnées. */
+  async getPanicResponseContext(token: string) {
+    const recipient = await this.findPanicRecipient(token);
+    const alert = await this.prisma.panicAlert.findUnique({ where: { id: recipient.panicAlertId } });
+    const building = alert
+      ? await this.prisma.building.findUnique({ where: { id: alert.buildingId }, select: { name: true } })
+      : null;
+    return {
+      buildingName: building?.name ?? '',
+      panicType: alert?.panicType ?? 'OTHER',
+      createdAt: alert?.createdAt ?? null,
+      name: recipient.name.split(' ')[0] || '',
+      options: panicResponsesFor(recipient.audience === 'OCCUPANT' ? 'OCCUPANT' : 'TEAM'),
+      response: recipient.response,
+      respondedAt: recipient.respondedAt,
+    };
+  }
+
+  async respondToPanic(token: string, response: string) {
+    const recipient = await this.findPanicRecipient(token);
+    const allowed = panicResponsesFor(recipient.audience === 'OCCUPANT' ? 'OCCUPANT' : 'TEAM');
+    if (!allowed.includes(response as PanicResponse)) throw new BadRequestException('Réponse invalide');
+    const respondedAt = new Date();
+    await this.prisma.panicRecipient.update({ where: { id: recipient.id }, data: { response, respondedAt } });
+    return { response, respondedAt };
+  }
+
+  private async findPanicRecipient(token: string) {
+    if (typeof token !== 'string' || token.length < 20 || token.length > 100) throw new NotFoundException('Lien invalide ou expiré');
+    const recipient = await this.prisma.panicRecipient.findUnique({
+      where: { responseTokenHash: createHash('sha256').update(token).digest('hex') },
+    });
+    if (!recipient || !recipient.responseExpiresAt || recipient.responseExpiresAt <= new Date()) {
+      throw new NotFoundException('Lien invalide ou expiré');
+    }
+    return recipient;
   }
 
   // ── Déclencher un incident ────────────────────────────────────────────────
