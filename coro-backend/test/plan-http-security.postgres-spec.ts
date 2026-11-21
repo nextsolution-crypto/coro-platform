@@ -115,6 +115,7 @@ describe('Plan authenticated HTTP security boundaries', () => {
       .overrideProvider(ExportService)
       .useValue({
         generatePdf: jest.fn().mockResolvedValue({ fr: null, en: null }),
+        generateLatestApprovedPdf: jest.fn().mockResolvedValue({ fr: null, en: null }),
         generateApprovedSnapshotPdf: jest
           .fn()
           .mockResolvedValue({ fr: Buffer.from('%PDF-1.4 synthetic QA') }),
