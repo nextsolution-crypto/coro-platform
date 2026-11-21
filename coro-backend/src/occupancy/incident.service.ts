@@ -176,12 +176,18 @@ function escapeIncidentNotificationHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
 }
 
+const THREAT_INCIDENT_TYPES = new Set(['ACTIVE_THREAT']);
+const THREAT_MEMBER_INSTRUCTION =
+  'Protégez-vous d’abord : FUYEZ si vous pouvez le faire en sécurité, sinon CACHEZ-VOUS et verrouillez. N’allez pas au point de rassemblement. Composez le 911 une fois en sécurité.';
+
 const OCCUPANT_MESSAGES: Record<string, { alert: string; alarm: string }> = {
   FIRE_ALERT:      { alert: 'Une investigation est en cours. Restez en place, préparez-vous à évacuer.', alarm: 'Évacuez immédiatement le bâtiment.' },
   FIRE_ALARM:      { alert: 'Évacuez immédiatement le bâtiment.', alarm: 'Évacuez immédiatement le bâtiment.' },
   SMOKE_DISCOVERY: { alert: 'Investigation en cours. Restez en place et soyez prêt à évacuer.', alarm: 'Évacuez immédiatement le bâtiment.' },
   GAS_LEAK:        { alert: 'Fuite de gaz possible. Évitez d\'utiliser des appareils électriques.', alarm: 'Évacuez immédiatement par les sorties désignées.' },
-  ACTIVE_THREAT:   { alert: 'Confinement en vigueur. Restez à l\'intérieur, verrouillez les portes.', alarm: 'Confinement d\'urgence — Ne bougez pas.' },
+  // Aligné sur le bouton panique (décision du 21 nov. 2026) : fuir si possible,
+  // sinon se cacher ; jamais de point de rassemblement pour une menace.
+  ACTIVE_THREAT:   { alert: 'Menace en cours. FUYEZ si vous pouvez le faire en sécurité, sinon CACHEZ-VOUS et verrouillez. N\'allez pas au point de rassemblement. Composez le 911 une fois en sécurité.', alarm: 'Menace en cours. FUYEZ si vous pouvez le faire en sécurité, sinon CACHEZ-VOUS et verrouillez. N\'allez pas au point de rassemblement. Composez le 911 une fois en sécurité.' },
   MEDICAL:         { alert: 'Urgence médicale en cours. Dégagez les allées.', alarm: 'Gardez les allées dégagées pour les secours.' },
   HAZMAT:          { alert: 'Incident matières dangereuses. Restez à l\'écart de la zone identifiée.', alarm: 'Évacuez par les sorties éloignées de la zone à risque.' },
   POWER_OUTAGE:    { alert: 'Coupure de courant. L\'éclairage d\'urgence est actif.', alarm: 'Suivez l\'éclairage d\'urgence pour sortir.' },
@@ -650,7 +656,10 @@ export class IncidentService {
     const ackUrl = `${API_URL}/incidents/tasks/ack/${ackToken}`;
     const roles  = (member.roles || []).map((r: any) => r.role).join(', ');
 
-    const subject = `${exercisePrefix}🚨 ${label} — Rapport à votre poste · ${building.name}`;
+    const isThreat = THREAT_INCIDENT_TYPES.has(incident.type);
+    const subject = isThreat
+      ? `${exercisePrefix}🚨 ${label} — Protégez-vous · ${building.name}`
+      : `${exercisePrefix}🚨 ${label} — Rapport à votre poste · ${building.name}`;
     const html = `
       <div style="font-family:-apple-system,sans-serif;max-width:540px;margin:0 auto;">
         <div style="background:#2C3E50;padding:24px;border-radius:8px 8px 0 0;">
@@ -662,7 +671,7 @@ export class IncidentService {
             <p style="margin:0;font-size:18px;font-weight:800;color:#E67E22;">${exercisePrefix}⚠️ ${label}</p>
             <p style="margin:4px 0 0;font-size:14px;color:#6C757D;">${building.name}</p>
           </div>
-          <p style="font-size:20px;font-weight:800;color:#C0392B;margin:0 0 12px;">Rapport à votre poste immédiatement.</p>
+          <p style="font-size:20px;font-weight:800;color:#C0392B;margin:0 0 12px;">${isThreat ? THREAT_MEMBER_INSTRUCTION : 'Rapport à votre poste immédiatement.'}</p>
           ${assemblyPoint ? `<p style="font-size:14px;color:#27AE60;margin:0 0 16px;"><strong>🏁 Point de rassemblement : ${assemblyPoint}</strong></p>` : ''}
           <p style="font-size:13px;color:#ADB5BD;margin:0 0 24px;">Rôle(s) : ${roles}</p>
           <a href="${ackUrl}" style="display:inline-block;background:#27AE60;color:#FFFFFF;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:700;font-size:15px;">✅ Confirmer ma présence au poste</a>
@@ -675,7 +684,9 @@ export class IncidentService {
 
     // SMS membre
     if (member.phone) {
-      const sms = `${exercisePrefix}CORO SENTINELLE\n${label} - ${building.name}\nRapport à votre poste (${roles}).\n${assemblyPoint ? `Rassemblement: ${assemblyPoint}\n` : ''}Confirmez: ${ackUrl}`;
+      const sms = isThreat
+        ? `${exercisePrefix}CORO SENTINELLE\n${label} - ${building.name}\n${THREAT_MEMBER_INSTRUCTION}\nConfirmez une fois en sécurité: ${ackUrl}`
+        : `${exercisePrefix}CORO SENTINELLE\n${label} - ${building.name}\nRapport à votre poste (${roles}).\n${assemblyPoint ? `Rassemblement: ${assemblyPoint}\n` : ''}Confirmez: ${ackUrl}`;
       await this.dispatcher.enqueue({ organizationId: incident.organizationId, incidentEventId: incident.id, channel: 'SMS', purpose: 'MEMBER_ALERT', idempotencyKey: `${incident.id}:member:${member.id}:sms`, envelope: { destination: member.phone, message: sms } }, tx);
     }
   }
@@ -898,6 +909,7 @@ export class IncidentService {
           time,
           coordinatorName,
           responseUrl: `${portalUrl}/alerte/${responseToken}`,
+          isExercise: body.isExercise === true,
         });
         const [emailAccepted, smsAccepted] = await Promise.all([
           email
@@ -938,7 +950,7 @@ export class IncidentService {
           description: `Bouton panique ${panicType} (${scope}) — ${notifiedCount} membre(s) de l'équipe et ${occupantCount} occupant(s) joints`,
           organizationId,
           clientUserId: actorUser ? actor!.clientUserId : null,
-          metadata: { panicAlertId: alert.id, triggeredBy, panicType, scope, coordinatorName, notifiedCount, occupantCount, contacts: sent },
+          metadata: { panicAlertId: alert.id, triggeredBy, panicType, scope, isExercise: body.isExercise === true, coordinatorName, notifiedCount, occupantCount, contacts: sent },
         },
       });
     } catch (error) {
@@ -951,7 +963,7 @@ export class IncidentService {
     });
     if (activeIncident) {
       await this.prisma.incidentLog.create({
-        data: { incidentEventId: activeIncident.id, action: `🚨 BOUTON PANIQUE (${PANIC_TYPE_LABELS[panicType].fr}) activé par ${triggeredBy}`, isAutomatic: false },
+        data: { incidentEventId: activeIncident.id, action: `${body.isExercise ? '[EXERCICE] ' : ''}🚨 BOUTON PANIQUE (${PANIC_TYPE_LABELS[panicType].fr}) activé par ${triggeredBy}`, isAutomatic: false },
       });
     }
 
@@ -1199,6 +1211,9 @@ export class IncidentService {
   ) {
     const incidentLabel  = INCIDENT_LABELS[incidentType] || 'Incident';
     const occupantMsgCfg = OCCUPANT_MESSAGES[incidentType] || OCCUPANT_MESSAGES.OTHER;
+    // Menace : personne n'est envoyé au point de rassemblement ni « à son
+    // poste » ; l'équipe reçoit la consigne de protection (21 nov. 2026).
+    if (THREAT_INCIDENT_TYPES.has(incidentType)) assemblyPoint = null;
 
     const coordinator = mobilizableTeam.find(m => m.roles.some((r: any) => r.role === 'COORDINATOR'));
     if (coordinator?.email) {
