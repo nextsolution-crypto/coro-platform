@@ -3,7 +3,9 @@ import {
   approvalStampFromVersion,
   shortContentHash,
 } from './approval-stamp';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { StorageService } from '../storage/storage.service';
+import { resolveApprovedPlans } from './approved-plan-blobs';
 import {
   ExportDataSource,
   frozenExportDataSource,
@@ -105,7 +107,10 @@ const MODULE_TITLES: Record<number, { fr: string; en: string }> = {
 
 @Injectable()
 export class ExportService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly storage?: StorageService,
+  ) {}
 
   // ============================================================
   // POINT D'ENTRÉE PRINCIPAL
@@ -188,7 +193,13 @@ export class ExportService {
         building: snapshot.project.building,
         user: snapshot.project.adviser,
       },
-      approvedPlans: snapshot.project.plans,
+      // M1-10 : plans référencés par empreinte, relus et vérifiés.
+      approvedPlans: await resolveApprovedPlans(snapshot.project.plans, {
+        storage: this.storage,
+        db: this.prisma,
+        organizationId: scope.organizationId,
+        projectId: scope.projectId,
+      }),
     };
     return this.generateFromDocument(doc, options, certification, data);
   }

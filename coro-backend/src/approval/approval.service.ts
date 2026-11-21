@@ -11,6 +11,10 @@ import {
   missingRequiredPlanFields,
   planRequiresConfiguratorCompleteness,
 } from '../configurator/plan-completeness';
+import {
+  planReference,
+  stageApprovedPlansInBackground,
+} from '../export/approved-plan-blobs';
 import { captureFrozenExportData } from '../export/export-frozen-data';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -146,6 +150,13 @@ export class ApprovalService {
     }, this.transactionOptions);
     if (result.eventId)
       void this.processNotificationEvent(result.eventId).catch(() => undefined);
+    if (!result.alreadySubmitted)
+      stageApprovedPlansInBackground(
+        this.storageService,
+        this.prisma,
+        actor.organizationId,
+        projectId,
+      );
     return {
       success: true,
       status: 'REVIEW',
@@ -305,6 +316,12 @@ export class ApprovalService {
       };
     }, this.transactionOptions);
     if (!result.replayed) {
+      stageApprovedPlansInBackground(
+        this.storageService,
+        this.prisma,
+        actor.organizationId,
+        projectId,
+      );
       this.generatePreview(result.project, actor.organizationId);
       void this.processNotificationEvent(result.eventId!).catch(() => undefined);
     }
@@ -602,17 +619,23 @@ export class ApprovalService {
           companyWebsite: organizationSettings.companyWebsite,
           companyTagline: organizationSettings.companyTagline,
         },
-        plans: (project.buildingPlans ?? []).map((plan: any) => ({
-          id: plan.id,
-          section: plan.section,
-          name: plan.name,
-          fileName: plan.fileName,
-          fileSize: plan.fileSize,
-          emissionDate: plan.emissionDate,
-          revision: plan.revision,
-          order: plan.order,
-          fileBase64: plan.fileBase64,
-        })),
+        // v3 : référence + empreinte (M1-10) ; v2 : base64 inclus (empreinte
+        // des demandes soumises avant le schéma v3).
+        plans: (project.buildingPlans ?? []).map((plan: any) =>
+          schemaVersion === 3
+            ? planReference(plan)
+            : {
+                id: plan.id,
+                section: plan.section,
+                name: plan.name,
+                fileName: plan.fileName,
+                fileSize: plan.fileSize,
+                emissionDate: plan.emissionDate,
+                revision: plan.revision,
+                order: plan.order,
+                fileBase64: plan.fileBase64,
+              },
+        ),
       },
       document: {
         id: document.id,
