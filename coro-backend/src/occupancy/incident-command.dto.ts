@@ -83,6 +83,10 @@ export class SendIncidentAccessDto {
 }
 
 export class TriggerIncidentPanicDto {
-  @IsString() @trimmed() @MinLength(1) @MaxLength(160) triggeredBy!: string;
-  @IsString() @trimmed() @MinLength(1) @MaxLength(160) emergencyType!: string;
+  @IsOptional() @IsString() @trimmed() @MaxLength(160) triggeredBy?: string;
+  @IsOptional() @IsString() @trimmed() @MaxLength(160) emergencyType?: string;
+  /** Décision du 21 nov. 2026 : type choisi en un toucher. */
+  @IsOptional() @IsIn(['THREAT', 'MEDICAL', 'FIRE', 'OTHER']) panicType?: 'THREAT' | 'MEDICAL' | 'FIRE' | 'OTHER';
+  /** Menace seulement : TEAM (silencieuse) ou BUILDING (tous les occupants consentants). */
+  @IsOptional() @IsIn(['TEAM', 'BUILDING']) scope?: 'TEAM' | 'BUILDING';
 }

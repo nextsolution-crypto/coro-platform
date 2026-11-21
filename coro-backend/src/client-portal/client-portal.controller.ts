@@ -1443,6 +1443,16 @@ export class ClientPortalController {
     );
   }
 
+  @Get('buildings/:buildingId/panic/:panicAlertId')
+  async getPanicStatus(
+    @Param('buildingId') buildingId: string,
+    @Param('panicAlertId') panicAlertId: string,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    return this.incidentService.getPanicStatus(panicAlertId, buildingId, req.clientUser.organizationId);
+  }
+
   @Post('incidents/trigger')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
   async triggerIncident(@Body() body: TriggerIncidentDto, @Request() req: any) {

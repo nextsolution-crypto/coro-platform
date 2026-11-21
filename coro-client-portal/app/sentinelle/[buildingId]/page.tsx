@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { apiGet, apiPost, getUser, getToken } from '../../store/auth';
 import { requestPanic, panicFailureCode, type PanicOutcome } from './panicOutcome';
+import { PanicChooser, PanicResponses, type PanicScope, type PanicType } from './PanicPanels';
 import PortalLayout from '../../components/PortalLayout';
 import {
   Users, UserCheck, UserX, Clock, AlertTriangle,
@@ -39,6 +40,7 @@ export default function SentinelleDashboard() {
   const [panicSending, setPanicSending]     = useState(false);
   const [panicResult, setPanicResult]       = useState<PanicOutcome | null>(null);
   const [panicConfirmOpen, setPanicConfirmOpen] = useState(false);
+  const [panicChoice, setPanicChoice] = useState<{ type: PanicType; scope: PanicScope }>({ type: 'THREAT', scope: 'TEAM' });
   const [populationStatus, setPopulationStatus] = useState<any>(null);
 
   useEffect(() => {
@@ -164,7 +166,9 @@ export default function SentinelleDashboard() {
 
   // Bouton panique : l'écran n'affiche un succès que si le serveur confirme
   // au moins un contact. Tout autre cas renvoie immédiatement vers le 911.
-  const handlePanic = async () => {
+  // Type et portée choisis en un toucher (décision du 21 nov. 2026).
+  const handlePanic = async (choice: { type: PanicType; scope: PanicScope } = panicChoice) => {
+    setPanicChoice(choice);
     setPanicConfirmOpen(false);
     setPanicSending(true);
     const outcome = await requestPanic({
@@ -172,7 +176,7 @@ export default function SentinelleDashboard() {
       apiUrl: API_URL,
       buildingId,
       token: getToken(),
-      payload: { triggeredBy: `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim(), emergencyType: 'URGENCE — ASSISTANCE REQUISE' },
+      payload: { panicType: choice.type, scope: choice.scope },
     });
     setPanicResult(outcome);
     setPanicMode(true);
@@ -712,27 +716,12 @@ export default function SentinelleDashboard() {
         </button>
       )}
 
-      {/* ── Confirmation panique (sans boîte native du navigateur) ── */}
+      {/* ── Choix du type d'urgence (sans boîte native du navigateur) ── */}
       {panicConfirmOpen && !panicMode && (
-        <div data-cg-emergency="" role="dialog" aria-modal="true" aria-labelledby="panic-confirm-title" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ backgroundColor: '#FFFFFF', borderRadius: 16, maxWidth: 440, width: '100%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.3)' }}>
-            <div style={{ backgroundColor: '#C0392B', padding: '20px 24px', textAlign: 'center' }}>
-              <p id="panic-confirm-title" style={{ margin: 0, fontSize: 20, fontWeight: 900, color: '#FFFFFF' }}>BOUTON PANIQUE · PANIC BUTTON</p>
-            </div>
-            <div style={{ padding: 24 }}>
-              <p style={{ margin: '0 0 8px', fontSize: 15, color: '#2C3E50', fontWeight: 600 }}>Envoyer une alerte d'urgence immédiate aux contacts d'urgence de ce bâtiment ?</p>
-              <p style={{ margin: '0 0 20px', fontSize: 13, color: '#6C757D' }}>Send an immediate emergency alert to this building's emergency contacts?</p>
-              <button type="button" onClick={handlePanic} autoFocus
-                style={{ width: '100%', padding: 16, borderRadius: 10, border: 'none', backgroundColor: '#C0392B', color: '#FFFFFF', fontSize: 18, fontWeight: 900, cursor: 'pointer', marginBottom: 10 }}>
-                ENVOYER L'ALERTE · SEND ALERT
-              </button>
-              <button type="button" onClick={() => setPanicConfirmOpen(false)}
-                style={{ width: '100%', padding: 12, borderRadius: 10, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', color: '#6C757D', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-                Annuler · Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <PanicChooser
+          onSend={(type, scope) => handlePanic({ type, scope })}
+          onCancel={() => setPanicConfirmOpen(false)}
+        />
       )}
 
       {/* ── Résultat panique : succès seulement si le serveur le confirme ── */}
@@ -753,7 +742,13 @@ export default function SentinelleDashboard() {
                     </p>
                   </div>
                   {panicResult.address && <p style={{ margin: '0 0 6px', fontSize: 14, color: '#2C3E50', fontWeight: 600 }}>📍 {panicResult.address}</p>}
-                  <p style={{ margin: '0 0 20px', fontSize: 13, color: '#6C757D' }}>Si personne ne répond, composez le 911. · If no one responds, call 911.</p>
+                  {panicResult.occupantCount ? (
+                    <p style={{ margin: '0 0 6px', fontSize: 13, color: '#2C3E50' }}>📢 {panicResult.occupantCount} occupant(s) prévenu(s) · occupants alerted</p>
+                  ) : null}
+                  <p style={{ margin: '0 0 12px', fontSize: 14, color: '#2C3E50', fontWeight: 800 }}>
+                    Composez le 911 maintenant si ce n’est pas fait.{panicResult.coordinatorName ? ` ${panicResult.coordinatorName} (coordonnateur) confirmera l’appel.` : ''}
+                  </p>
+                  {panicResult.panicAlertId && <PanicResponses buildingId={buildingId} panicAlertId={panicResult.panicAlertId} />}
                   <a href="tel:911"
                     style={{ display: 'block', textAlign: 'center', backgroundColor: '#C0392B', color: '#FFFFFF', padding: '16px', borderRadius: 10, textDecoration: 'none', fontSize: 20, fontWeight: 900, marginBottom: 12 }}>
                     📞 APPELER LE 911 · CALL 911
@@ -781,7 +776,7 @@ export default function SentinelleDashboard() {
                     style={{ display: 'block', textAlign: 'center', backgroundColor: '#C0392B', color: '#FFFFFF', padding: '18px', borderRadius: 10, textDecoration: 'none', fontSize: 22, fontWeight: 900, marginBottom: 12 }}>
                     📞 APPELER LE 911 · CALL 911
                   </a>
-                  <button type="button" onClick={handlePanic} disabled={panicSending}
+                  <button type="button" onClick={() => handlePanic()} disabled={panicSending}
                     style={{ width: '100%', padding: '12px', borderRadius: 10, border: '2px solid #C0392B', backgroundColor: '#FFFFFF', color: '#C0392B', fontSize: 15, fontWeight: 800, cursor: panicSending ? 'not-allowed' : 'pointer', marginBottom: 10 }}>
                     {panicSending ? 'Nouvel essai… · Retrying…' : 'Réessayer l\'alerte · Retry alert'}
                   </button>

@@ -19,7 +19,14 @@ export type PanicFailureReason =
   | "INVALID_RESPONSE";
 
 export type PanicOutcome =
-  | { kind: "CONFIRMED"; notifiedCount: number; address: string | null }
+  | {
+      kind: "CONFIRMED";
+      notifiedCount: number;
+      address: string | null;
+      panicAlertId?: string;
+      coordinatorName?: string | null;
+      occupantCount?: number;
+    }
   | { kind: "UNCONFIRMED"; reason: PanicFailureReason; status: number | null };
 
 type FetchLike = (
@@ -48,7 +55,13 @@ export function interpretPanicResponse(
   }
   if (count < 1) return { kind: "UNCONFIRMED", reason: "NO_CONTACT", status };
   const address = typeof record.address === "string" && record.address.trim() ? record.address : null;
-  return { kind: "CONFIRMED", notifiedCount: count, address };
+  const outcome: PanicOutcome = { kind: "CONFIRMED", notifiedCount: count, address };
+  if (typeof record.panicAlertId === "string" && record.panicAlertId) outcome.panicAlertId = record.panicAlertId;
+  if (typeof record.coordinatorName === "string" && record.coordinatorName) outcome.coordinatorName = record.coordinatorName;
+  if (typeof record.occupantCount === "number" && Number.isInteger(record.occupantCount) && record.occupantCount > 0) {
+    outcome.occupantCount = record.occupantCount;
+  }
+  return outcome;
 }
 
 export async function requestPanic(options: {

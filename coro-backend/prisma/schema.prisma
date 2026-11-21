@@ -10878,3 +10878,46 @@ model BuildingDocumentGrant {
   @@unique([buildingId, clientUserId])
   @@index([organizationId, buildingId])
 }
+
+/// Bouton panique (décision du 21 nov. 2026, audit M2-02 / M2-05) : une
+/// alerte et ses destinataires, avec l'issue de chaque envoi et la réponse
+/// de chacun (je prends en charge / en sécurité / besoin d'aide).
+model PanicAlert {
+  id             String   @id @default(uuid())
+  buildingId     String
+  organizationId String
+  panicType      String
+  scope          String
+  triggeredBy    String
+  clientUserId   String?
+  coordinatorName String?
+  notifiedCount  Int      @default(0)
+  occupantCount  Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  recipients PanicRecipient[]
+
+  @@index([buildingId, createdAt])
+  @@index([organizationId, createdAt])
+}
+
+model PanicRecipient {
+  id                String     @id @default(uuid())
+  panicAlertId      String
+  panicAlert        PanicAlert @relation(fields: [panicAlertId], references: [id], onDelete: Cascade)
+  name              String
+  category          String
+  role              String?
+  audience          String
+  emailMasked       String?
+  phoneMasked       String?
+  emailAccepted     Boolean?
+  smsAccepted       Boolean?
+  responseTokenHash String?    @unique
+  responseExpiresAt DateTime?
+  response          String?
+  respondedAt       DateTime?
+  createdAt         DateTime   @default(now())
+
+  @@index([panicAlertId])
+}

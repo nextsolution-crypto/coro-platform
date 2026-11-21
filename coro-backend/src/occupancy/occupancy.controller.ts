@@ -2,6 +2,7 @@ import {
   Controller, Get, Post, Body, Param, UseGuards, Request, Put, Query
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Throttle } from '@nestjs/throttler';
 import { OccupancyService } from './occupancy.service';
 import { IncidentService } from './incident.service';
 import { OperationalContinuityAccess } from '../auth/organization-access.decorator';
@@ -22,6 +23,20 @@ export class OccupancyController {
   @Get('intervention-access/:token')
   getInterventionAccess(@Param('token') token: string) {
     return this.incidentService.getInterventionSheetByToken(token);
+  }
+
+  // Réponse d'un destinataire d'une alerte panique (lien personnel à usage
+  // limité, valide 24 h) : je prends en charge / en sécurité / besoin d'aide.
+  @Throttle({ short: { ttl: 60_000, limit: 20 } })
+  @Get('panic/respond/:token')
+  getPanicResponse(@Param('token') token: string) {
+    return this.incidentService.getPanicResponseContext(token);
+  }
+
+  @Throttle({ short: { ttl: 60_000, limit: 20 } })
+  @Post('panic/respond/:token')
+  respondToPanic(@Param('token') token: string, @Body() body: { response?: string }) {
+    return this.incidentService.respondToPanic(token, String(body?.response ?? ''));
   }
 
   // Incident actif d'un bâtiment — pour affichage du QR sur la borne kiosque (public)
