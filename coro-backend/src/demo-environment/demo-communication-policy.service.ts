@@ -77,6 +77,38 @@ export function isSentinelleDemoEmailCandidate(
   );
 }
 
+// Test réel contrôlé des SMS Sentinelle dans la démo (21 nov. 2026) : seul
+// un numéro dont l'empreinte SHA-256 (format E.164) figure dans
+// DEMO_SENTINELLE_SMS_LIVE_RECIPIENT_SHA256 reçoit de vrais SMS d'incident
+// ou de panique. Le numéro lui-même n'est jamais versionné.
+const DEMO_SENTINELLE_SMS_OPERATIONS = new Set([
+  ...DEMO_SENTINELLE_EMAIL_OPERATIONS,
+  'INCIDENT_NOTIFICATION',
+]);
+
+export function normalizeDemoSmsRecipient(value: string | undefined): string | null {
+  const digits = (value || '').replace(/\D/g, '');
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  return null;
+}
+
+export function isSentinelleDemoSmsCandidate(
+  request: Pick<DemoCommunicationRequest, 'organizationId' | 'channel' | 'recipient' | 'operation'>,
+  env: Record<string, string | undefined> = process.env,
+): boolean {
+  if (request.organizationId !== CORO_DEMO_ORGANIZATION_ID) return false;
+  if (request.channel !== DemoCommunicationChannel.SMS) return false;
+  if (!DEMO_SENTINELLE_SMS_OPERATIONS.has(request.operation)) return false;
+  const normalized = normalizeDemoSmsRecipient(request.recipient);
+  if (!normalized) return false;
+  const allowed = (env.DEMO_SENTINELLE_SMS_LIVE_RECIPIENT_SHA256 || '')
+    .split(',')
+    .map((v) => v.trim().toLowerCase())
+    .filter((v) => /^[a-f0-9]{64}$/.test(v));
+  return allowed.includes(digest(normalized));
+}
+
 @Injectable()
 export class DemoCommunicationPolicyService {
   constructor(private readonly prisma: PrismaService) {}
@@ -146,9 +178,15 @@ export class DemoCommunicationPolicyService {
       !foundationBlocked &&
       environment.communicationMode === DemoCommunicationMode.SIMULATE &&
       (await this.isSentinelleDemoEmailException(request));
+    const sentinelleDemoSmsException =
+      !foundationBlocked &&
+      environment.communicationMode === DemoCommunicationMode.SIMULATE &&
+      isSentinelleDemoSmsCandidate(request);
     // Keep real-demo evidence separate from a previous simulated attempt.
     const auditKey = sentinelleDemoEmailException
       ? `SENTINELLE_DEMO_REAL_EMAIL_V1:${request.idempotencyKey}`
+      : sentinelleDemoSmsException
+        ? `SENTINELLE_DEMO_REAL_SMS_V1:${request.idempotencyKey ?? digest({ recipient: request.recipient, payload: request.payload, at: Date.now() })}`
       : (request.idempotencyKey ??
         digest({
           channel: request.channel,
@@ -181,7 +219,8 @@ export class DemoCommunicationPolicyService {
           !blocked &&
           !authenticationLiveException &&
           !controlledPopulationLiveException &&
-          !sentinelleDemoEmailException,
+          !sentinelleDemoEmailException &&
+          !sentinelleDemoSmsException,
         blocked,
       },
       update: {},
@@ -191,7 +230,8 @@ export class DemoCommunicationPolicyService {
     if (
       authenticationLiveException ||
       controlledPopulationLiveException ||
-      sentinelleDemoEmailException
+      sentinelleDemoEmailException ||
+      sentinelleDemoSmsException
     )
       return { disposition: 'LIVE' };
     return { disposition: 'SIMULATED', eventId: event.id };

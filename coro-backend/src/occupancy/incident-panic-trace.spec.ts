@@ -127,4 +127,12 @@ describe('Panic trigger trace and identity (audit M2-02, M2-04, M2-06, M2-07)', 
     prisma.panicRecipient.findUnique = jest.fn().mockResolvedValue({ id: 'r', audience: 'TEAM', responseExpiresAt: new Date(Date.now() - 1000) });
     await expect(service.respondToPanic('x'.repeat(32), 'SAFE')).rejects.toThrow('Lien invalide ou expiré');
   });
+
+  it('prefixes an exercise panic with [EXERCICE] / [DRILL]', async () => {
+    const { service } = harness();
+    await service.triggerPanic('building-1', { panicType: 'OTHER', isExercise: true }, 'org-1', { clientUserId: 'client-user-1' });
+    const sms = service.sendSms.mock.calls[0][1] as string;
+    expect(sms.startsWith('[EXERCICE] CORO')).toBe(true);
+    expect(sms).toContain('[DRILL] CORO');
+  });
 });

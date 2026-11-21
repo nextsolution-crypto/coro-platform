@@ -2,6 +2,7 @@ import { Transform } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayUnique,
+  IsBoolean,
   IsArray,
   IsEmail,
   IsEnum,
@@ -89,4 +90,6 @@ export class TriggerIncidentPanicDto {
   @IsOptional() @IsIn(['THREAT', 'MEDICAL', 'FIRE', 'OTHER']) panicType?: 'THREAT' | 'MEDICAL' | 'FIRE' | 'OTHER';
   /** Menace seulement : TEAM (silencieuse) ou BUILDING (tous les occupants consentants). */
   @IsOptional() @IsIn(['TEAM', 'BUILDING']) scope?: 'TEAM' | 'BUILDING';
+  /** Exercice : messages préfixés [EXERCICE] / [DRILL]. */
+  @IsOptional() @IsBoolean() isExercise?: boolean;
 }
