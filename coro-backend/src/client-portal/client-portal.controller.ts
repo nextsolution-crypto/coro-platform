@@ -1413,6 +1413,7 @@ export class ClientPortalController {
       buildingId,
       body,
       req.clientUser.organizationId,
+      { clientUserId: req.clientUser.sub || req.clientUser.id },
     );
   }
 
