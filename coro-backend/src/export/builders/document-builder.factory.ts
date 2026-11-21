@@ -3,6 +3,7 @@ import { BaseDocumentBuilder } from './base.builder';
 import { PmuBuilder } from './pmu.builder';
 import { PsiBuilder } from './psi.builder';
 import { PcaBuilder } from './pca.builder';
+import { ExportDataSource } from '../export-frozen-data';
 
 export function createDocumentBuilder(
   documentType: string,
@@ -11,14 +12,15 @@ export function createDocumentBuilder(
   content: any,
   lang: 'fr' | 'en',
   options: { selectedModules: number[]; moduleOrder: number[] },
+  data: ExportDataSource,
 ): BaseDocumentBuilder {
   switch (documentType) {
     case 'PSI':
-      return new PsiBuilder(prisma, doc, content, lang, options);
+      return new PsiBuilder(prisma, doc, content, lang, options, data);
     case 'PCA':
-      return new PcaBuilder(prisma, doc, content, lang, options);
+      return new PcaBuilder(prisma, doc, content, lang, options, data);
     case 'PMU':
     default:
-      return new PmuBuilder(prisma, doc, content, lang, options);
+      return new PmuBuilder(prisma, doc, content, lang, options, data);
   }
 }

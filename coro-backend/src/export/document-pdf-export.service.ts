@@ -238,6 +238,7 @@ export class DocumentPdfExportService {
             language: row.language as 'fr' | 'en' | 'both',
             isPreview: false,
           },
+          { projectId: row.projectId, organizationId: row.organizationId },
         );
         artifacts = [];
         for (const language of ['fr', 'en'] as const) {
@@ -373,7 +374,7 @@ export class DocumentPdfExportService {
       versionSnapshot?.contentHash !== review.contentHash
     )
       throw new ConflictException('APPROVED_VERSION_PROVENANCE_INVALID');
-    if (this.jsonObject(review.snapshot)?.schemaVersion !== 2)
+    if (![2, 3].includes(this.jsonObject(review.snapshot)?.schemaVersion as number))
       throw new ConflictException('APPROVED_SNAPSHOT_UNSUPPORTED');
     return { project, review, version };
   }

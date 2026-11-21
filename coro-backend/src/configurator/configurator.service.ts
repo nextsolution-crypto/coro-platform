@@ -1,7 +1,7 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RulesEngineService, BuildingConfig } from './rules-engine.service';
-import { AdviserActor, mutableProjectAccessWhere, projectAccessWhere } from '../auth/project-access';
+import { AdviserActor, assertEditableProject, editableProjectAccessWhere, projectAccessWhere } from '../auth/project-access';
 
 @Injectable()
 export class ConfiguratorService {
@@ -19,13 +19,24 @@ export class ConfiguratorService {
     config: BuildingConfig,
     actor: AdviserActor,
   ) {
+    if (!config || typeof config !== 'object' || Array.isArray(config)) {
+      throw new BadRequestException('Configuration invalide.');
+    }
     const analysis = this.rulesEngine.analyzeConfiguration(config);
     const updated = await this.prisma.project.updateMany({
-      where: { id: projectId, ...mutableProjectAccessWhere(actor) },
+      where: { id: projectId, ...editableProjectAccessWhere(actor) },
       data: { status: 'IN_PROGRESS', progress: 25, configData: config as any },
     });
-    if (updated.count !== 1)
+    if (updated.count !== 1) {
+      // Distinguer « verrouillé » (plan en révision, validé ou exporté) de
+      // « inaccessible » : assertEditableProject lève le bon message.
+      const accessible = await this.prisma.project.findFirst({
+        where: { id: projectId, ...projectAccessWhere(actor), isActive: true },
+        select: { id: true },
+      });
+      if (accessible) await assertEditableProject(this.prisma, projectId, actor);
       throw new ForbiddenException('Acces refuse a ce projet');
+    }
     return { projectId, config, analysis, savedAt: new Date() };
   }
 

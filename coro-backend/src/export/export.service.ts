@@ -1,4 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ExportDataSource,
+  frozenExportDataSource,
+  liveExportDataSource,
+} from './export-frozen-data';
 import puppeteer from 'puppeteer';
 import { PDFDocument, PDFName, PDFString } from 'pdf-lib';
 import { PrismaService } from '../prisma/prisma.service';
@@ -121,15 +126,22 @@ export class ExportService {
       ? null
       : await this.getCurrentVersionCertification(projectId);
 
-    return this.generateFromDocument(doc, options, certification);
+    return this.generateFromDocument(
+      doc,
+      options,
+      certification,
+      liveExportDataSource(this.prisma, doc.projectId, doc.project.organizationId),
+    );
   }
 
   async generateApprovedSnapshotPdf(
     snapshot: any,
     options: ExportOptions,
+    scope: { projectId: string; organizationId: string },
   ): Promise<{ fr?: Buffer; en?: Buffer }> {
     if (
-      snapshot?.schemaVersion !== 2 ||
+      snapshot?.project?.id !== scope?.projectId ||
+      ![2, 3].includes(snapshot?.schemaVersion) ||
       !snapshot?.document?.content ||
       !snapshot?.project?.client ||
       !snapshot?.project?.building ||
@@ -138,12 +150,28 @@ export class ExportService {
     ) {
       throw new Error('APPROVED_SNAPSHOT_UNSUPPORTED');
     }
+    // Schéma v3 (audit M1-01) : procédures et module 7 figés à l'approbation,
+    // le PDF officiel ne lit plus rien en direct. Schéma v2 (approbations
+    // antérieures) : seules ces données restent lues en direct, dans la
+    // portée de l'organisation et du projet approuvés.
+    let data: ExportDataSource;
+    if (snapshot.schemaVersion === 3) {
+      data = frozenExportDataSource(snapshot.exportData);
+    } else {
+      data = liveExportDataSource(
+        this.prisma,
+        scope.projectId,
+        scope.organizationId,
+      );
+    }
     const doc = {
       id: snapshot.document.id,
+      projectId: snapshot.project.id,
       title: snapshot.document.title,
       content: snapshot.document.content,
       project: {
         id: snapshot.project.id,
+        organizationId: scope.organizationId,
         name: snapshot.project.name,
         documentType: snapshot.project.documentType,
         year: snapshot.project.year,
@@ -154,13 +182,14 @@ export class ExportService {
       },
       approvedPlans: snapshot.project.plans,
     };
-    return this.generateFromDocument(doc, options, null);
+    return this.generateFromDocument(doc, options, null, data);
   }
 
   private async generateFromDocument(
     doc: any,
     options: ExportOptions,
     certification: CertificationData | null,
+    data: ExportDataSource,
   ): Promise<{ fr?: Buffer; en?: Buffer }> {
     // Historical snapshots are sanitized at the last trusted boundary before
     // HTML/PDF rendering; this does not rewrite or destroy their audit history.
@@ -173,6 +202,7 @@ export class ExportService {
         'fr',
         options,
         certification,
+        data,
       );
     }
     if (options.language === 'en' || options.language === 'both') {
@@ -182,6 +212,7 @@ export class ExportService {
         'en',
         options,
         certification,
+        data,
       );
     }
 
@@ -203,6 +234,7 @@ export class ExportService {
     lang: 'fr' | 'en',
     options: ExportOptions,
     certification: CertificationData | null,
+    data: ExportDataSource,
   ): Promise<Buffer> {
     const project = doc.project;
     const modules = lang === 'fr' ? content.modules_fr : content.modules_en;
@@ -270,6 +302,7 @@ export class ExportService {
         selectedModules: options.selectedModules,
         moduleOrder: options.moduleOrder,
       },
+      data,
     );
 
     const orderedModules = builder.orderedModules;

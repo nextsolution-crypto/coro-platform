@@ -157,6 +157,7 @@ describe('DocumentPdfExportService', () => {
     expect(test.renderer.generateApprovedSnapshotPdf).toHaveBeenCalledWith(
       test.snapshot,
       expect.objectContaining({ language: 'fr' }),
+      expect.objectContaining({ projectId: 'project-a' }),
     );
     expect(test.storage.uploadPrivateImmutable).toHaveBeenCalledTimes(1);
     expect(test.prisma.auditLog.create).toHaveBeenCalledTimes(1);

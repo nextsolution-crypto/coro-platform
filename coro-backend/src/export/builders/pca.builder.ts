@@ -261,14 +261,11 @@ export class PcaBuilder extends BaseDocumentBuilder {
 
       // Procédures PCA depuis la DB
       try {
-        const pcaProcedures = await this.prisma.procedureDefault.findMany({
-          where: { isActive: true, code: { startsWith: 'PC' } },
-          orderBy: { code: 'asc' },
-        });
+        const pcaProcedures = (await this.data.procedureDefaults()).filter(
+          (p: any) => typeof p.code === 'string' && p.code.startsWith('PC'),
+        );
 
-        const overrides = await this.prisma.procedureOverride.findMany({
-          where: { projectId: this.doc.projectId },
-        });
+        const overrides = await this.data.projectOverrides();
         const overrideMap = new Map(overrides.map((o: any) => [o.procedureId, o]));
 
         const procedures = pcaProcedures.map((p: any) => {
@@ -303,11 +300,8 @@ export class PcaBuilder extends BaseDocumentBuilder {
       // Contacts depuis la DB (sauvegardés via Module6PcaContacts)
       let contactsHtml = '';
       try {
-        const module4Data = await this.prisma.document.findFirst({
-          where: { projectId: this.doc.projectId },
-          select: { content: true },
-        });
-        const savedContent = module4Data?.content as any;
+        // Contacts du document rendu (snapshot approuvé ou document courant).
+        const savedContent = this.content as any;
         const contacts = savedContent?.module4?.pcaContacts || [];
         if (contacts.length > 0) {
           contactsHtml = `

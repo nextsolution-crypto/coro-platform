@@ -42,6 +42,47 @@ export function mutableProjectAccessWhere(
 }
 
 /**
+ * Statuts dans lesquels le contenu d'un plan peut encore changer (audit
+ * M1-02, M1-03, M1-04). En révision, validé ou exporté, le plan est en
+ * lecture seule : il faut d'abord un retour en révision (administrateur,
+ * avec motif), comme pour l'éditeur de document.
+ */
+export const EDITABLE_PROJECT_STATUSES = ['DRAFT', 'IN_PROGRESS'] as const;
+
+export function editableProjectAccessWhere(
+  actor: AdviserActor,
+): Prisma.ProjectWhereInput {
+  return {
+    ...mutableProjectAccessWhere(actor),
+    status: { in: [...EDITABLE_PROJECT_STATUSES] },
+  };
+}
+
+/**
+ * Vérifie l'accès (affectation comprise) et que le plan est modifiable.
+ * Message explicite quand le plan existe mais est verrouillé.
+ */
+export async function assertEditableProject(
+  prisma: { project: { findFirst: (args: any) => PromiseLike<any> } },
+  projectId: string,
+  actor: AdviserActor,
+): Promise<{ id: string; status: string }> {
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, ...projectAccessWhere(actor), isActive: true },
+    select: { id: true, status: true },
+  });
+  if (!project || project.status === 'ARCHIVED') {
+    throw new NotFoundException('Projet introuvable');
+  }
+  if (!(EDITABLE_PROJECT_STATUSES as readonly string[]).includes(project.status)) {
+    throw new ConflictException(
+      `Le plan est en lecture seule (statut ${project.status}). Demandez un retour en révision avant de le modifier.`,
+    );
+  }
+  return project;
+}
+
+/**
  * Locks the canonical Project row before a business mutation and then checks
  * its current lifecycle state. The lock makes the state check and all writes
  * performed by the caller's transaction atomic with a concurrent archive or
@@ -80,6 +121,24 @@ export async function lockMutableProject(
   if (project.isActive === false || project.status === 'ARCHIVED') {
     throw new ConflictException(
       'Ce projet est archivé ou inactif et demeure en lecture seule.',
+    );
+  }
+  return project;
+}
+
+/**
+ * lockMutableProject + verrou d'état documentaire : le plan doit être en
+ * brouillon ou en cours (règle unique des écritures documentaires).
+ */
+export async function lockEditableProject(
+  tx: Prisma.TransactionClient,
+  projectId: string,
+  actor: AdviserActor,
+) {
+  const project = await lockMutableProject(tx, projectId, actor);
+  if (!(EDITABLE_PROJECT_STATUSES as readonly string[]).includes(project.status)) {
+    throw new ConflictException(
+      `Le plan est en lecture seule (statut ${project.status}). Demandez un retour en révision avant de le modifier.`,
     );
   }
   return project;

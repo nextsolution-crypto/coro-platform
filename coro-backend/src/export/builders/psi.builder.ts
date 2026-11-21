@@ -189,9 +189,7 @@ export class PsiBuilder extends PmuBuilder {
     // ── Module 7 ──
     if (moduleNum === 7) {
       const module7Data =
-        await this.prisma.module7Data.findUnique({
-          where: { projectId: this.project.id },
-        });
+        await this.data.module7();
 
       const sections7 = renderModule7(
         module7Data,

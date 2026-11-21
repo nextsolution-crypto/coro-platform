@@ -1,4 +1,5 @@
 import { PrismaService } from '../../prisma/prisma.service';
+import { ExportDataSource } from '../export-frozen-data';
 
 export const DOCUMENT_TYPE_LABELS: Record<string, { fr: string; en: string }> = {
   PMU: { fr: 'Plan de mesures d\'urgence',       en: 'Emergency Response Plan' },
@@ -54,6 +55,7 @@ export abstract class BaseDocumentBuilder {
     protected readonly content: any,
     protected readonly lang: 'fr' | 'en',
     protected readonly options: { selectedModules: number[]; moduleOrder: number[] },
+    protected readonly data: ExportDataSource,
   ) {}
 
   abstract getDefaultModules(): number[];
@@ -382,22 +384,9 @@ export abstract class BaseDocumentBuilder {
     );
 
     const [defaults, orgOverrides, projectOverrides] = await Promise.all([
-      this.prisma.procedureDefault.findMany({
-        where: { isActive: true },
-        orderBy: { code: 'asc' },
-      }),
-      this.prisma.procedureOverride.findMany({
-        where: {
-          organizationId,
-          projectId: null,
-        },
-      }),
-      this.prisma.procedureOverride.findMany({
-        where: {
-          organizationId,
-          projectId,
-        },
-      }),
+      this.data.procedureDefaults(),
+      this.data.organizationOverrides(),
+      this.data.projectOverrides(),
     ]);
 
     const orgOverrideMap = new Map(
@@ -514,16 +503,7 @@ export abstract class BaseDocumentBuilder {
     }
 
     if (unresolvedCustomIds.length > 0) {
-      const customIaRecords = await this.prisma.customProcedure.findMany({
-        where: {
-          organizationId,
-          id: { in: unresolvedCustomIds },
-          OR: [
-            { projectId },
-            { isPublished: true },
-          ],
-        },
-      });
+      const customIaRecords = await this.data.customProcedures(unresolvedCustomIds);
 
       const customIaById = new Map(
         customIaRecords.map((p: any) => [p.id, p]),
