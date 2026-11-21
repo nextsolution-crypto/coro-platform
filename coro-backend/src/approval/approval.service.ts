@@ -7,6 +7,10 @@ import {
 } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
+import {
+  missingRequiredPlanFields,
+  planRequiresConfiguratorCompleteness,
+} from '../configurator/plan-completeness';
 import { captureFrozenExportData } from '../export/export-frozen-data';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -87,6 +91,15 @@ export class ApprovalService {
       const document = project.documents[0];
       if (!document || !['DRAFT', 'IN_PROGRESS'].includes(document.status))
         throw new ForbiddenException('Le document ne peut pas être soumis');
+      if (planRequiresConfiguratorCompleteness(project.documentType)) {
+        const missing = missingRequiredPlanFields(project.configData);
+        if (missing.length > 0)
+          throw new ConflictException({
+            code: 'PLAN_INCOMPLETE',
+            message: `Plan incomplet : ${missing.map((field) => field.label).join(', ')}.`,
+            missing,
+          });
+      }
       const snapshot = await this.snapshot(tx, project, document);
       const contentHash = hashReviewSnapshot(snapshot);
       const submittedAt = new Date();

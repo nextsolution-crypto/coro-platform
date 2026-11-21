@@ -1,5 +1,6 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { questionnaireFields, validateBuildingConfig } from './config-validation';
 import { RulesEngineService, BuildingConfig } from './rules-engine.service';
 import { AdviserActor, assertEditableProject, editableProjectAccessWhere, projectAccessWhere } from '../auth/project-access';
 
@@ -19,9 +20,8 @@ export class ConfiguratorService {
     config: BuildingConfig,
     actor: AdviserActor,
   ) {
-    if (!config || typeof config !== 'object' || Array.isArray(config)) {
-      throw new BadRequestException('Configuration invalide.');
-    }
+    // Schéma serveur (M1-06) : forme JSON sûre et types des champs connus.
+    validateBuildingConfig(config, questionnaireFields(await this.getQuestions()));
     const analysis = this.rulesEngine.analyzeConfiguration(config);
     const updated = await this.prisma.project.updateMany({
       where: { id: projectId, ...editableProjectAccessWhere(actor) },

@@ -1,7 +1,31 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import * as mammoth from 'mammoth';
 import { DemoCommunicationChannel } from '@prisma/client';
 import { DemoCommunicationPolicyService } from '../demo-environment/demo-communication-policy.service';
+
+export const MAX_DOCX_IMPORT_BYTES = 15 * 1024 * 1024;
+
+/**
+ * Validation de l'import Word (audit M1-06) : chaîne base64 (data URL
+ * acceptée), taille bornée, et signature d'archive Office Open XML (« PK »).
+ */
+export function decodeDocxUpload(base64: unknown): Buffer {
+  if (typeof base64 !== 'string' || base64.length === 0) {
+    throw new BadRequestException('Fichier Word manquant.');
+  }
+  const cleaned = base64.includes(',') ? base64.slice(base64.indexOf(',') + 1) : base64;
+  if (!/^[A-Za-z0-9+/=\s]+$/.test(cleaned)) {
+    throw new BadRequestException('Fichier Word illisible.');
+  }
+  if (Math.floor((cleaned.length * 3) / 4) > MAX_DOCX_IMPORT_BYTES + 3) {
+    throw new BadRequestException('Fichier Word trop volumineux (15 Mo maximum).');
+  }
+  const buffer = Buffer.from(cleaned, 'base64');
+  if (buffer.length < 4 || buffer[0] !== 0x50 || buffer[1] !== 0x4b) {
+    throw new BadRequestException('Le fichier doit être un document Word (.docx).');
+  }
+  return buffer;
+}
 
 @Injectable()
 export class ImportService {
@@ -10,8 +34,7 @@ export class ImportService {
   ) {}
 
   async extractTextFromDocx(base64: string): Promise<string> {
-    const cleaned = base64.includes(',') ? base64.split(',')[1] : base64;
-    const buffer = Buffer.from(cleaned, 'base64');
+    const buffer = decodeDocxUpload(base64);
     const result = await mammoth.extractRawText({ buffer });
     return result.value;
   }

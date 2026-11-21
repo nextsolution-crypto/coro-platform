@@ -371,6 +371,12 @@ export default function ProjectDetailPage() {
         console.error('Impossible de réconcilier l’état d’approbation:', stateErr);
       }
 
+      // Message métier du serveur (ex. plan incomplet, plan verrouillé).
+      const serverMessage = (err as any)?.response?.data?.message;
+      if (typeof serverMessage === 'string' && serverMessage.trim()) {
+        toast(serverMessage, 'error');
+        return;
+      }
       toast('Erreur lors du traitement. L’état du projet n’a pas pu être confirmé.', 'error');
     } finally {
       setProcessingApproval(false);

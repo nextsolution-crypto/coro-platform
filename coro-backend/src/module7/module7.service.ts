@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertPlainJsonObject } from '../configurator/config-validation';
 import {
   AdviserActor,
   assertEditableProject,
@@ -37,8 +38,14 @@ export class Module7Service {
   }
 
   async saveData(projectId: string, dto: Module7Dto, actor: AdviserActor) {
-    if (!dto || typeof dto !== 'object' || Array.isArray(dto)) {
-      throw new BadRequestException('Données du module 7 invalides.');
+    // Schéma serveur (M1-06) : forme JSON sûre, taille bornée (photos
+    // compressées côté client).
+    assertPlainJsonObject(dto, 'Données du module 7', 20 * 1024 * 1024);
+    const unknown = Object.keys(dto).filter(
+      (key) => !['quartsData', 'photosData', 'extraData'].includes(key),
+    );
+    if (unknown.length > 0) {
+      throw new BadRequestException(`Champ non prévu : ${unknown.join(', ')}.`);
     }
     for (const key of ['quartsData', 'photosData', 'extraData'] as const) {
       const value = dto[key];

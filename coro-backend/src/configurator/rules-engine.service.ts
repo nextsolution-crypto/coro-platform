@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { MissingPlanField, missingRequiredPlanFields } from './plan-completeness';
 
 export interface BuildingConfig {
   // ========== IDENTITÉ / DOCUMENT ==========
@@ -369,6 +370,8 @@ export interface ConfiguratorResult {
   validations: ValidationResult[];
   score: number;
   scoreCompletude: number;
+  /** Champs obligatoires manquants : bloquent la soumission (M1-08). */
+  champsObligatoiresManquants?: MissingPlanField[];
   profilReglementaire?: ProfilReglementaire;
 }
 
@@ -1655,6 +1658,7 @@ export class RulesEngineService {
     );
 
     result.scoreCompletude = this.calculateCompletude(config);
+    result.champsObligatoiresManquants = missingRequiredPlanFields(config);
   }
 
   private calculateCompletude(config: BuildingConfig): number {
