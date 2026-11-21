@@ -20,7 +20,7 @@ describe('ClientPortalService official PDF private storage', () => {
     projectVersion: { findFirst: jest.fn() },
     documentSignature: { findFirst: jest.fn() },
   };
-  const exportService = { generatePdf: jest.fn() };
+  const exportService = { generateLatestApprovedPdf: jest.fn() };
   const storageService = {
     storeOfficialPdfImmutable: jest.fn(),
     downloadOfficialPdfReference: jest.fn(),
@@ -42,7 +42,7 @@ describe('ClientPortalService official PDF private storage', () => {
     prisma.project.findUnique.mockResolvedValue(project);
     prisma.projectVersion.findFirst.mockResolvedValue({ id: 'version-1' });
     prisma.documentSignature.findFirst.mockResolvedValue({ id: 'signature-1' });
-    exportService.generatePdf.mockResolvedValue({
+    exportService.generateLatestApprovedPdf.mockResolvedValue({
       fr: Buffer.from('%PDF-fr'),
       en: Buffer.from('%PDF-en'),
     });

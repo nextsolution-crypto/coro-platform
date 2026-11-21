@@ -21,6 +21,13 @@ export interface CoverData {
   revisionType?: string;
   versionNumber?: number;
   guideMention?: string;
+  /** Version approuvée (M1-05). Absente : version de travail. */
+  approval?: {
+    versionNumber: number;
+    approvedAt: string | null;
+    approvedBy: string | null;
+    shortHash: string;
+  };
 }
 
 export function generateCoverPage(data: CoverData): string {
@@ -33,6 +40,11 @@ export function generateCoverPage(data: CoverData): string {
     tagline: isFr ? 'Expert-conseil en résilience et mesures d\'urgence' : 'Expert advisory in resilience and emergency planning',
     creationDate: isFr ? 'Date de création' : 'Creation date',
     version: isFr ? 'Version' : 'Version',
+    approvedVersion: isFr ? 'Version approuvée' : 'Approved version',
+    approvedOn: isFr ? 'approuvée le' : 'approved on',
+    by: isFr ? 'par' : 'by',
+    fingerprint: isFr ? 'Empreinte' : 'Fingerprint',
+    workingVersion: isFr ? 'Version de travail — non approuvée' : 'Working version — not approved',
     confidential: isFr ? 'Document confidentiel — Diffusion restreinte' : 'Confidential document — Restricted distribution',
     phone: isFr ? 'Téléphone' : 'Phone',
   };
@@ -74,6 +86,27 @@ export function generateCoverPage(data: CoverData): string {
   const rawRevisionType = data.revisionType || 'Création initiale';
   const revisionTypeLabel = REVISION_TYPE_LABELS[rawRevisionType]?.[isFr ? 'fr' : 'en'] || rawRevisionType;
   const versionLabel = `${data.versionNumber || 1}.0`;
+  const formatDate = (iso: string | null) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const month = monthNames[d.getMonth()];
+    return isFr
+      ? `${d.getDate()} ${month} ${d.getFullYear()}`
+      : `${month} ${d.getDate()}, ${d.getFullYear()}`;
+  };
+  // La « version » de couverture est celle de l'approbation, jamais un
+  // compte de lignes d'historique (M1-05).
+  const approvalHtml = data.approval
+    ? [
+        `<span>${labels.approvedVersion} : v${data.approval.versionNumber}${
+          data.approval.approvedAt ? ` — ${labels.approvedOn} ${formatDate(data.approval.approvedAt)}` : ''
+        }${data.approval.approvedBy ? ` ${labels.by} ${escapeHtml(data.approval.approvedBy)}` : ''}</span>`,
+        `<span>${labels.fingerprint} : ${escapeHtml(data.approval.shortHash)}</span>`,
+      ].join('')
+    : data.guideMention
+      ? `<span>${labels.version} : ${versionLabel}</span>`
+      : `<span>${labels.workingVersion}</span>`;
 
   // Sépare le label de type de document en deux lignes
   const words = data.documentTypeLabel.split(' ');
@@ -168,7 +201,7 @@ export function generateCoverPage(data: CoverData): string {
         <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
           <div style="display:flex;flex-direction:column;gap:4px;">
             <span>${revisionTypeLabel} : ${fullDate}</span>
-            <span>${labels.version} : ${versionLabel}</span>
+            ${approvalHtml}
             <span>${labels.confidential}</span>
           </div>
           ${data.guideMention ? `<span style="font-weight:700;color:#FFFFFF;border:2px solid rgba(255,255,255,0.7);border-radius:20px;padding:8px 18px;font-size:14px;">${escapeHtml(data.guideMention)}</span>` : ''}

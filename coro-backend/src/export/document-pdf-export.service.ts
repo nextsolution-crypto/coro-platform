@@ -11,6 +11,7 @@ import { StorageService } from '../storage/storage.service';
 import { projectAccessWhere, type AdviserActor } from '../auth/project-access';
 import { hashReviewSnapshot } from '../approval/document-review-integrity';
 import { ExportService, type ExportOptions } from './export.service';
+import { approvalStampFromVersion } from './approval-stamp';
 
 type RequestInput = ExportOptions & { idempotencyKey: string };
 type Artifact = {
@@ -237,6 +238,7 @@ export class DocumentPdfExportService {
             ...options,
             language: row.language as 'fr' | 'en' | 'both',
             isPreview: false,
+            approval: approvalStampFromVersion(authority.version),
           },
           { projectId: row.projectId, organizationId: row.organizationId },
         );

@@ -470,7 +470,10 @@ describe('plan document security boundaries', () => {
     };
     const notifications: any = { create: jest.fn().mockResolvedValue({}) };
     const email: any = { send: jest.fn().mockResolvedValue({}) };
-    const exporter: any = { generatePdf: jest.fn().mockResolvedValue({}) };
+    const exporter: any = {
+      generatePdf: jest.fn().mockResolvedValue({}),
+      generateLatestApprovedPdf: jest.fn().mockResolvedValue({}),
+    };
     const storage: any = { uploadFile: jest.fn() };
     const service = new ApprovalService(
       prisma,
