@@ -126,6 +126,18 @@ describe('Plan security PostgreSQL authorization', () => {
         name: 'Plan S02 Project A1',
         documentType: 'PMU',
         year: 2026,
+        // Champs obligatoires du contrôle de complétude avant soumission.
+        configData: {
+          province: 'Quebec',
+          responsableNom: 'Responsable synthétique',
+          dateReleve: '2026-01-15',
+          buildingType: 'Tour à bureaux',
+          usagePrincipal: 'D',
+          floors: 4,
+          posteCommandement: 'Hall principal',
+          pointRassemblement: 'Stationnement nord',
+          lieuDocument: 'Bureau de la sécurité',
+        },
         organizationId: ids.orgA,
         clientId: ids.clientA,
         buildingId: ids.buildingA,

@@ -60,6 +60,7 @@ interface AnalysisResult {
   validations: ValidationResult[];
   score: number;
   scoreCompletude: number;
+  champsObligatoiresManquants?: { key: string; label: string }[];
   profilReglementaire?: ProfilReglementaire;
 }
 
@@ -519,6 +520,17 @@ export default function ConfiguratorPage() {
   const importInputRef = useRef<HTMLInputElement>(null);
   const [navPanelOpen, setNavPanelOpen] = useState(false);
   const [analysisPanelOpen, setAnalysisPanelOpen] = useState(false);
+  // Sauvegarde automatique et verrou d'état (audit M1-08, M1-02).
+  const [projectStatus, setProjectStatus] = useState<string>('');
+  const [dirty, setDirty] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const editVersion = useRef(0);
+  const planIsEditable = projectStatus === '' || ['DRAFT', 'IN_PROGRESS'].includes(projectStatus);
+  const markDirty = () => {
+    editVersion.current += 1;
+    setDirty(true);
+  };
 
   useEffect(() => { initAuth(); }, []);
 
@@ -542,6 +554,7 @@ export default function ConfiguratorPage() {
         .flatMap((s: Section) => s.fields)
         .find((f: Field) => f.key === 'usagePrincipal');
       setProjectName(projectRes.data.name);
+      setProjectStatus(projectRes.data.status || '');
 
       const b = projectRes.data.building;
       if (b) setBuildingAddress(`${b.address || ''}, ${b.city || ''}, ${b.province || ''}, Canada`);
@@ -685,25 +698,73 @@ export default function ConfiguratorPage() {
     const formatted = phoneKeys.includes(key) && typeof value === 'string' ? formatPhone(value) : value;
     const newConfig = { ...config, [key]: formatted };
     setConfig(newConfig);
+    markDirty();
     triggerAnalysis(newConfig, lists);
   };
 
   const updateList = (key: string, items: any[]) => {
     const newLists = { ...lists, [key]: items };
     setLists(newLists);
+    markDirty();
     triggerAnalysis(config, newLists);
   };
 
-  const handleSave = async () => {
+  const handleSave = async (options: { silent?: boolean } = {}): Promise<boolean> => {
+    if (!planIsEditable) return false;
+    const version = editVersion.current;
     setSaving(true);
     try {
       const payload = { ...config, ...lists };
       await api.post(`/configurator/save/${projectId}`, payload);
       localStorage.setItem(`coro_config_${projectId}`, JSON.stringify(payload));
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch (err) { console.error(err); }
-    finally { setSaving(false); }
+      if (editVersion.current === version) setDirty(false);
+      setSaveError(null);
+      setLastSavedAt(new Date());
+      if (!options.silent) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      }
+      return true;
+    } catch (err: any) {
+      console.error(err);
+      const message = err?.response?.data?.message;
+      setSaveError(
+        typeof message === 'string' && message.trim()
+          ? message
+          : 'La sauvegarde a échoué. Vos modifications sont conservées sur cette page.',
+      );
+      if (err?.response?.status === 409) setProjectStatus('REVIEW');
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Sauvegarde automatique 4 s après la dernière modification.
+  useEffect(() => {
+    if (!dirty || saving || !planIsEditable || loading) return;
+    const timer = setTimeout(() => { void handleSave({ silent: true }); }, 4000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty, saving, planIsEditable, loading, config, lists]);
+
+  // Alerte du navigateur si l'on quitte avec des modifications non enregistrées.
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
+
+  const leaveTo = async (path: string) => {
+    if (dirty && planIsEditable) {
+      const ok = await handleSave({ silent: true });
+      if (!ok) return; // l'erreur est affichée, on reste sur la page
+    }
+    router.push(path);
   };
 
   const handleImportWord = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -758,6 +819,7 @@ export default function ConfiguratorPage() {
 
           setConfig(newConfig);
           setLists(newLists);
+          markDirty();
           setImportResult({ fieldsFound });
           
           // Sauvegarder aussi dans localStorage comme le fait handleSave
@@ -774,7 +836,8 @@ export default function ConfiguratorPage() {
           if (importInputRef.current) importInputRef.current.value = '';
         } catch (err) {
           console.error(err);
-          alert('Erreur lors de l\'import du document.');
+          const message = (err as any)?.response?.data?.message;
+          setSaveError(typeof message === 'string' && message.trim() ? message : 'Erreur lors de l\'import du document.');
         } finally {
           setImporting(false);
         }
@@ -945,7 +1008,7 @@ export default function ConfiguratorPage() {
       >
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-full xl:w-auto">
           <h1 className="text-xl font-bold cursor-pointer flex-shrink-0" style={{ color: '#2C3E50' }}
-            onClick={() => router.push('/dashboard')}>
+            onClick={() => void leaveTo('/dashboard')}>
             CO<span style={{ color: '#C0392B' }}>RO</span>
           </h1>
           <span className="hidden sm:inline" style={{ color: '#DEE2E6' }}>|</span>
@@ -998,7 +1061,7 @@ export default function ConfiguratorPage() {
             {importing ? '⏳ Analyse...' : '📄 Importer PMU'}
           </button>
           <button
-            onClick={() => router.push(`/projects/${projectId}`)}
+            onClick={() => void leaveTo(`/projects/${projectId}`)}
             className="flex-1 sm:flex-none text-xs sm:text-sm font-medium px-3 sm:px-4 py-2 rounded transition-colors"
             style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
@@ -1007,17 +1070,50 @@ export default function ConfiguratorPage() {
             Retour au projet
           </button>
           <button
-            onClick={handleSave}
-            disabled={saving}
+            onClick={() => void handleSave()}
+            disabled={saving || !planIsEditable}
             className="flex-1 sm:flex-none text-white text-xs sm:text-sm font-medium px-3 sm:px-4 py-2 rounded transition-colors disabled:opacity-50"
             style={{ backgroundColor: saved ? '#27AE60' : '#C0392B' }}
             onMouseEnter={e => { if (!saving) e.currentTarget.style.backgroundColor = saved ? '#1E8449' : '#A93226'; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = saved ? '#27AE60' : '#C0392B'; }}
           >
-            {saving ? 'Sauvegarde...' : saved ? '✓ Sauvegardé !' : 'Sauvegarder'}
+            {!planIsEditable ? 'Verrouillé' : saving ? 'Sauvegarde...' : saved ? '✓ Sauvegardé !' : 'Sauvegarder'}
           </button>
+          <span className="w-full xl:w-auto text-xs" aria-live="polite"
+            style={{ color: saveError ? '#A93226' : '#6C757D' }}>
+            {saveError
+              ? ''
+              : dirty && planIsEditable
+                ? 'Modifications non enregistrées…'
+                : lastSavedAt
+                  ? `Enregistré à ${lastSavedAt.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}`
+                  : ''}
+          </span>
         </div>
       </div>
+
+      {!planIsEditable && (
+        <div role="status" className="px-3 sm:px-4 lg:px-6 py-3 text-xs sm:text-sm"
+          style={{ backgroundColor: '#FDF2E9', borderBottom: '1px solid #F5CBA7', color: '#935116' }}>
+          Ce plan est soumis ou approuvé : la configuration est en lecture seule. Un administrateur doit d'abord le retourner en révision.
+        </div>
+      )}
+
+      {saveError && (
+        <div role="alert" className="px-3 sm:px-4 lg:px-6 py-3 flex items-start justify-between gap-3 text-xs sm:text-sm"
+          style={{ backgroundColor: '#FDEDEC', borderBottom: '1px solid #F5B7B1', color: '#A93226' }}>
+          <span>{saveError}</span>
+          <button onClick={() => setSaveError(null)} className="text-xs" style={{ color: '#6C757D' }}>✕</button>
+        </div>
+      )}
+
+      {planIsEditable && (analysis?.champsObligatoiresManquants?.length ?? 0) > 0 && (
+        <div className="px-3 sm:px-4 lg:px-6 py-2 text-xs sm:text-sm"
+          style={{ backgroundColor: '#FEF9E7', borderBottom: '1px solid #F9E79F', color: '#7D6608' }}>
+          <strong>À compléter avant la soumission :</strong>{' '}
+          {analysis!.champsObligatoiresManquants!.map(f => f.label).join(' · ')}
+        </div>
+      )}
 
       {importResult && (
         <div className="px-3 sm:px-4 lg:px-6 py-3 flex items-start justify-between gap-3"
@@ -1314,8 +1410,8 @@ export default function ConfiguratorPage() {
                   </button>
                 )}
                 {activeSection === sections.length - 1 && (
-                  <button onClick={handleSave}
-                    className="flex-1 text-white font-medium py-3 rounded-md text-sm"
+                  <button onClick={() => void handleSave()} disabled={!planIsEditable}
+                    className="flex-1 text-white font-medium py-3 rounded-md text-sm disabled:opacity-50"
                     style={{ backgroundColor: '#27AE60' }}
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1E8449'}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = '#27AE60'}
