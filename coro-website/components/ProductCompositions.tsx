@@ -122,8 +122,8 @@ function Documents({ locale, copy: t }: Props) {
                   <small>
                     {localized(
                       locale,
-                      " statut à valider",
-                      " status to validate",
+                      " Phase 2 — à venir",
+                      " Phase 2 — coming soon",
                     )}
                   </small>
                 )}
