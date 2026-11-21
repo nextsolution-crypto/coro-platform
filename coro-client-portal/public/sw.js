@@ -1,4 +1,4 @@
-const CACHE_NAME = "coro-sentinelle-v1";
+const CACHE_NAME = "coro-sentinelle-v2"; // v2 : page hors ligne d'urgence (M2-10)
 
 // Ressources à mettre en cache immédiatement
 const PRECACHE_URLS = ["/", "/dashboard", "/offline"];

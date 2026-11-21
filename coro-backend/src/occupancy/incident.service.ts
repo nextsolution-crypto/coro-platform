@@ -30,6 +30,7 @@ import {
   type PanicResponse,
   type PanicScope,
   type PanicType,
+  PANIC_INCIDENT_TYPES,
 } from './panic-messages';
 
 type IncidentAuditContext = {
@@ -252,6 +253,7 @@ function buildInterventionSheet(
     documentId: string | null;
     documentVersion: number | null;
     documentUpdatedAt: Date | null;
+    approvedVersionNumber?: number | null;
   } | null,
 ) {
   const cfg = configData || {};
@@ -318,6 +320,8 @@ function buildInterventionSheet(
       documentId: source.documentId,
       documentVersion: source.documentVersion,
       documentUpdatedAt: source.documentUpdatedAt?.toISOString() || null,
+      // Version approuvée lue (M2-08) ; null : plan courant (approbation ancienne).
+      approvedVersionNumber: source.approvedVersionNumber ?? null,
       capturedAt: new Date().toISOString(),
     } : {
       authority: 'NO_APPROVED_PROJECT_DOCUMENT',
@@ -957,14 +961,43 @@ export class IncidentService {
       console.error('[IncidentService] Trace panique non enregistrée:', error);
     }
 
-    // Log dans l'incident actif si existant
+    // Incident (audit M2-02) : la panique rejoint l'incident actif, sinon en
+    // ouvre un du type correspondant. Les alertes sont déjà parties
+    // ci-dessus : l'incident n'envoie rien de plus, il porte le suivi
+    // (checklist du coordonnateur, journal, REX).
+    const panicLine = `${body.isExercise ? '[EXERCICE] ' : ''}🚨 BOUTON PANIQUE (${PANIC_TYPE_LABELS[panicType].fr}) activé par ${triggeredBy} — ${notifiedCount} membre(s) de l'équipe et ${occupantCount} occupant(s) joints`;
+    let incidentEventId: string | null = null;
     const activeIncident = await this.prisma.incidentEvent.findFirst({
       where: { buildingId, organizationId, isActive: true },
+      orderBy: { createdAt: 'desc' },
     });
     if (activeIncident) {
+      incidentEventId = activeIncident.id;
       await this.prisma.incidentLog.create({
-        data: { incidentEventId: activeIncident.id, action: `${body.isExercise ? '[EXERCICE] ' : ''}🚨 BOUTON PANIQUE (${PANIC_TYPE_LABELS[panicType].fr}) activé par ${triggeredBy}`, isAutomatic: false },
+        data: { incidentEventId: activeIncident.id, action: panicLine, isAutomatic: false },
       });
+    } else {
+      try {
+        const opened = await this.triggerIncident(
+          {
+            buildingId,
+            type: PANIC_INCIDENT_TYPES[panicType] as any,
+            triggeredBy,
+            isExercise: body.isExercise === true,
+            description: panicLine,
+          } as any,
+          organizationId,
+          { status: 'ACTIVE', deferNotifications: true, source: 'PANIC' },
+        );
+        incidentEventId = opened.incident.id;
+      } catch (error) {
+        console.error('[IncidentService] Incident de panique non ouvert (alertes déjà envoyées):', error instanceof Error ? error.message : error);
+      }
+    }
+    if (incidentEventId) {
+      await this.prisma.panicAlert
+        .update({ where: { id: alert.id }, data: { incidentEventId } })
+        .catch(() => undefined);
     }
 
     return {
@@ -977,6 +1010,7 @@ export class IncidentService {
       coordinatorName,
       address,
       contacts: sent.length,
+      incidentEventId,
     };
   }
 
@@ -1035,6 +1069,67 @@ export class IncidentService {
     return recipient;
   }
 
+  /**
+   * Version approuvée du plan d'urgence du bâtiment (audit M2-08).
+   * 1. Dernière version d'approbation dont le snapshot contient le plan
+   *    soumis (configuration + contenu) : source opposable.
+   * 2. À défaut (approbations anciennes sans snapshot complet), le plan
+   *    validé courant, verrouillé en lecture seule depuis l'audit M1.
+   */
+  async loadApprovedPlanForIncident(buildingId: string, organizationId: string): Promise<{
+    project: { id: string; documentType: string; status: string; updatedAt: Date };
+    configData: any;
+    content: any;
+    document: { id: string; version: number; updatedAt: Date } | null;
+    approvedVersionNumber: number | null;
+  } | null> {
+    const version = await this.prisma.projectVersion.findFirst({
+      where: {
+        project: { buildingId, organizationId, documentType: { in: ['PMU', 'PSI'] }, isActive: true },
+        snapshot: { path: ['type'], equals: 'APPROVAL' },
+      },
+      orderBy: [{ createdAt: 'desc' }, { versionNumber: 'desc' }],
+      select: {
+        versionNumber: true,
+        createdAt: true,
+        snapshot: true,
+        project: { select: { id: true, documentType: true, status: true, updatedAt: true } },
+      },
+    });
+    const submitted = (version?.snapshot as any)?.submittedSnapshot;
+    if (version && submitted?.project && submitted?.document) {
+      return {
+        project: version.project,
+        configData: submitted.project.configData ?? {},
+        content: submitted.document.content ?? {},
+        document: submitted.document.id
+          ? { id: submitted.document.id, version: Number(submitted.document.version) || 0, updatedAt: version.createdAt }
+          : null,
+        approvedVersionNumber: version.versionNumber,
+      };
+    }
+
+    const activePmu = await this.prisma.project.findFirst({
+      where: { buildingId, organizationId, documentType: { in: ['PMU', 'PSI'] }, status: { in: ['VALIDATED', 'EXPORTED'] }, isActive: true },
+      orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+      select: { id: true, documentType: true, status: true, updatedAt: true, configData: true },
+    });
+    if (!activePmu) return null;
+    const pmuDocument = await this.prisma.document.findFirst({
+      where: { projectId: activePmu.id, status: { in: ['VALIDATED', 'EXPORTED'] } },
+      orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }, { id: 'desc' }],
+      select: { id: true, version: true, updatedAt: true, content: true },
+    });
+    const { configData, ...project } = activePmu;
+    return {
+      project,
+      configData: configData ?? {},
+      content: pmuDocument?.content ?? {},
+      document: pmuDocument ? { id: pmuDocument.id, version: pmuDocument.version, updatedAt: pmuDocument.updatedAt } : null,
+      approvedVersionNumber: version?.versionNumber ?? null,
+    };
+  }
+
   // ── Déclencher un incident ────────────────────────────────────────────────
   // opts.status/'PRE_ALERT' + deferNotifications=true : utilisé par le pont
   // panneau d'alarme (triggerFromAlarmPanel) — l'incident et ses tâches sont
@@ -1043,7 +1138,7 @@ export class IncidentService {
   async triggerIncident(
     body: TriggerIncidentDto & { triggeredBy: string },
     organizationId: string,
-    opts?: { status?: 'ACTIVE' | 'PRE_ALERT'; deferNotifications?: boolean },
+    opts?: { status?: 'ACTIVE' | 'PRE_ALERT'; deferNotifications?: boolean; source?: 'PANIC' },
     audit?: IncidentAuditContext,
   ) {
     const building = await this.prisma.building.findFirst({ where: { id: body.buildingId, organizationId } });
@@ -1053,27 +1148,15 @@ export class IncidentService {
     const deferNotifications = opts?.deferNotifications ?? false;
     const isExercise = body.isExercise === true;
 
-    // PMU actif
-    const activePmu = await this.prisma.project.findFirst({
-      where: { buildingId: body.buildingId, documentType: { in: ['PMU', 'PSI'] }, status: { in: ['VALIDATED', 'EXPORTED'] }, isActive: true },
-      orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
-      select: { id: true, documentType: true, status: true, updatedAt: true, configData: true },
-    });
-    const configData    = activePmu?.configData as any;
+    // Plan de référence (audit M2-08) : la dernière version APPROUVÉE du PMU
+    // ou du PSI du bâtiment — point de rassemblement et contacts tels
+    // qu'approuvés, même si le plan est revenu en révision depuis.
+    const approvedPlan = await this.loadApprovedPlanForIncident(body.buildingId, organizationId);
+    const activePmu = approvedPlan?.project ?? null;
+    const configData    = approvedPlan?.configData ?? null;
     const assemblyPoint = configData?.pointRassemblement || null;
-
-    // Contacts d'urgence (Module 2 — stockés dans Document.content, pas configData)
-    let contactsModule2: any = null;
-    let sourceDocument: { id: string; version: number; updatedAt: Date } | null = null;
-    if (activePmu?.id) {
-      const pmuDocument = await this.prisma.document.findFirst({
-        where: { projectId: activePmu.id, status: { in: ['VALIDATED', 'EXPORTED'] } },
-        orderBy: [{ version: 'desc' }, { updatedAt: 'desc' }, { id: 'desc' }],
-        select: { id: true, version: true, updatedAt: true, content: true },
-      });
-      contactsModule2 = (pmuDocument?.content as any)?.module2 || null;
-      sourceDocument = pmuDocument || null;
-    }
+    const contactsModule2: any = approvedPlan?.content?.module2 || null;
+    const sourceDocument = approvedPlan?.document ?? null;
 
     const interventionSheet = buildInterventionSheet(
       building,
@@ -1087,6 +1170,7 @@ export class IncidentService {
         documentId: sourceDocument?.id || null,
         documentVersion: sourceDocument?.version || null,
         documentUpdatedAt: sourceDocument?.updatedAt || null,
+        approvedVersionNumber: approvedPlan?.approvedVersionNumber ?? null,
       } : null,
     );
     const publicAccessToken = randomUUID();
@@ -1121,7 +1205,7 @@ export class IncidentService {
     const coordSteps    = await this.getCoordinatorSteps(procedureCode);
 
     // Créer l'incident
-    return this.prisma.$transaction(async (tx) => {
+    const created = await this.prisma.$transaction(async (tx) => {
     const incident = await tx.incidentEvent.create({
       data: {
         buildingId:        body.buildingId,
@@ -1174,6 +1258,15 @@ export class IncidentService {
           isAutomatic: true,
         },
       });
+    } else if (opts?.source === 'PANIC') {
+      await tx.incidentLog.create({
+        data: {
+          incidentEventId: incident.id,
+          action:  `${isExercise ? '[EXERCICE] ' : ''}Incident ouvert par le bouton panique — ${incidentLabel}`,
+          details: `Alertes déjà envoyées par la panique (suivi dans l'alerte panique) · ${presentRecords.length} occupants · Procédure ${procedureCode}`,
+          isAutomatic: true,
+        },
+      });
     } else {
       await tx.incidentLog.create({
         data: {
@@ -1193,6 +1286,17 @@ export class IncidentService {
     });
     return { incident, coordinatorStepsCount: coordSteps.length, notifiedCount: mobilizableTeam.length, isExercise };
     });
+    // Envoi immédiat après validation (M2-04) ; la tâche planifiée reprend
+    // les échecs.
+    if (!deferNotifications) this.kickIncidentDispatch(created.incident.id);
+    return created;
+  }
+
+  private kickIncidentDispatch(incidentEventId: string) {
+    if (!this.dispatcher) return;
+    void this.dispatcher.dispatchIncidentNow(incidentEventId).catch((error) =>
+      console.error('[IncidentService] Envoi immédiat différé à la tâche planifiée :', error instanceof Error ? error.message : error),
+    );
   }
 
   // ── Envoi des notifications (coordonnateur, équipe, occupants) ────────────
@@ -1308,6 +1412,12 @@ export class IncidentService {
   // atomique : si confirmation, annulation et minuterie se chevauchent, seul
   // le premier appel obtient claimed:true — les autres sont des no-op.
   private async resolvePreAlert(incidentId: string, outcome: 'CONFIRMED' | 'CANCELLED' | 'AUTO_ESCALATED', audit?: IncidentAuditContext) {
+    const resolved = await this.resolvePreAlertInTransaction(incidentId, outcome, audit);
+    if (resolved.claimed && outcome !== 'CANCELLED') this.kickIncidentDispatch(incidentId);
+    return resolved;
+  }
+
+  private async resolvePreAlertInTransaction(incidentId: string, outcome: 'CONFIRMED' | 'CANCELLED' | 'AUTO_ESCALATED', audit?: IncidentAuditContext) {
     return this.prisma.$transaction(async (tx) => {
     const claimed = await tx.incidentEvent.updateMany({
       where: { id: incidentId, status: 'PRE_ALERT' },

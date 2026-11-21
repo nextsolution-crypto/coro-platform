@@ -5,6 +5,7 @@ import { apiGet, getUser, type ClientUser } from '../store/auth';
 import PortalLayout from '../components/PortalLayout';
 import { Building2, FileText, MapPin, Users } from 'lucide-react';
 import styles from './buildings.module.css';
+import { saveEmergencyCard } from '../offline/emergency-card';
 
 export default function BuildingsPage() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function BuildingsPage() {
     try {
       const res = await apiGet('/client-portal/buildings') as BuildingSummary[];
       setBuildings(Array.isArray(res) ? res : []);
+      saveEmergencyCard(res);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Impossible de charger les bâtiments.');
     } finally {
