@@ -1,3 +1,4 @@
+import { Throttle } from '@nestjs/throttler';
 import {
   Controller,
   Get,
@@ -1415,22 +1416,16 @@ export class ClientPortalController {
 
   @Post('buildings/:buildingId/panic')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
+  // Décision du 21 nov. 2026 : comme un déclencheur manuel d'alarme, le bouton
+  // panique est ouvert à tout utilisateur du portail qui a accès au bâtiment.
+  // Le déclenchement d'un incident complet reste réservé au commandement.
+  // Limite anti-abus : 5 alertes par minute et par adresse.
+  @Throttle({ short: { ttl: 60_000, limit: 5 } })
   async triggerPanic(
     @Param('buildingId') buildingId: string,
     @Body() body: TriggerIncidentPanicDto,
     @Request() req: any,
   ) {
-    await this.clientPortalService.assertIncidentPermission(
-      req.clientUser,
-      IncidentPermission.INCIDENT_COMMAND,
-    );
-    await this.incidentService.requireIncidentAuthority({
-      actorType: 'CLIENT_USER',
-      actorId: req.clientUser.sub || req.clientUser.id,
-      organizationId: req.clientUser.organizationId,
-      buildingId,
-      permission: IncidentPermission.INCIDENT_COMMAND,
-    });
     await this.clientPortalService.assertBuildingAccess(
       buildingId,
       req.clientUser,
