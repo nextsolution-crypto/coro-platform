@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { HttpException, UnauthorizedException } from '@nestjs/common';
 import { PresenceFlowService } from './presence-flow.service';
 
 describe('PresenceFlowService', () => {
@@ -16,6 +16,7 @@ describe('PresenceFlowService', () => {
         findUnique: jest.fn(),
         findFirst: jest.fn(),
         update: jest.fn(),
+        aggregate: jest.fn().mockResolvedValue({ _sum: { failedAttempts: 0 } }),
       },
       presenceDeviceSession: {
         findFirst: jest.fn(),
@@ -179,5 +180,23 @@ describe('PresenceFlowService', () => {
     expect(JSON.stringify(prisma.presenceDeviceSession.updateMany.mock.calls[0][0])).not.toContain(
       'opaque-device-token',
     );
+  });
+
+  it('suspends PIN entry for a building after too many recent failures (audit M5-02)', async () => {
+    prisma.presenceSession.findFirst.mockResolvedValue({
+      id: 'session-b',
+      buildingId: 'building-a',
+      organizationId: 'org-a',
+      building: { name: 'Édifice QA' },
+    });
+    prisma.presenceSession.aggregate.mockResolvedValue({ _sum: { failedAttempts: 20 } });
+
+    const attempt = service.identify('session-b', '1234');
+    await expect(attempt).rejects.toBeInstanceOf(HttpException);
+    await expect(service.identify('session-b', '1234')).rejects.toMatchObject({ status: 429 });
+    expect(prisma.buildingEmployee.findFirst).not.toHaveBeenCalled();
+    const where = prisma.presenceSession.aggregate.mock.calls[0][0].where;
+    expect(where.buildingId).toBe('building-a');
+    expect(Date.now() - where.createdAt.gte.getTime()).toBeGreaterThanOrEqual(15 * 60_000 - 1000);
   });
 });
