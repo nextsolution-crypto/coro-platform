@@ -13,6 +13,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { OccupancyEmployeesService } from './occupancy-employees.service';
 import { PresenceFlowService } from './presence-flow.service';
@@ -40,6 +41,9 @@ export class OccupancyEmployeesController {
     );
   }
 
+  // NIP : 10 essais par minute et par adresse, en plus de la limite par
+  // bâtiment appliquée dans PresenceFlowService (audit M5-02).
+  @Throttle({ short: { ttl: 60_000, limit: 10 } })
   @Post('presence/session/identify')
   identifyPresenceSession(@Body() body: any) {
     return this.presenceFlow.identify(body.sessionId, body.pin);

@@ -1,7 +1,10 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
+  HttpStatus,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -11,13 +14,42 @@ import { PrismaService } from '../prisma/prisma.service';
 const CHALLENGE_TTL_MS = 45_000;
 const TRANSACTION_TTL_MS = 5 * 60_000;
 const DEVICE_TTL_MS = 30 * 24 * 60 * 60_000;
+// Audit M5-02 : un NIP à 4 chiffres ne résiste pas à des essais répétés sur
+// de nombreuses transactions. Au-delà de ce nombre d'échecs sur un bâtiment
+// dans la fenêtre glissante, la saisie du NIP est suspendue pour ce
+// bâtiment (la reconnaissance d'appareil et le QR personnel restent actifs).
+export const BUILDING_PIN_FAILURE_LIMIT = 20;
+export const BUILDING_PIN_FAILURE_WINDOW_MS = 15 * 60_000;
 
 const digest = (value: string) =>
   createHash('sha256').update(value).digest('hex');
 
 @Injectable()
 export class PresenceFlowService {
+  private readonly logger = new Logger(PresenceFlowService.name);
+
   constructor(private readonly prisma: PrismaService) {}
+
+  private async assertBuildingPinNotLocked(buildingId: string, now: Date) {
+    const recent = await this.prisma.presenceSession.aggregate({
+      where: {
+        buildingId,
+        createdAt: { gte: new Date(now.getTime() - BUILDING_PIN_FAILURE_WINDOW_MS) },
+        failedAttempts: { gt: 0 },
+      },
+      _sum: { failedAttempts: true },
+    });
+    const failures = recent._sum.failedAttempts ?? 0;
+    if (failures >= BUILDING_PIN_FAILURE_LIMIT) {
+      this.logger.warn(
+        `[ALERTE] Saisie NIP suspendue pour le bâtiment ${buildingId} : ${failures} échecs en 15 minutes.`,
+      );
+      throw new HttpException(
+        'Trop d\'essais de NIP sur cette borne. Réessayez dans 15 minutes ou utilisez votre code QR personnel.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+  }
 
   async issueChallenge(publicToken: string) {
     const display = await this.resolveDisplay(publicToken);
@@ -138,6 +170,7 @@ export class PresenceFlowService {
       include: { building: { select: { name: true } } },
     });
     if (!session) throw new UnauthorizedException('Transaction expirée ou invalide');
+    await this.assertBuildingPinNotLocked(session.buildingId, now);
     const employee = await this.prisma.buildingEmployee.findFirst({
       where: {
         buildingId: session.buildingId,
