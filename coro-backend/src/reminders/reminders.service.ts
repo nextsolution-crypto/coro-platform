@@ -162,43 +162,69 @@ export class RemindersService {
   }
 
   // ── Purge automatique registre Sentinelle ─────────────────────────────────
+  // Rétention : présences et invitations 12 mois, évacuations 36 mois
+  // (preuve ISO 22301 / CNPI). Une présence citée par une évacuation encore
+  // conservée est gardée jusqu'à la fin de la rétention de cette évacuation :
+  // sans cette règle, la contrainte EvacuationCheckIn → OccupancyRecord fait
+  // échouer toute la purge dès qu'une évacuation a plus de 12 mois (M5-03).
+  // Chaque étape est indépendante : l'échec de l'une est journalisé comme
+  // alerte et n'empêche pas les autres.
   @Cron('0 2 * * *') // Chaque nuit à 2h
-  async purgeOldOccupancyRecords() {
+  async purgeOldOccupancyRecords(now: Date = new Date()) {
     this.logger.log('Purge des anciens enregistrements Sentinelle...');
-    const cutoff12months = new Date();
+    const cutoff12months = new Date(now);
     cutoff12months.setMonth(cutoff12months.getMonth() - 12);
 
-    const cutoff36months = new Date();
+    const cutoff36months = new Date(now);
     cutoff36months.setMonth(cutoff36months.getMonth() - 36);
 
-    // Supprimer les OccupancyRecord de plus de 12 mois
-    const deletedRecords = await this.prisma.occupancyRecord.deleteMany({
-      where: { checkedInAt: { lt: cutoff12months } },
-    });
+    const failures: string[] = [];
+    const step = async (label: string, run: () => Promise<{ count: number }>) => {
+      try {
+        return (await run()).count;
+      } catch (error) {
+        failures.push(label);
+        this.logger.error(
+          `[ALERTE] Purge Sentinelle en échec (${label}) : ${error instanceof Error ? error.message : String(error)}`,
+        );
+        return 0;
+      }
+    };
 
-    // Supprimer les EvacuationCheckIn orphelins
-    await this.prisma.evacuationCheckIn.deleteMany({
-      where: {
-        evacuationEvent: {
-          triggeredAt: { lt: cutoff36months },
+    // 1. Évacuations de plus de 36 mois et leurs pointages
+    await step('pointages évacuation', () =>
+      this.prisma.evacuationCheckIn.deleteMany({
+        where: { evacuationEvent: { triggeredAt: { lt: cutoff36months } } },
+      }),
+    );
+    const deletedEvents = await step('évacuations', () =>
+      this.prisma.evacuationEvent.deleteMany({
+        where: { triggeredAt: { lt: cutoff36months } },
+      }),
+    );
+
+    // 2. Présences de plus de 12 mois qui ne servent plus de preuve
+    const deletedRecords = await step('présences', () =>
+      this.prisma.occupancyRecord.deleteMany({
+        where: {
+          checkedInAt: { lt: cutoff12months },
+          evacuationCheckins: { none: {} },
         },
-      },
-    });
+      }),
+    );
 
-    // Supprimer les EvacuationEvent de plus de 36 mois (ISO 22301)
-    const deletedEvents = await this.prisma.evacuationEvent.deleteMany({
-      where: { triggeredAt: { lt: cutoff36months } },
-    });
-
-    // Supprimer les VisitorInvitation de plus de 12 mois
-    const deletedInvitations = await this.prisma.visitorInvitation.deleteMany({
-      where: { createdAt: { lt: cutoff12months } },
-    });
+    // 3. Invitations visiteurs de plus de 12 mois
+    const deletedInvitations = await step('invitations', () =>
+      this.prisma.visitorInvitation.deleteMany({
+        where: { createdAt: { lt: cutoff12months } },
+      }),
+    );
 
     this.logger.log(
-      `Purge Sentinelle complétée — ${deletedRecords.count} présences, ` +
-      `${deletedEvents.count} évacuations, ${deletedInvitations.count} invitations supprimées`
+      `Purge Sentinelle ${failures.length ? 'PARTIELLE' : 'complétée'} — ${deletedRecords} présences, ` +
+      `${deletedEvents} évacuations, ${deletedInvitations} invitations supprimées`,
     );
+    return { deletedRecords, deletedEvents, deletedInvitations, failures };
   }
 
   // ── Alertes lacunes Sentinelle ────────────────────────────────────────────
