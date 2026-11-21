@@ -332,6 +332,16 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
     ],
   },
   {
+    pattern: "/alerte/[token]",
+    family: "public",
+    shell: "none",
+    status: "beta",
+    render: "skin",
+    styling: ["inline-hex"],
+    sensitivity: ["emergency-content"],
+    validation: ["test:panic-outcome"],
+  },
+  {
     pattern: "/presence/[kioskToken]",
     family: "public",
     shell: "none",
