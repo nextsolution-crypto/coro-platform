@@ -1,4 +1,5 @@
 import {
+  Headers,
   Controller, Get, Post, Body, Param, UseGuards, Request, Put, Query
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -70,14 +71,17 @@ export class OccupancyController {
     return this.occupancyService.resolveBuildingFromToken(token);
   }
 
-  // Recherche occupants pour checkout (public — token dans query)
+  // Recherche occupants pour checkout (public — jeton de borne en en-tête
+  // X-Kiosk-Token ; l'ancien paramètre d'adresse reste accepté pour les
+  // bornes pas encore rechargées). Prénom + initiale seulement.
   @Get('buildings/:buildingId/search')
   searchForCheckout(
     @Param('buildingId') buildingId: string,
     @Query('q') q: string,
-    @Query('token') token: string,
+    @Query('token') queryToken: string,
+    @Headers('x-kiosk-token') headerToken?: string,
   ) {
-    return this.occupancyService.searchOccupantsForCheckout(buildingId, token, q);
+    return this.occupancyService.searchOccupantsForCheckout(buildingId, headerToken || queryToken, q);
   }
 
   // Les lectures publiques par jeton de borne (présents, historique,

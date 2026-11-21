@@ -1,4 +1,10 @@
 import { NestFactory } from '@nestjs/core';
+import {
+  bodyLimitForPath,
+  OCCUPANCY_BODY_LIMIT,
+  SMALL_BODY_LIMIT,
+  UPLOAD_BODY_LIMIT,
+} from './common/body-size-limits';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import * as bodyParser from 'body-parser';
@@ -85,8 +91,24 @@ export async function bootstrap() {
     '/api/chat',
     bodyParser.json({ limit: '32kb', type: 'application/json' }),
   );
-  app.use(bodyParser.json({ limit: '250mb' }));
-  app.use(bodyParser.urlencoded({ limit: '250mb', extended: true }));
+  // Limites par famille de routes (M3-07) : 1 Mo public, 10 Mo occupation,
+  // 50 Mo pour les routes authentifiées qui reçoivent des fichiers.
+  const jsonParsers = new Map(
+    [SMALL_BODY_LIMIT, OCCUPANCY_BODY_LIMIT, UPLOAD_BODY_LIMIT].map((limit) => [
+      limit,
+      {
+        json: bodyParser.json({ limit }),
+        urlencoded: bodyParser.urlencoded({ limit, extended: true }),
+      },
+    ]),
+  );
+  app.use((req: any, res: any, next: any) => {
+    const parsers = jsonParsers.get(bodyLimitForPath(req.originalUrl || req.url || ''))!;
+    parsers.json(req, res, (error?: unknown) => {
+      if (error) return next(error);
+      parsers.urlencoded(req, res, next);
+    });
+  });
 
   // ── Validation globale des payloads ──
   app.useGlobalPipes(

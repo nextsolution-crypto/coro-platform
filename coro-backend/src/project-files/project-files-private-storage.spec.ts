@@ -2,7 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { ProjectFilesService } from './project-files.service';
 
 describe('ProjectFilesService private storage authority', () => {
-  const bytes = Buffer.from('synthetic private project document');
+  const bytes = Buffer.from('%PDF-1.7 synthetic private project document');
 
   function harness() {
     const project = {
