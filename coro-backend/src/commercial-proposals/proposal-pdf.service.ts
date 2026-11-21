@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { createHash, randomUUID } from 'crypto';
-import puppeteer from 'puppeteer';
+import { launchHardenedPdfBrowser } from '../pdf-engine/hardened-pdf-browser';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
@@ -143,10 +143,7 @@ export class ProposalPdfService {
     const doc = reservation.document;
     const { id, artifactVersion, storageKey: key } = doc;
     try {
-      const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      });
+      const browser = await launchHardenedPdfBrowser();
       let bytes: Buffer;
       try {
         const page = await browser.newPage();

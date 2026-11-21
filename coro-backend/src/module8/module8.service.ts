@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import puppeteer from 'puppeteer';
+import { withHardenedPdfBrowser } from '../pdf-engine/hardened-pdf-browser';
 import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 import { DocumentEditorIntegrityService } from '../generator/document-editor-integrity.service';
 
@@ -128,18 +128,15 @@ export class Module8Service {
       </html>
     `;
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    const pdf = await withHardenedPdfBrowser(async (browser) => {
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: 'load' });
+      return page.pdf({
+        format: 'Letter',
+        printBackground: true,
+        margin: { top: '20mm', bottom: '20mm', left: '15mm', right: '15mm' },
+      });
     });
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'load' });
-    const pdf = await page.pdf({
-      format: 'Letter',
-      printBackground: true,
-      margin: { top: '20mm', bottom: '20mm', left: '15mm', right: '15mm' },
-    });
-    await browser.close();
     return Buffer.from(pdf);
   }
 }

@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { ProposalDocumentCompositionReadiness } from '@prisma/client';
 import { createHash, randomUUID } from 'crypto';
-import puppeteer from 'puppeteer';
+import { launchHardenedPdfBrowser } from '../pdf-engine/hardened-pdf-browser';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
@@ -322,18 +322,11 @@ export class GovernedProposalPdfService {
         diagnostics,
         snapshot.readiness,
       );
-      const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      });
+      const browser = await launchHardenedPdfBrowser();
       let bytes: Buffer;
       try {
         const page = await browser.newPage();
-        await page.setRequestInterception(true);
-        page.on('request', (request) => {
-          if (request.url().startsWith('data:')) void request.continue();
-          else void request.abort();
-        });
+        // Réseau bloqué et JavaScript coupé par le moteur PDF durci.
         await page.setContent(html, { waitUntil: 'load' });
         bytes = Buffer.from(
           await page.pdf({

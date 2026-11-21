@@ -4,7 +4,7 @@ import {
   frozenExportDataSource,
   liveExportDataSource,
 } from './export-frozen-data';
-import puppeteer from 'puppeteer';
+import { withHardenedPdfBrowser } from '../pdf-engine/hardened-pdf-browser';
 import { PDFDocument, PDFName, PDFString } from 'pdf-lib';
 import { PrismaService } from '../prisma/prisma.service';
 import { BASE_STYLES } from './templates/base.styles';
@@ -330,10 +330,9 @@ export class ExportService {
     const subsectionTitlesById = builder.subsectionTitlesById;
 
     // ── UN SEUL NAVIGATEUR PARTAGÉ pour tous les segments HTML ──
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+    // Moteur PDF durci (M1-07) : réseau bloqué, JavaScript coupé, rendus
+    // simultanés limités. Le navigateur est fermé par le gestionnaire.
+    return withHardenedPdfBrowser(async (browser) => {
 
     // Buffers de couverture + corps (sans le sommaire, généré après coup une fois les pages connues)
     const bodyBuffersWithMeta: {
@@ -617,22 +616,10 @@ export class ExportService {
         const fullLastPageHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><style>@page{size:letter portrait;margin:0;}body{margin:0;padding:0;}</style></head><body>${lastPageHtml}</body></html>`;
         const lastPage = await browser.newPage();
         await lastPage.setContent(fullLastPageHtml, {
-          waitUntil: 'networkidle0' as any,
+          waitUntil: 'load',
         });
-        // Attendre que les images base64 soient complètement rendues
-        await lastPage.evaluate(() => {
-          return Promise.all(
-            Array.from(document.images)
-              .filter((img) => !img.complete)
-              .map(
-                (img) =>
-                  new Promise((resolve) => {
-                    img.onload = resolve;
-                    img.onerror = resolve;
-                  }),
-              ),
-          );
-        });
+        // « load » attend déjà les images intégrées (data:) ; aucun script
+        // n'est exécuté dans la page (moteur PDF durci).
         lastPageBytes = await lastPage.pdf({
           format: 'Letter',
           printBackground: true,
@@ -718,12 +705,9 @@ export class ExportService {
       const finalBytes = await mergedPdf.pdfDoc.save();
       return Buffer.from(finalBytes);
     } finally {
-      try {
-        await browser.close();
-      } catch (err) {
-        console.warn('Avertissement fermeture navigateur (ignoré) :', err);
-      }
+      // Fermeture du navigateur : withHardenedPdfBrowser.
     }
+    });
   }
 
   // ============================================================
