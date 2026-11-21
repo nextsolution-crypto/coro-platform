@@ -39,9 +39,8 @@ test("cleanup is resumable, lock-aware and rechecks references before mutation",
   assert.match(source, /status=exited/);
 });
 
-test("cleanup removes progressively only while below the warning threshold and only after GHCR recovery proof", () => {
+test("cleanup removes unprotected images only after GHCR recovery proof and reports the free-space target", () => {
   assert.match(source, /p\.warningFreeBytes/);
-  assert.match(source, /free_bytes\) < target_free_bytes/);
   assert.match(source, /docker manifest inspect "\$digest"/);
   assert.match(source, /IMAGE_REMOTE_RECOVERY_CHANGED/);
   assert.match(source, /GHCR_RECOVERY_NOT_VERIFIED/);
@@ -60,4 +59,10 @@ test("temporary JSON evidence is parsed independently of file extension", () => 
   assert.doesNotMatch(source, /require\(process\.argv\[1\]\)/);
   assert.doesNotMatch(source, /marker=require\(process\.argv\[3\]\)/);
   assert.match(source, /JSON\.parse\(fs\.readFileSync/);
+});
+
+test('cleanup enforces one active and one rollback image per service regardless of free space (owner rule of 21 Nov 2026)', () => {
+  assert.doesNotMatch(source, /\(\(\s*\$\(free_bytes\)\s*<\s*target_free_bytes\s*\)\)\s*\|\|\s*break/);
+  assert.match(source, /GHCR_RECOVERY_NOT_VERIFIED/);
+  assert.match(source, /IMAGE_BECAME_REFERENCED/);
 });

@@ -12,7 +12,7 @@ The recommended policy is:
 - preserve, per service, its last distinct healthy digest as the explicit rollback;
 - represent backend, PDF worker, rasterizer and spool initialization separately while deduplicating their shared backend digest physically;
 - preserve a named candidate only with a reason and an ISO expiry;
-- make other images immediately eligible when no running or stopped container, service rollback, candidate or deployment protects them and GHCR recovery is demonstrated;
+- make other images immediately eligible when no running or stopped container, service rollback, candidate or deployment protects them and GHCR recovery is demonstrated, and remove them on every run regardless of free space (owner rule of 21 Nov 2026: one active and one rollback image per service, nothing more);
 - keep the filtered 24-hour rule for build cache only;
 - warn below 24 GiB free and treat below 20 GiB as critical;
 - retain at least the release gate requirement plus 5 GiB operational reserve.
