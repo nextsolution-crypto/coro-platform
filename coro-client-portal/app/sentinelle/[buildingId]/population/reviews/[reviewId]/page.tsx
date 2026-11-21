@@ -22,6 +22,7 @@ import {
 import styles from "./review.module.css";
 import OperationalReviewReportSection from "./OperationalReviewReportSection";
 import CorrectiveActionTrackingReportSection from "./CorrectiveActionTrackingReportSection";
+import { shouldReplaceDraft } from "./reviewDraftState.mjs";
 
 const uuid = () => crypto.randomUUID();
 export default function PopulationReviewPage() {
@@ -60,6 +61,8 @@ export default function PopulationReviewPage() {
   const [actionFor, setActionFor] = useState<string | null>(null);
   const [finalizeConfirming, setFinalizeConfirming] = useState(false);
   const cancelFinalizeRef = useRef<HTMLButtonElement>(null);
+  const loadGeneration = useRef(0);
+  const summaryDirty = useRef(false);
   useEffect(() => {
     if (finalizeConfirming) cancelFinalizeRef.current?.focus();
   }, [finalizeConfirming]);
@@ -73,26 +76,36 @@ export default function PopulationReviewPage() {
 
   const load = useCallback(
     async (background = false) => {
+      const generation = ++loadGeneration.current;
       background ? setRefreshing(true) : setLoading(true);
       try {
         const result = (await apiGet(
           `/client-portal/operational-reviews/${reviewId}`,
         )) as any;
+        if (generation !== loadGeneration.current) return false;
         setReview(result);
-        setSummary({
-          title: result.title ?? "",
-          summary: result.summary ?? "",
-        });
+        if (shouldReplaceDraft({ background, dirty: summaryDirty.current })) {
+          setSummary({
+            title: result.title ?? "",
+            summary: result.summary ?? "",
+          });
+          summaryDirty.current = false;
+        }
         setError(null);
+        return true;
       } catch (caught) {
+        if (generation !== loadGeneration.current) return false;
         setError(
           caught instanceof Error
             ? caught.message
             : "Le retour d'expérience n'a pas pu être chargé.",
         );
+        return false;
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (generation === loadGeneration.current) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     },
     [reviewId],
@@ -111,20 +124,25 @@ export default function PopulationReviewPage() {
     key: string,
     work: () => Promise<unknown>,
     success: string,
-  ) => {
+  ): Promise<boolean> => {
     setBusy(key);
     setError(null);
     setMessage(null);
     try {
       await work();
-      await load(true);
+      if (!(await load(true))) {
+        setError("Modification enregistrée, mais l'actualisation a échoué. Actualisez la page avant de poursuivre.");
+        return false;
+      }
       setMessage(success);
+      return true;
     } catch (caught) {
       const failure = caught instanceof Error
         ? caught.message
         : "L'opération n'a pas pu être terminée.";
       try { await load(true); } catch { /* Conserver l'erreur métier initiale. */ }
       setError(failure);
+      return false;
     } finally {
       setBusy(null);
     }
@@ -211,9 +229,10 @@ export default function PopulationReviewPage() {
                 id="review-title"
                 value={summary.title}
                 disabled={!editable}
-                onChange={(e) =>
-                  setSummary({ ...summary, title: e.target.value })
-                }
+                onChange={(e) => {
+                  summaryDirty.current = true;
+                  setSummary({ ...summary, title: e.target.value });
+                }}
               />
             </div>
             <div className={`${styles.field} ${styles.fieldFull}`}>
@@ -222,9 +241,10 @@ export default function PopulationReviewPage() {
                 id="review-summary"
                 value={summary.summary}
                 disabled={!editable}
-                onChange={(e) =>
-                  setSummary({ ...summary, summary: e.target.value })
-                }
+                onChange={(e) => {
+                  summaryDirty.current = true;
+                  setSummary({ ...summary, summary: e.target.value });
+                }}
               />
             </div>
           </div>
@@ -337,7 +357,8 @@ export default function PopulationReviewPage() {
                           finding,
                         ),
                       "Constat ajouté.",
-                    ).then(() => {
+                    ).then((saved) => {
+                      if (!saved) return;
                       setFindingOpen(false);
                       setFinding({
                         ...finding,
@@ -427,7 +448,7 @@ export default function PopulationReviewPage() {
                                 recommendation,
                               ),
                             "Recommandation ajoutée.",
-                          ).then(() => setRecommendationFor(null))
+                          ).then((saved) => saved && setRecommendationFor(null))
                         }
                       >
                         AJOUTER
@@ -516,7 +537,7 @@ export default function PopulationReviewPage() {
                                 },
                               ),
                             "Action corrective créée.",
-                          ).then(() => setActionFor(null))
+                          ).then((saved) => saved && setActionFor(null))
                         }
                       />
                     )}
