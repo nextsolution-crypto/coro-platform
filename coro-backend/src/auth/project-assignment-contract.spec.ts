@@ -14,10 +14,6 @@ const KNOWN_ORGANIZATION_ONLY = new Map<string, string>([
   ['src/generator/generator.service.ts', 'lecture interne après contrôle d’accès de la génération'],
   ['src/activities/activity-task-lists.service.ts', 'précédé de lockMutableProject (affectation vérifiée)'],
   ['src/bookings/booking-eligibility.service.ts', 'contrôle de rôle dédié'],
-  ['src/task-lists/task-lists.service.ts', 'DETTE : listes de tâches de projet visibles par toute l’organisation'],
-  ['src/activities/activities.service.ts', 'DETTE : activités de mandat visibles par toute l’organisation'],
-  ['src/mandate/mandate.service.ts', 'DETTE : délais de mandat visibles par toute l’organisation'],
-  ['src/templates/templates.service.ts', 'DETTE : création de modèle depuis un projet'],
 ]);
 
 const PATTERN = /where:\s*\{\s*id:\s*projectId,\s*organizationId(?:\s*:\s*[\w.]+)?\s*\}/;

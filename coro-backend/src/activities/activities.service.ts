@@ -25,14 +25,6 @@ export class ActivitiesService {
     @Optional() private readonly activityTaskLists?: ActivityTaskListsService,
   ) {}
 
-  // Vérification propriété
-  private async assertOwnership(projectId: string, organizationId: string) {
-    const project = await this.prisma.project.findFirst({
-      where: { id: projectId, organizationId },
-    });
-    if (!project) throw new NotFoundException('Projet introuvable');
-    return project;
-  }
 
   // Catalogue des activités disponibles
   async getCatalog(actor: AdviserActor) {

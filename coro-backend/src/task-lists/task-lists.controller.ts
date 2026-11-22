@@ -125,7 +125,7 @@ export class TaskListsController {
     @Request() req: any,
   ) {
     requireInternal(req.user);
-    return this.service.getProjectTaskLists(projectId, req.user.organizationId);
+    return this.service.getProjectTaskLists(projectId, req.user);
   }
 
   // Renommer une instance de liste dans un projet

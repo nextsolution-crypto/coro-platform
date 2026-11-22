@@ -25,7 +25,7 @@ export class TemplatesController {
     @Request() req: any,
   ) {
     return this.templatesService.createFromProject(
-      projectId, req.user.organizationId, req.user.userId, body.name, body.description
+      projectId, req.user, body.name, body.description
     );
   }
 

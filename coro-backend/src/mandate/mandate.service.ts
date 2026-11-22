@@ -22,13 +22,6 @@ export class MandateService {
     @Optional() private readonly activityTypes?: ActivityTypesService,
   ) {}
 
-  private async assertOwnership(projectId: string, organizationId: string) {
-    const project = await this.prisma.project.findFirst({
-      where: { id: projectId, organizationId },
-    });
-    if (!project) throw new NotFoundException('Projet introuvable');
-    return project;
-  }
 
   private async assertProjectAccess(
     projectId: string,
