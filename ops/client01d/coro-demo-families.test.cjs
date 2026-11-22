@@ -10,12 +10,13 @@ function fakePrisma() {
     $executeRawUnsafe: async () => {},
     $queryRawUnsafe: async () => [{ family: "SENTINELLE", clients: 2 }],
     client: { findMany: async () => [{ id: "client-demo" }] },
-    commercialCapability: { findMany: async () => FAMILIES.map((code) => ({ id: `cap-${code}`, code, isAvailable: true, lifecycle: 'ACTIVE', scopePolicies: [{ scope: 'CLIENT', status: 'ALLOWED' }] })) },
+    building: { findMany: async () => [{ id: "b1" }, { id: "b2" }] },
+    commercialCapability: { findMany: async () => FAMILIES.map((code) => ({ id: `cap-${code}`, code, isAvailable: true, lifecycle: 'ACTIVE', scopePolicies: [{ scope: 'SITE', status: 'ALLOWED' }] })) },
     user: { findFirst: async () => ({ id: "admin", role: "SUPER_ADMIN" }) },
     organization: { count: async () => 3 },
     capabilityEntitlement: {
       findFirst: async ({ where }) => {
-        const g = state.grants.find((x) => x.capabilityId === where.capabilityId);
+        const g = state.grants.find((x) => x.capabilityId === where.capabilityId && x.buildingId === where.buildingId);
         return g ? { ...g, revisions: state.revisions.filter((r) => r.entitlementId === g.id).sort((a, b) => b.versionNumber - a.versionNumber) } : null;
       },
       findUnique: async ({ where }) => {
@@ -24,7 +25,7 @@ function fakePrisma() {
       },
       create: async ({ data }) => {
         const id = `grant-${state.grants.length}`;
-        state.grants.push({ id, capabilityId: data.capabilityId, source: data.source });
+        state.grants.push({ id, capabilityId: data.capabilityId, buildingId: data.buildingId, source: data.source });
         state.revisions.push({ entitlementId: id, ...data.revisions.create });
         return { id };
       },
@@ -43,7 +44,7 @@ function fakePrisma() {
 test("provision accorde les trois familles au client de démo, puis verify passe", async () => {
   const { prisma, state } = fakePrisma();
   const out = await run(prisma, "provision", "1");
-  assert.equal(out.created, 3);
+  assert.equal(out.created, 6);
   assert.equal(state.grants.every((g) => g.source === "TRIAL"), true);
   assert.equal(state.audits[0].action, "CORO_DEMO_FAMILIES_PROVISIONED");
   assert.equal((await run(prisma, "verify")).execution, "PASS");
@@ -54,8 +55,8 @@ test("rollback révoque ce qui a été accordé", async () => {
   const { prisma, state } = fakePrisma();
   await run(prisma, "provision", "1");
   const out = await run(prisma, "rollback", "2");
-  assert.equal(out.revoked, 3);
-  assert.equal(state.revisions.filter((r) => r.lifecycle === "REVOKED").length, 3);
+  assert.equal(out.revoked, 6);
+  assert.equal(state.revisions.filter((r) => r.lifecycle === "REVOKED").length, 6);
 });
 
 test("preflight n'expose aucun identifiant en clair", async () => {
@@ -67,5 +68,5 @@ test("preflight n'expose aucun identifiant en clair", async () => {
 
 test("le script n'écrit que dans l'organisation de démo", () => {
   const source = fs.readFileSync(require.resolve("./coro-demo-families.cjs"), "utf8");
-  assert.match(source, /organizationId: ORGANIZATION_ID, capabilityId: capability.id, scope: "CLIENT"/);
+  assert.match(source, /organizationId: ORGANIZATION_ID, capabilityId: capability.id, scope: "SITE"/);
 });

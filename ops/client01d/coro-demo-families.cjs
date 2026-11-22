@@ -4,7 +4,7 @@
  * Droits de contrat des familles Sentinelle, Population et Incident (M11-01).
  * - preflight : état de la démo + inventaire agrégé des autres organisations
  *   (nombre de clients qui utilisent chaque famille sans droit), sans nom.
- * - provision : accorde les trois familles au client de démo (niveau client,
+ * - provision : accorde les trois familles à chaque bâtiment du client de démo (niveau site,
  *   source TRIAL, 365 jours), enregistrées comme fixtures réversibles.
  * - verify / rollback.
  */
@@ -32,6 +32,13 @@ async function resolveTarget(tx) {
     select: { id: true },
   });
   if (clients.length !== 1) throw new Error("DEMO_CLIENT_NOT_UNIQUE");
+  // Sentinelle se vend par bâtiment (100 $/mois) : droits au niveau du site.
+  const buildings = await tx.building.findMany({
+    where: { organizationId: ORGANIZATION_ID, clientId: clients[0].id },
+    select: { id: true },
+    orderBy: { id: "asc" },
+  });
+  if (!buildings.length) throw new Error("DEMO_BUILDINGS_MISSING");
   const capabilities = await tx.commercialCapability.findMany({
     where: { code: { in: FAMILIES } },
     select: { id: true, code: true, isAvailable: true, lifecycle: true, scopePolicies: { select: { scope: true, status: true } } },
@@ -43,33 +50,23 @@ async function resolveTarget(tx) {
     select: { id: true, role: true },
   });
   if (!actor) throw new Error("GOVERNED_ACTOR_MISSING");
-  return { client: clients[0], capabilities, actor };
+  return { client: clients[0], buildings, capabilities, actor };
 }
 
 async function familyState(tx, target) {
   const out = {};
   for (const capability of target.capabilities) {
-    const grant = await tx.capabilityEntitlement.findFirst({
-      where: {
-        organizationId: ORGANIZATION_ID,
-        capabilityId: capability.id,
-        scope: "CLIENT",
-        clientId: target.client.id,
-        buildingId: null,
-      },
-      include: { revisions: { orderBy: { versionNumber: "desc" }, take: 1 } },
-    });
-    const latest = grant?.revisions?.[0];
-    out[capability.code] = grant
-      ? {
-          fingerprint: fingerprint(grant.id),
-          source: grant.source,
-          lifecycle: latest?.lifecycle ?? null,
-          enabled: latest?.enabled ?? null,
-          effectiveUntil: latest?.effectiveUntil ?? null,
-          owned: Boolean(await tx.demoFixtureRecord.findUnique({ where: fixtureWhere(capability.code) })),
-        }
-      : null;
+    const sites = [];
+    for (const building of target.buildings) {
+      const grant = await tx.capabilityEntitlement.findFirst({
+        where: { organizationId: ORGANIZATION_ID, capabilityId: capability.id, scope: "SITE", clientId: target.client.id, buildingId: building.id },
+        include: { revisions: { orderBy: { versionNumber: "desc" }, take: 1 } },
+      });
+      const latest = grant?.revisions?.[0];
+      sites.push(grant ? { buildingFingerprint: fingerprint(building.id), source: grant.source, lifecycle: latest?.lifecycle ?? null,
+        enabled: latest?.enabled ?? null, effectiveUntil: latest?.effectiveUntil ?? null } : { buildingFingerprint: fingerprint(building.id), granted: false });
+    }
+    out[capability.code] = sites;
   }
   return out;
 }
@@ -104,11 +101,10 @@ async function run(prisma, mode, runId) {
       const target = await resolveTarget(tx);
       const families = await familyState(tx, target);
       if (mode === "verify") {
-        for (const code of FAMILIES) {
-          const f = families[code];
-          if (!f || f.lifecycle !== "GRANTED" || f.enabled !== true || !f.effectiveUntil || new Date(f.effectiveUntil) <= now)
-            throw new Error("FAMILY_POSTCONDITION_FAILED");
-        }
+        for (const code of FAMILIES)
+          for (const f of families[code])
+            if (f.lifecycle !== "GRANTED" || f.enabled !== true || !f.effectiveUntil || new Date(f.effectiveUntil) <= now)
+              throw new Error("FAMILY_POSTCONDITION_FAILED");
       }
       return {
         schemaVersion: 1, execution: "PASS", mode, mutation: false,
@@ -126,15 +122,16 @@ async function run(prisma, mode, runId) {
     if (mode === "provision")
       for (const c of target.capabilities) {
         if (!c.isAvailable || c.lifecycle === "RETIRED") throw new Error(`CAPABILITY_UNAVAILABLE_${c.code}`);
-        if (!(c.scopePolicies || []).some((p) => p.scope === "CLIENT" && p.status === "ALLOWED"))
-          throw new Error(`CAPABILITY_CLIENT_SCOPE_NOT_ALLOWED_${c.code}`);
+        if (!(c.scopePolicies || []).some((p) => p.scope === "SITE" && p.status === "ALLOWED"))
+          throw new Error(`CAPABILITY_SITE_SCOPE_NOT_ALLOWED_${c.code}`);
       }
     let created = 0, revoked = 0;
-    for (const capability of target.capabilities) {
-      const record = await tx.demoFixtureRecord.findUnique({ where: fixtureWhere(capability.code) });
+    for (const capability of target.capabilities) for (const building of target.buildings) {
+      const key = `${capability.code}:${building.id}`;
+      const record = await tx.demoFixtureRecord.findUnique({ where: fixtureWhere(key) });
       if (mode === "provision") {
         const existing = await tx.capabilityEntitlement.findFirst({
-          where: { organizationId: ORGANIZATION_ID, capabilityId: capability.id, scope: "CLIENT", clientId: target.client.id, buildingId: null },
+          where: { organizationId: ORGANIZATION_ID, capabilityId: capability.id, scope: "SITE", clientId: target.client.id, buildingId: building.id },
           include: { revisions: { orderBy: { versionNumber: "desc" }, take: 1 } },
         });
         if (existing && !record) {
@@ -153,14 +150,14 @@ async function run(prisma, mode, runId) {
           continue;
         }
         const grant = await tx.capabilityEntitlement.create({ data: {
-          organizationId: ORGANIZATION_ID, capabilityId: capability.id, scope: "CLIENT", clientId: target.client.id,
+          organizationId: ORGANIZATION_ID, capabilityId: capability.id, scope: "SITE", clientId: target.client.id, buildingId: building.id,
           source: "TRIAL", provenanceReason: REASON, createdByUserId: target.actor.id,
           createdByDisplayName: "CORO governed demo activation",
           revisions: { create: { versionNumber: 1, lifecycle: "GRANTED", enabled: true, distributable: false, decisionAt: now,
             effectiveFrom: now, effectiveUntil: until, reason: REASON, createdByUserId: target.actor.id,
             createdByDisplayName: "CORO governed demo activation" } } } });
         await tx.demoFixtureRecord.create({ data: { organizationId: ORGANIZATION_ID, fixtureNamespace: FIXTURE_NAMESPACE,
-          fixtureKey: capability.code, entityType: "CAPABILITY_ENTITLEMENT", entityId: grant.id } });
+          fixtureKey: key, entityType: "CAPABILITY_ENTITLEMENT", entityId: grant.id } });
         created += 1;
       } else if (record) {
         const grant = await tx.capabilityEntitlement.findUnique({ where: { id: record.entityId },
@@ -173,7 +170,7 @@ async function run(prisma, mode, runId) {
             createdByUserId: target.actor.id, createdByDisplayName: "CORO governed demo rollback" } });
           revoked += 1;
         }
-        await tx.demoFixtureRecord.update({ where: fixtureWhere(capability.code), data: { state: "RETIRED" } });
+        await tx.demoFixtureRecord.update({ where: fixtureWhere(key), data: { state: "RETIRED" } });
       }
     }
     await tx.adminAuditEvent.create({ data: {
