@@ -1,5 +1,6 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { emergencyReply, isLiveEmergency } from '../common/emergency-guard';
+import { DailyCallBudget } from '../common/daily-call-budget';
 import { randomUUID } from 'node:crypto';
 import { PublicKnowledgeSearchService } from '../public-knowledge/public-knowledge-search.service';
 import type { PublicKnowledgeAnswerContext } from '../public-knowledge/public-knowledge.types';
@@ -16,6 +17,9 @@ import {
 import { PublicAssistantValidator } from './public-assistant-validator';
 import { classifyWebAIIntent, commercialPrompt, type WebAIIntent } from './web-ai-intent.classifier';
 import { WebAIObservabilityService } from './web-ai-observability.service';
+
+/** Plafond quotidien de l'assistant public (M9-05). */
+export const publicAssistantBudget = new DailyCallBudget('assistant-public', 'PUBLIC_ASSISTANT_DAILY_CALL_CAP', 2000);
 
 @Injectable()
 export class PublicAssistantOrchestratorService {
@@ -99,6 +103,11 @@ export class PublicAssistantOrchestratorService {
       }));
     let raw: PublicAssistantProviderOutput;
     let providerMode: 'DOCUMENTARY' | 'SIMULATED' | 'BEDROCK';
+    if (!publicAssistantBudget.tryConsume()) {
+      const response = this.degraded(requestId, session.id, input.language, classification.intent);
+      await this.observe(response, classification.intent, startedAt, sources.length, 'DAILY_BUDGET_EXHAUSTED');
+      return response;
+    }
     try {
       const generated = await this.provider.generate({
         question: input.message,

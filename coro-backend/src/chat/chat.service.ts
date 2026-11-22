@@ -1,6 +1,10 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { emergencyReply, isLiveEmergency } from '../common/emergency-guard';
+import { DailyCallBudget } from '../common/daily-call-budget';
 import { ChatHistoryMessageDto } from './chat.dto';
+
+/** Plafond quotidien du clavardage « Sophie » (M9-05). */
+export const chatBudget = new DailyCallBudget('sophie', 'CHAT_DAILY_CALL_CAP', 1000);
 
 export const CHAT_HTTP_CLIENT = Symbol('CHAT_HTTP_CLIENT');
 export type ChatHttpClient = typeof fetch;
@@ -110,6 +114,8 @@ export class ChatService {
     );
     if (!process.env.ANTHROPIC_API_KEY)
       return this.unavailable(contactSuggested);
+    // Plafond quotidien (M9-05) : message fixe au-delà.
+    if (!chatBudget.tryConsume()) return this.unavailable(contactSuggested);
 
     try {
       const response = await this.httpClient(
