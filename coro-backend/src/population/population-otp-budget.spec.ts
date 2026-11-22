@@ -9,7 +9,6 @@ describe('protection du coût SMS et débit de diffusion (M7-02, M7-03)', () => 
 
   function db(count: number) {
     return {
-      populationSubscriber: { findUnique: jest.fn().mockResolvedValue({ programId: 'program-1' }) },
       populationVerification: { count: jest.fn().mockResolvedValue(count) },
     };
   }
@@ -18,7 +17,9 @@ describe('protection du coût SMS et débit de diffusion (M7-02, M7-03)', () => 
     const d = db(10);
     await expect(assertVerificationBudget(d, 'sub-1')).resolves.toBeUndefined();
     expect(d.populationVerification.count).toHaveBeenCalledWith({
-      where: expect.objectContaining({ subscriber: { programId: 'program-1' } }),
+      where: expect.objectContaining({
+        subscriber: { program: { subscribers: { some: { id: 'sub-1' } } } },
+      }),
     });
   });
 

@@ -136,25 +136,23 @@ export const POPULATION_DELIVERY_MAX_CONCURRENCY = 25;
  * POPULATION_OTP_HOURLY_CAP_PER_PROGRAM (défaut 600).
  */
 export async function assertVerificationBudget(
-  db: { populationSubscriber: { findUnique: (args: any) => PromiseLike<any> }; populationVerification: { count: (args: any) => PromiseLike<number> } },
+  db: { populationVerification: { count: (args: any) => PromiseLike<number> } },
   subscriberId: string,
 ) {
   const cap = Number(process.env.POPULATION_OTP_HOURLY_CAP_PER_PROGRAM);
   const limit = Number.isInteger(cap) && cap > 0 ? cap : 600;
-  const subscriber = await db.populationSubscriber.findUnique({
-    where: { id: subscriberId },
-    select: { programId: true },
-  });
-  if (!subscriber) return;
+  // One count: every code issued in the last hour for the subscriber's program.
   const recent = await db.populationVerification.count({
     where: {
-      subscriber: { programId: subscriber.programId },
+      subscriber: {
+        program: { subscribers: { some: { id: subscriberId } } },
+      },
       createdAt: { gte: new Date(Date.now() - 60 * 60 * 1000) },
     },
   });
   if (recent >= limit) {
     new Logger('PopulationOtpBudget').warn(
-      `Plafond horaire de codes atteint pour le programme ${subscriber.programId} (${recent}/${limit})`,
+      `Plafond horaire de codes atteint (abonné ${subscriberId}, ${recent}/${limit})`,
     );
     throw new HttpException(
       "Trop d'inscriptions en cours pour ce programme. Réessayez dans quelques minutes.",
