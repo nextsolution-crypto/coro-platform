@@ -1,0 +1,142 @@
+name: Production CORO Demo Families Entitlements
+
+on:
+  workflow_dispatch:
+    inputs:
+      application_commit:
+        description: Exact active application SHA (the commit currently deployed)
+        required: true
+        type: string
+      phase:
+        description: Exact governed phase
+        required: true
+        type: choice
+        options: [preflight, provision, verify, rollback]
+      approval:
+        description: Exact phase-specific approval token
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      script_sha256: ${{ steps.hash.outputs.script_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Validate governed request and tests
+        env:
+          APPLICATION_COMMIT: ${{ inputs.application_commit }}
+          PHASE: ${{ inputs.phase }}
+          APPROVAL: ${{ inputs.approval }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$APPLICATION_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          case "$PHASE:$APPROVAL" in
+            preflight:PREFLIGHT_DEMO_FAMILIES|provision:PROVISION_DEMO_FAMILIES|verify:VERIFY_DEMO_FAMILIES|rollback:ROLLBACK_DEMO_FAMILIES) ;;
+            *) exit 1 ;;
+          esac
+          node --test ops/client01d/coro-demo-families.test.cjs
+      - id: hash
+        run: echo "script_sha256=$(sha256sum ops/client01d/coro-demo-families.cjs | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+  execute:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Execute tenant-scoped demo family entitlements
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          EXPECTED_ACTIVE_SHA: ${{ inputs.application_commit }}
+          SCRIPT_SHA256: ${{ needs.validate.outputs.script_sha256 }}
+          PHASE: ${{ inputs.phase }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,EXPECTED_ACTIVE_SHA,SCRIPT_SHA256,PHASE,GITHUB_RUN_ID
+          script: |
+            set -Eeuo pipefail
+            stage=initialize
+            trap 'rc=$?; echo "CORO_DEMO_FAMILIES_WORKFLOW_FAILED stage=$stage rc=$rc"; exit "$rc"' ERR
+            repo=/opt/coro-platform
+            tmp="$(mktemp -d /tmp/coro-demo-families.XXXXXX)"
+            backend=""
+            container_tmp="/tmp/coro-demo-families-$GITHUB_RUN_ID"
+            cleanup() {
+              if [[ -n "$backend" ]]; then docker exec "$backend" rm -rf -- "$container_tmp" >/dev/null 2>&1 || true; fi
+              rm -rf -- "$tmp"
+            }
+            trap cleanup EXIT
+            stage=deployment_lock
+            exec 9>/run/lock/coro-production-deployment.lock
+            flock -n 9
+            stage=source_integrity
+            git -C "$repo" fetch --quiet origin main
+            test "$(git -C "$repo" rev-parse origin/main)" = "$SOURCE_SHA"
+            git -C "$repo" show "$SOURCE_SHA:ops/client01d/coro-demo-families.cjs" >"$tmp/script.cjs"
+            test "$(sha256sum "$tmp/script.cjs" | cut -d' ' -f1)" = "$SCRIPT_SHA256"
+            stage=backend_health
+            backend="$(docker compose -f "$repo/docker-compose.yml" ps -q backend)"
+            test -n "$backend"
+            test "$(docker inspect -f '{{.State.Running}}' "$backend")" = true
+            test "$(docker inspect -f '{{.RestartCount}}' "$backend")" = 0
+            stage=active_release
+            marker="/opt/coro-ops/releases/state/production-$EXPECTED_ACTIVE_SHA.reconciled.json"
+            test -f "$marker"
+            test "$(node -e 'const m=require(process.argv[1]);process.stdout.write(m.releaseCommit||"")' "$marker")" = "$EXPECTED_ACTIVE_SHA"
+            manifest="$(node -e 'const m=require(process.argv[1]);process.stdout.write(m.manifestPath||"")' "$marker")"
+            manifest_sha="$(node -e 'const m=require(process.argv[1]);process.stdout.write(m.manifestSha256||"")' "$marker")"
+            test -f "$manifest"
+            test "$(sha256sum "$manifest" | cut -d' ' -f1)" = "$manifest_sha"
+            test "$(node -e 'const m=require(process.argv[1]);process.stdout.write(m.gitCommit||"")' "$manifest")" = "$EXPECTED_ACTIVE_SHA"
+            mapfile -t rollback_refs < <(node -e 'const m=require(process.argv[1]);for(const r of m.previousImages||[])if(typeof r==="string"&&r)console.log(r)' "$manifest")
+            test "${#rollback_refs[@]}" -eq 4
+            for ref in "${rollback_refs[@]}"; do docker image inspect "$ref" >/dev/null; done
+            stage=postgresql
+            postgres="$(docker compose -f "$repo/docker-compose.yml" ps -q postgres)"
+            test -n "$postgres"
+            docker exec "$postgres" sh -ceu 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"' >/dev/null
+            stage=capacity
+            free_kib="$(df -Pk -- /opt/coro-ops/backups/database | awk 'NR==2 {print $4}')"
+            test "$free_kib" -ge 10485760
+            if [[ "$PHASE" = provision || "$PHASE" = rollback ]]; then
+              stage=backup_restore
+              systemctl start coro-db-backup.service
+              test "$(systemctl show -p Result --value coro-db-backup.service)" = success
+              systemctl start coro-db-restore-test.service
+              test "$(systemctl show -p Result --value coro-db-restore-test.service)" = success
+            fi
+            stage=install_authority
+            docker exec "$backend" mkdir -m 0700 "$container_tmp"
+            docker cp "$tmp/script.cjs" "$backend:$container_tmp/coro-demo-families.cjs"
+            run_script() {
+              local exit_code=0
+              docker exec -e CORO_DEMO_FAMILIES_RUN=true -e GITHUB_RUN_ID="$GITHUB_RUN_ID" "$backend" node "$container_tmp/coro-demo-families.cjs" "$1" >"$tmp/evidence.json" || exit_code=$?
+              node -e 'const fs=require("fs"),r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1||!["PASS","FAIL"].includes(r.execution))process.exit(1);if(r.execution==="FAIL"&&!/^[A-Z][A-Z0-9_]{2,100}$/.test(r.errorCode||""))process.exit(1);if(/@|password|secret|token|access[_-]?key|private[_-]?key/i.test(JSON.stringify(r)))process.exit(1)' "$tmp/evidence.json"
+              cat "$tmp/evidence.json"
+              test "$exit_code" -eq 0
+              node -e 'const fs=require("fs"),r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.execution!=="PASS")process.exit(1)' "$tmp/evidence.json"
+            }
+            case "$PHASE" in
+              preflight) stage=preflight; run_script preflight ;;
+              provision) stage=provision_preflight; run_script preflight; stage=provision; run_script provision; stage=provision_verify; run_script verify ;;
+              verify) stage=verify; run_script verify ;;
+              rollback) stage=rollback; run_script rollback ;;
+            esac
