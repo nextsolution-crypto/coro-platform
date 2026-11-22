@@ -1,27 +1,97 @@
-.page { display: grid; gap: 24px; color: var(--cg-text-primary, #203449); }
-.back { width: fit-content; text-decoration: none; color: inherit; font-size: 14px; }
-.header, .panelHeader { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; }
-.header h1 { font-size: clamp(26px, 3vw, 36px); line-height: 1.2; margin: 10px 0; overflow-wrap: anywhere; }
-.header p, .panel p { line-height: 1.6; font-size: 14px; }
-.eyebrow { display: flex; align-items: center; gap: 8px; font-size: 12px !important; letter-spacing: .08em; }
+/* Fiche bâtiment — même langage visuel que les cartes CORO Sentinelle :
+   surfaces de verre, bordure fine, rayon 12 px, pastille d'icône teintée,
+   titres 800, libellés capitales colorés, badges d'état en pilule. */
+.page {
+  --bw-surface: var(--cg-glass-bg-strong, #FFFFFF);
+  --bw-fill: var(--cg-hover-overlay, #F8F9FA);
+  --bw-border: var(--cg-border-subtle, #E9ECEF);
+  --bw-border-strong: var(--cg-border-default, #DEE2E6);
+  --bw-text: var(--cg-text-primary, #2C3E50);
+  --bw-text-2: var(--cg-text-secondary, #6C757D);
+  --bw-muted: var(--cg-text-muted, #ADB5BD);
+  --bw-red: #C0392B;
+  --bw-red-soft: var(--cg-danger-bg, #FDEDEC);
+  --bw-red-text: var(--cg-danger-fg, #C0392B);
+  --bw-blue-soft: var(--cg-info-bg, #EBF5FB);
+  --bw-blue-text: var(--cg-info-fg, #2471A3);
+  --bw-green-soft: var(--cg-success-bg, #E8F5F1);
+  --bw-green-text: var(--cg-success-fg, #167D6A);
+  --bw-green-border: var(--cg-success-border, #A3D9C9);
+  --bw-amber-soft: var(--cg-warning-bg, #FEF9E7);
+  --bw-amber-text: var(--cg-warning-fg, #B9770E);
+  display: grid;
+  gap: 20px;
+  color: var(--bw-text);
+}
+
+.back { width: fit-content; text-decoration: none; color: var(--bw-text-2); font-size: 13px; }
+.back:hover { color: var(--bw-text); }
+
+/* En-tête */
+.header { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.eyebrow { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--bw-text-2); }
+.header h1 { font-size: clamp(24px, 3vw, 30px); font-weight: 900; line-height: 1.15; margin: 6px 0 4px; overflow-wrap: anywhere; }
+.address { margin: 0; font-size: 13px; color: var(--bw-text-2); }
 .operations { display: flex; flex-wrap: wrap; gap: 10px; }
-.operations a, .panelHeader > a { display: inline-flex; gap: 8px; align-items: center; padding: 12px 16px; border: 1px solid var(--cg-border, #c3cdd9); border-radius: 8px; color: inherit; text-decoration: none; min-height: 44px; }
-.sections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.sections button { display: flex; gap: 16px; align-items: flex-start; padding: 24px; text-align: left; cursor: pointer; color: inherit; background: var(--cg-glass-bg-strong, #fff); border: 1px solid var(--cg-border, #c3cdd9); border-radius: 12px; }
-.sections button[aria-pressed="true"] { border-color: var(--cg-accent, #176ca9); box-shadow: inset 0 0 0 1px var(--cg-accent, #176ca9); }
-.sections button > svg { flex-shrink: 0; }
-.sections button > span { display: grid; gap: 8px; }
-.sections strong { font-size: 18px; }
-.sections small, .sections span span { font-size: 13px; line-height: 1.5; }
-.sections span span { font-weight: 600; }
-.panel { border: 1px solid var(--cg-border, #c3cdd9); border-radius: 12px; padding: 24px; background: var(--cg-glass-bg-strong, #fff); }
+.operations a { display: inline-flex; gap: 8px; align-items: center; min-height: 40px; padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration: none; color: var(--bw-text); background: var(--bw-surface); border: 1px solid var(--bw-border-strong); }
+.operations a:hover { background: var(--bw-fill); }
+.operations a.primary { background: var(--bw-red); border-color: var(--bw-red); color: #FFFFFF; }
+.operations a.primary:hover { background: #A93226; border-color: #A93226; }
+
+/* Choix d'espace : cartes à la manière de « Sentinelle Population » */
+.sections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.sectionCard {
+  display: flex; gap: 14px; align-items: center; width: 100%;
+  padding: 18px 20px; text-align: left; cursor: pointer; font: inherit; color: inherit;
+  background: var(--bw-surface); border: 1px solid var(--bw-border);
+  border-left: 4px solid transparent; border-radius: 12px;
+  transition: border-color .15s ease, background-color .15s ease;
+}
+.sectionCard:hover { border-color: var(--bw-border-strong); }
+.sectionCard[aria-pressed="true"] { border-color: var(--bw-border-strong); border-left-color: var(--bw-red); }
+.iconTile { flex-shrink: 0; width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+.iconRed { background: var(--bw-red-soft); color: var(--bw-red-text); }
+.iconBlue { background: var(--bw-blue-soft); color: var(--bw-blue-text); }
+.sectionBody { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.sectionTitle { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sectionTitle strong { font-size: 16px; font-weight: 800; }
+.sectionBody small { font-size: 13px; line-height: 1.5; color: var(--bw-text-2); }
+.chevron { flex-shrink: 0; color: var(--bw-muted); }
+.sectionCard[aria-pressed="true"] .chevron { color: var(--bw-red-text); }
+
+/* Pastilles */
+.pill { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
+.pillNeutral { background: var(--bw-fill); color: var(--bw-text-2); border: 1px solid var(--bw-border); }
+.pillRed { background: var(--bw-red-soft); color: var(--bw-red-text); }
+.pillGreen { background: var(--bw-green-soft); color: var(--bw-green-text); }
+.pillAmber { background: var(--bw-amber-soft); color: var(--bw-amber-text); }
+.pillBlue { background: var(--bw-blue-soft); color: var(--bw-blue-text); }
+
+/* Panneau : à la manière de « Occupants présents » */
+.panel { background: var(--bw-surface); border: 1px solid var(--bw-border); border-radius: 12px; overflow: hidden; }
 .panel[hidden] { display: none; }
-.panel h2 { font-size: 22px; margin: 0 0 8px; }
-.panelHeader { margin-bottom: 24px; }
-.projects { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 16px; }
-.project { display: flex; align-items: center; gap: 14px; padding: 20px; border: 1px solid var(--cg-border, #c3cdd9); border-radius: 10px; color: inherit; text-decoration: none; }
-.project > div { flex: 1; min-width: 0; }
-.project h3 { font-size: 16px; margin: 6px 0; overflow-wrap: anywhere; }
-.project span { font-size: 12px; font-weight: 700; }
-.page :is(a,button):focus-visible { outline: 3px solid #65c5ff; outline-offset: 4px; }
-@media (max-width: 700px) { .sections { grid-template-columns: 1fr; } .sections button, .panel { padding: 18px; } .operations { width: 100%; } }
+.panelHeader { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--bw-border); }
+.panelHeader h2 { margin: 0; font-size: 15px; font-weight: 700; }
+.panelHeader p { margin: 2px 0 0; font-size: 12px; color: var(--bw-text-2); }
+.panelHeader > a { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; color: var(--bw-text); border: 1px solid var(--bw-border-strong); }
+.panelHeader > a:hover { background: var(--bw-fill); }
+
+.projects { display: grid; }
+.project { display: flex; align-items: center; gap: 14px; padding: 14px 20px; color: inherit; text-decoration: none; border-bottom: 1px solid var(--bw-border); }
+.project:last-child { border-bottom: none; }
+.project:hover { background: var(--bw-fill); }
+.projectBody { flex: 1; min-width: 0; }
+.projectType { display: block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--bw-red-text); }
+.project h3 { margin: 2px 0 0; font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+.empty { padding: 40px 20px; text-align: center; color: var(--bw-muted); font-size: 14px; }
+.empty svg { display: block; margin: 0 auto 12px; }
+
+.state { padding: 40px 20px; text-align: center; color: var(--bw-text-2); font-size: 14px; background: var(--bw-surface); border: 1px solid var(--bw-border); border-radius: 12px; }
+.state button { margin-top: 12px; padding: 9px 16px; border-radius: 8px; border: 1px solid var(--bw-border-strong); background: transparent; color: inherit; font-weight: 600; cursor: pointer; }
+
+.page :is(a, button):focus-visible { outline: 3px solid #65c5ff; outline-offset: 3px; }
+@media (max-width: 700px) {
+  .sections { grid-template-columns: 1fr; }
+  .operations { width: 100%; }
+  .operations a { flex: 1; justify-content: center; }
+}
