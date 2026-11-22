@@ -34,7 +34,7 @@ async function resolveTarget(tx) {
   if (clients.length !== 1) throw new Error("DEMO_CLIENT_NOT_UNIQUE");
   const capabilities = await tx.commercialCapability.findMany({
     where: { code: { in: FAMILIES } },
-    select: { id: true, code: true },
+    select: { id: true, code: true, isAvailable: true, lifecycle: true, scopePolicies: { select: { scope: true, status: true } } },
   });
   if (capabilities.length !== FAMILIES.length) throw new Error("FAMILY_CAPABILITY_MISSING");
   const actor = await tx.user.findFirst({
@@ -113,12 +113,22 @@ async function run(prisma, mode, runId) {
       return {
         schemaVersion: 1, execution: "PASS", mode, mutation: false,
         clientFingerprint: fingerprint(target.client.id), families,
+        capabilities: Object.fromEntries(target.capabilities.map((c) => [c.code, {
+          isAvailable: c.isAvailable, lifecycle: c.lifecycle,
+          scopes: Object.fromEntries((c.scopePolicies || []).map((p) => [p.scope, p.status])),
+        }])),
         ...(mode === "preflight" ? { inventory: await inventory(tx) } : {}),
       };
     }, { timeout: 60_000 });
   }
   return prisma.$transaction(async (tx) => {
     const target = await resolveTarget(tx);
+    if (mode === "provision")
+      for (const c of target.capabilities) {
+        if (!c.isAvailable || c.lifecycle === "RETIRED") throw new Error(`CAPABILITY_UNAVAILABLE_${c.code}`);
+        if (!(c.scopePolicies || []).some((p) => p.scope === "CLIENT" && p.status === "ALLOWED"))
+          throw new Error(`CAPABILITY_CLIENT_SCOPE_NOT_ALLOWED_${c.code}`);
+      }
     let created = 0, revoked = 0;
     for (const capability of target.capabilities) {
       const record = await tx.demoFixtureRecord.findUnique({ where: fixtureWhere(capability.code) });

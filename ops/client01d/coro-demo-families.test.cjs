@@ -10,7 +10,7 @@ function fakePrisma() {
     $executeRawUnsafe: async () => {},
     $queryRawUnsafe: async () => [{ family: "SENTINELLE", clients: 2 }],
     client: { findMany: async () => [{ id: "client-demo" }] },
-    commercialCapability: { findMany: async () => FAMILIES.map((code) => ({ id: `cap-${code}`, code })) },
+    commercialCapability: { findMany: async () => FAMILIES.map((code) => ({ id: `cap-${code}`, code, isAvailable: true, lifecycle: 'ACTIVE', scopePolicies: [{ scope: 'CLIENT', status: 'ALLOWED' }] })) },
     user: { findFirst: async () => ({ id: "admin", role: "SUPER_ADMIN" }) },
     organization: { count: async () => 3 },
     capabilityEntitlement: {
