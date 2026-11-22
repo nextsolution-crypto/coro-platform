@@ -46,12 +46,26 @@ export interface ClientUser {
   displayBuildingIds: string[];
 }
 
+/**
+ * Session client (audit M3-05) : le jeton vit dans un cookie httpOnly posé
+ * par l'API, illisible ici. getToken() ne renvoie plus qu'un éventuel jeton
+ * hérité d'une session ouverte avant le passage au cookie.
+ */
 export function getToken(): string | null {
   if (typeof window === "undefined") {
     return null;
   }
 
   return localStorage.getItem("coro_client_token");
+}
+
+/** En-têtes des appels API : anti-CSRF et, au besoin, jeton hérité. */
+export function sessionHeaders(): Record<string, string> {
+  const legacy = getToken();
+  return {
+    "X-Requested-With": "coro-portal",
+    ...(legacy ? { Authorization: `Bearer ${legacy}` } : {}),
+  };
 }
 
 export function getUser(): ClientUser | null {
@@ -73,12 +87,12 @@ export function getUser(): ClientUser | null {
   }
 }
 
-export function setAuth(token: string, user: ClientUser) {
+export function setAuth(_token: string | null | undefined, user: ClientUser) {
   if (typeof window === "undefined") {
     return;
   }
 
-  localStorage.setItem("coro_client_token", token);
+  // Le jeton n'est plus stocké dans le navigateur (cookie httpOnly).
 
   localStorage.setItem("coro_client_user", JSON.stringify(user));
 }
@@ -92,6 +106,13 @@ export function clearAuth() {
 
   localStorage.removeItem("coro_client_user");
 
+  // Efface le cookie de session côté serveur.
+  void fetch(`${API_URL}/client-auth/logout`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "X-Requested-With": "coro-portal" },
+  }).catch(() => undefined);
+
   for (let index = localStorage.length - 1; index >= 0; index -= 1) {
     const key = localStorage.key(index);
     if (key?.startsWith("coro_client_trusted_")) localStorage.removeItem(key);
@@ -103,7 +124,7 @@ export function clearAuth() {
 }
 
 export function isAuthenticated(): boolean {
-  return Boolean(getToken());
+  return Boolean(getUser() || getToken());
 }
 
 function handleUnauthorized() {
@@ -125,13 +146,13 @@ async function parseResponse(res: Response) {
 }
 
 export async function apiGet(path: string) {
-  const token = getToken();
 
   const res = await fetch(`${API_URL}${path}`, {
     method: "GET",
 
+    credentials: "include",
     headers: {
-      Authorization: `Bearer ${token}`,
+      ...sessionHeaders(),
       "Content-Type": "application/json",
     },
   });
@@ -155,11 +176,11 @@ export async function apiGet(path: string) {
 }
 
 export async function apiPost(path: string, body: unknown) {
-  const token = getToken();
   const res = await fetch(`${API_URL}${path}`, {
     method: "POST",
+    credentials: "include",
     headers: {
-      Authorization: `Bearer ${token}`,
+      ...sessionHeaders(),
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
@@ -180,11 +201,11 @@ export async function apiPost(path: string, body: unknown) {
 }
 
 export async function apiPatch(path: string, body: unknown) {
-  const token = getToken();
   const res = await fetch(`${API_URL}${path}`, {
     method: "PATCH",
+    credentials: "include",
     headers: {
-      Authorization: `Bearer ${token}`,
+      ...sessionHeaders(),
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
@@ -205,11 +226,11 @@ export async function apiPatch(path: string, body: unknown) {
 }
 
 export async function apiPut(path: string, body: unknown) {
-  const token = getToken();
   const res = await fetch(`${API_URL}${path}`, {
     method: "PUT",
+    credentials: "include",
     headers: {
-      Authorization: `Bearer ${token}`,
+      ...sessionHeaders(),
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
@@ -229,10 +250,10 @@ export async function apiPut(path: string, body: unknown) {
 }
 
 export async function apiDelete(path: string) {
-  const token = getToken();
   const res = await fetch(`${API_URL}${path}`, {
     method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
+    headers: sessionHeaders(),
   });
   if (res.status === 401) {
     handleUnauthorized();
@@ -248,10 +269,10 @@ export async function apiDelete(path: string) {
 }
 
 export async function apiUpload(path: string, body: FormData) {
-  const token = getToken();
   const res = await fetch(`${API_URL}${path}`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
+    headers: sessionHeaders(),
     body,
   });
   if (res.status === 401) {
@@ -268,9 +289,9 @@ export async function apiUpload(path: string, body: FormData) {
 }
 
 export async function apiDownload(path: string) {
-  const token = getToken();
   const res = await fetch(`${API_URL}${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
+    headers: sessionHeaders(),
   });
   if (res.status === 401) {
     handleUnauthorized();

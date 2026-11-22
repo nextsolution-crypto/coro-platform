@@ -573,7 +573,7 @@ export async function revokeOfflineDeviceAndPurge() {
     ? await storeGet<VaultRecord>("vault", user.id)
     : undefined;
   try {
-    if (vault && navigator.onLine && getToken()) {
+    if (vault && navigator.onLine && (getToken() || user)) {
       await api(`/project-files/client/offline/devices/${vault.deviceId}`, {
         method: "DELETE",
       });

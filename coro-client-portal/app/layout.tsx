@@ -65,6 +65,7 @@ export const viewport: Viewport = {
 };
 
 import ServiceWorkerRegister from './components/ServiceWorkerRegister';
+import ApiSessionBridge from './components/ApiSessionBridge';
 
 export default async function RootLayout({
   children,
@@ -82,6 +83,7 @@ export default async function RootLayout({
       </head>
       <body>
         <ThemeProvider>
+          <ApiSessionBridge />
           <ServiceWorkerRegister />
           {children}
         </ThemeProvider>
