@@ -7,7 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
 import type { WorkManagementActor } from '../auth/work-management-access';
-import { lockMutableProject } from '../auth/project-access';
+import { AdviserActor, lockMutableProject, projectAccessWhere } from '../auth/project-access';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -261,9 +261,12 @@ export class TaskListsService {
   }
 
   // Listes d'un projet
-  async getProjectTaskLists(projectId: string, organizationId: string) {
+  async getProjectTaskLists(projectId: string, actor: AdviserActor) {
+    // Affectation du conseiller vérifiée (audit M3-09).
+    const organizationId = actor.organizationId;
     const project = await this.prisma.project.findFirst({
-      where: { id: projectId, organizationId },
+      where: { id: projectId, ...projectAccessWhere(actor) },
+      select: { id: true },
     });
     if (!project) throw new NotFoundException('Projet introuvable');
     return this.prisma.projectTaskList.findMany({

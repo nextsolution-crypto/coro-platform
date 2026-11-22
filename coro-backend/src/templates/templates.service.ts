@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 
 @Injectable()
 export class TemplatesService {
@@ -19,13 +20,15 @@ export class TemplatesService {
   // ── Créer un modèle depuis un projet existant ──────────────
   async createFromProject(
     projectId: string,
-    organizationId: string,
-    userId: string,
+    actor: AdviserActor,
     name: string,
     description?: string,
   ) {
+    const organizationId = actor.organizationId;
+    const userId = actor.userId;
+    // Affectation du conseiller vérifiée (audit M3-09).
     const project = await this.prisma.project.findFirst({
-      where: { id: projectId, organizationId },
+      where: { id: projectId, ...projectAccessWhere(actor) },
       include: { documents: { orderBy: { updatedAt: 'desc' }, take: 1 } },
     });
     if (!project) throw new NotFoundException('Projet introuvable');
