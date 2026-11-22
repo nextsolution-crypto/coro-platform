@@ -9,6 +9,7 @@ import {
   IsUUID,
   Matches,
   MaxLength,
+  MinLength,
   Min,
 } from 'class-validator';
 
@@ -79,4 +80,11 @@ export class CreateTimelogCategoryDto {
 
 export class UpdateTimelogCategoryDto {
   @IsString() @IsNotEmpty() @MaxLength(300) label!: string;
+}
+
+export class ReopenTimePeriodDto {
+  @IsString()
+  @MinLength(10)
+  @MaxLength(500)
+  reason!: string;
 }

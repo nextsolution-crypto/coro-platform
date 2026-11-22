@@ -3,7 +3,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { TimelogService } from './timelog.service';
 import { requireInternal, requireTenantAdmin } from '../auth/work-management-access';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
-import { CreateTimelogCategoryDto, CreateTimelogEntryDto, DeleteTimelogEntryDto, TimelogRangeDto, UpdateTimelogCategoryDto, UpdateTimelogEntryDto } from './timelog.dto';
+import { CreateTimelogCategoryDto, CreateTimelogEntryDto, DeleteTimelogEntryDto, ReopenTimePeriodDto, TimelogRangeDto, UpdateTimelogCategoryDto, UpdateTimelogEntryDto } from './timelog.dto';
 
 @Controller('timelog')
 @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
@@ -63,5 +63,24 @@ export class TimelogController {
   getTeamTimelog(@Query() query: TimelogRangeDto, @Request() req: any) {
     requireTenantAdmin(req.user);
     return this.service.getTeamTimelog(req.user.organizationId, query.from, query.to);
+  }
+
+  // ── Clôture mensuelle des saisies (M6-02) ──
+  @Get('periods')
+  listPeriods(@Request() req: any) {
+    requireTenantAdmin(req.user);
+    return this.service.listPeriods(req.user.organizationId);
+  }
+
+  @Post('periods/:period/close')
+  closePeriod(@Param('period') period: string, @Request() req: any) {
+    requireTenantAdmin(req.user);
+    return this.service.closePeriod(req.user.organizationId, period, req.user.userId);
+  }
+
+  @Post('periods/:period/reopen')
+  reopenPeriod(@Param('period') period: string, @Body() dto: ReopenTimePeriodDto, @Request() req: any) {
+    requireTenantAdmin(req.user);
+    return this.service.reopenPeriod(req.user.organizationId, period, dto.reason, req.user.userId);
   }
 }

@@ -10928,3 +10928,37 @@ model PanicRecipient {
 
   @@index([panicAlertId])
 }
+
+/// Clôture mensuelle des saisies de temps (audit M6-02). Une période fermée
+/// ne peut plus être modifiée ; la rouvrir exige un motif, et toute écriture
+/// dans une période déjà fermée une fois est consignée (TimeEntryCorrection).
+model TimePeriodClosure {
+  id               String    @id @default(uuid())
+  organizationId   String
+  period           String // AAAA-MM
+  closedAt         DateTime  @default(now())
+  closedByUserId   String
+  reopenedAt       DateTime?
+  reopenedByUserId String?
+  reopenReason     String?
+  closeCount       Int       @default(1)
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([organizationId, period])
+}
+
+model TimeEntryCorrection {
+  id             String   @id @default(uuid())
+  organizationId String
+  period         String
+  entryType      String // TIMELOG | TASK
+  entryId        String
+  action         String // CREATE | UPDATE | DELETE
+  reason         String?
+  before         Json?
+  after          Json?
+  actorUserId    String
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, period])
+}

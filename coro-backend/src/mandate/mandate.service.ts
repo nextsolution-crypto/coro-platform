@@ -15,6 +15,7 @@ import { mandatePlanningStatus } from './activity-planning-status';
 
 type Db = Prisma.TransactionClient | PrismaService;
 
+import { assertPeriodWritable, recordCorrectionIfNeeded } from '../timelog/time-periods';
 @Injectable()
 export class MandateService {
   constructor(
@@ -875,12 +876,14 @@ export class MandateService {
       where: { id: taskId, projectId, organizationId },
     });
     if (!task) throw new NotFoundException('Tâche introuvable');
-        return tx.taskTimeEntry.create({
+        const entryDate = new Date(dto.date);
+        const period = await assertPeriodWritable(tx, organizationId, entryDate);
+        const created = await tx.taskTimeEntry.create({
       data: {
         taskId,
         userId,
         organizationId,
-        date: new Date(dto.date),
+        date: entryDate,
         heures: parseFloat(dto.heures),
         note: dto.note || null,
       },
@@ -888,6 +891,11 @@ export class MandateService {
             user: { select: { firstName: true, lastName: true, id: true } },
           },
     });
+        await recordCorrectionIfNeeded(tx, period, {
+          organizationId, entryType: 'TASK', entryId: created.id, action: 'CREATE',
+          after: { date: entryDate, heures: created.heures }, actorUserId: userId,
+        });
+        return created;
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
     );
@@ -912,7 +920,13 @@ export class MandateService {
     });
         if (!entry)
           throw new NotFoundException('Entrée introuvable ou non autorisée');
-        return tx.taskTimeEntry.delete({ where: { id: entryId } });
+        const period = await assertPeriodWritable(tx, organizationId, entry.date);
+        const deleted = await tx.taskTimeEntry.delete({ where: { id: entryId } });
+        await recordCorrectionIfNeeded(tx, period, {
+          organizationId, entryType: 'TASK', entryId, action: 'DELETE',
+          before: { date: entry.date, heures: entry.heures }, actorUserId: userId,
+        });
+        return deleted;
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
     );

@@ -22,7 +22,7 @@ describe('Timelog integrity', () => {
   });
 
   it('derives owner and tenant, validates the category, and creates an idempotent row', async () => {
-    const prisma: any = { timelogCategory: model(), timelogEntry: model() };
+    const prisma: any = { timelogCategory: model(), timelogEntry: model(), timePeriodClosure: { findUnique: jest.fn().mockResolvedValue(null) } };
     prisma.timelogCategory.findFirst.mockResolvedValue({ id: 'category' });
     prisma.timelogEntry.findFirst.mockResolvedValue(null);
     prisma.timelogEntry.create.mockImplementation(({ data }: any) => ({ id: 'entry', ...data, lockVersion: 0 }));
@@ -37,7 +37,7 @@ describe('Timelog integrity', () => {
   });
 
   it('rejects an unknown category before writing', async () => {
-    const prisma: any = { timelogCategory: model(), timelogEntry: model() };
+    const prisma: any = { timelogCategory: model(), timelogEntry: model(), timePeriodClosure: { findUnique: jest.fn().mockResolvedValue(null) } };
     prisma.timelogCategory.findFirst.mockResolvedValue(null);
     await expect(new TimelogService(prisma).addEntry('user-a', 'org-a', {
       date: '2026-10-29', heures: 1, category: 'forged',
@@ -49,7 +49,7 @@ describe('Timelog integrity', () => {
   it('returns the original row when the same create request is repeated', async () => {
     const existing = { id: 'entry', organizationId: 'org-a', userId: 'user-a',
       date: new Date('2026-10-29T00:00:00.000Z'), heures: 1, category: 'admin', note: null };
-    const prisma: any = { timelogCategory: model(), timelogEntry: model() };
+    const prisma: any = { timelogCategory: model(), timelogEntry: model(), timePeriodClosure: { findUnique: jest.fn().mockResolvedValue(null) } };
     prisma.timelogCategory.findFirst.mockResolvedValue({ id: 'category' });
     prisma.timelogEntry.findFirst.mockResolvedValue(existing);
     const result = await new TimelogService(prisma).addEntry('user-a', 'org-a', {
@@ -61,9 +61,9 @@ describe('Timelog integrity', () => {
   });
 
   it('atomically rejects a stale update', async () => {
-    const prisma: any = { timelogEntry: model() };
+    const prisma: any = { timelogEntry: model(), timePeriodClosure: { findUnique: jest.fn().mockResolvedValue(null) } };
     prisma.timelogEntry.updateMany.mockResolvedValue({ count: 0 });
-    prisma.timelogEntry.findFirst.mockResolvedValue({ id: 'entry' });
+    prisma.timelogEntry.findFirst.mockResolvedValue({ id: 'entry', date: new Date() });
     await expect(new TimelogService(prisma).updateEntry('entry', 'user-a', 'org-a', {
       heures: 2, note: 'local preserved', lockVersion: 1,
     })).rejects.toBeInstanceOf(ConflictException);
@@ -71,9 +71,9 @@ describe('Timelog integrity', () => {
   });
 
   it('does not delete when the version is stale', async () => {
-    const prisma: any = { timelogEntry: model() };
+    const prisma: any = { timelogEntry: model(), timePeriodClosure: { findUnique: jest.fn().mockResolvedValue(null) } };
     prisma.timelogEntry.deleteMany.mockResolvedValue({ count: 0 });
-    prisma.timelogEntry.findFirst.mockResolvedValue({ id: 'entry' });
+    prisma.timelogEntry.findFirst.mockResolvedValue({ id: 'entry', date: new Date() });
     await expect(new TimelogService(prisma).deleteEntry('entry', 'user-a', 'org-a', 1))
       .rejects.toBeInstanceOf(ConflictException);
   });
