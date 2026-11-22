@@ -265,6 +265,8 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: ghcr.io/${{ github.repository_owner }}/coro-website:${{ inputs.release_commit }}
+          build-args: |
+            NEXT_PUBLIC_WEB_AI_INTELLIGENT_ASSISTANT_ENABLED=true
 
       - name: Build and push client-portal
         id: client-portal
