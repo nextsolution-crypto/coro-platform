@@ -16,6 +16,7 @@ import { IncidentReportImportMappingService } from './incident-report-import-map
 import { IncidentReportImportExecutionService } from './incident-report-import-execution.service';
 import { IncidentReportHistoricalService } from './incident-report-historical.service';
 
+import { IncidentReportAttachmentScanWorker } from './incident-report-attachment-scan-worker.service';
 @Module({
   imports: [PrismaModule, StorageModule, CapabilityEntitlementsModule],
   controllers: [IncidentReportsController, IncidentReportImportController],
@@ -25,6 +26,7 @@ import { IncidentReportHistoricalService } from './incident-report-historical.se
     IncidentReportWorkflowService,
     IncidentReportAttachmentsService,
     IncidentReportAttachmentScanner,
+    IncidentReportAttachmentScanWorker,
     IncidentReportTemplatesService,
     IncidentReportExportsService,
     IncidentReportImportService,

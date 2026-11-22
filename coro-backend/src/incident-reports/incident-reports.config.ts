@@ -48,3 +48,15 @@ export function incidentReportUntrustedFilesEnabled(
     incidentReportImportEnabled(environment)
   );
 }
+
+/**
+ * Antivirus à la demande (économie de mémoire) : ClamAV n'est démarré que
+ * lorsqu'un fichier attend son analyse. Le fichier reste en quarantaine
+ * (scanStatus PENDING, jamais téléchargeable) jusqu'au verdict.
+ */
+export const INCIDENT_REPORT_CLAMAV_MODE_FLAG = 'INCIDENT_REPORT_CLAMAV_MODE';
+export function incidentReportClamavOnDemand(
+  environment: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return environment[INCIDENT_REPORT_CLAMAV_MODE_FLAG] === 'ON_DEMAND';
+}

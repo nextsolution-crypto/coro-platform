@@ -1,0 +1,8 @@
+[Unit]
+Description=CORO — ClamAV à la demande (démarrage/arrêt selon la file d'analyse)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/coro-platform/ops/clamav/on-demand.sh

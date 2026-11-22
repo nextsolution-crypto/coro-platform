@@ -22,6 +22,7 @@ import { IncidentReportAccessService } from './incident-report-access.service';
 import { IncidentReportAttachmentScanner } from './incident-report-attachment-scanner.service';
 import {
   incidentReportAttachmentsEnabled,
+  incidentReportClamavOnDemand,
   incidentReportsEnabled,
 } from './incident-reports.config';
 import { assertIncidentReportBinary } from './incident-report-binary-validator';
@@ -75,9 +76,14 @@ export class IncidentReportAttachmentsService {
     });
     if (!version)
       throw new ConflictException('Version de brouillon courante requise.');
-    const scan = await this.scanner.scan(bytes);
-    if (scan !== 'CLEAN')
-      throw new BadRequestException('Fichier refusé par l’analyse antivirus.');
+    // À la demande : le fichier part en quarantaine et sera analysé dès que
+    // ClamAV aura démarré ; sinon l'analyse reste immédiate et bloquante.
+    const onDemand = incidentReportClamavOnDemand();
+    if (!onDemand) {
+      const scan = await this.scanner.scan(bytes);
+      if (scan !== 'CLEAN')
+        throw new BadRequestException('Fichier refusé par l’analyse antivirus.');
+    }
     const sha256 = createHash('sha256').update(bytes).digest('hex');
     const existing = await this.prisma.incidentReportAttachment.findFirst({
       where: {
@@ -106,9 +112,12 @@ export class IncidentReportAttachmentsService {
           sizeBytes: BigInt(bytes.length),
           sha256,
           storageKey,
-          scanStatus: 'CLEAN',
-          scannedAt: new Date(),
-          provenance: { source: 'CORO_NATIVE', scanner: 'CLAMAV_INSTREAM' },
+          scanStatus: onDemand ? 'PENDING' : 'CLEAN',
+          scannedAt: onDemand ? null : new Date(),
+          provenance: {
+            source: 'CORO_NATIVE',
+            scanner: onDemand ? 'CLAMAV_ON_DEMAND' : 'CLAMAV_INSTREAM',
+          },
           createdByActorType: provenance.actorType,
           createdByActorId: provenance.actorId,
         },

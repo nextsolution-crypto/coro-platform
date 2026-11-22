@@ -15,9 +15,11 @@ CLAMAV_IMAGE='clamav/clamav-debian@sha256:6982509b9e1415bf23cb49d0c55872fdd57fd2
 CLAMAV_MINIMUM_AVAILABLE_BYTES=$((3 * 1024 * 1024 * 1024))
 CLAMAV_IMAGE_STAGE_RESERVE_BYTES=$((1024 * 1024 * 1024))
 INCIDENT_REPORT_FILE_SECURITY_MODE="${INCIDENT_REPORT_FILE_SECURITY_MODE:-DISABLED}"
+CLAMAV_ON_DEMAND=false
 case "$INCIDENT_REPORT_FILE_SECURITY_MODE" in
   DISABLED) CLAMAV_REQUIRED=false ;;
   CLAMAV_REQUIRED) CLAMAV_REQUIRED=true ;;
+  CLAMAV_ON_DEMAND) CLAMAV_REQUIRED=false; CLAMAV_ON_DEMAND=true ;;
   *) printf 'RELEASE_FAILED code=INCIDENT_REPORT_FILE_SECURITY_MODE_INVALID\n' >&2; exit 1 ;;
 esac
 
@@ -247,6 +249,10 @@ if [[ "$CLAMAV_REQUIRED" == true ]]; then
   clamav_available_kib="$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)"
   [[ "$clamav_available_kib" =~ ^[0-9]+$ ]] || fail CLAMAV_MEMORY_UNAVAILABLE
   (( clamav_available_kib * 1024 >= CLAMAV_MINIMUM_AVAILABLE_BYTES )) || fail CLAMAV_MEMORY_INSUFFICIENT
+elif [[ "$CLAMAV_ON_DEMAND" == true ]]; then
+  # À la demande : pas de réserve mémoire permanente, seulement l'espace disque de l'image.
+  clamav_image_id="$(docker image ls --no-trunc --quiet "$CLAMAV_IMAGE")" || fail CLAMAV_IMAGE_PRESENCE_UNAVAILABLE
+  [[ -n "$clamav_image_id" ]] || image_stage_required=$((image_stage_required + CLAMAV_IMAGE_STAGE_RESERVE_BYTES))
 fi
 database_bytes="$(docker compose exec -T postgres sh -ceu 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT pg_database_size(current_database())"')" || fail CAPACITY_DATABASE_SIZE_UNAVAILABLE
 [[ "$database_bytes" =~ ^[0-9]+$ ]] || fail CAPACITY_DATABASE_SIZE_INVALID
@@ -294,7 +300,7 @@ for image in "$BACKEND_IMAGE" "$FRONTEND_IMAGE" "$CLIENT_PORTAL_IMAGE" "$WEBSITE
   docker pull --platform linux/amd64 "$image" >/dev/null || fail IMAGE_UNAVAILABLE
   docker image inspect "$image" --format '{{.Architecture}}' | grep -qx amd64 || fail IMAGE_PLATFORM_MISMATCH
 done
-if [[ "$CLAMAV_REQUIRED" == true ]]; then
+if [[ "$CLAMAV_REQUIRED" == true || "$CLAMAV_ON_DEMAND" == true ]]; then
   docker pull --platform linux/amd64 "$CLAMAV_IMAGE" >/dev/null || fail CLAMAV_IMAGE_UNAVAILABLE
   [[ "$(docker image inspect "$CLAMAV_IMAGE" --format '{{.Architecture}}')" == amd64 ]] || fail CLAMAV_IMAGE_PLATFORM_MISMATCH
 fi
@@ -305,7 +311,8 @@ services:
   backend:
     image: $BACKEND_IMAGE
     environment:
-      INCIDENT_REPORT_ATTACHMENTS_ENABLED: "$([[ "$CLAMAV_REQUIRED" == true ]] && printf true || printf false)"
+      INCIDENT_REPORT_ATTACHMENTS_ENABLED: "$([[ "$CLAMAV_REQUIRED" == true || "$CLAMAV_ON_DEMAND" == true ]] && printf true || printf false)"
+      INCIDENT_REPORT_CLAMAV_MODE: "$([[ "$CLAMAV_ON_DEMAND" == true ]] && printf ON_DEMAND || printf INLINE)"
       INCIDENT_REPORT_IMPORT_ENABLED: "false"
   display-pdf-spool-init:
     image: $BACKEND_IMAGE
@@ -348,7 +355,16 @@ if [[ "$CLAMAV_REQUIRED" == true ]]; then
   [[ "$(docker inspect --format '{{.State.Health.Status}}' coro_clamav 2>/dev/null)" == healthy ]] || fail CLAMAV_HEALTH_TIMEOUT
   docker exec coro_backend node dist/src/scripts/clamav-smoke.js >"$RELEASE_DIR/${RELEASE_ID}.clamav-smoke.json" || fail CLAMAV_SMOKE_FAILED
   node -e 'const fs=require("fs"),r=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(r.execution!=="PASS"||r.ping!=="PONG"||r.signatures!=="CURRENT"||r.cleanInstream!=="CLEAN"||r.eicarInstream!=="INFECTED"||r.importEnabled!==false||r.attachmentsEnabled!==true)process.exit(1)' "$RELEASE_DIR/${RELEASE_ID}.clamav-smoke.json" || fail CLAMAV_SMOKE_EVIDENCE_INVALID
+elif [[ "$CLAMAV_ON_DEMAND" == true ]]; then
+  # ClamAV n'est pas gardé en mémoire : les fichiers restent en quarantaine
+  # jusqu'à ce que le minuteur démarre l'antivirus pour les analyser.
+  docker exec coro_backend node -e 'if(process.env.INCIDENT_REPORT_ATTACHMENTS_ENABLED!=="true"||process.env.INCIDENT_REPORT_CLAMAV_MODE!=="ON_DEMAND"||process.env.INCIDENT_REPORT_IMPORT_ENABLED!=="false")process.exit(1)' || fail CLAMAV_ON_DEMAND_CONFIGURATION_INVALID
+  install -m 0644 "$REPO/ops/clamav/coro-clamav-on-demand.service" /etc/systemd/system/coro-clamav-on-demand.service || fail CLAMAV_ON_DEMAND_TIMER_INSTALL_FAILED
+  install -m 0644 "$REPO/ops/clamav/coro-clamav-on-demand.timer" /etc/systemd/system/coro-clamav-on-demand.timer || fail CLAMAV_ON_DEMAND_TIMER_INSTALL_FAILED
+  systemctl daemon-reload && systemctl enable --now coro-clamav-on-demand.timer >/dev/null 2>&1 || fail CLAMAV_ON_DEMAND_TIMER_INSTALL_FAILED
+  printf '%s\n' '{"schemaVersion":1,"execution":"ON_DEMAND","required":false,"attachmentsEnabled":true,"importEnabled":false,"failClosed":true,"quarantineUntilScanned":true}' >"$RELEASE_DIR/${RELEASE_ID}.clamav-smoke.json"
 else
+  systemctl disable --now coro-clamav-on-demand.timer >/dev/null 2>&1 || true
   docker exec coro_backend node -e 'if(process.env.INCIDENT_REPORT_ATTACHMENTS_ENABLED!=="false"||process.env.INCIDENT_REPORT_IMPORT_ENABLED!=="false")process.exit(1)' || fail UNTRUSTED_FILE_CAPABILITIES_NOT_DISABLED
   printf '%s\n' '{"schemaVersion":1,"execution":"SKIPPED_NOT_REQUIRED","required":false,"attachmentsEnabled":false,"importEnabled":false,"failClosed":true}' >"$RELEASE_DIR/${RELEASE_ID}.clamav-smoke.json"
 fi
@@ -403,7 +419,7 @@ const fs=require('fs'); const p=process.env;
 const knowledgeRuntime=JSON.parse(fs.readFileSync(`/opt/coro-ops/releases/${p.RELEASE_ID}.knowledge-runtime.json`,'utf8'));
 const knowledgeSmoke=JSON.parse(fs.readFileSync(`/opt/coro-ops/releases/${p.RELEASE_ID}.knowledge-smoke.json`,'utf8'));
 const clamavSmoke=JSON.parse(fs.readFileSync(`/opt/coro-ops/releases/${p.RELEASE_ID}.clamav-smoke.json`,'utf8'));
-const manifest={releaseId:p.RELEASE_ID,gitCommit:p.RELEASE_COMMIT,timestampUtc:p.RELEASE_TIMESTAMP,operator:p.RELEASE_OPERATOR,status:'SUCCESS',images:{backend:p.BACKEND_IMAGE,frontend:p.FRONTEND_IMAGE,clientPortal:p.CLIENT_PORTAL_IMAGE,website:p.WEBSITE_IMAGE},rollbackImagesByService:JSON.parse(p.RETENTION_ROLLBACK_BY_SERVICE_JSON),composeIdentity:p.COMPOSE_IDENTITY,expectedMigrationHead:p.EXPECTED_MIGRATION_HEAD,previousCommit:p.PREVIOUS_COMMIT,previousImages:p.PREVIOUS_IMAGES.split('\n'),previousCompose:p.PREVIOUS_COMPOSE,previousMigrationHead:p.PREVIOUS_MIGRATION_HEAD,backupCheckpointId:p.BACKUP_ID,backupSha256:p.BACKUP_SHA,backupRemoteObject:p.BACKUP_REMOTE_OBJECT,backupVersionId:p.BACKUP_VERSION_ID,restoreEvidence:{status:'RESTORE_VERIFIED',report:p.RESTORE_REPORT},outboxConfiguration:{status:'PASS',keyId:p.CLIENT_INVITATION_OUTBOX_KEY_ID},fileSecurity:{mode:p.INCIDENT_REPORT_FILE_SECURITY_MODE,clamavImage:p.INCIDENT_REPORT_FILE_SECURITY_MODE==='CLAMAV_REQUIRED'?'clamav/clamav-debian@sha256:6982509b9e1415bf23cb49d0c55872fdd57fd2b92be33fa26d487da42d322076':null},healthChecks:{database:'PASS',backend:'PASS',frontend:'PASS',clientPortal:'PASS',website:'PASS',clamav:clamavSmoke,internalAuthReachable:'PASS',clientAuthReachable:'PASS',unauthenticatedBookingDenied:'PASS',authenticatedBooking:'NOT_VERIFIED_REQUIRES_APPROVED_SYNTHETIC_IDENTITY',containers:'PASS',restartCount:'PASS',criticalLogs:'PASS',mfaQaCaptureDisabled:'PASS'}};
+const manifest={releaseId:p.RELEASE_ID,gitCommit:p.RELEASE_COMMIT,timestampUtc:p.RELEASE_TIMESTAMP,operator:p.RELEASE_OPERATOR,status:'SUCCESS',images:{backend:p.BACKEND_IMAGE,frontend:p.FRONTEND_IMAGE,clientPortal:p.CLIENT_PORTAL_IMAGE,website:p.WEBSITE_IMAGE},rollbackImagesByService:JSON.parse(p.RETENTION_ROLLBACK_BY_SERVICE_JSON),composeIdentity:p.COMPOSE_IDENTITY,expectedMigrationHead:p.EXPECTED_MIGRATION_HEAD,previousCommit:p.PREVIOUS_COMMIT,previousImages:p.PREVIOUS_IMAGES.split('\n'),previousCompose:p.PREVIOUS_COMPOSE,previousMigrationHead:p.PREVIOUS_MIGRATION_HEAD,backupCheckpointId:p.BACKUP_ID,backupSha256:p.BACKUP_SHA,backupRemoteObject:p.BACKUP_REMOTE_OBJECT,backupVersionId:p.BACKUP_VERSION_ID,restoreEvidence:{status:'RESTORE_VERIFIED',report:p.RESTORE_REPORT},outboxConfiguration:{status:'PASS',keyId:p.CLIENT_INVITATION_OUTBOX_KEY_ID},fileSecurity:{mode:p.INCIDENT_REPORT_FILE_SECURITY_MODE,clamavImage:p.INCIDENT_REPORT_FILE_SECURITY_MODE!=='DISABLED'?'clamav/clamav-debian@sha256:6982509b9e1415bf23cb49d0c55872fdd57fd2b92be33fa26d487da42d322076':null},healthChecks:{database:'PASS',backend:'PASS',frontend:'PASS',clientPortal:'PASS',website:'PASS',clamav:clamavSmoke,internalAuthReachable:'PASS',clientAuthReachable:'PASS',unauthenticatedBookingDenied:'PASS',authenticatedBooking:'NOT_VERIFIED_REQUIRES_APPROVED_SYNTHETIC_IDENTITY',containers:'PASS',restartCount:'PASS',criticalLogs:'PASS',mfaQaCaptureDisabled:'PASS'}};
 manifest.knowledgeRuntime={...knowledgeRuntime,smoke:knowledgeSmoke};
 const path=`/opt/coro-ops/releases/${p.RELEASE_ID}.json`; fs.writeFileSync(path,JSON.stringify(manifest,null,2)+'\n',{flag:'wx',mode:0o600});
 NODE
