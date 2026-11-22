@@ -63,7 +63,45 @@ export class DisplayOrchestrationService {
     const permission = this.requiredPermission(dto.commandType);
     await this.spatial.require(actor, organizationId, buildingId, permission);
     this.validateSource(dto);
+    return this.issueAuthorized(
+      organizationId,
+      buildingId,
+      { userId: actor.userId, permission },
+      dto,
+    );
+  }
 
+  /**
+   * Trusted adapter for the Sentinelle incident (M10-01): the incident itself is
+   * the authority. Only the incident bridge calls this, never a controller.
+   */
+  async issueFromIncident(
+    organizationId: string,
+    buildingId: string,
+    dto: IssueDisplayOperationalCommandDto,
+  ) {
+    if (dto.source !== 'CORO_INCIDENT' || !dto.incidentEventId)
+      throw new ForbiddenException('INCIDENT_ADAPTER_REQUIRES_INCIDENT_SOURCE');
+    if (!['ENTER_EMERGENCY', 'ENTER_EXERCISE', 'CANCEL_EXERCISE'].includes(dto.commandType))
+      throw new ForbiddenException('INCIDENT_ADAPTER_COMMAND_NOT_ALLOWED');
+    return this.issueAuthorized(
+      organizationId,
+      buildingId,
+      {
+        userId: 'SYSTEM:CORO_INCIDENT',
+        permission: this.requiredPermission(dto.commandType),
+      },
+      dto,
+    );
+  }
+
+  private async issueAuthorized(
+    organizationId: string,
+    buildingId: string,
+    actor: { userId: string; permission: DisplayPermission },
+    dto: IssueDisplayOperationalCommandDto,
+  ) {
+    const permission = actor.permission;
     const existing = await this.prisma.displayOperationalCommand.findUnique({
       where: {
         organizationId_idempotencyKey: {
@@ -81,7 +119,10 @@ export class DisplayOrchestrationService {
         })
       : null;
     const needsIncident = !dto.exercise || dto.source === 'CORO_INCIDENT';
-    if (needsIncident && (!incident || !incident.isActive))
+    // Ending an exercise display is allowed once the exercise itself is closed.
+    const closedExerciseCancel =
+      dto.commandType === 'CANCEL_EXERCISE' && incident?.isExercise === true;
+    if (needsIncident && (!incident || (!incident.isActive && !closedExerciseCancel)))
       throw new ConflictException('ACTIVE_INCIDENT_REQUIRED');
     if (incident && incident.isExercise !== dto.exercise)
       throw new ConflictException('INCIDENT_EXERCISE_CLASSIFICATION_MISMATCH');
@@ -281,9 +322,11 @@ export class DisplayOrchestrationService {
             data: {
               incidentEventId: dto.incidentEventId,
               action: `DISPLAY_${dto.commandType}`,
-              actor: `USER:${actor.userId}`,
+              actor: actor.userId.startsWith('SYSTEM:')
+                ? actor.userId
+                : `USER:${actor.userId}`,
               details: `Commande ${commandId}; ${targets.length} écran(s); corrélation ${dto.correlationId}`,
-              isAutomatic: false,
+              isAutomatic: actor.userId.startsWith('SYSTEM:'),
             },
           });
         }
@@ -450,6 +493,17 @@ export class DisplayOrchestrationService {
             },
           },
           update: {},
+        });
+      }
+      if (delivery.command.incidentEventId) {
+        await tx.incidentLog.create({
+          data: {
+            incidentEventId: delivery.command.incidentEventId,
+            action: `DISPLAY_ACK_${dto.status}`,
+            actor: `DISPLAY:${device.id}`,
+            details: `Écran ${device.id} : ${displayAckLabel(dto.status)} (commande ${delivery.command.type}${dto.errorCode ? `, code ${dto.errorCode}` : ''})`,
+            isAutomatic: true,
+          },
         });
       }
       await this.reconcileCommand(tx, delivery.commandId);
@@ -712,5 +766,20 @@ export class DisplayOrchestrationService {
       where: { id },
       include: { deliveries: { orderBy: { deviceId: 'asc' } }, outbox: true },
     });
+  }
+}
+
+export function displayAckLabel(status: string): string {
+  switch (status) {
+    case 'RECEIVED':
+      return 'commande reçue / command received';
+    case 'APPLIED':
+      return 'mode urgence affiché / emergency mode applied';
+    case 'REJECTED':
+      return 'commande refusée / command rejected';
+    case 'STALE':
+      return 'commande périmée / command stale';
+    default:
+      return 'échec / failed';
   }
 }
