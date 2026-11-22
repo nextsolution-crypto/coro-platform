@@ -562,3 +562,11 @@
     padding: 8px;
   }
 }
+
+.lateEntry {
+  padding: 1px 8px;
+  border-radius: 20px;
+  background: var(--p-amber-soft);
+  color: var(--p-amber-text);
+  font-weight: 700;
+}

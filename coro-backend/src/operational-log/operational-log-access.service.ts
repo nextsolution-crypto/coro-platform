@@ -38,6 +38,21 @@ export class OperationalLogAccessService {
     );
   }
 
+  /** Vrai si l'acteur détient la permission (sans lever d'exception). */
+  async has(
+    actor: ProvenanceActor,
+    organizationId: string,
+    buildingId: string,
+    permission: PlatformPermission,
+  ): Promise<boolean> {
+    try {
+      await this.require(actor, organizationId, buildingId, permission);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private deny(): never {
     throw new NotFoundException('Entrée de main courante introuvable.');
   }

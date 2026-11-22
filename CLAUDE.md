@@ -29,6 +29,7 @@ Contexte complet et détaillé : `CORO_CONTEXTE_REPRISE_v4.md` (racine). Ce fich
 - PowerShell + dossiers `[id]`/`[projectId]` : toujours utiliser `-LiteralPath`.
 - Rate limiting global actif (`@nestjs/throttler` : 120 req/min, 2000 req/h par IP).
 - **Dépôt GitHub public** : aucun mot de passe, jeton, clé ni adresse IP de serveur dans un fichier versionné.
+- **Déploiement** (workflow `deploy.yml`) : toujours `incident_report_file_security_mode=CLAMAV_ON_DEMAND` (ClamAV démarré seulement quand une pièce jointe attend son analyse ; `DISABLED` retire le minuteur et coupe les pièces jointes).
 - Prod : `app.getcoro.io` / `api.getcoro.io` / `client.getcoro.io` / `getcoro.io` — VPS DigitalOcean Toronto, déploiement auto CI/CD sur push `main`, Prisma épinglé à `6.19.3` (v7 casse le schema).
 
 ## 3. État d'avancement réel des modules (scan du code — 13 sept. 2026)

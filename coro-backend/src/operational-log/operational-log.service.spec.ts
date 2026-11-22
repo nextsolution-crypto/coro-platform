@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { OperationalLogPriority } from '@prisma/client';
-import { OperationalLogService } from './operational-log.service';
+import { OperationalLogService, assertPlausibleEventAt } from './operational-log.service';
 
 describe('OperationalLogService', () => {
   const prisma = {
@@ -21,7 +21,7 @@ describe('OperationalLogService', () => {
     incidentReport: { findFirst: jest.fn() },
     $transaction: jest.fn(),
   };
-  const access = { require: jest.fn() };
+  const access = { require: jest.fn(), has: jest.fn().mockResolvedValue(false) };
   const service = new OperationalLogService(prisma as never, access as never);
   const actor = { userId: 'user-a', organizationId: 'org-a' } as never;
 
@@ -110,6 +110,8 @@ describe('OperationalLogService', () => {
       category: 'SECURITY',
       activityType: 'PATROL',
       priority: 'NORMAL',
+      authorActorType: 'USER',
+      authorActorId: 'user-a',
     };
     prisma.operationalLogEntry.findFirst.mockResolvedValue(current);
     prisma.operationalLogEntryRevision.findUnique.mockResolvedValue(null);
@@ -135,5 +137,26 @@ describe('OperationalLogService', () => {
         actor,
       ),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('M8-03 : refuse la correction de l’entrée d’un autre agent sans rôle de superviseur', async () => {
+    prisma.operationalLogEntry.findFirst.mockResolvedValue({
+      id: 'entry-b', organizationId: 'org-a', buildingId: 'building-a', lockVersion: 1,
+      authorActorType: 'USER', authorActorId: 'someone-else',
+    });
+    access.has.mockResolvedValue(false);
+    await expect(
+      service.update('org-a', 'entry-b', {
+        expectedLockVersion: 1, correctionReason: 'Correction factuelle', description: 'Après',
+        idempotencyKey: '33333333-3333-4333-8333-333333333333',
+      } as never, actor),
+    ).rejects.toThrow('Seul l’auteur');
+  });
+
+  it('M8-02 : refuse une heure d’événement future ou de plus de 30 jours', () => {
+    const now = Date.parse('2026-11-22T12:00:00Z');
+    expect(() => assertPlausibleEventAt('2026-11-22T12:30:00Z', now)).toThrow('futur');
+    expect(() => assertPlausibleEventAt('2026-10-01T12:00:00Z', now)).toThrow('30 jours');
+    expect(() => assertPlausibleEventAt('2026-11-22T11:00:00Z', now)).not.toThrow();
   });
 });
