@@ -741,6 +741,12 @@ function ItemList({
                     item.plannedStartAt,
                 )}
               </span>
+              {lateEntryMinutes(item) !== null && (
+                <span className={styles.lateEntry}>
+                  Saisi le {formatDate(item.recordedAt)} (+
+                  {formatDelay(lateEntryMinutes(item)!)})
+                </span>
+              )}
               {item.createdByDisplayName && (
                 <span>{item.createdByDisplayName}</span>
               )}
@@ -2102,4 +2108,17 @@ function Loading() {
       Chargement sécurisé…
     </div>
   );
+}
+
+/** M8-02 : une saisie faite plus d'une heure après l'événement est signalée. */
+const LATE_ENTRY_THRESHOLD_MINUTES = 60;
+function lateEntryMinutes(item: { eventAt?: string; recordedAt?: string }): number | null {
+  if (!item.eventAt || !item.recordedAt) return null;
+  const minutes = Math.round((Date.parse(item.recordedAt) - Date.parse(item.eventAt)) / 60000);
+  return Number.isFinite(minutes) && minutes > LATE_ENTRY_THRESHOLD_MINUTES ? minutes : null;
+}
+function formatDelay(minutes: number): string {
+  if (minutes < 120) return `${minutes} min`;
+  if (minutes < 48 * 60) return `${Math.round(minutes / 60)} h`;
+  return `${Math.round(minutes / 1440)} j`;
 }

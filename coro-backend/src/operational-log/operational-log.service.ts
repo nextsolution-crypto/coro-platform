@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -34,6 +35,8 @@ const entrySelect = {
   eventAt: true,
   recordedAt: true,
   authorUserId: true,
+  authorActorType: true,
+  authorActorId: true,
   shiftReference: true,
   locationLabel: true,
   activityType: true,
@@ -73,6 +76,7 @@ export class OperationalLogService {
       PlatformPermission.OPERATIONAL_LOG_CREATE,
     );
     this.validateText(dto.description);
+    assertPlausibleEventAt(dto.eventAt);
     const replay = await this.prisma.operationalLogEntry.findUnique({
       where: {
         organizationId_creationIdempotencyKey: {
@@ -255,6 +259,21 @@ export class OperationalLogService {
       existing.buildingId,
       PlatformPermission.OPERATIONAL_LOG_EDIT,
     );
+    if ((dto as { eventAt?: string }).eventAt)
+      assertPlausibleEventAt((dto as { eventAt?: string }).eventAt!);
+    // M8-03 : seule l'autrice ou l'auteur de l'entrée, ou un superviseur de
+    // quart / administrateur de la main courante, peut la corriger.
+    const isAuthor =
+      existing.authorActorType === provenanceActor(actor).actorType &&
+      existing.authorActorId === provenanceActor(actor).actorId;
+    if (
+      !isAuthor &&
+      !(await this.access.has(actor, organizationId, existing.buildingId, PlatformPermission.OPERATIONAL_SHIFT_SUPERVISE)) &&
+      !(await this.access.has(actor, organizationId, existing.buildingId, PlatformPermission.OPERATIONAL_LOG_ADMIN))
+    )
+      throw new ForbiddenException(
+        'Seul l’auteur de l’entrée ou un superviseur de quart peut la corriger.',
+      );
     const replay = await this.prisma.operationalLogEntryRevision.findUnique({
       where: {
         organizationId_idempotencyKey: {
@@ -528,4 +547,19 @@ export class OperationalLogService {
   private missing(): never {
     throw new NotFoundException('Entrée de main courante introuvable.');
   }
+}
+
+/** M8-02 : une heure d'événement future ou trop ancienne est refusée. */
+export const EVENT_AT_FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
+export const EVENT_AT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+export function assertPlausibleEventAt(value: string, now = Date.now()) {
+  const at = Date.parse(value);
+  if (!Number.isFinite(at))
+    throw new BadRequestException('Heure de l’événement invalide.');
+  if (at > now + EVENT_AT_FUTURE_TOLERANCE_MS)
+    throw new BadRequestException('L’heure de l’événement ne peut pas être dans le futur.');
+  if (at < now - EVENT_AT_MAX_AGE_MS)
+    throw new BadRequestException(
+      'L’heure de l’événement date de plus de 30 jours : consignez-la dans un rapport.',
+    );
 }
