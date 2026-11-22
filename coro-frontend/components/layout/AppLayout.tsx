@@ -102,6 +102,7 @@ const SUPER_ADMIN_COMMERCIAL_GROUP = {
     { label: 'Tableau commercial', path: '/admin/commercial', icon: '◉' },
     { label: 'Préparer une offre', path: '/admin/commercial/journey', icon: '∆' },
     { label: 'Dossiers commerciaux', path: '/admin/commercial/prospects', icon: '○' },
+    { label: 'Propositions', path: '/admin/commercial/proposals', icon: '◇' },
     { label: 'Contrats', path: '/admin/commercial/contracts', icon: '▧' },
   ],
 };
@@ -109,7 +110,7 @@ const SUPER_ADMIN_COMMERCIAL_GROUP = {
 const SUPER_ADMIN_COMMERCIAL_ADMIN_GROUP = {
   label: 'Administration commerciale',
   items: [
-    { label: 'Organisations',    path: '/admin/organizations', icon: 'ðŸ¢' },
+    { label: 'Organisations',    path: '/admin/organizations', icon: '🏢' },
     { label: 'Catalogue et tarifs', path: '/admin/product-catalog', icon: '◫' },
     { label: 'Contenus et clauses', path: '/admin/commercial/content', icon: '▤' },
     { label: 'Émetteur légal', path: '/admin/commercial/legal-issuer', icon: '§' },
@@ -127,9 +128,16 @@ const SUPER_ADMIN_COMMERCIAL_ADVANCED_GROUP = {
     { label: 'Hypothèses de coûts', path: '/admin/commercial/assumptions/cost', icon: '¤' },
     { label: 'Hypothèses de valeur', path: '/admin/commercial/assumptions/value', icon: '≈' },
     { label: 'Clauses commerciales', path: '/admin/commercial/clauses', icon: '¶' },
-    { label: 'Propositions', path: '/admin/commercial/proposals', icon: '◇' },
   ],
 };
+
+/**
+ * Audit M11-03 / M10-04 (22 nov. 2026) : le module commercial avancé est gelé
+ * jusqu'à une dizaine de clients payants. Seuls proposition, contrat et
+ * facture restent dans le menu ; les outils avancés restent accessibles par
+ * leur adresse et réapparaissent avec NEXT_PUBLIC_COMMERCIAL_ADVANCED_TOOLS=true.
+ */
+const COMMERCIAL_ADVANCED_TOOLS_VISIBLE = process.env.NEXT_PUBLIC_COMMERCIAL_ADVANCED_TOOLS === 'true';
 
 const SUPER_ADMIN_OTHER_GROUP = {
   label: 'Plateforme',
@@ -141,7 +149,7 @@ const SUPER_ADMIN_OTHER_GROUP = {
     },
     { label: 'Rapports REX', path: '/admin/rex-reports', icon: '📄' },
     { label: 'Recommandations', path: '/admin/referrals',     icon: '🎁' },
-    { label: 'Carte globale',    path: '/admin/map',           icon: 'ðŸŒ' },
+    { label: 'Carte globale',    path: '/admin/map',           icon: '🌍' },
     { label: 'Health Score',    path: '/admin/health',         icon: '🏥' },
     { label: 'Tous les projets', path: '/admin/projects',      icon: '📁' },
     { label: 'Procédures',      path: '/admin/procedures',     icon: '📋' },
@@ -867,7 +875,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <div className="space-y-0.5">
                   {SUPER_ADMIN_PLATFORM_GROUP.items.map(item => renderNavItem(item))}
                 </div>
-                {[SUPER_ADMIN_COMMERCIAL_GROUP, SUPER_ADMIN_COMMERCIAL_ADMIN_GROUP, SUPER_ADMIN_COMMERCIAL_ADVANCED_GROUP, ...(platform.isFounder ? [SUPER_ADMIN_OTHER_GROUP] : [])].map(group => (
+                {[SUPER_ADMIN_COMMERCIAL_GROUP, SUPER_ADMIN_COMMERCIAL_ADMIN_GROUP, ...(COMMERCIAL_ADVANCED_TOOLS_VISIBLE ? [SUPER_ADMIN_COMMERCIAL_ADVANCED_GROUP] : []), ...(platform.isFounder ? [SUPER_ADMIN_OTHER_GROUP] : [])].map(group => (
                   <div key={group.label} className="mt-4">
                     <p className="px-3 text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: p.text('#ADB5BD') }}>
                       {group.label}
