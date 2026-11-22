@@ -1378,7 +1378,7 @@ function AttachmentButton({
           fileBase64: data,
           idempotencyKey: uuid(),
         }),
-      "Pièce jointe téléversée et soumise à l’analyse antivirus.",
+      "Pièce jointe reçue : elle sera disponible après l’analyse antivirus (quelques minutes).",
     );
   };
   return (

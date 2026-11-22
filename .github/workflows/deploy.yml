@@ -25,12 +25,13 @@ on:
         default: INITIAL
         type: string
       incident_report_file_security_mode:
-        description: DISABLED blocks untrusted uploads/imports; CLAMAV_REQUIRED enforces the full antivirus gate
+        description: DISABLED blocks untrusted uploads/imports; CLAMAV_ON_DEMAND quarantines files and starts ClamAV only when needed; CLAMAV_REQUIRED keeps ClamAV running (3 GiB gate)
         required: true
         default: DISABLED
         type: choice
         options:
           - DISABLED
+          - CLAMAV_ON_DEMAND
           - CLAMAV_REQUIRED
 
 permissions:
