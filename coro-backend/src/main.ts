@@ -104,9 +104,17 @@ export async function bootstrap() {
   );
   app.use((req: any, res: any, next: any) => {
     const parsers = jsonParsers.get(bodyLimitForPath(req.originalUrl || req.url || ''))!;
+    const done = (error?: any) => {
+      // Corps trop volumineux : 413 explicite (sinon 500 générique).
+      if (error?.type === 'entity.too.large') {
+        res.status(413).json({ statusCode: 413, message: 'Requête trop volumineuse.' });
+        return;
+      }
+      next(error);
+    };
     parsers.json(req, res, (error?: unknown) => {
-      if (error) return next(error);
-      parsers.urlencoded(req, res, next);
+      if (error) return done(error);
+      parsers.urlencoded(req, res, done);
     });
   });
 
