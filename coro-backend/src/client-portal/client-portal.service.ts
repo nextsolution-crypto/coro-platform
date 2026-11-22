@@ -3,8 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+  NotFoundException, Optional } from '@nestjs/common';
 import {
   CoroActorType,
   IncidentPermission,
@@ -79,6 +78,7 @@ const CLIENT_PROJECT_DETAIL_SELECT = {
   },
 } as const;
 
+import { PdfSealService } from '../pdf-seal/pdf-seal.service';
 @Injectable()
 export class ClientPortalService {
   constructor(
@@ -92,7 +92,30 @@ export class ClientPortalService {
     private populationEvidenceService: PopulationEvidenceService,
     private populationEvidenceReportService: PopulationEvidenceReportService,
     private pilotPolicy: ClientPilotPolicyService = new ClientPilotPolicyService(),
+    @Optional() private pdfSeal?: PdfSealService,
   ) {}
+
+  /** Sceau CORO (M8-04) : signature + horodatage ; jeton gardé à côté du PDF. */
+  private async sealOfficialPdf(
+    bytes: Buffer,
+    context: { organizationId: string; projectId: string; projectVersionId: string; language: 'fr' | 'en'; versionNumber?: number },
+  ): Promise<Buffer> {
+    if (!this.pdfSeal) return bytes;
+    const sealed = await this.pdfSeal.seal(bytes, {
+      reason: context.language === 'fr'
+        ? `Version approuvée${context.versionNumber ? ` v${context.versionNumber}` : ''} — document officiel CORO`
+        : `Approved version${context.versionNumber ? ` v${context.versionNumber}` : ''} — CORO official document`,
+    });
+    if (sealed.timestampToken)
+      await this.storageService
+        .uploadPrivateImmutable(
+          sealed.timestampToken,
+          `tenant-${context.organizationId}/official-pdf-timestamps/${context.projectId}/${context.projectVersionId}-${context.language}-${sealed.sha256}.tsr`,
+          'application/timestamp-reply',
+        )
+        .catch(() => undefined);
+    return sealed.pdf;
+  }
 
   getPilotPolicy(organizationId: string) {
     return this.pilotPolicy.getPolicy(organizationId);
@@ -1768,20 +1791,30 @@ export class ClientPortalService {
       );
     }
 
+    const sealContext = {
+      organizationId: project.organizationId,
+      projectId,
+      projectVersionId: latestVersion.id,
+      versionNumber: (latestVersion as { versionNumber?: number }).versionNumber,
+    };
+    const [sealedFr, sealedEn] = await Promise.all([
+      this.sealOfficialPdf(result.fr, { ...sealContext, language: 'fr' }),
+      this.sealOfficialPdf(result.en, { ...sealContext, language: 'en' }),
+    ]);
     const [officialPdfFr, officialPdfEn] = await Promise.all([
       this.storageService.storeOfficialPdfImmutable({
         organizationId: project.organizationId,
         projectId,
         projectVersionId: latestVersion.id,
         language: 'fr',
-        bytes: result.fr,
+        bytes: sealedFr,
       }),
       this.storageService.storeOfficialPdfImmutable({
         organizationId: project.organizationId,
         projectId,
         projectVersionId: latestVersion.id,
         language: 'en',
-        bytes: result.en,
+        bytes: sealedEn,
       }),
     ]);
 

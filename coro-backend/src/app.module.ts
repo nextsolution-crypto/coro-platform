@@ -89,8 +89,11 @@ import { OperationalLogModule } from './operational-log/operational-log.module';
 import { OperationalShiftsModule } from './operational-shifts/operational-shifts.module';
 import { OperationalDirectivesModule } from './operational-directives/operational-directives.module';
 
+import { PdfSealModule } from './pdf-seal/pdf-seal.module';
+
 @Module({
   imports: [
+    PdfSealModule,
     DemoEnvironmentModule,
     PrismaModule,
     AdminAuditModule,

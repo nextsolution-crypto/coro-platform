@@ -1,8 +1,7 @@
 import {
   ConflictException,
   Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+  NotFoundException, Optional } from '@nestjs/common';
 import { PlatformPermission, Prisma } from '@prisma/client';
 import { createHash, randomUUID } from 'node:crypto';
 import type { ProvenanceActor } from '../auth/coro-actor-provenance';
@@ -21,6 +20,7 @@ import {
 } from './incident-report-pdf.renderer';
 import { incidentReportsEnabled } from './incident-reports.config';
 
+import { PdfSealService } from '../pdf-seal/pdf-seal.service';
 @Injectable()
 export class IncidentReportExportsService {
   private readonly renderer = new IncidentReportPdfRenderer();
@@ -28,6 +28,7 @@ export class IncidentReportExportsService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly access: IncidentReportAccessService,
+    @Optional() private readonly pdfSeal?: PdfSealService,
   ) {}
 
   async create(
@@ -176,13 +177,24 @@ export class IncidentReportExportsService {
         approvals,
         generatedAt,
       });
-      const sha256 = createHash('sha256').update(bytes).digest('hex');
+      // Sceau CORO (M8-04) : signature de la plateforme + horodatage RFC 3161.
+      const sealed = this.pdfSeal
+        ? await this.pdfSeal.seal(bytes, {
+            reason: `Rapport ${report.reportNumber} — version ${version.versionNumber} approuvée (CORO)`,
+          })
+        : null;
+      const finalBytes = sealed?.pdf ?? bytes;
+      const sha256 = createHash('sha256').update(finalBytes).digest('hex');
       const storageKey = `tenant-${organizationId}/incident-report-exports/${reportId}/${version.id}/${id}.pdf`;
       await this.storage.uploadPrivateImmutable(
-        bytes,
+        finalBytes,
         storageKey,
         'application/pdf',
       );
+      if (sealed?.timestampToken)
+        await this.storage
+          .uploadPrivateImmutable(sealed.timestampToken, `${storageKey}.tsr`, 'application/timestamp-reply')
+          .catch(() => undefined);
       const completed = await this.prisma.$transaction(async (tx) => {
         await ensureProvenanceActor(tx, actor);
         const row = await tx.incidentReportExport.update({
