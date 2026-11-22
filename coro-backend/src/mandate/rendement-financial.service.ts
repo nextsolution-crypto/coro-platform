@@ -49,6 +49,8 @@ type FinancialTotal = {
   uniqueLossMakingMandates: number;
 };
 
+import { round2 } from '../common/exact-amounts';
+
 @Injectable()
 export class RendementFinancialService {
   constructor(
@@ -102,7 +104,7 @@ export class RendementFinancialService {
           { mandateId: string | null; projectId: string; projectName: string }
         >(),
       };
-      current.hours += entry.heures;
+      current.hours = round2(current.hours + entry.heures);
       if (entry.task.activity)
         current.activities.set(entry.task.activity.id, entry.task.activity);
       const mandateKey =

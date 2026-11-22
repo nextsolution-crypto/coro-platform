@@ -21,6 +21,8 @@ type ChargeDetail = {
   category: 'CONFIRMED' | 'PENDING';
 };
 
+import { round2 } from '../common/exact-amounts';
+
 @Injectable()
 export class CapacityService {
   constructor(private prisma: PrismaService) {}
@@ -89,14 +91,14 @@ export class CapacityService {
     const actualByProject = new Map<string, number>();
     for (const entry of taskEntries) {
       const projectId = entry.task.projectId;
-      actualByProject.set(projectId, (actualByProject.get(projectId) ?? 0) + entry.heures);
+      actualByProject.set(projectId, round2((actualByProject.get(projectId) ?? 0) + entry.heures));
       const summary = summaryByUser.get(entry.userId);
       if (!summary) continue;
-      summary.heuresTaskTotal += entry.heures;
+      summary.heuresTaskTotal = round2(summary.heuresTaskTotal + entry.heures);
     }
     for (const entry of timelogEntries) {
       const summary = summaryByUser.get(entry.userId);
-      if (summary) summary.heuresTimelogTotal += entry.heures;
+      if (summary) summary.heuresTimelogTotal = round2(summary.heuresTimelogTotal + entry.heures);
     }
 
     const activeMandateProjectIds = new Set(mandates.map(mandate => mandate.projectId));
@@ -168,7 +170,7 @@ export class CapacityService {
       if (!summary) continue;
       const heuresReelles = actualByProject.get(mandate.projectId) ?? 0;
       const heuresBudgetees = mandate.heuresBudgetees ?? 0;
-      const heuresRestantesBrutes = Math.max(0, heuresBudgetees - heuresReelles);
+      const heuresRestantesBrutes = Math.max(0, round2(heuresBudgetees - heuresReelles));
       const heuresPlanifieesMandat = confirmedMandateHoursByProject.get(mandate.projectId) ?? 0;
       const chargeMandatNonVentilee = Math.max(0, heuresRestantesBrutes - heuresPlanifieesMandat);
       summary.heuresRestantesMandats += chargeMandatNonVentilee;

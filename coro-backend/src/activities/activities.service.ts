@@ -17,6 +17,8 @@ import { ActivityTaskListsService } from './activity-task-lists.service';
 import { requireInternal } from '../auth/work-management-access';
 import { OPEN_BOOKING_STATUSES } from '../bookings/booking-status';
 
+import { round2 } from '../common/exact-amounts';
+
 @Injectable()
 export class ActivitiesService {
   constructor(
@@ -272,7 +274,7 @@ export class ActivitiesService {
     const tasks = activity.tasks.map((task: any) => ({
       ...task,
       actualHours: task.timeEntries.reduce(
-        (total: number, entry: { heures: number }) => total + entry.heures,
+        (total: number, entry: { heures: number }) => round2(total + entry.heures),
         0,
       ),
       timeEntries: undefined,
