@@ -1,0 +1,103 @@
+name: Production Sophie Activation
+
+on:
+  workflow_dispatch:
+    inputs:
+      application_commit:
+        description: Exact active application SHA (the commit currently deployed)
+        required: true
+        type: string
+      phase:
+        description: Exact governed phase
+        required: true
+        type: choice
+        options: [preflight, provision, verify]
+      approval:
+        description: Exact phase-specific approval token
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      script_sha256: ${{ steps.hash.outputs.script_sha256 }}
+      sql_sha256: ${{ steps.hash.outputs.sql_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate governed request
+        env:
+          APPLICATION_COMMIT: ${{ inputs.application_commit }}
+          PHASE: ${{ inputs.phase }}
+          APPROVAL: ${{ inputs.approval }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$APPLICATION_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          case "$PHASE:$APPROVAL" in
+            preflight:PREFLIGHT_SOPHIE|provision:PROVISION_SOPHIE|verify:VERIFY_SOPHIE) ;;
+            *) exit 1 ;;
+          esac
+          bash -n ops/public-knowledge/sophie-activation.sh
+      - id: hash
+        run: |
+          echo "script_sha256=$(sha256sum ops/public-knowledge/sophie-activation.sh | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "sql_sha256=$(sha256sum ops/public-knowledge/provision-readonly-role.sql | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+  execute:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Execute governed Sophie activation
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          EXPECTED_ACTIVE_SHA: ${{ inputs.application_commit }}
+          SCRIPT_SHA256: ${{ needs.validate.outputs.script_sha256 }}
+          SQL_SHA256: ${{ needs.validate.outputs.sql_sha256 }}
+          PHASE: ${{ inputs.phase }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,EXPECTED_ACTIVE_SHA,SCRIPT_SHA256,SQL_SHA256,PHASE
+          script: |
+            set -Eeuo pipefail
+            stage=initialize
+            trap 'rc=$?; echo "CORO_SOPHIE_ACTIVATION_FAILED stage=$stage rc=$rc"; exit "$rc"' ERR
+            repo=/opt/coro-platform
+            tmp="$(mktemp -d /tmp/coro-sophie.XXXXXX)"
+            trap 'rm -rf -- "$tmp"' EXIT
+            stage=deployment_lock
+            exec 9>/run/lock/coro-production-deployment.lock
+            flock -n 9
+            stage=source_integrity
+            git -C "$repo" fetch --quiet origin main
+            test "$(git -C "$repo" rev-parse origin/main)" = "$SOURCE_SHA"
+            git -C "$repo" show "$SOURCE_SHA:ops/public-knowledge/sophie-activation.sh" >"$tmp/sophie-activation.sh"
+            git -C "$repo" show "$SOURCE_SHA:ops/public-knowledge/provision-readonly-role.sql" >"$tmp/provision-readonly-role.sql"
+            test "$(sha256sum "$tmp/sophie-activation.sh" | cut -d' ' -f1)" = "$SCRIPT_SHA256"
+            test "$(sha256sum "$tmp/provision-readonly-role.sql" | cut -d' ' -f1)" = "$SQL_SHA256"
+            stage=active_release
+            test -f "/opt/coro-ops/releases/state/production-$EXPECTED_ACTIVE_SHA.reconciled.json"
+            if [[ "$PHASE" = provision ]]; then
+              stage=backup_restore
+              systemctl start coro-db-backup.service
+              test "$(systemctl show -p Result --value coro-db-backup.service)" = success
+              systemctl start coro-db-restore-test.service
+              test "$(systemctl show -p Result --value coro-db-restore-test.service)" = success
+            fi
+            stage="$PHASE"
+            SOPHIE_SQL_DIR="$tmp" bash "$tmp/sophie-activation.sh" "$PHASE" >"$tmp/evidence.txt" 2>&1 || { code=$?; grep -viE 'postgresql://|password|secret' "$tmp/evidence.txt" | tail -20; exit "$code"; }
+            if grep -qiE 'postgresql://|password|secret' "$tmp/evidence.txt"; then echo 'SOPHIE_EVIDENCE_REDACTION_FAILED'; exit 1; fi
+            cat "$tmp/evidence.txt"

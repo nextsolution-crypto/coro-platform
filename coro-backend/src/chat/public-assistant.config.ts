@@ -31,17 +31,18 @@ export class PublicAssistantConfig {
     1_000,
     30_000,
   );
-  readonly bedrockCampaignLimit = integer(
-    'WEB_AI_BEDROCK_CAMPAIGN_REQUEST_LIMIT',
-    100,
+  /** Appels Bedrock au plus par heure glissante (plafond de coût). */
+  readonly bedrockHourlyLimit = integer(
+    'WEB_AI_BEDROCK_HOURLY_REQUEST_LIMIT',
+    300,
     1,
-    100,
+    2000,
   );
   readonly bedrockConcurrency = integer(
     'WEB_AI_BEDROCK_MAX_CONCURRENCY',
-    2,
+    3,
     1,
-    4,
+    6,
   );
   readonly circuitFailureThreshold = integer(
     'WEB_AI_BEDROCK_CIRCUIT_FAILURE_THRESHOLD',

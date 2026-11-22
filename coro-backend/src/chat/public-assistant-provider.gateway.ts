@@ -10,7 +10,8 @@ import { SimulatedPublicAssistantProvider } from './simulated-public-assistant.p
 
 @Injectable()
 export class PublicAssistantProviderGateway {
-  private requests = 0;
+  /** Horodatages des appels de la dernière heure. */
+  private recent: number[] = [];
   private concurrent = 0;
   private failures = 0;
   private openUntil = 0;
@@ -43,11 +44,13 @@ export class PublicAssistantProviderGateway {
     input: PublicAssistantProviderInput,
   ): Promise<PublicAssistantProviderResult> {
     if (Date.now() < this.openUntil) throw new Error('WEB_AI_CIRCUIT_OPEN');
-    if (this.requests >= this.config.bedrockCampaignLimit)
-      throw new Error('WEB_AI_CAMPAIGN_LIMIT_REACHED');
+    const now = Date.now();
+    this.recent = this.recent.filter((at) => now - at < 3_600_000);
+    if (this.recent.length >= this.config.bedrockHourlyLimit)
+      throw new Error('WEB_AI_HOURLY_LIMIT_REACHED');
     if (this.concurrent >= this.config.bedrockConcurrency)
       throw new Error('WEB_AI_CONCURRENCY_LIMIT_REACHED');
-    this.requests += 1;
+    this.recent.push(now);
     this.concurrent += 1;
     try {
       const output = await this.bedrock.generate(input);

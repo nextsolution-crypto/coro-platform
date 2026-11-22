@@ -429,6 +429,12 @@ if ! docker exec coro_backend node dist/scripts/knowledge-provider-smoke.js >"$R
 fi
 node ops/knowledge/runtime-policy.mjs verify "$BACKEND_IMAGE" >"$RELEASE_DIR/${RELEASE_ID}.knowledge-runtime.json" || fail KNOWLEDGE_RUNTIME_MISMATCH
 
+# Corpus public de Sophie : resynchronisé à chaque version depuis les pages du
+# site intégrées à l'image. Idempotent ; un échec est consigné sans bloquer.
+if docker exec coro_backend sh -c 'test "${WEB_AI_PUBLIC_KNOWLEDGE_ENABLED:-false}" = true'; then
+  docker exec -e PUBLIC_KNOWLEDGE_SYNC_CONFIRMATION=SYNC_PUBLIC_KNOWLEDGE coro_backend node dist/src/public-knowledge/sync-public-knowledge.js >"$RELEASE_DIR/${RELEASE_ID}.public-knowledge-sync.json" 2>&1 || printf '{"status":"FAILED_NON_BLOCKING"}\n' >"$RELEASE_DIR/${RELEASE_ID}.public-knowledge-sync.json"
+fi
+
 export RELEASE_TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 export PREVIOUS_COMMIT="$previous_commit" PREVIOUS_IMAGES="$previous_images" PREVIOUS_MIGRATION_HEAD="$previous_migration_head"
 export PREVIOUS_COMPOSE="$previous_compose" EXPECTED_MIGRATION_HEAD="$expected_migration_head" BACKUP_ID="$backup_id" BACKUP_SHA="$backup_sha" BACKUP_REMOTE_OBJECT="$remote_object" BACKUP_VERSION_ID="$backup_version_id" RESTORE_REPORT="$restore_report"

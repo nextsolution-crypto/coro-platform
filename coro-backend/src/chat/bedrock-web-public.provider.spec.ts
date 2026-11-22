@@ -97,3 +97,13 @@ describe('BedrockWebPublicProvider', () => {
     ).rejects.toThrow('WEB_AI_BEDROCK_OUTPUT_INVALID');
   });
 });
+
+describe('Sophie — consignes', () => {
+  it('fixe la politique commerciale et la langue', () => {
+    const { SOPHIE_SYSTEM_PROMPT } = jest.requireActual('./bedrock-web-public.provider');
+    expect(SOPHIE_SYSTEM_PROMPT).toContain('never give a price');
+    expect(SOPHIE_SYSTEM_PROMPT).toContain('"contact"');
+    expect(SOPHIE_SYSTEM_PROMPT).toContain('fr-CA');
+    expect(SOPHIE_SYSTEM_PROMPT).toContain('911');
+  });
+});

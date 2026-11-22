@@ -1,6 +1,7 @@
 // Maintenance encadrée de /etc/coro-ai/runtime-policy.json.
 // report             : état des interrupteurs et présence des identifiants (aucune valeur affichée)
 // set-semantic <on|off> : allume ou éteint les vecteurs Titan de CORO Knowledge
+// set-web <on|off>      : Sophie (assistant du site) sur Bedrock Nova Lite au Canada
 // La politique est appliquée au conteneur au déploiement suivant.
 import { existsSync, lstatSync, mkdirSync, readFileSync, renameSync, writeFileSync, copyFileSync } from 'node:fs';
 import { dirname, resolve, join } from 'node:path';
@@ -35,6 +36,11 @@ export function withSemantic(policy, enabled) {
   return validatePolicy({ ...validatePolicy(policy), semanticEmbeddingsEnabled: enabled });
 }
 
+export function withWebPublic(policy, enabled) {
+  if (typeof enabled !== 'boolean') throw new Error('KNOWLEDGE_POLICY_INVALID');
+  return validatePolicy({ ...validatePolicy(policy), webPublicBedrockEnabled: enabled });
+}
+
 export function credentialsReady(report) {
   return report.awsConfig && report.profileCoroAiProduction && report.rolesAnywhereCredentialProcess &&
     report.signingHelper && report.certificate;
@@ -67,6 +73,14 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       writePolicy(next);
       const reread = loadPolicy();
       if (reread.semanticEmbeddingsEnabled !== enabled) throw new Error('KNOWLEDGE_POLICY_WRITE_MISMATCH');
+      console.log(JSON.stringify({ schemaVersion: 1, execution: 'PASS', policy: reread, credentials,
+        appliesAt: 'NEXT_RELEASE' }));
+    } else if (command === 'set-web' && (value === 'on' || value === 'off')) {
+      const enabled = value === 'on';
+      if (enabled && !credentialsReady(credentials)) throw new Error('KNOWLEDGE_CREDENTIALS_NOT_READY');
+      writePolicy(withWebPublic(policy, enabled));
+      const reread = loadPolicy();
+      if (reread.webPublicBedrockEnabled !== enabled) throw new Error('KNOWLEDGE_POLICY_WRITE_MISMATCH');
       console.log(JSON.stringify({ schemaVersion: 1, execution: 'PASS', policy: reread, credentials,
         appliesAt: 'NEXT_RELEASE' }));
     } else throw new Error('KNOWLEDGE_COMMAND_INVALID');

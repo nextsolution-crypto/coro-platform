@@ -1,5 +1,5 @@
 export const PUBLIC_KNOWLEDGE_ENGINE_VERSION = 'PUBLIC_KNOWLEDGE_V1';
-export const PUBLIC_KNOWLEDGE_CORPUS_VERSION = '2026-10-27';
+export const PUBLIC_KNOWLEDGE_CORPUS_VERSION = '2026-11-22-site';
 
 export type PublicKnowledgeLanguageCode = 'fr-CA' | 'en-CA';
 export type PublicKnowledgeLanguageDb = 'FR_CA' | 'EN_CA';
@@ -20,6 +20,17 @@ export type PublicKnowledgeCapabilityStatusCode =
   | 'PLANNED'
   | 'RETIRED'
   | 'UNKNOWN';
+
+/** Page du site extraite automatiquement (voir scripts/public-knowledge-site-corpus.cjs). */
+export interface SiteCorpusEntry {
+  sourceKey: string;
+  route: string;
+  language: PublicKnowledgeLanguageCode;
+  sourceType: PublicKnowledgeSourceTypeCode;
+  authorityRank: number;
+  title: string;
+  content: string;
+}
 
 export interface PublicKnowledgeSeed {
   sourceKey: string;

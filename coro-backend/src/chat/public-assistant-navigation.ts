@@ -52,7 +52,25 @@ const ROUTES: Record<string, RouteDefinition> = {
   security: { path: '/security', fr: 'Sécurité CORO', en: 'CORO security' },
   blog: { path: '/blog', fr: 'Consulter le blogue', en: 'Read the blog' },
   contact: { path: '/contact', fr: 'Contacter CORO', en: 'Contact CORO' },
+  projects: { path: '/gestion-de-projets', fr: 'Gestion de projets et de mandats', en: 'Project and mandate management' },
+  performance: { path: '/performance-objectifs', fr: 'Performance et capacité', en: 'Performance and capacity' },
+  about: { path: '/about', fr: 'À propos de CORO', en: 'About CORO' },
+  privacy: { path: '/privacy', fr: 'Politique de confidentialité', en: 'Privacy policy' },
+  terms: { path: '/terms', fr: 'Conditions d’utilisation', en: 'Terms of use' },
+  partners: { path: '/partners', fr: 'Partenaires', en: 'Partners' },
+  referral: { path: '/programme-recommandation', fr: 'Programme de recommandation', en: 'Referral program' },
+  guides: { path: '/guides', fr: 'Guides', en: 'Guides' },
+  diagnostic: { path: '/diagnostic', fr: 'Diagnostic de préparation', en: 'Readiness diagnostic' },
+  pmu: { path: '/documents/plan-mesures-urgence-pmu', fr: 'Plan de mesures d’urgence (PMU)', en: 'Emergency measures plan (PMU)' },
+  psi: { path: '/documents/plan-securite-incendie-psi', fr: 'Plan de sécurité incendie (PSI)', en: 'Fire safety plan (PSI)' },
+  pca: { path: '/documents/plan-continuite-activites-pca', fr: 'Plan de continuité des activités (PCA)', en: 'Business continuity plan (PCA)' },
+  pgc: { path: '/documents/plan-gestion-crise-pgc', fr: 'Plan de gestion de crise (PGC)', en: 'Crisis management plan (PGC)' },
+  pra: { path: '/documents/plan-reprise-activites-pra', fr: 'Plan de reprise des activités (PRA)', en: 'Disaster recovery plan (PRA)' },
+  pue: { path: '/documents/plan-urgence-environnementale-pue', fr: 'Plan d’urgence environnementale (PUE)', en: 'Environmental emergency plan (PUE)' },
 };
+
+/** Clés de navigation proposables par l'assistant. */
+export const PUBLIC_ROUTE_KEYS = Object.keys(ROUTES);
 
 @Injectable()
 export class PublicAssistantNavigationRegistry {

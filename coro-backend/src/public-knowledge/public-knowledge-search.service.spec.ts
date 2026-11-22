@@ -12,6 +12,21 @@ describe('PublicKnowledgeSearchService', () => {
   const embeddings = new DeterministicEmbeddingService();
   const security = new PublicKnowledgeSecurity();
   const config = new PublicKnowledgeConfig();
+  // Découpage identique à l'ingestion (extraits d'environ 1 200 caractères).
+  const chunk = (content: string) => {
+    const parts = security.normalizeText(content).split(/\n{2,}|(?<=[.!?])\s+/);
+    const chunks: string[] = [];
+    let current = '';
+    for (const part of parts) {
+      if (current && current.length + part.length + 1 > config.chunkCharacters) {
+        chunks.push(current.trim());
+        current = '';
+      }
+      current = `${current} ${part}`.trim();
+    }
+    if (current) chunks.push(current);
+    return chunks;
+  };
   const sources = PUBLIC_KNOWLEDGE_CATALOG.map((entry, index) => ({
     id: `public-source-${index}`,
     sourceKey: entry.sourceKey,
@@ -20,14 +35,12 @@ describe('PublicKnowledgeSearchService', () => {
     language: toDbLanguage(entry.language),
     version: 1,
     authorityRank: entry.authorityRank,
-    chunks: [
-      {
-        id: `public-chunk-${index}`,
-        text: entry.content,
-        embedding: embeddings.embed(`${entry.title} ${entry.content}`),
-        containsPromptInjection: false,
-      },
-    ],
+    chunks: chunk(entry.content).map((text, ordinal) => ({
+      id: `public-chunk-${index}-${ordinal}`,
+      text,
+      embedding: embeddings.embed(`${entry.title} ${text}`),
+      containsPromptInjection: false,
+    })),
     capabilities: entry.capability
       ? [
           {
@@ -37,6 +50,14 @@ describe('PublicKnowledgeSearchService', () => {
         ]
       : [],
   }));
+  /** Une source attendue est trouvée si la même page publiée est retournée. */
+  const pageOf = (url: string) => new URL(url).pathname;
+  const expectedPages = (keys: string[], language: string) =>
+    new Set(
+      PUBLIC_KNOWLEDGE_CATALOG.filter(
+        (entry) => keys.includes(entry.sourceKey) && entry.language === language,
+      ).map((entry) => pageOf(entry.canonicalUrl)),
+    );
   const prisma = {
     publicKnowledgeSource: {
       findMany: jest.fn(async ({ where }: any) =>
@@ -67,10 +88,12 @@ describe('PublicKnowledgeSearchService', () => {
     const missed: string[] = [];
     for (const item of PUBLIC_KNOWLEDGE_EVALUATION_CASES) {
       const results = await service.search(item.question, item.language, 5);
+      const pages = expectedPages(item.expectedSourceKeys, item.language);
       if (
         item.expectedSourceKeys.some((expected) =>
           results.some((result) => result.sourceKey === expected),
-        )
+        ) ||
+        results.some((result) => pages.has(pageOf(result.canonicalUrl)))
       )
         successful += 1;
       else missed.push(item.id);

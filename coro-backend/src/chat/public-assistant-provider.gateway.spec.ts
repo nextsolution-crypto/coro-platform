@@ -44,10 +44,10 @@ describe('PublicAssistantProviderGateway', () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it('enforces the campaign request ceiling before a provider call', async () => {
+  it('enforces the hourly request ceiling before a provider call', async () => {
     process.env.WEB_AI_PROVIDER = 'bedrock';
     process.env.WEB_AI_BEDROCK_INVOCATION_ENABLED = 'true';
-    process.env.WEB_AI_BEDROCK_CAMPAIGN_REQUEST_LIMIT = '1';
+    process.env.WEB_AI_BEDROCK_HOURLY_REQUEST_LIMIT = '1';
     const config = new PublicAssistantConfig();
     const bedrock = new BedrockWebPublicProvider(config);
     jest.spyOn(bedrock, 'generate').mockResolvedValue({
@@ -66,8 +66,13 @@ describe('PublicAssistantProviderGateway', () => {
       mode: 'BEDROCK',
     });
     await expect(gateway.generate(input)).rejects.toThrow(
-      'WEB_AI_CAMPAIGN_LIMIT_REACHED',
+      'WEB_AI_HOURLY_LIMIT_REACHED',
     );
+    // Une heure plus tard, la fenêtre glissante libère de nouveau un appel.
+    const now = Date.now();
+    jest.spyOn(Date, 'now').mockReturnValue(now + 3_600_001);
+    await expect(gateway.generate(input)).resolves.toMatchObject({ mode: 'BEDROCK' });
+    jest.restoreAllMocks();
   });
 
   it('opens the circuit after the configured failures', async () => {
