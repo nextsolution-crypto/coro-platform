@@ -7,6 +7,8 @@ import { OPEN_BOOKING_STATUSES } from '../bookings/booking-status';
 import { MandateServicesService } from './mandate-services.service';
 import { previewOperations } from './mandate-operations-preview.engine';
 
+import { sum2 } from '../common/exact-amounts';
+
 @Injectable()
 export class MandateOperationsPreviewService {
   constructor(private readonly prisma: PrismaService, private readonly mandateServices: MandateServicesService) {}
@@ -47,7 +49,7 @@ export class MandateOperationsPreviewService {
         } });
       const operations = previewOperations(services, activities.map(activity => ({ ...activity,
         label: activity.customLabel || activity.label, taskCount: activity.tasks.length,
-        actualHours: activity.tasks.reduce((sum, task) => sum + task.timeEntries.reduce((s, entry) => s + entry.heures, 0), 0),
+        actualHours: sum2(activity.tasks, (task) => sum2(task.timeEntries, (entry) => entry.heures)),
         exerciseReportCount: activity.exerciseReport ? 1 : 0,
       })));
       return { commercialRevision: revision, generatedAt: new Date().toISOString(), summary: {

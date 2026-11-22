@@ -42,6 +42,7 @@ export const DEFAULT_CATEGORIES = [
 ];
 
 import { assertPeriodFormat, assertPeriodWritable, periodOf, recordCorrectionIfNeeded } from './time-periods';
+import { round2, sum2 } from '../common/exact-amounts';
 
 @Injectable()
 export class TimelogService {
@@ -130,8 +131,8 @@ export class TimelogService {
       this.getCatalog(organizationId),
     ]);
 
-    const heuresTimelog = timelogEntries.reduce((sum, e) => sum + e.heures, 0);
-    const heuresTaches = taskEntries.reduce((sum, e) => sum + e.heures, 0);
+    const heuresTimelog = sum2(timelogEntries, (e) => e.heures);
+    const heuresTaches = sum2(taskEntries, (e) => e.heures);
     const heuresTotal = heuresTimelog + heuresTaches;
     const horaireBase = user?.horaireBase || 40;
 
@@ -180,7 +181,7 @@ export class TimelogService {
       userId,
       organizationId,
       date: parseCivilDate(dto.date),
-      heures: dto.heures,
+      heures: round2(dto.heures),
       category: dto.category,
       note: dto.note?.trim() || null,
       isBillable: false,
@@ -218,7 +219,7 @@ export class TimelogService {
     });
     const check = current?.date ? await assertPeriodWritable(this.prisma, organizationId, current.date) : null;
     const data: any = {
-      heures: dto.heures,
+      heures: round2(dto.heures),
       lockVersion: { increment: 1 },
     };
     if (dto.note !== undefined) data.note = dto.note.trim() || null;
@@ -274,8 +275,8 @@ export class TimelogService {
         }),
       ]);
 
-      const heuresTimelog = timelogEntries.reduce((sum, e) => sum + e.heures, 0);
-      const heuresTaches = taskEntries.reduce((sum, e) => sum + e.heures, 0);
+      const heuresTimelog = sum2(timelogEntries, (e) => e.heures);
+      const heuresTaches = sum2(taskEntries, (e) => e.heures);
       const heuresTotal = heuresTimelog + heuresTaches;
       const horaireBase = user.horaireBase || 40;
       const diffDays = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1;

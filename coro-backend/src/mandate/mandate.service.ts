@@ -16,6 +16,8 @@ import { mandatePlanningStatus } from './activity-planning-status';
 type Db = Prisma.TransactionClient | PrismaService;
 
 import { assertPeriodWritable, recordCorrectionIfNeeded } from '../timelog/time-periods';
+import { multiply2, round2, sum2 } from '../common/exact-amounts';
+
 @Injectable()
 export class MandateService {
   constructor(
@@ -52,7 +54,7 @@ export class MandateService {
       include: { timeEntries: true },
     });
     const heuresReelles = tasks.reduce(
-      (sum, t) => sum + t.timeEntries.reduce((s, e) => s + e.heures, 0),
+      (sum, t) => round2(sum + sum2(t.timeEntries, (e) => e.heures)),
       0,
     );
 
@@ -168,7 +170,7 @@ export class MandateService {
     const tasks = project.projectTasks.map((task) => ({
       ...task,
       actualHours: task.timeEntries.reduce(
-        (sum, entry) => sum + entry.heures,
+        (sum, entry) => round2(sum + entry.heures),
         0,
       ),
       timeEntries: undefined,
@@ -361,7 +363,7 @@ export class MandateService {
     if (dto.typeMandat === 'FORFAITAIRE' && dto.dateDebutDelai) {
       const debut = new Date(dto.dateDebutDelai);
           const heures = dto.heuresBudgetees
-            ? parseFloat(dto.heuresBudgetees)
+            ? round2(parseFloat(dto.heuresBudgetees))
             : 0;
       const documentType = dto.typeDelai || 'STANDARD';
 
@@ -384,11 +386,11 @@ export class MandateService {
       update: {
         description: dto.description,
             montantVendu: dto.montantVendu
-              ? parseFloat(dto.montantVendu)
+              ? round2(parseFloat(dto.montantVendu))
               : null,
-        tauxHoraire: dto.tauxHoraire ? parseFloat(dto.tauxHoraire) : null,
+        tauxHoraire: dto.tauxHoraire ? round2(parseFloat(dto.tauxHoraire)) : null,
             heuresBudgetees: dto.heuresBudgetees
-              ? parseFloat(dto.heuresBudgetees)
+              ? round2(parseFloat(dto.heuresBudgetees))
               : null,
         lienDrive: dto.lienDrive,
         ownerId: dto.ownerId || null,
@@ -406,11 +408,11 @@ export class MandateService {
         organizationId,
         description: dto.description,
             montantVendu: dto.montantVendu
-              ? parseFloat(dto.montantVendu)
+              ? round2(parseFloat(dto.montantVendu))
               : null,
-        tauxHoraire: dto.tauxHoraire ? parseFloat(dto.tauxHoraire) : null,
+        tauxHoraire: dto.tauxHoraire ? round2(parseFloat(dto.tauxHoraire)) : null,
             heuresBudgetees: dto.heuresBudgetees
-              ? parseFloat(dto.heuresBudgetees)
+              ? round2(parseFloat(dto.heuresBudgetees))
               : null,
         lienDrive: dto.lienDrive,
         ownerId: dto.ownerId || null,
@@ -884,7 +886,7 @@ export class MandateService {
         userId,
         organizationId,
         date: entryDate,
-        heures: parseFloat(dto.heures),
+        heures: round2(parseFloat(dto.heures)),
         note: dto.note || null,
       },
           include: {
@@ -959,7 +961,7 @@ export class MandateService {
       orderBy: { date: 'asc' },
     });
 
-    const totalHeures = entries.reduce((sum, e) => sum + e.heures, 0);
+    const totalHeures = sum2(entries, (e) => e.heures);
 
     return { entries, totalHeures };
   }
@@ -1001,7 +1003,7 @@ export class MandateService {
       orderBy: { date: 'asc' },
     });
 
-    const totalHeures = entries.reduce((sum, e) => sum + e.heures, 0);
+    const totalHeures = sum2(entries, (e) => e.heures);
     const taux = mandate?.tauxHoraire || 0;
     const montant = mandate?.montantVendu || 0;
     const coutReel = totalHeures * taux;
@@ -1173,7 +1175,7 @@ export class MandateService {
           mandats: {},
         };
       }
-      byUser[uid].heuresTotal += e.heures;
+      byUser[uid].heuresTotal = round2(byUser[uid].heuresTotal + e.heures);
 
       // Par mandat
       const projectId = e.task.projectId;
@@ -1189,14 +1191,14 @@ export class MandateService {
           heuresBudgetees: mandate?.heuresBudgetees || 0,
         };
       }
-      byUser[uid].mandats[projectId].heures += e.heures;
+      byUser[uid].mandats[projectId].heures = round2(byUser[uid].mandats[projectId].heures + e.heures);
     });
 
     // Calculer revenus et marges
     const conseillers = Object.values(byUser).map((c: any) => {
       const mandatsList = Object.values(c.mandats).map((m: any) => {
-        const coutReel = m.heures * m.tauxHoraire;
-        const marge = m.montantVendu - coutReel;
+        const coutReel = multiply2(m.heures, m.tauxHoraire);
+        const marge = round2(m.montantVendu - coutReel);
         const margePct =
           m.montantVendu > 0 ? Math.round((marge / m.montantVendu) * 100) : 0;
         return { ...m, coutReel, marge, margePct };
@@ -1254,7 +1256,7 @@ export class MandateService {
 
     const heuresParProjet: Record<string, number> = {};
     tasks.forEach((t) => {
-      const total = t.timeEntries.reduce((s, e) => s + e.heures, 0);
+      const total = sum2(t.timeEntries, (e) => e.heures);
       heuresParProjet[t.projectId] =
         (heuresParProjet[t.projectId] || 0) + total;
     });
