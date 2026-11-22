@@ -139,6 +139,25 @@ export default function PortalLayout({
     };
   }, [offlineVaultMode, user?.organizationId]);
 
+  // M11-01 — families outside the client's contract are hidden once the
+  // platform enforces contracts (the API answers hideOutsideContract).
+  const [sentinelleHidden, setSentinelleHidden] = useState(false);
+  useEffect(() => {
+    if (offlineVaultMode || !user?.organizationId) return;
+    let active = true;
+    apiGet("/client-portal/entitlements")
+      .then((result: { hideOutsideContract?: boolean; families?: Record<string, boolean> | null }) => {
+        if (!active) return;
+        setSentinelleHidden(
+          result?.hideOutsideContract === true && result.families?.SENTINELLE === false,
+        );
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [offlineVaultMode, user?.organizationId]);
+
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
@@ -168,7 +187,9 @@ export default function PortalLayout({
     { label: "Manuel d’utilisation", path: "/manual", icon: BookOpenCheck },
     { label: "Carte", path: "/map", icon: Map },
     { label: "Activités", path: "/activities", icon: Calendar },
-    { label: "Intelligence", path: "/intelligence", icon: Shield },
+    ...(sentinelleHidden
+      ? []
+      : [{ label: "Intelligence", path: "/intelligence", icon: Shield }]),
     ...(networkEnabled
       ? [{ label: "CORO Network", path: "/network", icon: Network }]
       : []),

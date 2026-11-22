@@ -12,6 +12,7 @@ import { EntitlementResolver } from './entitlement-resolver.service';
 import { EntitlementCommandService } from './entitlement-command.service';
 import { CapabilityObservationModule } from '../control-center/capability-observation.module';
 import { ClientFeatureEntitlementService } from './client-feature-entitlement.service';
+import { FamilyEntitlementService } from './family-entitlement.service';
 @Module({
   imports: [PrismaModule, AdminAuditModule, CapabilityObservationModule],
   controllers: [
@@ -25,12 +26,14 @@ import { ClientFeatureEntitlementService } from './client-feature-entitlement.se
     EntitlementResolver,
     EntitlementCommandService,
     ClientFeatureEntitlementService,
+    FamilyEntitlementService,
   ],
   exports: [
     CapabilityEntitlementsService,
     EntitlementResolver,
     EntitlementCommandService,
     ClientFeatureEntitlementService,
+    FamilyEntitlementService,
   ],
 })
 export class CapabilityEntitlementsModule {}
