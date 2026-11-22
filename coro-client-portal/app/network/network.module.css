@@ -1,7 +1,7 @@
 .page {
   display: grid;
   gap: 24px;
-  color: var(--cg-skin-text-info, #25313a);
+  color: var(--p-text);
 }
 .header {
   display: flex;
@@ -23,7 +23,7 @@
   align-items: center;
   padding: 0 16px;
   border: 1px solid var(--cg-skin-border-default, #c9d2d8);
-  border-radius: 10px;
+  border-radius:8px;
   color: inherit;
   text-decoration: none;
 }
@@ -45,8 +45,8 @@
 .state,
 .error {
   border: 1px solid var(--cg-skin-border-default, #dce2e5);
-  background: var(--cg-skin-bg-surface, #fff);
-  border-radius: 14px;
+  background: var(--cg-skin-bg-surface, var(--p-surface));
+  border-radius:12px;
 }
 .stats article {
   display: grid;
@@ -56,7 +56,7 @@
   padding: 16px;
 }
 .stats article svg {
-  color: var(--cg-skin-text-accent, #a62d2a);
+  color: var(--p-red-text);
 }
 .stats article span {
   color: var(--cg-skin-text-muted, #60717d);
@@ -113,7 +113,7 @@
   cursor: pointer;
 }
 .card:hover {
-  border-color: var(--cg-skin-text-accent, #a62d2a);
+  border-color: var(--p-red-text);
   transform: translateY(-1px);
 }
 .card:focus-visible,
@@ -139,7 +139,7 @@
 .metrics span {
   padding: 8px;
   border-radius: 8px;
-  background: var(--cg-skin-bg-fill1, #f4f7f8);
+  background: var(--cg-skin-bg-fill1, var(--p-fill));
   font-size: 12px;
 }
 .metrics b {

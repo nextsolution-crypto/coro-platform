@@ -1,7 +1,7 @@
 .page {
   display: grid;
   gap: 24px;
-  color: var(--cg-skin-text-info, #25313a);
+  color: var(--p-text);
   min-width: 0;
 }
 .header {
@@ -39,7 +39,7 @@
   justify-content: center;
   gap: 8px;
   padding: 0 16px;
-  border-radius: 10px;
+  border-radius:8px;
   font-weight: 750;
   cursor: pointer;
 }
@@ -65,8 +65,8 @@
 .error,
 .summary article {
   border: 1px solid var(--cg-skin-border-default, #dce2e5);
-  background: var(--cg-skin-bg-surface, #fff);
-  border-radius: 14px;
+  background: var(--cg-skin-bg-surface, var(--p-surface));
+  border-radius:12px;
 }
 .filters {
   display: grid;
@@ -221,7 +221,7 @@
 .details dl div {
   padding: 10px;
   border-radius: 8px;
-  background: var(--cg-skin-bg-fill1, #f4f7f8);
+  background: var(--cg-skin-bg-fill1, var(--p-fill));
 }
 .details dt {
   font-size: 12px;
