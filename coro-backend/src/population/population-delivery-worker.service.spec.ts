@@ -47,7 +47,7 @@ describe('PopulationDeliveryWorkerService', () => {
       'building-1',
       'alert-1',
       'program-1',
-      100,
+      500,
     );
   });
 

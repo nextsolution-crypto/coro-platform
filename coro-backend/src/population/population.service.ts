@@ -2,7 +2,10 @@ import { controlledOtpAllowed } from './population-controlled-otp';
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
+  HttpStatus,
   Injectable,
+  Logger,
   NotFoundException,
   Optional,
   ServiceUnavailableException,
@@ -118,8 +121,52 @@ const POPULATION_ACCESS_REQUEST_TOKEN_AAD = Buffer.from(
 
 const POPULATION_DELIVERY_MAX_ATTEMPTS = 3;
 const POPULATION_DELIVERY_BACKOFF_MS = [60_000, 5 * 60_000, 15 * 60_000];
-export const POPULATION_DELIVERY_DEFAULT_BATCH_SIZE = 25;
-export const POPULATION_DELIVERY_MAX_BATCH_SIZE = 100;
+// Audit M7-02 : 100 envois par alerte et par passage (5 s), envoyés en
+// parallèle — environ 1 200 messages par minute par défaut au lieu de 300.
+export const POPULATION_DELIVERY_DEFAULT_BATCH_SIZE = 100;
+export const POPULATION_DELIVERY_MAX_BATCH_SIZE = 500;
+export const POPULATION_DELIVERY_DEFAULT_CONCURRENCY = 10;
+export const POPULATION_DELIVERY_MAX_CONCURRENCY = 25;
+
+/**
+ * Plafond horaire de codes de vérification par programme (audit M7-03) :
+ * la limite par adresse IP n'empêche pas d'envoyer des codes vers beaucoup
+ * de numéros différents. Au-delà, l'inscription est mise en pause une heure
+ * (coût SMS protégé, alerte dans les journaux). Réglable par
+ * POPULATION_OTP_HOURLY_CAP_PER_PROGRAM (défaut 600).
+ */
+export async function assertVerificationBudget(
+  db: { populationVerification: { count: (args: any) => PromiseLike<number> } },
+  subscriberId: string,
+) {
+  const cap = Number(process.env.POPULATION_OTP_HOURLY_CAP_PER_PROGRAM);
+  const limit = Number.isInteger(cap) && cap > 0 ? cap : 600;
+  // One count: every code issued in the last hour for the subscriber's program.
+  const recent = await db.populationVerification.count({
+    where: {
+      subscriber: {
+        program: { subscribers: { some: { id: subscriberId } } },
+      },
+      createdAt: { gte: new Date(Date.now() - 60 * 60 * 1000) },
+    },
+  });
+  if (recent >= limit) {
+    new Logger('PopulationOtpBudget').warn(
+      `Plafond horaire de codes atteint (abonné ${subscriberId}, ${recent}/${limit})`,
+    );
+    throw new HttpException(
+      "Trop d'inscriptions en cours pour ce programme. Réessayez dans quelques minutes.",
+      HttpStatus.TOO_MANY_REQUESTS,
+    );
+  }
+}
+
+export function populationDeliveryConcurrency(): number {
+  const value = Number(process.env.POPULATION_DELIVERY_CONCURRENCY);
+  return Number.isInteger(value) && value >= 1
+    ? Math.min(value, POPULATION_DELIVERY_MAX_CONCURRENCY)
+    : POPULATION_DELIVERY_DEFAULT_CONCURRENCY;
+}
 
 const DISPERSION_REQUIRED_FIELDS = [
   'dispersionSourceFileId',
@@ -1760,6 +1807,7 @@ export class PopulationService {
         }
         return decoy;
       }
+      await assertVerificationBudget(tx, subscriber.id);
       const verification = await tx.populationVerification.create({
         data: {
           subscriberId: subscriber.id,
@@ -1979,6 +2027,7 @@ export class PopulationService {
 
     const verificationExpiresAt = new Date(now.getTime() + 10 * 60 * 1000);
 
+    await assertVerificationBudget(this.prisma, subscriberId);
     await this.prisma.populationVerification.create({
       data: {
         subscriberId,
@@ -2108,6 +2157,7 @@ export class PopulationService {
     }
 
     const verificationCode = this.generateVerificationCode();
+    await assertVerificationBudget(this.prisma, subscriber.id);
     await this.prisma.populationVerification.create({
       data: {
         subscriberId: subscriber.id,
@@ -7560,20 +7610,32 @@ export class PopulationService {
       );
     }
 
-    for (const delivery of queuedDeliveries) {
-      try {
-        const claim = await this.claimAlertDelivery(
-          buildingId,
-          alertId,
-          delivery.id,
-        );
-        if (claim.claimed) {
-          await this.dispatchAlertDelivery(buildingId, alertId, delivery.id);
+    // Envois en parallèle (M7-02) : chaque livraison est réservée de façon
+    // atomique, donc deux travailleurs ne l'envoient jamais deux fois.
+    let cursor = 0;
+    const worker = async () => {
+      while (cursor < queuedDeliveries.length) {
+        const delivery = queuedDeliveries[cursor++];
+        try {
+          const claim = await this.claimAlertDelivery(
+            buildingId,
+            alertId,
+            delivery.id,
+          );
+          if (claim.claimed) {
+            await this.dispatchAlertDelivery(buildingId, alertId, delivery.id);
+          }
+        } catch {
+          // Each delivery materializes its own controlled provider result.
         }
-      } catch {
-        // Each delivery materializes its own controlled provider result.
       }
-    }
+    };
+    await Promise.all(
+      Array.from(
+        { length: Math.min(populationDeliveryConcurrency(), queuedDeliveries.length) },
+        worker,
+      ),
+    );
 
     return this.finalizeSendingAlert(buildingId, alertId, programId);
   }
