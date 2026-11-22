@@ -35,6 +35,50 @@ import { PopulationEvidenceService } from '../population/population-evidence.ser
 import { PopulationEvidenceReportService } from '../population/population-evidence-report.service';
 import { ClientPilotPolicyService } from './client-pilot-policy.service';
 
+/** Champs d'un projet visibles par un utilisateur client (audit M4-02). */
+const CLIENT_PROJECT_BUILDING_SELECT = {
+  id: true,
+  name: true,
+  address: true,
+  city: true,
+  province: true,
+  timeZone: true,
+} as const;
+
+const CLIENT_PROJECT_LIST_SELECT = {
+  id: true,
+  name: true,
+  documentType: true,
+  status: true,
+  year: true,
+  progress: true,
+  buildingId: true,
+  clientId: true,
+  approvedAt: true,
+  createdAt: true,
+  updatedAt: true,
+  client: { select: { id: true, name: true } },
+  building: { select: CLIENT_PROJECT_BUILDING_SELECT },
+  user: { select: { firstName: true, lastName: true } },
+  signatures: {
+    select: { id: true, fullName: true, signedAt: true },
+    orderBy: { signedAt: 'desc' as const },
+  },
+} as const;
+
+const CLIENT_PROJECT_DETAIL_SELECT = {
+  ...CLIENT_PROJECT_LIST_SELECT,
+  exportedPdfFr: true,
+  exportedPdfEn: true,
+  officialPdfFr: true,
+  officialPdfEn: true,
+  approvedBy: { select: { firstName: true, lastName: true } },
+  signatures: {
+    select: { id: true, fullName: true, email: true, signedAt: true, comment: true },
+    orderBy: { signedAt: 'desc' as const },
+  },
+} as const;
+
 @Injectable()
 export class ClientPortalService {
   constructor(
@@ -1307,22 +1351,12 @@ export class ClientPortalService {
       where.buildingId = { in: buildingIds ?? [] };
     }
 
+    // Projection limitée à ce que le portail affiche (audit M4-02) : plus
+    // de configuration entière, de fiche client complète, de courriels de
+    // conseillers ni d'adresse IP de signature.
     const projects = await this.prisma.project.findMany({
       where,
-      include: {
-        client: true,
-        building: true,
-        user: { select: { firstName: true, lastName: true, email: true } },
-        approvedBy: { select: { firstName: true, lastName: true } },
-        signatures: {
-          include: {
-            clientUser: {
-              select: { firstName: true, lastName: true, email: true },
-            },
-          },
-          orderBy: { signedAt: 'desc' },
-        },
-      },
+      select: CLIENT_PROJECT_LIST_SELECT,
       orderBy: { updatedAt: 'desc' },
     });
 
@@ -1345,20 +1379,7 @@ export class ClientPortalService {
           ? { buildingId: { in: buildingIds ?? [] } }
           : {}),
       },
-      include: {
-        client: true,
-        building: true,
-        user: { select: { firstName: true, lastName: true, email: true } },
-        approvedBy: { select: { firstName: true, lastName: true } },
-        signatures: {
-          include: {
-            clientUser: {
-              select: { firstName: true, lastName: true, email: true },
-            },
-          },
-          orderBy: { signedAt: 'desc' },
-        },
-      },
+      select: CLIENT_PROJECT_DETAIL_SELECT,
     });
 
     return project;

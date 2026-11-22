@@ -20,7 +20,12 @@ import {
 } from '@simplewebauthn/server';
 import type { RegistrationResponseJSON } from '@simplewebauthn/server';
 
-const LEASE_MS = 24 * 60 * 60 * 1000;
+// Audit M4-03 : un plan d'urgence doit rester lisible pendant une panne
+// longue (verglas, réseau régional). Bail de 30 jours, jamais au-delà de la
+// fin de validité du document.
+const LEASE_DAYS = 30;
+const LEASE_MS = LEASE_DAYS * 24 * 60 * 60 * 1000;
+const LEASE_MAX_SECONDS = LEASE_MS / 1000;
 const FRESH_MFA_MS = 10 * 60 * 1000;
 const ALLOWED_AUDIT_EVENTS = new Set([
   'OFFLINE_PREPARED',
@@ -58,7 +63,7 @@ export class OfflineDocumentsService {
   getPublicConfiguration() {
     const key = this.signingKey();
     if (!key || !this.webAuthnConfiguration())
-      return { available: false, leaseMaxSeconds: 86400 };
+      return { available: false, leaseMaxSeconds: LEASE_MAX_SECONDS };
     const publicKey = createPublicKey(key).export({
       format: 'der',
       type: 'spki',
@@ -66,7 +71,7 @@ export class OfflineDocumentsService {
     return {
       available: true,
       algorithm: 'Ed25519',
-      leaseMaxSeconds: 86400,
+      leaseMaxSeconds: LEASE_MAX_SECONDS,
       publicKeySpki: Buffer.from(publicKey).toString('base64'),
       clockPolicy: 'BEST_EFFORT_LOCAL_HIGH_WATER_MARK',
     };
@@ -238,7 +243,10 @@ export class OfflineDocumentsService {
     });
     if (!file?.sha256 || !(file.buildingId ?? file.project?.buildingId))
       throw new NotFoundException('Document hors ligne inadmissible');
-    const expiresAt = new Date(now.getTime() + LEASE_MS);
+    const leaseEnd = now.getTime() + LEASE_MS;
+    const expiresAt = new Date(
+      file.expiresAt ? Math.min(leaseEnd, file.expiresAt.getTime()) : leaseEnd,
+    );
     const payload: OfflineLeasePayload = {
       schemaVersion: 1,
       leaseId: randomUUID(),

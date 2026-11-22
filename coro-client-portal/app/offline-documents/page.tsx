@@ -88,8 +88,10 @@ export default function OfflineDocumentsPage() {
           <h1>Accès hors ligne</h1>
           <p className={styles.intro}>
             Seuls les documents approuvés et explicitement classifiés non
-            sensibles peuvent être conservés. L&apos;accès expire après 24
-            heures et exige une vérification locale WebAuthn. Une révocation
+            sensibles peuvent être conservés. L&apos;accès reste valide 30 jours
+            après la dernière synchronisation (jamais au-delà de la fin de
+            validité du document) et exige une vérification locale WebAuthn.
+            Gardez aussi une copie papier à jour du plan d&apos;urgence. Une révocation
             distante ne peut pas être instantanée pendant une coupure complète.
           </p>
         </header>
@@ -150,10 +152,16 @@ export default function OfflineDocumentsPage() {
               <article key={item.id} className={styles.documentCard}>
                 <strong>Document d&apos;urgence hors ligne</strong>
                 <p>
+                  Dernière synchronisation :{" "}
+                  {new Date(item.lease.payload.issuedAt).toLocaleString("fr-CA", {
+                    timeZone: "America/Toronto",
+                  })}
+                </p>
+                <p>
                   Expire le{" "}
-                  {new Date(item.lease.payload.expiresAt).toLocaleString(
-                    "fr-CA",
-                  )}
+                  {new Date(item.lease.payload.expiresAt).toLocaleString("fr-CA", {
+                    timeZone: "America/Toronto",
+                  })}
                 </p>
                 <button
                   className={styles.secondaryButton}
