@@ -170,10 +170,12 @@ suite('Sentinelle employee to closed exercise on PostgreSQL', () => {
         ).status,
       ).toBe('DELIVERED');
     }
-    const evacuation = await occupancy.triggerEvacuation(
-      { buildingId, triggeredBy: 'FICTIF QA' },
-      organizationId,
-    );
+    // Un seul circuit (M5-07) : l'alarme incendie a déjà ouvert
+    // l'évacuation et son dénombrement, reliés à l'incident.
+    const evacuation = await prisma.evacuationEvent.findFirstOrThrow({
+      where: { buildingId, organizationId, status: 'ACTIVE' },
+    });
+    expect(evacuation.incidentEventId).toBe(created.incident.id);
     expect(evacuation.totalPresent).toBe(3);
     await expect(
       occupancy.triggerEvacuation({ buildingId }, organizationId),
