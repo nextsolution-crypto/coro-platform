@@ -4,6 +4,7 @@ import './globals.css';
 import 'leaflet/dist/leaflet.css';
 import '../design-system/tokens.css';
 import '../design-system/primitives.css';
+import '../design-system/portal-theme.css';
 import { ThemeProvider } from '../design-system/theme/ThemeProvider';
 import { ThemeInitScript } from '../design-system/theme/ThemeInitScript';
 

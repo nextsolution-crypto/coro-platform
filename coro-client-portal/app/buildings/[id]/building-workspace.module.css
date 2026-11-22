@@ -2,23 +2,24 @@
    surfaces de verre, bordure fine, rayon 12 px, pastille d'icône teintée,
    titres 800, libellés capitales colorés, badges d'état en pilule. */
 .page {
-  --bw-surface: var(--cg-glass-bg-strong, #FFFFFF);
-  --bw-fill: var(--cg-hover-overlay, #F8F9FA);
-  --bw-border: var(--cg-border-subtle, #E9ECEF);
-  --bw-border-strong: var(--cg-border-default, #DEE2E6);
-  --bw-text: var(--cg-text-primary, #2C3E50);
-  --bw-text-2: var(--cg-text-secondary, #6C757D);
-  --bw-muted: var(--cg-text-muted, #ADB5BD);
-  --bw-red: #C0392B;
-  --bw-red-soft: var(--cg-danger-bg, #FDEDEC);
-  --bw-red-text: var(--cg-danger-fg, #C0392B);
-  --bw-blue-soft: var(--cg-info-bg, #EBF5FB);
-  --bw-blue-text: var(--cg-info-fg, #2471A3);
-  --bw-green-soft: var(--cg-success-bg, #E8F5F1);
-  --bw-green-text: var(--cg-success-fg, #167D6A);
-  --bw-green-border: var(--cg-success-border, #A3D9C9);
-  --bw-amber-soft: var(--cg-warning-bg, #FEF9E7);
-  --bw-amber-text: var(--cg-warning-fg, #B9770E);
+  /* Alias locaux vers le thème commun du portail (design-system/portal-theme.css). */
+  --bw-surface: var(--p-surface);
+  --bw-fill: var(--p-fill);
+  --bw-border: var(--p-border);
+  --bw-border-strong: var(--p-border-strong);
+  --bw-text: var(--p-text);
+  --bw-text-2: var(--p-text-2);
+  --bw-muted: var(--p-muted);
+  --bw-red: var(--p-red);
+  --bw-red-soft: var(--p-red-soft);
+  --bw-red-text: var(--p-red-text);
+  --bw-blue-soft: var(--p-blue-soft);
+  --bw-blue-text: var(--p-blue-text);
+  --bw-green-soft: var(--p-green-soft);
+  --bw-green-text: var(--p-green-text);
+  --bw-green-border: var(--p-green-border);
+  --bw-amber-soft: var(--p-amber-soft);
+  --bw-amber-text: var(--p-amber-text);
   display: grid;
   gap: 20px;
   color: var(--bw-text);
@@ -36,7 +37,7 @@
 .operations a { display: inline-flex; gap: 8px; align-items: center; min-height: 40px; padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration: none; color: var(--bw-text); background: var(--bw-surface); border: 1px solid var(--bw-border-strong); }
 .operations a:hover { background: var(--bw-fill); }
 .operations a.primary { background: var(--bw-red); border-color: var(--bw-red); color: #FFFFFF; }
-.operations a.primary:hover { background: #A93226; border-color: #A93226; }
+.operations a.primary:hover { background: var(--p-red-hover); border-color: var(--p-red-hover); }
 
 /* Choix d'espace : cartes à la manière de « Sentinelle Population » */
 .sections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }

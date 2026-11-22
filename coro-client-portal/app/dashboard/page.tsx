@@ -97,7 +97,7 @@ export default function DashboardPage() {
         <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           Tableau de bord
         </p>
-        <h1 style={{ margin: '0 0 4px', fontSize: 'clamp(22px, 5vw, 28px)', fontWeight: 800, color: '#2C3E50' }}>
+        <h1 className="coro-title" style={{ margin: '0 0 4px', fontSize: 'clamp(22px, 5vw, 28px)', fontWeight: 800, color: '#2C3E50' }}>
           Bonjour, {user.firstName} 👋
         </h1>
         <p style={{ margin: 0, fontSize: 14, color: '#6C757D' }}>

@@ -171,8 +171,7 @@ export default function ProfilePage() {
       <div
         style={{
           width: '100%',
-          maxWidth: 600,
-          margin: '0 auto',
+          maxWidth: 720,
         }}
       >
         {/* En-tête */}
@@ -195,6 +194,7 @@ export default function ProfilePage() {
           </p>
 
           <h1
+            className="coro-title"
             style={{
               margin: 0,
               fontSize:

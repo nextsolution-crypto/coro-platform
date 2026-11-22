@@ -6,7 +6,7 @@
 
 .header {
   padding-bottom: 18px;
-  border-bottom: 1px solid #e3e9ec;
+  border-bottom: 1px solid var(--p-border);
 }
 
 .grid { align-items: stretch; }
@@ -16,7 +16,7 @@
 }
 
 .card:hover {
-  border-color: #b9ccd6 !important;
+  border-color: var(--p-border-strong) !important;
   box-shadow: 0 8px 24px rgba(23, 48, 66, 0.1) !important;
   transform: translateY(-1px);
 }

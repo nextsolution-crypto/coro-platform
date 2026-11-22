@@ -355,6 +355,7 @@ export default function BookingsPage() {
         >
           <h1
             className="
+              coro-title
               m-0
               text-[24px]
               sm:text-[30px]

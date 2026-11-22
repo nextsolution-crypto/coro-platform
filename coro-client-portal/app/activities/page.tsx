@@ -376,6 +376,7 @@ export default function ActivitiesPage() {
         </p>
 
         <h1
+            className="coro-title"
           style={{
             margin: 0,
             fontSize: 'clamp(24px, 5vw, 28px)',

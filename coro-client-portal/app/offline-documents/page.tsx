@@ -84,8 +84,8 @@ export default function OfflineDocumentsPage() {
     <PortalLayout>
       <main className={styles.page}>
         <header className={styles.header}>
-          <p className={styles.eyebrow}>DOCUMENTS D&apos;URGENCE</p>
-          <h1>Accès hors ligne</h1>
+          <p className={`${styles.eyebrow} coro-eyebrow`}>DOCUMENTS D&apos;URGENCE</p>
+          <h1 className="coro-title">Accès hors ligne</h1>
           <p className={styles.intro}>
             Seuls les documents approuvés et explicitement classifiés non
             sensibles peuvent être conservés. L&apos;accès reste valide 30 jours

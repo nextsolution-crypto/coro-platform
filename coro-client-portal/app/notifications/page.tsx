@@ -60,7 +60,7 @@ export default function NotificationsPage() {
         <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           Notifications
         </p>
-        <h1 style={{ margin: 0, fontSize: 'clamp(24px, 5vw, 28px)', lineHeight: 1.2, fontWeight: 800, color: '#2C3E50' }}>
+        <h1 className="coro-title" style={{ margin: 0, fontSize: 'clamp(24px, 5vw, 28px)', lineHeight: 1.2, fontWeight: 800, color: '#2C3E50' }}>
           {notifications.length === 0 ? 'Tout est à jour' : `${notifications.length} notification${notifications.length > 1 ? 's' : ''}`}
         </h1>
       </header>
