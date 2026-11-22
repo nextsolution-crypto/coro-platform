@@ -1,0 +1,108 @@
+name: Production CORO Knowledge Runtime Policy
+
+on:
+  workflow_dispatch:
+    inputs:
+      application_commit:
+        description: Exact active application SHA (the commit currently deployed)
+        required: true
+        type: string
+      phase:
+        description: Exact governed phase
+        required: true
+        type: choice
+        options: [report, semantic-on, semantic-off]
+      approval:
+        description: Exact phase-specific approval token
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      policy_sha256: ${{ steps.hash.outputs.policy_sha256 }}
+      maintenance_sha256: ${{ steps.hash.outputs.maintenance_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate governed request and tests
+        env:
+          APPLICATION_COMMIT: ${{ inputs.application_commit }}
+          PHASE: ${{ inputs.phase }}
+          APPROVAL: ${{ inputs.approval }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$APPLICATION_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          case "$PHASE:$APPROVAL" in
+            report:REPORT_KNOWLEDGE_POLICY|semantic-on:ENABLE_SEMANTIC_EMBEDDINGS|semantic-off:DISABLE_SEMANTIC_EMBEDDINGS) ;;
+            *) exit 1 ;;
+          esac
+          node --test ops/knowledge/runtime-policy.test.mjs ops/knowledge/policy-maintenance.test.mjs
+      - id: hash
+        run: |
+          echo "policy_sha256=$(sha256sum ops/knowledge/runtime-policy.mjs | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "maintenance_sha256=$(sha256sum ops/knowledge/policy-maintenance.mjs | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+  execute:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Execute governed knowledge policy maintenance
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          EXPECTED_ACTIVE_SHA: ${{ inputs.application_commit }}
+          POLICY_SHA256: ${{ needs.validate.outputs.policy_sha256 }}
+          MAINTENANCE_SHA256: ${{ needs.validate.outputs.maintenance_sha256 }}
+          PHASE: ${{ inputs.phase }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,EXPECTED_ACTIVE_SHA,POLICY_SHA256,MAINTENANCE_SHA256,PHASE
+          script: |
+            set -Eeuo pipefail
+            stage=initialize
+            trap 'rc=$?; echo "CORO_KNOWLEDGE_POLICY_WORKFLOW_FAILED stage=$stage rc=$rc"; exit "$rc"' ERR
+            repo=/opt/coro-platform
+            tmp="$(mktemp -d /tmp/coro-knowledge-policy.XXXXXX)"
+            trap 'rm -rf -- "$tmp"' EXIT
+            stage=deployment_lock
+            exec 9>/run/lock/coro-production-deployment.lock
+            flock -n 9
+            stage=source_integrity
+            git -C "$repo" fetch --quiet origin main
+            test "$(git -C "$repo" rev-parse origin/main)" = "$SOURCE_SHA"
+            git -C "$repo" show "$SOURCE_SHA:ops/knowledge/runtime-policy.mjs" >"$tmp/runtime-policy.mjs"
+            git -C "$repo" show "$SOURCE_SHA:ops/knowledge/policy-maintenance.mjs" >"$tmp/policy-maintenance.mjs"
+            test "$(sha256sum "$tmp/runtime-policy.mjs" | cut -d' ' -f1)" = "$POLICY_SHA256"
+            test "$(sha256sum "$tmp/policy-maintenance.mjs" | cut -d' ' -f1)" = "$MAINTENANCE_SHA256"
+            stage=active_release
+            test -f "/opt/coro-ops/releases/state/production-$EXPECTED_ACTIVE_SHA.reconciled.json"
+            stage=runtime
+            backend="$(docker compose -f "$repo/docker-compose.yml" ps -q backend)"
+            test -n "$backend"
+            node -e 'const e=JSON.parse(process.argv[1])[0].Config.Env;const k=["CORO_AI_PROVIDER","WEB_AI_PROVIDER","CORO_KNOWLEDGE_EMBEDDING_PROVIDER","KNOWLEDGE_LOCAL_OCR_ENABLED"];const o={};for(const v of e){const [n,...r]=v.split("=");if(k.includes(n))o[n]=r.join("=")}console.log(JSON.stringify({activeRuntime:o}))' "$(docker inspect "$backend")"
+            run() {
+              local code=0
+              node "$tmp/policy-maintenance.mjs" "$@" >"$tmp/evidence.json" || code=$?
+              node -e 'const r=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));if(r.schemaVersion!==1)process.exit(1);if(/arn:|BEGIN |password|secret|token|access[_-]?key|private[_-]?key/i.test(JSON.stringify(r)))process.exit(1)' "$tmp/evidence.json"
+              cat "$tmp/evidence.json"
+              test "$code" -eq 0
+            }
+            case "$PHASE" in
+              report) stage=report; run report ;;
+              semantic-on) stage=enable; run set-semantic on ;;
+              semantic-off) stage=disable; run set-semantic off ;;
+            esac
