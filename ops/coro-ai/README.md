@@ -36,6 +36,16 @@ Prérequis AWS : le rôle de `coro-ai-production` doit autoriser
 `bedrock:InvokeModel` sur
 `arn:aws:bedrock:ca-central-1::foundation-model/amazon.titan-embed-text-v2:0`,
 et rien d'autre pour ce modèle.
+Le profil Roles Anywhere `CORO-AI-Production` porte aussi une politique de
+session en ligne qui restreint chaque session : elle doit contenir la même
+autorisation Titan (`CoroKnowledgeTitanEmbeddingsCanadaOnly`, condition
+`aws:RequestedRegion = ca-central-1`). Sans elle, AWS répond
+`AccessDeniedException` (403) même si le rôle l'autorise.
+
+Constat et interrupteur : workflow `production-knowledge-policy`
+(`report`, `semantic-on`, `semantic-off`) ; prise d'effet au déploiement
+suivant. Un échec Titan au déploiement est consigné
+(`semanticEmbeddings.status = DEGRADED_*`) sans bloquer la version.
 
 Comportement :
 
