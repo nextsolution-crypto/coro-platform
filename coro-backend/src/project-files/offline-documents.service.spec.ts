@@ -47,7 +47,7 @@ describe('OfflineDocumentsService', () => {
       lifecycleState: 'APPROVED',
       offlineClassification: 'NON_SENSITIVE_EMERGENCY',
       effectiveAt: new Date(Date.now() - 1000),
-      expiresAt: new Date(Date.now() + 86_400_000),
+      expiresAt: new Date(Date.now() + 90 * 86_400_000),
       project: { buildingId: 'building-a' },
     };
     const prisma: any = {
@@ -160,7 +160,7 @@ describe('OfflineDocumentsService', () => {
     );
   });
 
-  it('issues an Ed25519 lease bound to identity, building, version, hash and device for 24h', async () => {
+  it('issues an Ed25519 lease bound to identity, building, version, hash and device for 30 days (M4-03)', async () => {
     const h = harness();
     const result = await h.service.issueLease({
       clientUserId: 'client-a',
@@ -181,7 +181,7 @@ describe('OfflineDocumentsService', () => {
     expect(
       new Date(result.payload.expiresAt).getTime() -
         new Date(result.payload.issuedAt).getTime(),
-    ).toBe(86_400_000);
+    ).toBe(30 * 86_400_000);
     expect(
       verify(
         null,
@@ -207,13 +207,37 @@ describe('OfflineDocumentsService', () => {
     expect(h.prisma.offlineDocumentLease.create).not.toHaveBeenCalled();
   });
 
+  it("ne dépasse jamais la fin de validité du document (M4-03)", async () => {
+    const h = harness();
+    const documentEnd = new Date(Date.now() + 2 * 86_400_000);
+    h.prisma.projectFile.findFirst.mockResolvedValue({
+      id: 'file-a',
+      organizationId: 'org-a',
+      version: 2,
+      sha256: 'a'.repeat(64),
+      lifecycleState: 'APPROVED',
+      offlineClassification: 'NON_SENSITIVE_EMERGENCY',
+      effectiveAt: new Date(Date.now() - 1000),
+      expiresAt: documentEnd,
+      project: { buildingId: 'building-a' },
+    });
+    const result = await h.service.issueLease({
+      clientUserId: 'client-a',
+      organizationId: 'org-a',
+      permittedBuildingIds: ['building-a'],
+      deviceId: 'device-a',
+      fileId: 'file-a',
+    });
+    expect(new Date(result.payload.expiresAt).getTime()).toBe(documentEnd.getTime());
+  });
+
   it('publishes only the verification key and never the private key', () => {
     const h = harness();
     const config = h.service.getPublicConfiguration();
     expect(config).toMatchObject({
       available: true,
       algorithm: 'Ed25519',
-      leaseMaxSeconds: 86400,
+      leaseMaxSeconds: 30 * 86400,
     });
     expect(config).toHaveProperty('publicKeySpki');
     expect(JSON.stringify(config)).not.toContain('PRIVATE KEY');
