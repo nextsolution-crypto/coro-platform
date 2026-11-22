@@ -49,6 +49,8 @@ describe('PopulationService', () => {
     populationSubscriber: {
       create: jest.fn(),
       findFirst: jest.fn(),
+      // Plafond horaire de codes par programme (M7-03).
+      findUnique: jest.fn().mockResolvedValue({ programId: 'program-1' }),
       findMany: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn(),
