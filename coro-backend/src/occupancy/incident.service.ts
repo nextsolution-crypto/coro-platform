@@ -9,6 +9,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import { IncidentNotificationDispatcherService } from './incident-notification-dispatcher.service';
+import { openEvacuationWithSnapshot } from './occupancy.service';
 import { Cron } from '@nestjs/schedule';
 import {
   IncidentHistoryExerciseFilter,
@@ -236,6 +237,20 @@ function normalizePhone(phone: string | null | undefined): string | null {
   if (digits.length > 10) return `+${digits}`;
   return null;
 }
+
+/** Incidents qui imposent d'évacuer (pas la menace active : confinement). */
+export const EVACUATION_INCIDENT_TYPES = new Set<string>([
+  'SMOKE_DISCOVERY',
+  'FIRE_ALERT',
+  'FIRE_ALARM',
+  'GAS_LEAK',
+  'TOXIC_GAS',
+  'HAZMAT',
+  'BOMB_THREAT',
+  'SUSPICIOUS_PACKAGE',
+  'LITHIUM_BATTERY',
+  'HAZARDOUS_ATMOSPHERE',
+]);
 
 const PORTAL_URL = process.env.CLIENT_PORTAL_URL || 'https://client.getcoro.io';
 const API_URL    = process.env.API_URL            || 'https://api.getcoro.io/api';
@@ -1289,7 +1304,35 @@ export class IncidentService {
     // Envoi immédiat après validation (M2-04) ; la tâche planifiée reprend
     // les échecs.
     if (!deferNotifications) this.kickIncidentDispatch(created.incident.id);
+    // Un seul circuit (M5-07) : un incident qui impose d'évacuer ouvre
+    // l'évacuation et son dénombrement. Une pré-alerte attend confirmation.
+    if (status === 'ACTIVE') await this.openEvacuationForIncident(created.incident);
     return created;
+  }
+
+  private async openEvacuationForIncident(incident: { id: string; buildingId: string; organizationId: string; type: string; triggeredBy?: string | null; isExercise?: boolean }) {
+    if (!EVACUATION_INCIDENT_TYPES.has(incident.type)) return;
+    try {
+      const label = INCIDENT_LABELS[incident.type] || 'Incident';
+      const result = await openEvacuationWithSnapshot(this.prisma, {
+        buildingId: incident.buildingId,
+        organizationId: incident.organizationId,
+        triggeredBy: incident.triggeredBy ?? null,
+        notes: `${incident.isExercise ? '[EXERCICE] ' : ''}Ouverte par l'incident « ${label} »`,
+        incidentEventId: incident.id,
+      });
+      await this.prisma.incidentLog.create({
+        data: {
+          incidentEventId: incident.id,
+          action: result.created
+            ? `Évacuation ouverte — dénombrement de ${result.event.totalPresent} personne(s) pointée(s)`
+            : 'Évacuation déjà en cours dans le bâtiment — dénombrement existant conservé',
+          isAutomatic: true,
+        },
+      });
+    } catch (error) {
+      console.error("[IncidentService] Évacuation non ouverte par l'incident :", error instanceof Error ? error.message : error);
+    }
   }
 
   private kickIncidentDispatch(incidentEventId: string) {
@@ -1413,7 +1456,10 @@ export class IncidentService {
   // le premier appel obtient claimed:true — les autres sont des no-op.
   private async resolvePreAlert(incidentId: string, outcome: 'CONFIRMED' | 'CANCELLED' | 'AUTO_ESCALATED', audit?: IncidentAuditContext) {
     const resolved = await this.resolvePreAlertInTransaction(incidentId, outcome, audit);
-    if (resolved.claimed && outcome !== 'CANCELLED') this.kickIncidentDispatch(incidentId);
+    if (resolved.claimed && outcome !== 'CANCELLED') {
+      this.kickIncidentDispatch(incidentId);
+      if ((resolved as any).incident) await this.openEvacuationForIncident((resolved as any).incident);
+    }
     return resolved;
   }
 

@@ -146,12 +146,19 @@ suite('Sentinelle employee to closed exercise on PostgreSQL', () => {
       where: { incidentEventId: created.incident.id },
     });
     expect(queued.length).toBeGreaterThan(0);
+    // The incident already kicks an immediate background dispatch; wait for it
+    // (or finish the row ourselves) rather than racing its claim.
     for (const row of queued) {
-      await dispatcher.dispatchOne(row.id);
-      const accepted =
-        await prisma.incidentNotificationDelivery.findUniqueOrThrow({
+      let accepted = await prisma.incidentNotificationDelivery.findUniqueOrThrow(
+        { where: { id: row.id } },
+      );
+      for (let i = 0; i < 100 && accepted.status !== 'SENT'; i++) {
+        if (accepted.status !== 'PROCESSING') await dispatcher.dispatchOne(row.id);
+        else await new Promise((resolve) => setTimeout(resolve, 50));
+        accepted = await prisma.incidentNotificationDelivery.findUniqueOrThrow({
           where: { id: row.id },
         });
+      }
       expect(accepted.status).toBe('SENT');
       await reconcileSentinelleProviderEvent(
         prisma,
@@ -170,10 +177,12 @@ suite('Sentinelle employee to closed exercise on PostgreSQL', () => {
         ).status,
       ).toBe('DELIVERED');
     }
-    const evacuation = await occupancy.triggerEvacuation(
-      { buildingId, triggeredBy: 'FICTIF QA' },
-      organizationId,
-    );
+    // Un seul circuit (M5-07) : l'alarme incendie a déjà ouvert
+    // l'évacuation et son dénombrement, reliés à l'incident.
+    const evacuation = await prisma.evacuationEvent.findFirstOrThrow({
+      where: { buildingId, organizationId, status: 'ACTIVE' },
+    });
+    expect(evacuation.incidentEventId).toBe(created.incident.id);
     expect(evacuation.totalPresent).toBe(3);
     await expect(
       occupancy.triggerEvacuation({ buildingId }, organizationId),

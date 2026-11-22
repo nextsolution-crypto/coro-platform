@@ -215,43 +215,14 @@ export class OccupancyService {
       where: { id: dto.buildingId, organizationId },
     });
     if (!building) throw new NotFoundException('Bâtiment introuvable');
-
-    return this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`sentinelle-evacuation:${dto.buildingId}`}, 0))`;
-      const active = await tx.evacuationEvent.findFirst({
-        where: { buildingId: dto.buildingId, organizationId, status: 'ACTIVE' }, select: { id: true },
-      });
-      if (active) throw new ConflictException('Une évacuation est déjà active pour ce bâtiment.');
-      // Snapshot et dénombrement sont créés dans la même transaction.
-    const presentOccupants = await tx.occupancyRecord.findMany({
-      where: { buildingId: dto.buildingId, status: 'IN' },
+    const result = await openEvacuationWithSnapshot(this.prisma, {
+      buildingId: dto.buildingId,
+      organizationId,
+      triggeredBy: dto.triggeredBy,
+      notes: dto.notes,
     });
-
-    const event = await tx.evacuationEvent.create({
-      data: {
-        buildingId: dto.buildingId,
-        organizationId,
-        triggeredBy: dto.triggeredBy,
-        notes: dto.notes,
-        totalPresent: presentOccupants.length,
-        snapshot: presentOccupants as any,
-        status: 'ACTIVE',
-      },
-    });
-
-    // Créer les entrées de dénombrement pour chaque occupant
-    if (presentOccupants.length > 0) {
-      await tx.evacuationCheckIn.createMany({
-        data: presentOccupants.map((o) => ({
-          evacuationEventId: event.id,
-          occupantRecordId: o.id,
-          isAccountedFor: false,
-        })),
-      });
-    }
-
-    return event;
-    });
+    if (!result.created) throw new ConflictException('Une évacuation est déjà active pour ce bâtiment.');
+    return result.event;
   }
 
   // Obtenir l'évacuation active d'un bâtiment
@@ -997,4 +968,54 @@ export function summarizeAccountability(checkins: Array<any>) {
     pending: checkins.filter((c) => (c.status ?? 'PENDING') === 'PENDING' && !c.isAccountedFor).map(person),
   };
   return { counts, accounted, missing, fireBrief };
+}
+
+/**
+ * Ouvre une évacuation avec son instantané et son dénombrement, dans une
+ * seule transaction verrouillée par bâtiment. Partagé par le déclenchement
+ * manuel et par l'incident (audit M5-07 : un seul circuit).
+ * Retourne l'évacuation déjà active si elle existe (created: false).
+ */
+export async function openEvacuationWithSnapshot(
+  prisma: PrismaService,
+  input: {
+    buildingId: string;
+    organizationId: string;
+    triggeredBy?: string | null;
+    notes?: string | null;
+    incidentEventId?: string | null;
+  },
+): Promise<{ created: boolean; event: any }> {
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`sentinelle-evacuation:${input.buildingId}`}, 0))`;
+    const active = await tx.evacuationEvent.findFirst({
+      where: { buildingId: input.buildingId, organizationId: input.organizationId, status: 'ACTIVE' },
+    });
+    if (active) return { created: false, event: active };
+    const presentOccupants = await tx.occupancyRecord.findMany({
+      where: { buildingId: input.buildingId, status: 'IN' },
+    });
+    const event = await tx.evacuationEvent.create({
+      data: {
+        buildingId: input.buildingId,
+        organizationId: input.organizationId,
+        triggeredBy: input.triggeredBy ?? null,
+        notes: input.notes ?? null,
+        incidentEventId: input.incidentEventId ?? null,
+        totalPresent: presentOccupants.length,
+        snapshot: presentOccupants as any,
+        status: 'ACTIVE',
+      },
+    });
+    if (presentOccupants.length > 0) {
+      await tx.evacuationCheckIn.createMany({
+        data: presentOccupants.map((o) => ({
+          evacuationEventId: event.id,
+          occupantRecordId: o.id,
+          isAccountedFor: false,
+        })),
+      });
+    }
+    return { created: true, event };
+  });
 }

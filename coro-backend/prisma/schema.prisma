@@ -7550,11 +7550,15 @@ model EvacuationEvent {
   closureReason  String?
   notes          String?
   organizationId String
+  /// Incident qui a ouvert l'évacuation (audit M5-07 : un seul circuit).
+  incidentEventId String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
   checkins        EvacuationCheckIn[]
   exerciseReports ExerciseReport[]
+
+  @@index([incidentEventId])
 }
 
 model EvacuationCheckIn {
