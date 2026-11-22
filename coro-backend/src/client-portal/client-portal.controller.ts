@@ -16,6 +16,7 @@ import {
   ForbiddenException,
   UsePipes,
   ValidationPipe,
+  Optional,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
@@ -84,6 +85,9 @@ interface CorrectiveActionRequest {
   clientUser: CorrectiveActionActor;
 }
 
+import { FamilyEntitlementService } from '../capability-entitlements/family-entitlement.service';
+import { capabilityEnforcementMode } from '../capability-entitlements/family-entitlement';
+
 @Controller('client-portal')
 @UseGuards(ClientJwtGuard)
 export class ClientPortalController {
@@ -94,7 +98,21 @@ export class ClientPortalController {
     private occupancyService: OccupancyService,
     private correctiveActionsService: CorrectiveActionsService,
     private correctiveActionEvidenceService: CorrectiveActionEvidenceService,
+    @Optional() private familyEntitlements?: FamilyEntitlementService,
   ) {}
+
+  /** M11-01 — families in the client's contract, so the portal hides the rest. */
+  @Get('entitlements')
+  async getEntitlements(@Request() req: any) {
+    const mode = capabilityEnforcementMode();
+    const families = this.familyEntitlements
+      ? await this.familyEntitlements.familiesFor({
+          organizationId: req.clientUser.organizationId,
+          clientId: req.clientUser.clientId,
+        })
+      : null;
+    return { mode, families, hideOutsideContract: mode === 'ENFORCE' };
+  }
 
   @Get('dashboard')
   async getDashboard(@Request() req: any) {

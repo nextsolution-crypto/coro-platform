@@ -32,6 +32,8 @@ import { OperationalLogModule } from '../operational-log/operational-log.module'
 import { OperationalShiftsModule } from '../operational-shifts/operational-shifts.module';
 import { OperationalDirectivesModule } from '../operational-directives/operational-directives.module';
 import { CapabilityEntitlementsModule } from '../capability-entitlements/capability-entitlements.module';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { CapabilityEnforcementInterceptor } from './capability-enforcement.interceptor';
 
 @Module({
   imports: [
@@ -64,6 +66,7 @@ import { CapabilityEntitlementsModule } from '../capability-entitlements/capabil
     ClientOperationalCapabilitiesController,
   ],
   providers: [
+    { provide: APP_INTERCEPTOR, useClass: CapabilityEnforcementInterceptor },
     ClientPortalService,
     ClientAuthService,
     ClientPilotPolicyService,
