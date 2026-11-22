@@ -1,3 +1,4 @@
+import { SITE_CORPUS } from './public-knowledge.site-corpus';
 import { PublicKnowledgeSeed } from './public-knowledge.types';
 
 const publishedAt = new Date('2026-10-27T00:00:00.000Z');
@@ -262,5 +263,39 @@ export const PUBLIC_KNOWLEDGE_CATALOG: PublicKnowledgeSeed[] = [
     'A PCA identifies priority activities, dependencies and continuity strategies. It prepares the organization to maintain operations during a disruption.',
     'BLOG_ARTICLE',
     50,
+  ),
+  ...page(
+    'faq-offer-and-demo',
+    '/contact',
+    'Offre, prix et démonstration CORO',
+    "CORO n'affiche pas de prix fixe ni de grille tarifaire publique. L'offre est définie avec chaque organisation selon ses sites et bâtiments, ses utilisateurs, les capacités utiles et le niveau d'accompagnement souhaité. Aucun montant ne peut être annoncé dans le clavardage. Pour obtenir une offre ou une démonstration (démo), il faut passer par la page Contact du site : https://getcoro.io/contact. La démarche commence par une démonstration et une discussion sur votre environnement; un accès d'évaluation peut être convenu séparément selon la situation.",
+    'CORO offer, pricing and demo',
+    'CORO does not display fixed prices or a public price list. The offer is defined with each organization based on its sites and buildings, users, useful capabilities and desired level of support. No amount can be quoted in the chat. To get an offer or a demo (demonstration, trial), use the Contact page: https://getcoro.io/contact?lang=en. The process starts with a demo and a discussion of your environment; evaluation access can be agreed separately depending on the situation.',
+    'FAQ',
+    5,
+  ),
+  ...page(
+    'faq-sophie',
+    '/',
+    "Sophie, l'assistante du site CORO",
+    "Sophie est l'assistante virtuelle du site getcoro.io. Elle répond aux questions sur CORO, ses capacités, ses modules, son fonctionnement, la sécurité et la démarche pour obtenir une offre, à partir des pages publiées du site. Elle ne voit aucune donnée de client ni aucun document privé, ne déclenche aucune action et ne remplace pas les services d'urgence : en cas d'urgence réelle, composez le 911.",
+    "Sophie, the CORO website assistant",
+    'Sophie is the virtual assistant of the getcoro.io website. She answers questions about CORO, its capabilities, modules, how it works, security and how to get an offer, based on the published website pages. She sees no client data or private documents, triggers no action and does not replace emergency services: in a real emergency, call 911.',
+    'FAQ',
+    5,
+  ),
+  // Toutes les pages publiées du site, extraites automatiquement (FR et EN).
+  ...SITE_CORPUS.map(
+    (entry): PublicKnowledgeSeed => ({
+      sourceKey: entry.sourceKey,
+      sourceType: entry.sourceType,
+      canonicalUrl: `https://getcoro.io${entry.route}${entry.language === 'en-CA' ? '?lang=en' : ''}`,
+      title: entry.title,
+      language: entry.language,
+      content: entry.content,
+      authorityRank: entry.authorityRank,
+      publishedAt,
+      sourceUpdatedAt: publishedAt,
+    }),
   ),
 ];

@@ -15,7 +15,7 @@ import {
   toAssistantContextSource,
 } from './public-assistant.types';
 import { PublicAssistantValidator } from './public-assistant-validator';
-import { classifyWebAIIntent, commercialPrompt, type WebAIIntent } from './web-ai-intent.classifier';
+import { classifyWebAIIntent, type WebAIIntent } from './web-ai-intent.classifier';
 import { WebAIObservabilityService } from './web-ai-observability.service';
 
 /** Plafond quotidien de l'assistant public (M9-05). */
@@ -145,8 +145,14 @@ export class PublicAssistantOrchestratorService {
       suggestedQuestions: validated.suggestedQuestions,
       mode: providerMode,
       intent: classification.intent,
-      commercialPrompt: commercialPrompt(classification.intent, input.language),
     };
+    // Décision du fondateur : démonstration et offre passent par la page
+    // Contact uniquement (pas de formulaire dans le clavardage).
+    if (classification.commercial && !response.suggestedLinks.some((link) => link.url.startsWith('/contact')))
+      response.suggestedLinks = [
+        ...this.navigation.links(['contact'], input.language),
+        ...response.suggestedLinks,
+      ].slice(0, 4);
     this.sessions.append(
       session.id,
       { role: 'user', content: input.message },
@@ -186,7 +192,6 @@ export class PublicAssistantOrchestratorService {
       suggestedQuestions: [],
       mode: this.selectedMode(),
       intent,
-      commercialPrompt: commercialPrompt(intent, language),
     };
   }
 
@@ -210,7 +215,6 @@ export class PublicAssistantOrchestratorService {
       suggestedQuestions: [],
       mode: 'DEGRADED',
       intent,
-      commercialPrompt: commercialPrompt(intent, language),
     };
   }
 

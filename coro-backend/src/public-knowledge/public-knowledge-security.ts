@@ -66,7 +66,15 @@ export class PublicKnowledgeSecurity {
       'why',
       'your',
       'vous',
-      'coro',
+      // Mots outils fréquents (questions en langage courant).
+      'qu', 'ce', 'ces', 'cet', 'cette', 'il', 'ils', 'elle', 'elles', 'se',
+      'sa', 'son', 'ses', 'si', 'ne', 'pas', 'par', 'sur', 'sont', 'peut',
+      'peuvent', 'nous', 'notre', 'nos', 'votre', 'vos', 'je', 'me', 'mon',
+      'ma', 'mes', 'moi', 'avez', 'existe', 'il', 'y', 'quoi', 'quels',
+      'quelles', 'lequel', 'laquelle', 'faire', 'fait',
+      'are', 'an', 'and', 'in', 'it', 'be', 'this', 'that', 'with', 'from',
+      'about', 'my', 'we', 'our', 'you', 'there', 'any', 'have', 'has',
+      'me', 'its', 'or', 'at', 'by', 'if', 'so', 'than', 'then',
     ]);
     return (
       value

@@ -11,7 +11,7 @@ on:
         description: Exact governed phase
         required: true
         type: choice
-        options: [report, semantic-on, semantic-off]
+        options: [report, semantic-on, semantic-off, web-on, web-off]
       approval:
         description: Exact phase-specific approval token
         required: true
@@ -43,7 +43,7 @@ jobs:
           set -Eeuo pipefail
           [[ "$APPLICATION_COMMIT" =~ ^[0-9a-f]{40}$ ]]
           case "$PHASE:$APPROVAL" in
-            report:REPORT_KNOWLEDGE_POLICY|semantic-on:ENABLE_SEMANTIC_EMBEDDINGS|semantic-off:DISABLE_SEMANTIC_EMBEDDINGS) ;;
+            report:REPORT_KNOWLEDGE_POLICY|semantic-on:ENABLE_SEMANTIC_EMBEDDINGS|semantic-off:DISABLE_SEMANTIC_EMBEDDINGS|web-on:ENABLE_WEB_PUBLIC_BEDROCK|web-off:DISABLE_WEB_PUBLIC_BEDROCK) ;;
             *) exit 1 ;;
           esac
           node --test ops/knowledge/runtime-policy.test.mjs ops/knowledge/policy-maintenance.test.mjs
@@ -108,4 +108,6 @@ jobs:
               report) stage=report; run report ;;
               semantic-on) stage=enable; run set-semantic on ;;
               semantic-off) stage=disable; run set-semantic off ;;
+              web-on) stage=web_enable; run set-web on ;;
+              web-off) stage=web_disable; run set-web off ;;
             esac

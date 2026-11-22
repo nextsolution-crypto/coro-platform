@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { credentialReport, credentialsReady, withSemantic } from './policy-maintenance.mjs';
+import { credentialReport, credentialsReady, withSemantic, withWebPublic } from './policy-maintenance.mjs';
 
 const base = { schemaVersion: 1, bedrockEnabled: false, webPublicBedrockEnabled: false, localOcrEnabled: true };
 
@@ -28,4 +28,10 @@ test('credential report reveals presence only, never values', () => {
     const missing = credentialReport({ awsConfig: join(dir, 'none'), signingHelper: join(dir, 'helper'), pki: join(dir, 'cert.pem') });
     assert.equal(credentialsReady(missing), false);
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('Sophie on Bedrock keeps every other switch', () => {
+  assert.deepEqual(withWebPublic({ ...base, bedrockEnabled: true }, true),
+    { ...base, bedrockEnabled: true, webPublicBedrockEnabled: true, semanticEmbeddingsEnabled: false });
+  assert.throws(() => withWebPublic(base, 1));
 });

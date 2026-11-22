@@ -178,7 +178,7 @@ export const PUBLIC_KNOWLEDGE_EVALUATION_CASES: PublicKnowledgeEvaluationCase[] 
       category: 'rex',
       question:
         "Comment les exercices alimentent-ils l'amélioration continue ?",
-      expectedSourceKeys: ['exercises-rex'],
+      expectedSourceKeys: ['exercises-rex', 'site-home', 'site-resilience-operationnelle'],
       requiredFacts: ['constats', 'actions correctives'],
       forbiddenClaims: ['fermeture automatique'],
       expectedBehavior: 'ANSWER_WITH_SOURCES',
@@ -457,7 +457,7 @@ export const PUBLIC_KNOWLEDGE_EVALUATION_CASES: PublicKnowledgeEvaluationCase[] 
       language: 'en-CA',
       category: 'multisite',
       question: 'Can a portfolio team view several buildings in CORO?',
-      expectedSourceKeys: ['multisite'],
+      expectedSourceKeys: ['multisite', 'site-pricing'],
       requiredFacts: ['portfolio'],
       forbiddenClaims: ['implicit access'],
       expectedBehavior: 'ANSWER_WITH_SOURCES',
