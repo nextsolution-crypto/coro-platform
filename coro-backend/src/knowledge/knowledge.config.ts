@@ -59,6 +59,37 @@ export class KnowledgeConfig {
     3600,
   );
 
+  /** CORO Knowledge : vecteurs sémantiques (Titan V2, Canada) ou projection locale. */
+  readonly embeddingProvider = this.enumValue(
+    'CORO_KNOWLEDGE_EMBEDDING_PROVIDER',
+    'deterministic',
+    ['deterministic', 'bedrock-titan-v2'] as const,
+  );
+  readonly embeddingRegion =
+    process.env.CORO_KNOWLEDGE_EMBEDDING_REGION ?? 'ca-central-1';
+  readonly embeddingTimeoutMs = integer(
+    'CORO_KNOWLEDGE_EMBEDDING_TIMEOUT_MS',
+    10_000,
+    1000,
+    30_000,
+  );
+  /** Extraits ré-indexés par passe du rattrapage (0 = rattrapage arrêté). */
+  readonly embeddingBackfillBatch = integer(
+    'CORO_KNOWLEDGE_EMBEDDING_BACKFILL_BATCH',
+    40,
+    0,
+    500,
+  );
+
+  assertEmbeddingActivation() {
+    if (this.embeddingProvider !== 'bedrock-titan-v2')
+      throw new Error('Vecteurs Titan non selectionnes.');
+    if (this.embeddingRegion !== 'ca-central-1')
+      throw new Error('La region des vecteurs doit etre ca-central-1.');
+    if (this.rolesAnywhereSessionSeconds !== 900)
+      throw new Error('La session Roles Anywhere doit etre limitee a 900 secondes.');
+  }
+
   assertBedrockActivation() {
     if (this.aiProvider !== 'bedrock') return;
     if (!this.bedrockInvocationEnabled)

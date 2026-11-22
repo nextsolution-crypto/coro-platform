@@ -5541,6 +5541,8 @@ model ProjectFileKnowledgeChunk {
   tokenCountApprox   Int
   characterCount     Int
   embedding          Float[]
+  /// Modèle du vecteur : null ou LOCAL_DETERMINISTIC_V1 (historique), BEDROCK_TITAN_EMBED_TEXT_V2_512.
+  embeddingModel     String?
   createdAt          DateTime                         @default(now())
   citations          ProjectFileKnowledgeCitation[]
   interactionSources CoroKnowledgeInteractionSource[]
@@ -5548,6 +5550,7 @@ model ProjectFileKnowledgeChunk {
   @@unique([ingestionId, ordinal])
   @@index([organizationId, ingestionId])
   @@index([contentHash])
+  @@index([embeddingModel])
 }
 
 model ProjectFileKnowledgeCitation {

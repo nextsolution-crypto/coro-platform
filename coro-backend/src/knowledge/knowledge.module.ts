@@ -22,6 +22,8 @@ import { KnowledgeReconciliationService } from './knowledge-reconciliation.servi
 import { LibraryKnowledgeRetrievalService } from './library-knowledge-retrieval.service';
 import { BedrockProviderAdapter } from './bedrock-provider.adapter';
 import { CoroAiProviderGateway } from './coro-ai-provider.gateway';
+import { SemanticEmbeddingService } from './semantic-embedding.service';
+import { KnowledgeEmbeddingBackfillService } from './knowledge-embedding-backfill.service';
 
 @Module({
   imports: [
@@ -37,6 +39,8 @@ import { CoroAiProviderGateway } from './coro-ai-provider.gateway';
     KnowledgeExtractorService,
     KnowledgeChunkerService,
     DeterministicEmbeddingService,
+    SemanticEmbeddingService,
+    KnowledgeEmbeddingBackfillService,
     KnowledgeAuthorizationService,
     KnowledgeIngestionService,
     KnowledgeRetrievalService,
