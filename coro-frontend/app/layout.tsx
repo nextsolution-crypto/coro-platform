@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import AuthProvider from '@/components/layout/AuthProvider';
+import ApiSessionBridge from '@/components/layout/ApiSessionBridge';
 import 'leaflet/dist/leaflet.css';
 import '@/design-system/tokens.css';
 import '@/design-system/primitives.css';
@@ -81,6 +82,7 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <ThemeProvider>
+          <ApiSessionBridge />
           <AuthProvider>
             {children}
           </AuthProvider>

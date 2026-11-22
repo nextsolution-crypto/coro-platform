@@ -1,4 +1,5 @@
 'use client';
+import { sessionMarker } from '@/lib/session';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -108,7 +109,7 @@ export default function TeamPlannerPage() {
 
   useEffect(() => {
     if (!ready) return;
-    if (!isAuthenticated && !sessionStorage.getItem('coro_token') && !localStorage.getItem('coro_token')) {
+    if (!isAuthenticated && !sessionMarker() && !sessionMarker()) {
       router.replace('/login'); return;
     }
     Promise.allSettled([api.get('/clients'), api.get('/buildings')]).then(([clientResult, buildingResult]) => {
@@ -118,7 +119,7 @@ export default function TeamPlannerPage() {
   }, [ready, isAuthenticated, router]);
 
   useEffect(() => {
-    const authenticated = isAuthenticated || Boolean(sessionStorage.getItem('coro_token') || localStorage.getItem('coro_token'));
+    const authenticated = isAuthenticated || Boolean(sessionMarker() || sessionMarker());
     if (!ready || !authenticated) return;
     const requestId = ++contextRequest.current;
     let cancelled = false;
@@ -141,7 +142,7 @@ export default function TeamPlannerPage() {
   const requestRange = useMemo(() => days.length && validTimeZone(zone) ? requestWindow(days, zone) : null, [days, zone]);
 
   useEffect(() => {
-    if (!ready || !requestRange || (!isAuthenticated && !sessionStorage.getItem('coro_token') && !localStorage.getItem('coro_token'))) return;
+    if (!ready || !requestRange || (!isAuthenticated && !sessionMarker() && !sessionMarker())) return;
     let cancelled = false;
     queueMicrotask(() => { if (!cancelled) { setLoading(true); setError(''); } });
     api.get<PlannerResponse>('/planning/team', { params: {
@@ -162,7 +163,7 @@ export default function TeamPlannerPage() {
   }, [ready, requestRange, zone, debouncedSearch, clientId, buildingId, projectId, activityTypeId, bookingStatus, needsAction, isAuthenticated, refreshKey]);
 
   useEffect(() => {
-    const authenticated = isAuthenticated || Boolean(sessionStorage.getItem('coro_token') || localStorage.getItem('coro_token'));
+    const authenticated = isAuthenticated || Boolean(sessionMarker() || sessionMarker());
     if (!actionType || !requestRange || !authenticated) return;
     let cancelled = false;
     queueMicrotask(() => { if (!cancelled) { setActionLoading(true); setActionError(''); } });
@@ -181,7 +182,7 @@ export default function TeamPlannerPage() {
   }, [actionType, actionPage, requestRange, zone, debouncedSearch, clientId, buildingId, projectId, activityTypeId, bookingStatus, isAuthenticated, refreshKey]);
 
   useEffect(() => {
-    const authenticated = isAuthenticated || Boolean(sessionStorage.getItem('coro_token') || localStorage.getItem('coro_token'));
+    const authenticated = isAuthenticated || Boolean(sessionMarker() || sessionMarker());
     const requestId = ++monthRequest.current;
     if (view !== 'month' || !requestRange || !authenticated) {
       queueMicrotask(() => {

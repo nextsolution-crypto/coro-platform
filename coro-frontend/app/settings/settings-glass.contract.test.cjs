@@ -17,7 +17,9 @@ const { ROUTE_REGISTRY } = require('../../design-system/routes/route-registry.ts
 
 // Empreinte revue après l’alignement de sécurité Paramètres : les outils
 // administratifs sont désormais absents pour OPERATOR dans les deux rendus.
-const LEGACY_PAGE_SHA256 = 'ebfb92a2c5b964bc30bf17dec5078485b41feba58b4c2584b23a1e2a97d6ce02';
+// Revue M3-05 (22 nov. 2026) : le jeton n’est plus lu dans le navigateur
+// (session en cookie httpOnly, sessionMarker()).
+const LEGACY_PAGE_SHA256 = '54eb9f39d92034ce1b6e94fa9765c8fd63803b46bababacdc004f304bc73a0f4';
 const LEGACY_HEX_COUNT = 18;
 
 function withoutGlassBlocks(src) {

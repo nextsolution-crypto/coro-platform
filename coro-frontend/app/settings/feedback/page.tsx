@@ -1,4 +1,5 @@
 'use client';
+import { sessionMarker } from '@/lib/session';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -28,7 +29,7 @@ export default function FeedbackPage() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      const token = localStorage.getItem('coro_token');
+      const token = sessionMarker();
       if (!token) router.push('/login');
     }
   }, [isAuthenticated]);

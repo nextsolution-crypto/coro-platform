@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Strategy } from 'passport-jwt';
+import { advisorCsrfSatisfied, extractAdvisorToken } from './advisor-session-cookie';
 import { UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { requireJwtSecret } from './auth-security.config';
@@ -9,13 +10,17 @@ import { requireJwtSecret } from './auth-security.config';
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private readonly prisma: PrismaService) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: (request: any) => extractAdvisorToken(request).token,
       ignoreExpiration: false,
       secretOrKey: requireJwtSecret(),
+      passReqToCallback: true,
     });
   }
 
-  async validate(payload: any) {
+  async validate(request: any, payload: any) {
+    if (extractAdvisorToken(request).viaCookie && !advisorCsrfSatisfied(request)) {
+      throw new UnauthorizedException('En-tête de protection manquant.');
+    }
     if (!payload?.sub || !Number.isInteger(payload.authVersion)) {
       throw new UnauthorizedException('Session invalide ou expirée.');
     }

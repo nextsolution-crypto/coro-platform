@@ -1,4 +1,5 @@
 'use client';
+import { sessionMarker } from '@/lib/session';
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -44,7 +45,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      const token = localStorage.getItem('coro_token');
+      const token = sessionMarker();
 
       if (!token) {
         router.push('/login');

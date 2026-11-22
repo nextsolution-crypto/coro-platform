@@ -1,4 +1,5 @@
 'use client';
+import { sessionMarker } from '@/lib/session';
 
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
@@ -71,7 +72,7 @@ export default function TimesheetTab({ projectId, mandate }: Props) {
     setError('');
     try {
       const { from, to } = getDateRange(viewMode);
-      const token = localStorage.getItem('coro_token');
+      const token = sessionMarker();
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/timesheet/export?from=${from}&to=${to}`,
         { headers: { Authorization: `Bearer ${token}` } }
