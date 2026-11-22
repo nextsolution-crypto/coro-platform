@@ -6,6 +6,9 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+# Sophie : assistant documentaire complet (Bedrock Canada) quand true.
+ARG NEXT_PUBLIC_WEB_AI_INTELLIGENT_ASSISTANT_ENABLED=false
+ENV NEXT_PUBLIC_WEB_AI_INTELLIGENT_ASSISTANT_ENABLED=$NEXT_PUBLIC_WEB_AI_INTELLIGENT_ASSISTANT_ENABLED
 RUN npm run build
 
 FROM node:22-alpine AS production
