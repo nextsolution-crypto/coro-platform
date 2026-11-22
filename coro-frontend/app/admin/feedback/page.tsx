@@ -1,4 +1,5 @@
 'use client';
+import { sessionMarker } from '@/lib/session';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -93,7 +94,7 @@ export default function FeedbackAdminPage() {
 
       fetchData();
     } else {
-      const token = localStorage.getItem('coro_token');
+      const token = sessionMarker();
 
       if (!token) {
         router.push('/login');

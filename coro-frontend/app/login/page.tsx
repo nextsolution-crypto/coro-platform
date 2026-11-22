@@ -37,8 +37,7 @@ export default function LoginPage() {
         setView('mfa');
         return;
       }
-      const { access_token, refresh_token, user } = response.data;
-      setAuth(user, access_token, refresh_token);
+      setAuth(response.data.user);
       router.push('/dashboard');
     } catch (err: any) {
       setError('Email ou mot de passe invalide');
@@ -57,11 +56,11 @@ export default function LoginPage() {
         email: email.trim(),
         code: mfaCode.trim(),
       });
-      const { access_token, refresh_token, trusted_token, user } = response.data;
+      const { trusted_token, user } = response.data;
       if (trusted_token) {
         localStorage.setItem(`coro_trusted_${email.trim()}`, trusted_token);
       }
-      setAuth(user, access_token, refresh_token);
+      setAuth(user);
       router.push('/dashboard');
     } catch (err: any) {
       setError('Code invalide ou expiré. Veuillez réessayer.');

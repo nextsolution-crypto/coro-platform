@@ -1,4 +1,5 @@
 'use client';
+import { sessionMarker } from '@/lib/session';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -115,7 +116,7 @@ export default function ProjectsPage() {
       // Polling toutes les 30 secondes pour détecter les modifications d'autres utilisateurs
       pollRef.current = setInterval(() => fetchProjectsOnly(), 30000);
     } else {
-      const token = localStorage.getItem('coro_token');
+      const token = sessionMarker();
       if (!token) router.push('/login');
     }
     return () => { if (pollRef.current) clearInterval(pollRef.current); };

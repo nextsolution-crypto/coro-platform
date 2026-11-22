@@ -1,4 +1,5 @@
 "use client";
+import { sessionMarker } from '@/lib/session';
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { isAxiosError } from "axios";
@@ -159,7 +160,7 @@ export default function OrganizationsAdminPage() {
         cancelled = true;
       };
     } else {
-      const token = localStorage.getItem("coro_token");
+      const token = sessionMarker();
       if (!token) router.push("/login");
     }
   }, [isAuthenticated, router, user?.role]);

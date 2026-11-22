@@ -1,4 +1,5 @@
 'use client';
+import { sessionMarker } from '@/lib/session';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
@@ -79,7 +80,7 @@ export default function ProjectDetailPage() {
   const handleExportGuide = async (language: 'fr' | 'en' | 'both') => {
     setExportingGuide(true);
     try {
-      const token = localStorage.getItem('coro_token');
+      const token = sessionMarker();
       const safeName = (project?.name || 'guide').replace(/[^a-z0-9]/gi, '-');
 
       if (language === 'both') {
@@ -157,7 +158,7 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     if (isAuthenticated) fetchData();
     else {
-      const token = localStorage.getItem('coro_token');
+      const token = sessionMarker();
       if (!token) router.push('/login');
     }
   }, [isAuthenticated, projectId]);
@@ -386,7 +387,7 @@ export default function ProjectDetailPage() {
   const handlePreview = async () => {
     setPreviewing(true);
     try {
-      const token = localStorage.getItem('coro_token');
+      const token = sessionMarker();
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/export`, {
         method: 'POST',
         headers: {

@@ -1,4 +1,5 @@
 'use client';
+import { sessionMarker } from '@/lib/session';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -60,7 +61,7 @@ export default function ActivitiesPortfolioPage() {
 
   const handleDownloadIcs = async (activityId: string, label: string) => {
     setDownloadError('');
-    const token = localStorage.getItem('coro_token');
+    const token = sessionMarker();
     try {
       await downloadActivityIcs(activityId, label);
     } catch (error) {

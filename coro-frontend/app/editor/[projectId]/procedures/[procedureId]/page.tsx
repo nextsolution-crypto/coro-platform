@@ -1,4 +1,5 @@
 'use client';
+import { sessionMarker } from '@/lib/session';
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
@@ -275,7 +276,7 @@ export default function ProcedureProjectEditPage() {
   useEffect(() => {
     if (isAuthenticated && projectId && procedureId) fetchData();
     else if (!isAuthenticated) {
-      const token = localStorage.getItem('coro_token');
+      const token = sessionMarker();
       if (!token) router.push('/login');
     }
   }, [isAuthenticated, projectId, procedureId]);

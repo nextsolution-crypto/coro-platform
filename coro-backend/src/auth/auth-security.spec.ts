@@ -25,7 +25,7 @@ describe('Platform authentication security', () => {
   it('rejette un JWT legacy sans authVersion', async () => {
     const prisma = { user: { findUnique: jest.fn() } } as any;
     const strategy = new JwtStrategy(prisma);
-    await expect(strategy.validate({ sub: 'user-1' })).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(strategy.validate({ headers: {} }, { sub: 'user-1' })).rejects.toBeInstanceOf(UnauthorizedException);
     expect(prisma.user.findUnique).not.toHaveBeenCalled();
   });
 
@@ -35,12 +35,12 @@ describe('Platform authentication security', () => {
     [{ id: 'user-1', email: 'u@example.test', role: 'OPERATOR', organizationId: 'org', isActive: true, authVersion: 2 }, 1],
   ])('refuse utilisateur absent, inactif ou version perimee', async (user, authVersion) => {
     const strategy = new JwtStrategy({ user: { findUnique: jest.fn().mockResolvedValue(user) } } as any);
-    await expect(strategy.validate({ sub: 'user-1', authVersion })).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(strategy.validate({ headers: {} }, { sub: 'user-1', authVersion })).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('retourne le role courant de la DB et non celui du JWT', async () => {
     const current = { id: 'user-1', email: 'u@example.test', role: 'OPERATOR', organizationId: 'org', isActive: true, authVersion: 4 };
     const strategy = new JwtStrategy({ user: { findUnique: jest.fn().mockResolvedValue(current) } } as any);
-    await expect(strategy.validate({ sub: 'user-1', role: 'SUPER_ADMIN', authVersion: 4 })).resolves.toMatchObject({ role: 'OPERATOR' });
+    await expect(strategy.validate({ headers: {} }, { sub: 'user-1', role: 'SUPER_ADMIN', authVersion: 4 })).resolves.toMatchObject({ role: 'OPERATOR' });
   });
 });

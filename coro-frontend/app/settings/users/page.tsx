@@ -1,4 +1,5 @@
 "use client";
+import { sessionMarker } from '@/lib/session';
 
 import { useState, useEffect } from "react";
 import axios from "axios";
@@ -155,7 +156,7 @@ export default function TeamUsersPage() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchData();
     } else {
-      const token = localStorage.getItem("coro_token");
+      const token = sessionMarker();
       if (!token) router.push("/login");
     }
   }, [isAuthenticated, user]);

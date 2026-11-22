@@ -1,4 +1,5 @@
 'use client';
+import { sessionMarker } from '@/lib/session';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -46,7 +47,7 @@ export default function BuildingsCompliancePage() {
   }, []);
   useEffect(() => {
     if (isAuthenticated) queueMicrotask(() => void fetchData());
-    else if (!localStorage.getItem('coro_token')) router.push('/login');
+    else if (!sessionMarker()) router.push('/login');
   }, [fetchData, isAuthenticated, router]);
 
   const clients = useMemo(() => Array.from(new Set(buildings.map((b) => b.clientName))).sort((a, b) => a.localeCompare(b, 'fr')), [buildings]);

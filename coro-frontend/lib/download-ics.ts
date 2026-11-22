@@ -1,5 +1,6 @@
+import { sessionMarker } from '@/lib/session';
 export async function downloadActivityIcs(activityId: string, label: string): Promise<void> {
-  const token = localStorage.getItem('coro_token');
+  const token = sessionMarker();
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/activities/${activityId}/ics`, {
     headers: { Authorization: `Bearer ${token}` },
   });

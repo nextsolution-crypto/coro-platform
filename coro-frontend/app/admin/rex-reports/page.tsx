@@ -1,4 +1,5 @@
 'use client';
+import { sessionMarker } from '@/lib/session';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -24,7 +25,7 @@ export default function RexReportsAdminPage() {
   useEffect(() => { initAuth(); }, [initAuth]);
   useEffect(() => {
     if (isAuthenticated && user?.role !== 'SUPER_ADMIN') router.replace('/dashboard');
-    if (!isAuthenticated && !localStorage.getItem('coro_token')) router.replace('/login');
+    if (!isAuthenticated && !sessionMarker()) router.replace('/login');
   }, [isAuthenticated, user, router]);
 
   async function search(value = reference) {
