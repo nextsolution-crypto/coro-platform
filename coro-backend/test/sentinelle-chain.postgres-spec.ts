@@ -146,12 +146,19 @@ suite('Sentinelle employee to closed exercise on PostgreSQL', () => {
       where: { incidentEventId: created.incident.id },
     });
     expect(queued.length).toBeGreaterThan(0);
+    // The incident already kicks an immediate background dispatch; wait for it
+    // (or finish the row ourselves) rather than racing its claim.
     for (const row of queued) {
-      await dispatcher.dispatchOne(row.id);
-      const accepted =
-        await prisma.incidentNotificationDelivery.findUniqueOrThrow({
+      let accepted = await prisma.incidentNotificationDelivery.findUniqueOrThrow(
+        { where: { id: row.id } },
+      );
+      for (let i = 0; i < 100 && accepted.status !== 'SENT'; i++) {
+        if (accepted.status !== 'PROCESSING') await dispatcher.dispatchOne(row.id);
+        else await new Promise((resolve) => setTimeout(resolve, 50));
+        accepted = await prisma.incidentNotificationDelivery.findUniqueOrThrow({
           where: { id: row.id },
         });
+      }
       expect(accepted.status).toBe('SENT');
       await reconcileSentinelleProviderEvent(
         prisma,
