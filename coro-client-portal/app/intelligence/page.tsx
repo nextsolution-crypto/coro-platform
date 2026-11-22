@@ -167,7 +167,7 @@ export default function IntelligencePage() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
             <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.08em' }}>CORO Sentinelle</p>
-            <h1 style={{ margin: 0, fontSize: 'clamp(20px, 5vw, 28px)', fontWeight: 900, color: '#2C3E50', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h1 className="coro-title" style={{ margin: 0, fontSize: 'clamp(20px, 5vw, 28px)', fontWeight: 900, color: '#2C3E50', display: 'flex', alignItems: 'center', gap: 8 }}>
               💡 Intelligence organisationnelle
             </h1>
           </div>

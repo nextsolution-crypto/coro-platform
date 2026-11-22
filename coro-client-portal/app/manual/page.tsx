@@ -163,8 +163,8 @@ export default function ManualPage() {
     <PortalLayout>
       <main className={styles.page}>
         <header>
-          <p className={styles.category}>Centre d’aide CORO</p>
-          <h1>Manuel d’utilisation</h1>
+          <p className={`${styles.category} coro-eyebrow`}>Centre d’aide CORO</p>
+          <h1 className="coro-title">Manuel d’utilisation</h1>
           <p>
             Retrouvez une fonction, ses étapes et le résultat attendu. Les
             actions disponibles dépendent de votre rôle et des capacités

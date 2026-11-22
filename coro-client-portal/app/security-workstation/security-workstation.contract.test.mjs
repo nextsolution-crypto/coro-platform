@@ -94,8 +94,8 @@ assert.match(
 );
 assert.match(page, /contentForEditing/);
 assert.match(auth, /public readonly details\?: unknown/);
-assert.match(workstationCss, /\.panel,\s*\.dialog\s*\{\s*color:\s*#173042/);
-assert.match(workstationCss, /\.fieldError\s*\{\s*color:\s*#922b25/);
+assert.match(workstationCss, /\.panel,\s*\.dialog\s*\{\s*color:\s*(#173042|var\(--p-text\))/);
+assert.match(workstationCss, /\.fieldError\s*\{\s*color:\s*(#922b25|var\(--p-red-text\))/);
 assert.match(workstationCss, /\.actions\s*\{[\s\S]*flex-wrap:\s*wrap/);
 assert.match(workstationCss, /\.actions input\[type="date"\]/);
 assert.match(workstationCss, /grid-template-columns:\s*minmax\(0, 1fr\)/);

@@ -391,8 +391,8 @@ export default function SecurityWorkstationPage() {
       <main className={styles.page}>
         <header className={styles.hero}>
           <div>
-            <p className={styles.eyebrow}>CORO REPORT · OPÉRATIONS</p>
-            <h1>Poste de sécurité</h1>
+            <p className={`${styles.eyebrow} coro-eyebrow`}>CORO REPORT · OPÉRATIONS</p>
+            <h1 className="coro-title">Poste de sécurité</h1>
             <p>
               Le registre opérationnel et les rapports gouvernés de votre
               bâtiment.

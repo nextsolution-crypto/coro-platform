@@ -184,8 +184,8 @@ export default function DisplayPage() {
       <main className={styles.page}>
         <header className={styles.header}>
           <div>
-            <p className={styles.eyebrow}>CORO Display</p>
-            <h1>Plans et affichages de sécurité</h1>
+            <p className={`${styles.eyebrow} coro-eyebrow`}>CORO Display</p>
+            <h1 className="coro-title">Plans et affichages de sécurité</h1>
             <p>
               Consultez les versions autorisées et signalez une correction sans
               modifier le document approuvé.

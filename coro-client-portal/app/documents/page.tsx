@@ -189,9 +189,9 @@ export default function DocumentsPage() {
       <div className={styles.page}>
         {/* En-tête */}
         <header className={styles.header}>
-          <p className={styles.eyebrow}>Conformité</p>
+          <p className={`${styles.eyebrow} coro-eyebrow`}>Conformité</p>
 
-          <h1 className={styles.title}>Vos documents de conformité</h1>
+          <h1 className={`${styles.title} coro-title`}>Vos documents de conformité</h1>
           <p className={styles.context}>
             <Building2 size={16} aria-hidden="true" />
             {workspaceLabel}

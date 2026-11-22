@@ -1214,6 +1214,7 @@ export default function MapPage() {
               Vue cartographique
             </p>
             <h1
+            className="coro-title"
               style={{
                 margin: 0,
                 fontSize: "clamp(20px, 4vw, 24px)",

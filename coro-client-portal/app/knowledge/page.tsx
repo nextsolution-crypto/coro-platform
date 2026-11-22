@@ -82,8 +82,8 @@ export default function KnowledgePage() {
         <header className={styles.hero}>
           <div className={styles.heroIcon} aria-hidden="true"><BookOpenCheck /></div>
           <div>
-            <p className={styles.eyebrow}>CORO AI</p>
-            <h1>Interroger vos documents approuvés</h1>
+            <p className={`${styles.eyebrow} coro-eyebrow`}>CORO AI</p>
+            <h1 className="coro-title">Interroger vos documents approuvés</h1>
             <p>
               Les réponses s’appuient sur les documents approuvés et en vigueur auxquels vous avez accès. Pour ajouter des plans ou des fichiers de référence, ouvrez la documentation du bâtiment concerné.
             </p>
