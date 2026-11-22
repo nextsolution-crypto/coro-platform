@@ -22,3 +22,27 @@ Activation requires a separate governed operation that:
 No model invocation is part of this change or its automated tests.
 The approved Canadian cross-region inference profile can process within the two
 Canadian regions; CORO still addresses Bedrock through `ca-central-1` only.
+
+## CORO Knowledge - vecteurs sémantiques Titan (inactif par défaut)
+
+CORO Knowledge peut calculer de vrais vecteurs de sens avec Amazon Titan Text
+Embeddings V2 (`amazon.titan-embed-text-v2:0`, 512 dimensions), appelé dans
+`ca-central-1` uniquement. Interrupteur distinct de CORO AI :
+`"semanticEmbeddingsEnabled": true` dans `/etc/coro-ai/runtime-policy.json`,
+qui pose `CORO_KNOWLEDGE_EMBEDDING_PROVIDER=bedrock-titan-v2` et monte les
+mêmes identifiants Roles Anywhere en lecture seule.
+
+Prérequis AWS : le rôle de `coro-ai-production` doit autoriser
+`bedrock:InvokeModel` sur
+`arn:aws:bedrock:ca-central-1::foundation-model/amazon.titan-embed-text-v2:0`,
+et rien d'autre pour ce modèle.
+
+Comportement :
+
+- nouveaux documents : vecteur Titan stocké avec `embeddingModel`;
+- documents existants : rattrapage automatique par lots (60 s,
+  `CORO_KNOWLEDGE_EMBEDDING_BACKFILL_BATCH`, 40 par défaut, 0 = arrêté);
+- échec AWS : repli sur la projection locale, coupe-circuit de 5 minutes
+  après 3 échecs ; la recherche reste plein texte + mots exacts;
+- le déploiement exécute un test fictif (`knowledge-provider-smoke.js`) qui
+  échoue si Titan est activé mais inaccessible.

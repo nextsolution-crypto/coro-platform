@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { createHash, randomUUID } from 'crypto';
 import { ProjectFilesService } from '../project-files/project-files.service';
@@ -12,6 +13,10 @@ import { KnowledgeChunkerService } from './knowledge-chunker.service';
 import { KnowledgeConfig } from './knowledge.config';
 import { KnowledgeExtractorService } from './knowledge-extractor.service';
 import { KnowledgeActor } from './knowledge.types';
+import {
+  LOCAL_EMBEDDING_MODEL,
+  SemanticEmbeddingService,
+} from './semantic-embedding.service';
 
 @Injectable()
 export class KnowledgeIngestionService {
@@ -23,7 +28,28 @@ export class KnowledgeIngestionService {
     private readonly chunker: KnowledgeChunkerService,
     private readonly embeddings: DeterministicEmbeddingService,
     private readonly config: KnowledgeConfig,
+    @Optional() private readonly semantic?: SemanticEmbeddingService,
   ) {}
+
+  /** Vecteurs calculés hors transaction (appels Titan possibles). */
+  private async embedChunks(texts: string[]) {
+    const results: Array<{ model: string; vector: number[] }> = [];
+    for (let start = 0; start < texts.length; start += 4) {
+      results.push(
+        ...(await Promise.all(
+          texts.slice(start, start + 4).map(async (text) =>
+            this.semantic
+              ? this.semantic.embedDocument(text)
+              : {
+                  model: LOCAL_EMBEDDING_MODEL,
+                  vector: this.embeddings.validate(this.embeddings.embed(text)),
+                },
+          ),
+        )),
+      );
+    }
+    return results;
+  }
 
   async index(actor: KnowledgeActor, projectFileId: string) {
     return this.indexCanonical(projectFileId, actor);
@@ -114,6 +140,7 @@ export class KnowledgeIngestionService {
       const pages = await this.extractor.extract(downloaded.buffer, file.mimeType);
       const chunks = this.chunker.chunks(pages);
       if (!chunks.length) throw new Error('NO_EXTRACTABLE_CONTENT');
+      const vectors = await this.embedChunks(chunks.map((chunk) => chunk.text));
       const rootId = file.parentId ?? file.id;
       const chain = await this.prisma.projectFile.findMany({
         where: {
@@ -143,15 +170,14 @@ export class KnowledgeIngestionService {
         await tx.projectFileKnowledgeChunk.deleteMany({
           where: { ingestionId: ingestion.id },
         });
-        for (const chunk of chunks) {
+        for (const [index, chunk] of chunks.entries()) {
           const citationId = randomUUID();
-          const embedding = this.embeddings.validate(
-            this.embeddings.embed(chunk.text),
-          );
+          const { vector: embedding, model: embeddingModel } = vectors[index];
           await tx.projectFileKnowledgeChunk.create({
             data: {
               ...chunk,
               embedding,
+              embeddingModel,
               organizationId: file.organizationId,
               ingestionId: ingestion.id,
               citations: {
