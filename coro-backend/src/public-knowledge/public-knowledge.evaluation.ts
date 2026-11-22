@@ -230,7 +230,7 @@ export const PUBLIC_KNOWLEDGE_EVALUATION_CASES: PublicKnowledgeEvaluationCase[] 
       language: 'fr-CA',
       category: 'navigation',
       question: 'Avez-vous un article sur la continuité des activités ?',
-      expectedSourceKeys: ['blog-continuity'],
+      expectedSourceKeys: ['blog-continuity', 'site-documents-plan-continuite-activites-pca', 'site-guides'],
       requiredFacts: ['PCA'],
       forbiddenClaims: ['aucun article'],
       expectedBehavior: 'NAVIGATE',

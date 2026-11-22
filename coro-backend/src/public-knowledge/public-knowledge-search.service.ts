@@ -146,7 +146,7 @@ export class PublicKnowledgeSearchService {
             .filter((term) => terms.has(term))
             .reduce((sum, term) => sum + (idf.get(term) ?? 0), 0) / queryWeight
         : 0;
-    return prepared
+    const ranked = prepared
       .flatMap(({ source, titleTerms, chunks }) => {
         const capability = source.capabilities[0];
         const titleMatch = weighted(titleTerms);
@@ -159,7 +159,7 @@ export class PublicKnowledgeSearchService {
           const authority = Math.max(0, 1 - source.authorityRank / 100);
           const relevance = Math.min(
             1,
-            lexical * 0.56 + titleMatch * 0.12 + semantic * 0.22 + authority * 0.1,
+            lexical * 0.5 + titleMatch * 0.18 + semantic * 0.22 + authority * 0.1,
           );
           return {
             sourceId: source.id,
@@ -197,8 +197,39 @@ export class PublicKnowledgeSearchService {
           all.findIndex(
             (candidate) => candidate.sourceId === result.sourceId,
           ) === index,
-      )
-      .slice(0, limit);
+      );
+    return this.withCapabilityStatus(ranked, limit);
+  }
+
+  /**
+   * Une page de module retenue entraîne sa fiche « capacité » (même page
+   * publiée), qui porte le statut officiel (disponible, planifié…). Sans
+   * elle, l'assistant ne pourrait pas affirmer la disponibilité.
+   */
+  private withCapabilityStatus(
+    ranked: PublicKnowledgeSearchResult[],
+    limit: number,
+  ): PublicKnowledgeSearchResult[] {
+    const path = (url: string) => new URL(url).pathname;
+    // Seules les pages propres à une capacité (une seule capacité par page).
+    const byPath = new Map<string, Set<string>>();
+    for (const result of ranked)
+      if (result.capabilityKey)
+        byPath.set(path(result.canonicalUrl), (byPath.get(path(result.canonicalUrl)) ?? new Set()).add(result.capabilityKey));
+    const capabilityByPath = new Map<string, PublicKnowledgeSearchResult>();
+    for (const result of ranked) {
+      const key = path(result.canonicalUrl);
+      if (result.capabilityKey && byPath.get(key)?.size === 1 && !capabilityByPath.has(key))
+        capabilityByPath.set(key, result);
+    }
+    const selected = ranked.slice(0, limit);
+    for (const result of [...selected]) {
+      if (result.capabilityKey) continue;
+      const capability = capabilityByPath.get(path(result.canonicalUrl));
+      if (!capability || selected.includes(capability)) continue;
+      selected.splice(selected.indexOf(result) + 1, 0, capability);
+    }
+    return selected.slice(0, limit);
   }
 
   private hasCapabilityConflict(results: PublicKnowledgeSearchResult[]) {
