@@ -305,6 +305,19 @@ if [[ "$CLAMAV_REQUIRED" == true || "$CLAMAV_ON_DEMAND" == true ]]; then
   [[ "$(docker image inspect "$CLAMAV_IMAGE" --format '{{.Architecture}}')" == amd64 ]] || fail CLAMAV_IMAGE_PLATFORM_MISMATCH
 fi
 
+# Sceau CORO (M8-04) : clé de signature des PDF générée une seule fois, sur le
+# serveur, jamais affichée ni versionnée (certificat auto-signé, 10 ans).
+SEAL_DIR=/opt/coro-ops/secrets
+SEAL_P12="$SEAL_DIR/pdf-seal.p12"
+install -d -m 0700 "$SEAL_DIR" || fail PDF_SEAL_DIRECTORY_UNAVAILABLE
+if [[ ! -s "$SEAL_P12" ]]; then
+  seal_tmp="$(mktemp -d)"
+  openssl req -x509 -newkey rsa:3072 -sha256 -days 3650 -nodes -subj "/CN=CORO - Sceau de la plateforme/O=CORO/C=CA" -keyout "$seal_tmp/key.pem" -out "$seal_tmp/cert.pem" >/dev/null 2>&1 || { rm -rf -- "$seal_tmp"; fail PDF_SEAL_KEY_GENERATION_FAILED; }
+  openssl pkcs12 -export -inkey "$seal_tmp/key.pem" -in "$seal_tmp/cert.pem" -name CORO -passout pass: -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -macalg sha1 -out "$SEAL_P12" >/dev/null 2>&1 || { rm -rf -- "$seal_tmp"; fail PDF_SEAL_KEY_GENERATION_FAILED; }
+  rm -rf -- "$seal_tmp"
+  chmod 0600 "$SEAL_P12"
+fi
+
 COMPOSE_OVERRIDE="$(mktemp /tmp/coro-release-compose.XXXXXX.yml)"
 cat >"$COMPOSE_OVERRIDE" <<YAML
 services:
@@ -314,6 +327,12 @@ services:
       INCIDENT_REPORT_ATTACHMENTS_ENABLED: "$([[ "$CLAMAV_REQUIRED" == true || "$CLAMAV_ON_DEMAND" == true ]] && printf true || printf false)"
       INCIDENT_REPORT_CLAMAV_MODE: "$([[ "$CLAMAV_ON_DEMAND" == true ]] && printf ON_DEMAND || printf INLINE)"
       INCIDENT_REPORT_IMPORT_ENABLED: "false"
+      CORO_PDF_SEAL_P12_PATH: /run/secrets/coro-pdf-seal.p12
+    volumes:
+      - type: bind
+        source: $SEAL_P12
+        target: /run/secrets/coro-pdf-seal.p12
+        read_only: true
   display-pdf-spool-init:
     image: $BACKEND_IMAGE
   display-pdf-worker:
