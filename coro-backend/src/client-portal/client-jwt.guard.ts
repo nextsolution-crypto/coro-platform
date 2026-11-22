@@ -1,4 +1,11 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  CLIENT_CSRF_HEADER,
+  CLIENT_CSRF_VALUE,
+  extractClientToken,
+  isSafeMethod,
+} from './client-session-cookie';
+import {
+  ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { CanActivate, ExecutionContext } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -13,13 +20,20 @@ export class ClientJwtGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const authHeader = request.headers.authorization;
+    const { token, viaCookie } = extractClientToken(request);
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!token) {
       throw new UnauthorizedException('Token client manquant.');
     }
+    // Session en cookie : une modification exige l'en-tête anti-CSRF (M3-05).
+    if (
+      viaCookie &&
+      !isSafeMethod(request.method) &&
+      request.headers?.[CLIENT_CSRF_HEADER] !== CLIENT_CSRF_VALUE
+    ) {
+      throw new ForbiddenException('Requête refusée (protection CSRF).');
+    }
 
-    const token = authHeader.split(' ')[1];
     try {
       const payload = this.jwt.verify(token);
       if (

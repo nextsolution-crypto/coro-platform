@@ -71,8 +71,10 @@ export default function PortalLayout({
   }, [pathname]);
 
   useEffect(() => {
+    // Session en cookie httpOnly (M3-05) : l'utilisateur mis en cache sert
+    // d'indice, /client-auth/me confirme la session auprès de l'API.
     const token = getToken();
-    if (!token) {
+    if (!token && !getUser()) {
       router.replace("/login");
       return;
     }
@@ -85,13 +87,13 @@ export default function PortalLayout({
       .then(([freshUser, networkAccess]) => {
         if (!active) return;
         if (getToken() !== token) return;
-        setAuth(token, freshUser);
+        setAuth(null, freshUser);
         setUser(freshUser);
         setNetworkEnabled(networkAccess?.enabled === true);
         setOfflineVaultMode(false);
       })
       .catch(() => {
-        if (!active || !getToken()) return;
+        if (!active || (!getToken() && !getUser())) return;
         const cachedUser = getUser();
         if (pathname === "/offline-documents" && cachedUser) {
           setUser(cachedUser);

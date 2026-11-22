@@ -6,7 +6,14 @@ import {
   UseGuards,
   Request,
   Put,
+  Res,
+  HttpCode,
 } from '@nestjs/common';
+import type { Response } from 'express';
+import {
+  CLIENT_SESSION_COOKIE,
+  clientSessionCookieOptions,
+} from './client-session-cookie';
 import { Throttle } from '@nestjs/throttler';
 import { ClientAuthService } from './client-auth.service';
 import { ClientJwtGuard } from './client-jwt.guard';
@@ -14,6 +21,26 @@ import { ClientJwtGuard } from './client-jwt.guard';
 @Controller('client-auth')
 export class ClientAuthController {
   constructor(private clientAuthService: ClientAuthService) {}
+
+  /**
+   * Pose la session dans un cookie httpOnly (M3-05). Le jeton reste dans la
+   * réponse pendant la transition, mais le portail ne le stocke plus.
+   */
+  private withSessionCookie<T>(res: Response, result: T): T {
+    const token = (result as any)?.token;
+    if (typeof token === 'string' && token) {
+      res.cookie(CLIENT_SESSION_COOKIE, token, clientSessionCookieOptions());
+    }
+    return result;
+  }
+
+  @Post('logout')
+  @HttpCode(200)
+  logout(@Res({ passthrough: true }) res: Response) {
+    const { maxAge: _maxAge, ...options } = clientSessionCookieOptions();
+    res.clearCookie(CLIENT_SESSION_COOKIE, options);
+    return { success: true };
+  }
 
   @Get('me')
   @UseGuards(ClientJwtGuard)
@@ -28,11 +55,11 @@ export class ClientAuthController {
   @Throttle({ short: { ttl: 60000, limit: 5 } })
   async login(
     @Body() body: { email: string; password: string; trustedToken?: string },
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.clientAuthService.login(
-      body.email,
-      body.password,
-      body.trustedToken,
+    return this.withSessionCookie(
+      res,
+      await this.clientAuthService.login(body.email, body.password, body.trustedToken),
     );
   }
 
@@ -56,8 +83,11 @@ export class ClientAuthController {
 
   @Post('verify-mfa')
   @Throttle({ short: { ttl: 60000, limit: 5 } })
-  async verifyMfa(@Body() body: { email: string; code: string }) {
-    return this.clientAuthService.verifyMfa(body.email, body.code);
+  async verifyMfa(
+    @Body() body: { email: string; code: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.withSessionCookie(res, await this.clientAuthService.verifyMfa(body.email, body.code));
   }
 
   @Put('change-password')
@@ -76,8 +106,11 @@ export class ClientAuthController {
 
   @Post('magic-link/validate')
   @Throttle({ short: { ttl: 60000, limit: 5 } })
-  async validateMagicLink(@Body() body: { token: string }) {
-    return this.clientAuthService.validateMagicLink(body.token);
+  async validateMagicLink(
+    @Body() body: { token: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.withSessionCookie(res, await this.clientAuthService.validateMagicLink(body.token));
   }
 
   @Post('magic-link/request')
