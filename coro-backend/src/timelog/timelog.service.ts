@@ -41,6 +41,8 @@ export const DEFAULT_CATEGORIES = [
   { key: 'temps_repris', label: 'Temps repris', order: 23 },
 ];
 
+import { assertPeriodFormat, assertPeriodWritable, periodOf, recordCorrectionIfNeeded } from './time-periods';
+
 @Injectable()
 export class TimelogService {
   constructor(private prisma: PrismaService) {}
@@ -191,8 +193,14 @@ export class TimelogService {
       if (this.sameCreateRequest(existing, data)) return existing;
       throw new ConflictException('La clé de reprise correspond à une autre saisie.');
     }
+    const check = await assertPeriodWritable(this.prisma, organizationId, data.date);
     try {
-      return await this.prisma.timelogEntry.create({ data });
+      const created = await this.prisma.timelogEntry.create({ data });
+      await recordCorrectionIfNeeded(this.prisma as any, check, {
+        organizationId, entryType: 'TIMELOG', entryId: created.id, action: 'CREATE',
+        after: { date: data.date, heures: data.heures, category: data.category }, actorUserId: userId,
+      });
+      return created;
     } catch (error: any) {
       if (error?.code !== 'P2002') throw error;
       const raced = await this.prisma.timelogEntry.findFirst({
@@ -204,6 +212,11 @@ export class TimelogService {
   }
 
   async updateEntry(entryId: string, userId: string, organizationId: string, dto: UpdateTimelogEntryDto) {
+    const current = await this.prisma.timelogEntry.findFirst({
+      where: { id: entryId, userId, organizationId },
+      select: { date: true, heures: true, note: true },
+    });
+    const check = current?.date ? await assertPeriodWritable(this.prisma, organizationId, current.date) : null;
     const data: any = {
       heures: dto.heures,
       lockVersion: { increment: 1 },
@@ -213,15 +226,33 @@ export class TimelogService {
       where: { id: entryId, userId, organizationId, lockVersion: dto.lockVersion },
       data,
     });
-    if (result.count === 1) return { updated: true, lockVersion: dto.lockVersion + 1 };
+    if (result.count === 1) {
+      if (check)
+        await recordCorrectionIfNeeded(this.prisma as any, check, {
+          organizationId, entryType: 'TIMELOG', entryId, action: 'UPDATE',
+          before: current, after: { heures: dto.heures, note: dto.note }, actorUserId: userId,
+        });
+      return { updated: true, lockVersion: dto.lockVersion + 1 };
+    }
     await this.throwMissingOrConflict(entryId, userId, organizationId);
   }
 
   async deleteEntry(entryId: string, userId: string, organizationId: string, lockVersion: number) {
+    const current = await this.prisma.timelogEntry.findFirst({
+      where: { id: entryId, userId, organizationId },
+      select: { date: true, heures: true, category: true },
+    });
+    const check = current?.date ? await assertPeriodWritable(this.prisma, organizationId, current.date) : null;
     const result = await this.prisma.timelogEntry.deleteMany({
       where: { id: entryId, userId, organizationId, lockVersion },
     });
-    if (result.count === 1) return { deleted: true };
+    if (result.count === 1) {
+      if (check)
+        await recordCorrectionIfNeeded(this.prisma as any, check, {
+          organizationId, entryType: 'TIMELOG', entryId, action: 'DELETE', before: current, actorUserId: userId,
+        });
+      return { deleted: true };
+    }
     await this.throwMissingOrConflict(entryId, userId, organizationId);
   }
 
@@ -287,5 +318,50 @@ export class TimelogService {
     });
     if (!existing) throw new NotFoundException('Entrée introuvable');
     throw new ConflictException('Cette entrée a été modifiée dans une autre session. Rechargez les données.');
+  }
+
+  // ── CLÔTURE DES PÉRIODES (M6-02) ─────────────────────────
+
+  async listPeriods(organizationId: string) {
+    const rows = await (this.prisma as any).timePeriodClosure.findMany({
+      where: { organizationId },
+      orderBy: { period: 'desc' },
+      take: 24,
+    });
+    return rows.map((row: any) => ({ ...row, status: row.reopenedAt ? 'REOPENED' : 'CLOSED' }));
+  }
+
+  async closePeriod(organizationId: string, period: string, userId: string) {
+    assertPeriodFormat(period);
+    if (period >= periodOf(new Date()))
+      throw new BadRequestException('Seul un mois terminé peut être fermé.');
+    const db = this.prisma as any;
+    const existing = await db.timePeriodClosure.findUnique({
+      where: { organizationId_period: { organizationId, period } },
+    });
+    if (existing && !existing.reopenedAt) return { ...existing, status: 'CLOSED' };
+    const row = existing
+      ? await db.timePeriodClosure.update({
+          where: { id: existing.id },
+          data: { closedAt: new Date(), closedByUserId: userId, reopenedAt: null, reopenedByUserId: null, closeCount: { increment: 1 } },
+        })
+      : await db.timePeriodClosure.create({ data: { organizationId, period, closedByUserId: userId } });
+    return { ...row, status: 'CLOSED' };
+  }
+
+  async reopenPeriod(organizationId: string, period: string, reason: string, userId: string) {
+    assertPeriodFormat(period);
+    const motive = (reason ?? '').trim();
+    if (motive.length < 10) throw new BadRequestException('Indiquez le motif de la réouverture (10 caractères minimum).');
+    const db = this.prisma as any;
+    const existing = await db.timePeriodClosure.findUnique({
+      where: { organizationId_period: { organizationId, period } },
+    });
+    if (!existing || existing.reopenedAt) throw new BadRequestException('Cette période n’est pas fermée.');
+    const row = await db.timePeriodClosure.update({
+      where: { id: existing.id },
+      data: { reopenedAt: new Date(), reopenedByUserId: userId, reopenReason: motive },
+    });
+    return { ...row, status: 'REOPENED' };
   }
 }

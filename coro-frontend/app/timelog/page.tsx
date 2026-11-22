@@ -1,4 +1,5 @@
 'use client';
+import PeriodClosurePanel from './PeriodClosurePanel';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -538,6 +539,7 @@ export default function TimelogPage() {
       {/* ── VUE ÉQUIPE ── */}
       {activeTab === 'equipe' && (
         <>
+          <PeriodClosurePanel />
           {loadingTeam ? (
             <div className="flex items-center justify-center py-16">
               <p className="text-sm animate-pulse" style={{ color: '#ADB5BD' }}>Chargement...</p>
