@@ -17,19 +17,27 @@ import {
  */
 async function semanticSmoke(config: KnowledgeConfig) {
   if (config.embeddingProvider !== 'bedrock-titan-v2') return { status: 'DISABLED' };
-  config.assertEmbeddingActivation();
+  // Titan est une amélioration avec repli automatique : son échec est
+  // consigné dans la preuve de déploiement mais ne bloque pas la version,
+  // et surtout ne retire pas les identifiants dont CORO AI a besoin.
   const service = new SemanticEmbeddingService(config, new DeterministicEmbeddingService());
-  const question = await service.embedQuery('Où se trouve la sortie de secours la plus proche ?');
-  const related = await service.embedDocument("Évacuation : empruntez l'issue de secours de l'escalier nord.");
-  const unrelated = await service.embedDocument('Recette du gâteau au chocolat de la cafétéria.');
-  if (!question || related.model !== TITAN_EMBEDDING_MODEL || unrelated.model !== TITAN_EMBEDDING_MODEL)
-    throw new Error('KNOWLEDGE_EMBEDDING_SMOKE_FAILED');
-  const near = cosine(question, related.vector);
-  const far = cosine(question, unrelated.vector);
-  if (!(near > far)) throw new Error('KNOWLEDGE_EMBEDDING_SMOKE_FAILED');
-  return { status: 'PASS', model: TITAN_MODEL_ID, region: config.embeddingRegion,
-    dimensions: question.length, syntheticOnly: true,
-    similarityRelated: Number(near.toFixed(3)), similarityUnrelated: Number(far.toFixed(3)) };
+  try {
+    config.assertEmbeddingActivation();
+    const question = await service.embedQuery('Où se trouve la sortie de secours la plus proche ?');
+    const related = await service.embedDocument("Évacuation : empruntez l'issue de secours de l'escalier nord.");
+    const unrelated = await service.embedDocument('Recette du gâteau au chocolat de la cafétéria.');
+    if (!question || related.model !== TITAN_EMBEDDING_MODEL || unrelated.model !== TITAN_EMBEDDING_MODEL)
+      return { status: 'DEGRADED_LOCAL_FALLBACK', model: TITAN_MODEL_ID, region: config.embeddingRegion,
+        failure: service.lastFailure };
+    const near = cosine(question, related.vector);
+    const far = cosine(question, unrelated.vector);
+    return { status: near > far ? 'PASS' : 'DEGRADED_SIMILARITY_CHECK', model: TITAN_MODEL_ID,
+      region: config.embeddingRegion, dimensions: question.length, syntheticOnly: true,
+      similarityRelated: Number(near.toFixed(3)), similarityUnrelated: Number(far.toFixed(3)) };
+  } catch {
+    return { status: 'DEGRADED_LOCAL_FALLBACK', model: TITAN_MODEL_ID,
+      failure: service.lastFailure ?? { errorName: 'ACTIVATION_REFUSED', httpStatusCode: null } };
+  }
 }
 
 async function main() {

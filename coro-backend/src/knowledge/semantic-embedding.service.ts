@@ -49,6 +49,8 @@ export class SemanticEmbeddingService {
   private consecutiveFailures = 0;
   private openUntil = 0;
   private readonly queryCache = new Map<string, number[]>();
+  /** Dernier échec Titan (nom d'erreur AWS et statut HTTP), sans contenu. */
+  lastFailure: { errorName: string; httpStatusCode: number | null } | null = null;
 
   constructor(
     private readonly config: KnowledgeConfig,
@@ -149,6 +151,12 @@ export class SemanticEmbeddingService {
       const failure = error as {
         name?: string;
         $metadata?: { httpStatusCode?: number };
+      };
+      this.lastFailure = {
+        errorName: /^[A-Za-z0-9_]{1,80}$/.test(failure?.name ?? '') ? failure.name! : 'ERROR',
+        httpStatusCode: Number.isInteger(failure?.$metadata?.httpStatusCode)
+          ? failure.$metadata!.httpStatusCode!
+          : null,
       };
       process.stderr.write(
         JSON.stringify({
