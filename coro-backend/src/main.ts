@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { currentRoute, UnknownFieldsAuditPipe } from './common/unknown-fields-audit.pipe';
 import {
   bodyLimitForPath,
   OCCUPANCY_BODY_LIMIT,
@@ -119,7 +120,11 @@ export async function bootstrap() {
   });
 
   // ── Validation globale des payloads ──
+  app.use(currentRoute.middleware);
   app.useGlobalPipes(
+    // M3-08 : repère (ou refuse en mode strict) les champs non déclarés
+    // avant que la validation ne les retire en silence.
+    new UnknownFieldsAuditPipe(),
     new ValidationPipe({
       whitelist: true, // Supprime les champs non déclarés dans les DTOs
       forbidNonWhitelisted: false, // Ne bloque pas (trop strict pour notre API flexible)
