@@ -43,17 +43,17 @@ const INTELLIGENT_ASSISTANT_ENABLED =
 const COPY = {
   "fr-CA": {
     welcome:
-      "Bonjour ! Je suis CORO AI. Je peux vous aider à découvrir CORO, comprendre nos solutions et trouver les informations pertinentes. Comment puis-je vous aider ?",
+      "Bonjour ! Je suis Sophie, l'assistante du site CORO. Je peux vous aider à découvrir CORO, comprendre nos solutions et trouver les informations pertinentes. Comment puis-je vous aider ?",
     suggestions: [
       "Qu'est-ce que CORO ?",
       "Comment CORO Knowledge fonctionne-t-il ?",
       "Quels documents sont disponibles ?",
       "Comment CORO protège-t-il les personnes ?",
     ],
-    open: "Ouvrir CORO AI",
-    close: "Fermer CORO AI",
-    title: "CORO AI",
-    online: "Assistant documentaire public",
+    open: "Ouvrir Sophie, l’assistante CORO",
+    close: "Fermer Sophie",
+    title: "Sophie",
+    online: "Assistante du site CORO",
     loading: "Recherche dans les sources CORO…",
     placeholder: "Posez une question sur CORO…",
     send: "Envoyer",
@@ -77,17 +77,17 @@ const COPY = {
   },
   "en-CA": {
     welcome:
-      "Hello! I'm CORO AI. I can help you explore CORO, understand our solutions and find relevant information. How can I help you?",
+      "Hello! I'm Sophie, the CORO website assistant. I can help you explore CORO, understand our solutions and find relevant information. How can I help you?",
     suggestions: [
       "What is CORO?",
       "How does CORO Knowledge work?",
       "Which documents are available?",
       "How does CORO help protect people?",
     ],
-    open: "Open CORO AI",
-    close: "Close CORO AI",
-    title: "CORO AI",
-    online: "Public document assistant",
+    open: "Open Sophie, the CORO assistant",
+    close: "Close Sophie",
+    title: "Sophie",
+    online: "CORO website assistant",
     loading: "Searching CORO sources…",
     placeholder: "Ask a question about CORO…",
     send: "Send",

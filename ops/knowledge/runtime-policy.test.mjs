@@ -24,7 +24,7 @@ test('unknown fields, implicit booleans and unpinned images fail closed', () => 
 });
 test('activation pins Canadian model, 900 seconds and readonly credential mounts', () => {
   const expected = overlay(enabled, image);
-  assert.deepEqual(verifyRuntime(runtime(expected), expected), { bedrock: 'PASS', webPublicBedrock: 'DISABLED', semanticEmbeddings: 'DISABLED', localOcr: 'ENABLED', sessionSeconds: 900 });
+  assert.deepEqual(verifyRuntime(runtime(expected), expected), { bedrock: 'PASS', webPublicBedrock: 'DISABLED', semanticEmbeddings: 'DISABLED', localSemanticEmbeddings: 'DISABLED', localOcr: 'ENABLED', sessionSeconds: 900 });
   for (const mutation of [r => r.Config.Env.push('CORO_AI_BEDROCK_REGION=us-east-1'), r => r.RestartCount++,
     r => r.Mounts[0].RW = true, r => r.Config.Image = 'wrong']) {
     const actual = runtime(expected); mutation(actual); assert.throws(() => verifyRuntime(actual, expected));
@@ -41,7 +41,7 @@ test('WEB_PUBLIC activation is independent and pins the Canadian profile', () =>
   assert.equal(expected.services.backend.environment.WEB_AI_PROVIDER, 'bedrock');
   assert.equal(expected.services.backend.environment.WEB_AI_BEDROCK_MODEL_ID, 'ca.amazon.nova-lite-v1:0');
   assert.deepEqual(verifyRuntime(runtime(expected), expected), {
-    bedrock: 'DISABLED', webPublicBedrock: 'PASS', semanticEmbeddings: 'DISABLED', localOcr: 'ENABLED', sessionSeconds: 900,
+    bedrock: 'DISABLED', webPublicBedrock: 'PASS', semanticEmbeddings: 'DISABLED', localSemanticEmbeddings: 'DISABLED', localOcr: 'ENABLED', sessionSeconds: 900,
   });
 });
 test('semantic embeddings activate alone, pinned to Titan in ca-central-1', () => {
@@ -52,7 +52,7 @@ test('semantic embeddings activate alone, pinned to Titan in ca-central-1', () =
   assert.equal(env.CORO_KNOWLEDGE_EMBEDDING_REGION, 'ca-central-1');
   assert.ok(expected.services.backend.volumes.length === 2);
   assert.deepEqual(verifyRuntime(runtime(expected), expected), {
-    bedrock: 'DISABLED', webPublicBedrock: 'DISABLED', semanticEmbeddings: 'PASS', localOcr: 'ENABLED', sessionSeconds: 900,
+    bedrock: 'DISABLED', webPublicBedrock: 'DISABLED', semanticEmbeddings: 'PASS', localSemanticEmbeddings: 'DISABLED', localOcr: 'ENABLED', sessionSeconds: 900,
   });
   assert.throws(() => validatePolicy({...enabled, semanticEmbeddingsEnabled: 'yes'}));
 });
@@ -64,9 +64,17 @@ test('policy is private, root-owned and refuses symlinks', { skip: process.getui
   const dir = mkdtempSync(join(tmpdir(), 'coro-policy-')); const path = join(dir, 'policy.json');
   try {
     chmodSync(dir, 0o700); writeFileSync(path, JSON.stringify(enabled), {mode:0o600});
-    assert.deepEqual(loadPolicy(path), {...enabled, semanticEmbeddingsEnabled: false});
+    assert.deepEqual(loadPolicy(path), {...enabled, semanticEmbeddingsEnabled: false, localSemanticEmbeddingsEnabled: false});
     chmodSync(path, 0o644); assert.throws(() => loadPolicy(path)); chmodSync(path, 0o600);
     symlinkSync(path, join(dir,'link.json')); assert.throws(() => loadPolicy(join(dir,'link.json')));
     chmodSync(dir,0o755); assert.throws(() => loadPolicy(path));
   } finally { rmSync(dir,{recursive:true,force:true}); }
+});
+
+test('local embeddings need no AWS credentials and exclude Titan', () => {
+  const expected = overlay({...enabled, bedrockEnabled: false, localSemanticEmbeddingsEnabled: true}, image);
+  const env = expected.services.backend.environment;
+  assert.equal(env.CORO_KNOWLEDGE_EMBEDDING_PROVIDER, 'local-e5-small');
+  assert.equal(env.AWS_CONFIG_FILE, undefined);
+  assert.throws(() => validatePolicy({...enabled, semanticEmbeddingsEnabled: true, localSemanticEmbeddingsEnabled: true}));
 });

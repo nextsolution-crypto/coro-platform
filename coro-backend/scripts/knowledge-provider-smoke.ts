@@ -7,7 +7,6 @@ import { DeterministicEmbeddingService } from '../src/knowledge/deterministic-em
 import {
   cosine,
   SemanticEmbeddingService,
-  TITAN_EMBEDDING_MODEL,
   TITAN_MODEL_ID,
 } from '../src/knowledge/semantic-embedding.service';
 
@@ -16,26 +15,27 @@ import {
  * ca-central-1 et qu'il rapproche bien deux textes de même sens.
  */
 async function semanticSmoke(config: KnowledgeConfig) {
-  if (config.embeddingProvider !== 'bedrock-titan-v2') return { status: 'DISABLED' };
-  // Titan est une amélioration avec repli automatique : son échec est
-  // consigné dans la preuve de déploiement mais ne bloque pas la version,
-  // et surtout ne retire pas les identifiants dont CORO AI a besoin.
+  if (config.embeddingProvider === 'deterministic') return { status: 'DISABLED' };
+  // Amélioration avec repli automatique : un échec est consigné dans la
+  // preuve de déploiement mais ne bloque pas la version, et ne retire pas
+  // les identifiants dont CORO AI a besoin.
   const service = new SemanticEmbeddingService(config, new DeterministicEmbeddingService());
+  const model = config.embeddingProvider === 'local-e5-small' ? 'Xenova/multilingual-e5-small' : TITAN_MODEL_ID;
   try {
-    config.assertEmbeddingActivation();
+    if (config.embeddingProvider === 'bedrock-titan-v2') config.assertEmbeddingActivation();
     const question = await service.embedQuery('Où se trouve la sortie de secours la plus proche ?');
     const related = await service.embedDocument("Évacuation : empruntez l'issue de secours de l'escalier nord.");
     const unrelated = await service.embedDocument('Recette du gâteau au chocolat de la cafétéria.');
-    if (!question || related.model !== TITAN_EMBEDDING_MODEL || unrelated.model !== TITAN_EMBEDDING_MODEL)
-      return { status: 'DEGRADED_LOCAL_FALLBACK', model: TITAN_MODEL_ID, region: config.embeddingRegion,
-        failure: service.lastFailure };
+    if (!question || related.model !== service.targetModel || unrelated.model !== service.targetModel)
+      return { status: 'DEGRADED_LOCAL_FALLBACK', model, failure: service.lastFailure };
     const near = cosine(question, related.vector);
     const far = cosine(question, unrelated.vector);
-    return { status: near > far ? 'PASS' : 'DEGRADED_SIMILARITY_CHECK', model: TITAN_MODEL_ID,
-      region: config.embeddingRegion, dimensions: question.length, syntheticOnly: true,
+    await service.engine.unload();
+    return { status: near > far ? 'PASS' : 'DEGRADED_SIMILARITY_CHECK', model,
+      dimensions: question.length, syntheticOnly: true,
       similarityRelated: Number(near.toFixed(3)), similarityUnrelated: Number(far.toFixed(3)) };
   } catch {
-    return { status: 'DEGRADED_LOCAL_FALLBACK', model: TITAN_MODEL_ID,
+    return { status: 'DEGRADED_LOCAL_FALLBACK', model,
       failure: service.lastFailure ?? { errorName: 'ACTIVATION_REFUSED', httpStatusCode: null } };
   }
 }

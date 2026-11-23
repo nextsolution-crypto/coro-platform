@@ -63,7 +63,7 @@ export class KnowledgeConfig {
   readonly embeddingProvider = this.enumValue(
     'CORO_KNOWLEDGE_EMBEDDING_PROVIDER',
     'deterministic',
-    ['deterministic', 'bedrock-titan-v2'] as const,
+    ['deterministic', 'bedrock-titan-v2', 'local-e5-small'] as const,
   );
   readonly embeddingRegion =
     process.env.CORO_KNOWLEDGE_EMBEDDING_REGION ?? 'ca-central-1';
@@ -73,6 +73,14 @@ export class KnowledgeConfig {
     1000,
     30_000,
   );
+  /**
+   * Échelle des cosinus e5 (modèle local) : en dessous du plancher, deux
+   * textes sont jugés sans lien ; plancher + amplitude = lien maximal.
+   */
+  readonly localSimilarityFloor =
+    integer('CORO_KNOWLEDGE_LOCAL_SIMILARITY_FLOOR_PERMILLE', 780, 500, 950) / 1000;
+  readonly localSimilaritySpan =
+    integer('CORO_KNOWLEDGE_LOCAL_SIMILARITY_SPAN_PERMILLE', 140, 50, 400) / 1000;
   /** Extraits ré-indexés par passe du rattrapage (0 = rattrapage arrêté). */
   readonly embeddingBackfillBatch = integer(
     'CORO_KNOWLEDGE_EMBEDDING_BACKFILL_BATCH',

@@ -6,11 +6,7 @@ import { KnowledgeAuthorizationService } from './knowledge-authorization.service
 import { KnowledgeConfig } from './knowledge.config';
 import { KnowledgeActor, KnowledgeSearchHit } from './knowledge.types';
 import { LibraryKnowledgeRetrievalService } from './library-knowledge-retrieval.service';
-import {
-  cosine,
-  SemanticEmbeddingService,
-  TITAN_EMBEDDING_MODEL,
-} from './semantic-embedding.service';
+import { cosine, SemanticEmbeddingService } from './semantic-embedding.service';
 
 /** Extraits évalués au plus par question. */
 const CANDIDATE_LIMIT = 500;
@@ -128,10 +124,10 @@ export class KnowledgeRetrievalService {
         };
         const titan =
           titanQuery &&
-          stored.embeddingModel === TITAN_EMBEDDING_MODEL &&
+          stored.embeddingModel === this.semantic?.targetModel &&
           stored.embedding?.length === titanQuery.length;
         const semantic = titan
-          ? titanSemanticScore(cosine(titanQuery, stored.embedding!))
+          ? this.semantic!.semanticScore(cosine(titanQuery, stored.embedding!))
           : this.embeddings
               .embed(chunk.text)
               .reduce((sum, value, index) => sum + value * queryVector[index], 0);
@@ -230,7 +226,7 @@ export class KnowledgeRetrievalService {
     const rows = await this.prisma.projectFileKnowledgeChunk.findMany({
       where: {
         organizationId,
-        embeddingModel: TITAN_EMBEDDING_MODEL,
+        embeddingModel: this.semantic?.targetModel,
         id: { notIn: exclude },
       } as any,
       select: { id: true },

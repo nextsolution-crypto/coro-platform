@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { credentialReport, credentialsReady, withSemantic, withWebPublic } from './policy-maintenance.mjs';
+import { credentialReport, credentialsReady, withLocalSemantic, withSemantic, withWebPublic } from './policy-maintenance.mjs';
 
 const base = { schemaVersion: 1, bedrockEnabled: false, webPublicBedrockEnabled: false, localOcrEnabled: true };
 
 test('turning semantic embeddings on keeps every other switch', () => {
-  assert.deepEqual(withSemantic(base, true), { ...base, semanticEmbeddingsEnabled: true });
-  assert.deepEqual(withSemantic({ ...base, semanticEmbeddingsEnabled: true }, false), { ...base, semanticEmbeddingsEnabled: false });
+  assert.deepEqual(withSemantic(base, true), { ...base, semanticEmbeddingsEnabled: true, localSemanticEmbeddingsEnabled: false });
+  assert.deepEqual(withSemantic({ ...base, semanticEmbeddingsEnabled: true }, false), { ...base, semanticEmbeddingsEnabled: false, localSemanticEmbeddingsEnabled: false });
   assert.throws(() => withSemantic(base, 'on'));
 });
 
@@ -32,6 +32,11 @@ test('credential report reveals presence only, never values', () => {
 
 test('Sophie on Bedrock keeps every other switch', () => {
   assert.deepEqual(withWebPublic({ ...base, bedrockEnabled: true }, true),
-    { ...base, bedrockEnabled: true, webPublicBedrockEnabled: true, semanticEmbeddingsEnabled: false });
+    { ...base, bedrockEnabled: true, webPublicBedrockEnabled: true, semanticEmbeddingsEnabled: false, localSemanticEmbeddingsEnabled: false });
   assert.throws(() => withWebPublic(base, 1));
+});
+
+test('local embeddings replace Titan', () => {
+  assert.deepEqual(withLocalSemantic({ ...base, semanticEmbeddingsEnabled: true }, true),
+    { ...base, semanticEmbeddingsEnabled: false, localSemanticEmbeddingsEnabled: true });
 });
