@@ -284,6 +284,16 @@ export const PUBLIC_KNOWLEDGE_CATALOG: PublicKnowledgeSeed[] = [
     'FAQ',
     5,
   ),
+  ...page(
+    'faq-available-plans',
+    '/gestion-documentaire',
+    'Quels plans d’urgence CORO produit-il aujourd’hui?',
+    "Aujourd’hui, CORO produit trois plans : le plan de mesures d’urgence (PMU), le plan de sécurité incendie (PSI) et le plan de continuité des activités (PCA), avec procédures intégrées, approbation et export PDF bilingue. Le site présente six types de plans : le plan de gestion de crise (PGC), le plan de reprise des activités (PRA) et le plan d’urgence environnementale (PUE) ont chacun un guide complet, mais leur production dans CORO est prévue en phase 2 et n’est pas disponible aujourd’hui.",
+    'Which emergency plans does CORO produce today?',
+    'Today, CORO produces three plans: the emergency measures plan (PMU), the fire safety plan (PSI) and the business continuity plan (PCA), with integrated procedures, approval and bilingual PDF export. The website presents six plan types: the crisis management plan (PGC), disaster recovery plan (PRA) and environmental emergency plan (PUE) each have a complete guide, but their production in CORO is planned for phase 2 and is not available today.',
+    'FAQ',
+    3,
+  ),
   // Toutes les pages publiées du site, extraites automatiquement (FR et EN).
   ...SITE_CORPUS.map(
     (entry): PublicKnowledgeSeed => ({
