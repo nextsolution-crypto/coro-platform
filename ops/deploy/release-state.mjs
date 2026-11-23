@@ -62,15 +62,28 @@ function persist(root, state) {
   return state;
 }
 
-export function readState(root, releaseId) {
+const pause = (milliseconds) =>
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
+
+/**
+ * L'état et son empreinte sont écrits l'un après l'autre (chacun de façon
+ * atomique). Un lecteur qui passe entre les deux écritures voit une
+ * empreinte périmée : on relit donc brièvement avant de conclure à une
+ * corruption, qui reste détectée si l'écart persiste.
+ */
+export function readState(root, releaseId, { attempts = 20, delayMs = 50 } = {}) {
   const files = statePaths(root, releaseId);
-  const body = fs.readFileSync(files.state);
-  const recorded = fs
-    .readFileSync(files.checksum, "utf8")
-    .trim()
-    .split(/\s+/)[0];
-  if (!SHA64.test(recorded) || checksum(body) !== recorded)
-    throw new Error("STATE_CHECKSUM_INVALID");
+  let body;
+  for (let attempt = 1; ; attempt += 1) {
+    body = fs.readFileSync(files.state);
+    const recorded = fs
+      .readFileSync(files.checksum, "utf8")
+      .trim()
+      .split(/\s+/)[0];
+    if (SHA64.test(recorded) && checksum(body) === recorded) break;
+    if (attempt >= attempts) throw new Error("STATE_CHECKSUM_INVALID");
+    pause(delayMs);
+  }
   const state = JSON.parse(body);
   if (state.releaseId !== releaseId || !RELEASE_STATES.includes(state.state))
     throw new Error("STATE_INVALID");

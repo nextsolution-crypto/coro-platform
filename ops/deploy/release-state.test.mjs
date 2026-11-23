@@ -293,3 +293,23 @@ test("historical transition evidence is append-only across rollback", () => {
     4,
   );
 });
+
+test("a reader between the state and checksum writes waits instead of failing", async () => {
+  const root = fixture();
+  prepareState(root, input);
+  const stateFile = path.join(root, `${releaseId}.state.json`);
+  const checksumFile = path.join(root, `${releaseId}.state.sha256`);
+  const goodChecksum = fs.readFileSync(checksumFile, "utf8");
+  // Simule l'instant entre les deux écritures : nouveau corps, ancienne empreinte.
+  const body = fs.readFileSync(stateFile, "utf8").replace("\n}", ',\n  "note": "x"\n}');
+  fs.writeFileSync(stateFile, body);
+  const { checksum } = await import("./release-state.mjs");
+  const { Worker } = await import("node:worker_threads");
+  const late = new Worker(
+    `const fs=require("fs");setTimeout(()=>fs.writeFileSync(${JSON.stringify(checksumFile)},${JSON.stringify(`${checksum(Buffer.from(body))}  ${path.basename(stateFile)}\n`)}),120);`,
+    { eval: true },
+  );
+  assert.equal(readState(root, releaseId, { attempts: 40, delayMs: 25 }).releaseId, releaseId);
+  await new Promise((resolve) => late.on("exit", resolve));
+  assert.notEqual(fs.readFileSync(checksumFile, "utf8"), goodChecksum);
+});
