@@ -47,6 +47,7 @@ const copy = {
     panLabel: 'Capture d’écran, défilable horizontalement', onScreen: 'Sur cet écran',
     legend: ['Point de rassemblement', 'Accès', 'Protection incendie', 'Matières dangereuses', 'Coupures d’utilités', 'Personnes nécessitant une assistance'] },
   s6: { n: '06', label: 'Clôturer et rapporter', title: 'Le rapport garde la trace de ce qui s’est passé.', text: 'Une fois l’incident résolu, un rapport PDF se génère depuis son dossier. Il reprend l’identification, la chronologie horodatée, les occupants au déclenchement, l’équipe mobilisée, le déroulement de la procédure et le retour d’expérience.' },
+  display: { label: 'CORO Display — les écrans du bâtiment', title: 'Les écrans passent en mode urgence avec l’incident.', text: 'En temps normal, les écrans CORO Display affichent le plan d’évacuation approuvé du bâtiment. Dès qu’un incident réel ou un exercice est déclenché, ils basculent seuls en mode urgence, sans manipulation sur place.', items: ['Bascule automatique au déclenchement d’un incident ou d’un exercice', 'Chaque écran confirme la réception, et la confirmation est inscrite au journal de l’incident', 'Fin d’un exercice : retour automatique à l’affichage normal', 'Fin d’une urgence réelle : levée confirmée par deux personnes', 'Écran sans signal depuis 10 minutes : le responsable du bâtiment est averti'] },
   s7: { n: '07', label: 'Apprendre et corriger', title: 'Le rapport dit ce qui s’est passé. Le retour d’expérience dit ce qui change.',
     text: 'Le retour d’expérience est un formulaire du dossier de l’incident. Les actions correctives peuvent ensuite être suivies : responsable, échéance et statut.',
     rex: ['Ce qui a bien fonctionné', 'Points à améliorer', 'Recommandations', 'Actions correctives proposées'], rexLabel: 'Les quatre rubriques du retour d’expérience' },
@@ -105,6 +106,7 @@ const english = {
     cartouche: ['CORO Incident · Responder information', 'Information for responders', 'French interface shown'] as const,
     panLabel: 'Screenshot, horizontally scrollable', onScreen: 'On this screen', legend: ['Assembly point', 'Access', 'Fire protection', 'Hazardous materials', 'Utility shut-offs', 'People requiring assistance'] },
   s6: { n: '06', label: 'Close and report', title: 'Keep a record of what happened.', text: 'After resolution, a PDF report can be generated from the incident. It includes identification, the timestamped timeline, occupants at activation, the team, procedure progress and lessons learned.' },
+  display: { label: 'CORO Display — building screens', title: 'Screens switch to emergency mode with the incident.', text: 'In normal operation, CORO Display screens show the building’s approved evacuation plan. As soon as a real incident or an exercise starts, they switch to emergency mode on their own, with no action needed on site.', items: ['Automatic switch when an incident or exercise starts', 'Each screen confirms receipt, and the confirmation is written to the incident log', 'End of an exercise: automatic return to normal display', 'End of a real emergency: release confirmed by two people', 'Screen silent for 10 minutes: the building manager is alerted'] },
   s7: { n: '07', label: 'Learn and improve', title: 'The report records events. Lessons learned inform change.', text: 'The incident record includes a lessons-learned form. Corrective actions can then be tracked with an owner, due date and status.', rex: ['What worked well', 'Areas for improvement', 'Recommendations', 'Proposed corrective actions'], rexLabel: 'Four lessons-learned sections' },
   extra: [
     { title: 'Exercise mode', text: 'Exercise messages are marked [EXERCISE]. Occupants are not notified, but the emergency team and responsible staff may receive communications through enabled channels. Plan exercises accordingly.' },
@@ -197,6 +199,12 @@ export default async function Page({ searchParams }: P) {
         <SplitContent ratio="5-7" align="start"
           text={<EditorialBlock id="incident-s6-title" label={`${t.s6.n} — ${t.s6.label}`} heading={t.s6.title}><p>{t.s6.text}</p></EditorialBlock>}
           media={<p className={styles.statement}>{ui.report}</p>} />
+      </PageSection>
+
+      <PageSection tone="navy" labelledBy="incident-display-title">
+        <SplitContent ratio="5-7" align="start"
+          text={<EditorialBlock id="incident-display-title" label={t.display.label} heading={t.display.title}><p>{t.display.text}</p></EditorialBlock>}
+          media={<ul className={styles.plain}>{t.display.items.map((x) => <li key={x}>{x}</li>)}</ul>} />
       </PageSection>
 
       <PageSection tone="soft" labelledBy="incident-s7-title">
