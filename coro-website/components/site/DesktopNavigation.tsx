@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { Locale } from '@/lib/site/locale';
 import { visibleNavigation } from '@/lib/site/navigation';
+import { NavLabel } from './NavLabel';
 import styles from './SiteShell.module.css';
 
 type OpenState = { group: string; by: 'pointer' | 'click' } | null;
@@ -57,7 +58,7 @@ export function DesktopNavigation({ locale }: { locale: Locale }) {
               {group.label[locale]}<span aria-hidden="true">⌄</span>
             </button>
             <div className={styles.megaMenu} id={menuId}>
-              {group.items.map((entry) => <Link key={entry.id} href={entry.href!} onClick={() => setOpen(null)}>{entry.label[locale]}</Link>)}
+              {group.items.map((entry) => <Link key={entry.href} href={entry.href!} onClick={() => setOpen(null)}><NavLabel text={entry.label[locale]} /></Link>)}
             </div>
           </div>
         );

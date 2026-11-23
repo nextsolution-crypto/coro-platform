@@ -17,14 +17,15 @@ const item = (id: string, fr: string, en: string, anchor?: string): NavigationIt
  */
 export const navigationGroups: readonly NavigationGroup[] = [
   { id: 'prepare', label: { fr: 'Se préparer', en: 'Prepare' }, items: [
-    item('resilience', 'Indice CORO et résilience', 'CORO Index and resilience'),
+    item('resilience', 'Résilience opérationnelle (Indice CORO)', 'Operational resilience (CORO Index)'),
     item('guides', 'Plans d’urgence', 'Emergency plans'),
     item('exercises', 'Exercices', 'Exercises'),
   ] },
   { id: 'respond', label: { fr: 'Réagir', en: 'Respond' }, items: [
-    item('sentinelle', 'Registre et évacuation (Sentinelle)', 'Occupancy and evacuation (Sentinelle)'),
-    item('incident', 'Incident et écrans d’urgence', 'Incidents and emergency screens'),
-    item('sentinelle-population', 'Alerte à la population', 'Public alerts'),
+    item('sentinelle', 'Registre et évacuation (CORO Sentinelle)', 'Occupancy and evacuation (CORO Sentinelle)'),
+    item('incident', 'Incident (CORO Incident)', 'Incidents (CORO Incident)'),
+    item('incident', 'Écrans d’urgence (CORO Display)', 'Emergency screens (CORO Display)', 'coro-display'),
+    item('sentinelle-population', 'Alerte à la population (CORO Sentinelle Population)', 'Public alerts (CORO Sentinelle Population)'),
     item('qr-intervention', 'QR Intervention', 'QR Response'),
   ] },
   { id: 'prove', label: { fr: 'Suivre et prouver', en: 'Track and prove' }, items: [
@@ -33,8 +34,8 @@ export const navigationGroups: readonly NavigationGroup[] = [
     item('network', 'Network', 'Network'),
   ] },
   { id: 'advisors', label: { fr: 'Firmes-conseils', en: 'Consulting firms' }, items: [
-    item('documents', 'Gestion documentaire', 'Document management'), item('projects', 'Projets et mandats', 'Projects and mandates'),
-    item('performance', 'Performance', 'Performance'), item('client', 'Portail client', 'Client portal'),
+    item('documents', 'Gestion documentaire (CORO Documents)', 'Document management (CORO Documents)'), item('projects', 'Projets et mandats (CORO Projects)', 'Projects and mandates (CORO Projects)'),
+    item('performance', 'Performance (CORO Performance)', 'Performance (CORO Performance)'), item('client', 'Portail client (CORO Client)', 'Client portal (CORO Client)'),
   ] },
   { id: 'resources', label: { fr: 'Ressources', en: 'Resources' }, items: [
     item('resources', 'Centre de ressources', 'Resource centre'), item('blog', 'Blogue', 'Blog'),

@@ -10,3 +10,4 @@
 /* LAB-08 (LAB08-004): desktop header labels never wrap. Between 68rem and 75rem the paddings tighten so the longest French labels fit on one line. */
 @media(min-width:68rem){.dropdown>button,.directLink,.login,.demo,.language{white-space:nowrap}}
 @media(min-width:68rem) and (max-width:74.99rem){.headerInner{gap:.5rem}.desktopNav{gap:0}.dropdown>button,.directLink{padding-inline:.5rem}.headerActions{gap:.2rem}.login,.demo{padding-inline:.5rem}}
+.navLabel{display:grid;gap:.1rem}.navProduct{font-size:.75rem;font-weight:700;letter-spacing:.02em;color:var(--coro-slate-500,#6c757d)}
