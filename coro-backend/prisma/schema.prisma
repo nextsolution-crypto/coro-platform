@@ -5289,6 +5289,10 @@ model ProjectFile {
   status                           String                          @default("en_revision") // 'en_revision', 'valide'
   lifecycleState                   ProjectFileLifecycleState?
   sha256                           String?
+  /// Quarantaine antivirus (ClamAV à la demande) : null = déposé avant la
+  /// quarantaine ou analysé au dépôt ; PENDING, CLEAN, INFECTED, FAILED.
+  malwareScanStatus                String?
+  malwareScannedAt                 DateTime?
   reviewRequestedAt                DateTime?
   reviewRequestedById              String?
   approvedAt                       DateTime?
@@ -5327,6 +5331,7 @@ model ProjectFile {
   @@index([buildingId, lifecycleState])
   @@index([expiresAt])
   @@index([organizationId, parentId, effectiveAt])
+  @@index([malwareScanStatus])
 }
 
 enum ProjectFileReminderRecipientKind {

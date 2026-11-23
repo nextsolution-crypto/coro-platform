@@ -14,8 +14,10 @@ log() { printf 'coro-clamav-on-demand %s\n' "$*"; }
 
 running() { [[ "$(docker inspect --format '{{.State.Running}}' coro_clamav 2>/dev/null || true)" == true ]]; }
 
-# Compte direct en base (léger : pas de processus Node chaque minute).
-pending="$(docker exec coro_postgres sh -ceu 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT count(*) FROM \"IncidentReportAttachment\" WHERE \"scanStatus\" = '"'"'PENDING'"'"' AND \"revokedAt\" IS NULL"' 2>/dev/null || true)"
+# Compte direct en base (léger : pas de processus Node chaque minute) :
+# pièces jointes de rapports + fichiers de projet / documents de bâtiment.
+PENDING_SQL='SELECT (SELECT count(*) FROM "IncidentReportAttachment" WHERE "scanStatus" = '"'"'PENDING'"'"' AND "revokedAt" IS NULL) + (SELECT count(*) FROM "ProjectFile" WHERE "malwareScanStatus" = '"'"'PENDING'"'"')'
+pending="$(printf '%s;\n' "$PENDING_SQL" | docker exec -i coro_postgres sh -ceu 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At' 2>/dev/null || true)"
 [[ "$pending" =~ ^[0-9]+$ ]] || { log "demand=UNAVAILABLE"; exit 0; }
 
 now="$(date +%s)"

@@ -9,6 +9,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { IncidentReportAttachmentScanner } from '../incident-reports/incident-report-attachment-scanner.service';
+import { incidentReportClamavOnDemand } from '../incident-reports/incident-reports.config';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -18,6 +19,24 @@ import { Prisma, ProjectFileLifecycleState } from '@prisma/client';
 import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 
 const PRIVATE_PROJECT_FILE_URL = 'private:project-file';
+
+/**
+ * Un fichier en quarantaine antivirus n'est ni lisible ni approuvable :
+ * PENDING (analyse à venir), INFECTED (logiciel malveillant), FAILED
+ * (analyse impossible dans les délais). null ou CLEAN : libre.
+ */
+export function assertMalwareScanReleased(status: string | null | undefined) {
+  if (!status || status === 'CLEAN') return;
+  if (status === 'PENDING')
+    throw new ConflictException(
+      "Fichier en cours d'analyse antivirus. Réessayez dans quelques minutes.",
+    );
+  throw new ForbiddenException(
+    status === 'INFECTED'
+      ? 'Fichier bloqué : un logiciel malveillant a été détecté.'
+      : "Fichier bloqué : l'analyse antivirus n'a pas pu être effectuée.",
+  );
+}
 const MIN_REASON_LENGTH = 8;
 
 @Injectable()
@@ -37,12 +56,26 @@ export class ProjectFilesService {
    * indisponible : refus si PROJECT_FILE_MALWARE_SCAN=REQUIRED, sinon
    * dépôt accepté et journalisé (liste de types déjà appliquée).
    */
-  private async scanForMalware(bytes: Buffer) {
+  private async scanForMalware(bytes: Buffer): Promise<'CLEAN' | 'PENDING' | null> {
+    // ClamAV à la demande : le service est le plus souvent arrêté. Le fichier
+    // est alors mis en quarantaine (PENDING) au lieu d'être accepté sans
+    // analyse ; le minuteur du serveur démarre ClamAV et l'analyse suit.
+    if (this.malwareScanner && incidentReportClamavOnDemand()) {
+      let verdict: 'CLEAN' | 'INFECTED';
+      try {
+        verdict = await this.malwareScanner.scan(bytes);
+      } catch {
+        return 'PENDING';
+      }
+      if (verdict === 'INFECTED')
+        throw new BadRequestException('Fichier refusé : un logiciel malveillant a été détecté.');
+      return 'CLEAN';
+    }
     if (!this.malwareScanner || !process.env.INCIDENT_REPORT_CLAMAV_HOST?.trim()) {
       if (process.env.PROJECT_FILE_MALWARE_SCAN === 'REQUIRED') {
         throw new ServiceUnavailableException("L'analyse antivirus est indisponible. Réessayez plus tard.");
       }
-      return;
+      return null;
     }
     let verdict: 'CLEAN' | 'INFECTED';
     try {
@@ -52,11 +85,12 @@ export class ProjectFilesService {
         throw new ServiceUnavailableException("L'analyse antivirus est indisponible. Réessayez plus tard.");
       }
       this.logger.warn(`Antivirus indisponible, dépôt accepté sans analyse : ${error instanceof Error ? error.message : 'erreur'}`);
-      return;
+      return null;
     }
     if (verdict === 'INFECTED') {
       throw new BadRequestException('Fichier refusé : un logiciel malveillant a été détecté.');
     }
+    return 'CLEAN';
   }
 
   async uploadFile(data: {
@@ -116,7 +150,7 @@ export class ProjectFilesService {
     // antivirus si le service d'analyse est configuré.
     const detected = detectAllowedFileType(data.name, data.buffer);
     data = { ...data, mimeType: detected.mimeType };
-    await this.scanForMalware(data.buffer);
+    const malwareScanStatus = await this.scanForMalware(data.buffer);
 
     // Déterminer la version
     let version = 1;
@@ -188,6 +222,8 @@ export class ProjectFilesService {
           status: 'en_revision',
           lifecycleState: 'DRAFT',
           sha256: digest,
+          malwareScanStatus,
+          malwareScannedAt: malwareScanStatus === 'CLEAN' ? new Date() : null,
         },
         include: {
           uploadedBy: { select: { firstName: true, lastName: true } },
@@ -289,6 +325,7 @@ export class ProjectFilesService {
       if (existingEvent) return this.safeFile(file);
       if (file.lifecycleState !== 'REVIEW')
         throw new ConflictException('Le fichier doit être en révision');
+      assertMalwareScanReleased(file.malwareScanStatus);
 
       const rootId = file.parentId ?? file.id;
       // Serialize approvals per tenant and documentary chain. The statement is
@@ -811,6 +848,7 @@ export class ProjectFilesService {
       },
     });
     if (!file) throw new NotFoundException('Fichier prive introuvable');
+    assertMalwareScanReleased(file.malwareScanStatus);
     if (file.lifecycleState === 'REVOKED')
       throw new NotFoundException('Fichier prive introuvable');
     if (
@@ -1079,6 +1117,7 @@ export class ProjectFilesService {
       ...safe,
       effectiveLifecycleState,
       isDownloadable:
+        (!safe.malwareScanStatus || safe.malwareScanStatus === 'CLEAN') &&
         !['REVOKED', 'EXPIRED', 'NOT_EFFECTIVE'].includes(
           effectiveLifecycleState,
         ) &&
