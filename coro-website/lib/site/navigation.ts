@@ -29,13 +29,14 @@ export const navigationGroups: readonly NavigationGroup[] = [
     item('qr-intervention', 'QR Intervention', 'QR Response'),
   ] },
   { id: 'prove', label: { fr: 'Suivre et prouver', en: 'Track and prove' }, items: [
+    item('client', 'Portail client (CORO Client)', 'Client portal (CORO Client)'),
     item('sentinelle', 'Rapports de sécurité (CORO Report)', 'Security reports (CORO Report)', 'coro-report'),
     item('knowledge', 'CORO Knowledge', 'CORO Knowledge'), item('ai', 'CORO AI', 'CORO AI'),
     item('network', 'Network', 'Network'),
   ] },
   { id: 'advisors', label: { fr: 'Firmes-conseils', en: 'Consulting firms' }, items: [
     item('documents', 'Gestion documentaire (CORO Documents)', 'Document management (CORO Documents)'), item('projects', 'Projets et mandats (CORO Projects)', 'Projects and mandates (CORO Projects)'),
-    item('performance', 'Performance (CORO Performance)', 'Performance (CORO Performance)'), item('client', 'Portail client (CORO Client)', 'Client portal (CORO Client)'),
+    item('performance', 'Performance (CORO Performance)', 'Performance (CORO Performance)'),
   ] },
   { id: 'resources', label: { fr: 'Ressources', en: 'Resources' }, items: [
     item('resources', 'Centre de ressources', 'Resource centre'), item('blog', 'Blogue', 'Blog'),
