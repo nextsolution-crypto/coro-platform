@@ -24,7 +24,7 @@ export const pageContexts: Readonly<Record<string, PageContext>> = {
   '/gestion-documentaire': ctx('Avant l’urgence', 'Before an emergency', ...ADVISORS),
   '/gestion-de-projets': ctx('Au quotidien', 'Every day', ...ADVISORS),
   '/performance-objectifs': ctx('Au quotidien', 'Every day', ...ADVISORS),
-  '/portail-client': ctx('Avant, pendant et après l’urgence', 'Before, during and after an emergency', 'Les clients des firmes-conseils', 'Clients of consulting firms'),
+  '/portail-client': ctx('Avant, pendant et après l’urgence', 'Before, during and after an emergency', 'Gestionnaires de bâtiments et entreprises clientes', 'Building managers and client organizations'),
   '/coro-knowledge': ctx('Avant, pendant et après l’urgence', 'Before, during and after an emergency', 'Firmes-conseils et gestionnaires de bâtiments', 'Consulting firms and building managers'),
   '/coro-ai': ctx('Avant, pendant et après l’urgence', 'Before, during and after an emergency', 'Firmes-conseils et gestionnaires de bâtiments', 'Consulting firms and building managers'),
   '/guides': PLANS,

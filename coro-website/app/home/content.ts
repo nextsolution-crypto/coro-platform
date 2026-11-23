@@ -26,7 +26,8 @@ const fr = {
     lead: 'La firme-conseil prépare les plans ; le gestionnaire du bâtiment les utilise au quotidien et pendant l’urgence. CORO relie les deux.',
     explore: 'Explorer',
     doors: [
-      { id: 'buildings', kicker: 'Gestionnaires, propriétaires et entreprises', title: 'Vous protégez des bâtiments et leurs occupants.', text: 'Savoir qui est présent, déclencher un incident, faire basculer les écrans en mode urgence, tenir la main courante et mesurer votre préparation : avant, pendant et après l’urgence.', links: [
+      { id: 'buildings', kicker: 'Gestionnaires, propriétaires et entreprises', title: 'Vous protégez des bâtiments et leurs occupants.', text: 'Depuis votre portail : savoir qui est présent, déclencher un incident, faire basculer les écrans en mode urgence, tenir la main courante et mesurer votre préparation : avant, pendant et après l’urgence.', links: [
+        { label: 'Votre portail client', href: '/portail-client' },
         { label: 'Registre et évacuation', href: '/sentinelle' },
         { label: 'Incident et écrans d’urgence', href: '/coro-incident' },
         { label: 'Rapports de sécurité', href: '/sentinelle#coro-report' },
@@ -36,7 +37,7 @@ const fr = {
         { label: 'Gestion documentaire', href: '/gestion-documentaire' },
         { label: 'Projets et mandats', href: '/gestion-de-projets' },
         { label: 'Performance', href: '/performance-objectifs' },
-        { label: 'Portail client', href: '/portail-client' },
+        { label: 'Guides des plans d’urgence', href: '/guides' },
       ] },
     ],
   },
@@ -252,7 +253,8 @@ const en: HomeContent = {
     lead: 'The consulting firm prepares the plans; the building manager uses them every day and during an emergency. CORO connects both.',
     explore: 'Explore',
     doors: [
-      { id: 'buildings', kicker: 'Managers, owners and organizations', title: 'You protect buildings and their occupants.', text: 'Know who is present, start an incident, switch screens to emergency mode, keep the security logbook and measure your preparedness: before, during and after an emergency.', links: [
+      { id: 'buildings', kicker: 'Managers, owners and organizations', title: 'You protect buildings and their occupants.', text: 'From your portal: know who is present, start an incident, switch screens to emergency mode, keep the security logbook and measure your preparedness: before, during and after an emergency.', links: [
+        { label: 'Your client portal', href: '/portail-client' },
         { label: 'Occupancy and evacuation', href: '/sentinelle' },
         { label: 'Incidents and emergency screens', href: '/coro-incident' },
         { label: 'Security reports', href: '/sentinelle#coro-report' },
@@ -262,7 +264,7 @@ const en: HomeContent = {
         { label: 'Document management', href: '/gestion-documentaire' },
         { label: 'Projects and mandates', href: '/gestion-de-projets' },
         { label: 'Performance', href: '/performance-objectifs' },
-        { label: 'Client portal', href: '/portail-client' },
+        { label: 'Emergency plan guides', href: '/guides' },
       ] },
     ],
   },
