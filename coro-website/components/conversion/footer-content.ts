@@ -34,7 +34,7 @@ export const footerGroups: readonly FooterGroup[] = [
     { path: '/sentinelle-population', label: { fr: 'Alerte à la population', en: 'Public alerts' }, fr: true, en: true },
     { path: '/coro-ai', label: { fr: 'CORO AI', en: 'CORO AI' }, fr: true, en: true },
   ] },
-  { id: 'platform', label: { fr: 'Pour les conseillers', en: 'For advisors' }, links: [
+  { id: 'platform', label: { fr: 'Firmes-conseils', en: 'Consulting firms' }, links: [
     { path: '/gestion-documentaire', label: { fr: 'Gestion documentaire', en: 'Document management' }, fr: true, en: true },
     { path: '/gestion-de-projets', label: { fr: 'Projets et mandats', en: 'Projects and mandates' }, fr: true, en: true },
     { path: '/performance-objectifs', label: { fr: 'Performance', en: 'Performance' }, fr: true, en: true },

@@ -32,7 +32,7 @@ export const navigationGroups: readonly NavigationGroup[] = [
     item('knowledge', 'CORO Knowledge', 'CORO Knowledge'), item('ai', 'CORO AI', 'CORO AI'),
     item('network', 'Network', 'Network'),
   ] },
-  { id: 'advisors', label: { fr: 'Pour les conseillers', en: 'For advisors' }, items: [
+  { id: 'advisors', label: { fr: 'Firmes-conseils', en: 'Consulting firms' }, items: [
     item('documents', 'Gestion documentaire', 'Document management'), item('projects', 'Projets et mandats', 'Projects and mandates'),
     item('performance', 'Performance', 'Performance'), item('client', 'Portail client', 'Client portal'),
   ] },
