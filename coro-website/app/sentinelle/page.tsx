@@ -54,6 +54,10 @@ const copy = {
   ],
   assemblyLabel: 'Point de rassemblement', assemblyTitle: 'Passer de « combien? » à « qui? ».',
   assemblyText: ['Le point de rassemblement constitue l’un des moments les plus importants du processus d’évacuation. CORO Sentinelle permet de soutenir les responsables qui doivent établir une situation aussi claire que possible après la sortie des occupants.', 'Sentinelle contribue à établir une information nominative permettant de comparer les personnes enregistrées comme présentes avec celles qui ont effectivement été recensées.', 'Une personne non confirmée est une personne dont la présence n’a pas encore été confirmée lors du recensement. Sentinelle enregistre les entrées, les sorties et les statuts opérationnels déclarés; le registre d’occupation n’assure pas la géolocalisation continue des personnes.'],
+  reportLabel: 'CORO Report — le quotidien de l’agent', reportTitle: 'La main courante et les rapports de sécurité, au même endroit.',
+  reportText: 'Dans le portail client, la page Poste de sécurité ouvre CORO Report. L’agent y tient la main courante de son quart et rédige ses rapports d’événement à partir de modèles. Chaque rapport suit un circuit de révision avant son approbation, puis s’exporte en PDF.',
+  reportItems: ['Main courante horodatée : une heure future ou de plus de 30 jours est refusée, une saisie tardive est signalée', 'Correction réservée à l’auteur, au superviseur de quart ou à l’administrateur', 'Rapports rédigés à partir de modèles, soumis, révisés puis approuvés', 'Export PDF scellé par CORO et horodaté par une autorité externe, avec page de certification bilingue', 'Pièces jointes analysées par un antivirus avant d’être accessibles'],
+  reportNote: 'Sentinelle dit qui est présent. CORO Report garde la trace de ce qui s’est passé pendant le quart.',
   boundaryLabel: 'Ce que Sentinelle est, et n’est pas', boundaryTitle: 'Un registre d’occupation, pas un système de suivi.',
   boundaryItems: ['Enregistre l’arrivée et le départ déclarés à l’entrée', 'N’assure pas la géolocalisation continue des personnes', 'N’est ni un contrôle d’accès physique ni un outil de surveillance des employés', 'Registre consultable par les utilisateurs autorisés'],
   usesLabel: 'Cas d’utilisation', usesTitle: 'Une solution adaptée à différents environnements.',
@@ -135,6 +139,10 @@ const english = {
   ],
   assemblyLabel: 'Assembly point', assemblyTitle: 'Move from “how many?” to “who?”.',
   assemblyText: ['The assembly point is a key part of evacuation. CORO Sentinelle helps staff establish the clearest possible picture after occupants leave.', 'Sentinelle supports a named comparison between people registered as present and people accounted for.', 'A person not yet accounted for is someone whose status has not been confirmed during accountability. Sentinelle records declared arrivals, departures and operational statuses; the occupancy register does not continuously track people’s locations.'],
+  reportLabel: 'CORO Report — the security officer’s daily work', reportTitle: 'The security logbook and incident reports, in one place.',
+  reportText: 'In the client portal, the Security desk page opens CORO Report. Officers keep the logbook for their shift and write event reports from templates. Each report goes through review before approval, then exports as a PDF.',
+  reportItems: ['Time-stamped logbook: future times or times more than 30 days old are refused, and late entries are flagged', 'Corrections limited to the author, the shift supervisor or an administrator', 'Reports written from templates, submitted, reviewed and approved', 'PDF export sealed by CORO and time-stamped by an external authority, with a bilingual certification page', 'Attachments scanned by antivirus before they become available'],
+  reportNote: 'Sentinelle shows who is present. CORO Report keeps a record of what happened during the shift.',
   boundaryLabel: 'What Sentinelle does', boundaryTitle: 'An occupancy register, not a tracking system.',
   boundaryItems: ['Records declared arrival and departure', 'Does not continuously geolocate people', 'Is neither a physical access control system nor an employee surveillance tool', 'The register is available to authorized users'],
   usesLabel: 'Use cases', usesTitle: 'Suited to different environments.',
@@ -248,6 +256,12 @@ export default async function Page({ searchParams }: P) {
         <SplitContent order="media-text" ratio="4-8" align="start"
           media={<MediaFrame src="/website-v2/sentinel/assembly-point.webp" alt="" ratio={1536 / 1024} sizes="(min-width: 68rem) 720px, 100vw" />}
           text={<EditorialBlock id="sentinelle-assembly-title" label={copy.assemblyLabel} heading={copy.assemblyTitle}>{copy.assemblyText.map((t) => <p key={t}>{t}</p>)}</EditorialBlock>} />
+      </PageSection>
+
+      <PageSection tone="navy" labelledBy="sentinelle-report-title">
+        <SplitContent ratio="5-7" align="start"
+          text={<EditorialBlock id="sentinelle-report-title" label={copy.reportLabel} heading={copy.reportTitle}><p>{copy.reportText}</p><p className={styles.note}>{copy.reportNote}</p></EditorialBlock>}
+          media={<ul className={styles.plain}>{copy.reportItems.map((item) => <li key={item}>{item}</li>)}</ul>} />
       </PageSection>
 
       <PageSection tone="white" labelledBy="sentinelle-boundary-title">
