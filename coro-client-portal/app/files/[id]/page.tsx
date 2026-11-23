@@ -245,6 +245,9 @@ export default function ProjectFilesClientPage() {
   };
 
   const lifecycleLabel = (file: any) => {
+    // Quarantaine antivirus : prioritaire sur le cycle de vie.
+    const quarantine = ({ PENDING: "Analyse antivirus en cours", INFECTED: "Bloqué : logiciel malveillant", FAILED: "Bloqué : analyse impossible" } as Record<string, string>)[file.malwareScanStatus ?? ""];
+    if (quarantine) return quarantine;
     const state = file.effectiveLifecycleState || file.lifecycleState;
     return (
       (

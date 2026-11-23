@@ -7,7 +7,8 @@ const timer = fs.readFileSync(new URL('./coro-clamav-on-demand.timer', import.me
 const release = fs.readFileSync(new URL('../deploy/coro-production-release.sh', import.meta.url), 'utf8');
 
 test('ClamAV à la demande : démarrage seulement sur demande et avec assez de mémoire', () => {
-  assert.match(script, /scanStatus\\" = '"'"'PENDING'"'"'/);
+  assert.match(script, /"scanStatus" = '"'"'PENDING'"'"'/);
+  assert.match(script, /"ProjectFile" WHERE "malwareScanStatus" = '"'"'PENDING'"'"'/);
   assert.match(script, /MemAvailable/);
   assert.match(script, /DEFERRED_LOW_MEMORY/);
   assert.match(script, /up -d --no-deps clamav/);

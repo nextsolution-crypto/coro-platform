@@ -65,6 +65,8 @@ export class KnowledgeIngestionService {
         sha256: { not: null },
         OR: [{ effectiveAt: null }, { effectiveAt: { lte: now } }],
         AND: [
+          // Jamais un fichier encore en quarantaine antivirus.
+          { OR: [{ malwareScanStatus: null }, { malwareScanStatus: 'CLEAN' }] },
           { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
           {
             OR: [

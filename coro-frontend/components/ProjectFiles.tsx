@@ -25,6 +25,7 @@ interface ProjectFile {
   effectiveAt?: string | null;
   expiresAt?: string | null;
   isDownloadable?: boolean;
+  malwareScanStatus?: string | null;
   createdAt: string;
   uploadedBy?: {
     firstName: string;
@@ -79,7 +80,11 @@ const formatSize = (bytes: number) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+const MALWARE_SCAN_LABELS: Record<string, string> = { PENDING: "Analyse antivirus en cours", INFECTED: "Bloqué : logiciel malveillant", FAILED: "Bloqué : analyse impossible" };
+
 const lifecycleLabel = (file: ProjectFile) =>
+  // Quarantaine antivirus : prioritaire sur le cycle de vie.
+  MALWARE_SCAN_LABELS[file.malwareScanStatus ?? ""] ??
   (
     ({
       DRAFT: "Brouillon",

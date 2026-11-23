@@ -30,6 +30,7 @@ export class IncidentReportAttachmentScanWorker {
     this.running = true;
     try {
       await this.processPending();
+      await this.processProjectFiles();
     } catch (error) {
       this.logger.warn(`Analyse en attente : ${error instanceof Error ? error.message : 'erreur'}`);
     } finally {
@@ -67,6 +68,57 @@ export class IncidentReportAttachmentScanWorker {
       scanned += 1;
     }
     return { scanned };
+  }
+
+  /**
+   * Fichiers de projet et documents de bâtiment en quarantaine (même
+   * ClamAV, même minuteur). Sain : libéré. Infecté ou analyse impossible
+   * pendant 48 h : bloqué (ni lisible, ni approuvable, ni indexé).
+   */
+  async processProjectFiles(now = new Date()) {
+    const pending = await this.prisma.projectFile.findMany({
+      where: { malwareScanStatus: 'PENDING' },
+      select: { id: true, organizationId: true, storageKey: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
+      take: BATCH,
+    });
+    if (!pending.length) return { scanned: 0 };
+    const stale = pending.filter((row) => now.getTime() - row.createdAt.getTime() > GIVE_UP_AFTER_MS);
+    for (const row of stale) await this.settleProjectFile(row, 'FAILED', now);
+    const fresh = pending.filter((row) => !stale.includes(row));
+    if (!fresh.length) return { scanned: 0 };
+    try {
+      await this.scanner.ping();
+    } catch {
+      return { scanned: 0, waiting: fresh.length };
+    }
+    let scanned = 0;
+    for (const row of fresh) {
+      let verdict: 'CLEAN' | 'INFECTED';
+      try {
+        verdict = await this.scanner.scan(await this.storage.downloadPrivate(row.storageKey));
+      } catch {
+        break;
+      }
+      await this.settleProjectFile(row, verdict, now);
+      scanned += 1;
+    }
+    return { scanned };
+  }
+
+  private async settleProjectFile(
+    row: { id: string; organizationId: string },
+    verdict: 'CLEAN' | 'INFECTED' | 'FAILED',
+    now: Date,
+  ) {
+    const updated = await this.prisma.projectFile.updateMany({
+      where: { id: row.id, malwareScanStatus: 'PENDING' },
+      data: { malwareScanStatus: verdict, malwareScannedAt: now },
+    });
+    if (updated.count === 1 && verdict !== 'CLEAN')
+      this.logger.warn(
+        `Fichier de projet ${row.id} bloqué (${verdict === 'INFECTED' ? 'logiciel malveillant' : 'analyse impossible'}).`,
+      );
   }
 
   private async settle(
