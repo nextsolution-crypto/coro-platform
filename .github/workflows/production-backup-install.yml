@@ -1,0 +1,77 @@
+name: Install Production Backup Scripts
+
+# Réinstalle les scripts et unités systemd de sauvegarde (ops/backup) sur le serveur
+# depuis un commit de main, puis lance une sauvegarde de contrôle.
+# Ne touche ni aux fichiers de configuration (/etc/coro-backup), ni aux sauvegardes existantes.
+
+on:
+  workflow_dispatch:
+    inputs:
+      install_approval:
+        description: Type INSTALL_BACKUP_SCRIPTS
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - env:
+          BACKUP_INSTALL_APPROVAL: ${{ inputs.install_approval }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$BACKUP_INSTALL_APPROVAL" == INSTALL_BACKUP_SCRIPTS ]]
+          bash -n ops/backup/install.sh
+          for file in ops/backup/*.sh; do bash -n "$file"; done
+          for file in ops/backup/lib/*.js; do node --check "$file"; done
+          chmod +x ops/backup/*.sh
+          bash ops/backup/tests/remote-test.sh
+          bash ops/backup/install.sh --dry-run >/dev/null
+
+  install:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 45
+    steps:
+      - name: Install backup scripts and run a control backup
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          BACKUP_INSTALL_APPROVAL: ${{ inputs.install_approval }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          command_timeout: 40m
+          envs: SOURCE_SHA,BACKUP_INSTALL_APPROVAL
+          script: |
+            set -Eeuo pipefail
+            [[ "$BACKUP_INSTALL_APPROVAL" == INSTALL_BACKUP_SCRIPTS ]] || { echo 'BACKUP_INSTALL_FAILED code=APPROVAL_MISSING'; exit 1; }
+            repo=/opt/coro-platform
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" merge-base --is-ancestor "$SOURCE_SHA" origin/main || { echo 'BACKUP_INSTALL_FAILED code=SOURCE_NOT_ON_MAIN'; exit 1; }
+            exec 9>/run/lock/coro-production-deployment.lock
+            flock --nonblock 9 || { echo 'BACKUP_INSTALL_FAILED code=DEPLOYMENT_LOCK_BUSY'; exit 1; }
+            stage="$(mktemp -d /tmp/coro-backup-install.XXXXXX)"
+            trap 'rm -rf -- "$stage"' EXIT
+            git -C "$repo" archive "$SOURCE_SHA" ops/backup | tar -x -C "$stage"
+            rm -rf -- "$stage/ops/backup/tests"
+            bash "$stage/ops/backup/install.sh"
+            systemctl reset-failed coro-db-backup.service || true
+            if systemctl start coro-db-backup.service && [[ "$(systemctl show -p Result --value coro-db-backup.service)" == success ]]; then
+              echo "BACKUP_INSTALL_SUCCESS source=${SOURCE_SHA:0:12} controlBackup=success"
+            else
+              echo "BACKUP_INSTALL_PARTIAL source=${SOURCE_SHA:0:12} controlBackup=failed"
+              journalctl -u coro-db-backup.service -n 30 --no-pager -o cat | grep -Eo 'ERROR_CODE=[A-Z0-9_]+|REMOTE_[A-Z_]+' | tail -n 3 || true
+              exit 1
+            fi
