@@ -38,6 +38,11 @@ export class PdfSealService {
     return this.p12;
   }
 
+  /** Vrai si la clé de signature de la plateforme est disponible. */
+  signingAvailable(): boolean {
+    return Boolean(this.loadP12());
+  }
+
   async seal(pdf: Buffer, meta: { reason: string; location?: string }): Promise<SealResult> {
     let output = pdf;
     let signed = false;

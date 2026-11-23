@@ -158,7 +158,8 @@ export class IncidentReportExportsService {
       throw error;
     }
     try {
-      const bytes = await this.renderer.render({
+      const signatureExpected = this.pdfSeal?.signingAvailable?.() ?? false;
+      const renderInput = {
         locale: dto.locale,
         pageFormat: dto.pageFormat,
         reportNumber: report.reportNumber,
@@ -176,13 +177,17 @@ export class IncidentReportExportsService {
           .formSchema as unknown as IncidentReportFormSchema,
         approvals,
         generatedAt,
-      });
+        signatureExpected,
+      };
+      const reason = `Rapport ${report.reportNumber} — version ${version.versionNumber} approuvée (CORO)`;
+      const bytes = await this.renderer.render(renderInput);
       // Sceau CORO (M8-04) : signature de la plateforme + horodatage RFC 3161.
-      const sealed = this.pdfSeal
-        ? await this.pdfSeal.seal(bytes, {
-            reason: `Rapport ${report.reportNumber} — version ${version.versionNumber} approuvée (CORO)`,
-          })
-        : null;
+      let sealed = this.pdfSeal ? await this.pdfSeal.seal(bytes, { reason }) : null;
+      // La page de certification ne doit jamais annoncer une signature absente.
+      if (sealed && signatureExpected && !sealed.signed) {
+        const unsignedBytes = await this.renderer.render({ ...renderInput, signatureExpected: false });
+        sealed = await this.pdfSeal!.seal(unsignedBytes, { reason });
+      }
       const finalBytes = sealed?.pdf ?? bytes;
       const sha256 = createHash('sha256').update(finalBytes).digest('hex');
       const storageKey = `tenant-${organizationId}/incident-report-exports/${reportId}/${version.id}/${id}.pdf`;

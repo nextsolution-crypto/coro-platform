@@ -25,9 +25,9 @@ const destinationsWithAliases = destinations.map((destination) => {
   return destination;
 });
 
-test("les 58 destinations réelles sont toutes auditées et uniques", () => {
-  assert.equal(destinations.length, 59);
-  assert.equal(new Set(destinations.map(({ path: destination }) => destination)).size, 59);
+test("les 60 destinations réelles sont toutes auditées et uniques", () => {
+  assert.equal(destinations.length, 60);
+  assert.equal(new Set(destinations.map(({ path: destination }) => destination)).size, 60);
 });
 
 for (const [pathname, expected] of [
@@ -92,7 +92,7 @@ test("la destination active pilote sa visibilité sans déplacer le contenu prin
   assert.doesNotMatch(layout, /scrollIntoView\(/);
 });
 
-test("les 95 pages applicatives réelles ont au plus une destination active", () => {
+test("les 97 pages applicatives réelles ont au plus une destination active", () => {
   const appRoot = path.resolve(__dirname, "../../app");
   const pages = [];
   const visit = (directory) => {
@@ -103,7 +103,7 @@ test("les 95 pages applicatives réelles ont au plus une destination active", ()
     }
   };
   visit(appRoot);
-  assert.equal(pages.length, 96);
+  assert.equal(pages.length, 97);
 
   for (const page of pages) {
     const relative = path.relative(appRoot, path.dirname(page)).replaceAll("\\", "/");

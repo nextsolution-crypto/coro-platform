@@ -93,15 +93,15 @@ export default function IncidentHistoryPage() {
   const hasBlockingError = history.phase === 'error' && result === null;
   const resetFilters = () => { setSearchDraft(''); setSearch(''); setStatus('ALL'); setExercise('ALL'); setPage(1); };
 
-  if (isInitialLoading) return <PortalLayout><div role="status" aria-live="polite" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300 }}><p style={{ color: '#6C757D' }}>Chargement de l’historique des incidents…</p></div></PortalLayout>;
+  if (isInitialLoading) return <PortalLayout><div role="status" aria-live="polite" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300 }}><p style={{ color: '#6C757D' }}>Chargement de l’historique des urgences…</p></div></PortalLayout>;
 
   return (
     <PortalLayout>
       <header style={{ marginBottom: 20 }}>
         <button type="button" onClick={() => router.push(`/sentinelle/${buildingId}`)} style={{ minHeight: 44, padding: '8px 4px', background: 'none', border: 0, cursor: 'pointer', color: '#6C757D' }}>← Retour au registre</button>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-          <div><p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase' }}>CORO Sentinelle</p><h1 style={{ margin: 0, fontSize: 'clamp(20px, 5vw, 26px)', color: '#2C3E50', display: 'flex', gap: 8, alignItems: 'center' }}><FileText size={22} /> Historique des incidents</h1></div>
-          <button type="button" onClick={() => void loadHistory(true)} disabled={history.phase === 'loading'} aria-label="Actualiser l’historique des incidents" style={{ minWidth: 44, minHeight: 44, padding: '8px 14px', borderRadius: 8, border: '1px solid #D5D8DC', background: '#FFF', color: '#566573', cursor: isRefreshing ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}><RefreshCw size={16} aria-hidden="true" />{isRefreshing ? 'Actualisation…' : 'Actualiser'}</button>
+          <div><p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase' }}>CORO Sentinelle</p><h1 style={{ margin: 0, fontSize: 'clamp(20px, 5vw, 26px)', color: '#2C3E50', display: 'flex', gap: 8, alignItems: 'center' }}><FileText size={22} /> Historique des urgences</h1></div>
+          <button type="button" onClick={() => void loadHistory(true)} disabled={history.phase === 'loading'} aria-label="Actualiser l’historique des urgences" style={{ minWidth: 44, minHeight: 44, padding: '8px 14px', borderRadius: 8, border: '1px solid #D5D8DC', background: '#FFF', color: '#566573', cursor: isRefreshing ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}><RefreshCw size={16} aria-hidden="true" />{isRefreshing ? 'Actualisation…' : 'Actualiser'}</button>
         </div>
       </header>
 
@@ -112,7 +112,7 @@ export default function IncidentHistoryPage() {
         <section aria-label="Recherche et filtres" style={{ marginBottom: 16, padding: 16, border: '1px solid #E9ECEF', borderRadius: 10, background: '#FFF', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: 12 }}>
           <label style={{ display: 'grid', gap: 5, fontSize: 12, fontWeight: 700, color: '#566573' }}>Recherche type ou procédure<div style={{ position: 'relative' }}><Search size={16} aria-hidden="true" style={{ position: 'absolute', left: 12, top: 14, color: '#7F8C8D' }} /><input value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} maxLength={80} placeholder="Ex. incendie ou P003" style={{ width: '100%', minHeight: 44, boxSizing: 'border-box', padding: '8px 12px 8px 36px', border: '1px solid #BFC9CA', borderRadius: 8 }} /></div></label>
           <Select label="Statut" value={status} onChange={(value) => { setStatus(value as StatusFilter); setPage(1); }} options={[['ALL', `Tous (${result.counts.all})`], ['OPEN', `Ouverts (${result.counts.open})`], ['PRE_ALERT', 'Préalertes'], ['ACTIVE', 'Actifs'], ['CONTAINED', 'Contenus'], ['RESOLVED', 'Résolus'], ['CANCELLED', 'Annulés']]} />
-          <Select label="Nature" value={exercise} onChange={(value) => { setExercise(value as ExerciseFilter); setPage(1); }} options={[['ALL', 'Incidents et exercices'], ['REAL', `Incidents réels (${result.counts.real})`], ['EXERCISE', `Exercices (${result.counts.exercises})`]]} />
+          <Select label="Nature" value={exercise} onChange={(value) => { setExercise(value as ExerciseFilter); setPage(1); }} options={[['ALL', 'Urgences et exercices'], ['REAL', `Urgences réelles (${result.counts.real})`], ['EXERCISE', `Exercices (${result.counts.exercises})`]]} />
           <Select label="Trier par" value={sort} onChange={(value) => { setSort(value as SortValue); setPage(1); }} options={[['triggeredAt-desc', 'Plus récents'], ['triggeredAt-asc', 'Plus anciens'], ['status-asc', 'Statut'], ['type-asc', 'Type']]} />
         </section>
 

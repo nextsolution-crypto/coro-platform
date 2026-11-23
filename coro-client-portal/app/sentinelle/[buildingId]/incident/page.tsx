@@ -350,7 +350,7 @@ export default function IncidentPage() {
           <div>
             <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.08em' }}>CORO Sentinelle</p>
             <h1 style={{ margin: 0, fontSize: 'clamp(20px, 5vw, 26px)', fontWeight: 800, color: '#2C3E50', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <AlertTriangle size={22} color="#E67E22" /> Module Incident
+              <AlertTriangle size={22} color="#E67E22" /> Urgence — CORO Incident
             </h1>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>

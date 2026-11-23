@@ -48,6 +48,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   '/admin/commercial/prospects': Target,
   '/admin/commercial/contracts': FileSignature,
   '/admin/organizations': Landmark,
+  '/admin/capability-coverage': ListChecks,
   '/admin/product-catalog': Package,
   '/admin/commercial/content': FileText,
   '/admin/commercial/legal-issuer': Scale,

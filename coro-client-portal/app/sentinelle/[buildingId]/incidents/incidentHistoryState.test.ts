@@ -61,7 +61,7 @@ test("the page exposes pagination, search, explicit statuses and exercise marker
 test("the register names and routes both histories without ambiguity", () => {
   const source = readFileSync(new URL("../page.tsx", import.meta.url), "utf8");
   assert.match(source, /sentinelle\/\$\{buildingId\}\/historique[\s\S]*Historique des présences/);
-  assert.match(source, /sentinelle\/\$\{buildingId\}\/incidents[\s\S]*Historique des incidents/);
+  assert.match(source, /sentinelle\/\$\{buildingId\}\/incidents[\s\S]*Historique des urgences/);
 });
 
 test("the population register identifies its page as a recent subset", () => {

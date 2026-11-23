@@ -14,6 +14,7 @@ import { RequirePlatformPermission } from '../auth/platform-permission.decorator
 import { SuperAdminOnly } from '../auth/platform-roles.decorator';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
 import { CapabilityEntitlementsService } from './capability-entitlements.service';
+import { CapabilityCoverageService } from './capability-coverage.service';
 import {
   ChangeEntitlementDatesDto,
   ChangeEntitlementLimitsDto,
@@ -418,5 +419,20 @@ export class ContractEntitlementProvisioningController {
       },
       r.user,
     );
+  }
+}
+
+/** M8-07 — lecture seule : fonctions actives par client, comparées au site. */
+@Controller('admin/v1/organizations/:organizationId/capability-coverage')
+@UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
+@SuperAdminOnly()
+@RequirePlatformPermission(
+  PlatformPermission.COMMERCIAL_ENTITLEMENT_PROVISION,
+  'organizationId',
+)
+export class CapabilityCoverageController {
+  constructor(private readonly coverage: CapabilityCoverageService) {}
+  @Get() get(@Param('organizationId') organizationId: string) {
+    return this.coverage.coverage(organizationId);
   }
 }

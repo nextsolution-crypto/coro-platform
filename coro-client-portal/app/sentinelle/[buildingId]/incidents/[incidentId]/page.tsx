@@ -515,9 +515,16 @@ export default function IncidentDetailPage() {
           </div>
           <button type="button" onClick={handleExportPdf} disabled={generating}
             style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '10px 20px', borderRadius: 8, border: 'none', backgroundColor: '#2C3E50', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: generating ? 0.7 : 1 }}>
-            <Download size={15} /> {generating ? 'Préparation...' : 'Imprimer le rapport'}
+            <Download size={15} /> {generating ? 'Préparation...' : 'Imprimer le bilan'}
           </button>
         </div>
+        {/* M8-05 : l'urgence (CORO Incident) et le rapport (Poste de sécurité) sont deux objets distincts, reliés explicitement. */}
+        <p style={{ margin: '12px 0 0', fontSize: 13, color: '#6C757D' }}>
+          Cette page suit l’<strong>urgence</strong> du bâtiment. Pour documenter l’événement dans un <strong>rapport</strong> révisé et approuvé :{' '}
+          <a href={`/security-workstation?buildingId=${encodeURIComponent(buildingId)}&tab=reports`} style={{ color: '#C0392B', fontWeight: 700 }}>
+            rédiger un rapport au Poste de sécurité →
+          </a>
+        </p>
       </header>
 
       {asArray<string>(incident.snapshotWarnings).length > 0 && (

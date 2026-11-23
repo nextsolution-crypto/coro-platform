@@ -8,7 +8,46 @@ import {
 } from './incident-report-form-engine';
 
 export const INCIDENT_REPORT_RENDERER_VERSION =
-  'coro-incident-report-pdf/1.1.0';
+  'coro-incident-report-pdf/1.2.0';
+
+/**
+ * Page de certification bilingue (M8-04) : toujours en français ET en
+ * anglais, quelle que soit la langue du rapport, pour qu'un tiers (assureur,
+ * inspecteur, tribunal) comprenne ce que le sceau CORO garantit.
+ */
+const certification = {
+  title: 'CERTIFICATION DU DOCUMENT / DOCUMENT CERTIFICATION',
+  identity: 'Identification / Identification',
+  report: 'Rapport / Report',
+  version: 'Version approuvée / Approved version',
+  building: 'Bâtiment / Building',
+  approvedBy: 'Approuvé par / Approved by',
+  approvedAt: "Date d'approbation / Approval date",
+  generated: "Date de l'export / Export date",
+  contentHash: 'Empreinte du contenu (SHA-256) / Content digest (SHA-256)',
+  guaranteesFr: 'Ce que garantit ce document',
+  guaranteesEn: 'What this document guarantees',
+  frozenFr:
+    "Le contenu de ce rapport correspond à la version approuvée, figée dans CORO au moment de l'approbation; il ne peut plus être modifié. L'empreinte SHA-256 ci-dessus identifie ce contenu de façon unique.",
+  frozenEn:
+    'The content of this report matches the approved version, frozen in CORO at the time of approval; it can no longer be changed. The SHA-256 digest above uniquely identifies this content.',
+  signedFr:
+    "Ce fichier PDF porte le sceau numérique CORO : il est signé par la clé de la plateforme CORO au moment de l'export. Toute modification du fichier après sa génération rend la signature invalide. Un jeton d'horodatage RFC 3161, émis par une autorité d'horodatage indépendante, est conservé par CORO avec l'export.",
+  signedEn:
+    'This PDF file carries the CORO digital seal: it is signed with the CORO platform key at export time. Any change to the file after it was generated invalidates the signature. An RFC 3161 time-stamp token, issued by an independent time-stamping authority, is kept by CORO with the export.',
+  verifyFr:
+    "Pour vérifier : ouvrez le fichier dans un lecteur PDF (par exemple Adobe Acrobat Reader) et consultez le panneau Signatures. Le certificat est émis par CORO et non par une autorité publique : votre lecteur peut indiquer que l'identité du signataire est inconnue, mais il confirme si le document a été modifié depuis sa signature.",
+  verifyEn:
+    'To verify: open the file in a PDF reader (for example Adobe Acrobat Reader) and check the Signatures panel. The certificate is issued by CORO, not by a public authority: your reader may report the signer identity as unknown, but it confirms whether the document has been changed since it was signed.',
+  unsignedFr:
+    "Cet export ne porte pas de signature numérique de la plateforme. Son authenticité peut être confirmée auprès de CORO à l'aide du numéro de rapport, de la version et de l'empreinte ci-dessus.",
+  unsignedEn:
+    'This export does not carry a platform digital signature. Its authenticity can be confirmed with CORO using the report number, version and digest above.',
+  scopeFr:
+    "Le sceau CORO atteste l'intégrité et l'origine du document; il ne constitue pas une certification de conformité réglementaire.",
+  scopeEn:
+    'The CORO seal attests to the integrity and origin of the document; it is not a certification of regulatory compliance.',
+};
 type Locale = 'fr-CA' | 'en-CA';
 type PageFormat = 'LETTER' | 'A4';
 
@@ -99,6 +138,8 @@ export interface IncidentReportPdfInput {
   schema: IncidentReportFormSchema;
   approvals: IncidentReportPdfApproval[];
   generatedAt: Date;
+  /** La plateforme signera ce PDF (sceau CORO) après le rendu. */
+  signatureExpected?: boolean;
 }
 
 export class IncidentReportPdfRenderer {
@@ -284,6 +325,53 @@ export class IncidentReportPdfRenderer {
     draw(
       `${l.generated}: ${this.formatDate(input.generatedAt, input.locale, input.timeZone)}  |  ${l.renderer}: ${INCIDENT_REPORT_RENDERER_VERSION}`,
       { fontSize: 8, color: muted },
+    );
+
+    // ── Page de certification bilingue ──
+    addPage();
+    draw(certification.title, { bold: true, fontSize: 14, color: green, gap: 10 });
+    heading(certification.identity);
+    draw(`${certification.report}: ${input.reportNumber}`, { bold: true, gap: 1 });
+    draw(`${certification.version}: ${input.versionNumber}`, { gap: 1 });
+    draw(`${certification.building}: ${clean(input.buildingName)}`, { gap: 1 });
+    const approval = [...input.approvals]
+      .reverse()
+      .find((item) => item.decision === 'APPROVED');
+    if (approval) {
+      draw(
+        `${certification.approvedBy}: ${approval.actorDisplayName ?? `${approval.actorType}/${approval.actorId}`}`,
+        { gap: 1 },
+      );
+      draw(
+        `${certification.approvedAt}: ${this.formatDate(approval.decidedAt, 'fr-CA', input.timeZone)}`,
+        { gap: 1 },
+      );
+    }
+    draw(
+      `${certification.generated}: ${this.formatDate(input.generatedAt, 'fr-CA', input.timeZone)}`,
+      { gap: 4 },
+    );
+    draw(certification.contentHash, { bold: true, fontSize: 8.5, gap: 1 });
+    draw(input.contentHash, { fontSize: 8.5, gap: 8 });
+    const block = (title: string, paragraphs: string[]) => {
+      heading(title);
+      for (const paragraph of paragraphs) draw(paragraph, { fontSize: 9, gap: 5 });
+    };
+    block(
+      certification.guaranteesFr,
+      input.signatureExpected
+        ? [certification.frozenFr, certification.signedFr, certification.verifyFr, certification.scopeFr]
+        : [certification.frozenFr, certification.unsignedFr, certification.scopeFr],
+    );
+    block(
+      certification.guaranteesEn,
+      input.signatureExpected
+        ? [certification.frozenEn, certification.signedEn, certification.verifyEn, certification.scopeEn]
+        : [certification.frozenEn, certification.unsignedEn, certification.scopeEn],
+    );
+    draw(
+      `Report ID: ${input.reportId}  |  Version ID: ${input.reportVersionId}  |  ${INCIDENT_REPORT_RENDERER_VERSION}`,
+      { fontSize: 7.5, color: muted },
     );
 
     pages.forEach((item, index) =>
