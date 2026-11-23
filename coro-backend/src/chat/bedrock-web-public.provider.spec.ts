@@ -105,5 +105,6 @@ describe('Sophie — consignes', () => {
     expect(SOPHIE_SYSTEM_PROMPT).toContain('"contact"');
     expect(SOPHIE_SYSTEM_PROMPT).toContain('fr-CA');
     expect(SOPHIE_SYSTEM_PROMPT).toContain('911');
+    expect(SOPHIE_SYSTEM_PROMPT).toContain('PUE = plan d’urgence environnementale');
   });
 });
