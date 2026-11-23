@@ -76,11 +76,13 @@ export class KnowledgeConfig {
   /**
    * Échelle des cosinus e5 (modèle local) : en dessous du plancher, deux
    * textes sont jugés sans lien ; plancher + amplitude = lien maximal.
+   * Calibré le 23 nov. 2026 sur le modèle quantifié (test au build) :
+   * liés 0,78 à 0,83 ; sans lien 0,70 à 0,79.
    */
   readonly localSimilarityFloor =
-    integer('CORO_KNOWLEDGE_LOCAL_SIMILARITY_FLOOR_PERMILLE', 780, 500, 950) / 1000;
+    integer('CORO_KNOWLEDGE_LOCAL_SIMILARITY_FLOOR_PERMILLE', 760, 500, 950) / 1000;
   readonly localSimilaritySpan =
-    integer('CORO_KNOWLEDGE_LOCAL_SIMILARITY_SPAN_PERMILLE', 140, 50, 400) / 1000;
+    integer('CORO_KNOWLEDGE_LOCAL_SIMILARITY_SPAN_PERMILLE', 100, 50, 400) / 1000;
   /** Extraits ré-indexés par passe du rattrapage (0 = rattrapage arrêté). */
   readonly embeddingBackfillBatch = integer(
     'CORO_KNOWLEDGE_EMBEDDING_BACKFILL_BATCH',

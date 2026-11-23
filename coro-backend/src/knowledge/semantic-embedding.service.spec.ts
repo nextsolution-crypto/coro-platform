@@ -264,7 +264,7 @@ describe('KnowledgeEmbeddingBackfillService', () => {
 
 describe('Modèle local multilingual-e5-small', () => {
   function localConfig() {
-    return config({ embeddingProvider: 'local-e5-small', localSimilarityFloor: 0.78, localSimilaritySpan: 0.14 });
+    return config({ embeddingProvider: 'local-e5-small', localSimilarityFloor: 0.76, localSimilaritySpan: 0.1 });
   }
   function e5(axis: number) {
     const values = Array<number>(384).fill(0);
@@ -304,8 +304,8 @@ describe('Modèle local multilingual-e5-small', () => {
     await service.embedQuery('Où ?');
     expect(engine.embed).toHaveBeenLastCalledWith('query', 'Où ?');
     expect(service.semanticScore(0.7)).toBe(0);
-    expect(service.semanticScore(0.85)).toBeCloseTo(0.5);
-    expect(service.semanticScore(0.95)).toBe(1);
+    expect(service.semanticScore(0.81)).toBeCloseTo(0.5);
+    expect(service.semanticScore(0.9)).toBe(1);
   });
 
   it('reste sur la projection si le modèle est absent de l image', async () => {
