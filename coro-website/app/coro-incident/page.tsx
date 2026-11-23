@@ -201,7 +201,7 @@ export default async function Page({ searchParams }: P) {
           media={<p className={styles.statement}>{ui.report}</p>} />
       </PageSection>
 
-      <PageSection tone="navy" labelledBy="incident-display-title">
+      <PageSection tone="navy" id="coro-display" labelledBy="incident-display-title">
         <SplitContent ratio="5-7" align="start"
           text={<EditorialBlock id="incident-display-title" label={t.display.label} heading={t.display.title}><p>{t.display.text}</p></EditorialBlock>}
           media={<ul className={styles.plain}>{t.display.items.map((x) => <li key={x}>{x}</li>)}</ul>} />

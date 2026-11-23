@@ -27,17 +27,20 @@ export type FooterGroup = { id: string; label: Label; links: readonly FooterLink
 
 /** Only implemented public routes (lib/site/routes.ts). `fr` / `en` mirror the route's locale availability. */
 export const footerGroups: readonly FooterGroup[] = [
-  { id: 'platform', label: { fr: 'Plateforme', en: 'Platform' }, links: [
-    { path: '/gestion-documentaire', label: { fr: 'Documents', en: 'Documents' }, fr: true, en: true },
-    { path: '/gestion-de-projets', label: { fr: 'Projets', en: 'Projects' }, fr: true, en: true },
+  { id: 'resilience', label: { fr: 'Bâtiments et urgences', en: 'Buildings and emergencies' }, links: [
+    { path: '/resilience-operationnelle', label: { fr: 'Indice CORO et résilience', en: 'CORO Index and resilience' }, fr: true, en: true },
+    { path: '/sentinelle', label: { fr: 'Registre et évacuation', en: 'Occupancy and evacuation' }, fr: true, en: true },
+    { path: '/coro-incident', label: { fr: 'Incident et écrans d’urgence', en: 'Incidents and emergency screens' }, fr: true, en: true },
+    { path: '/sentinelle-population', label: { fr: 'Alerte à la population', en: 'Public alerts' }, fr: true, en: true },
+    { path: '/coro-ai', label: { fr: 'CORO AI', en: 'CORO AI' }, fr: true, en: true },
+  ] },
+  { id: 'platform', label: { fr: 'Pour les conseillers', en: 'For advisors' }, links: [
+    { path: '/gestion-documentaire', label: { fr: 'Gestion documentaire', en: 'Document management' }, fr: true, en: true },
+    { path: '/gestion-de-projets', label: { fr: 'Projets et mandats', en: 'Projects and mandates' }, fr: true, en: true },
     { path: '/performance-objectifs', label: { fr: 'Performance', en: 'Performance' }, fr: true, en: true },
     { path: '/portail-client', label: { fr: 'Portail client', en: 'Client portal' }, fr: true, en: true },
+    { path: '/guides', label: { fr: 'Plans d’urgence', en: 'Emergency plans' }, fr: true, en: false },
     { path: '/pricing', label: { fr: 'Tarification', en: 'Pricing' }, fr: true, en: true },
-  ] },
-  { id: 'resilience', label: { fr: 'Résilience et opérations', en: 'Resilience and operations' }, links: [
-    { path: '/resilience-operationnelle', label: { fr: 'Résilience opérationnelle', en: 'Operational resilience' }, fr: true, en: true },
-    { path: '/sentinelle', label: { fr: 'Sentinelle', en: 'Sentinelle' }, fr: true, en: true },
-    { path: '/sentinelle-population', label: { fr: 'Sentinelle Population', en: 'Sentinelle Population' }, fr: true, en: true },
   ] },
   { id: 'company', label: { fr: 'Entreprise', en: 'Company' }, links: [
     { path: '/about', label: { fr: 'À propos', en: 'About' }, fr: true, en: true },

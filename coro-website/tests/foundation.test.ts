@@ -77,7 +77,7 @@ test('navigation exposes implemented destinations only', () => {
     for (const group of visibleNavigation(locale)) {
       for (const item of group.items) {
         assert.ok(item.href?.startsWith('/'));
-        const basePath = item.href!.split('?')[0];
+        const basePath = item.href!.split(/[?#]/)[0];
         assert.ok(publicRoutes.some((route) => route.implemented && route.path === basePath));
       }
     }

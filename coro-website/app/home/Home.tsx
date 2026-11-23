@@ -3,6 +3,7 @@ import type { Locale } from '@/lib/site/locale';
 import { ReferralCapture } from './client/ReferralCapture';
 import { getHomeContent } from './content';
 import {
+  Audiences,
   DemoSection,
   Documents,
   Ecosystem,
@@ -27,6 +28,7 @@ export function Home({ locale }: { locale: Locale }) {
     <V2Shell locale={locale} pathname="/" headerTone="dark">
       <ReferralCapture />
       <Hero c={c} locale={locale} />
+      <Audiences c={c} locale={locale} />
       <Tension c={c} />
       <Ecosystem c={c} />
       <Documents c={c} />

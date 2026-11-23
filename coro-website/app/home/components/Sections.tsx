@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/Button';
 import type { HomeContent } from '../content';
 import DemoForm from '@/app/DemoForm';
 import { HeroVideo } from '../client/HeroVideo';
-import type { Locale } from '@/lib/site/locale';
+import { localizedHref, type Locale } from '@/lib/site/locale';
 import styles from './sections.module.css';
 
 /** 13-section storyboard (MIG-08A), matching docs/website-v2/05-migration/MIG-08-HOMEPAGE-GATE.md §26. */
@@ -34,6 +34,36 @@ export function Hero({ c, locale }: { c: HomeContent; locale: Locale }) {
         </>
       }
     />
+  );
+}
+
+/**
+ * Deux portes d'entrée de même poids, juste sous l'accueil : gestionnaires de bâtiments et firmes-conseils.
+ * Les liens mènent aux pages existantes ; aucune adresse ne change.
+ */
+export function Audiences({ c, locale }: { c: HomeContent; locale: Locale }) {
+  return (
+    <PageSection tone="white" density="compact" labelledBy="home-audiences" id="pour-qui">
+      <div className={styles.audHeader}>
+        <TechLabel>{c.audiences.label}</TechLabel>
+        <h2 id="home-audiences" className={styles.heading}>{c.audiences.heading}</h2>
+        <p className={styles.lead}>{c.audiences.lead}</p>
+      </div>
+      <ul className={styles.audGrid}>
+        {c.audiences.doors.map((door) => (
+          <li key={door.id} className={styles.audDoor} data-door={door.id}>
+            <p className={styles.audKicker}>{door.kicker}</p>
+            <h3 className={styles.audTitle}>{door.title}</h3>
+            <p className={styles.audText}>{door.text}</p>
+            <ul className={styles.audLinks} aria-label={door.title}>
+              {door.links.map((link) => (
+                <li key={link.href}><Link href={localizedHref(link.href, locale)}>{link.label}<span aria-hidden="true"> →</span></Link></li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
+    </PageSection>
   );
 }
 
@@ -259,23 +289,25 @@ export function Documents({ c }: { c: HomeContent }) {
           <p className={styles.documentSuiteLead}>{c.documents.lead}</p>
         </div>
         <ul className={styles.documentSuiteGrid}>
-          {c.documents.items.map((doc) => {
+          {c.documents.items.filter((doc) => 'href' in doc && !!doc.href).map((doc) => {
             const Icon = DOCUMENT_ICON[doc.code];
-            const available = 'href' in doc && !!doc.href;
             return (
               <li key={doc.code} className={styles.documentSuiteCard}>
                 <span className={styles.documentSuiteIcon} style={{ '--accent-color': doc.color } as CSSProperties} aria-hidden="true"><Icon size={18} strokeWidth={1.8} /></span>
                 <span className={styles.documentSuiteCode}>{doc.code}</span>
                 <span className={styles.documentSuiteName}>{doc.name}</span>
                 <span className={styles.documentSuitePurpose}>{doc.purpose}</span>
-                {available ? (
-                  <Link href={(doc as { href: string }).href} className={styles.documentSuiteLink}>{c.documents.linkLabel} →</Link>
-                ) : (
-                  <span className={styles.documentSuitePhase}>{c.documents.phaseLabel}</span>
-                )}
+                <Link href={(doc as { href: string }).href} className={styles.documentSuiteLink}>{c.documents.linkLabel} →</Link>
               </li>
             );
           })}
+          <li className={`${styles.documentSuiteCard} ${styles.documentSuiteUpcoming}`}>
+            <span className={styles.documentSuiteCode}>{c.documents.items.filter((doc) => 'phase' in doc).map((doc) => doc.code).join(' · ')}</span>
+            <span className={styles.documentSuiteName}>{c.documents.upcomingTitle}</span>
+            <span className={styles.documentSuitePurpose}>{c.documents.upcomingText}</span>
+            <span className={styles.documentSuitePhase}>{c.documents.phaseLabel}</span>
+            <Link href="/guides" className={styles.documentSuiteLink}>{c.documents.upcomingLink} →</Link>
+          </li>
         </ul>
       </div>
     </PageSection>

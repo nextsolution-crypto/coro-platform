@@ -258,7 +258,7 @@ export default async function Page({ searchParams }: P) {
           text={<EditorialBlock id="sentinelle-assembly-title" label={copy.assemblyLabel} heading={copy.assemblyTitle}>{copy.assemblyText.map((t) => <p key={t}>{t}</p>)}</EditorialBlock>} />
       </PageSection>
 
-      <PageSection tone="navy" labelledBy="sentinelle-report-title">
+      <PageSection tone="navy" id="coro-report" labelledBy="sentinelle-report-title">
         <SplitContent ratio="5-7" align="start"
           text={<EditorialBlock id="sentinelle-report-title" label={copy.reportLabel} heading={copy.reportTitle}><p>{copy.reportText}</p><p className={styles.note}>{copy.reportNote}</p></EditorialBlock>}
           media={<ul className={styles.plain}>{copy.reportItems.map((item) => <li key={item}>{item}</li>)}</ul>} />
