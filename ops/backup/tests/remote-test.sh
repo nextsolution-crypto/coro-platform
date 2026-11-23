@@ -46,8 +46,16 @@ case "$scenario" in
   http500) printf '500 InternalError\n' >&2; exit 2 ;;
   http503) printf '503 Service Unavailable\n' >&2; exit 2 ;;
 esac
+delayed_read() {
+  # Spaces read-after-write delay: the first two reads of a freshly written object answer 404.
+  [[ "$scenario" == 'delayed-visibility' && -f "$object" ]] || return 0
+  local counter="${object}.reads" count=0
+  [[ -f "$counter" ]] && count="$(cat "$counter")"
+  if (( count < 2 )); then printf '%s' "$((count + 1))" >"$counter"; printf '404 Not Found\n' >&2; exit 2; fi
+}
 case "$operation" in
   head-object)
+    delayed_read
     if [[ "$scenario" == 'missing-after-upload' && "$key" == *.dump ]]; then printf '404 Not Found\n' >&2; exit 2; fi
     [[ -f "$object" ]] || { printf '404 Not Found\n' >&2; exit 2; }
     size="$(stat -c '%s' "$object")"
@@ -73,6 +81,7 @@ case "$operation" in
     printf '{}\n'
     ;;
   get-object)
+    delayed_read
     destination="${args[$((${#args[@]}-3))]}"
     [[ -f "$object" ]] || { printf '404 Not Found\n' >&2; exit 2; }
     [[ "$scenario" == 'verification-failure' ]] && { printf '500 verification failed\n' >&2; exit 2; }
@@ -133,6 +142,8 @@ run_case success success success
 success_root="${TEST_ROOT}/success/backup"
 if node -e "const m=require(process.argv[1]);if(m.status!=='REMOTE_VERIFIED'||m.remoteVerification!=='PASSED'||m.remoteVersionId!=='version-test-20261002T180000Z-abcdef123456'||m.remoteRetentionStatus!=='VERSIONED_NO_WORM_GUARANTEE')process.exit(1)" "${success_root}/test-20261002T180000Z-abcdef123456.remote.manifest.json"; then pass remote-manifest; else fail remote-manifest invalid; fi
 if node -e "const s=require(process.argv[1]);if(s.consecutiveFailures!==0||!s.lastRemoteObject||s.lastRemoteVersionId!=='version-test-20261002T180000Z-abcdef123456')process.exit(1)" "${success_root}/state.json"; then pass success-state; else fail success-state invalid; fi
+
+run_case delayed-visibility delayed-visibility success
 
 for scenario in network timeout http400 http401 http403 missing-after-upload missing-version http429 http500 http503 partial-upload size-mismatch checksum-mismatch manifest-upload-failure verification-failure; do
   run_case "$scenario" "$scenario" failure

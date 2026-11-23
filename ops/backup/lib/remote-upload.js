@@ -98,9 +98,18 @@ function isRetryable(text) {
   return /timeout|timed out|connection reset|temporar|429|500|502|503|504|slowdown|service unavailable/i.test(text);
 }
 
-function aws(args, errorCode, allowNotFound = false) {
+/**
+ * S3-compatible endpoints (DigitalOcean Spaces) can answer 404 for a few seconds right after a
+ * successful put-object. Verification reads made right after a write therefore treat "not found"
+ * as temporary and retry for up to ~2 minutes before failing.
+ */
+const visibilityAttempts = Number(process.env.CORO_BACKUP_REMOTE_VISIBILITY_ATTEMPTS || 8);
+const visibilityDelayCapMs = Number(process.env.CORO_BACKUP_REMOTE_VISIBILITY_CAP_MS || 30000);
+
+function aws(args, errorCode, allowNotFound = false, awaitVisibility = false) {
   let lastText = '';
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+  const attempts = awaitVisibility ? Math.max(maxAttempts, visibilityAttempts) : maxAttempts;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const result = spawnSync('aws', ['--no-cli-pager', '--endpoint-url', endpoint, 's3api', ...args], {
       encoding: 'utf8',
       env: process.env,
@@ -109,10 +118,12 @@ function aws(args, errorCode, allowNotFound = false) {
     });
     lastText = `${result.stdout || ''}\n${result.stderr || ''}`;
     if (result.status === 0) return { found: true, stdout: result.stdout || '' };
-    if (allowNotFound && /404|not found|nosuchkey/i.test(lastText)) return { found: false, stdout: '' };
-    if (!isRetryable(lastText) || attempt === maxAttempts) break;
+    const notFound = /404|not found|nosuchkey/i.test(lastText);
+    if (allowNotFound && notFound) return { found: false, stdout: '' };
+    const retryable = isRetryable(lastText) || (awaitVisibility && notFound);
+    if (!retryable || attempt === attempts) break;
     const jitter = crypto.randomInt(0, Math.max(1, baseDelayMs + 1));
-    sleep(baseDelayMs * (2 ** (attempt - 1)) + jitter);
+    sleep(Math.min(baseDelayMs * (2 ** (attempt - 1)), awaitVisibility ? visibilityDelayCapMs : Number.MAX_SAFE_INTEGER) + jitter);
   }
   if (/401|403|accessdenied|invalidaccesskey|signaturedoesnotmatch/i.test(lastText)) {
     fail('REMOTE_AUTH_FAILED', 'Remote authentication or authorization failed');
@@ -177,12 +188,12 @@ async function main() {
   }
 
   aws(['put-object', '--bucket', bucket, '--key', dumpKey, '--body', dumpPath, '--acl', 'private', '--metadata', `sha256=${local.sha256},backup-id=${local.backupId}`, '--output', 'json'], 'REMOTE_UPLOAD_FAILED');
-  const dumpHeadResult = aws(['head-object', '--bucket', bucket, '--key', dumpKey, '--output', 'json'], 'REMOTE_OBJECT_MISSING');
+  const dumpHeadResult = aws(['head-object', '--bucket', bucket, '--key', dumpKey, '--output', 'json'], 'REMOTE_OBJECT_MISSING', false, true);
   const dumpHead = JSON.parse(dumpHeadResult.stdout);
   const dumpVersionId = requiredVersionId(dumpHead, 'REMOTE_VERSION_ID_MISSING');
   assert(Number(dumpHead.ContentLength) === local.sizeBytes, 'REMOTE_SIZE_MISMATCH', 'Remote dump size mismatch');
   assert(metadataValue(dumpHead, 'sha256') === local.sha256 && metadataValue(dumpHead, 'backup-id') === local.backupId, 'REMOTE_CHECKSUM_MISMATCH', 'Remote dump metadata mismatch');
-  aws(['get-object', '--bucket', bucket, '--key', dumpKey, verifyDumpPath, '--output', 'json'], 'REMOTE_VERIFICATION_FAILED');
+  aws(['get-object', '--bucket', bucket, '--key', dumpKey, verifyDumpPath, '--output', 'json'], 'REMOTE_VERIFICATION_FAILED', false, true);
   assert(await sha256File(verifyDumpPath) === local.sha256, 'REMOTE_CHECKSUM_MISMATCH', 'Downloaded remote dump checksum mismatch');
   fs.rmSync(verifyDumpPath);
 
@@ -201,11 +212,11 @@ async function main() {
   const remoteManifestSha = await sha256File(pendingRemoteManifestPath);
   const remoteManifestSize = fs.statSync(pendingRemoteManifestPath).size;
   aws(['put-object', '--bucket', bucket, '--key', manifestKey, '--body', pendingRemoteManifestPath, '--acl', 'private', '--metadata', `sha256=${remoteManifestSha},backup-id=${local.backupId}`, '--output', 'json'], 'REMOTE_MANIFEST_FAILED');
-  const manifestHeadResult = aws(['head-object', '--bucket', bucket, '--key', manifestKey, '--output', 'json'], 'REMOTE_MANIFEST_FAILED');
+  const manifestHeadResult = aws(['head-object', '--bucket', bucket, '--key', manifestKey, '--output', 'json'], 'REMOTE_MANIFEST_FAILED', false, true);
   const manifestHead = JSON.parse(manifestHeadResult.stdout);
   assert(Number(manifestHead.ContentLength) === remoteManifestSize, 'REMOTE_MANIFEST_FAILED', 'Remote manifest size mismatch');
   assert(metadataValue(manifestHead, 'sha256') === remoteManifestSha && metadataValue(manifestHead, 'backup-id') === local.backupId, 'REMOTE_MANIFEST_FAILED', 'Remote manifest metadata mismatch');
-  aws(['get-object', '--bucket', bucket, '--key', manifestKey, verifyManifestPath, '--output', 'json'], 'REMOTE_MANIFEST_FAILED');
+  aws(['get-object', '--bucket', bucket, '--key', manifestKey, verifyManifestPath, '--output', 'json'], 'REMOTE_MANIFEST_FAILED', false, true);
   assert(await sha256File(verifyManifestPath) === remoteManifestSha, 'REMOTE_MANIFEST_FAILED', 'Downloaded remote manifest checksum mismatch');
   fs.rmSync(verifyManifestPath);
   fs.renameSync(pendingRemoteManifestPath, remoteManifestPath);
