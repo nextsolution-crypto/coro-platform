@@ -524,3 +524,17 @@
 @media (max-width: 30rem) {
   .demoValues { grid-template-columns: 1fr; }
 }
+
+/* Deux portes d'entrée (gestionnaires de bâtiments / firmes-conseils), de même poids. */
+.audHeader { display: grid; gap: 0; }
+.audGrid { list-style: none; margin: var(--coro-v1-space-6) 0 0; padding: 0; display: grid; gap: var(--coro-v1-space-5); grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); }
+.audDoor { display: grid; align-content: start; gap: var(--coro-v1-space-3); padding: var(--coro-v1-space-6); border: 1px solid var(--coro-v1-paper-line-strong); border-block-start: 3px solid var(--coro-v1-red-600); border-radius: var(--coro-v1-radius-control); background: var(--coro-v1-surface-1); }
+.audDoor[data-door="advisors"] { border-block-start-color: var(--coro-v1-blue-700); }
+.audKicker { margin: 0; color: var(--muted); font-size: var(--coro-v1-text-small); font-weight: 750; text-transform: uppercase; letter-spacing: .06em; }
+.audTitle { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 800; line-height: 1.2; }
+.audText { margin: 0; color: var(--muted); line-height: 1.6; }
+.audLinks { list-style: none; margin: var(--coro-v1-space-2) 0 0; padding: 0; display: grid; gap: 0; }
+.audLinks li { border-block-start: 1px solid var(--line); }
+.audLinks a { display: flex; justify-content: space-between; min-height: 44px; align-items: center; color: var(--ink); font-weight: 700; text-decoration: none; }
+.audLinks a:hover, .audLinks a:focus-visible { color: var(--coro-v1-red-700); }
+.documentSuiteUpcoming { border-style: dashed; }

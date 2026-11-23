@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Locale } from '@/lib/site/locale';
 import { SiteFooterV2 } from '@/components/conversion/SiteFooterV2';
+import { PageContextStrip } from './PageContextStrip';
 import { SiteHeader, type SiteHeaderTone } from './SiteHeader';
 import { SkipLink } from './SkipLink';
 import styles from './V2Shell.module.css';
@@ -17,7 +18,7 @@ export function V2Shell({ locale, pathname = '/', headerTone = 'light', englishA
     <div className={styles.shell} data-coro-system="v1" lang={locale}>
       <SkipLink locale={locale} />
       <SiteHeader locale={locale} pathname={pathname} tone={headerTone} englishAvailable={englishAvailable} />
-      <main id="main-content" tabIndex={-1} className={styles.main}>{children}</main>
+      <main id="main-content" tabIndex={-1} className={styles.main}><PageContextStrip locale={locale} pathname={pathname} />{children}</main>
       <SiteFooterV2 locale={locale} pathname={pathname} englishAvailable={englishAvailable} />
     </div>
   );

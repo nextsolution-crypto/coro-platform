@@ -20,6 +20,26 @@ const fr = {
       { label: 'Agir', text: 'Incident · Actions\nTraçabilité' },
     ],
   },
+  audiences: {
+    label: 'Pour qui',
+    heading: 'Deux façons d’utiliser CORO.',
+    lead: 'La firme-conseil prépare les plans ; le gestionnaire du bâtiment les utilise au quotidien et pendant l’urgence. CORO relie les deux.',
+    explore: 'Explorer',
+    doors: [
+      { id: 'buildings', kicker: 'Gestionnaires, propriétaires et entreprises', title: 'Vous protégez des bâtiments et leurs occupants.', text: 'Savoir qui est présent, déclencher un incident, faire basculer les écrans en mode urgence, tenir la main courante et mesurer votre préparation : avant, pendant et après l’urgence.', links: [
+        { label: 'Registre et évacuation', href: '/sentinelle' },
+        { label: 'Incident et écrans d’urgence', href: '/coro-incident' },
+        { label: 'Rapports de sécurité', href: '/sentinelle#coro-report' },
+        { label: 'Indice CORO', href: '/resilience-operationnelle' },
+      ] },
+      { id: 'advisors', kicker: 'Firmes-conseils en mesures d’urgence', title: 'Vous accompagnez des clients.', text: 'Produisez les PMU, PSI et PCA de vos clients, pilotez vos mandats et vos heures, et donnez à chaque client un portail où il retrouve ses plans approuvés et ses outils d’urgence.', links: [
+        { label: 'Gestion documentaire', href: '/gestion-documentaire' },
+        { label: 'Projets et mandats', href: '/gestion-de-projets' },
+        { label: 'Performance', href: '/performance-objectifs' },
+        { label: 'Portail client', href: '/portail-client' },
+      ] },
+    ],
+  },
   tension: {
     label: 'Pourquoi CORO',
     heading: 'Avoir un plan ne signifie pas être prêt.',
@@ -75,8 +95,11 @@ const fr = {
     },
   },
   documents: {
-    label: '01. Une suite complète',
-    heading: 'Tous vos documents. Un seul endroit.',
+    label: '01. Plans d’urgence',
+    upcomingTitle: 'Trois plans à venir',
+    upcomingText: 'Gestion de crise, reprise des activités, urgence environnementale. Guides déjà disponibles.',
+    upcomingLink: 'Lire les guides',
+    heading: 'Vos plans d’urgence. Un seul endroit.',
     lead: 'Des modèles structurés, alignés sur les normes applicables au Québec et au Canada, adaptés à votre réalité.',
     linkLabel: 'En savoir plus',
     phaseLabel: 'Phase 2',
@@ -223,6 +246,26 @@ const en: HomeContent = {
       { label: 'Act', text: 'Incident · Actions\nTraceability' },
     ],
   },
+  audiences: {
+    label: 'Who it is for',
+    heading: 'Two ways to use CORO.',
+    lead: 'The consulting firm prepares the plans; the building manager uses them every day and during an emergency. CORO connects both.',
+    explore: 'Explore',
+    doors: [
+      { id: 'buildings', kicker: 'Managers, owners and organizations', title: 'You protect buildings and their occupants.', text: 'Know who is present, start an incident, switch screens to emergency mode, keep the security logbook and measure your preparedness: before, during and after an emergency.', links: [
+        { label: 'Occupancy and evacuation', href: '/sentinelle' },
+        { label: 'Incidents and emergency screens', href: '/coro-incident' },
+        { label: 'Security reports', href: '/sentinelle#coro-report' },
+        { label: 'CORO Index', href: '/resilience-operationnelle' },
+      ] },
+      { id: 'advisors', kicker: 'Emergency management consulting firms', title: 'You support clients.', text: 'Produce your clients’ emergency, fire safety and continuity plans, manage mandates and hours, and give each client a portal with their approved plans and emergency tools.', links: [
+        { label: 'Document management', href: '/gestion-documentaire' },
+        { label: 'Projects and mandates', href: '/gestion-de-projets' },
+        { label: 'Performance', href: '/performance-objectifs' },
+        { label: 'Client portal', href: '/portail-client' },
+      ] },
+    ],
+  },
   tension: {
     label: 'Why CORO',
     heading: 'Having a plan does not mean being ready.',
@@ -278,8 +321,11 @@ const en: HomeContent = {
     },
   },
   documents: {
-    label: '01. A complete suite',
-    heading: 'All your documents. One place.',
+    label: '01. Emergency plans',
+    upcomingTitle: 'Three plans coming',
+    upcomingText: 'Crisis management, disaster recovery, environmental emergency. Guides already available.',
+    upcomingLink: 'Read the guides',
+    heading: 'Your emergency plans. One place.',
     lead: 'Structured templates, aligned with applicable standards in Quebec and Canada, adapted to your reality.',
     linkLabel: 'Learn more',
     phaseLabel: 'Phase 2',

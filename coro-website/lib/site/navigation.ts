@@ -6,34 +6,41 @@ type Label = Record<Locale, string>;
 export type NavigationItem = { id: string; label: Label; href?: string; external?: boolean };
 export type NavigationGroup = { id: string; label: Label; items: readonly NavigationItem[] };
 
-const item = (id: string, fr: string, en: string): NavigationItem => {
+const item = (id: string, fr: string, en: string, anchor?: string): NavigationItem => {
   const route = getRoute(id);
-  return { id, label: { fr, en }, href: route?.implemented ? route.path : undefined };
+  return { id, label: { fr, en }, href: route?.implemented ? `${route.path}${anchor ? `#${anchor}` : ''}` : undefined };
 };
 
+/**
+ * Menu organisé par moment (se préparer, réagir, suivre et prouver) pour les gestionnaires de bâtiments,
+ * plus un menu dédié aux firmes-conseils. Les adresses des pages ne changent pas.
+ */
 export const navigationGroups: readonly NavigationGroup[] = [
-  { id: 'platform', label: { fr: 'Plateforme', en: 'Platform' }, items: [
-    item('platform-overview', "Vue d’ensemble", 'Overview'), item('coro-platform', 'CORO Platform', 'CORO Platform'),
-    item('documents', 'Documents', 'Documents'), item('projects', 'Projects', 'Projects'),
-    item('performance', 'Performance', 'Performance'), item('client', 'Client', 'Client'),
-    item('security', 'Sécurité & hébergement', 'Security & hosting'),
+  { id: 'prepare', label: { fr: 'Se préparer', en: 'Prepare' }, items: [
+    item('resilience', 'Indice CORO et résilience', 'CORO Index and resilience'),
+    item('guides', 'Plans d’urgence', 'Emergency plans'),
+    item('exercises', 'Exercices', 'Exercises'),
   ] },
-  { id: 'resilience', label: { fr: 'Résilience & opérations', en: 'Resilience & operations' }, items: [
-    item('resilience-operations', "Vue d’ensemble", 'Overview'), item('resilience', 'Résilience / Indice CORO', 'Resilience / CORO Index'),
-    item('sentinelle', 'Sentinelle', 'Sentinelle'), item('incident', 'Incident', 'Incident'),
-    item('exercises', 'Exercices', 'Exercises'), item('ops', 'Ops', 'Ops'), item('qr-intervention', 'QR Intervention', 'QR Response'),
+  { id: 'respond', label: { fr: 'Réagir', en: 'Respond' }, items: [
+    item('sentinelle', 'Registre et évacuation (Sentinelle)', 'Occupancy and evacuation (Sentinelle)'),
+    item('incident', 'Incident et écrans d’urgence', 'Incidents and emergency screens'),
+    item('sentinelle-population', 'Alerte à la population', 'Public alerts'),
+    item('qr-intervention', 'QR Intervention', 'QR Response'),
   ] },
-  { id: 'intelligence', label: { fr: 'Intelligence', en: 'Intelligence' }, items: [
-    item('knowledge', 'Knowledge', 'Knowledge'), item('ai', 'AI', 'AI'), item('network', 'Network', 'Network'),
+  { id: 'prove', label: { fr: 'Suivre et prouver', en: 'Track and prove' }, items: [
+    item('sentinelle', 'Rapports de sécurité (CORO Report)', 'Security reports (CORO Report)', 'coro-report'),
+    item('knowledge', 'CORO Knowledge', 'CORO Knowledge'), item('ai', 'CORO AI', 'CORO AI'),
+    item('network', 'Network', 'Network'),
   ] },
-  { id: 'solutions', label: { fr: 'Solutions', en: 'Solutions' }, items: [
-    item('sentinelle-population', 'Sentinelle Population', 'Sentinelle Population'),
-    item('campus', 'Campus', 'Campus'), item('multi-site', 'Multi-sites', 'Multi-site'),
+  { id: 'advisors', label: { fr: 'Pour les conseillers', en: 'For advisors' }, items: [
+    item('documents', 'Gestion documentaire', 'Document management'), item('projects', 'Projets et mandats', 'Projects and mandates'),
+    item('performance', 'Performance', 'Performance'), item('client', 'Portail client', 'Client portal'),
   ] },
   { id: 'resources', label: { fr: 'Ressources', en: 'Resources' }, items: [
     item('resources', 'Centre de ressources', 'Resource centre'), item('blog', 'Blogue', 'Blog'),
-    item('guides', 'Guides', 'Guides'), item('diagnostic', 'Évaluer ma préparation', 'Assess my preparedness'),
-    item('compliance-resources', 'Conformité & réglementation', 'Compliance & regulations'),
+    item('diagnostic', 'Évaluer ma préparation', 'Assess my preparedness'),
+    item('security', 'Sécurité et hébergement', 'Security and hosting'),
+    item('compliance-resources', 'Conformité et réglementation', 'Compliance and regulations'),
   ] },
 ];
 
