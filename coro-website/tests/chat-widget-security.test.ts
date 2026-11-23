@@ -37,10 +37,9 @@ test("concurrent contact submissions are disabled", () => {
   );
 });
 
-test("chat input and legacy outbound history respect backend limits", () => {
+test("chat input respects backend limits and sends no conversation history", () => {
   assert.match(source, /maxLength=\{2_000\}/);
-  assert.match(source, /messages\s*\.slice\(-10\)/);
-  assert.match(source, /content\.slice\(0, 2_000\)/);
+  assert.doesNotMatch(source, /const history = messages/);
 });
 
 test("intelligent assistant sends only bounded current input and public page context", () => {
@@ -50,12 +49,17 @@ test("intelligent assistant sends only bounded current input and public page con
   assert.doesNotMatch(source, /pageContext: window\.location\.href/);
   const intelligentBranch = source.slice(
     source.indexOf("if (INTELLIGENT_ASSISTANT_ENABLED)"),
-    source.indexOf('publicApiUrl("chat/vitrine")'),
+    source.indexOf('throw new Error("PUBLIC_ASSISTANT_DISABLED")'),
   );
   assert.match(intelligentBranch, /message: text/);
   assert.match(intelligentBranch, /language/);
   assert.match(intelligentBranch, /sessionId/);
   assert.doesNotMatch(intelligentBranch, /history,/);
+});
+
+test("the retired US chat endpoint is never called", () => {
+  assert.doesNotMatch(source, /chat\/vitrine/);
+  assert.doesNotMatch(source, /anthropic/i);
 });
 
 test("assistant state is ephemeral and exposes no browser persistence or analytics", () => {

@@ -99,7 +99,8 @@ jobs:
             test "$(docker inspect -f '{{.State.Running}}' "$backend")" = true
             test "$(docker inspect -f '{{.RestartCount}}' "$backend")" = 0
             test "$(docker exec "$backend" sh -c 'printf %s "$INCIDENT_REPORTS_ENABLED"')" = true
-            test "$(docker exec "$backend" sh -c 'printf %s "$INCIDENT_REPORT_ATTACHMENTS_ENABLED"')" = false
+            # Pièces jointes admises seulement sous quarantaine ClamAV (à la demande ou permanente).
+            docker exec "$backend" node -e 'const e=process.env;if(e.INCIDENT_REPORT_ATTACHMENTS_ENABLED==="true"&&!["ON_DEMAND","INLINE"].includes(e.INCIDENT_REPORT_CLAMAV_MODE))process.exit(1)'
             test "$(docker exec "$backend" sh -c 'printf %s "$INCIDENT_REPORT_IMPORT_ENABLED"')" = false
             test "$(docker exec "$backend" sh -c 'printf %s "${INCIDENT_REPORT_ARCHIVES_ENABLED:-false}"')" = false
             stage=active_release

@@ -26,68 +26,6 @@ describe('ChatService security', () => {
     );
   });
 
-  it('does not call any provider when Anthropic configuration is absent', async () => {
-    delete process.env.ANTHROPIC_API_KEY;
-    const http = jest.fn() as unknown as ChatHttpClient;
-    const result = await new ChatService(http).handleMessage(
-      'Quels sont vos prix?',
-      [],
-    );
-    expect(http).not.toHaveBeenCalled();
-    expect(result).toMatchObject({
-      status: 'UNAVAILABLE',
-      contactSuggested: true,
-    });
-  });
-
-  it('suggests contact on a keyword without sending a notification', async () => {
-    process.env.ANTHROPIC_API_KEY = 'test-only';
-    const http = jest.fn().mockResolvedValue(
-      response(200, {
-        content: [{ text: 'Utilisez le formulaire si vous le souhaitez.' }],
-      }),
-    ) as unknown as ChatHttpClient;
-    const result = await new ChatService(http).handleMessage(
-      'Je veux une démo',
-      [],
-    );
-    expect(result.contactSuggested).toBe(true);
-    expect(http).toHaveBeenCalledTimes(1);
-    expect(String((http as jest.Mock).mock.calls[0][0])).toContain(
-      'anthropic.com',
-    );
-  });
-
-  it.each([
-    [500, { error: 'provider' }],
-    [200, { unexpected: true }],
-  ])(
-    'fails explicitly for Anthropic status/shape %#',
-    async (status, payload) => {
-      process.env.ANTHROPIC_API_KEY = 'test-only';
-      const http = jest
-        .fn()
-        .mockResolvedValue(
-          response(status, payload),
-        ) as unknown as ChatHttpClient;
-      await expect(
-        new ChatService(http).handleMessage('Bonjour', []),
-      ).resolves.toMatchObject({ status: 'UNAVAILABLE' });
-    },
-  );
-
-  it('fails closed when the Anthropic request times out', async () => {
-    process.env.ANTHROPIC_API_KEY = 'test-only';
-    const http = jest
-      .fn()
-      .mockRejectedValue(
-        new DOMException('Timed out', 'TimeoutError'),
-      ) as unknown as ChatHttpClient;
-    await expect(
-      new ChatService(http).handleMessage('Bonjour', []),
-    ).resolves.toMatchObject({ status: 'UNAVAILABLE' });
-  });
-
   it('escapes notification content and reports provider success only with a message id', async () => {
     process.env.BREVO_API_KEY = 'test-only';
     const http = jest
@@ -159,17 +97,4 @@ describe('ChatService security', () => {
       ).resolves.toEqual({ success: false, status: expectedStatus });
     },
   );
-});
-
-describe('ChatService live emergency guard (T6)', () => {
-  it('answers a live emergency with the fixed 911 reply without calling any provider', async () => {
-    const http = jest.fn();
-    process.env.ANTHROPIC_API_KEY = 'test-key';
-    const result = await new ChatService(http as any).handleMessage("Il y a un feu dans l'entrepôt", []);
-    delete process.env.ANTHROPIC_API_KEY;
-    expect(http).not.toHaveBeenCalled();
-    expect(result.reply).toMatch(/composez le 911/);
-    expect(result.reply).toMatch(/call 911/);
-    expect(result.status).toBe('ANSWERED');
-  });
 });

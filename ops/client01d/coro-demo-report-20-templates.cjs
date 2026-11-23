@@ -50,20 +50,18 @@ const fixtureWhere = (key) => ({
 });
 
 function assertRuntimeFlags(environment) {
-  const required = {
-    INCIDENT_REPORTS_ENABLED: true,
-    INCIDENT_REPORT_ATTACHMENTS_ENABLED: false,
-    INCIDENT_REPORT_IMPORT_ENABLED: false,
-    INCIDENT_REPORT_ARCHIVES_ENABLED: false,
-    OPERATIONAL_LOG_ENABLED: false,
-    OPERATIONAL_SHIFTS_ENABLED: false,
-    OPERATIONAL_DIRECTIVES_ENABLED: false,
-    OPERATIONAL_FOLLOWUPS_ENABLED: false,
-  };
-  for (const [name, expected] of Object.entries(required)) {
-    if ((environment[name] === "true") !== expected)
-      throw new Error(`FLAG_${name}_INVALID`);
-  }
+  // Les modèles de rapport ne dépendent que du module Rapports. Les pièces
+  // jointes ne sont admises que sous quarantaine ClamAV (à la demande ou
+  // permanente) ; l'import de fichiers reste fermé.
+  if (environment.INCIDENT_REPORTS_ENABLED !== "true")
+    throw new Error("FLAG_INCIDENT_REPORTS_ENABLED_INVALID");
+  if (environment.INCIDENT_REPORT_IMPORT_ENABLED === "true")
+    throw new Error("FLAG_INCIDENT_REPORT_IMPORT_ENABLED_INVALID");
+  if (
+    environment.INCIDENT_REPORT_ATTACHMENTS_ENABLED === "true" &&
+    !["ON_DEMAND", "INLINE"].includes(environment.INCIDENT_REPORT_CLAMAV_MODE)
+  )
+    throw new Error("FLAG_INCIDENT_REPORT_ATTACHMENTS_ENABLED_INVALID");
 }
 
 function fieldCatalog(formSchema) {

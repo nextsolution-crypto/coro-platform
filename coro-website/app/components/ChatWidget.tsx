@@ -220,12 +220,6 @@ export default function ChatWidget() {
   const sendMessage = async (override?: string) => {
     const text = (override ?? input).trim();
     if (!text || loading) return;
-    const history = messages
-      .slice(-10)
-      .map((message) => ({
-        role: message.role,
-        content: message.content.slice(0, 2_000),
-      }));
     setInput("");
     setMessages((current) => [...current, { role: "user", content: text }]);
     setLoading(true);
@@ -259,25 +253,9 @@ export default function ChatWidget() {
         ]);
         return;
       }
-      const response = await fetch(publicApiUrl("chat/vitrine"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history }),
-      });
-      if (!response.ok) throw new Error("CHAT_UNAVAILABLE");
-      const result = (await response.json()) as {
-        reply?: unknown;
-        contactSuggested?: unknown;
-        transferToAgent?: unknown;
-      };
-      if (typeof result.reply !== "string")
-        throw new Error("INVALID_CHAT_RESPONSE");
-      setMessages((current) => [
-        ...current,
-        { role: "assistant", content: result.reply as string },
-      ]);
-      if (result.contactSuggested ?? result.transferToAgent)
-        setContactSuggested(true);
+      // L'ancien clavardage hors Canada est retiré : sans l'assistant
+      // documentaire, le widget affiche seulement les liens utiles.
+      throw new Error("PUBLIC_ASSISTANT_DISABLED");
     } catch {
       setMessages((current) => [
         ...current,

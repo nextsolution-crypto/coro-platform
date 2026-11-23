@@ -88,7 +88,7 @@ test('navigation exposes implemented destinations only', () => {
 test('API URL helpers never duplicate the api segment', () => {
   const previousPublic = process.env.NEXT_PUBLIC_API_URL; const previousInternal = process.env.INTERNAL_API_URL;
   process.env.NEXT_PUBLIC_API_URL = 'https://api.getcoro.io/api/'; process.env.INTERNAL_API_URL = 'http://backend:3002/api';
-  assert.equal(publicApiUrl('/chat/vitrine'), 'https://api.getcoro.io/api/chat/vitrine');
+  assert.equal(publicApiUrl('/chat/v1/public-assistant'), 'https://api.getcoro.io/api/chat/v1/public-assistant');
   assert.equal(serverApiUrl('blog/public'), 'http://backend:3002/api/blog/public');
   if (previousPublic === undefined) delete process.env.NEXT_PUBLIC_API_URL; else process.env.NEXT_PUBLIC_API_URL = previousPublic;
   if (previousInternal === undefined) delete process.env.INTERNAL_API_URL; else process.env.INTERNAL_API_URL = previousInternal;
