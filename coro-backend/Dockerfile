@@ -17,6 +17,8 @@ COPY . .
 
 RUN npx prisma@6.19.3 generate
 RUN npm run build
+# CORO Knowledge : modèle de vecteurs local (multilingual-e5-small, MIT).
+RUN node scripts/fetch-embedding-model.cjs /app/models
 RUN node scripts/verify-client-operational-routes.cjs
 
 # ── Production stage ─────────────────────────────────
@@ -51,6 +53,8 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/assets ./assets
+COPY --from=builder /app/models ./models
+ENV CORO_KNOWLEDGE_LOCAL_MODEL_ROOT=/app/models
 
 # Fail the image build if the runtime Prisma engine is missing or cannot load.
 RUN node -e "require('./node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node')"
@@ -58,6 +62,7 @@ RUN node -e "require('./node_modules/.prisma/client/libquery_engine-debian-opens
 RUN node dist/scripts/knowledge-runtime-smoke.js
 RUN node dist/scripts/knowledge-ocr-smoke.js
 RUN node dist/scripts/display-pdf-runtime-smoke.js
+RUN node dist/scripts/knowledge-local-embedding-smoke.js
 
 EXPOSE 3002
 

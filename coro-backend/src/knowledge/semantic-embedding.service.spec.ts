@@ -1,8 +1,10 @@
 import { DeterministicEmbeddingService } from './deterministic-embedding.service';
 import { KnowledgeEmbeddingBackfillService } from './knowledge-embedding-backfill.service';
 import { KnowledgeRetrievalService, titanSemanticScore } from './knowledge-retrieval.service';
+import { LocalEmbeddingEngine } from './local-embedding.engine';
 import {
   cosine,
+  LOCAL_E5_EMBEDDING_MODEL,
   LOCAL_EMBEDDING_MODEL,
   SemanticEmbeddingService,
   TITAN_DIMENSIONS,
@@ -159,7 +161,11 @@ describe('KnowledgeRetrievalService with Titan vectors', () => {
       scope: jest.fn(async () => ({ organizationId: 'org', buildingIds: undefined })),
       where: jest.fn(() => ({ organizationId: 'org' })),
     };
-    const semantic: any = { embedQuery: jest.fn(async () => vector(7)) };
+    const semantic: any = {
+      embedQuery: jest.fn(async () => vector(7)),
+      targetModel: TITAN_EMBEDDING_MODEL,
+      semanticScore: titanSemanticScore,
+    };
     const service = new KnowledgeRetrievalService(
       prisma,
       authorization,
@@ -196,7 +202,11 @@ describe('KnowledgeRetrievalService with Titan vectors', () => {
       new DeterministicEmbeddingService(),
       { maxResults: 8 } as any,
       { search: jest.fn(async () => []) } as any,
-      { embedQuery: jest.fn(async () => vector(1)) } as any,
+      {
+        embedQuery: jest.fn(async () => vector(1)),
+        targetModel: TITAN_EMBEDDING_MODEL,
+        semanticScore: titanSemanticScore,
+      } as any,
     );
     await service.search(
       { type: 'INTERNAL_USER', id: 'u', organizationId: 'org', role: 'ADMIN' } as any,
@@ -225,7 +235,8 @@ describe('KnowledgeEmbeddingBackfillService', () => {
       },
     };
     const semantic: any = {
-      titanAvailable: () => true,
+      semanticAvailable: () => true,
+      targetModel: TITAN_EMBEDDING_MODEL,
       embedDocument: jest.fn(async (text: string) =>
         text === 'Plan A'
           ? { model: TITAN_EMBEDDING_MODEL, vector: vector(4) }
@@ -244,9 +255,64 @@ describe('KnowledgeEmbeddingBackfillService', () => {
   it('does nothing while Titan is unavailable', async () => {
     const prisma: any = { projectFileKnowledgeChunk: { findMany: jest.fn() } };
     const service = new KnowledgeEmbeddingBackfillService(prisma, config(), {
-      titanAvailable: () => false,
+      semanticAvailable: () => false,
     } as any);
     await service.tick();
     expect(prisma.projectFileKnowledgeChunk.findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('Modèle local multilingual-e5-small', () => {
+  function localConfig() {
+    return config({ embeddingProvider: 'local-e5-small', localSimilarityFloor: 0.78, localSimilaritySpan: 0.14 });
+  }
+  function e5(axis: number) {
+    const values = Array<number>(384).fill(0);
+    values[axis] = 1;
+    return values;
+  }
+
+  it('préfixe questions et passages, sérialise et décharge après inactivité', async () => {
+    jest.useFakeTimers();
+    const calls: string[] = [];
+    const dispose = jest.fn(async () => undefined);
+    const extractor = Object.assign(
+      jest.fn(async (text: string) => {
+        calls.push(text);
+        return { tolist: () => [e5(text.startsWith('query') ? 1 : 2)] };
+      }),
+      { dispose },
+    );
+    const loader = jest.fn(async () => extractor as any);
+    const engine = new LocalEmbeddingEngine('/models', 1000, loader);
+    await Promise.all([engine.embed('query', 'sortie'), engine.embed('passage', 'évacuation')]);
+    expect(calls).toEqual(['query: sortie', 'passage: évacuation']);
+    expect(loader).toHaveBeenCalledTimes(1);
+    expect(engine.loaded()).toBe(true);
+    await jest.advanceTimersByTimeAsync(1001);
+    expect(dispose).toHaveBeenCalled();
+    expect(engine.loaded()).toBe(false);
+    jest.useRealTimers();
+  });
+
+  it('stocke les vecteurs e5 et les compare sur leur propre échelle', async () => {
+    const engine = { modelPresent: () => true, embed: jest.fn(async () => e5(5)) } as any;
+    const service = new SemanticEmbeddingService(localConfig(), new DeterministicEmbeddingService(), engine);
+    expect(service.targetModel).toBe(LOCAL_E5_EMBEDDING_MODEL);
+    expect(await service.embedDocument('Plan')).toEqual({ model: LOCAL_E5_EMBEDDING_MODEL, vector: e5(5) });
+    expect(engine.embed).toHaveBeenCalledWith('passage', 'Plan');
+    await service.embedQuery('Où ?');
+    expect(engine.embed).toHaveBeenLastCalledWith('query', 'Où ?');
+    expect(service.semanticScore(0.7)).toBe(0);
+    expect(service.semanticScore(0.85)).toBeCloseTo(0.5);
+    expect(service.semanticScore(0.95)).toBe(1);
+  });
+
+  it('reste sur la projection si le modèle est absent de l image', async () => {
+    const engine = { modelPresent: () => false, embed: jest.fn() } as any;
+    const service = new SemanticEmbeddingService(localConfig(), new DeterministicEmbeddingService(), engine);
+    expect(service.semanticAvailable()).toBe(false);
+    expect((await service.embedDocument('Plan')).model).toBe(LOCAL_EMBEDDING_MODEL);
+    expect(engine.embed).not.toHaveBeenCalled();
   });
 });

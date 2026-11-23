@@ -11,7 +11,7 @@ on:
         description: Exact governed phase
         required: true
         type: choice
-        options: [report, semantic-on, semantic-off, web-on, web-off]
+        options: [report, semantic-on, semantic-off, web-on, web-off, local-on, local-off]
       approval:
         description: Exact phase-specific approval token
         required: true
@@ -43,7 +43,7 @@ jobs:
           set -Eeuo pipefail
           [[ "$APPLICATION_COMMIT" =~ ^[0-9a-f]{40}$ ]]
           case "$PHASE:$APPROVAL" in
-            report:REPORT_KNOWLEDGE_POLICY|semantic-on:ENABLE_SEMANTIC_EMBEDDINGS|semantic-off:DISABLE_SEMANTIC_EMBEDDINGS|web-on:ENABLE_WEB_PUBLIC_BEDROCK|web-off:DISABLE_WEB_PUBLIC_BEDROCK) ;;
+            report:REPORT_KNOWLEDGE_POLICY|semantic-on:ENABLE_SEMANTIC_EMBEDDINGS|semantic-off:DISABLE_SEMANTIC_EMBEDDINGS|web-on:ENABLE_WEB_PUBLIC_BEDROCK|web-off:DISABLE_WEB_PUBLIC_BEDROCK|local-on:ENABLE_LOCAL_EMBEDDINGS|local-off:DISABLE_LOCAL_EMBEDDINGS) ;;
             *) exit 1 ;;
           esac
           node --test ops/knowledge/runtime-policy.test.mjs ops/knowledge/policy-maintenance.test.mjs
@@ -94,6 +94,9 @@ jobs:
             backend="$(docker compose -f "$repo/docker-compose.yml" ps -q backend)"
             test -n "$backend"
             node -e 'const e=JSON.parse(process.argv[1])[0].Config.Env;const k=["CORO_AI_PROVIDER","WEB_AI_PROVIDER","CORO_KNOWLEDGE_EMBEDDING_PROVIDER","KNOWLEDGE_LOCAL_OCR_ENABLED"];const o={};for(const v of e){const [n,...r]=v.split("=");if(k.includes(n))o[n]=r.join("=")}console.log(JSON.stringify({activeRuntime:o}))' "$(docker inspect "$backend")"
+            stage=memory
+            node -e 'const [t,u,a]=process.argv.slice(1).map(Number);console.log(JSON.stringify({serverMemoryMiB:{total:t,used:u,available:a}}))' $(free -m | awk '/^Mem:/{print $2, $3, $7}')
+            docker stats --no-stream --format '{{json .}}' | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const o={};for(const l of d.trim().split("\n")){const j=JSON.parse(l);o[j.Name]=j.MemUsage.split(" / ")[0]}console.log(JSON.stringify({containerMemory:o}))})'
             stage=release_evidence
             marker="/opt/coro-ops/releases/state/production-$EXPECTED_ACTIVE_SHA.reconciled.json"
             node -e 'const fs=require("fs");const m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));const r=JSON.parse(fs.readFileSync(m.manifestPath,"utf8"));const k=r.knowledgeRuntime||{};const s=JSON.stringify({releaseKnowledgeRuntime:k});if(/arn:|BEGIN |password|secret|token|access[_-]?key|private[_-]?key/i.test(s))process.exit(1);console.log(s)' "$marker"
@@ -110,4 +113,6 @@ jobs:
               semantic-off) stage=disable; run set-semantic off ;;
               web-on) stage=web_enable; run set-web on ;;
               web-off) stage=web_disable; run set-web off ;;
+              local-on) stage=local_enable; run set-local on ;;
+              local-off) stage=local_disable; run set-local off ;;
             esac

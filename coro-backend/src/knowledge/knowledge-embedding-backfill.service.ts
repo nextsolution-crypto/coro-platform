@@ -2,10 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { KnowledgeConfig } from './knowledge.config';
-import {
-  SemanticEmbeddingService,
-  TITAN_EMBEDDING_MODEL,
-} from './semantic-embedding.service';
+import { SemanticEmbeddingService } from './semantic-embedding.service';
 
 /**
  * Rattrapage des vecteurs CORO Knowledge.
@@ -28,7 +25,7 @@ export class KnowledgeEmbeddingBackfillService {
 
   @Interval(60_000)
   async tick() {
-    if (this.running || !this.semantic.titanAvailable()) return;
+    if (this.running || !this.semantic.semanticAvailable()) return;
     if (this.config.embeddingBackfillBatch === 0) return;
     this.running = true;
     try {
@@ -48,7 +45,7 @@ export class KnowledgeEmbeddingBackfillService {
       where: {
         OR: [
           { embeddingModel: null },
-          { embeddingModel: { not: TITAN_EMBEDDING_MODEL } },
+          { embeddingModel: { not: this.semantic.targetModel } },
         ],
         ingestion: { status: 'READY' },
       } as any,
@@ -62,9 +59,9 @@ export class KnowledgeEmbeddingBackfillService {
     }>;
     let converted = 0;
     for (const chunk of chunks) {
-      if (!this.semantic.titanAvailable()) break;
+      if (!this.semantic.semanticAvailable()) break;
       const result = await this.semantic.embedDocument(chunk.text);
-      if (result.model !== TITAN_EMBEDDING_MODEL) continue;
+      if (result.model !== this.semantic.targetModel) continue;
       // Écriture conditionnelle : un extrait réindexé entre-temps n'est
       // pas écrasé.
       const updated = await this.prisma.projectFileKnowledgeChunk.updateMany({
@@ -87,7 +84,7 @@ export class KnowledgeEmbeddingBackfillService {
       this.prisma.projectFileKnowledgeChunk.count({
         where: {
           ingestion: { status: 'READY' },
-          embeddingModel: TITAN_EMBEDDING_MODEL,
+          embeddingModel: this.semantic.targetModel,
         } as any,
       }),
     ]);

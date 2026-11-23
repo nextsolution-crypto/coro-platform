@@ -8,21 +8,24 @@ const credentials = ['/etc/coro-ai', '/usr/local/bin/aws_signing_helper'];
 
 export function validatePolicy(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value) ||
-      Object.keys(value).some(k => !['schemaVersion', 'bedrockEnabled', 'webPublicBedrockEnabled', 'semanticEmbeddingsEnabled', 'localOcrEnabled'].includes(k)) ||
+      Object.keys(value).some(k => !['schemaVersion', 'bedrockEnabled', 'webPublicBedrockEnabled', 'semanticEmbeddingsEnabled', 'localSemanticEmbeddingsEnabled', 'localOcrEnabled'].includes(k)) ||
       value.schemaVersion !== 1 || typeof value.bedrockEnabled !== 'boolean' ||
       (value.webPublicBedrockEnabled !== undefined && typeof value.webPublicBedrockEnabled !== 'boolean') ||
       (value.semanticEmbeddingsEnabled !== undefined && typeof value.semanticEmbeddingsEnabled !== 'boolean') ||
+      (value.localSemanticEmbeddingsEnabled !== undefined && typeof value.localSemanticEmbeddingsEnabled !== 'boolean') ||
+      (value.semanticEmbeddingsEnabled === true && value.localSemanticEmbeddingsEnabled === true) ||
       typeof value.localOcrEnabled !== 'boolean') throw new Error('KNOWLEDGE_POLICY_INVALID');
   return { schemaVersion: 1, bedrockEnabled: value.bedrockEnabled,
     webPublicBedrockEnabled: value.webPublicBedrockEnabled ?? false,
     semanticEmbeddingsEnabled: value.semanticEmbeddingsEnabled ?? false,
+    localSemanticEmbeddingsEnabled: value.localSemanticEmbeddingsEnabled ?? false,
     localOcrEnabled: value.localOcrEnabled };
 }
 
 export function loadPolicy(path = POLICY_PATH) {
   let stat;
   try { stat = lstatSync(path); } catch (error) {
-    if (error.code === 'ENOENT') return validatePolicy({ schemaVersion: 1, bedrockEnabled: false, webPublicBedrockEnabled: false, semanticEmbeddingsEnabled: false, localOcrEnabled: false });
+    if (error.code === 'ENOENT') return validatePolicy({ schemaVersion: 1, bedrockEnabled: false, webPublicBedrockEnabled: false, semanticEmbeddingsEnabled: false, localSemanticEmbeddingsEnabled: false, localOcrEnabled: false });
     throw error;
   }
   const parent = lstatSync(dirname(path));
@@ -42,7 +45,9 @@ export function overlay(policy, image) {
     WEB_AI_BEDROCK_INVOCATION_ENABLED: String(policy.webPublicBedrockEnabled),
     KNOWLEDGE_LOCAL_OCR_ENABLED: String(policy.localOcrEnabled),
     // CORO Knowledge : vecteurs Titan Text Embeddings V2, ca-central-1 uniquement.
-    CORO_KNOWLEDGE_EMBEDDING_PROVIDER: policy.semanticEmbeddingsEnabled ? 'bedrock-titan-v2' : 'deterministic',
+    // Vecteurs locaux (multilingual-e5-small sur le serveur) ou Titan au Canada.
+    CORO_KNOWLEDGE_EMBEDDING_PROVIDER: policy.semanticEmbeddingsEnabled ? 'bedrock-titan-v2'
+      : policy.localSemanticEmbeddingsEnabled ? 'local-e5-small' : 'deterministic',
   };
   const backend = { image, environment };
   if (policy.semanticEmbeddingsEnabled) environment.CORO_KNOWLEDGE_EMBEDDING_REGION = 'ca-central-1';
@@ -75,6 +80,7 @@ export function verifyRuntime(runtime, expected) {
   return { bedrock: env.CORO_AI_PROVIDER === 'bedrock' ? 'PASS' : 'DISABLED',
     webPublicBedrock: env.WEB_AI_PROVIDER === 'bedrock' ? 'PASS' : 'DISABLED',
     semanticEmbeddings: env.CORO_KNOWLEDGE_EMBEDDING_PROVIDER === 'bedrock-titan-v2' ? 'PASS' : 'DISABLED',
+    localSemanticEmbeddings: env.CORO_KNOWLEDGE_EMBEDDING_PROVIDER === 'local-e5-small' ? 'PASS' : 'DISABLED',
     localOcr: env.KNOWLEDGE_LOCAL_OCR_ENABLED === 'true' ? 'ENABLED' : 'DISABLED',
     sessionSeconds: awsUsed ? 900 : null };
 }
