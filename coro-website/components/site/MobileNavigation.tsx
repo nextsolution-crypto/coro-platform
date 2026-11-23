@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import type { Locale } from '@/lib/site/locale';
 import { localizedHref } from '@/lib/site/locale';
 import { visibleNavigation } from '@/lib/site/navigation';
+import { NavLabel } from './NavLabel';
 import styles from './SiteShell.module.css';
 
 /**
@@ -27,7 +28,7 @@ export function MobileNavigation({ locale, onNavigate }: { locale: Locale; onNav
               {group.label[locale]}<span aria-hidden="true">{open ? '−' : '+'}</span>
             </button>
             <div id={panelId} hidden={!open}>
-              {group.items.map((entry) => <Link key={entry.id} href={entry.href!} onClick={onNavigate}>{entry.label[locale]}</Link>)}
+              {group.items.map((entry) => <Link key={entry.href} href={entry.href!} onClick={onNavigate}><NavLabel text={entry.label[locale]} /></Link>)}
             </div>
           </section>
         );

@@ -28,17 +28,17 @@ export type FooterGroup = { id: string; label: Label; links: readonly FooterLink
 /** Only implemented public routes (lib/site/routes.ts). `fr` / `en` mirror the route's locale availability. */
 export const footerGroups: readonly FooterGroup[] = [
   { id: 'resilience', label: { fr: 'Bâtiments et urgences', en: 'Buildings and emergencies' }, links: [
-    { path: '/resilience-operationnelle', label: { fr: 'Indice CORO et résilience', en: 'CORO Index and resilience' }, fr: true, en: true },
-    { path: '/sentinelle', label: { fr: 'Registre et évacuation', en: 'Occupancy and evacuation' }, fr: true, en: true },
-    { path: '/coro-incident', label: { fr: 'Incident et écrans d’urgence', en: 'Incidents and emergency screens' }, fr: true, en: true },
-    { path: '/sentinelle-population', label: { fr: 'Alerte à la population', en: 'Public alerts' }, fr: true, en: true },
+    { path: '/resilience-operationnelle', label: { fr: 'Résilience opérationnelle (Indice CORO)', en: 'Operational resilience (CORO Index)' }, fr: true, en: true },
+    { path: '/sentinelle', label: { fr: 'Registre et évacuation (CORO Sentinelle)', en: 'Occupancy and evacuation (CORO Sentinelle)' }, fr: true, en: true },
+    { path: '/coro-incident', label: { fr: 'Incident et écrans (CORO Incident, CORO Display)', en: 'Incidents and screens (CORO Incident, CORO Display)' }, fr: true, en: true },
+    { path: '/sentinelle-population', label: { fr: 'Alerte à la population (CORO Sentinelle Population)', en: 'Public alerts (CORO Sentinelle Population)' }, fr: true, en: true },
     { path: '/coro-ai', label: { fr: 'CORO AI', en: 'CORO AI' }, fr: true, en: true },
   ] },
   { id: 'platform', label: { fr: 'Firmes-conseils', en: 'Consulting firms' }, links: [
-    { path: '/gestion-documentaire', label: { fr: 'Gestion documentaire', en: 'Document management' }, fr: true, en: true },
-    { path: '/gestion-de-projets', label: { fr: 'Projets et mandats', en: 'Projects and mandates' }, fr: true, en: true },
-    { path: '/performance-objectifs', label: { fr: 'Performance', en: 'Performance' }, fr: true, en: true },
-    { path: '/portail-client', label: { fr: 'Portail client', en: 'Client portal' }, fr: true, en: true },
+    { path: '/gestion-documentaire', label: { fr: 'Gestion documentaire (CORO Documents)', en: 'Document management (CORO Documents)' }, fr: true, en: true },
+    { path: '/gestion-de-projets', label: { fr: 'Projets et mandats (CORO Projects)', en: 'Projects and mandates (CORO Projects)' }, fr: true, en: true },
+    { path: '/performance-objectifs', label: { fr: 'Performance (CORO Performance)', en: 'Performance (CORO Performance)' }, fr: true, en: true },
+    { path: '/portail-client', label: { fr: 'Portail client (CORO Client)', en: 'Client portal (CORO Client)' }, fr: true, en: true },
     { path: '/guides', label: { fr: 'Plans d’urgence', en: 'Emergency plans' }, fr: true, en: false },
     { path: '/pricing', label: { fr: 'Tarification', en: 'Pricing' }, fr: true, en: true },
   ] },
