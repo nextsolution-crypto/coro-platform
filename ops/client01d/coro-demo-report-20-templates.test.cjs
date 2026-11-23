@@ -30,25 +30,19 @@ const flags = {
   INCIDENT_REPORTS_ENABLED: "true",
   INCIDENT_REPORT_ATTACHMENTS_ENABLED: "false",
   INCIDENT_REPORT_IMPORT_ENABLED: "false",
-  INCIDENT_REPORT_ARCHIVES_ENABLED: "false",
-  OPERATIONAL_LOG_ENABLED: "false",
-  OPERATIONAL_SHIFTS_ENABLED: "false",
-  OPERATIONAL_DIRECTIVES_ENABLED: "false",
-  OPERATIONAL_FOLLOWUPS_ENABLED: "false",
 };
 
-test("extension requires Report and refuses every unsafe capability flag", () => {
+test("extension requires Report and refuses unsafe file capabilities", () => {
   assert.doesNotThrow(() => assertRuntimeFlags(flags));
   for (const name of Object.keys(flags)) {
-    const invalid = {
-      ...flags,
-      [name]: flags[name] === "true" ? "false" : "true",
-    };
-    assert.throws(
-      () => assertRuntimeFlags(invalid),
-      new RegExp(`FLAG_${name}_INVALID`),
-    );
+    const invalid = { ...flags, [name]: flags[name] === "true" ? "false" : "true" };
+    assert.throws(() => assertRuntimeFlags(invalid), new RegExp(`FLAG_${name}_INVALID`));
   }
+  // Pièces jointes admises sous quarantaine ClamAV ; la main courante n'entre pas en jeu.
+  for (const mode of ["ON_DEMAND", "INLINE"])
+    assert.doesNotThrow(() =>
+      assertRuntimeFlags({ ...flags, INCIDENT_REPORT_ATTACHMENTS_ENABLED: "true", INCIDENT_REPORT_CLAMAV_MODE: mode, OPERATIONAL_LOG_ENABLED: "true" }),
+    );
 });
 
 test("canonical template requires schema 1.1 and produces a stable hash", () => {

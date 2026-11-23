@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
-  ChatMessageDto,
   ChatNotifyDto,
   PublicAssistantMessageDto,
 } from './chat.dto';
@@ -33,15 +32,6 @@ export class ChatController {
     private readonly publicAssistantConfig: PublicAssistantConfig,
     private readonly commercial: WebAICommercialService,
   ) {}
-
-  @Post('vitrine')
-  @Throttle({
-    short: { ttl: 60_000, limit: 8 },
-    long: { ttl: 3_600_000, limit: 60 },
-  })
-  chat(@Body() body: ChatMessageDto) {
-    return this.chatService.handleMessage(body.message, body.history ?? []);
-  }
 
   @Post('v1/commercial-requests')
   @Throttle({ short: { ttl: 60_000, limit: 3 }, long: { ttl: 3_600_000, limit: 10 } })

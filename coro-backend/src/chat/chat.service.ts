@@ -1,42 +1,14 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { emergencyReply, isLiveEmergency } from '../common/emergency-guard';
-import { DailyCallBudget } from '../common/daily-call-budget';
-import { ChatHistoryMessageDto } from './chat.dto';
 
-/** Plafond quotidien du clavardage « Sophie » (M9-05). */
-export const chatBudget = new DailyCallBudget('sophie', 'CHAT_DAILY_CALL_CAP', 1000);
+/*
+ * L'ancien clavardage du site (POST /chat/vitrine, API Anthropic aux
+ * États-Unis) a été retiré le 23 nov. 2026 : Sophie passe désormais par
+ * l'assistant public (corpus du site, Bedrock au Canada). Ce service ne
+ * conserve que l'avis courriel de demande de contact.
+ */
 
 export const CHAT_HTTP_CLIENT = Symbol('CHAT_HTTP_CLIENT');
 export type ChatHttpClient = typeof fetch;
-
-const CORO_CONTEXT = `Tu es l'assistant virtuel du site public de CORO, une plateforme canadienne de conformité opérationnelle et de résilience organisationnelle.
-
-Capacités publiques confirmées : PMU (plan de mesures d'urgence), PSI (plan de sécurité incendie) et PCA (plan de continuité des activités). Les PGC, PRA et PUE sont planifiés pour une phase ultérieure et ne doivent jamais être présentés comme disponibles aujourd'hui.
-
-Réponds dans la langue du visiteur, de façon concise et factuelle. N'invente jamais une fonctionnalité, un prix, une disponibilité, une conformité juridique, une action effectuée ni un engagement de rappel. Pour une demande commerciale, invite seulement le visiteur à utiliser volontairement le formulaire de contact affiché dans le chat. Tu ne peux ni transmettre une conversation, ni confirmer qu'un conseiller contactera le visiteur. Si l'information n'est pas confirmée, dis-le clairement.`;
-
-const CONTACT_KEYWORDS = [
-  'prix',
-  'tarif',
-  'coût',
-  'abonnement',
-  'démo',
-  'demo',
-  'conseiller',
-  'contact',
-  'price',
-  'pricing',
-  'advisor',
-  'contact us',
-];
-
-export interface ChatResult {
-  reply: string;
-  contactSuggested: boolean;
-  /** Compatibilité du contrat historique : cette valeur ne déclenche aucun envoi. */
-  transferToAgent: boolean;
-  status: 'ANSWERED' | 'UNAVAILABLE';
-}
 
 export interface NotificationResult {
   success: boolean;
@@ -61,20 +33,6 @@ export function escapeHtml(value: string): string {
   ).join('');
 }
 
-function isAnthropicPayload(
-  value: unknown,
-): value is { content: Array<{ text: string }> } {
-  if (!value || typeof value !== 'object') return false;
-  const content = (value as { content?: unknown }).content;
-  if (!Array.isArray(content) || content.length === 0) return false;
-  const first: unknown = content[0];
-  return (
-    !!first &&
-    typeof first === 'object' &&
-    typeof (first as { text?: unknown }).text === 'string'
-  );
-}
-
 function isBrevoPayload(value: unknown): value is { messageId: string } {
   return (
     !!value &&
@@ -95,76 +53,6 @@ export class ChatService {
   constructor(
     @Inject(CHAT_HTTP_CLIENT) private readonly httpClient: ChatHttpClient,
   ) {}
-
-  async handleMessage(
-    message: string,
-    history: ChatHistoryMessageDto[],
-  ): Promise<ChatResult> {
-    const normalizedMessage = message.trim();
-    if (isLiveEmergency(normalizedMessage)) {
-      return {
-        reply: emergencyReply(),
-        contactSuggested: false,
-        transferToAgent: false,
-        status: 'ANSWERED',
-      };
-    }
-    const contactSuggested = CONTACT_KEYWORDS.some((keyword) =>
-      normalizedMessage.toLocaleLowerCase('fr-CA').includes(keyword),
-    );
-    if (!process.env.ANTHROPIC_API_KEY)
-      return this.unavailable(contactSuggested);
-    // Plafond quotidien (M9-05) : message fixe au-delà.
-    if (!chatBudget.tryConsume()) return this.unavailable(contactSuggested);
-
-    try {
-      const response = await this.httpClient(
-        'https://api.anthropic.com/v1/messages',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': process.env.ANTHROPIC_API_KEY,
-            'anthropic-version': '2023-06-01',
-          },
-          signal: AbortSignal.timeout(15_000),
-          body: JSON.stringify({
-            model: 'claude-haiku-4-5-20251001',
-            max_tokens: 500,
-            system: CORO_CONTEXT,
-            messages: [
-              ...history.map(({ role, content }) => ({ role, content })),
-              { role: 'user', content: normalizedMessage },
-            ],
-          }),
-        },
-      );
-      if (!response.ok) {
-        this.logger.warn(
-          `Anthropic request failed with HTTP ${response.status}`,
-        );
-        return this.unavailable(contactSuggested);
-      }
-      const payload: unknown = await response.json();
-      if (!isAnthropicPayload(payload)) {
-        this.logger.warn('Anthropic returned an invalid response shape');
-        return this.unavailable(contactSuggested);
-      }
-      return {
-        reply: payload.content[0].text,
-        contactSuggested,
-        transferToAgent: contactSuggested,
-        status: 'ANSWERED',
-      };
-    } catch (error) {
-      const kind =
-        error instanceof DOMException && error.name === 'TimeoutError'
-          ? 'timeout'
-          : 'transport';
-      this.logger.warn(`Anthropic request unavailable (${kind})`);
-      return this.unavailable(contactSuggested);
-    }
-  }
 
   notifyAgent(
     email: string,
@@ -231,15 +119,5 @@ export class ChatService {
       this.logger.warn('Brevo request unavailable (transport or timeout)');
       return { success: false, status: 'PROVIDER_ERROR' };
     }
-  }
-
-  private unavailable(contactSuggested: boolean): ChatResult {
-    return {
-      reply:
-        "L'assistant est temporairement indisponible. Réessayez plus tard ou écrivez à info@getcoro.io.",
-      contactSuggested,
-      transferToAgent: contactSuggested,
-      status: 'UNAVAILABLE',
-    };
   }
 }
