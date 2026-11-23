@@ -206,3 +206,42 @@ function thisInput(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+describe('Page de certification bilingue (M8-04)', () => {
+  async function drawnText(signatureExpected: boolean) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { PDFPage } = require('pdf-lib');
+    const texts: string[] = [];
+    const spy = jest
+      .spyOn(PDFPage.prototype, 'drawText')
+      .mockImplementation(function (this: unknown, text: unknown) {
+        texts.push(String(text));
+      } as never);
+    try {
+      const bytes = await new IncidentReportPdfRenderer().render(
+        thisInput({ locale: 'en-CA', signatureExpected }),
+      );
+      return { texts: texts.join('\n'), pdf: await PDFDocument.load(bytes) };
+    } finally {
+      spy.mockRestore();
+    }
+  }
+
+  it('ajoute une dernière page en français et en anglais, quelle que soit la langue', async () => {
+    const { texts } = await drawnText(true);
+    expect(texts).toContain('CERTIFICATION DU DOCUMENT / DOCUMENT CERTIFICATION');
+    expect(texts).toContain('Ce que garantit ce document');
+    expect(texts).toContain('What this document guarantees');
+    expect(texts).toMatch(/sceau numérique CORO/);
+    expect(texts).toMatch(/CORO digital seal/);
+    expect(texts).toMatch(/RFC 3161/);
+    expect(texts).toMatch(/pas une certification de conformité/);
+  });
+
+  it("n'annonce aucune signature quand la plateforme ne signera pas", async () => {
+    const { texts } = await drawnText(false);
+    expect(texts).not.toMatch(/sceau numérique CORO/);
+    expect(texts).toMatch(/ne porte pas de signature numérique/);
+    expect(texts).toMatch(/does not carry a platform digital signature/);
+  });
+});

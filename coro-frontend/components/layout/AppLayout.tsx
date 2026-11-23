@@ -111,6 +111,7 @@ const SUPER_ADMIN_COMMERCIAL_ADMIN_GROUP = {
   label: 'Administration commerciale',
   items: [
     { label: 'Organisations',    path: '/admin/organizations', icon: '🏢' },
+    { label: 'Fonctions actives par client', path: '/admin/capability-coverage', icon: '✓' },
     { label: 'Catalogue et tarifs', path: '/admin/product-catalog', icon: '◫' },
     { label: 'Contenus et clauses', path: '/admin/commercial/content', icon: '▤' },
     { label: 'Émetteur légal', path: '/admin/commercial/legal-issuer', icon: '§' },

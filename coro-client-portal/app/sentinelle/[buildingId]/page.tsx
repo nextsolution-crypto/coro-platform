@@ -335,11 +335,11 @@ export default function SentinelleDashboard() {
         </button>
         <button type="button" onClick={() => router.push(`/sentinelle/${buildingId}/incident`)}
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '2px solid #E67E22', backgroundColor: '#FEF9E7', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#E67E22' }}>
-          🚨 Déclencher un incident
+          🚨 Déclencher une urgence
         </button>
         <button type="button" onClick={() => router.push(`/sentinelle/${buildingId}/incidents`)}
           style={{ minHeight: 44, display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#6C757D' }}>
-          📋 Historique des incidents
+          📋 Historique des urgences
         </button>
       </div>
 

@@ -2,6 +2,7 @@ import { GUARDS_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { readFileSync } from 'fs';
 import { PLATFORM_ROLES_KEY } from '../auth/platform-roles.decorator';
 import {
+  CapabilityCoverageController,
   CapabilityEntitlementsController,
   ClientEntitlementsController,
   ContractEntitlementProvisioningController,
@@ -9,6 +10,10 @@ import {
 } from './capability-entitlements.controller';
 describe('Capability entitlement API security', () => {
   it.each([
+    [
+      CapabilityCoverageController,
+      'admin/v1/organizations/:organizationId/capability-coverage',
+    ],
     [
       CapabilityEntitlementsController,
       'admin/v1/organizations/:organizationId/entitlements',

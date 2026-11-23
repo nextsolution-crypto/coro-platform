@@ -139,7 +139,17 @@ export default function SecurityWorkstationPage() {
   const [reportPermissions, setReportPermissions] = useState<string[]>([]);
   const [reportFileCapabilities, setReportFileCapabilities] =
     useState<ReportFileCapabilities | null>(null);
-  const [tab, setTab] = useState<Tab>("overview");
+  // Lien direct depuis une urgence : /security-workstation?buildingId=…&tab=reports
+  const requested = useMemo(() => {
+    if (typeof window === "undefined") return { buildingId: "", tab: null as Tab | null };
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    return {
+      buildingId: params.get("buildingId") ?? "",
+      tab: tabParam && tabParam in labels ? (tabParam as Tab) : null,
+    };
+  }, []);
+  const [tab, setTab] = useState<Tab>(requested.tab ?? "overview");
   const [items, setItems] = useState<Item[]>([]);
   const [templates, setTemplates] = useState<Item[]>([]);
   const [reviewers, setReviewers] = useState<Item[]>([]);
@@ -212,9 +222,12 @@ export default function SecurityWorkstationPage() {
         );
         if (!active) return;
         setBuildings(next);
-        const preferred = evaluated.find(({ capabilities: available }) =>
-          available.some((capability) => capability.available),
-        );
+        const usable = ({ capabilities: available }: { capabilities: Capability[] }) =>
+          available.some((capability) => capability.available);
+        const preferred =
+          evaluated.find(
+            (entry) => entry.building.id === requested.buildingId && usable(entry),
+          ) ?? evaluated.find(usable);
         setCapabilities(preferred?.capabilities ?? []);
         setReportFileCapabilities(preferred?.reportFileCapabilities ?? null);
         setReportPermissions(preferred?.reportPermissions ?? []);
@@ -230,7 +243,7 @@ export default function SecurityWorkstationPage() {
     return () => {
       active = false;
     };
-  }, [organizationId]);
+  }, [organizationId, requested.buildingId]);
 
   useEffect(() => {
     if (!organizationId || !buildingId) return;
@@ -463,6 +476,16 @@ export default function SecurityWorkstationPage() {
                 <p>
                   {items.length} élément{items.length === 1 ? "" : "s"}
                 </p>
+                {tab === "reports" && buildingId && (
+                  <p className={styles.vocabularyNote}>
+                    Un <strong>rapport</strong> documente un événement après
+                    coup. Une <strong>urgence</strong> en cours se déclenche et
+                    se suit dans CORO Incident :{" "}
+                    <a href={`/sentinelle/${encodeURIComponent(buildingId)}/incident`}>
+                      ouvrir les urgences du bâtiment →
+                    </a>
+                  </p>
+                )}
               </div>
               <div className={styles.actions}>
                 {(tab === "log" || tab === "reports") && (
