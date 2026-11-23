@@ -23,6 +23,15 @@ export interface CoverageOffer {
   technicalFlags?: string[];
 }
 
+export interface CoverageBuilding {
+  id: string;
+  name: string;
+  offers: Record<string, boolean>;
+}
+export interface CoverageClient extends CoverageBuilding {
+  buildings: CoverageBuilding[];
+}
+
 export const COVERAGE_OFFERS: CoverageOffer[] = [
   { key: 'SENTINELLE', label: 'CORO Sentinelle (présence, évacuation)', codes: ['SENTINELLE'], siteRoute: '/sentinelle' },
   { key: 'SENTINELLE_POPULATION', label: 'Sentinelle Population', codes: ['SENTINELLE_POPULATION'], siteRoute: '/sentinelle-population' },
@@ -89,14 +98,14 @@ export class CapabilityCoverageService {
         await Promise.all(offer.codes.map((code) => this.active(organizationId, code, {})))
       ).some(Boolean);
 
-    const rows = [];
+    const rows: CoverageClient[] = [];
     for (const client of clients) {
       const clientLevel: Record<string, boolean> = {};
       for (const offer of COVERAGE_OFFERS)
         clientLevel[offer.key] =
           organizationLevel[offer.key] ||
           (await Promise.all(offer.codes.map((code) => this.active(organizationId, code, { clientId: client.id })))).some(Boolean);
-      const buildings = [];
+      const buildings: CoverageBuilding[] = [];
       for (const building of client.buildings) {
         const offers: Record<string, boolean> = {};
         for (const offer of COVERAGE_OFFERS)
