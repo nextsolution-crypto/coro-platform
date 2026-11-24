@@ -797,7 +797,7 @@ async function prepareLot4(prisma, admin) {
       await tx.operationalDirectiveVersion.create({ data: { id: dv.versionId, organizationId: org, buildingId: building.id, directiveId: dv.id, versionNumber: 1, title: dv.title, description: dv.text, targetSnapshot: { securityPost: SITE.post }, contentHash: crypto.createHash('sha256').update(JSON.stringify(content)).digest('hex'), authorActorType: 'CLIENT_USER', authorActorId: supervisor.id } });
       if (dv.status === 'PUBLISHED' && dv.ack) {
         for (const g of GUARDS) {
-          await tx.operationalDirectiveReceipt.create({ data: { id: id(`${dv.key}-receipt-${g.key}`), organizationId: org, buildingId: building.id, directiveId: dv.id, versionId: dv.versionId, recipientActorType: 'CLIENT_USER', recipientActorId: g.id, status: g.key === 'garde-pelletier' && dv.key === 'dir-3' ? 'PENDING' : 'CONFIRMED', publishedAt: published, viewedAt: new Date(published.getTime() + 3600000), confirmedAt: g.key === 'garde-pelletier' && dv.key === 'dir-3' ? null : new Date(published.getTime() + 2 * 3600000) } });
+          await tx.operationalDirectiveReceipt.create({ data: { id: id(`${dv.key}-receipt-${g.key}`), organizationId: org, buildingId: building.id, directiveId: dv.id, versionId: dv.versionId, recipientActorType: 'CLIENT_USER', recipientActorId: g.id, status: g.key === 'garde-pelletier' && dv.key === 'dir-3' ? 'VIEWED' : 'CONFIRMED', publishedAt: published, viewedAt: new Date(published.getTime() + 3600000), confirmedAt: g.key === 'garde-pelletier' && dv.key === 'dir-3' ? null : new Date(published.getTime() + 2 * 3600000) } });
         }
       }
     }
