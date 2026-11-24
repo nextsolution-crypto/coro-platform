@@ -322,6 +322,20 @@ describePostgres('Governed rendement financial authority on PostgreSQL', () => {
         },
         { view: 'cumulative' },
       ),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        scope: expect.objectContaining({ audience: 'ADVISOR' }),
+      }),
+    );
+    await expect(
+      financial.financial(
+        {
+          userId: fixture.owner.id,
+          organizationId: fixture.org.id,
+          role: 'OPERATOR',
+        },
+        { view: 'cumulative', organizationId: fixture.otherOrg!.id } as never,
+      ),
     ).rejects.toBeInstanceOf(ForbiddenException);
     await expect(
       financial.financial(
