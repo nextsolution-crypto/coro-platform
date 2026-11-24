@@ -15,7 +15,6 @@ describe('assertIncidentReportBinary', () => {
   it.each([
     [pdf, 'application/pdf', 'preuve.pdf'],
     [jpeg, 'image/jpeg', 'photo.jpeg'],
-    [png, 'image/png', 'photo.png'],
   ])('accepts a structurally valid %s', (bytes, mediaType, name) => {
     expect(() =>
       assertIncidentReportBinary(bytes as Buffer, mediaType, name),
@@ -25,7 +24,7 @@ describe('assertIncidentReportBinary', () => {
     [Buffer.from('not a pdf'), 'application/pdf', 'preuve.pdf'],
     [pdf.subarray(0, 12), 'application/pdf', 'preuve.pdf'],
     [jpeg.subarray(0, 4), 'image/jpeg', 'photo.jpg'],
-    [png.subarray(0, 12), 'image/png', 'photo.png'],
+    [png, 'image/png', 'photo.png'],
     [pdf, 'application/pdf', 'preuve.jpg'],
   ])(
     'rejects malformed, truncated, or disguised content',

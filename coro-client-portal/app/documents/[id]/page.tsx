@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { apiGet, apiPost, getUser } from '../../store/auth';
+import { apiDownload, apiGet, apiPost, getUser } from '../../store/auth';
 import { toast } from '../../store/toast';
 import PortalLayout from '../../components/PortalLayout';
 import styles from './document-detail.module.css';
@@ -318,6 +318,21 @@ const handleRefuse = async () => {
       toast('Erreur lors du refus.', 'error');
     } finally {
       setRefusing(false);
+    }
+  };
+
+  // Aperçu privé : lu par une route authentifiée, affiché depuis une URL locale du navigateur.
+  const openPreview = async (lang: 'fr' | 'en') => {
+    try {
+      const { blob } = await apiDownload(`/client-portal/projects/${projectId}/preview/${lang}`);
+      const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+      setPdfViewerUrl((previous) => {
+        if (previous.startsWith('blob:')) URL.revokeObjectURL(previous);
+        return url;
+      });
+      setShowPdfViewer(true);
+    } catch {
+      toast('Aperçu indisponible pour le moment. Réessayez dans un instant.', 'error');
     }
   };
 
@@ -666,10 +681,7 @@ const mySignature =
                   {project?.exportedPdfFr && (
                     <button
                       type="button"
-                      onClick={() => {
-                        setPdfViewerUrl(project.exportedPdfFr);
-                        setShowPdfViewer(true);
-                      }}
+                      onClick={() => void openPreview('fr')}
                       style={{
                         minHeight: 46,
                         display: 'flex',
@@ -695,10 +707,7 @@ const mySignature =
                   {project?.exportedPdfEn && (
                     <button
                       type="button"
-                      onClick={() => {
-                        setPdfViewerUrl(project.exportedPdfEn);
-                        setShowPdfViewer(true);
-                      }}
+                      onClick={() => void openPreview('en')}
                       style={{
                         minHeight: 46,
                         display: 'flex',

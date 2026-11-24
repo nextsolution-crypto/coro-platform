@@ -232,7 +232,7 @@ export class ProjectFilesClientController {
   }
 
   @Post(':projectId')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 25 * 1024 * 1024 } }))
   async uploadFile(
     @Param('projectId') projectId: string,
     @UploadedFile() file: Express.Multer.File,

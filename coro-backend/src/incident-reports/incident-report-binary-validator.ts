@@ -3,7 +3,6 @@ import { BadRequestException } from '@nestjs/common';
 const EXTENSIONS: Record<string, string[]> = {
   'application/pdf': ['pdf'],
   'image/jpeg': ['jpg', 'jpeg'],
-  'image/png': ['png'],
 };
 
 export function assertIncidentReportBinary(

@@ -179,8 +179,8 @@ export default function BuildingDocuments({
     e.preventDefault();
     void run(async () => {
       if (!file) throw new Error("Sélectionnez un fichier");
-      if (file.size > 50 * 1024 * 1024)
-        throw new Error("Maximum 50 Mo par fichier");
+      if (file.size > 25 * 1024 * 1024)
+        throw new Error("Maximum 25 Mo par fichier");
       const form = new FormData();
       form.append("file", file);
       form.append("category", category);
@@ -402,10 +402,9 @@ export default function BuildingDocuments({
             </label>
           </div>
           <p className={styles.note}>
-            PDF, Word, Excel, textes, images et plans · 50 Mo maximum. Les
-            formats spécialisés sont conservés ; leur analyse exige un export
-            exploitable. Seuls les documents approuvés et en vigueur alimentent
-            CORO AI.
+            PDF ou JPG · 25 Mo maximum par fichier. Exportez vos plans et
+            documents techniques en PDF. Seuls les documents approuvés et en
+            vigueur alimentent CORO AI.
           </p>
           {visible.length === 0 ? (
             <div className={styles.empty}>
@@ -597,7 +596,7 @@ export default function BuildingDocuments({
               <input
                 type="file"
                 required
-                accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.tsv,.txt,.md,.jpg,.jpeg,.png,.tif,.tiff,.webp,.dwg,.dxf,.ifc"
+                accept=".pdf,.jpg,.jpeg,application/pdf,image/jpeg"
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               />
             </label>

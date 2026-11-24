@@ -129,8 +129,8 @@ export default function ProjectFilesClientPage() {
 
     if (!file) return;
 
-    if (file.size > 50 * 1024 * 1024) {
-      alert("Le fichier doit faire moins de 50 MB");
+    if (file.size > 25 * 1024 * 1024) {
+      alert("Le fichier doit faire moins de 25 Mo (PDF ou JPG)");
 
       e.target.value = "";
       return;
@@ -418,7 +418,7 @@ export default function ProjectFilesClientPage() {
               type="file"
               onChange={handleFileSelect}
               className="hidden"
-              accept=".pdf,.png,.jpg,.jpeg,.dwg,.docx,.xlsx,.zip"
+              accept=".pdf,.jpg,.jpeg,application/pdf,image/jpeg"
             />
           </div>
         </header>

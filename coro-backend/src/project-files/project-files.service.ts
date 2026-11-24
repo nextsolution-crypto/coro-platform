@@ -13,7 +13,7 @@ import { incidentReportClamavOnDemand } from '../incident-reports/incident-repor
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { detectAllowedFileType } from './file-type-policy';
+import { assertClientUploadSize, detectAllowedFileType } from './file-type-policy';
 import { createHash, randomUUID } from 'crypto';
 import { Prisma, ProjectFileLifecycleState } from '@prisma/client';
 import { AdviserActor, projectAccessWhere } from '../auth/project-access';
@@ -144,8 +144,7 @@ export class ProjectFilesService {
     if (!building) throw new NotFoundException('Bâtiment introuvable');
     if (!['shared', 'internal'].includes(data.visibility))
       throw new BadRequestException('Visibilité invalide');
-    if (!data.buffer?.length || data.buffer.length > 50 * 1024 * 1024)
-      throw new BadRequestException('Fichier vide ou supérieur à 50 Mo');
+    assertClientUploadSize(data.buffer?.length ?? 0);
     // Liste de types autorisés, vérifiée sur le contenu (M3-06), puis
     // antivirus si le service d'analyse est configuré.
     const detected = detectAllowedFileType(data.name, data.buffer);

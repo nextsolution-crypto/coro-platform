@@ -99,8 +99,8 @@ export default function CorrectiveActionEvidenceForm({ actionId, onSaved }: { ac
           <input required value={form.systemReferenceId} onChange={(event) => update({ systemReferenceId: event.target.value })} />
         </label>
       </>}
-      {(form.type === "DOCUMENT" || form.type === "PHOTO") && <label className={styles.full}>Fichier (10 Mo maximum)
-        <input required type="file" accept={form.type === "PHOTO" ? "image/jpeg,image/png,image/webp" : ".pdf,.docx,.xlsx,.txt"} onChange={(event) => { intent.current = null; setFile(event.target.files?.[0] ?? null); }} />
+      {(form.type === "DOCUMENT" || form.type === "PHOTO") && <label className={styles.full}>Fichier ({form.type === "PHOTO" ? "JPG" : "PDF"}, 25 Mo maximum)
+        <input required type="file" accept={form.type === "PHOTO" ? ".jpg,.jpeg,image/jpeg" : ".pdf,application/pdf"} onChange={(event) => { intent.current = null; setFile(event.target.files?.[0] ?? null); }} />
       </label>}
     </div>
     {error && <p className={styles.error} role="alert">{error}</p>}

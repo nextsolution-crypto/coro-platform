@@ -164,8 +164,8 @@ export default function ProjectFiles({ projectId }: { projectId: string }) {
 
     if (!file) return;
 
-    if (file.size > 50 * 1024 * 1024) {
-      alert("Le fichier doit faire moins de 50 MB");
+    if (file.size > 25 * 1024 * 1024) {
+      alert("Le fichier doit faire moins de 25 Mo (PDF ou JPG)");
       e.target.value = "";
       return;
     }
@@ -347,7 +347,7 @@ export default function ProjectFiles({ projectId }: { projectId: string }) {
             }}
           >
             {files.length} fichier
-            {files.length > 1 ? "s" : ""} — max 50 MB par fichier
+            {files.length > 1 ? "s" : ""} — PDF ou JPG, 25 Mo max par fichier
           </p>
         </div>
 
@@ -389,7 +389,7 @@ export default function ProjectFiles({ projectId }: { projectId: string }) {
           type="file"
           onChange={handleFileSelect}
           className="hidden"
-          accept=".pdf,.png,.jpg,.jpeg,.dwg,.docx,.xlsx,.zip"
+          accept=".pdf,.jpg,.jpeg,application/pdf,image/jpeg"
         />
       </div>
 
@@ -461,7 +461,7 @@ export default function ProjectFiles({ projectId }: { projectId: string }) {
               color: "#ADB5BD",
             }}
           >
-            PDF, PNG, JPG, DWG, DOCX, XLSX — Max 50 MB
+            PDF ou JPG — 25 Mo maximum
           </p>
 
           <button
