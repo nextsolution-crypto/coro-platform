@@ -433,7 +433,7 @@ function buildLot2(plan) {
     const cu = clientUsers.find((u) => u.clientId === m.building.clientId);
     return {
       key: `booking-${k}`, id: id(`booking-${k}`), activityId: a.id, projectId: m.projectId, buildingId: m.building.id,
-      clientUserId: cu.id, advisorId: m.owner.id, activityType: a.type, requestedDate: a.scheduledDate, duration: 180,
+      clientUserId: cu.id, advisorId: m.owner.id, activityType: a.type.startsWith('formation') ? 'formation' : 'exercice', requestedDate: a.scheduledDate, duration: 180,
       participants: 8 + k * 4, comment: ['Nous aimerions inclure les nouveaux employés.', 'Prévoir une salle pour 15 personnes.', 'Merci de confirmer la date avec notre direction.', 'Possible de tenir l’exercice en fin d’après-midi ?'][k],
     };
   });
