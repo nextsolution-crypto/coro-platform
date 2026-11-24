@@ -1,0 +1,76 @@
+name: Read-only Production Demo Advisor Inventory
+
+on:
+  workflow_dispatch:
+    inputs:
+      approval:
+        description: Type READ_DEMO_ADVISOR_INVENTORY
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      script_sha256: ${{ steps.hash.outputs.script_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - name: Validate request and read-only contract
+        env:
+          APPROVAL: ${{ inputs.approval }}
+        run: |
+          set -Eeuo pipefail
+          test "$APPROVAL" = READ_DEMO_ADVISOR_INVENTORY
+          node --test ops/demo/demo-advisor-inventory.test.cjs
+      - id: hash
+        run: echo "script_sha256=$(sha256sum ops/demo/demo-advisor-inventory.cjs | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+  execute:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Count demo advisor data (read-only)
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SCRIPT_SHA256: ${{ needs.validate.outputs.script_sha256 }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: SOURCE_SHA,SCRIPT_SHA256,GITHUB_RUN_ID
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            host_tmp="$(mktemp -d /tmp/coro-demo-inventory.XXXXXX)"
+            container_tmp="/tmp/coro-demo-inventory-$GITHUB_RUN_ID"
+            backend_container=""
+            cleanup() {
+              if [[ -n "$backend_container" ]]; then docker exec "$backend_container" rm -rf -- "$container_tmp" >/dev/null 2>&1 || true; fi
+              rm -rf -- "$host_tmp"
+            }
+            trap cleanup EXIT
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" show "$SOURCE_SHA:ops/demo/demo-advisor-inventory.cjs" >"$host_tmp/inventory.cjs"
+            test "$(sha256sum "$host_tmp/inventory.cjs" | cut -d' ' -f1)" = "$SCRIPT_SHA256"
+            backend_container="$(docker compose -f "$repo/docker-compose.yml" ps -q backend)"
+            test -n "$backend_container"
+            docker exec "$backend_container" mkdir -p "$container_tmp"
+            docker cp "$host_tmp/inventory.cjs" "$backend_container:$container_tmp/inventory.cjs"
+            docker exec -e CORO_DEMO_INVENTORY_RUN=true -w /app "$backend_container" \
+              node "$container_tmp/inventory.cjs" >"$host_tmp/evidence.json"
+            node -e 'const fs=require("fs");const s=fs.readFileSync(process.argv[1],"utf8");const r=JSON.parse(s);if(r.schemaVersion!==1||r.command!=="inventory")process.exit(1);if(/@|password|secret|token|key/i.test(s))process.exit(1);' "$host_tmp/evidence.json"
+            cat "$host_tmp/evidence.json"
