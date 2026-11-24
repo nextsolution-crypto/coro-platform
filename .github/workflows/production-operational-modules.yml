@@ -1,0 +1,115 @@
+name: Production Operational Modules (Poste de sécurité)
+
+# Active ou désactive les quatre modules opérationnels du portail client
+# (main courante, quarts et relève, consignes, suivis). Décision de Mathieu
+# du 24 novembre 2026 : activés pour la démo, toutes les données de
+# production étant fictives avant la mise en service.
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: Exact governed phase
+        required: true
+        type: choice
+        options: [verify, enable, disable]
+      approval:
+        description: Exact phase-specific approval token
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate governed request
+        env:
+          PHASE: ${{ inputs.phase }}
+          APPROVAL: ${{ inputs.approval }}
+        run: |
+          set -Eeuo pipefail
+          case "$PHASE:$APPROVAL" in
+            verify:VERIFY_OPERATIONAL_MODULES|enable:ENABLE_OPERATIONAL_MODULES|disable:DISABLE_OPERATIONAL_MODULES) ;;
+            *) exit 1 ;;
+          esac
+
+  execute:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Apply operational module flags
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          PHASE: ${{ inputs.phase }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          envs: PHASE
+          script: |
+            set -Eeuo pipefail
+            stage=initialize
+            trap 'rc=$?; echo "OPERATIONAL_MODULES_FAILED stage=$stage rc=$rc"; exit "$rc"' ERR
+            repo=/opt/coro-platform
+            env_file="$repo/.env"
+            tmp="$(mktemp -d /tmp/coro-operational-modules.XXXXXX)"
+            trap 'rm -rf -- "$tmp"' EXIT
+            names=(OPERATIONAL_LOG_ENABLED OPERATIONAL_SHIFTS_ENABLED OPERATIONAL_DIRECTIVES_ENABLED OPERATIONAL_FOLLOWUPS_ENABLED)
+            stage=deployment_lock
+            exec 9>/run/lock/coro-production-deployment.lock
+            flock -n 9
+            backend="$(docker compose -f "$repo/docker-compose.yml" ps -q backend)"
+            test -n "$backend"
+            backend_ready() {
+              local code
+              [[ "$(docker inspect -f '{{.State.Running}}' "$backend" 2>/dev/null)" = true ]] || return 1
+              code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 10 -H 'content-type: application/json' -d '{"email":"release-smoke-nonexistent@example.invalid","password":"InvalidReleaseSmoke!123"}' http://127.0.0.1:3002/api/auth/login)" || return 1
+              [[ "$code" =~ ^(400|401)$ ]]
+            }
+            show_flags() {
+              docker exec "$backend" node -e 'const n=process.argv.slice(1);console.log(JSON.stringify({schemaVersion:1,execution:"PASS",flags:Object.fromEntries(n.map(k=>[k,process.env[k]==="true"]))}))' "${names[@]}"
+            }
+            if [[ "$PHASE" = verify ]]; then stage=verify; show_flags; exit 0; fi
+            desired=false; [[ "$PHASE" = enable ]] && desired=true
+            stage=active_release
+            marker="$(find /opt/coro-ops/releases/state -maxdepth 1 -type f -name 'production-*.reconciled.json' -printf '%T@ %p\n' | sort -rn | sed -n '1p' | cut -d' ' -f2-)"
+            [[ -n "$marker" && -f "$marker" && ! -L "$marker" ]]
+            manifest="$(node -e 'const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(m.manifestPath||"")' "$marker")"
+            expected_sha="$(node -e 'const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(m.manifestSha256||"")' "$marker")"
+            [[ -f "$manifest" && "$(sha256sum "$manifest" | cut -d' ' -f1)" == "$expected_sha" ]]
+            expected_backend="$(node -e 'const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(m.images?.backend||"")' "$manifest")"
+            [[ "$expected_backend" =~ ^ghcr\.io/nextsolution-crypto/coro-backend@sha256:[0-9a-f]{64}$ ]]
+            active_image="$(docker inspect --format '{{.Image}}' "$backend")"
+            docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$active_image" | grep -Fxq "$expected_backend"
+            override="$tmp/backend-immutable.yml"
+            printf 'services:\n  backend:\n    image: %s\n' "$expected_backend" >"$override"
+            stage=env_update
+            cp --preserve=mode,ownership,timestamps "$env_file" "$tmp/env.backup"
+            cp "$env_file" "$tmp/env.new"
+            for name in "${names[@]}"; do
+              awk -v key="$name" -v desired="$desired" 'BEGIN{done=0} $0 ~ "^"key"=" {if(!done){print key"="desired;done=1}next} {print} END{if(!done)print key"="desired}' "$tmp/env.new" >"$tmp/env.next"
+              mv "$tmp/env.next" "$tmp/env.new"
+            done
+            chown --reference="$env_file" "$tmp/env.new"
+            chmod --reference="$env_file" "$tmp/env.new"
+            mv "$tmp/env.new" "$env_file"
+            stage=apply_runtime
+            if ! { docker compose -f "$repo/docker-compose.yml" -f "$override" up -d --no-deps --no-build backend \
+                && backend="$(docker compose -f "$repo/docker-compose.yml" -f "$override" ps -q backend)" \
+                && for _ in $(seq 1 45); do backend_ready && break; sleep 2; done && backend_ready; }; then
+              cp --preserve=mode,ownership,timestamps "$tmp/env.backup" "$env_file"
+              docker compose -f "$repo/docker-compose.yml" -f "$override" up -d --no-deps --no-build backend
+              exit 1
+            fi
+            stage=verify_flags
+            docker exec "$backend" node -e 'const d=process.argv[1]==="true";const n=process.argv.slice(2);if(!n.every(k=>(process.env[k]==="true")===d))process.exit(1)' "$desired" "${names[@]}"
+            show_flags
