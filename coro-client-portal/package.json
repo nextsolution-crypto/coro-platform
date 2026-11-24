@@ -12,7 +12,7 @@
     "qa:build": "node scripts/assert-build-output-idle.mjs && next build",
     "qa:runtime": "node .next/standalone/server.js",
     "lint": "eslint",
-    "test:skin": "node design-system/portal-glass.test.cjs && node app/components/active-navigation.test.cjs && node app/buildings/building-projects.test.cjs",
+    "test:skin": "node design-system/portal-glass.test.cjs && node app/components/active-navigation.test.cjs && node app/buildings/building-projects.test.cjs && node --test app/support/support.contract.test.mjs",
     "test:sms-compliance": "node --experimental-strip-types app/population/lib/smsCompliance.test.ts",
     "test:sentinelle-auth": "node app/sentinelle/sentinelleAuth.contract.test.mjs",
     "test:panic-outcome": "node --experimental-strip-types \"app/sentinelle/[buildingId]/panicOutcome.test.ts\"",

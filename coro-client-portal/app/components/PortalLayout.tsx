@@ -21,8 +21,7 @@ import {
   HardDriveDownload,
   BookOpenCheck,
   MonitorUp,
-  ClipboardCheck,
-} from "lucide-react";
+  ClipboardCheck, LifeBuoy } from "lucide-react";
 import workspace from "./PortalWorkspace.module.css";
 import { resolveActivePortalNavigationPath } from "./active-navigation";
 
@@ -185,6 +184,7 @@ export default function PortalLayout({
     { label: "Conformité", path: "/documents", icon: FileText },
     { label: "CORO AI", path: "/knowledge", icon: BookOpenCheck },
     { label: "Manuel d’utilisation", path: "/manual", icon: BookOpenCheck },
+    { label: "Aide et support", path: "/support", icon: LifeBuoy },
     { label: "Carte", path: "/map", icon: Map },
     { label: "Activités", path: "/activities", icon: Calendar },
     ...(sentinelleHidden

@@ -9,6 +9,7 @@ const release = fs.readFileSync(new URL('../deploy/coro-production-release.sh', 
 test('ClamAV à la demande : démarrage seulement sur demande et avec assez de mémoire', () => {
   assert.match(script, /"scanStatus" = '"'"'PENDING'"'"'/);
   assert.match(script, /"ProjectFile" WHERE "malwareScanStatus" = '"'"'PENDING'"'"'/);
+  assert.match(script, /"SupportTicketAttachment" WHERE "malwareScanStatus" = '"'"'PENDING'"'"'/);
   assert.match(script, /MemAvailable/);
   assert.match(script, /DEFERRED_LOW_MEMORY/);
   assert.match(script, /up -d --no-deps clamav/);

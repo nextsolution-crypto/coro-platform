@@ -388,6 +388,45 @@ export class EmailService {
     );
   }
 
+  /** Centre d'aide : réponse ou mise à jour d'une demande (sans le contenu des échanges). */
+  async sendSupportTicketUpdate(data: {
+    toEmail: string;
+    toName: string;
+    reference: string;
+    subject: string;
+    headline: string;
+    url: string;
+  }) {
+    const esc = (value: string) =>
+      value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
+    const safeUrl = /^https:\/\/[a-z0-9.-]+\.getcoro\.io\/support\/[A-Za-z0-9-]+$/i.test(data.url)
+      ? data.url
+      : 'https://app.getcoro.io/support';
+    const subject = `${data.reference} — ${data.headline} / Support request update`;
+    const htmlContent = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#F8F9FA;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="max-width:600px;margin:40px auto;background:#FFFFFF;border-radius:6px;overflow:hidden;border:1px solid #E9ECEF;">
+    <div style="background:#2C3E50;padding:28px 32px;font-size:28px;font-weight:900;color:#FFFFFF;">CO<span style="color:#C0392B;">RO</span></div>
+    <div style="padding:32px;">
+      <p style="font-size:13px;font-weight:700;color:#ADB5BD;letter-spacing:.06em;">CENTRE D’AIDE · ${esc(data.reference)}</p>
+      <p style="font-size:20px;font-weight:700;color:#2C3E50;">${esc(data.headline)}</p>
+      <p style="font-size:15px;color:#6C757D;">Bonjour ${esc(data.toName)},</p>
+      <p style="font-size:15px;color:#6C757D;">Votre demande « ${esc(data.subject)} » a été mise à jour. Pour des raisons de confidentialité, le contenu des échanges reste dans CORO.</p>
+      <p style="font-size:15px;color:#6C757D;">Your support request has been updated. For confidentiality, the conversation stays in CORO.</p>
+      <p style="margin:28px 0;"><a href="${safeUrl}" style="display:inline-block;background:#C0392B;color:#FFFFFF;padding:14px 28px;border-radius:4px;text-decoration:none;font-weight:700;">Voir la demande / View request</a></p>
+    </div>
+    <div style="background:#F8F9FA;padding:20px 32px;text-align:center;font-size:13px;color:#ADB5BD;border-top:1px solid #E9ECEF;">© 2026 CORO — getcoro.io</div>
+  </div>
+</body></html>`;
+    return this.sendEmail(
+      { email: data.toEmail, name: data.toName },
+      subject,
+      htmlContent,
+      'SUPPORT_TICKET_UPDATE',
+    );
+  }
+
   async sendDocumentSigned(data: {
     toEmail: string;
     toName: string;

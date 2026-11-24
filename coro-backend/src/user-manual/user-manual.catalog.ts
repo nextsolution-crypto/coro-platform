@@ -205,7 +205,7 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
       'Ouvrez Paramètres.',
       'Mon profil est disponible depuis Mon compte.',
       'Les administrateurs voient aussi les réglages Organisation, Modèle Module 1, Membres de l’équipe et Types d’activités.',
-      'Les administrateurs voient aussi Catégories de timelog et Modèles de tâches; Nous écrire reste disponible aux comptes internes actifs.',
+      'Les administrateurs voient aussi Catégories de timelog et Modèles de tâches. Pour signaler un bug, poser une question ou proposer une amélioration, utilisez le Centre d’aide (menu Ressources) : chaque demande reçoit un numéro et un suivi.',
       'Ouvrez uniquement le réglage nécessaire et vérifiez les permissions et confirmations présentées par son écran.',
       'Pour changer votre mot de passe, saisissez le mot de passe actuel puis le nouveau secret conforme à la politique affichée. Les sessions et appareils de confiance existants sont révoqués.',
       'Pour ajouter un membre, enregistrez une invitation sécurisée. Aucun mot de passe temporaire n’est affiché; le membre choisit son secret depuis un lien à usage unique.',

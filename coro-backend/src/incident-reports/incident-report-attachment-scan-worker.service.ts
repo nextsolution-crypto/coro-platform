@@ -31,6 +31,7 @@ export class IncidentReportAttachmentScanWorker {
     try {
       await this.processPending();
       await this.processProjectFiles();
+      await this.processSupportAttachments();
     } catch (error) {
       this.logger.warn(`Analyse en attente : ${error instanceof Error ? error.message : 'erreur'}`);
     } finally {
@@ -101,6 +102,44 @@ export class IncidentReportAttachmentScanWorker {
         break;
       }
       await this.settleProjectFile(row, verdict, now);
+      scanned += 1;
+    }
+    return { scanned };
+  }
+
+  /** Pièces jointes du Centre d'aide en quarantaine : même règle que les fichiers de projet. */
+  async processSupportAttachments(now = new Date()) {
+    const pending = await this.prisma.supportTicketAttachment.findMany({
+      where: { malwareScanStatus: 'PENDING' },
+      select: { id: true, storageKey: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
+      take: BATCH,
+    });
+    if (!pending.length) return { scanned: 0 };
+    const settle = (id: string, verdict: 'CLEAN' | 'INFECTED' | 'FAILED') =>
+      this.prisma.supportTicketAttachment.updateMany({
+        where: { id, malwareScanStatus: 'PENDING' },
+        data: { malwareScanStatus: verdict, malwareScannedAt: now },
+      });
+    const stale = pending.filter((row) => now.getTime() - row.createdAt.getTime() > GIVE_UP_AFTER_MS);
+    for (const row of stale) await settle(row.id, 'FAILED');
+    const fresh = pending.filter((row) => !stale.includes(row));
+    if (!fresh.length) return { scanned: 0 };
+    try {
+      await this.scanner.ping();
+    } catch {
+      return { scanned: 0, waiting: fresh.length };
+    }
+    let scanned = 0;
+    for (const row of fresh) {
+      let verdict: 'CLEAN' | 'INFECTED';
+      try {
+        verdict = await this.scanner.scan(await this.storage.downloadPrivate(row.storageKey));
+      } catch {
+        break;
+      }
+      await settle(row.id, verdict);
+      if (verdict === 'INFECTED') this.logger.warn(`Pièce jointe de support ${row.id} bloquée (logiciel malveillant).`);
       scanned += 1;
     }
     return { scanned };
