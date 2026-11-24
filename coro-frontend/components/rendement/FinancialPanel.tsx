@@ -64,7 +64,14 @@ export default function FinancialPanel({ data }: { data: FinancialResponse }) {
             aria-label="Synthèse financière"
             className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4"
           >
-            {data.totals.map((total) => (
+            {data.totals
+              .filter(
+                (total) =>
+                  total.currency !== "UNKNOWN" ||
+                  Number(total.soldAmount) !== 0 ||
+                  Number(total.knownLaborCost) !== 0,
+              )
+              .map((total) => (
               <article
                 key={total.currency}
                 className="rounded-md border border-slate-200 bg-white p-5"

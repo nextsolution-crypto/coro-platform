@@ -43,6 +43,7 @@ export default function OccupationPanel({
   const sorted = [...advisors].sort((a, b) => b.hours - a.hours);
   const total = advisors.reduce((sum, advisor) => sum + advisor.hours, 0);
   const teamRate = occupation(total, days * Math.max(1, advisors.length));
+  const showActivities = advisors.some((advisor) => advisor.activities.length > 0);
   return (
     <section
       aria-labelledby="occupation-heading"
@@ -70,7 +71,7 @@ export default function OccupationPanel({
                 <th className="p-3">Heures sur mandats</th>
                 <th className="p-3">Occupation</th>
                 <th className="p-3">Mandats</th>
-                <th className="p-3">Activités</th>
+                {showActivities && <th className="p-3">Activités</th>}
               </tr>
             </thead>
             <tbody>
@@ -82,7 +83,7 @@ export default function OccupationPanel({
                     <td className="p-3">{advisor.hours.toFixed(1)} h</td>
                     <td className={`p-3 font-bold ${tone(rate)}`}>{rate === null ? "—" : `${rate} %`}</td>
                     <td className="p-3">{advisor.participatedMandates.length}</td>
-                    <td className="p-3">{advisor.activities.length}</td>
+                    {showActivities && <td className="p-3">{advisor.activities.length}</td>}
                   </tr>
                 );
               })}

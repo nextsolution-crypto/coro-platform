@@ -263,6 +263,11 @@ function build() {
       const when = addDays(m.start, Math.round(span * a.at));
       const whenIso = iso(isWeekday(when) ? when : addDays(when, when.getUTCDay() === 6 ? 2 : 1));
       const past = whenIso < AS_OF;
+      const linked = { visite: 'Visite', formation: 'Formation', table: 'Exercice', livraison: 'Livraison' }[a.suffix];
+      if (linked) {
+        const task = tasks.find((t) => t.projectId === m.projectId && t.category === linked);
+        if (task) task.activityId = id(`${m.key}-${a.suffix}`);
+      }
       activities.push({
         key: `${m.key}-${a.suffix}`, id: id(`${m.key}-${a.suffix}`), projectId: m.projectId, type: a.type, label: a.label,
         duration: a.duration, scheduledDate: local(whenIso, a.type === 'inspection' ? '09:30' : '13:30'),
@@ -496,7 +501,7 @@ async function prepare(prisma) {
       skipDuplicates: true,
     });
     await tx.projectTask.createMany({
-      data: plan.tasks.map((t) => ({ id: t.id, projectId: t.projectId, organizationId: org, categoryName: t.category, taskTitle: t.title, status: t.status, dueDate: t.dueDate, order: t.order, assigneeId: t.assigneeId })),
+      data: plan.tasks.map((t) => ({ id: t.id, projectId: t.projectId, organizationId: org, categoryName: t.category, taskTitle: t.title, status: t.status, dueDate: t.dueDate, order: t.order, assigneeId: t.assigneeId, activityId: t.activityId ?? null })),
       skipDuplicates: true,
     });
     await tx.projectTaskAssignee.createMany({
