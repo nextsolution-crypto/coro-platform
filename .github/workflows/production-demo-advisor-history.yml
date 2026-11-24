@@ -1,0 +1,105 @@
+name: Governed Production Demo Advisor History
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: Exact governed phase
+        required: true
+        type: choice
+        options: [dry-run, prepare, verify, reset]
+      approval:
+        description: Exact phase-specific approval token
+        required: true
+        type: string
+      as_of:
+        description: Date de référence AAAA-MM-JJ (fin de l'historique)
+        required: true
+        type: string
+        default: '2026-11-24'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coro-production-maintenance
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      script_sha256: ${{ steps.hash.outputs.script_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - name: Validate fixed request and generator contract
+        env:
+          PHASE: ${{ inputs.phase }}
+          APPROVAL: ${{ inputs.approval }}
+          AS_OF: ${{ inputs.as_of }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$AS_OF" =~ ^2026-1[12]-[0-3][0-9]$|^2027-01-[0-3][0-9]$ ]]
+          case "$PHASE:$APPROVAL" in
+            dry-run:DRY_RUN_DEMO_ADVISOR_HISTORY) ;;
+            prepare:PREPARE_DEMO_ADVISOR_HISTORY) ;;
+            verify:VERIFY_DEMO_ADVISOR_HISTORY) ;;
+            reset:RESET_DEMO_ADVISOR_HISTORY) ;;
+            *) exit 1 ;;
+          esac
+          node --test ops/demo/demo-advisor-history.test.cjs
+      - id: hash
+        run: echo "script_sha256=$(sha256sum ops/demo/demo-advisor-history.cjs | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+  execute:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Execute tenant-scoped demo history
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SCRIPT_SHA256: ${{ needs.validate.outputs.script_sha256 }}
+          PHASE: ${{ inputs.phase }}
+          AS_OF: ${{ inputs.as_of }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
+          command_timeout: 20m
+          envs: SOURCE_SHA,SCRIPT_SHA256,PHASE,AS_OF,GITHUB_RUN_ID
+          script: |
+            set -Eeuo pipefail
+            repo=/opt/coro-platform
+            host_tmp="$(mktemp -d /tmp/coro-demo-history.XXXXXX)"
+            container_tmp="/tmp/coro-demo-history-$GITHUB_RUN_ID"
+            backend_container=""
+            cleanup() {
+              if [[ -n "$backend_container" ]]; then docker exec "$backend_container" rm -rf -- "$container_tmp" >/dev/null 2>&1 || true; fi
+              rm -rf -- "$host_tmp"
+            }
+            trap cleanup EXIT
+            exec 9>/run/lock/coro-production-deployment.lock
+            flock -n 9
+            git -C "$repo" fetch --quiet origin main
+            git -C "$repo" show "$SOURCE_SHA:ops/demo/demo-advisor-history.cjs" >"$host_tmp/history.cjs"
+            test "$(sha256sum "$host_tmp/history.cjs" | cut -d' ' -f1)" = "$SCRIPT_SHA256"
+            backend_container="$(docker compose -f "$repo/docker-compose.yml" ps -q backend)"
+            test -n "$backend_container"
+            test "$(docker inspect -f '{{.State.Running}}' "$backend_container")" = true
+            if [[ "$PHASE" = prepare || "$PHASE" = reset ]]; then
+              systemctl start coro-db-backup.service
+              test "$(systemctl show -p Result --value coro-db-backup.service)" = success
+            fi
+            docker exec "$backend_container" mkdir -p "$container_tmp"
+            docker cp "$host_tmp/history.cjs" "$backend_container:$container_tmp/history.cjs"
+            docker exec -e CORO_DEMO_HISTORY_RUN=true -e CORO_DEMO_HISTORY_AS_OF="$AS_OF" -w /app "$backend_container" \
+              node "$container_tmp/history.cjs" "$PHASE" >"$host_tmp/evidence.json"
+            node -e 'const fs=require("fs");const s=fs.readFileSync(process.argv[1],"utf8");const r=JSON.parse(s);if(r.schemaVersion!==1||r.command!==process.argv[2])process.exit(1);if(/@|password|secret|token|private/i.test(s))process.exit(1);' "$host_tmp/evidence.json" "$PHASE"
+            cat "$host_tmp/evidence.json"
