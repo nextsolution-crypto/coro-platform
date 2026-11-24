@@ -56,6 +56,7 @@ export class RendementController {
     @Query() query: FinancialRendementQueryDto,
     @Request() req: { user: WorkManagementActor },
   ) {
+    requireInternal(req.user);
     return this.financial.financial(req.user, query);
   }
 

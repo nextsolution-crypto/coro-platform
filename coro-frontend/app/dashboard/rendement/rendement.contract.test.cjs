@@ -8,7 +8,7 @@ const read = (relative) =>
   fs.readFileSync(path.join(__dirname, relative), "utf8");
 
 test("direction dashboard uses the governed financial projection and role gate", () => {
-  const source = read("page.tsx");
+  const source = read("page.tsx") + read("../../../components/rendement/FinancialPanel.tsx");
   assert.match(source, /\/rendement\/financial/);
   assert.match(source, /ADMIN/);
   assert.match(source, /SUPER_ADMIN/);
@@ -19,9 +19,11 @@ test("direction dashboard uses the governed financial projection and role gate",
   assert.match(source, /main-d’œuvre connue/);
 });
 
-test("advisor profile uses only the operational projection", () => {
+test("advisor profile shows the same view, scoped by the server to the advisor", () => {
   const source = read("../../profile/rendement/page.tsx");
   assert.match(source, /\/rendement\/operational/);
-  assert.doesNotMatch(source, /\/rendement\/financial/);
-  assert.doesNotMatch(source, /soldAmount|knownLaborCost|contributionMargin/);
+  assert.match(source, /\/rendement\/financial/);
+  assert.match(source, /FinancialPanel/);
+  assert.match(source, /ce qui vous concerne/);
+  assert.doesNotMatch(source, /params: \{[^}]*userId/);
 });
