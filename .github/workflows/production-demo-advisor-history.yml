@@ -99,7 +99,9 @@ jobs:
             fi
             docker exec "$backend_container" mkdir -p "$container_tmp"
             docker cp "$host_tmp/history.cjs" "$backend_container:$container_tmp/history.cjs"
+            status=0
             docker exec -e CORO_DEMO_HISTORY_RUN=true -e CORO_DEMO_HISTORY_AS_OF="$AS_OF" -w /app "$backend_container" \
-              node "$container_tmp/history.cjs" "$PHASE" >"$host_tmp/evidence.json"
+              node "$container_tmp/history.cjs" "$PHASE" >"$host_tmp/evidence.json" || status=$?
             node -e 'const fs=require("fs");const s=fs.readFileSync(process.argv[1],"utf8");const r=JSON.parse(s);if(r.schemaVersion!==1||r.command!==process.argv[2])process.exit(1);if(/@|password|secret|token|private/i.test(s))process.exit(1);' "$host_tmp/evidence.json" "$PHASE"
             cat "$host_tmp/evidence.json"
+            exit "$status"
