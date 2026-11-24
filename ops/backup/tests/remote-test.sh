@@ -53,6 +53,14 @@ delayed_read() {
   [[ -f "$counter" ]] && count="$(cat "$counter")"
   if (( count < 2 )); then printf '%s' "$((count + 1))" >"$counter"; printf '404 Not Found\n' >&2; exit 2; fi
 }
+flaky_connect() {
+  # Network drop: the first two calls of the whole run cannot reach the endpoint.
+  [[ "$scenario" == 'flaky-connect' ]] || return 0
+  local counter="${MOCK_REMOTE_DIR}/.connect-failures" count=0
+  [[ -f "$counter" ]] && count="$(cat "$counter")"
+  if (( count < 2 )); then printf '%s' "$((count + 1))" >"$counter"; printf 'Could not connect to the endpoint URL\n' >&2; exit 255; fi
+}
+flaky_connect
 case "$operation" in
   head-object)
     delayed_read
@@ -144,6 +152,7 @@ if node -e "const m=require(process.argv[1]);if(m.status!=='REMOTE_VERIFIED'||m.
 if node -e "const s=require(process.argv[1]);if(s.consecutiveFailures!==0||!s.lastRemoteObject||s.lastRemoteVersionId!=='version-test-20261002T180000Z-abcdef123456')process.exit(1)" "${success_root}/state.json"; then pass success-state; else fail success-state invalid; fi
 
 run_case delayed-visibility delayed-visibility success
+run_case flaky-connect flaky-connect success
 
 for scenario in network timeout http400 http401 http403 missing-after-upload missing-version http429 http500 http503 partial-upload size-mismatch checksum-mismatch manifest-upload-failure verification-failure; do
   run_case "$scenario" "$scenario" failure

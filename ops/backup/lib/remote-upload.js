@@ -123,7 +123,7 @@ const visibilityDelayCapMs = Number(process.env.CORO_BACKUP_REMOTE_VISIBILITY_CA
 
 function aws(args, errorCode, allowNotFound = false, awaitVisibility = false) {
   let lastText = '';
-  const attempts = awaitVisibility ? Math.max(maxAttempts, visibilityAttempts) : maxAttempts;
+  const attempts = Math.max(maxAttempts, visibilityAttempts);
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const result = spawnSync('aws', ['--no-cli-pager', '--endpoint-url', endpoint, 's3api', ...args], {
       encoding: 'utf8',
@@ -135,10 +135,14 @@ function aws(args, errorCode, allowNotFound = false, awaitVisibility = false) {
     if (result.status === 0) return { found: true, stdout: result.stdout || '' };
     const notFound = /404|not found|nosuchkey/i.test(lastText);
     if (allowNotFound && notFound) return { found: false, stdout: '' };
-    const retryable = isRetryable(lastText) || (awaitVisibility && notFound);
-    if (!retryable || attempt === attempts) break;
+    // Brief network drops between the Droplet and Spaces ("Could not connect to the endpoint URL")
+    // get the extended budget too, whatever the operation.
+    const connectivity = /could not connect|endpoint ?connection|connection refused|name resolution|temporary failure in name|network is unreachable/i.test(lastText);
+    const retryable = isRetryable(lastText) || connectivity || (awaitVisibility && notFound);
+    const budget = connectivity || awaitVisibility ? Math.max(maxAttempts, visibilityAttempts) : maxAttempts;
+    if (!retryable || attempt >= budget) break;
     const jitter = crypto.randomInt(0, Math.max(1, baseDelayMs + 1));
-    sleep(Math.min(baseDelayMs * (2 ** (attempt - 1)), awaitVisibility ? visibilityDelayCapMs : Number.MAX_SAFE_INTEGER) + jitter);
+    sleep(Math.min(baseDelayMs * (2 ** (attempt - 1)), connectivity || awaitVisibility ? visibilityDelayCapMs : Number.MAX_SAFE_INTEGER) + jitter);
   }
   if (/401|403|accessdenied|invalidaccesskey|signaturedoesnotmatch/i.test(lastText)) {
     fail('REMOTE_AUTH_FAILED', 'Remote authentication or authorization failed');
