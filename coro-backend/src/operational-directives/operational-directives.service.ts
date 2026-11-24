@@ -475,7 +475,8 @@ export class OperationalDirectivesService {
           : {}),
       },
       include: { events: { orderBy: { occurredAt: 'desc' }, take: 5 } },
-      orderBy: [{ dueAt: 'asc' }, { createdAt: 'desc' }],
+      // Ordre de l'énumération PostgreSQL : suivis actifs d'abord, puis fermés et annulés.
+      orderBy: [{ status: 'asc' }, { dueAt: 'asc' }, { createdAt: 'desc' }],
       take: query.limit,
     });
   }
