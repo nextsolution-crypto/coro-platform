@@ -800,23 +800,27 @@ export class ApprovalService {
         },
       )
       .then(async (pdfResult) => {
-        const timestamp = Date.now();
+        // Copies d'aperçu privées : servies par le portail après vérification des droits,
+        // jamais par un lien public.
+        const stamp = String(Date.now());
         const [exportedPdfFr, exportedPdfEn] = await Promise.all([
           pdfResult.fr
-            ? this.storageService.uploadFile(
-                pdfResult.fr,
-                `${project.id}-${timestamp}-FR.pdf`,
-                'documents',
-                'application/pdf',
-              )
+            ? this.storageService.storeApprovedPreviewPdf({
+                organizationId,
+                projectId: project.id,
+                stamp,
+                language: 'fr',
+                bytes: pdfResult.fr,
+              })
             : Promise.resolve(null),
           pdfResult.en
-            ? this.storageService.uploadFile(
-                pdfResult.en,
-                `${project.id}-${timestamp}-EN.pdf`,
-                'documents',
-                'application/pdf',
-              )
+            ? this.storageService.storeApprovedPreviewPdf({
+                organizationId,
+                projectId: project.id,
+                stamp,
+                language: 'en',
+                bytes: pdfResult.en,
+              })
             : Promise.resolve(null),
         ]);
         await this.prisma.project.update({

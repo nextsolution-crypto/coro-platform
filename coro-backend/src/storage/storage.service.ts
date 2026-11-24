@@ -104,6 +104,7 @@ export class StorageService {
     key: string,
     body?: Buffer,
     contentType = 'application/octet-stream',
+    aclSubresource = false,
   ): Promise<Buffer> {
     const config = this.privateStorage;
     const host = config.port
@@ -113,11 +114,12 @@ export class StorageService {
       .split('/')
       .map((segment) => encodeURIComponent(segment))
       .join('/');
-    const path = config.pathPrefix
+    const objectPath = config.pathPrefix
       ? `${config.pathPrefix}/${config.bucket}/${encodedKey}`
       : config.protocol === 'https:' && config.region === 'tor1'
         ? `/${encodedKey}`
         : `/${config.bucket}/${encodedKey}`;
+    const path = aclSubresource ? `${objectPath}?acl` : objectPath;
     const now = new Date();
     const amzDate =
       now
@@ -135,9 +137,10 @@ export class StorageService {
       'x-amz-content-sha256': payloadHash,
       'x-amz-date': amzDate,
     };
-    if (method === 'PUT') {
+    if (method === 'PUT' && !aclSubresource) {
       headers['content-type'] = contentType;
     }
+    if (aclSubresource) headers['x-amz-acl'] = 'private';
     const signedHeaders = Object.keys(headers).sort().join(';');
     const canonicalHeaders = Object.keys(headers)
       .sort()
@@ -145,8 +148,8 @@ export class StorageService {
       .join('');
     const canonicalRequest = [
       method,
-      path,
-      '',
+      objectPath,
+      aclSubresource ? 'acl=' : '',
       canonicalHeaders,
       signedHeaders,
       payloadHash,
@@ -255,6 +258,60 @@ export class StorageService {
     return this.privateRequest('GET', storageKey);
   }
 
+  /** Retire la lecture publique d'un objet existant (ACL privée), sans le supprimer ni le modifier. */
+  async makeObjectPrivate(storageKey: string): Promise<void> {
+    if (!storageKey || storageKey.includes('..') || storageKey.startsWith('/')) {
+      throw new Error('INVALID_STORAGE_KEY');
+    }
+    await this.privateRequest('PUT', storageKey, undefined, undefined, true);
+  }
+
+  /**
+   * Copie PDF d'un plan approuvé (aperçu FR/EN du portail) : privée, rangée par organisation,
+   * lisible seulement par l'application après vérification des droits.
+   */
+  async storeApprovedPreviewPdf(input: {
+    organizationId: string;
+    projectId: string;
+    stamp: string;
+    language: 'fr' | 'en';
+    bytes: Buffer;
+  }): Promise<string> {
+    this.assertPdf(input.bytes);
+    const storageKey = [
+      `tenant-${this.safeKeyPart(input.organizationId)}`,
+      'approved-preview-pdfs',
+      this.safeKeyPart(input.projectId),
+      this.safeKeyPart(input.stamp),
+      `${input.language}.pdf`,
+    ].join('/');
+    try {
+      await this.uploadPrivateImmutable(input.bytes, storageKey, 'application/pdf');
+    } catch (error: unknown) {
+      if (!(error instanceof Error) || error.message !== 'PRIVATE_OBJECT_ALREADY_EXISTS') throw error;
+      const existing = await this.downloadPrivate(storageKey);
+      if (!this.buffersEqual(existing, input.bytes)) throw new Error('APPROVED_PREVIEW_PDF_CONFLICT');
+    }
+    return `${StorageService.OFFICIAL_PDF_REFERENCE_PREFIX}${Buffer.from(storageKey, 'utf8').toString('base64url')}`;
+  }
+
+  /** Clé de stockage d'une ancienne URL publique de coro-storage (ou null si ce n'en est pas une). */
+  historicalPublicStorageKey(reference: string | null | undefined): string | null {
+    if (!reference) return null;
+    let candidate: URL;
+    let allowedOrigin: URL;
+    try {
+      candidate = new URL(reference);
+      allowedOrigin = new URL(this.cdnUrl);
+    } catch {
+      return null;
+    }
+    if (candidate.protocol !== 'https:' || candidate.origin !== allowedOrigin.origin || candidate.username || candidate.password || candidate.search || candidate.hash) return null;
+    const storageKey = candidate.pathname.slice(1).split('/').map((segment) => decodeURIComponent(segment)).join('/');
+    if (!storageKey || storageKey.includes('..') || storageKey.includes('\\')) return null;
+    return storageKey;
+  }
+
   async storeOfficialPdfImmutable(input: {
     organizationId: string;
     projectId: string;
@@ -319,7 +376,7 @@ export class StorageService {
       }
       const storageKey = Buffer.from(encoded, 'base64url').toString('utf8');
       if (
-        !/^tenant-[A-Za-z0-9._-]+\/official-project-pdfs\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\/(fr|en)\.pdf$/.test(
+        !/^tenant-[A-Za-z0-9._-]+\/(official-project-pdfs|approved-preview-pdfs)\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\/(fr|en)\.pdf$/.test(
           storageKey,
         )
       ) {

@@ -143,13 +143,64 @@ export class ClientPortalController {
 
   @Get('projects/:id')
   async getProject(@Param('id') id: string, @Request() req: any) {
-    return this.clientPortalService.getProject(
+    const project: any = await this.clientPortalService.getProject(
       id,
       req.clientUser.clientId,
       req.clientUser.organizationId,
       req.clientUser.role,
       req.clientUser.buildingIds,
     );
+    if (!project) return project;
+    // Les références de stockage ne quittent jamais le serveur : le portail sait seulement
+    // si un PDF existe, et le lit par les routes authentifiées ci-dessous.
+    const available = (value: unknown) => (value ? 'available' : null);
+    return {
+      ...project,
+      exportedPdfFr: available(project.exportedPdfFr),
+      exportedPdfEn: available(project.exportedPdfEn),
+      officialPdfFr: available(project.officialPdfFr),
+      officialPdfEn: available(project.officialPdfEn),
+    };
+  }
+
+  /** Aperçu PDF du plan approuvé (FR/EN), servi après vérification des droits du client. */
+  @Get('projects/:id/preview/:lang')
+  async downloadApprovedPreviewPdf(
+    @Param('id') id: string,
+    @Param('lang') lang: string,
+    @Request() req: any,
+    @Res() res: Response,
+  ) {
+    const normalizedLang = lang.toLowerCase();
+    if (!['fr', 'en'].includes(normalizedLang)) {
+      return res.status(400).json({ message: 'Langue invalide' });
+    }
+    const project = await this.clientPortalService.getProject(
+      id,
+      req.clientUser.clientId,
+      req.clientUser.organizationId,
+      req.clientUser.role,
+      req.clientUser.buildingIds,
+    );
+    if (!project) return res.status(404).json({ message: 'Projet introuvable' });
+    const reference =
+      normalizedLang === 'fr' ? project.exportedPdfFr : project.exportedPdfEn;
+    if (!reference) {
+      return res.status(404).json({ message: 'Aperçu PDF non disponible' });
+    }
+    try {
+      const pdfBuffer = await this.clientPortalService.downloadOfficialPdf(reference);
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Length': String(pdfBuffer.length),
+        'Content-Disposition': 'inline',
+        'Cache-Control': 'private, no-store',
+        'X-Content-Type-Options': 'nosniff',
+      });
+      return res.send(pdfBuffer);
+    } catch {
+      return res.status(502).json({ message: 'Aperçu PDF momentanément indisponible' });
+    }
   }
 
   @Get('activities')
@@ -1772,7 +1823,7 @@ export class ClientPortalController {
 
   @Post('corrective-actions/:id/evidence/file')
   @UseInterceptors(
-    FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }),
+    FileInterceptor('file', { limits: { fileSize: 25 * 1024 * 1024 } }),
   )
   addCorrectiveActionFile(
     @Param('id') id: string,

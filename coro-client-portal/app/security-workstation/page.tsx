@@ -28,6 +28,7 @@ import {
   visibleReviewActions,
 } from "./reportReviewActions.mjs";
 import styles from "./security-workstation.module.css";
+import { toast } from "../store/toast";
 
 type Capability = { feature: string; available: boolean; reason: string };
 type ReportFileCapabilities = {
@@ -1391,6 +1392,10 @@ function AttachmentButton({
 }) {
   const upload = async (file?: File) => {
     if (!file || !versionId) return;
+    if (file.size > 25 * 1024 * 1024) {
+      toast("Pièce jointe : PDF ou JPG, 25 Mo maximum.", "error");
+      return;
+    }
     const data = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onerror = () =>
@@ -1424,7 +1429,7 @@ function AttachmentButton({
       <input
         disabled={!versionId || !available}
         type="file"
-        accept="image/jpeg,image/png,application/pdf"
+        accept=".pdf,.jpg,.jpeg,application/pdf,image/jpeg"
         onChange={(event) => void upload(event.target.files?.[0])}
       />
     </label>

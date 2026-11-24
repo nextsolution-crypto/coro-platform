@@ -1,3 +1,4 @@
+import { CLIENT_UPLOAD_MAX_BYTES, CLIENT_UPLOAD_MAX_LABEL } from '../project-files/file-type-policy';
 import {
   BadRequestException,
   ConflictException,
@@ -27,7 +28,7 @@ import {
 } from './incident-reports.config';
 import { assertIncidentReportBinary } from './incident-report-binary-validator';
 
-const MAX_BYTES = 10 * 1024 * 1024;
+const MAX_BYTES = CLIENT_UPLOAD_MAX_BYTES;
 @Injectable()
 export class IncidentReportAttachmentsService {
   constructor(
@@ -62,7 +63,7 @@ export class IncidentReportAttachmentsService {
       );
     const bytes = Buffer.from(dto.fileBase64, 'base64');
     if (!bytes.length || bytes.length > MAX_BYTES)
-      throw new BadRequestException('Fichier vide ou supérieur à 10 Mo.');
+      throw new BadRequestException(`Fichier vide ou supérieur à ${CLIENT_UPLOAD_MAX_LABEL}.`);
     assertIncidentReportBinary(bytes, dto.mediaType, dto.originalFileName);
     const version = await this.prisma.incidentReportVersion.findFirst({
       where: {

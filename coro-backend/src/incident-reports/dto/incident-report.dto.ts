@@ -77,7 +77,7 @@ export class CreateIncidentReportAttachmentDto {
   @IsString()
   @IsIn(['image/jpeg', 'image/png', 'application/pdf'])
   mediaType!: string;
-  @IsString() @Length(1, 15_000_000) fileBase64!: string;
+  @IsString() @Length(1, 35_000_000) fileBase64!: string; // 25 Mo en base64
   @IsUUID() idempotencyKey!: string;
 }
 

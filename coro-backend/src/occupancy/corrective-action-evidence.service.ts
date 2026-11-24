@@ -1,3 +1,4 @@
+import { CLIENT_UPLOAD_MAX_BYTES } from '../project-files/file-type-policy';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { CoroActorType, CorrectiveActionEvidenceType, CorrectiveActionPermission, CorrectiveActionSystemReferenceType, Prisma } from '@prisma/client';
 import { createHash, randomUUID } from 'crypto';
@@ -6,9 +7,9 @@ import { StorageService } from '../storage/storage.service';
 import { CorrectiveActionsService, CorrectiveActionActor } from './corrective-actions.service';
 import { CreateFileEvidenceDto, CreateLinkEvidenceDto, CreateNoteEvidenceDto, CreateSystemReferenceEvidenceDto, WithdrawEvidenceDto } from './dto/corrective-action-evidence.dto';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const DOCUMENT_MIMES = new Set(['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/plain']);
-const PHOTO_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const MAX_FILE_SIZE = CLIENT_UPLOAD_MAX_BYTES;
+const DOCUMENT_MIMES = new Set(['application/pdf']);
+const PHOTO_MIMES = new Set(['image/jpeg']);
 
 @Injectable()
 export class CorrectiveActionEvidenceService {
@@ -40,7 +41,7 @@ export class CorrectiveActionEvidenceService {
     this.assertEvidenceMutable(await this.actions.findAccessibleAction(actionId, actor));
     if (!file?.buffer?.length) throw new BadRequestException('Fichier requis');
     if (body.type !== CorrectiveActionEvidenceType.DOCUMENT && body.type !== CorrectiveActionEvidenceType.PHOTO) throw new BadRequestException('Type de preuve fichier invalide');
-    if (file.size > MAX_FILE_SIZE) throw new BadRequestException('Fichier trop volumineux (10 Mo maximum)');
+    if (file.size > MAX_FILE_SIZE) throw new BadRequestException('Fichier trop volumineux (25 Mo maximum)');
     this.validateFile(body.type, file.mimetype, file.buffer);
     const hash = createHash('sha256').update(file.buffer).digest('hex');
     let evidence = await this.prisma.correctiveActionEvidence.findFirst({ where: { organizationId: actor.organizationId, clientIntentId: body.clientIntentId } });
@@ -127,7 +128,7 @@ export class CorrectiveActionEvidenceService {
 
   private validateFile(type: CorrectiveActionEvidenceType, mime: string, bytes: Buffer) {
     const allowed = type === 'DOCUMENT' ? DOCUMENT_MIMES : PHOTO_MIMES;
-    if (!allowed.has(mime)) throw new BadRequestException('Type MIME non autorise');
+    if (!allowed.has(mime)) throw new BadRequestException(type === 'DOCUMENT' ? 'Document : seuls les fichiers PDF sont acceptés.' : 'Photo : seuls les fichiers JPG sont acceptés.');
     const hex = bytes.subarray(0, 12).toString('hex');
     const valid = mime === 'application/pdf' ? bytes.subarray(0, 5).toString() === '%PDF-' : mime === 'image/jpeg' ? hex.startsWith('ffd8ff') : mime === 'image/png' ? hex.startsWith('89504e470d0a1a0a') : mime === 'image/webp' ? bytes.subarray(0, 4).toString() === 'RIFF' && bytes.subarray(8, 12).toString() === 'WEBP' : mime === 'text/plain' ? !bytes.includes(0) : hex.startsWith('504b0304');
     if (!valid) throw new BadRequestException('Signature de fichier invalide');
