@@ -495,6 +495,98 @@ async function prepareLot2(prisma, plan, admin) {
   }, { timeout: 180000 });
 }
 
+// ── Lot 3 : Centre d'aide et rapports d'exercice ────────────────────────
+const TICKETS = [
+  { type: 'QUESTION', impact: 'MINOR', status: 'CLOSED', subject: 'Où trouver la version signée de notre plan ?', ask: 'Bonjour, nous ne retrouvons plus la version signée du plan de l’an dernier. Où la télécharger ?', answer: 'Bonjour, elle se trouve dans Documents, sur la fiche du plan : bouton Télécharger (FR ou EN). Bonne journée !', days: [3, 3, 4] },
+  { type: 'QUESTION', impact: 'DISRUPTIVE', status: 'RESOLVED', subject: 'Ajouter notre nouveau gestionnaire comme contact d’urgence', ask: 'Notre gestionnaire d’immeuble a changé. Comment le mettre à jour dans le plan ?', answer: 'C’est noté, nous mettons à jour la liste des contacts et nous vous envoyons la nouvelle version pour signature.', days: [9, 9, 10] },
+  { type: 'OTHER', impact: 'MINOR', status: 'WAITING_REQUESTER', subject: 'Date de l’exercice d’évacuation du printemps', ask: 'Pouvons-nous déjà réserver l’exercice d’évacuation du printemps ?', answer: 'Oui, avec plaisir. Avez-vous une préférence entre la semaine du 13 et celle du 20 avril ?', days: [2, 2, null] },
+  { type: 'QUESTION', impact: 'DISRUPTIVE', status: 'IN_PROGRESS', subject: 'Formation des nouveaux secouristes', ask: 'Cinq nouveaux employés doivent être formés secouristes. Quelles sont les options ?', answer: null, days: [1, 1, null] },
+  { type: 'QUESTION', impact: 'MINOR', status: 'NEW', subject: 'Question sur le registre des présences', ask: 'Les visiteurs doivent-ils pointer à la sortie, ou la sortie est-elle automatique ?', answer: null, days: [0, null, null] },
+];
+
+function buildLot3(plan, lot2) {
+  const tickets = TICKETS.map((t, k) => {
+    const m = plan.mandates[(k * 11) % plan.mandates.length];
+    const cu = lot2.clientUsers.find((u) => u.clientId === m.building.clientId);
+    const created = local(iso(addDays(day(AS_OF), -t.days[0])), '10:15');
+    return { ...t, key: `ticket-${k}`, id: id(`ticket-${k}`), clientUser: cu, clientId: m.building.clientId, buildingId: m.building.id, agent: m.owner, created };
+  });
+  const reports = plan.activities
+    .filter((a) => a.type.startsWith('exercice') && a.status === 'fait')
+    .slice(0, 2)
+    .map((a, k) => {
+      const m = plan.mandates.find((x) => x.projectId === a.projectId);
+      return { key: `exercise-${k}`, id: id(`exercise-${k}`), activity: a, mandate: m, type: a.type === 'exercice_table' ? 'TABLETOP' : 'EVACUATION', status: k === 0 ? 'IN_REVIEW' : 'DRAFT' };
+    });
+  return { tickets, reports };
+}
+
+async function prepareLot3(prisma, plan, admin) {
+  const org = TARGET.organizationId;
+  const lot = buildLot3(plan, buildLot2(plan));
+  const { firstResponseDueAt, supportPriority } = require('/app/dist/src/support/support-sla.js');
+  await prisma.$transaction(async (tx) => {
+    await assertTarget(tx);
+    for (const t of lot.tickets) {
+      if (await tx.supportTicket.findUnique({ where: { id: t.id } })) continue;
+      const priority = supportPriority(t.type, t.impact);
+      const responded = t.answer ? local(iso(addDays(day(AS_OF), -(t.days[1] ?? 0))), '14:40') : null;
+      await tx.supportTicket.create({
+        data: {
+          id: t.id, organizationId: org, channel: 'CLIENT_PORTAL', queue: 'ADVISOR', type: t.type, impact: t.impact, priority,
+          status: t.status, subject: t.subject, requesterClientUserId: t.clientUser.id, clientId: t.clientId, buildingId: t.buildingId,
+          assignedUserId: t.status === 'NEW' ? null : t.agent.id, firstResponseDueAt: firstResponseDueAt(priority, t.created),
+          firstRespondedAt: responded, lastRequesterActivityAt: t.created, lastAgentActivityAt: responded,
+          resolvedAt: ['RESOLVED', 'CLOSED'].includes(t.status) ? local(iso(addDays(day(AS_OF), -(t.days[2] ?? 0) + 1)), '09:00') : null,
+          closedAt: t.status === 'CLOSED' ? local(iso(addDays(day(AS_OF), -(t.days[2] ?? 0) + 2)), '09:00') : null,
+          createdAt: t.created,
+        },
+      });
+      const messages = [{ authorKind: 'REQUESTER', authorClientUserId: t.clientUser.id, authorName: `${t.clientUser.firstName} ${t.clientUser.lastName}`, body: t.ask, createdAt: t.created }];
+      if (t.status === 'IN_PROGRESS') messages.push({ authorKind: 'AGENT', authorUserId: t.agent.id, authorName: `${t.agent.firstName} ${t.agent.lastName}`, body: 'Vérifier les dates de la prochaine formation RCR avec le formateur avant de répondre.', internal: true, createdAt: new Date(t.created.getTime() + 3 * 3600000) });
+      if (t.answer) messages.push({ authorKind: 'AGENT', authorUserId: t.agent.id, authorName: `${t.agent.firstName} ${t.agent.lastName}`, body: t.answer, createdAt: responded });
+      if (t.status === 'CLOSED') messages.push({ authorKind: 'REQUESTER', authorClientUserId: t.clientUser.id, authorName: `${t.clientUser.firstName} ${t.clientUser.lastName}`, body: 'Parfait, merci !', createdAt: new Date(responded.getTime() + 20 * 3600000) });
+      await tx.supportTicketMessage.createMany({ data: messages.map((msg, n) => ({ id: id(`${t.key}-msg-${n}`), ticketId: t.id, internal: false, ...msg })) });
+    }
+    for (const rep of lot.reports) {
+      if (await tx.exerciseReport.findUnique({ where: { id: rep.id } })) continue;
+      const m = rep.mandate;
+      const occurred = rep.activity.scheduledDate;
+      const adviser = `${m.owner.firstName} ${m.owner.lastName}`;
+      await tx.exerciseReport.create({
+        data: {
+          id: rep.id, organizationId: org, projectId: m.projectId, activityId: rep.activity.id, clientId: m.building.clientId, buildingId: m.building.id,
+          type: rep.type, status: rep.status, activityLabel: rep.activity.label, scheduledAt: occurred, occurredAt: occurred, startedAt: occurred,
+          durationMinutes: rep.type === 'TABLETOP' ? 120 : 45, zones: rep.type === 'EVACUATION' ? ['Rez-de-chaussée', 'Étages 1 à 3'] : [],
+          mandateName: m.name, providerName: 'Firme-conseil de démonstration', adviserName: adviser,
+          buildingName: m.building.name, buildingAddress: `${m.building.address}, ${m.building.city}`,
+          level: rep.type === 'TABLETOP' ? 'Direction' : 'Tous les occupants', difficulty: 'Intermédiaire',
+          scenario: rep.type === 'TABLETOP' ? 'Panne prolongée du centre de données pendant la période de pointe.' : 'Alarme incendie déclenchée au 2e étage, escalier est inaccessible.',
+          positiveIntro: 'L’équipe a réagi rapidement et la communication a été claire.', globalRating: 'Satisfaisant',
+          summaryTitle: rep.type === 'TABLETOP' ? 'Exercice sur table — continuité des activités' : 'Exercice d’évacuation complet',
+          conclusion: 'Les objectifs principaux sont atteints. Trois améliorations sont recommandées avant le prochain exercice.',
+          preparedBy: adviser, recipient: 'Direction du bâtiment', conclusionDate: addDays(occurred, 2), createdById: m.owner.id,
+          reviewSubmittedById: rep.status === 'IN_REVIEW' ? m.owner.id : null, reviewSubmittedAt: rep.status === 'IN_REVIEW' ? addDays(occurred, 2) : null,
+        },
+      });
+      await tx.exerciseParticipant.createMany({ data: ['Coordonnateur d’urgence', 'Responsable d’étage', 'Responsable du point de rassemblement', 'Agent de sécurité'].map((name, n) => ({ id: id(`${rep.key}-p-${n}`), key: `p${n}`, reportId: rep.id, name })) });
+      await tx.exerciseTimelineEntry.createMany({
+        data: [['INPUT', 'Déclenchement du scénario'], ['RESPONSE', 'Appel au 911 et mobilisation de l’équipe'], ['RESPONSE', rep.type === 'TABLETOP' ? 'Activation de la cellule de crise' : 'Évacuation complète en 7 min 40 s'], ['INPUT', 'Fin de l’exercice et débriefing']]
+          .map(([type, event], n) => ({ id: id(`${rep.key}-t-${n}`), key: `t${n}`, reportId: rep.id, type, event })),
+      });
+      const findings = [
+        ['POSITIVE', 'Mobilisation rapide de l’équipe d’urgence.'],
+        ['GAP', 'Le point de rassemblement secondaire n’était pas connu de tous.'],
+        ['GAP', 'Deux personnes à mobilité réduite n’avaient pas d’accompagnateur désigné.'],
+      ];
+      for (const [n, [type, description]] of findings.entries()) {
+        await tx.exerciseFinding.create({ data: { id: id(`${rep.key}-f-${n}`), key: `f${n}`, reportId: rep.id, type, description, order: n } });
+        if (type === 'GAP') await tx.exerciseRecommendation.create({ data: { id: id(`${rep.key}-r-${n}`), key: `r${n}`, reportId: rep.id, findingId: id(`${rep.key}-f-${n}`), text: n === 1 ? 'Afficher le point de rassemblement secondaire et le rappeler à chaque formation.' : 'Désigner un accompagnateur et un substitut pour chaque personne à mobilité réduite.' } });
+      }
+    }
+  }, { timeout: 120000 });
+}
+
 async function counts(tx) {
   const where = { organizationId: TARGET.organizationId };
   const advisorIds = ADVISORS.map((a) => a.id);
@@ -510,6 +602,10 @@ async function counts(tx) {
     tx.timePeriodClosure.findMany({ where: { ...where, period: { in: CLOSED_PERIODS }, reopenedAt: null }, select: { period: true } }),
     tx.demoFixtureRecord.count({ where: { ...where, fixtureNamespace: NAMESPACE, state: 'ACTIVE' } }),
   ]);
+  const [tickets, exerciseReports] = await Promise.all([
+    tx.supportTicket.count({ where: { ...where, requesterClientUserId: { in: CLIENTS.map((c) => id(`client-user-${c.key}`)) } } }),
+    tx.exerciseReport.count({ where: { ...where, projectId: { in: projectIds } } }),
+  ]);
   const [observations, comments, auditLogs, bookings, clientUsers] = await Promise.all([
     tx.reviewObservation.count({ where: { ...where, projectId: { in: projectIds } } }),
     tx.projectComment.count({ where: { ...where, projectId: { in: projectIds } } }),
@@ -522,7 +618,7 @@ async function counts(tx) {
     taskTimeEntries: taskTime._count, taskHours: Math.round((taskTime._sum.heures || 0) * 100) / 100,
     timelogEntries: timelog._count, timelogHours: Math.round((timelog._sum.heures || 0) * 100) / 100,
     activities, closedPeriods: closures.map((c) => c.period).sort(), registeredRecords: records,
-    observations, comments, auditLogs, bookings, clientUsers,
+    observations, comments, auditLogs, bookings, clientUsers, tickets, exerciseReports,
   };
 }
 
@@ -664,6 +760,7 @@ async function prepare(prisma) {
   }, { timeout: 180000 });
 
   await prepareLot2(prisma, plan, admin);
+  await prepareLot3(prisma, plan, admin);
   return summary('prepare', { current: await prisma.$transaction((tx) => counts(tx)) }, { mutation: true });
 }
 
@@ -691,6 +788,10 @@ async function reset(prisma) {
     await tx.timePeriodClosure.deleteMany({ where: { organizationId: org, id: { in: closureIds } } });
     await tx.taskTimeEntry.deleteMany({ where: { organizationId: org, userId: { in: advisorIds } } });
     await tx.timelogEntry.deleteMany({ where: { organizationId: org, userId: { in: advisorIds } } });
+    const ticketIds = (await tx.supportTicket.findMany({ where: { organizationId: org, requesterClientUserId: { in: CLIENTS.map((c) => id(`client-user-${c.key}`)) } }, select: { id: true } })).map((t) => t.id);
+    await tx.supportTicketAttachment.deleteMany({ where: { ticketId: { in: ticketIds } } });
+    await tx.supportTicket.deleteMany({ where: { organizationId: org, id: { in: ticketIds } } });
+    await tx.exerciseReport.deleteMany({ where: { organizationId: org, projectId: { in: projectIds } } });
     const bookingIds = (await tx.booking.findMany({ where: { organizationId: org, projectId: { in: projectIds } }, select: { id: true } })).map((b) => b.id);
     await tx.booking.updateMany({ where: { organizationId: org, id: { in: bookingIds } }, data: { pendingCommitmentVersionId: null, currentCommitmentVersionId: null } });
     await tx.bookingAssignment.deleteMany({ where: { booking: { organizationId: org, id: { in: bookingIds } } } });
@@ -736,7 +837,7 @@ async function main() {
   }
 }
 
-module.exports = { buildLot2, AS_OF, ADVISORS, BUILDINGS, CLIENTS, CLOSED_PERIODS, build, buildMandates, id, run };
+module.exports = { buildLot3, buildLot2, AS_OF, ADVISORS, BUILDINGS, CLIENTS, CLOSED_PERIODS, build, buildMandates, id, run };
 
 if (require.main === module) {
   main().catch((error) => {

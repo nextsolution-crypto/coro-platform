@@ -45,7 +45,7 @@ test('every write is scoped to the demo organization', () => {
   const src = fs.readFileSync(path.join(__dirname, 'demo-advisor-history.cjs'), 'utf8');
   assert.match(src, /organizationId: '916f54ec-af22-45e0-99db-a369d9630002'/);
   const deletes = src.match(/deleteMany\(\{ where: \{[^}]*/g) || [];
-  for (const d of deletes) assert.ok(/organizationId: org|task: \{ projectId|schedule: \{ userId|bookingId: \{ in: bookingIds/.test(d), d);
+  for (const d of deletes) assert.ok(/organizationId: org|task: \{ projectId|schedule: \{ userId|bookingId: \{ in: bookingIds|ticketId: \{ in: ticketIds/.test(d), d);
   assert.doesNotMatch(src, /\$executeRawUnsafe\((?!'SET TRANSACTION READ ONLY')/);
 });
 
