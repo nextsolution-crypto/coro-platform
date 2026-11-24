@@ -9,9 +9,10 @@ test('builds a deterministic, realistic two-month history', () => {
   const a = h.build();
   const b = h.build();
   assert.deepStrictEqual(a.taskTime.map((e) => e.id), b.taskTime.map((e) => e.id));
-  assert.strictEqual(a.mandates.length, 45);
+  assert.strictEqual(a.mandates.length, 57);
   const types = a.mandates.reduce((acc, m) => ({ ...acc, [m.type]: (acc[m.type] || 0) + 1 }), {});
-  assert.deepStrictEqual(types, { PMU: 25, PSI: 16, PCA: 4 });
+  assert.deepStrictEqual(types, { PMU: 32, PSI: 19, PCA: 6 });
+  assert.strictEqual(new Set(a.mandates.map((m) => m.name)).size, a.mandates.length);
   for (const m of a.mandates) {
     assert.ok(m.rate >= 120 && m.rate <= 170);
     if (m.type === 'PSI') assert.strictEqual(m.budget, 20);

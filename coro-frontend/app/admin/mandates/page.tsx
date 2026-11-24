@@ -21,6 +21,7 @@ const delaiConfig: Record<string, { icon: string; color: string; bg: string; bor
   URGENT:   { icon: '🟠', color: '#E67E22', bg: '#FEF9E7', border: '#FAD7A0' },
   ATTENTION:{ icon: '🟡', color: '#F39C12', bg: '#FEF9E7', border: '#FAD7A0' },
   OK:       { icon: '✅', color: '#27AE60', bg: '#EAFAF1', border: '#A9DFBF' },
+  LIVRE:    { icon: '✔️', color: '#6C757D', bg: '#F8F9FA', border: '#E9ECEF' },
 };
 
 export default function AdminMandatesPage() {
@@ -164,6 +165,7 @@ export default function AdminMandatesPage() {
             <option value="URGENT">🟠 Urgent</option>
             <option value="ATTENTION">🟡 Attention</option>
             <option value="OK">✅ OK</option>
+            <option value="LIVRE">✔️ Livré</option>
           </select>
         </div>
 
@@ -302,7 +304,9 @@ export default function AdminMandatesPage() {
                           <span className="flex-shrink-0">{d.icon}</span>
                           <div>
                             <p className="text-xs font-bold whitespace-nowrap" style={{ color: d.color }}>
-                              {m.diffDays < 0
+                              {m.delaiLevel === 'LIVRE'
+? 'Livré'
+: m.diffDays < 0
                                 ? `Dépassé de ${Math.abs(m.diffDays)}j`
                                 : m.diffDays === 0
                                 ? "Aujourd'hui"
@@ -455,7 +459,9 @@ export default function AdminMandatesPage() {
                             <span>{d.icon}</span>
                             <div>
                               <p className="text-xs font-bold whitespace-nowrap" style={{ color: d.color }}>
-                                {m.diffDays < 0
+                                {m.delaiLevel === 'LIVRE'
+? 'Livré'
+: m.diffDays < 0
                                   ? `Dépassé de ${Math.abs(m.diffDays)}j`
                                   : m.diffDays === 0
                                   ? "Aujourd'hui"
