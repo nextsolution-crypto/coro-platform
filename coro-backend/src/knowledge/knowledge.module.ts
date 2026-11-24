@@ -21,6 +21,7 @@ import { KnowledgeRetrievalService } from './knowledge-retrieval.service';
 import { KnowledgeReconciliationService } from './knowledge-reconciliation.service';
 import { LibraryKnowledgeRetrievalService } from './library-knowledge-retrieval.service';
 import { BedrockProviderAdapter } from './bedrock-provider.adapter';
+import { UserManualService } from '../user-manual/user-manual.service';
 import { CoroAiProviderGateway } from './coro-ai-provider.gateway';
 import { SemanticEmbeddingService } from './semantic-embedding.service';
 import { KnowledgeEmbeddingBackfillService } from './knowledge-embedding-backfill.service';
@@ -34,6 +35,7 @@ import { KnowledgeEmbeddingBackfillService } from './knowledge-embedding-backfil
   controllers: [KnowledgeInternalController, KnowledgeClientController],
   providers: [
     ClientJwtGuard,
+    UserManualService,
     KnowledgeConfig,
     KnowledgeNormalizer,
     KnowledgeExtractorService,
@@ -51,6 +53,12 @@ import { KnowledgeEmbeddingBackfillService } from './knowledge-embedding-backfil
     CoroAiService,
     KnowledgeReconciliationService,
   ],
-  exports: [KnowledgeRetrievalService, CoroAiService],
+  exports: [
+    KnowledgeRetrievalService,
+    CoroAiService,
+    KnowledgeConfig,
+    KnowledgeGroundingService,
+    BedrockProviderAdapter,
+  ],
 })
 export class KnowledgeModule {}

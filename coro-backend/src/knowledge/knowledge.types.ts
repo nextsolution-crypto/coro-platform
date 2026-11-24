@@ -22,7 +22,7 @@ export interface ExtractedPage {
 }
 
 export interface KnowledgeSearchHit {
-  sourceType?: 'PROJECT_FILE' | 'LIBRARY_PROCEDURE';
+  sourceType?: 'PROJECT_FILE' | 'LIBRARY_PROCEDURE' | 'PRODUCT_MANUAL';
   sourceReference?: string;
   sourceVersion?: string;
   sourceFingerprint?: string;

@@ -20,7 +20,7 @@ const stop = new Set(
     ' ',
   ),
 );
-const tokens = (s: string) => [
+export const tokens = (s: string) => [
   ...new Set(
     (normalize(s).match(/[a-z0-9]+/g) ?? [])
       .filter((t) => (t.length > 2 || t === 'ai' || t === 'ia') && !stop.has(t))
@@ -91,5 +91,36 @@ export class UserManualService {
         : 'Aucune instruction suffisamment précise dans le manuel accessible. Essayez le nom de la fonction ou consultez les catégories.',
       articles,
     };
+  }
+
+  /**
+   * Classement plein texte pour CORO AI : le titre et les mots-clés pèsent
+   * plus que le résumé, puis les étapes et les limites. Retourne les
+   * articles les plus pertinents avec un score entre 0 et 1.
+   */
+  retrieve(audience: ManualAudience, question: string, limit = 4) {
+    const terms = tokens(question);
+    if (!terms.length) return [];
+    return this.list(audience)
+      .articles.map((a) => {
+        const heading = new Set(tokens([a.title, ...a.keywords].join(' ')));
+        const summary = new Set(tokens(a.summary));
+        const body = new Set(
+          tokens([...a.steps, a.expectedResult, ...a.limits, ...a.prerequisites].join(' ')),
+        );
+        let points = 0;
+        let matched = 0;
+        for (const t of terms) {
+          const p = heading.has(t) ? 3 : summary.has(t) ? 2 : body.has(t) ? 1 : 0;
+          points += p;
+          if (p) matched += 1;
+        }
+        return { article: a, score: points / (3 * terms.length), matched };
+      })
+      .filter((r) => r.matched > 0 && r.matched / terms.length >= 0.5)
+      .sort(
+        (x, y) => y.score - x.score || x.article.id.localeCompare(y.article.id),
+      )
+      .slice(0, limit);
   }
 }

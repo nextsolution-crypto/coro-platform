@@ -11,6 +11,10 @@ import {
   UserManualInternalController,
 } from './user-manual.controller';
 import { UserManualService } from './user-manual.service';
+import { UserManualAssistantService } from './user-manual-assistant.service';
+import { KnowledgeConfig } from '../knowledge/knowledge.config';
+import { KnowledgeGroundingService } from '../knowledge/knowledge-grounding.service';
+import { BedrockProviderAdapter } from '../knowledge/bedrock-provider.adapter';
 
 describe('Manual HTTP integration with real session guards (isolated identities)', () => {
   let app: INestApplication;
@@ -31,6 +35,10 @@ describe('Manual HTTP integration with real session guards (isolated identities)
       controllers: [UserManualInternalController, UserManualClientController],
       providers: [
         UserManualService,
+        UserManualAssistantService,
+        KnowledgeGroundingService,
+        { provide: KnowledgeConfig, useValue: { aiProvider: 'deterministic' } },
+        { provide: BedrockProviderAdapter, useValue: { answer: jest.fn() } },
         JwtStrategy,
         ClientJwtGuard,
         { provide: PrismaService, useValue: db },

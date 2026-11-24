@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { CLIENT_UPLOAD_MAX_BYTES } from '../project-files/file-type-policy';
 import { ClientJwtGuard } from '../client-portal/client-jwt.guard';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 import { EvidenceReadAccess } from '../auth/organization-access.decorator';
@@ -53,7 +54,9 @@ export class BuildingDocumentsController {
   }
   @Post()
   @UseGuards(BuildingDocumentUploadGuard)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: CLIENT_UPLOAD_MAX_BYTES } }),
+  )
   upload(
     @Req() req: any,
     @Param('buildingId') id: string,
@@ -95,7 +98,9 @@ export class BuildingDocumentsClientController {
   }
   @Post()
   @UseGuards(BuildingDocumentUploadGuard)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: CLIENT_UPLOAD_MAX_BYTES } }),
+  )
   upload(
     @Req() req: any,
     @Param('buildingId') id: string,

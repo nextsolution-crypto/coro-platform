@@ -29,6 +29,7 @@ type Answer = {
   missingInformation: string[];
   conflicts: string[];
   citations: Citation[];
+  manualSuggestions?: { id: string; title: string; href: string }[];
   correlationId: string;
 };
 
@@ -122,6 +123,14 @@ export default function KnowledgePage() {
               {answer.answer ? <p className={styles.answer}>{answer.answer}</p> : <div className={styles.empty}><CircleAlert /><p>{answer.uncertainty?.trim() || answer.missingInformation.map((item) => item.trim()).filter(Boolean).join(" ") || "Information insuffisante."}</p></div>}
               {answer.uncertainty && answer.answer && <p className={styles.uncertainty}>{answer.uncertainty}</p>}
               {answer.conflicts.length > 0 && <div className={styles.warning}><strong>Contradiction détectée</strong>{answer.conflicts.map((item) => <p key={item}>{item}</p>)}</div>}
+              {!answer.answer && (answer.manualSuggestions?.length ?? 0) > 0 && (
+                <div className={styles.warning} data-testid="manual-suggestions">
+                  <strong>Question sur l’utilisation de CORO ? Voir le manuel :</strong>
+                  {answer.manualSuggestions!.map((item) => (
+                    <p key={item.id}><a href={item.href}>{item.title}</a></p>
+                  ))}
+                </div>
+              )}
               <small>Référence de requête : {answer.correlationId}</small>
             </article>
 

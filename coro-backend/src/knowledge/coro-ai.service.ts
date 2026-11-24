@@ -3,7 +3,9 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
+import { UserManualService } from '../user-manual/user-manual.service';
 import { createHash, randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { KnowledgeGroundingService } from './knowledge-grounding.service';
@@ -29,7 +31,21 @@ export class CoroAiService {
     private readonly grounding: KnowledgeGroundingService,
     private readonly providerGateway: CoroAiProviderGateway,
     private readonly authorization: KnowledgeAuthorizationService,
+    @Optional() private readonly manual?: UserManualService,
   ) {}
+
+  /** Articles du manuel utiles quand la question porte sur le logiciel. */
+  private manualSuggestions(actor: KnowledgeActor, question: string) {
+    if (!this.manual) return [];
+    try {
+      return this.manual
+        .retrieve(actor.type === 'CLIENT_USER' ? 'CLIENT' : 'INTERNAL', question, 3)
+        .filter((r) => r.score >= 0.34)
+        .map(({ article }) => ({ id: article.id, title: article.title, href: article.href }));
+    } catch {
+      return [];
+    }
+  }
 
   async ask(
     actor: KnowledgeActor,
@@ -117,6 +133,7 @@ export class CoroAiService {
         missingInformation: [],
         conflicts: [],
         citations: [],
+        manualSuggestions: this.manualSuggestions(actor, input.question),
       };
     }
     const suspicious = this.grounding.suspicious(input.question);
@@ -188,6 +205,8 @@ export class CoroAiService {
           sha256: hit.sourceFingerprint ?? hit.sourceSha256,
           href: hit.href ?? `/knowledge/sources/${hit.projectFileId}`,
         })),
+      manualSuggestions:
+        status === 'ANSWERED' ? [] : this.manualSuggestions(actor, input.question),
     };
   }
 
