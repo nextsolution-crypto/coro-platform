@@ -5,16 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
+import { notificationDestination, type AdvisorNotification } from '@/lib/notification-destination';
 
-interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  projectId?: string;
-  isRead: boolean;
-  createdAt: string;
-}
+type Notification = AdvisorNotification;
+const PAGE_SIZE = 50;
 
 const TYPE_CONFIG: Record<string, { icon: string; color: string; bg: string }> = {
   APPROBATION_REQUISE: { icon: '📋', color: '#F39C12', bg: '#FEF9E7' },
@@ -23,6 +17,7 @@ const TYPE_CONFIG: Record<string, { icon: string; color: string; bg: string }> =
   DELAI_URGENT:        { icon: '⚡', color: '#E67E22', bg: '#FEF9E7' },
   DELAI_DEPASSE:       { icon: '🔴', color: '#C0392B', bg: '#FDEDEC' },
   FICHIER_CLIENT:      { icon: '📎', color: '#2980B9', bg: '#EBF5FB' },
+  LACUNE_RESILIENCE:   { icon: '⚠️', color: '#E67E22', bg: '#FEF9E7' },
 };
 
 export default function NotificationsPage() {
@@ -31,6 +26,9 @@ export default function NotificationsPage() {
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [unreadTotal, setUnreadTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -40,8 +38,14 @@ export default function NotificationsPage() {
 
   const fetchData = async () => {
     try {
-      const res = await api.get('/notifications');
-      setNotifications(res.data || []);
+      const [res, unread] = await Promise.all([
+        api.get(`/notifications?take=${PAGE_SIZE}`),
+        api.get('/notifications/unread-count').catch(() => ({ data: { count: 0 } })),
+      ]);
+      const page: Notification[] = res.data || [];
+      setNotifications(page);
+      setHasMore(page.length === PAGE_SIZE);
+      setUnreadTotal(unread.data?.count || 0);
     } catch (err) {
       console.error(err);
     } finally {
@@ -49,9 +53,26 @@ export default function NotificationsPage() {
     }
   };
 
+  const loadMore = async () => {
+    const last = notifications[notifications.length - 1];
+    if (!last) return;
+    setLoadingMore(true);
+    try {
+      const res = await api.get(`/notifications?take=${PAGE_SIZE}&before=${encodeURIComponent(last.createdAt)}`);
+      const page: Notification[] = res.data || [];
+      setNotifications(prev => [...prev, ...page.filter(n => !prev.some(existing => existing.id === n.id))]);
+      setHasMore(page.length === PAGE_SIZE);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   const handleMarkAsRead = async (id: string) => {
     try {
       await api.put(`/notifications/${id}/read`);
+      setUnreadTotal(count => Math.max(0, count - 1));
 
       setNotifications(prev =>
         prev.map(n =>
@@ -68,6 +89,7 @@ export default function NotificationsPage() {
   const handleMarkAllAsRead = async () => {
     try {
       await api.put('/notifications/read-all');
+      setUnreadTotal(0);
 
       setNotifications(prev =>
         prev.map(n => ({
@@ -84,9 +106,11 @@ export default function NotificationsPage() {
     try {
       await api.delete(`/notifications/${id}`);
 
-      setNotifications(prev =>
-        prev.filter(n => n.id !== id)
-      );
+      setNotifications(prev => {
+        const removed = prev.find(n => n.id === id);
+        if (removed && !removed.isRead) setUnreadTotal(count => Math.max(0, count - 1));
+        return prev.filter(n => n.id !== id);
+      });
     } catch (err) {
       console.error(err);
     }
@@ -97,14 +121,11 @@ export default function NotificationsPage() {
       await handleMarkAsRead(notif.id);
     }
 
-    if (notif.type.startsWith('BOOKING_ASSIGNMENT_')) {
-      router.push('/planning');
-    } else if (notif.projectId) {
-      router.push(`/projects/${notif.projectId}`);
-    }
+    const destination = notificationDestination(notif);
+    if (destination) router.push(destination);
   };
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const unreadCount = unreadTotal;
 
   return (
     <AppLayout>
@@ -278,7 +299,7 @@ export default function NotificationsPage() {
 
                   {/* Actions desktop */}
                   <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
-                    {notif.projectId && (
+                    {notificationDestination(notif) && (
                       <span
                         className="text-xs font-medium whitespace-nowrap"
                         style={{ color: cfg.color }}
@@ -316,12 +337,12 @@ export default function NotificationsPage() {
                     borderTop: '1px solid rgba(0,0,0,0.05)',
                   }}
                 >
-                  {notif.projectId && (
+                  {notificationDestination(notif) && (
                     <span
                       className="text-xs font-medium"
                       style={{ color: cfg.color }}
                     >
-                      Voir le projet →
+                      Voir →
                     </span>
                   )}
 
@@ -342,6 +363,17 @@ export default function NotificationsPage() {
               </div>
             );
           })}
+          {hasMore && (
+            <button
+              type="button"
+              onClick={() => void loadMore()}
+              disabled={loadingMore}
+              className="w-full text-sm font-medium px-4 py-2.5 rounded"
+              style={{ border: '1px solid #DEE2E6', color: '#2C3E50', backgroundColor: '#FFFFFF' }}
+            >
+              {loadingMore ? 'Chargement…' : 'Afficher les notifications plus anciennes'}
+            </button>
+          )}
         </div>
       )}
     </AppLayout>
