@@ -163,10 +163,38 @@ describe('RendementFinancialService', () => {
     );
   });
 
-  it('rejects OPERATOR and cross-tenant financial access before querying', async () => {
-    authority.requirePermission.mockRejectedValueOnce(new ForbiddenException());
+  it('lets an organization ADMIN read its own team without platform authority', async () => {
+    prisma.projectMandate.findMany.mockResolvedValue([]);
+    const result = await service.financial(actor('ADMIN'), { view: 'cumulative' });
+    expect(authority.requirePermission).not.toHaveBeenCalled();
+    expect(result.scope.audience).toBe('ORGANIZATION');
+    expect(prisma.projectMandate.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ organizationId: 'org-a' }) }),
+    );
+  });
+
+  it('limits an advisor to the mandates they worked on', async () => {
+    prisma.projectMandate.findMany.mockResolvedValue([]);
+    const result = await service.financial(actor('OPERATOR'), {
+      view: 'cumulative',
+      userId: 'someone-else',
+    } as any);
+    expect(authority.requirePermission).not.toHaveBeenCalled();
+    expect(result.scope.audience).toBe('ADVISOR');
+    const where = prisma.projectMandate.findMany.mock.calls[0][0].where;
+    expect(JSON.stringify(where)).toContain('admin-a');
+    expect(JSON.stringify(where)).not.toContain('someone-else');
+  });
+
+  it('requires platform authority for another organization before querying', async () => {
+    authority.requirePermission
+      .mockRejectedValueOnce(new ForbiddenException())
+      .mockRejectedValueOnce(new ForbiddenException());
     await expect(
-      service.financial(actor('OPERATOR'), { view: 'cumulative' }),
+      service.financial(actor('ADMIN'), { view: 'cumulative', organizationId: 'org-b' } as any),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.financial(actor('OPERATOR'), { view: 'cumulative', organizationId: 'org-b' } as any),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(prisma.projectMandate.findMany).not.toHaveBeenCalled();
   });

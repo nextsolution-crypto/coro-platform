@@ -80,20 +80,53 @@ const CLIENTS = [
   { key: 'rivesud', name: 'Hôtellerie Rive-Sud — Démo', sector: 'Hôtellerie', city: 'Longueuil' },
   { key: 'boreales', name: 'Industries Boréales — Démo', sector: 'Fabrication', city: 'Drummondville' },
   { key: 'agedor', name: 'Résidences Âge d’Or — Démo', sector: 'Résidences pour aînés', city: 'Québec' },
+  { key: 'cegep', name: 'Collège des Deux-Rives — Démo', sector: 'Enseignement', city: 'Sherbrooke' },
+  { key: 'logistik', name: 'Logistique Nordet — Démo', sector: 'Entreposage', city: 'Mirabel' },
+  { key: 'municipal', name: 'Ville de Val-Fictif — Démo', sector: 'Municipal', city: 'Val-Fictif' },
+  { key: 'clinique', name: 'Cliniques Santé Plus — Démo', sector: 'Santé', city: 'Gatineau' },
 ].map((c) => ({ ...c, id: id(`client-${c.key}`) }));
 
 const BUILDINGS = [
-  ['laurentide', 'tour-cartier', 'Tour Cartier — Démo', '1250, boulevard Fictif', 'Montréal', 'Bureaux', 45.4995, -73.5713, 24],
-  ['laurentide', 'centre-saint-roch', 'Centre Saint-Roch — Démo', '400, rue Imaginaire', 'Québec', 'Bureaux', 46.8139, -71.2229, 9],
-  ['laurentide', 'carrefour-laval', 'Carrefour Laval Est — Démo', '3000, avenue Modèle', 'Laval', 'Commercial', 45.5703, -73.7236, 3],
-  ['rivesud', 'hotel-fleuve', 'Hôtel du Fleuve — Démo', '75, place Exemple', 'Longueuil', 'Hôtel', 45.5312, -73.5181, 12],
-  ['rivesud', 'auberge-chambly', 'Auberge du Bassin — Démo', '18, rue du Modèle', 'Chambly', 'Hôtel', 45.4486, -73.2876, 4],
-  ['boreales', 'usine-principale', 'Usine principale — Démo', '900, rue Industrielle Fictive', 'Drummondville', 'Industriel', 45.8838, -72.4843, 2],
-  ['boreales', 'entrepot-nord', 'Entrepôt Nord — Démo', '120, chemin du Dépôt', 'Drummondville', 'Entrepôt', 45.9002, -72.5012, 1],
-  ['agedor', 'rpa-sillery', 'Résidence Sillery — Démo', '2200, chemin Fictif', 'Québec', 'RPA', 46.7781, -71.2470, 8],
-  ['agedor', 'rpa-beauport', 'Résidence Beauport — Démo', '55, avenue Exemple', 'Québec', 'RPA', 46.8590, -71.1906, 6],
-  ['agedor', 'rpa-levis', 'Résidence du Vieux-Lévis — Démo', '10, côte du Modèle', 'Lévis', 'RPA', 46.8033, -71.1779, 5],
-].map(([clientKey, key, name, address, city, type, lat, lng, floors]) => ({ clientKey, key, name, address, city, type, lat, lng, floors, id: id(`building-${key}`), clientId: id(`client-${clientKey}`) }));
+  ['laurentide', 'tour-cartier', 'Tour Cartier — Démo', 'Montréal', 'Bureaux', 45.4995, -73.5713, 24],
+  ['laurentide', 'centre-saint-roch', 'Centre Saint-Roch — Démo', 'Québec', 'Bureaux', 46.8139, -71.2229, 9],
+  ['laurentide', 'carrefour-laval', 'Carrefour Laval Est — Démo', 'Laval', 'Commercial', 45.5703, -73.7236, 3],
+  ['laurentide', 'place-mercier', 'Place Mercier — Démo', 'Montréal', 'Bureaux', 45.5017, -73.5540, 18],
+  ['laurentide', 'edifice-jacques', 'Édifice Jacques-Fictif — Démo', 'Montréal', 'Bureaux', 45.5080, -73.5680, 12],
+  ['rivesud', 'hotel-fleuve', 'Hôtel du Fleuve — Démo', 'Longueuil', 'Hôtel', 45.5312, -73.5181, 12],
+  ['rivesud', 'auberge-chambly', 'Auberge du Bassin — Démo', 'Chambly', 'Hôtel', 45.4486, -73.2876, 4],
+  ['rivesud', 'hotel-boucherville', 'Hôtel des Îles — Démo', 'Boucherville', 'Hôtel', 45.5913, -73.4364, 6],
+  ['boreales', 'usine-principale', 'Usine principale — Démo', 'Drummondville', 'Industriel', 45.8838, -72.4843, 2],
+  ['boreales', 'entrepot-nord', 'Entrepôt Nord — Démo', 'Drummondville', 'Entrepôt', 45.9002, -72.5012, 1],
+  ['boreales', 'usine-victoriaville', 'Usine de Victoriaville — Démo', 'Victoriaville', 'Industriel', 46.0571, -71.9598, 2],
+  ['agedor', 'rpa-sillery', 'Résidence Sillery — Démo', 'Québec', 'RPA', 46.7781, -71.2470, 8],
+  ['agedor', 'rpa-beauport', 'Résidence Beauport — Démo', 'Québec', 'RPA', 46.8590, -71.1906, 6],
+  ['agedor', 'rpa-levis', 'Résidence du Vieux-Lévis — Démo', 'Lévis', 'RPA', 46.8033, -71.1779, 5],
+  ['agedor', 'rpa-charlesbourg', 'Résidence Charlesbourg — Démo', 'Québec', 'RPA', 46.8600, -71.2700, 7],
+  ['agedor', 'rpa-trois-rivieres', 'Résidence des Forges — Démo', 'Trois-Rivières', 'RPA', 46.3432, -72.5477, 6],
+  ['cegep', 'pavillon-a', 'Pavillon principal — Démo', 'Sherbrooke', 'Enseignement', 45.4042, -71.8929, 5],
+  ['cegep', 'pavillon-sport', 'Centre sportif — Démo', 'Sherbrooke', 'Sportif', 45.4060, -71.8950, 2],
+  ['cegep', 'residence-etudiante', 'Résidence étudiante — Démo', 'Sherbrooke', 'Résidentiel', 45.4020, -71.8900, 6],
+  ['logistik', 'centre-mirabel', 'Centre de distribution Mirabel — Démo', 'Mirabel', 'Entrepôt', 45.6500, -74.0800, 1],
+  ['logistik', 'centre-boisbriand', 'Plateforme Boisbriand — Démo', 'Boisbriand', 'Entrepôt', 45.6200, -73.8400, 1],
+  ['logistik', 'centre-levis', 'Entrepôt Lévis — Démo', 'Lévis', 'Entrepôt', 46.7600, -71.1900, 1],
+  ['municipal', 'hotel-de-ville', 'Hôtel de ville — Démo', 'Val-Fictif', 'Municipal', 46.1000, -71.3000, 3],
+  ['municipal', 'aréna', 'Aréna municipal — Démo', 'Val-Fictif', 'Sportif', 46.1020, -71.3050, 2],
+  ['municipal', 'bibliotheque', 'Bibliothèque centrale — Démo', 'Val-Fictif', 'Culturel', 46.0990, -71.2980, 2],
+  ['municipal', 'garage', 'Garage municipal — Démo', 'Val-Fictif', 'Industriel', 46.0950, -71.3100, 1],
+  ['clinique', 'clinique-hull', 'Clinique Hull — Démo', 'Gatineau', 'Santé', 45.4280, -75.7130, 4],
+  ['clinique', 'clinique-aylmer', 'Clinique Aylmer — Démo', 'Gatineau', 'Santé', 45.3950, -75.8450, 2],
+  ['clinique', 'clinique-buckingham', 'Clinique Buckingham — Démo', 'Gatineau', 'Santé', 45.5880, -75.4150, 2],
+  ['clinique', 'centre-imagerie', 'Centre d’imagerie — Démo', 'Gatineau', 'Santé', 45.4400, -75.7400, 3],
+  ['laurentide', 'tour-sherbrooke', 'Tour Wellington — Démo', 'Sherbrooke', 'Bureaux', 45.4000, -71.8900, 10],
+  ['rivesud', 'hotel-saint-jean', 'Hôtel du Richelieu — Démo', 'Saint-Jean-sur-Richelieu', 'Hôtel', 45.3070, -73.2620, 5],
+  ['cegep', 'pavillon-sciences', 'Pavillon des sciences — Démo', 'Sherbrooke', 'Enseignement', 45.4070, -71.8970, 4],
+  ['municipal', 'caserne', 'Caserne de pompiers — Démo', 'Val-Fictif', 'Municipal', 46.1040, -71.2950, 2],
+  ['clinique', 'clinique-gatineau', 'Clinique du Plateau — Démo', 'Gatineau', 'Santé', 45.4500, -75.7700, 3],
+].map(([clientKey, key, name, city, type, lat, lng, floors], n) => ({
+  clientKey, key, name, city, type, lat, lng, floors,
+  address: `${100 + n * 25}, rue Fictive`,
+  id: id(`building-${key}`), clientId: id(`client-${clientKey}`),
+}));
 
 const TASKS = {
   PSI: [
@@ -124,23 +157,32 @@ const TASKS = {
   ],
 };
 
-/** 45 mandats (55 % PMU, 35 % PSI, 10 % PCA), démarrés entre le 8 septembre et le 20 novembre. */
+/**
+ * 45 mandats démarrés du 8 septembre au 20 novembre et 12 mandats signés qui démarrent
+ * entre fin novembre et la mi-janvier (55 % PMU, 35 % PSI, 10 % PCA).
+ */
 function buildMandates() {
   const r = rng('mandates');
-  const types = [...Array(25).fill('PMU'), ...Array(16).fill('PSI'), ...Array(4).fill('PCA')];
+  const types = [...Array(32).fill('PMU'), ...Array(19).fill('PSI'), ...Array(6).fill('PCA')];
   for (let i = types.length - 1; i > 0; i -= 1) {
     const j = Math.floor(r() * (i + 1));
     [types[i], types[j]] = [types[j], types[i]];
   }
   const now = day(AS_OF);
+  const usedPairs = new Set();
   return types.map((type, index) => {
-    const building = BUILDINGS[index % BUILDINGS.length];
+    let slot = (index * 7) % BUILDINGS.length;
+    for (let guard = 0; usedPairs.has(`${slot}|${type}`) && guard < BUILDINGS.length; guard += 1) slot = (slot + 1) % BUILDINGS.length;
+    usedPairs.add(`${slot}|${type}`);
+    const building = BUILDINGS[slot];
     const owner = ADVISORS[index % ADVISORS.length];
     const support = ADVISORS[(index + 2) % ADVISORS.length];
     const complex = type === 'PMU' && r() < 0.35;
     const budget = type === 'PSI' ? 20 : type === 'PCA' ? 60 + Math.round(r() * 30) : complex ? 40 + Math.round(r() * 80) : 30;
     const weeks = type === 'PSI' ? 3 + Math.floor(r() * 3) : type === 'PCA' ? 9 + Math.floor(r() * 4) : complex ? 6 + Math.floor(r() * 4) : 4 + Math.floor(r() * 3);
-    const start = addDays(day('2026-09-08'), Math.floor((index / types.length) * 70 + r() * 3));
+    const start = index < 45
+      ? addDays(day('2026-09-08'), Math.floor((index / 45) * 70 + r() * 3))
+      : addDays(day('2026-11-25'), Math.floor(((index - 45) / 12) * 50 + r() * 3));
     const plannedEnd = addDays(start, weeks * 7);
     const rate = 120 + Math.round(r() * 10) * 5; // 120 à 170 $/h
     // Consommation d'heures : les mandats terminés oscillent autour du budget, quelques-uns le dépassent.
@@ -160,7 +202,7 @@ function buildMandates() {
       building, owner, support,
       projectId: id(`project-${index}`),
       mandateId: id(`mandate-${index}`),
-      name: `${type} — ${building.name.replace(' — Démo', '')} 2026${complex ? ' (complexe)' : ''}`,
+      name: `${type} — ${building.name.replace(' — Démo', '')} ${start >= day('2027-01-01') ? 2027 : 2026}${complex ? ' (complexe)' : ''}`,
       description: `${label} — mandat fictif de démonstration${complex ? ', bâtiment complexe' : ''}.`,
     };
   });

@@ -135,11 +135,30 @@ export class RendementFinancialService {
 
   async financial(actor: FinancialActor, query: FinancialRendementQueryDto) {
     const organizationId = query.organizationId ?? actor.organizationId;
-    await this.platformAuthority.requirePermission(
-      actor,
-      PlatformPermission.FINANCIAL_RENDEMENT_READ,
-      organizationId,
-    );
+    // Périmètre : l'administrateur d'une organisation lit le rendement de
+    // toute son équipe; un conseiller lit le même rendement limité aux
+    // mandats auxquels il a participé. Toute lecture d'une autre
+    // organisation (ou par la plateforme) exige l'autorité plateforme.
+    let scope: 'ORGANIZATION' | 'ADVISOR' | 'PLATFORM';
+    if (
+      organizationId === actor.organizationId &&
+      actor.role === 'ADMIN'
+    ) {
+      scope = 'ORGANIZATION';
+    } else if (
+      organizationId === actor.organizationId &&
+      actor.role !== 'SUPER_ADMIN'
+    ) {
+      scope = 'ADVISOR';
+      query = { ...query, userId: actor.userId };
+    } else {
+      await this.platformAuthority.requirePermission(
+        actor,
+        PlatformPermission.FINANCIAL_RENDEMENT_READ,
+        organizationId,
+      );
+      scope = 'PLATFORM';
+    }
     const view = query.view ?? 'cumulative';
     const workRange =
       view === 'work-period' ? reportingRange(query.from, query.to) : undefined;
@@ -325,6 +344,7 @@ export class RendementFinancialService {
 
     return {
       scope: {
+        audience: scope,
         view,
         from: query.from ?? null,
         to: query.to ?? null,

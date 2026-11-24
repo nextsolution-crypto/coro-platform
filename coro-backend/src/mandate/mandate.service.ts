@@ -1272,7 +1272,13 @@ export class MandateService {
       // Calcul délai
       let diffDays: number | null = null;
       let delaiLevel: string | null = null;
-      if (m.dateLimite && m.typeMandat === 'FORFAITAIRE') {
+      const delivered = ['VALIDATED', 'EXPORTED', 'ARCHIVED'].includes(
+        m.project.status,
+      );
+      if (m.dateLimite && m.typeMandat === 'FORFAITAIRE' && delivered) {
+        // Un mandat livré n'est plus en retard : son délai est clos.
+        delaiLevel = 'LIVRE';
+      } else if (m.dateLimite && m.typeMandat === 'FORFAITAIRE') {
         diffDays = Math.ceil(
           (new Date(m.dateLimite).getTime() - today.getTime()) /
             (1000 * 60 * 60 * 24),

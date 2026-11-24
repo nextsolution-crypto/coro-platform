@@ -195,7 +195,7 @@ test('package.json : scripts de préproduction nommés glass:*, aucun dans build
 test('rendement : /profile/rendement et /dashboard/rendement restent les pages de main (contrats operational / financial), sans vue Glass ni ancien modèle', () => {
   const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8').replace(/\r\n/g, '\n');
   const op = read('app/profile/rendement/page.tsx'); const fin = read('app/dashboard/rendement/page.tsx');
-  assert.match(op, /\/rendement\/operational/); assert.doesNotMatch(op, /\/rendement\/financial|soldAmount|knownLaborCost|contributionMargin/, 'la page personnelle n’affiche aucune donnée financière');
+  assert.match(op, /\/rendement\/operational/); assert.match(op, /\/rendement\/financial/); assert.doesNotMatch(op, /params: \{[^}]*userId/, 'la page personnelle ne choisit pas le conseiller : le serveur limite la vue à ses mandats');
   assert.match(fin, /\/rendement\/financial/); assert.match(fin, /SUPER_ADMIN/); assert.match(fin, /router\.replace\("\/profile\/rendement"\)/, 'garde de rôle : redirection d’un non-administrateur');
   for (const [name, source] of [['profile', op], ['dashboard', fin]]) {
     assert.doesNotMatch(source, /GLASS:begin|GLASS:end|useTheme|RendementGlassView|RendementEquipeGlassView|design-system/, name + ' : aucun bloc ni vue Glass');

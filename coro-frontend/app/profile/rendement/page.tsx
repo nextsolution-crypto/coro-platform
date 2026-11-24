@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import AppLayout from "@/components/layout/AppLayout";
 import api from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
+import FinancialPanel, { type FinancialResponse } from "@/components/rendement/FinancialPanel";
+import { occupation, workdaysBetween } from "@/components/rendement/OccupationPanel";
 
 type OperationalResponse = {
   period: { from: string | null; to: string | null; timeZone: string };
@@ -41,6 +43,7 @@ export default function MonRendementPage() {
   const [data, setData] = useState<OperationalResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [financial, setFinancial] = useState<FinancialResponse | null>(null);
 
   useEffect(() => {
     void initAuth();
@@ -70,6 +73,18 @@ export default function MonRendementPage() {
     };
   }, [from, isInitialized, to, user]);
 
+  useEffect(() => {
+    if (!isInitialized || !user) return;
+    let active = true;
+    api
+      .get<FinancialResponse>("/rendement/financial", { params: { view: "cumulative" } })
+      .then((response) => active && setFinancial(response.data))
+      .catch(() => active && setFinancial(null));
+    return () => {
+      active = false;
+    };
+  }, [isInitialized, user]);
+
   const advisor =
     data?.advisors.find((item) => item.userId === user?.id) ??
     data?.advisors[0];
@@ -81,11 +96,11 @@ export default function MonRendementPage() {
           Mon profil
         </p>
         <h1 className="text-2xl font-black text-slate-800">
-          Mon rendement opérationnel
+          Mon rendement
         </h1>
         <p className="mt-2 text-sm text-slate-600">
-          Heures, activités et participations autorisées. Aucune donnée
-          financière n’est affichée.
+          Vos heures, votre occupation et la rentabilité des mandats auxquels
+          vous avez participé. Vous ne voyez que ce qui vous concerne.
         </p>
       </header>
 
@@ -132,13 +147,23 @@ export default function MonRendementPage() {
         <>
           <section
             aria-label="Synthèse opérationnelle"
-            className="mb-6 grid gap-4 sm:grid-cols-3"
+            className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
           >
             <article className="rounded-md border border-slate-200 bg-white p-5">
               <p className="text-sm text-slate-500">Heures saisies</p>
               <p className="text-2xl font-black text-blue-700">
                 {advisor.hours.toFixed(1)} h
               </p>
+            </article>
+            <article className="rounded-md border border-slate-200 bg-white p-5">
+              <p className="text-sm text-slate-500">Occupation facturable</p>
+              <p className="text-2xl font-black text-slate-800">
+                {(() => {
+                  const rate = occupation(advisor.hours, workdaysBetween(from, to));
+                  return rate === null ? "—" : `${rate} %`;
+                })()}
+              </p>
+              <p className="text-xs text-slate-500">sur 8 h par jour ouvrable</p>
             </article>
             <article className="rounded-md border border-slate-200 bg-white p-5">
               <p className="text-sm text-slate-500">Activités</p>
@@ -193,6 +218,15 @@ export default function MonRendementPage() {
             )}
           </section>
         </>
+      )}
+
+      {financial && financial.mandates.length > 0 && (
+        <div className="mt-8">
+          <h2 className="mb-3 text-lg font-black text-slate-800">
+            Rentabilité de mes mandats
+          </h2>
+          <FinancialPanel data={financial} />
+        </div>
       )}
     </AppLayout>
   );
