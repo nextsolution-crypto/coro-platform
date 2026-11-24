@@ -75,12 +75,12 @@ export class ConfiguratorService {
             },
             {
               key: 'dateReleve',
-              label: 'Date du releve technique',
+              label: 'Date du relevé technique',
               type: 'date',
             },
             {
               key: 'reglementMunicipal',
-              label: 'Reglement municipal applicable (si connu)',
+              label: 'Règlement municipal applicable (si connu)',
               type: 'text',
             },
             {
@@ -107,7 +107,7 @@ export class ConfiguratorService {
         },
         {
           id: 'description',
-          title: 'Description generale',
+          title: 'Description générale',
           icon: '🏢',
           fields: [
             {
@@ -183,22 +183,22 @@ export class ConfiguratorService {
               tooltip:
                 "Ex: chirurgie d'un jour, sédation, perfusion. Si Oui, le PSI est requis même pour un usage D (établissements d'affaires). CNPI 2020 art. 2.8.1.1.",
             },
-            { key: 'floors', label: 'Nombre d etages', type: 'number' },
+            { key: 'floors', label: 'Nombre d’étages', type: 'number' },
             { key: 'basements', label: 'Nombre de sous-sols', type: 'number' },
             {
               key: 'superficie',
-              label: 'Superficie du batiment (pi2)',
+              label: 'Superficie du bâtiment (pi2)',
               type: 'number',
             },
             {
               key: 'anneeConstruction',
-              label: 'Annee de construction',
+              label: 'Année de construction',
               type: 'select',
               options: Array.from({ length: 125 }, (_, i) => String(2025 - i)),
             },
             {
               key: 'derniereRenovation',
-              label: 'Annee derniere renovation majeure',
+              label: 'Année dernière rénovation majeure',
               type: 'select',
               options: [
                 'Aucune',
@@ -207,7 +207,7 @@ export class ConfiguratorService {
             },
             {
               key: 'typeConstructionEtages',
-              label: 'Type de construction — Etages superieurs',
+              label: 'Type de construction — Étages supérieurs',
               type: 'select',
               options: [
                 'Incombustible - Beton',
@@ -231,7 +231,7 @@ export class ConfiguratorService {
             },
             {
               key: 'accesSousSol',
-              label: 'Acces aux sous-sols',
+              label: 'Accès aux sous-sols',
               type: 'checkbox_group',
               checkboxOptions: [
                 'Escaliers',
@@ -243,12 +243,12 @@ export class ConfiguratorService {
             },
             {
               key: 'accesSousSolDetails',
-              label: 'Details acces sous-sol (optionnel)',
+              label: 'Détails accès sous-sol (optionnel)',
               type: 'text',
             },
             {
               key: 'accesEtages',
-              label: 'Acces aux etages',
+              label: 'Accès aux étages',
               type: 'checkbox_group',
               checkboxOptions: [
                 'Escaliers',
@@ -259,22 +259,22 @@ export class ConfiguratorService {
             },
             {
               key: 'accesEtagesDetails',
-              label: 'Details acces etages (optionnel)',
+              label: 'Détails accès étages (optionnel)',
               type: 'text',
             },
             {
               key: 'treizeEtage',
-              label: 'Le batiment a un 13e etage',
+              label: 'Le bâtiment a un 13e étage',
               type: 'boolean',
             },
             {
               key: 'infosBatiment',
-              label: 'Informations supplementaires sur le batiment (optionnel)',
+              label: 'Informations supplémentaires sur le bâtiment (optionnel)',
               type: 'text',
             },
             {
               key: 'hauteurBatiment',
-              label: 'Batiment a grande hauteur (+ de 18m)',
+              label: 'Bâtiment à grande hauteur (+ de 18m)',
               type: 'boolean',
               tooltip:
                 'Un batiment est considere a grande hauteur si le plancher du dernier etage occupe est a plus de 18m au-dessus du niveau moyen du sol.',
@@ -321,27 +321,27 @@ export class ConfiguratorService {
             },
             {
               key: 'lieuSommeil',
-              label: 'Lieu de sommeil (hotel, residence)',
+              label: 'Lieu de sommeil (hôtel, résidence)',
               type: 'boolean',
               tooltip:
                 'Cocher OUI si des personnes dorment dans le batiment (hotel, residence, dortoir, RPA). Active des procedures d evacuation specifiques et des exigences supplementaires selon le CNPI.',
             },
-            { key: 'securite24h', label: 'Securite 24h/7', type: 'boolean' },
+            { key: 'securite24h', label: 'Sécurité 24 h/7', type: 'boolean' },
             {
               key: 'agentSecurite',
-              label: 'Agent de securite sur place',
+              label: 'Agent de sécurité sur place',
               type: 'boolean',
             },
             {
               key: 'posteSurveillance',
-              label: 'Poste de securite',
+              label: 'Poste de sécurité',
               type: 'boolean',
               tooltip:
                 'Poste physique occupe par un agent de securite qui surveille les systemes de securite, les cameras et les acces du batiment.',
             },
             {
               key: 'personnelHandicap',
-              label: 'Personnes necessitant aide evacuation (PPNAE)',
+              label: 'Personnes nécessitant aide évacuation (PPNAE)',
               type: 'boolean',
               tooltip:
                 "PPNAE = Personnes Nécessitant Assistance À l'Évacuation. Leur présence requiert des mesures spécifiques documentées et un registre à jour (CNPI 2020 art. 2.8.2.1).",
@@ -382,19 +382,19 @@ export class ConfiguratorService {
             },
             {
               key: 'controleAcces',
-              label: 'Systeme de controle d acces',
+              label: 'Système de contrôle d’accès',
               type: 'boolean',
             },
             {
               key: 'cameras',
-              label: 'Cameras de surveillance (CCTV)',
+              label: 'Caméras de surveillance (CCTV)',
               type: 'boolean',
             },
           ],
         },
         {
           id: 'certifications',
-          title: 'Certifications du batiment',
+          title: 'Certifications du bâtiment',
           icon: '🏆',
           fields: [
             {
@@ -417,7 +417,7 @@ export class ConfiguratorService {
             },
             {
               key: 'certISO22301',
-              label: 'ISO 22301 (Continuite des affaires)',
+              label: 'ISO 22301 (Continuité des affaires)',
               type: 'boolean',
             },
             {
@@ -428,14 +428,14 @@ export class ConfiguratorService {
             { key: 'certEnergyStar', label: 'Energy Star', type: 'boolean' },
             {
               key: 'autresCertifications',
-              label: 'Autres certifications (decrire)',
+              label: 'Autres certifications (décrire)',
               type: 'text',
             },
           ],
         },
         {
           id: 'emplacements',
-          title: 'Emplacements strategiques',
+          title: 'Emplacements stratégiques',
           icon: '📍',
           fields: [
             {
@@ -457,7 +457,7 @@ export class ConfiguratorService {
             },
             {
               key: 'lieuAccueilTemporaire',
-              label: 'Lieu d accueil temporaire (lieu)',
+              label: 'Lieu d’accueil temporaire (lieu)',
               type: 'text',
             },
             {
@@ -467,27 +467,27 @@ export class ConfiguratorService {
             },
             {
               key: 'zoneRafraichissement',
-              label: 'Zone de rafraichissement - BOMA (lieu)',
+              label: 'Zone de rafraîchissement - BOMA (lieu)',
               type: 'text',
             },
             {
               key: 'boiteClePompier',
-              label: 'Boite a cles pompier (lieu)',
+              label: 'Boîte à clés pompier (lieu)',
               type: 'text',
             },
             {
               key: 'trousseClesPompier',
-              label: 'Trousseau de cles pompier present',
+              label: 'Trousseau de clés pompier présent',
               type: 'boolean',
             },
             {
               key: 'trousseClesPompierLieu',
-              label: 'Localisation du trousseau de cles pompier',
+              label: 'Localisation du trousseau de clés pompier',
               type: 'text',
             },
             {
               key: 'lieuDocument',
-              label: 'Lieu ou est conserve le document (PMU/PSI/etc.)',
+              label: 'Lieu où est conservé le document (PMU/PSI/etc.)',
               type: 'text',
               tooltip:
                 'Indiquer l endroit precis ou est conserve l exemplaire papier officiel du document en cas d urgence. Ex: Poste de securite, bureau du gestionnaire.',
@@ -558,7 +558,7 @@ export class ConfiguratorService {
           fields: [
             {
               key: 'panneauAlarme',
-              label: 'Panneau alarme incendie present',
+              label: 'Panneau alarme incendie présent',
               type: 'boolean',
             },
             {
@@ -583,7 +583,7 @@ export class ConfiguratorService {
               type: 'text',
             },
             { key: 'panneauMarque', label: 'Marque du panneau', type: 'text' },
-            { key: 'panneauModele', label: 'Modele du panneau', type: 'text' },
+            { key: 'panneauModele', label: 'Modèle du panneau', type: 'text' },
             {
               key: 'panneauLocalisation',
               label: 'Emplacement du panneau',
@@ -591,7 +591,7 @@ export class ConfiguratorService {
             },
             {
               key: 'panneauAnnonciateurDistance',
-              label: 'Panneau annonciateur present',
+              label: 'Panneau annonciateur présent',
               type: 'boolean',
             },
             {
@@ -625,27 +625,27 @@ export class ConfiguratorService {
             },
             {
               key: 'telephonePompier',
-              label: 'Telephone pompier present',
+              label: 'Téléphone pompier présent',
               type: 'boolean',
             },
             {
               key: 'stationManuelle',
-              label: 'Stations manuelles d alarme presentes',
+              label: 'Stations manuelles d’alarme présentes',
               type: 'boolean',
             },
             {
               key: 'detecteurFumee',
-              label: 'Detecteurs de fumee',
+              label: 'Détecteurs de fumée',
               type: 'boolean',
             },
             {
               key: 'detecteurChaleur',
-              label: 'Detecteurs de chaleur',
+              label: 'Détecteurs de chaleur',
               type: 'boolean',
             },
             {
               key: 'detecteurDebitGicleurs',
-              label: 'Detecteurs de debit gicleurs',
+              label: 'Détecteurs de débit gicleurs',
               type: 'boolean',
             },
             {
@@ -660,12 +660,12 @@ export class ConfiguratorService {
             },
             {
               key: 'desenfumageAutomatique',
-              label: 'Relais : Desenfumage automatique',
+              label: 'Relais : Désenfumage automatique',
               type: 'boolean',
             },
             {
               key: 'deverrouillagePorces',
-              label: 'Relais : Deverrouillage acces controle',
+              label: 'Relais : Déverrouillage accès contrôle',
               type: 'boolean',
             },
             {
@@ -682,18 +682,18 @@ export class ConfiguratorService {
           fields: [
             {
               key: 'systemePhonic',
-              label: 'Systeme de communication phonique present',
+              label: 'Système de communication phonique présent',
               type: 'boolean',
             },
             {
               key: 'systemePhonicType',
-              label: 'Type systeme phonique',
+              label: 'Type système phonique',
               type: 'select',
               options: ['Manuel', 'Automatise', 'Hybride'],
             },
             {
               key: 'messagesAutomatises',
-              label: 'Messages automatises programmes',
+              label: 'Messages automatisés programmés',
               type: 'boolean',
             },
             {
@@ -704,7 +704,7 @@ export class ConfiguratorService {
             { key: 'nbRadios', label: 'Nombre de radios', type: 'number' },
             {
               key: 'intercomUrgence',
-              label: 'Intercom urgence present',
+              label: 'Intercom urgence présent',
               type: 'boolean',
             },
           ],
@@ -716,17 +716,17 @@ export class ConfiguratorService {
           fields: [
             {
               key: 'gicleurs',
-              label: 'Reseau de gicleurs present',
+              label: 'Réseau de gicleurs présent',
               type: 'boolean',
             },
             {
               key: 'gicleursSystemes',
-              label: 'Systemes de gicleurs (ajouter chaque type de reseau)',
+              label: 'Systèmes de gicleurs (ajouter chaque type de réseau)',
               type: 'dynamic_list',
               schema: [
                 {
                   key: 'type',
-                  label: 'Type de reseau',
+                  label: 'Type de réseau',
                   type: 'select',
                   options: [
                     'Sous eau',
@@ -745,7 +745,7 @@ export class ConfiguratorService {
                 },
                 {
                   key: 'complet',
-                  label: 'Systeme complet (tout le batiment)',
+                  label: 'Système complet (tout le bâtiment)',
                   type: 'boolean',
                 },
               ],
@@ -757,7 +757,7 @@ export class ConfiguratorService {
             },
             {
               key: 'pompeIncendie',
-              label: 'Pompe incendie presente',
+              label: 'Pompe incendie présente',
               type: 'boolean',
               tooltip:
                 'Pompe dediee exclusivement a l alimentation en eau du reseau de gicleurs. Distincte de la pompe domestique. Verifier la presence d un tableau de controle de la pompe dans la salle des gicleurs.',
@@ -776,26 +776,26 @@ export class ConfiguratorService {
             },
             {
               key: 'boyauIncendie',
-              label: 'Boyaux incendie presents',
+              label: 'Boyaux incendie présents',
               type: 'boolean',
               tooltip:
                 'Tuyaux flexibles installes dans des cabinets a l interieur du batiment, permettant aux occupants formes d attaquer un debut d incendie. Distincts des extincteurs portatifs — verifier presence de cabinets boyaux dans les corridors.',
             },
             {
               key: 'boyauCabinet',
-              label: 'Cabinet boyau incendie present',
+              label: 'Cabinet boyau incendie présent',
               type: 'boolean',
             },
             {
               key: 'priseRefoulement',
-              label: 'Prise de refoulement presente',
+              label: 'Prise de refoulement présente',
               type: 'boolean',
               tooltip:
                 'Raccord exterieur (aussi appele raccord siamois) permettant aux pompiers d injecter de l eau directement dans le reseau de gicleurs pour augmenter la pression. Generalement visible sur la facade du batiment.',
             },
             {
               key: 'raccordPompier',
-              label: 'Raccord pompier exterieur present',
+              label: 'Raccord pompier extérieur présent',
               type: 'boolean',
             },
             {
@@ -815,21 +815,21 @@ export class ConfiguratorService {
             },
             {
               key: 'vannesIsolement',
-              label: 'Vannes d isolement de zone presentes',
+              label: 'Vannes d’isolement de zone présentes',
               type: 'boolean',
             },
             {
               key: 'vannesIsolementLieu',
-              label: 'Localisation vannes d isolement',
+              label: 'Localisation vannes d’isolement',
               type: 'text',
             },
-            { key: 'valve2_5', label: 'Valve 2 1/2 presente', type: 'boolean' },
+            { key: 'valve2_5', label: 'Valve 2 1/2 présente', type: 'boolean' },
             {
               key: 'valve2_5Lieu',
               label: 'Localisation valve 2 1/2',
               type: 'text',
             },
-            { key: 'valve1_5', label: 'Valve 1 1/2 presente', type: 'boolean' },
+            { key: 'valve1_5', label: 'Valve 1 1/2 présente', type: 'boolean' },
             {
               key: 'valve1_5Lieu',
               label: 'Localisation valve 1 1/2',
@@ -887,7 +887,7 @@ export class ConfiguratorService {
           fields: [
             {
               key: 'extincteurPortatif',
-              label: 'Extincteurs portatifs presents',
+              label: 'Extincteurs portatifs présents',
               type: 'boolean',
             },
             {
@@ -898,7 +898,7 @@ export class ConfiguratorService {
               schema: [
                 {
                   key: 'type',
-                  label: 'Type d extincteur',
+                  label: 'Type d’extincteur',
                   type: 'select',
                   options: [
                     'ABC poudre',
@@ -915,64 +915,64 @@ export class ConfiguratorService {
             },
             {
               key: 'systemeExtinctionFixe',
-              label: 'Systeme d extinction fixe present (cuisine)',
+              label: 'Système d’extinction fixe présent (cuisine)',
               type: 'boolean',
             },
             {
               key: 'systemeExtinctionFixeLieu',
-              label: 'Localisation systeme extinction fixe',
+              label: 'Localisation système extinction fixe',
               type: 'text',
             },
             {
               key: 'systemePreAction',
-              label: 'Systeme pre-action present',
+              label: 'Système préaction présent',
               type: 'boolean',
             },
             {
               key: 'systemePreActionLieu',
-              label: 'Localisation systeme pre-action',
+              label: 'Localisation système préaction',
               type: 'text',
             },
             {
               key: 'systemeHalogen',
-              label: 'Systeme halon / halogenure present',
+              label: 'Système halon / halogénure présent',
               type: 'boolean',
             },
             {
               key: 'systemeHalogenLieu',
-              label: 'Localisation systeme halon',
+              label: 'Localisation système halon',
               type: 'text',
             },
             {
               key: 'systemeCO2',
-              label: 'Systeme CO2 fixe present',
+              label: 'Système CO2 fixe présent',
               type: 'boolean',
             },
             {
               key: 'systemeCO2Lieu',
-              label: 'Localisation systeme CO2',
+              label: 'Localisation système CO2',
               type: 'text',
             },
           ],
         },
         {
           id: 'mecanique',
-          title: 'Systemes mecaniques',
+          title: 'Systèmes mécaniques',
           icon: '⚙️',
           fields: [
             {
               key: 'ascenseurs',
-              label: 'Ascenseurs presents',
+              label: 'Ascenseurs présents',
               type: 'boolean',
             },
             {
               key: 'nbAscenseurs',
-              label: 'Nombre d ascenseurs',
+              label: 'Nombre d’ascenseurs',
               type: 'number',
             },
             {
               key: 'typeAscenseur',
-              label: 'Type d ascenseurs',
+              label: 'Type d’ascenseurs',
               type: 'select',
               options: [
                 'Hydraulique',
@@ -984,12 +984,12 @@ export class ConfiguratorService {
             },
             {
               key: 'salleAscenseur',
-              label: 'Localisation salle mecanique ascenseur',
+              label: 'Localisation salle mécanique ascenseur',
               type: 'text',
             },
             {
               key: 'ascenseurPompier',
-              label: 'Ascenseur designe pompier',
+              label: 'Ascenseur désigné pompier',
               type: 'boolean',
             },
             {
@@ -1000,12 +1000,12 @@ export class ConfiguratorService {
             },
             {
               key: 'rappelAscenseursLieu',
-              label: 'Localisation panneau controle rappel ascenseurs',
+              label: 'Localisation panneau contrôle rappel ascenseurs',
               type: 'text',
             },
             {
               key: 'telephoneAscenseurs',
-              label: 'Telephone dans tous les ascenseurs',
+              label: 'Téléphone dans tous les ascenseurs',
               type: 'boolean',
             },
             {
@@ -1015,21 +1015,21 @@ export class ConfiguratorService {
             },
             {
               key: 'escaliersPressurises',
-              label: 'Escaliers pressurises',
+              label: 'Escaliers pressurisés',
               type: 'boolean',
               tooltip:
                 'Escaliers ou l air est souffle sous pression pour empecher la fumee d y penetrer lors d un incendie. Generalement obligatoires dans les batiments de grande hauteur (+18m) selon le CNB. Verifier avec les plans mecaniques.',
             },
-            { key: 'nbEscaliers', label: 'Nombre d escaliers', type: 'number' },
+            { key: 'nbEscaliers', label: 'Nombre d’escaliers', type: 'number' },
             {
               key: 'toitVerrouille',
-              label: 'Toit verrouille',
+              label: 'Toit verrouillé',
               type: 'boolean',
             },
-            { key: 'accesToit', label: 'Acces au toit (par ou)', type: 'text' },
+            { key: 'accesToit', label: 'Accès au toit (par où)', type: 'text' },
             {
               key: 'separationCoupeFeu',
-              label: 'Separation coupe-feu presente',
+              label: 'Séparation coupe-feu présente',
               type: 'boolean',
               tooltip:
                 'Mur, plancher ou porte resistant au feu qui divise le batiment en compartiments pour limiter la propagation de l incendie. La resistance au feu est mesuree en heures (ex: 1h, 2h). Identifier l emplacement avec le gestionnaire ou les plans architecturaux.',
@@ -1041,10 +1041,10 @@ export class ConfiguratorService {
             },
             {
               key: 'emplacementBac',
-              label: 'Emplacement du bac a dechets',
+              label: 'Emplacement du bac à déchets',
               type: 'text',
             },
-            { key: 'compacteur', label: 'Compacteur present', type: 'boolean' },
+            { key: 'compacteur', label: 'Compacteur présent', type: 'boolean' },
             {
               key: 'compacteurGicleurs',
               label: 'Gicleurs dans le compacteur',
@@ -1062,10 +1062,10 @@ export class ConfiguratorService {
             },
             {
               key: 'chuteADechets',
-              label: 'Chute a dechets presente',
+              label: 'Chute à déchets présente',
               type: 'boolean',
             },
-            { key: 'cvac', label: 'Systeme CVAC present', type: 'boolean' },
+            { key: 'cvac', label: 'Système CVAC présent', type: 'boolean' },
             {
               key: 'cvacType',
               label: 'Type CVAC',
@@ -1078,7 +1078,7 @@ export class ConfiguratorService {
             },
             {
               key: 'cvacLocalisation',
-              label: 'Localisation systeme(s) CVAC',
+              label: 'Localisation système(s) CVAC',
               type: 'text',
             },
             {
@@ -1102,14 +1102,14 @@ export class ConfiguratorService {
             },
             {
               key: 'desenfumage',
-              label: 'Systeme de desenfumage present',
+              label: 'Système de désenfumage présent',
               type: 'boolean',
               tooltip:
                 'Systeme mecanique qui extrait la fumee du batiment lors d un incendie pour faciliter l evacuation et l intervention des pompiers. Peut etre declenche automatiquement par le panneau d alarme (relais auxiliaire).',
             },
             {
               key: 'desenfumageLieu',
-              label: 'Localisation systeme desenfumage',
+              label: 'Localisation système désenfumage',
               type: 'text',
             },
             {
@@ -1136,58 +1136,58 @@ export class ConfiguratorService {
             },
             {
               key: 'salleElectrique',
-              label: 'Localisation salle electrique principale',
+              label: 'Localisation salle électrique principale',
               type: 'text',
             },
             {
               key: 'generatrice',
-              label: 'Generatrice presente',
+              label: 'Génératrice présente',
               type: 'boolean',
             },
             {
               key: 'nbGeneratrices',
-              label: 'Nombre de generatrices',
+              label: 'Nombre de génératrices',
               type: 'number',
             },
             {
               key: 'generatriceNom',
-              label: 'Marque / modele generatrice',
+              label: 'Marque / modele génératrice',
               type: 'text',
             },
             {
               key: 'generatriceLieu',
-              label: 'Localisation generatrice',
+              label: 'Localisation génératrice',
               type: 'text',
             },
             {
               key: 'generatriceCarburant',
-              label: 'Type de carburant generatrice',
+              label: 'Type de carburant génératrice',
               type: 'select',
               options: ['Diesel', 'Gaz naturel', 'Propane', 'Essence', 'Autre'],
             },
             {
               key: 'autonomieGeneratrice',
-              label: 'Autonomie generatrice (heures)',
+              label: 'Autonomie génératrice (heures)',
               type: 'number',
             },
             {
               key: 'capaciteReservoir',
-              label: 'Capacite reservoir principal (litres)',
+              label: 'Capacité réservoir principal (litres)',
               type: 'number',
             },
             {
               key: 'reservoirsAuxiliaires',
-              label: 'Reservoirs auxiliaires presents',
+              label: 'Réservoirs auxiliaires présents',
               type: 'boolean',
             },
             {
               key: 'reservoirsAuxiliairesLieu',
-              label: 'Emplacement reservoirs auxiliaires',
+              label: 'Emplacement réservoirs auxiliaires',
               type: 'text',
             },
             {
               key: 'reservoirsAuxiliairesCapacite',
-              label: 'Capacite reservoirs auxiliaires (litres)',
+              label: 'Capacité réservoirs auxiliaires (litres)',
               type: 'text',
             },
             {
@@ -1197,7 +1197,7 @@ export class ConfiguratorService {
             },
             {
               key: 'generatriceEquipements',
-              label: 'Equipements alimentes par la generatrice',
+              label: 'Équipements alimentés par la génératrice',
               type: 'checkbox_group',
               checkboxOptions: [
                 'Alarme incendie',
@@ -1221,55 +1221,55 @@ export class ConfiguratorService {
                 'Autres equipements alimentes par la generatrice (ajouter)',
               type: 'dynamic_list',
               schema: [
-                { key: 'nom', label: 'Nom de l equipement', type: 'text' },
+                { key: 'nom', label: 'Nom de l’équipement', type: 'text' },
               ],
             },
             {
               key: 'gazNaturel',
-              label: 'Gaz naturel present',
+              label: 'Gaz naturel présent',
               type: 'boolean',
             },
             {
               key: 'gazNaturelLieu',
-              label: 'Localisation entree de gaz',
+              label: 'Localisation entrée de gaz',
               type: 'text',
             },
-            { key: 'propane', label: 'Propane present', type: 'boolean' },
+            { key: 'propane', label: 'Propane présent', type: 'boolean' },
             {
               key: 'propaneLieu',
-              label: 'Localisation reservoir propane',
+              label: 'Localisation réservoir propane',
               type: 'text',
             },
             {
               key: 'vannesArretSalleGicleurs',
-              label: 'Vanne d arret - Salle de gicleurs (localisation)',
+              label: 'Vanne d’arrêt - Salle de gicleurs (localisation)',
               type: 'text',
             },
             {
               key: 'vannesArretGazNaturel',
-              label: 'Vanne d arret - Entree de gaz naturel (localisation)',
+              label: 'Vanne d’arrêt - Entrée de gaz naturel (localisation)',
               type: 'text',
             },
             {
               key: 'vannesArretEauDomestique',
-              label: 'Vanne d arret - Arrivee eau domestique (localisation)',
+              label: 'Vanne d’arrêt - Arrivée eau domestique (localisation)',
               type: 'text',
             },
             {
               key: 'vannesArretSalleElectrique',
-              label: 'Vanne d arret - Salle electrique (localisation)',
+              label: 'Vanne d’arrêt - Salle électrique (localisation)',
               type: 'text',
             },
           ],
         },
         {
           id: 'detecteurs',
-          title: 'Detecteurs de gaz',
+          title: 'Détecteurs de gaz',
           icon: '🔬',
           fields: [
             {
               key: 'detecteurCO',
-              label: 'Detecteur CO (monoxyde de carbone)',
+              label: 'Détecteur CO (monoxyde de carbone)',
               type: 'boolean',
             },
             {
@@ -1284,27 +1284,27 @@ export class ConfiguratorService {
             },
             {
               key: 'detecteurCOLieu',
-              label: 'Localisation detecteur CO',
+              label: 'Localisation détecteur CO',
               type: 'text',
             },
             {
               key: 'detecteurGazNaturel',
-              label: 'Detecteur gaz naturel (CH4)',
+              label: 'Détecteur gaz naturel (CH4)',
               type: 'boolean',
             },
             {
               key: 'detecteurGazNaturelLieu',
-              label: 'Localisation detecteur gaz naturel',
+              label: 'Localisation détecteur gaz naturel',
               type: 'text',
             },
             {
               key: 'detecteurPropane',
-              label: 'Detecteur propane (C3H8)',
+              label: 'Détecteur propane (C3H8)',
               type: 'boolean',
             },
             {
               key: 'detecteurAmmoniac',
-              label: 'Detecteur ammoniac (NH3)',
+              label: 'Détecteur ammoniac (NH3)',
               type: 'boolean',
             },
             {
@@ -1319,35 +1319,35 @@ export class ConfiguratorService {
             },
             {
               key: 'detecteurFreon',
-              label: 'Detecteur freon / refrigerant',
+              label: 'Détecteur fréon / réfrigérant',
               type: 'boolean',
             },
             {
               key: 'detecteurO2',
-              label: 'Detecteur oxygene (O2)',
+              label: 'Détecteur oxygène (O2)',
               type: 'boolean',
             },
             {
               key: 'detecteurFM200',
-              label: 'Detecteur FM200',
+              label: 'Détecteur FM200',
               type: 'boolean',
             },
-            { key: 'detecteurCO2', label: 'Detecteur CO2', type: 'boolean' },
+            { key: 'detecteurCO2', label: 'Détecteur CO2', type: 'boolean' },
           ],
         },
         {
           id: 'matieres',
-          title: 'Matieres dangereuses',
+          title: 'Matières dangereuses',
           icon: '⚠️',
           fields: [
             {
               key: 'matieresDangereuses',
-              label: 'Matieres dangereuses presentes dans le batiment',
+              label: 'Matières dangereuses présentes dans le bâtiment',
               type: 'boolean',
             },
             {
               key: 'matieresList',
-              label: 'Liste des matieres dangereuses (ajouter chaque matiere)',
+              label: 'Liste des matières dangereuses (ajouter chaque matiere)',
               type: 'dynamic_list',
               tooltip:
                 'Le numero UN identifie les matieres dangereuses selon les normes internationales de transport (TMD). Ex: UN1202 = carburant diesel, UN1075 = propane.',
@@ -1355,7 +1355,7 @@ export class ConfiguratorService {
                 { key: 'nom', label: 'Nom du produit', type: 'text' },
                 {
                   key: 'numeroUN',
-                  label: 'Numero UN (ex: UN1202)',
+                  label: 'Numéro UN (ex: UN1202)',
                   type: 'text',
                 },
                 {
@@ -1398,19 +1398,19 @@ export class ConfiguratorService {
             },
             {
               key: 'ammoniac',
-              label: 'Ammoniac (NH3) present - CRITIQUE',
+              label: 'Ammoniac (NH3) présent - CRITIQUE',
               type: 'boolean',
               tooltip:
                 'L ammoniac est classe CRITIQUE — sa presence active des procedures d urgence speciales et requiert une coordination avec le service incendie local. Seuil d alarme minimal : 25 ppm. Verifier obligatoirement avec le responsable de la securite industrielle.',
             },
             {
               key: 'batteriesLithium',
-              label: 'Batteries lithium-ion presentes',
+              label: 'Batteries lithium-ion présentes',
               type: 'boolean',
             },
             {
               key: 'trousseDeversement',
-              label: 'Trousse de deversement presente',
+              label: 'Trousse de deversement présente',
               type: 'boolean',
             },
             {
@@ -1536,7 +1536,7 @@ export class ConfiguratorService {
         },
         {
           id: 'premiers_soins',
-          title: 'Equipements premiers soins',
+          title: 'Équipements premiers soins',
           icon: '🏥',
           fields: [
             {
@@ -1547,7 +1547,7 @@ export class ConfiguratorService {
               schema: [
                 {
                   key: 'type',
-                  label: 'Type d equipement',
+                  label: 'Type d’équipement',
                   type: 'select',
                   options: [
                     'Trousse de premiers soins',
@@ -1560,20 +1560,20 @@ export class ConfiguratorService {
                   ],
                 },
                 { key: 'lieu', label: 'Localisation', type: 'text' },
-                { key: 'quantite', label: 'Quantite', type: 'number' },
+                { key: 'quantite', label: 'Quantité', type: 'number' },
               ],
             },
           ],
         },
         {
           id: 'industriel',
-          title: 'Specifique industriel',
+          title: 'Spécifique industriel',
           icon: '🏭',
           fields: [
             // 7.9 — ENTREPOSAGE ET MANUTENTION (Header uniquement)
             {
               key: 'espaceClos',
-              label: 'Espaces clos presents',
+              label: 'Espaces clos présents',
               type: 'boolean',
               tooltip:
                 "Espaces fermes ou confines (reservoirs, silos, cuves, tunnels, fosses) oú le volume d'air est limite et les echanges d'air reduits ou inexistants.",
@@ -1587,7 +1587,7 @@ export class ConfiguratorService {
             // 7.9.1 — Palletier
             {
               key: 'palettierPresent',
-              label: '7.9.1 Palletier present',
+              label: '7.9.1 Palletier présent',
               type: 'boolean',
             },
             {
@@ -1605,7 +1605,7 @@ export class ConfiguratorService {
             },
             {
               key: 'palettierAlles',
-              label: 'Allees',
+              label: 'Allées',
               type: 'select',
               options: ['2.4 metres', '3.6 metres'],
             },
@@ -1613,7 +1613,7 @@ export class ConfiguratorService {
             // 7.9.2 — Ilos de stockage et palettes
             {
               key: 'stockagePresent',
-              label: '7.9.2 Ilos de stockage et palettes present',
+              label: '7.9.2 Ilos de stockage et palettes présent',
               type: 'boolean',
             },
             {
@@ -1662,7 +1662,7 @@ export class ConfiguratorService {
             // 7.9.3 — Mezzanine
             {
               key: 'mezzaninePresent',
-              label: '7.9.3 Mezzanine presente',
+              label: '7.9.3 Mezzanine présente',
               type: 'boolean',
             },
             {
@@ -1682,7 +1682,7 @@ export class ConfiguratorService {
             // 7.9.4 — Chariot élévateur
             {
               key: 'chariotsPresent',
-              label: '7.9.4 Chariots elevateurs presents',
+              label: '7.9.4 Chariots elevateurs présents',
               type: 'boolean',
             },
             {
@@ -1708,7 +1708,7 @@ export class ConfiguratorService {
             // 7.9.5 — Batteries lithium
             {
               key: 'batteriesLithiumPresent',
-              label: '7.9.5 Batteries lithium present',
+              label: '7.9.5 Batteries lithium présent',
               type: 'boolean',
             },
             {
@@ -1751,7 +1751,7 @@ export class ConfiguratorService {
             // Procédés dangereux (section générale)
             {
               key: 'procesDangereux',
-              label: 'Procedes dangereux presents',
+              label: 'Procedes dangereux présents',
               type: 'boolean',
               tooltip:
                 'Activites industrielles presentant des risques particuliers (soudure, coupage, explosifs, etc.).',
@@ -1785,7 +1785,7 @@ export class ConfiguratorService {
                 { key: 'risque', label: 'Risque identifie', type: 'text' },
                 {
                   key: 'mesures',
-                  label: 'Mesures de controle en place',
+                  label: 'Mesures de contrôle en place',
                   type: 'text',
                 },
               ],
@@ -1803,7 +1803,7 @@ export class ConfiguratorService {
         },
         {
           id: 'historique',
-          title: 'Historique des mises a jour',
+          title: 'Historique des mises à jour',
           icon: '📅',
           fields: [
             {
@@ -1814,7 +1814,7 @@ export class ConfiguratorService {
               schema: [
                 {
                   key: 'date',
-                  label: 'Date du releve / de la mise a jour',
+                  label: 'Date du relevé / de la mise a jour',
                   type: 'date',
                 },
                 {

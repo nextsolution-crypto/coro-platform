@@ -600,6 +600,18 @@ export class RulesEngineService {
       };
     }
 
+    // CNPI 2020 art. 2.8.1.1 : la section s'applique aussi aux bâtiments qui doivent avoir un
+    // système d'alarme incendie; un bâtiment de grande hauteur en est toujours muni.
+    if (usage.startsWith('D') && (this.isHighRise(config) || config.panneauAlarme === true)) {
+      return {
+        statut: 'OUI',
+        code: 'PSI-D-ALARME',
+        message: this.isHighRise(config)
+          ? 'PSI requis — bâtiment de grande hauteur muni d\'un système d\'alarme incendie (CNPI 2020 art. 2.8.1.1)'
+          : 'PSI requis — bâtiment muni d\'un système d\'alarme incendie; confirmer qu\'il est exigé par le CNB (CNPI 2020 art. 2.8.1.1)',
+      };
+    }
+
     if (usage.startsWith('D')) {
       return {
         statut: 'VERIFICATION_REQUISE',
