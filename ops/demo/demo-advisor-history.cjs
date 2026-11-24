@@ -392,7 +392,7 @@ async function prepare(prisma) {
       }
       await tx.advisorInternalCostRate.upsert({
         where: { id: id(`rate-${a.key}`) },
-        create: { id: id(`rate-${a.key}`), organizationId: org, userId: a.id, currency: 'CAD', hourlyCost: a.cost, effectiveFrom: day('2026-01-01'), status: 'APPROVED', proposedByUserId: admin.id, proposedAt: day('2026-08-25'), approvedByUserId: admin.id, approvedAt: day('2026-08-26') },
+        create: { id: id(`rate-${a.key}`), organizationId: org, userId: a.id, currency: 'CAD', hourlyCost: a.cost, effectiveFrom: day('2026-01-01'), status: 'APPROVED', proposedByUserId: a.id, proposedAt: day('2026-08-25'), approvedByUserId: admin.id, approvedAt: day('2026-08-26') },
         update: {},
       });
     }
@@ -512,7 +512,7 @@ async function reset(prisma) {
     await tx.userUnavailability.deleteMany({ where: { organizationId: org, userId: { in: advisorIds } } });
     await tx.userWorkScheduleInterval.deleteMany({ where: { schedule: { userId: { in: advisorIds } } } });
     await tx.userWorkSchedule.deleteMany({ where: { organizationId: org, userId: { in: advisorIds } } });
-    await tx.advisorInternalCostRate.deleteMany({ where: { organizationId: org, userId: { in: advisorIds } } });
+    // Les taux approuvés sont immuables (aucune suppression possible) : ils restent, rattachés à des comptes désactivés.
     await tx.user.updateMany({ where: { organizationId: org, id: { in: advisorIds } }, data: { isActive: false } });
     await tx.demoFixtureRecord.updateMany({ where: { organizationId: org, fixtureNamespace: NAMESPACE, state: 'ACTIVE' }, data: { state: 'RETIRED' } });
   }, { timeout: 180000 });
