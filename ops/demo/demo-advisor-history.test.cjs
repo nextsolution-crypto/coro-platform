@@ -57,3 +57,16 @@ test('lot 2 adds observations, comments, audit trail and live booking requests',
   for (const u of lot.clientUsers) assert.match(u.email, /@example\.invalid$/);
 });
 
+
+test('lot 4 builds a security post history that stays resettable', () => {
+  const lot = h.buildLot4();
+  assert.ok(lot.shifts.length > 100 && lot.logs.length > 200 && lot.followUps.length > 10);
+  assert.strictEqual(lot.shifts.filter((s) => s.status === 'OPEN').length, 1);
+  for (const x of lot.handovers) assert.notStrictEqual(x.out.guard.id, x.next.guard.id);
+  for (const l of lot.logs) assert.ok(l.eventAt <= l.recordedAt);
+  assert.ok(lot.logs.some((l) => l.recordedAt - l.eventAt > 3600000), 'au moins une saisie tardive');
+  const src = fs.readFileSync(path.join(__dirname, 'demo-advisor-history.cjs'), 'utf8');
+  // Tables en ajout seul : jamais écrites par la démonstration (sinon le reset devient impossible).
+  assert.doesNotMatch(src, /operationalShiftHistory|operationalHandoverAction|operationalFollowUpEvent|operationalLogAuditEvent|operationalShiftParticipant/);
+  assert.doesNotMatch(src, /operationalDirectiveVersion\.delete/);
+});

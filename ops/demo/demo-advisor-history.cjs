@@ -587,6 +587,247 @@ async function prepareLot3(prisma, plan, admin) {
   }, { timeout: 120000 });
 }
 
+// ── Lot 4 : Poste de sécurité du portail (Tour Prémont) ─────────────────
+const SITE = { clientName: 'Groupe Immobilier Prémont', buildingName: 'Tour Prémont', post: 'Poste principal — hall' };
+const SITE_IDENTITIES = { agent: 'demo-client@getcoro.io', supervisor: 'demo-clientcorp@getcoro.io' };
+const AGENT_PERMISSIONS = ['OPERATIONAL_LOG_READ', 'OPERATIONAL_LOG_CREATE', 'OPERATIONAL_LOG_EDIT', 'OPERATIONAL_SHIFT_READ', 'OPERATIONAL_SHIFT_OPEN', 'OPERATIONAL_SHIFT_EDIT_OWN', 'OPERATIONAL_HANDOVER_PREPARE', 'OPERATIONAL_HANDOVER_ACKNOWLEDGE', 'OPERATIONAL_DIRECTIVE_READ', 'OPERATIONAL_DIRECTIVE_ACKNOWLEDGE', 'OPERATIONAL_FOLLOWUP_READ', 'OPERATIONAL_FOLLOWUP_CREATE', 'OPERATIONAL_FOLLOWUP_EXECUTE'];
+const SUPERVISOR_PERMISSIONS = [...AGENT_PERMISSIONS, 'OPERATIONAL_LOG_ADMIN', 'OPERATIONAL_SHIFT_SUPERVISE', 'OPERATIONAL_SHIFT_EXCEPTION_CLOSE', 'OPERATIONAL_DIRECTIVE_CREATE', 'OPERATIONAL_DIRECTIVE_EDIT', 'OPERATIONAL_DIRECTIVE_REVIEW', 'OPERATIONAL_DIRECTIVE_APPROVE', 'OPERATIONAL_DIRECTIVE_PUBLISH', 'OPERATIONAL_DIRECTIVE_REVOKE', 'OPERATIONAL_FOLLOWUP_ASSIGN', 'OPERATIONAL_FOLLOWUP_VERIFY', 'OPERATIONAL_FOLLOWUP_CLOSE'];
+const SITE_FEATURES = ['OPERATIONAL_LOG', 'OPERATIONAL_SHIFTS', 'OPERATIONAL_DIRECTIVES', 'OPERATIONAL_FOLLOWUPS', 'SECURITY_WORKSTATION'];
+const GUARDS = [
+  { key: 'garde-roy', firstName: 'Julien', lastName: 'Roy' },
+  { key: 'garde-cote', firstName: 'Nadia', lastName: 'Côté' },
+  { key: 'garde-pelletier', firstName: 'Marc', lastName: 'Pelletier' },
+].map((g) => ({ ...g, id: id(`guard-${g.key}`), email: `${g.key}@example.invalid` }));
+const SITE_START = '2026-09-28';
+const LOG_TEMPLATES = [
+  ['ronde', 'Ronde', 'NORMAL', 'Ronde complète des étages 1 à 12, rien à signaler.', 'Étages 1 à 12'],
+  ['acces', 'Accès', 'NORMAL', 'Livraison de fournitures acceptée au quai, bon de livraison vérifié.', 'Quai de chargement'],
+  ['acces', 'Accès', 'LOW', 'Entrepreneur en électricité inscrit au registre, badge temporaire remis.', 'Hall'],
+  ['alarme', 'Alarme', 'HIGH', 'Alarme intrusion porte stationnement P2 : vérification sur place, porte mal fermée, réarmée.', 'Stationnement P2'],
+  ['technique', 'Technique', 'HIGH', 'Fuite d’eau signalée au 7e (salle de bain des femmes), concierge avisé, eau coupée.', '7e étage'],
+  ['assistance', 'Assistance', 'NORMAL', 'Locataire assistée pour l’ouverture de son bureau (clé oubliée), identité vérifiée.', '4e étage'],
+  ['ronde', 'Ronde', 'NORMAL', 'Ronde extérieure : éclairage du stationnement fonctionnel, deux ampoules à remplacer côté est.', 'Extérieur'],
+  ['securite', 'Sécurité', 'CRITICAL', 'Personne non autorisée dans l’escalier B, raccompagnée à la sortie. Description consignée.', 'Escalier B'],
+  ['acces', 'Accès', 'NORMAL', 'Remise des clés au service d’entretien de nuit.', 'Hall'],
+  ['technique', 'Technique', 'NORMAL', 'Ascenseur 3 en arrêt, technicien appelé, ascenseur remis en service à l’arrivée du technicien.', 'Ascenseurs'],
+];
+
+function buildLot4() {
+  const r = rng('lot4');
+  const shifts = [];
+  const logs = [];
+  const handovers = [];
+  const followUps = [];
+  let n = 0;
+  for (let d = day(SITE_START); d <= day(AS_OF); d = addDays(d, 1)) {
+    const date = iso(d);
+    for (const [slot, start, end] of [['jour', '07:00', '19:00'], ['nuit', '19:00', '07:00']]) {
+      const startAt = local(date, start);
+      const endAt = slot === 'jour' ? local(date, end) : local(iso(addDays(d, 1)), end);
+      const guard = GUARDS[n % GUARDS.length]; // relève toujours entre deux agents différents
+      const isCurrent = startAt <= new Date(`${AS_OF}T16:00:00Z`) && endAt > new Date(`${AS_OF}T16:00:00Z`);
+      const isFuture = startAt > new Date(`${AS_OF}T16:00:00Z`);
+      const key = `shift-${date}-${slot}`;
+      const shift = { key, id: id(key), date, slot, startAt, endAt, guard, status: isFuture ? 'PLANNED' : isCurrent ? 'OPEN' : 'CLOSED' };
+      shifts.push(shift);
+      n += 1;
+      if (isFuture) continue;
+      const count = 2 + Math.floor(r() * 4);
+      for (let k = 0; k < count; k += 1) {
+        const [activityType, category, priority, description, location] = LOG_TEMPLATES[Math.floor(r() * LOG_TEMPLATES.length)];
+        const eventAt = new Date(startAt.getTime() + ((k + 1) / (count + 1)) * (endAt - startAt));
+        if (eventAt > new Date(`${AS_OF}T16:00:00Z`)) continue;
+        const late = r() < 0.06;
+        const lkey = `${key}-log-${k}`;
+        const needsFollow = priority === 'HIGH' && r() < 0.6;
+        logs.push({ key: lkey, id: id(lkey), shiftId: shift.id, guard, eventAt, recordedAt: new Date(eventAt.getTime() + (late ? 95 : 4) * 60000), activityType, category, priority, description, location, followUp: needsFollow });
+        if (needsFollow) followUps.push({ key: `${lkey}-fu`, id: id(`${lkey}-fu`), sourceId: id(lkey), description: `Suite à donner : ${description.split(',')[0].toLowerCase()}.`, priority: 'IMPORTANT', created: eventAt, guard });
+      }
+    }
+  }
+  // Relève entre chaque quart terminé et le suivant.
+  for (let i = 0; i < shifts.length - 1; i += 1) {
+    const out = shifts[i];
+    const next = shifts[i + 1];
+    if (out.status !== 'CLOSED') continue;
+    const snapshot = { summary: 'Quart sans événement majeur; consignes en vigueur relues.', openFollowUps: 0, keysCount: 12, capturedAt: out.endAt.toISOString() };
+    handovers.push({ key: `${out.key}-handover`, id: id(`${out.key}-handover`), out, next, snapshot, snapshotHash: crypto.createHash('sha256').update(JSON.stringify(snapshot)).digest('hex'), submittedAt: new Date(out.endAt.getTime() - 10 * 60000), decidedAt: new Date(out.endAt.getTime() + 5 * 60000) });
+  }
+  // État des suivis selon leur ancienneté.
+  const now = new Date(`${AS_OF}T16:00:00Z`);
+  for (const f of followUps) {
+    const ageDays = (now - f.created) / 86400000;
+    f.status = ageDays > 10 ? 'CLOSED' : ageDays > 5 ? 'VERIFIED' : ageDays > 2 ? 'IN_PROGRESS' : 'OPEN';
+    f.dueAt = new Date(f.created.getTime() + 3 * 86400000);
+  }
+  const closedSources = new Set(followUps.filter((f) => f.status === 'CLOSED').map((f) => f.sourceId));
+  for (const l of logs) l.status = l.followUp && !closedSources.has(l.id) ? 'FOLLOW_UP' : 'RESOLVED';
+  const directives = [
+    { key: 'dir-1', title: 'Contrôle des accès après 18 h', type: 'PERMANENT', priority: 'IMPORTANT', status: 'PUBLISHED', ack: true, text: 'Après 18 h, toute personne doit présenter une carte d’accès ou être inscrite au registre. Aucun accès sans vérification d’identité.', published: '2026-09-25' },
+    { key: 'dir-2', title: 'Procédure d’alarme incendie — appel au 911', type: 'PERMANENT', priority: 'CRITICAL', status: 'PUBLISHED', ack: true, text: 'Au déclenchement d’une alarme, confirmer l’appel au 911, ouvrir l’accès aux pompiers et remettre la liste des présences.', published: '2026-09-25' },
+    { key: 'dir-3', title: 'Travaux de toiture — accès restreint', type: 'TEMPORARY', priority: 'IMPORTANT', status: 'PUBLISHED', ack: true, text: 'Du 16 novembre au 18 décembre, l’accès au toit est réservé à l’entrepreneur inscrit. Vérifier le permis de travail chaque matin.', published: '2026-11-15', expires: '2026-12-19' },
+    { key: 'dir-4', title: 'Fermeture du stationnement P3 pour peinture', type: 'TEMPORARY', priority: 'NORMAL', status: 'EXPIRED', ack: false, text: 'Le P3 est fermé du 19 au 23 octobre. Rediriger les usagers vers le P2.', published: '2026-10-17', expires: '2026-10-24' },
+    { key: 'dir-5', title: 'Nouvelle procédure de remise des clés', type: 'SHIFT_DIRECTIVE', priority: 'NORMAL', status: 'SUBMITTED', ack: true, text: 'Chaque remise de clé est inscrite dans la main courante avec le numéro de la clé et le nom de la personne.', published: null },
+  ].map((dv) => ({ ...dv, id: id(dv.key), versionId: id(`${dv.key}-v1`) }));
+  return { shifts, logs, handovers, followUps, directives };
+}
+
+async function prepareLot4(prisma, admin) {
+  const org = TARGET.organizationId;
+  const lot = buildLot4();
+  const ctx = await prisma.$transaction(async (tx) => {
+    await assertTarget(tx);
+    const building = await tx.building.findFirst({ where: { organizationId: org, name: SITE.buildingName, client: { name: SITE.clientName } }, select: { id: true, clientId: true, timeZone: true } });
+    if (!building) throw new Error('SITE_BUILDING_NOT_FOUND');
+    const agent = await tx.clientUser.findFirst({ where: { organizationId: org, email: SITE_IDENTITIES.agent, clientId: building.clientId }, select: { id: true, firstName: true, lastName: true, operationalPermissions: true } });
+    const supervisor = await tx.clientUser.findFirst({ where: { organizationId: org, email: SITE_IDENTITIES.supervisor, clientId: building.clientId }, select: { id: true, firstName: true, lastName: true, operationalPermissions: true } });
+    if (!agent || !supervisor) throw new Error('SITE_IDENTITIES_NOT_FOUND');
+    // Droits des comptes de démonstration du portail (ajout seulement; l'état d'origine est gardé pour reset).
+    for (const [who, row, perms] of [['agent', agent, AGENT_PERMISSIONS], ['supervisor', supervisor, SUPERVISOR_PERMISSIONS]]) {
+      const key = `site-permissions-${who}`;
+      const existing = await tx.demoFixtureRecord.findUnique({ where: { organizationId_fixtureNamespace_fixtureKey: { organizationId: org, fixtureNamespace: NAMESPACE, fixtureKey: key } } });
+      const baseline = existing && existing.state === 'ACTIVE' ? existing.baseline : { before: row.operationalPermissions };
+      const merged = [...new Set([...row.operationalPermissions, ...perms])];
+      await tx.clientUser.update({ where: { id: row.id }, data: { operationalPermissions: merged } });
+      await tx.demoFixtureRecord.upsert({
+        where: { organizationId_fixtureNamespace_fixtureKey: { organizationId: org, fixtureNamespace: NAMESPACE, fixtureKey: key } },
+        create: { organizationId: org, fixtureNamespace: NAMESPACE, fixtureKey: key, entityType: 'ClientUserPermissions', entityId: row.id, baseline },
+        update: { state: 'ACTIVE', entityType: 'ClientUserPermissions', entityId: row.id, baseline },
+      });
+    }
+    for (const g of GUARDS) {
+      const row = await tx.clientUser.upsert({
+        where: { email: g.email },
+        create: { id: g.id, email: g.email, password: `disabled-${crypto.randomUUID()}`, firstName: g.firstName, lastName: g.lastName, clientId: building.clientId, organizationId: org, isActive: true, operationalPermissions: AGENT_PERMISSIONS },
+        update: {},
+      });
+      if (row.id !== g.id) throw new Error('FIXTURE_COLLISION_GUARD');
+      await register(tx, `guard-${g.key}`, 'ClientUser', g.id);
+    }
+    await tx.coroActorIdentity.upsert({ where: { organizationId_actorType_actorId: { organizationId: org, actorType: 'USER', actorId: admin.id } }, create: { organizationId: org, actorType: 'USER', actorId: admin.id, userId: admin.id }, update: {} });
+    for (const cu of [agent.id, supervisor.id, ...GUARDS.map((g) => g.id)]) {
+      await tx.coroActorIdentity.upsert({ where: { organizationId_actorType_actorId: { organizationId: org, actorType: 'CLIENT_USER', actorId: cu } }, create: { organizationId: org, actorType: 'CLIENT_USER', actorId: cu, clientUserId: cu }, update: {} });
+      const existing = await tx.clientOperationalBuildingAssignment.findUnique({ where: { organizationId_buildingId_clientUserId: { organizationId: org, buildingId: building.id, clientUserId: cu } } });
+      if (!existing) {
+        const row = await tx.clientOperationalBuildingAssignment.create({ data: { organizationId: org, buildingId: building.id, clientUserId: cu, grantedByUserId: admin.id, grantReason: 'Démonstration du Poste de sécurité', effectiveFrom: day('2026-09-01') } });
+        await register(tx, `site-assignment-${cu}`, 'ClientOperationalBuildingAssignment', row.id);
+      }
+    }
+    // Droits contractuels du site (essai), comme pour CORO Report.
+    const until = new Date('2027-06-30T00:00:00Z');
+    for (const code of SITE_FEATURES) {
+      const capability = await tx.commercialCapability.findUnique({ where: { code } });
+      if (!capability) throw new Error(`CAPABILITY_MISSING_${code}`);
+      const existing = await tx.capabilityEntitlement.findFirst({ where: { organizationId: org, capabilityId: capability.id, scope: 'SITE', clientId: building.clientId, buildingId: building.id }, include: { revisions: { orderBy: { versionNumber: 'desc' }, take: 1 } } });
+      if (existing && existing.revisions[0]?.lifecycle === 'GRANTED' && existing.revisions[0]?.enabled) continue;
+      if (existing) {
+        await tx.capabilityEntitlementRevision.create({ data: { entitlementId: existing.id, versionNumber: existing.revisions[0].versionNumber + 1, lifecycle: 'GRANTED', enabled: true, distributable: false, decisionAt: new Date(), effectiveFrom: day('2026-09-01'), effectiveUntil: until, reason: 'Démonstration du Poste de sécurité', createdByUserId: admin.id, createdByDisplayName: 'Démonstration CORO' } });
+        await register(tx, `site-entitlement-${code}`, 'CapabilityEntitlement', existing.id);
+      } else {
+        const row = await tx.capabilityEntitlement.create({ data: { organizationId: org, capabilityId: capability.id, scope: 'SITE', clientId: building.clientId, buildingId: building.id, source: 'TRIAL', provenanceReason: 'Démonstration du Poste de sécurité', createdByUserId: admin.id, createdByDisplayName: 'Démonstration CORO', revisions: { create: { versionNumber: 1, lifecycle: 'GRANTED', enabled: true, distributable: false, decisionAt: new Date(), effectiveFrom: day('2026-09-01'), effectiveUntil: until, reason: 'Démonstration du Poste de sécurité', createdByUserId: admin.id, createdByDisplayName: 'Démonstration CORO' } } } });
+        await register(tx, `site-entitlement-${code}`, 'CapabilityEntitlement', row.id);
+      }
+    }
+    return { building, agent, supervisor };
+  }, { timeout: 120000 });
+
+  const { building, supervisor } = ctx;
+  const tz = building.timeZone || TIME_ZONE;
+  const actor = (g) => ({ actorType: 'CLIENT_USER', actorId: g.id });
+  await prisma.$transaction(async (tx) => {
+    await assertTarget(tx);
+    await tx.operationalShift.createMany({
+      data: lot.shifts.map((s) => ({
+        id: s.id, organizationId: org, buildingId: building.id, securityPost: SITE.post, teamName: s.slot === 'jour' ? 'Équipe de jour' : 'Équipe de nuit',
+        responsibleActorType: 'CLIENT_USER', responsibleActorId: s.guard.id, plannedStartAt: s.startAt, plannedEndAt: s.endAt,
+        actualStartAt: s.status === 'PLANNED' ? null : new Date(s.startAt.getTime() + 3 * 60000),
+        actualEndAt: s.status === 'CLOSED' ? new Date(s.endAt.getTime() + 6 * 60000) : null,
+        buildingTimeZone: tz, status: s.status, creationIdempotencyKey: `demo:${s.key}`,
+        createdByActorType: 'CLIENT_USER', createdByActorId: supervisor.id,
+        closedByActorType: s.status === 'CLOSED' ? 'CLIENT_USER' : null, closedByActorId: s.status === 'CLOSED' ? s.guard.id : null,
+      })),
+      skipDuplicates: true,
+    });
+    for (let i = 0; i < lot.logs.length; i += 500) {
+      await tx.operationalLogEntry.createMany({
+        data: lot.logs.slice(i, i + 500).map((l) => ({
+          id: l.id, organizationId: org, buildingId: building.id, eventAt: l.eventAt, recordedAt: l.recordedAt, ...{ authorActorType: 'CLIENT_USER', authorActorId: l.guard.id },
+          shiftId: l.shiftId, locationLabel: l.location, activityType: l.activityType, category: l.category, priority: l.priority, description: l.description,
+          status: l.status, followUpRequired: l.followUp, creationIdempotencyKey: `demo:${l.key}`, createdAt: l.recordedAt,
+        })),
+        skipDuplicates: true,
+      });
+    }
+    await tx.operationalHandover.createMany({
+      data: lot.handovers.map((h) => ({
+        id: h.id, organizationId: org, buildingId: building.id, outgoingShiftId: h.out.id, incomingShiftId: h.next.id,
+        outgoingActorType: 'CLIENT_USER', outgoingActorId: h.out.guard.id, incomingActorType: 'CLIENT_USER', incomingActorId: h.next.guard.id,
+        status: 'ACKNOWLEDGED', snapshot: h.snapshot, snapshotHash: h.snapshotHash, creationIdempotencyKey: `demo:${h.key}`,
+        submittedAt: h.submittedAt, decidedAt: h.decidedAt, createdAt: h.submittedAt,
+      })),
+      skipDuplicates: true,
+    });
+    await tx.operationalFollowUp.createMany({
+      data: lot.followUps.map((f) => ({
+        id: f.id, organizationId: org, buildingId: building.id, sourceType: 'OPERATIONAL_LOG', sourceId: f.sourceId, description: f.description, priority: f.priority,
+        responsibleActorType: 'CLIENT_USER', responsibleActorId: f.guard.id, dueAt: f.dueAt, status: f.status,
+        completedAt: ['VERIFIED', 'CLOSED'].includes(f.status) ? new Date(f.created.getTime() + 2 * 86400000) : null,
+        verifiedAt: ['VERIFIED', 'CLOSED'].includes(f.status) ? new Date(f.created.getTime() + 3 * 86400000) : null,
+        verifiedByActorType: ['VERIFIED', 'CLOSED'].includes(f.status) ? 'CLIENT_USER' : null, verifiedByActorId: ['VERIFIED', 'CLOSED'].includes(f.status) ? supervisor.id : null,
+        closedAt: f.status === 'CLOSED' ? new Date(f.created.getTime() + 4 * 86400000) : null,
+        creationIdempotencyKey: `demo:${f.key}`, createdByActorType: 'CLIENT_USER', createdByActorId: f.guard.id, createdAt: f.created,
+      })),
+      skipDuplicates: true,
+    });
+    for (const dv of lot.directives) {
+      const published = dv.published ? local(dv.published, '09:00') : null;
+      // Les versions de consigne sont immuables : après un reset, la consigne est seulement réactivée.
+      if (await tx.operationalDirective.findUnique({ where: { id: dv.id } })) {
+        await tx.operationalDirective.update({ where: { id: dv.id }, data: { status: dv.status } });
+        continue;
+      }
+      const content = { title: dv.title, description: dv.text, type: dv.type, priority: dv.priority };
+      await tx.operationalDirective.create({ data: {
+        id: dv.id, organizationId: org, buildingId: building.id, securityPost: SITE.post, title: dv.title, type: dv.type, priority: dv.priority, status: dv.status,
+        effectiveAt: published, expiresAt: dv.expires ? local(dv.expires, '00:00') : null, targetCriteria: { securityPost: SITE.post }, acknowledgementRequired: dv.ack,
+        creationIdempotencyKey: `demo:${dv.key}`, createdByActorType: 'CLIENT_USER', createdByActorId: supervisor.id,
+        approvedByActorType: published ? 'USER' : null, approvedByActorId: published ? admin.id : null, approvedByUserId: published ? admin.id : null,
+        approvedAt: published, publishedAt: published, createdAt: published ? new Date(published.getTime() - 86400000) : local(AS_OF, '08:00'),
+      } });
+      await tx.operationalDirectiveVersion.create({ data: { id: dv.versionId, organizationId: org, buildingId: building.id, directiveId: dv.id, versionNumber: 1, title: dv.title, description: dv.text, targetSnapshot: { securityPost: SITE.post }, contentHash: crypto.createHash('sha256').update(JSON.stringify(content)).digest('hex'), authorActorType: 'CLIENT_USER', authorActorId: supervisor.id } });
+      if (dv.status === 'PUBLISHED' && dv.ack) {
+        for (const g of GUARDS) {
+          await tx.operationalDirectiveReceipt.create({ data: { id: id(`${dv.key}-receipt-${g.key}`), organizationId: org, buildingId: building.id, directiveId: dv.id, versionId: dv.versionId, recipientActorType: 'CLIENT_USER', recipientActorId: g.id, status: g.key === 'garde-pelletier' && dv.key === 'dir-3' ? 'PENDING' : 'CONFIRMED', publishedAt: published, viewedAt: new Date(published.getTime() + 3600000), confirmedAt: g.key === 'garde-pelletier' && dv.key === 'dir-3' ? null : new Date(published.getTime() + 2 * 3600000) } });
+        }
+      }
+    }
+  }, { timeout: 180000 });
+  return { shifts: lot.shifts.length, logs: lot.logs.length, handovers: lot.handovers.length, followUps: lot.followUps.length, directives: lot.directives.length };
+}
+
+async function resetLot4(tx, org) {
+  const guardIds = GUARDS.map((g) => g.id);
+  const lot = buildLot4();
+  const shiftIds = lot.shifts.map((s) => s.id);
+  const directiveIds = lot.directives.map((d) => d.id);
+  // Versions de consigne immuables (aucune suppression possible) : les consignes sont archivées.
+  await tx.operationalDirective.updateMany({ where: { organizationId: org, id: { in: directiveIds } }, data: { status: 'ARCHIVED' } });
+  await tx.operationalFollowUp.deleteMany({ where: { organizationId: org, id: { in: lot.followUps.map((f) => f.id) } } });
+  await tx.operationalHandover.deleteMany({ where: { organizationId: org, id: { in: lot.handovers.map((h) => h.id) } } });
+  await tx.operationalLogEntry.deleteMany({ where: { organizationId: org, id: { in: lot.logs.map((l) => l.id) } } });
+  await tx.operationalShift.deleteMany({ where: { organizationId: org, id: { in: shiftIds } } });
+  const records = await tx.demoFixtureRecord.findMany({ where: { organizationId: org, fixtureNamespace: NAMESPACE, state: 'ACTIVE' } });
+  for (const r of records) {
+    if (r.entityType === 'ClientUserPermissions') await tx.clientUser.update({ where: { id: r.entityId }, data: { operationalPermissions: r.baseline?.before ?? [] } });
+    if (r.entityType === 'ClientOperationalBuildingAssignment') await tx.clientOperationalBuildingAssignment.updateMany({ where: { organizationId: org, id: r.entityId }, data: { status: 'REVOKED', revokedAt: new Date(), revocationReason: 'Fin de la démonstration' } });
+    if (r.entityType === 'CapabilityEntitlement') {
+      const e = await tx.capabilityEntitlement.findUnique({ where: { id: r.entityId }, include: { revisions: { orderBy: { versionNumber: 'desc' }, take: 1 } } });
+      if (e && e.revisions[0]?.lifecycle !== 'REVOKED') await tx.capabilityEntitlementRevision.create({ data: { entitlementId: e.id, versionNumber: e.revisions[0].versionNumber + 1, lifecycle: 'REVOKED', enabled: false, distributable: false, decisionAt: new Date(), effectiveFrom: new Date(), effectiveUntil: null, reason: 'Fin de la démonstration', createdByUserId: e.createdByUserId, createdByDisplayName: 'Démonstration CORO' } });
+    }
+  }
+  await tx.clientUser.updateMany({ where: { organizationId: org, id: { in: guardIds } }, data: { isActive: false } });
+}
+
 async function counts(tx) {
   const where = { organizationId: TARGET.organizationId };
   const advisorIds = ADVISORS.map((a) => a.id);
@@ -606,6 +847,16 @@ async function counts(tx) {
     tx.supportTicket.count({ where: { ...where, requesterClientUserId: { in: CLIENTS.map((c) => id(`client-user-${c.key}`)) } } }),
     tx.exerciseReport.count({ where: { ...where, projectId: { in: projectIds } } }),
   ]);
+  const siteBuilding = await tx.building.findFirst({ where: { ...where, name: SITE.buildingName, client: { name: SITE.clientName } }, select: { id: true } });
+  const siteWhere = { ...where, buildingId: siteBuilding?.id ?? '00000000-0000-0000-0000-000000000000' };
+  const lot4 = buildLot4();
+  const [siteShifts, siteLogs, siteHandovers, siteFollowUps, siteDirectives] = await Promise.all([
+    tx.operationalShift.count({ where: { ...siteWhere, id: { in: lot4.shifts.map((x) => x.id) } } }),
+    tx.operationalLogEntry.count({ where: { ...siteWhere, id: { in: lot4.logs.map((x) => x.id) } } }),
+    tx.operationalHandover.count({ where: { ...siteWhere, id: { in: lot4.handovers.map((x) => x.id) } } }),
+    tx.operationalFollowUp.count({ where: { ...siteWhere, id: { in: lot4.followUps.map((x) => x.id) } } }),
+    tx.operationalDirective.count({ where: { ...siteWhere, id: { in: lot4.directives.map((x) => x.id) }, status: { not: 'ARCHIVED' } } }),
+  ]);
   const [observations, comments, auditLogs, bookings, clientUsers] = await Promise.all([
     tx.reviewObservation.count({ where: { ...where, projectId: { in: projectIds } } }),
     tx.projectComment.count({ where: { ...where, projectId: { in: projectIds } } }),
@@ -619,6 +870,7 @@ async function counts(tx) {
     timelogEntries: timelog._count, timelogHours: Math.round((timelog._sum.heures || 0) * 100) / 100,
     activities, closedPeriods: closures.map((c) => c.period).sort(), registeredRecords: records,
     observations, comments, auditLogs, bookings, clientUsers, tickets, exerciseReports,
+    siteShifts, siteLogs, siteHandovers, siteFollowUps, siteDirectives,
   };
 }
 
@@ -761,6 +1013,7 @@ async function prepare(prisma) {
 
   await prepareLot2(prisma, plan, admin);
   await prepareLot3(prisma, plan, admin);
+  await prepareLot4(prisma, admin);
   return summary('prepare', { current: await prisma.$transaction((tx) => counts(tx)) }, { mutation: true });
 }
 
@@ -784,6 +1037,7 @@ async function reset(prisma) {
   const projectIds = plan.mandates.map((m) => m.projectId);
   await prisma.$transaction(async (tx) => {
     await assertTarget(tx);
+    await resetLot4(tx, org);
     const closureIds = (await tx.demoFixtureRecord.findMany({ where: { organizationId: org, fixtureNamespace: NAMESPACE, entityType: 'TimePeriodClosure' }, select: { entityId: true } })).map((r) => r.entityId);
     await tx.timePeriodClosure.deleteMany({ where: { organizationId: org, id: { in: closureIds } } });
     await tx.taskTimeEntry.deleteMany({ where: { organizationId: org, userId: { in: advisorIds } } });
@@ -837,7 +1091,7 @@ async function main() {
   }
 }
 
-module.exports = { buildLot3, buildLot2, AS_OF, ADVISORS, BUILDINGS, CLIENTS, CLOSED_PERIODS, build, buildMandates, id, run };
+module.exports = { buildLot4, buildLot3, buildLot2, AS_OF, ADVISORS, BUILDINGS, CLIENTS, CLOSED_PERIODS, build, buildMandates, id, run };
 
 if (require.main === module) {
   main().catch((error) => {
