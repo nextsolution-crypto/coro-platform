@@ -210,6 +210,13 @@ function computePsiRequisLabel(config: any, isFr: boolean): string {
       : '✓ Required — Medical treatments on site';
   }
 
+  const highRise = config.hauteurBatiment === true || config.hauteurBatiment === 'GRANDE_HAUTEUR';
+  if (usage.startsWith('D') && (highRise || config.panneauAlarme === true)) {
+    return isFr
+      ? '✓ Requis — Système d\'alarme incendie (CNPI art. 2.8.1.1)'
+      : '✓ Required — Fire alarm system (NFC art. 2.8.1.1)';
+  }
+
   if (usage.startsWith('D')) {
     return isFr
       ? 'À vérifier — Confirmer les traitements médicaux'
