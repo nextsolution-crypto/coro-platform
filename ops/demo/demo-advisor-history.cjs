@@ -400,7 +400,7 @@ async function prepare(prisma) {
       const advisor = ADVISORS.find((a) => a.key === ab.advisor);
       await tx.userUnavailability.upsert({
         where: { id: id(`absence-${ab.key}`) },
-        create: { id: id(`absence-${ab.key}`), organizationId: org, userId: advisor.id, startAt: local(ab.from, '00:00'), endAt: local(iso(addDays(day(ab.to), 1)), '00:00'), allDay: true, localStartDate: day(ab.from), localEndDate: day(ab.to), timeZone: TIME_ZONE, type: ab.type, createdByUserId: admin.id },
+        create: { id: id(`absence-${ab.key}`), organizationId: org, userId: advisor.id, startAt: local(ab.from, '00:00'), endAt: local(iso(addDays(day(ab.to), 1)), '00:00'), allDay: true, localStartDate: day(ab.from), localEndDate: addDays(day(ab.to), 1), // fin exclusive timeZone: TIME_ZONE, type: ab.type, createdByUserId: admin.id },
         update: {},
       });
     }
