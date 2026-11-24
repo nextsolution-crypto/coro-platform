@@ -20,7 +20,14 @@ type Article = {
   version: string;
   sha256: string;
 };
-type Answer = { status: string; explanation: string; articles: Article[] };
+type Answer = {
+  status: string;
+  provider?: string;
+  answer?: string | null;
+  uncertainty?: string | null;
+  explanation: string;
+  articles: Article[];
+};
 
 export default function ManualPage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -184,11 +191,11 @@ export default function ManualPage() {
           </nav>
         )}
         <section className={styles.panel} aria-labelledby="manual-ai">
-          <h2 id="manual-ai">Recherche guidée dans le Manuel</h2>
+          <h2 id="manual-ai">Demander à CORO AI</h2>
           <p>
-            Cette aide recherche les instructions du manuel et les restitue avec
-            leur référence, sans génération libre. Elle ne consulte aucun
-            document client et ne déclenche aucune action.
+            CORO AI répond à partir des articles de ce manuel et cite ceux
+            qu’il a utilisés. Il ne consulte aucun document client et ne
+            déclenche aucune action. Urgence réelle : composez le 911.
           </p>
           <form onSubmit={ask}>
             <label htmlFor="manual-question">
@@ -207,12 +214,23 @@ export default function ManualPage() {
               <button
                 disabled={asking || loading || question.trim().length < 3}
               >
-                {asking ? "Recherche…" : "Trouver les étapes"}
+                {asking ? "CORO AI réfléchit…" : "Demander"}
               </button>
             </div>
           </form>
           <div role="status" aria-live="polite">
-            {answer && <p>{answer.explanation}</p>}
+            {answer?.answer ? (
+              <div className={styles.card} data-testid="manual-ai-answer">
+                <p className={styles.category}>Réponse de CORO AI</p>
+                <p style={{ whiteSpace: "pre-line" }}>{answer.answer}</p>
+                {answer.uncertainty && <p className={styles.meta}>{answer.uncertainty}</p>}
+                <p className={styles.meta}>
+                  Vérifiez les étapes dans les articles cités ci-dessous.
+                </p>
+              </div>
+            ) : (
+              answer && <p>{answer.explanation}</p>
+            )}
           </div>
           {answer?.articles.map((a) => renderArticle(a, true))}
           <p>

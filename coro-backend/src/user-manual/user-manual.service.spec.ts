@@ -3,7 +3,12 @@ import { existsSync } from 'fs';
 import { resolve } from 'path';
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { UserManualService } from './user-manual.service';
-import { MANUAL_ARTICLES } from './user-manual.catalog';
+import {
+  MANUAL_ARTICLES,
+  MANUAL_NAVIGATION_COVERAGE,
+  ManualAudience,
+} from './user-manual.catalog';
+import { readFileSync } from 'fs';
 import {
   UserManualClientController,
   UserManualInternalController,
@@ -37,8 +42,11 @@ describe('Versioned product manual', () => {
     expect(
       service.ask('CLIENT', 'Comment approuver un document ?').status,
     ).toBe('INSUFFICIENT_EVIDENCE');
-    expect(service.ask('INTERNAL', 'Comment créer un projet ?').status).toBe(
-      'INSUFFICIENT_EVIDENCE',
+    expect(
+      service.ask('CLIENT', 'Comment créer un projet ?').status,
+    ).toBe('INSUFFICIENT_EVIDENCE');
+    expect(service.ask('INTERNAL', 'Comment créer un projet ?').articles[0].id).toBe(
+      'creer-projet',
     );
   });
   it.each([
@@ -155,4 +163,46 @@ describe('Versioned product manual', () => {
       }
     }
   });
+  it.each([
+    ['INTERNAL', 'coro-frontend/components/layout/AppLayout.tsx'],
+    ['CLIENT', 'coro-client-portal/app/components/PortalLayout.tsx'],
+  ] as [ManualAudience, string][])(
+    'documents every %s navigation destination',
+    (audience, layout) => {
+      const source = readFileSync(resolve(__dirname, '../../..', layout), 'utf8');
+      const paths = [
+        ...new Set(
+          [...source.matchAll(/path:\s*['"](\/[^'"]*)['"]/g)].map((m) => m[1]),
+        ),
+      ];
+      expect(paths.length).toBeGreaterThan(10);
+      const articles = MANUAL_ARTICLES.filter((a) => a.audience.includes(audience));
+      const ids = new Set(articles.map((a) => a.id));
+      const routes = new Set(articles.map((a) => a.route));
+      const coverage = MANUAL_NAVIGATION_COVERAGE[audience];
+      const missing = paths.filter(
+        (path) => !routes.has(path) && !(coverage[path] && ids.has(coverage[path])),
+      );
+      expect(missing).toEqual([]);
+      for (const id of Object.values(coverage)) expect(ids.has(id)).toBe(true);
+    },
+  );
+  it.each([
+    ['CLIENT', 'Comment utiliser le bouton urgence panique ?', 'bouton-urgence'],
+    ['CLIENT', 'Comment dénombrer les occupants pendant une évacuation ?', 'evacuation-denombrement'],
+    ['INTERNAL', 'Comment ouvrir une demande au centre d’aide ?', 'centre-aide'],
+    ['INTERNAL', 'Comment publier un plan sur les écrans display ?', 'display-gestion'],
+    ['CLIENT', 'Comment signer un document ?', 'documents-client'],
+  ] as [ManualAudience, string, string][])(
+    'finds the %s chapter for: %s',
+    (audience, question, id) => {
+      expect(service.ask(audience, question).articles.map((a) => a.id)).toContain(id);
+    },
+  );
+  it('states the real client upload policy (PDF or JPG, 25 Mo)', () => {
+    const text = JSON.stringify(service.get('CLIENT', 'building-document-library'));
+    expect(text).toContain('PDF ou JPG, 25 Mo');
+    expect(text).not.toContain('50 Mo');
+  });
 });
+

@@ -8,9 +8,14 @@ import {
   UserManualInternalController,
 } from './user-manual.controller';
 import { UserManualService } from './user-manual.service';
+import { UserManualAssistantService } from './user-manual-assistant.service';
+import { KnowledgeModule } from '../knowledge/knowledge.module';
 @Module({
-  imports: [PrismaModule, JwtModule.register({ secret: requireJwtSecret() })],
+  imports: [
+    PrismaModule,
+    KnowledgeModule,
+    JwtModule.register({ secret: requireJwtSecret() })],
   controllers: [UserManualInternalController, UserManualClientController],
-  providers: [ClientJwtGuard, UserManualService],
+  providers: [ClientJwtGuard, UserManualService, UserManualAssistantService],
 })
 export class UserManualModule {}
