@@ -49,7 +49,10 @@ for (const [pathname, expected] of [
   ["/settings/task-templates", "/settings/task-templates"],
   ["/settings/activity-types", "/settings/activity-types"],
   ["/settings/timelog-categories", "/settings/timelog-categories"],
-  ["/settings/feedback", "/settings/feedback"],
+  ["/support", "/support"],
+  ["/support/ticket-1", "/support"],
+  ["/support/console", "/support/console"],
+  ["/support/console/ticket-1", "/support/console"],
   ["/admin/commercial/configurator", "/admin/commercial/journey"],
   ["/admin/commercial/dossier/PROSPECT/prospect-1", "/admin/commercial/prospects"],
   ["/editor/project-1", "/projects"],
@@ -92,7 +95,7 @@ test("la destination active pilote sa visibilité sans déplacer le contenu prin
   assert.doesNotMatch(layout, /scrollIntoView\(/);
 });
 
-test("les 97 pages applicatives réelles ont au plus une destination active", () => {
+test("les 101 pages applicatives réelles ont au plus une destination active", () => {
   const appRoot = path.resolve(__dirname, "../../app");
   const pages = [];
   const visit = (directory) => {
@@ -103,7 +106,7 @@ test("les 97 pages applicatives réelles ont au plus une destination active", ()
     }
   };
   visit(appRoot);
-  assert.equal(pages.length, 97);
+  assert.equal(pages.length, 101);
 
   for (const page of pages) {
     const relative = path.relative(appRoot, path.dirname(page)).replaceAll("\\", "/");

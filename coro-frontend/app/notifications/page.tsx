@@ -18,6 +18,7 @@ const TYPE_CONFIG: Record<string, { icon: string; color: string; bg: string }> =
   DELAI_DEPASSE:       { icon: '🔴', color: '#C0392B', bg: '#FDEDEC' },
   FICHIER_CLIENT:      { icon: '📎', color: '#2980B9', bg: '#EBF5FB' },
   LACUNE_RESILIENCE:   { icon: '⚠️', color: '#E67E22', bg: '#FEF9E7' },
+  SUPPORT_TICKET:      { icon: '🛟', color: '#2980B9', bg: '#EBF5FB' },
 };
 
 export default function NotificationsPage() {

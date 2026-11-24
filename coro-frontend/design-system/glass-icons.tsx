@@ -2,7 +2,7 @@ import {
   Activity, ArrowLeftRight, BadgeCheck, BarChart3, Bell, BookOpen, Building2, Calculator, CalendarCheck, CalendarDays,
   CalendarRange, ChevronDown, ClipboardList, Circle, Coins, FilePlus2, FileSignature, FileText, FileWarning,
   Files, FolderKanban, FolderTree, Gauge, Gem, Gift, Globe, HeartPulse, History, Landmark, LayoutDashboard,
-  KeyRound, Library, ListChecks, Map as MapIcon, Menu, MessageSquare, Package, PenLine, Pilcrow, Radar, Route, Scale,
+  Inbox, KeyRound, Library, LifeBuoy, ListChecks, Map as MapIcon, Menu, MessageSquare, Package, PenLine, Pilcrow, Radar, Route, Scale,
   QrCode, Search, Settings, Shapes, ShieldCheck, SlidersHorizontal, Tags, Target, Timer, TrendingUp, UserCog, Users, X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -38,6 +38,8 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   '/settings/activity-types': Shapes,
   '/settings/timelog-categories': Tags,
   '/settings/feedback': MessageSquare,
+  '/support': LifeBuoy,
+  '/support/console': Inbox,
   '/admin/test-scenario-pilots': ListChecks,
   '/admin/control-center': Radar,
   '/admin/metering': Activity,

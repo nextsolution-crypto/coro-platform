@@ -65,6 +65,7 @@ const NAV_GROUPS = [
     items: [
       { label: 'Bibliothèque', path: '/library',   icon: '📚' },
       { label: 'Manuel d’utilisation', path: '/manual', icon: '📖' },
+      { label: 'Centre d’aide', path: '/support', icon: '🛟' },
       { label: 'Paramètres',   path: '/settings',  icon: '⚙️' },
     ],
   },
@@ -82,7 +83,7 @@ const ADMIN_GROUP = {
     { label: 'Modèles de tâches',    path: '/settings/task-templates',      icon: '✅' },
     { label: 'Types d’activités',     path: '/settings/activity-types',      icon: '◆' },
     { label: 'Catégories timelog',   path: '/settings/timelog-categories',  icon: '🏷' },
-    { label: 'Nous écrire',          path: '/settings/feedback',            icon: '💬' },
+    { label: 'Demandes de support',  path: '/support/console',              icon: '💬' },
   ],
 };
 
@@ -156,7 +157,6 @@ const SUPER_ADMIN_OTHER_GROUP = {
     { label: 'Tous les projets', path: '/admin/projects',      icon: '📁' },
     { label: 'Procédures',      path: '/admin/procedures',     icon: '📋' },
     { label: 'Tâches globales', path: '/admin/task-templates', icon: '✅' },
-    { label: 'Feedbacks',       path: '/admin/feedback',       icon: '💬' },
     { label: 'Changelog',       path: '/admin/changelog',      icon: '📝' },
     { label: 'Blogue',          path: '/blog',                 icon: '✍️' },
   ],

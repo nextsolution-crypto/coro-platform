@@ -23,7 +23,7 @@ import { LanguageCheckModule } from './language-check/language-check.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { ChangelogModule } from './changelog/changelog.module';
 import { ProceduresModule } from './procedures/procedures.module';
-import { FeedbackModule } from './feedback/feedback.module';
+import { SupportModule } from './support/support.module';
 import { VersionsModule } from './versions/versions.module';
 import { TemplatesModule } from './templates/templates.module';
 import { AuditModule } from './audit/audit.module';
@@ -144,7 +144,7 @@ import { PdfSealModule } from './pdf-seal/pdf-seal.module';
     OrganizationsModule,
     ChangelogModule,
     ProceduresModule,
-    FeedbackModule,
+    SupportModule,
     VersionsModule,
     TemplatesModule,
     AuditModule,
