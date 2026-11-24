@@ -356,6 +356,17 @@ export default function BuildingDetailPage() {
                   {building.client.name}
                 </span>
               </div>
+              {(building.responsableFirstName || building.responsableLastName) && (
+                <p className="mt-2 text-sm" style={{ color: "#6C757D" }}>
+                  Responsable du bâtiment :{" "}
+                  <span style={{ color: "#2C3E50", fontWeight: 500 }}>
+                    {[building.responsableFirstName, building.responsableLastName].filter(Boolean).join(" ")}
+                  </span>
+                  {building.responsableTitre ? `, ${building.responsableTitre}` : ""}
+                  {building.responsableEmail ? ` · ${building.responsableEmail}` : ""}
+                  {building.responsablePhone ? ` · ${building.responsablePhone}` : ""}
+                </p>
+              )}
             </div>
           </div>
 
@@ -385,10 +396,10 @@ export default function BuildingDetailPage() {
                   color: "#92400E",
                   backgroundColor: "#FFFBEB",
                 }}
-                title="Attribuez DISPLAY_READ et ce batiment depuis Membres de l'equipe"
+                title="Attribuez DISPLAY_READ et ce bâtiment depuis Membres de l’équipe"
               >
                 <Building2 size={14} />
-                Configurer l'acces Display
+                Configurer l’accès Display
               </button>
             ) : (
               <span
