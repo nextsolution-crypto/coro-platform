@@ -21,7 +21,10 @@ const TARGET = {
 const NAMESPACE = 'coro-demo-advisor-history-v1';
 const START = '2026-09-08';
 const END = '2026-11-30';
-const CLOSED_PERIODS = ['2026-09', '2026-10'];
+const AS_OF = /^\d{4}-\d{2}-\d{2}$/.test(process.env.CORO_DEMO_HISTORY_AS_OF || '') ? process.env.CORO_DEMO_HISTORY_AS_OF : '2026-11-24';
+if (AS_OF < '2026-11-01' || AS_OF > '2027-01-31') throw new Error('AS_OF_OUT_OF_RANGE');
+// Mois entièrement écoulés avant la date de référence, depuis septembre.
+const CLOSED_PERIODS = ['2026-09', '2026-10', '2026-11', '2026-12'].filter((p) => p < AS_OF.slice(0, 7));
 const TIME_ZONE = 'America/Toronto';
 const COMMANDS = new Set(['dry-run', 'prepare', 'verify', 'reset']);
 
@@ -57,7 +60,7 @@ const isWeekday = (d) => d.getUTCDay() >= 1 && d.getUTCDay() <= 5;
 const quarter = (h) => Math.round(h * 4) / 4;
 // Heure locale de Montréal (novembre : UTC-5, septembre-octobre : UTC-4).
 const local = (dateIso, hhmm) => {
-  const offset = dateIso >= '2026-11-01' ? 5 : 4;
+  const offset = dateIso >= '2026-11-01' ? 5 : 4; // heure normale de l'Est à partir du 1er novembre
   const [h, m] = hhmm.split(':').map(Number);
   return new Date(Date.UTC(...dateIso.split('-').map((v, i) => (i === 1 ? Number(v) - 1 : Number(v))), h + offset, m));
 };
@@ -129,7 +132,7 @@ function buildMandates() {
     const j = Math.floor(r() * (i + 1));
     [types[i], types[j]] = [types[j], types[i]];
   }
-  const now = day('2026-11-24');
+  const now = day(AS_OF);
   return types.map((type, index) => {
     const building = BUILDINGS[index % BUILDINGS.length];
     const owner = ADVISORS[index % ADVISORS.length];
@@ -165,7 +168,7 @@ function buildMandates() {
 
 function workdays() {
   const out = [];
-  for (let d = day(START); d <= day('2026-11-24'); d = addDays(d, 1)) {
+  for (let d = day(START); d <= day(AS_OF); d = addDays(d, 1)) {
     if (isWeekday(d) && !HOLIDAYS.has(iso(d))) out.push(iso(d));
   }
   return out;
@@ -217,7 +220,7 @@ function build() {
     for (const a of acts) {
       const when = addDays(m.start, Math.round(span * a.at));
       const whenIso = iso(isWeekday(when) ? when : addDays(when, when.getUTCDay() === 6 ? 2 : 1));
-      const past = whenIso < '2026-11-24';
+      const past = whenIso < AS_OF;
       activities.push({
         key: `${m.key}-${a.suffix}`, id: id(`${m.key}-${a.suffix}`), projectId: m.projectId, type: a.type, label: a.label,
         duration: a.duration, scheduledDate: local(whenIso, a.type === 'inspection' ? '09:30' : '13:30'),
@@ -238,7 +241,7 @@ function build() {
       if (dow === 2 || dow === 4) entries.push(['lecture_email', 0.5, null]);
       if (dow === 3 && r() < 0.5) entries.push(['echange_collegue', 0.5, null]);
       if (dow === 5) entries.push(['deplacement_autre', r() < 0.4 ? 0.75 : 0, null]);
-      if (d.endsWith('-30') || d.endsWith('-31') || d === '2026-10-29' || d === '2026-11-24') entries.push(['feuille_depenses', 0.5, 'Feuille de dépenses mensuelle']);
+      if (d.endsWith('-30') || d.endsWith('-31') || d === '2026-10-29' || d === '2026-11-26') entries.push(['feuille_depenses', 0.5, 'Feuille de dépenses mensuelle']);
       if (['2026-09-24', '2026-10-22', '2026-11-19'].includes(d)) entries.push(['clinique_dev', 1.5, 'Clinique mensuelle de développement']);
       if (dow === 3 && a.senior && r() < 0.3) entries.push(['appel_prospect', 0.5, null]);
       for (const [category, heures, note] of entries) {
@@ -255,9 +258,9 @@ function build() {
     const total = m.budget * m.finalRatio * task.share;
     const window = days.filter((d) => d >= iso(task.from) && d <= iso(task.to) && !absent(task.assignee.key, d));
     if (!window.length) continue;
-    const doneRatio = task.status === 'terminee' ? 1 : task.status === 'en_cours' ? Math.max(0.2, Math.min(0.9, (day('2026-11-24') - task.from) / Math.max(1, task.to - task.from))) : 0;
+    const doneRatio = task.status === 'terminee' ? 1 : task.status === 'en_cours' ? Math.max(0.2, Math.min(0.9, (day(AS_OF) - task.from) / Math.max(1, task.to - task.from))) : 0;
     let remaining = quarter(total * doneRatio);
-    const usable = window.filter((d) => d <= '2026-11-24');
+    const usable = window.filter((d) => d <= AS_OF);
     let i = 0;
     while (remaining > 0 && usable.length) {
       const d = usable[i % usable.length];
@@ -466,7 +469,7 @@ async function prepare(prisma) {
     for (const period of CLOSED_PERIODS) {
       const existing = await tx.timePeriodClosure.findUnique({ where: { organizationId_period: { organizationId: org, period } } });
       if (!existing) {
-        const row = await tx.timePeriodClosure.create({ data: { organizationId: org, period, closedByUserId: admin.id, closedAt: local(`${period === '2026-09' ? '2026-10-02' : '2026-11-03'}`, '16:00') } });
+        const row = await tx.timePeriodClosure.create({ data: { organizationId: org, period, closedByUserId: admin.id, closedAt: local({ '2026-09': '2026-10-02', '2026-10': '2026-11-03', '2026-11': '2026-12-02', '2026-12': '2027-01-05' }[period], '16:00') } });
         await register(tx, `closure-${period}`, 'TimePeriodClosure', row.id);
       }
     }
@@ -532,7 +535,7 @@ async function main() {
   }
 }
 
-module.exports = { ADVISORS, BUILDINGS, CLIENTS, CLOSED_PERIODS, build, buildMandates, id, run };
+module.exports = { AS_OF, ADVISORS, BUILDINGS, CLIENTS, CLOSED_PERIODS, build, buildMandates, id, run };
 
 if (require.main === module) {
   main().catch((error) => {

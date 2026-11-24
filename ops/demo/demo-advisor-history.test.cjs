@@ -21,7 +21,7 @@ test('builds a deterministic, realistic two-month history', () => {
   // Au plus 8 h par jour et par conseiller, rien dans le futur.
   const daily = {};
   for (const e of [...a.taskTime, ...a.timelog]) {
-    assert.ok(e.date.toISOString().slice(0, 10) <= '2026-11-24');
+    assert.ok(e.date.toISOString().slice(0, 10) <= h.AS_OF);
     const k = `${e.userId}|${e.date.toISOString().slice(0, 10)}`;
     daily[k] = (daily[k] || 0) + e.heures;
   }
@@ -34,6 +34,7 @@ test('builds a deterministic, realistic two-month history', () => {
   }
   assert.ok(Math.max(...Object.values(weekly)) <= 6);
   assert.deepStrictEqual(h.CLOSED_PERIODS, ['2026-09', '2026-10']);
+  assert.strictEqual(h.AS_OF, '2026-11-24');
   // Tous les noms de la démo sont fictifs et identifiés comme tels.
   for (const x of [...h.CLIENTS, ...h.BUILDINGS]) assert.match(x.name, /Démo/);
   for (const adv of h.ADVISORS) assert.match(adv.email, /@demo-coro\.invalid$/);

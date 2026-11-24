@@ -12,6 +12,11 @@ on:
         description: Exact phase-specific approval token
         required: true
         type: string
+      as_of:
+        description: Date de référence AAAA-MM-JJ (fin de l'historique)
+        required: true
+        type: string
+        default: '2026-11-24'
 
 permissions:
   contents: read
@@ -34,8 +39,10 @@ jobs:
         env:
           PHASE: ${{ inputs.phase }}
           APPROVAL: ${{ inputs.approval }}
+          AS_OF: ${{ inputs.as_of }}
         run: |
           set -Eeuo pipefail
+          [[ "$AS_OF" =~ ^2026-1[12]-[0-3][0-9]$|^2027-01-[0-3][0-9]$ ]]
           case "$PHASE:$APPROVAL" in
             dry-run:DRY_RUN_DEMO_ADVISOR_HISTORY) ;;
             prepare:PREPARE_DEMO_ADVISOR_HISTORY) ;;
@@ -58,6 +65,7 @@ jobs:
           SOURCE_SHA: ${{ github.sha }}
           SCRIPT_SHA256: ${{ needs.validate.outputs.script_sha256 }}
           PHASE: ${{ inputs.phase }}
+          AS_OF: ${{ inputs.as_of }}
           GITHUB_RUN_ID: ${{ github.run_id }}
         with:
           host: ${{ secrets.SERVER_IP }}
@@ -65,7 +73,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           fingerprint: ${{ secrets.SERVER_SSH_ECDSA_HOST_FINGERPRINT }}
           command_timeout: 20m
-          envs: SOURCE_SHA,SCRIPT_SHA256,PHASE,GITHUB_RUN_ID
+          envs: SOURCE_SHA,SCRIPT_SHA256,PHASE,AS_OF,GITHUB_RUN_ID
           script: |
             set -Eeuo pipefail
             repo=/opt/coro-platform
@@ -91,7 +99,7 @@ jobs:
             fi
             docker exec "$backend_container" mkdir -p "$container_tmp"
             docker cp "$host_tmp/history.cjs" "$backend_container:$container_tmp/history.cjs"
-            docker exec -e CORO_DEMO_HISTORY_RUN=true -w /app "$backend_container" \
+            docker exec -e CORO_DEMO_HISTORY_RUN=true -e CORO_DEMO_HISTORY_AS_OF="$AS_OF" -w /app "$backend_container" \
               node "$container_tmp/history.cjs" "$PHASE" >"$host_tmp/evidence.json"
             node -e 'const fs=require("fs");const s=fs.readFileSync(process.argv[1],"utf8");const r=JSON.parse(s);if(r.schemaVersion!==1||r.command!==process.argv[2])process.exit(1);if(/@|password|secret|token|private/i.test(s))process.exit(1);' "$host_tmp/evidence.json" "$PHASE"
             cat "$host_tmp/evidence.json"
