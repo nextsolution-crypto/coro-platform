@@ -16,7 +16,7 @@ const normalize = (s: string) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 const stop = new Set(
-  'utiliser savoir apprendre connaitre veux souhaite aider explique expliquer montrer coro comment faire pour dans avec est les des une mon mes son ses sur que qui quoi quel quelle quels quelles trouver acceder ouvrir consulter cette cela peux peut dois puis avoir voudrais besoin fonction fonctionne'.split(
+  'utiliser savoir apprendre connaitre veux souhaite aider explique expliquer montrer coro comment faire pour dans avec est les des une mon mes son ses sur que qui quoi quel quelle quels quelles trouver acceder ouvrir consulter cette cela peux peut dois puis avoir voudrais besoin fonction fonctionne combien pendant quand lors'.split(
     ' ',
   ),
 );
@@ -117,7 +117,7 @@ export class UserManualService {
         }
         return { article: a, score: points / (3 * terms.length), matched };
       })
-      .filter((r) => r.matched > 0 && r.matched / terms.length >= 0.5)
+      .filter((r) => r.matched > 0 && r.matched / terms.length >= 0.34)
       .sort(
         (x, y) => y.score - x.score || x.article.id.localeCompare(y.article.id),
       )

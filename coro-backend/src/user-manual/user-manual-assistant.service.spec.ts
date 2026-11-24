@@ -78,4 +78,13 @@ describe('CORO AI on the user manual', () => {
         .map((s) => s.id),
     ).toContain('display-gestion');
   });
+  it('retrieves the incident acknowledgement deadlines and puts limits before steps', () => {
+    const ids = manual
+      .retrieve('CLIENT', "Combien de temps a l'agent pour accuser réception d'une tâche critique pendant un incident ?")
+      .map((r) => r.article.id);
+    expect(ids).toContain('declencher-incident');
+    const article = manual.get('INTERNAL', 'creer-projet');
+    expect(article.steps.join(' ')).toContain('PGC, PRA et PUE ne sont pas encore disponibles');
+  });
 });
+

@@ -15,10 +15,10 @@ export function manualArticleText(a: ManualArticleView): string {
     `${a.title} (${a.category})`,
     `Résumé : ${a.summary}`,
     `Prérequis : ${a.prerequisites.join(' ')}`,
+    `Limites (à respecter dans la réponse) : ${a.limits.join(' ')}`,
     'Étapes :',
     ...a.steps.map((step, index) => `${index + 1}. ${step}`),
     `Résultat attendu : ${a.expectedResult}`,
-    `Limites : ${a.limits.join(' ')}`,
   ].join('\n');
 }
 
@@ -89,7 +89,10 @@ export class UserManualAssistantService {
       }));
       try {
         const grounded = await this.bedrock.answer(
-          `Question sur l'utilisation du logiciel CORO : ${text}`,
+          'Question sur l utilisation du logiciel CORO. Reponds en francais, en suivant les etapes des articles. ' +
+            'Respecte les Limites et les Prerequis : si un article indique qu une fonction, un type ou une option ' +
+            'n est pas disponible, dis-le clairement et ne decris aucune facon de le faire. ' +
+            `Question : ${text}`,
           hits,
         );
         const cited = ranked
