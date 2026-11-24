@@ -15,6 +15,9 @@ import {
 } from '../auth/project-access';
 import { UpdateProjectDto } from './dto/update-project.dto';
 
+// Types dotés d'un configurateur (PGC, PRA et PUE : « bientôt disponible »).
+const CREATABLE_DOCUMENT_TYPES = new Set(['PMU', 'PSI', 'PCA']);
+
 @Injectable()
 export class ProjectsService {
   constructor(private prisma: PrismaService) {}
@@ -109,7 +112,7 @@ export class ProjectsService {
       name: string;
       documentType: any;
       year: number;
-      clientId: string;
+      clientId?: string;
       buildingId: string;
       userId: string;
       organizationId: string;
@@ -141,31 +144,37 @@ export class ProjectsService {
       }
     }
 
-    const [client, building] = await Promise.all([
-      this.prisma.client.findFirst({
-        where: { id: data.clientId, organizationId: actor.organizationId },
-        select: { id: true },
-      }),
-      this.prisma.building.findFirst({
-        where: {
-          id: data.buildingId,
-          organizationId: actor.organizationId,
-          clientId: data.clientId,
-        },
-        select: { id: true },
-      }),
-    ]);
-    if (!client || !building) {
+    const name = typeof data.name === 'string' ? data.name.trim() : '';
+    if (!name) {
+      throw new BadRequestException('Nom du projet requis');
+    }
+    if (!CREATABLE_DOCUMENT_TYPES.has(data.documentType)) {
+      throw new BadRequestException('Type de document non disponible');
+    }
+    const year = Number(data.year);
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+      throw new BadRequestException('Année invalide');
+    }
+    if (typeof data.buildingId !== 'string' || !data.buildingId) {
+      throw new BadRequestException('Bâtiment requis');
+    }
+    // Le client du projet est toujours celui du bâtiment (formulaire de la fiche bâtiment : pas de client envoyé).
+    const building = await this.prisma.building.findFirst({
+      where: { id: data.buildingId, organizationId: actor.organizationId },
+      select: { id: true, clientId: true },
+    });
+    if (!building || (data.clientId && data.clientId !== building.clientId)) {
       throw new ForbiddenException('Acces refuse a ce projet');
     }
+    data = { ...data, name, year };
 
     return this.prisma.project.create({
       data: {
         name: data.name,
         documentType: data.documentType,
         year: data.year,
-        clientId: data.clientId,
-        buildingId: data.buildingId,
+        clientId: building.clientId,
+        buildingId: building.id,
         userId: actor.userId,
         organizationId: actor.organizationId,
       },
