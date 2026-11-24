@@ -19,10 +19,25 @@ const statePath = process.env.CORO_BACKUP_STATE_PATH || (manifestPath ? path.joi
 let currentBackupId = null;
 let stateAllowed = false;
 
-function fail(code, message) {
+function fail(code, message, detail = '') {
   updateState(false, code);
-  process.stderr.write(`ERROR_CODE=${code}\nERROR_MESSAGE=${message}\n`);
+  process.stderr.write(`ERROR_CODE=${code}\nERROR_MESSAGE=${message}\n${detail ? `ERROR_DETAIL=${detail}\n` : ''}`);
   process.exit(1);
+}
+
+/**
+ * Short, public-safe summary of an S3 CLI error (status code, operation, provider error name).
+ * Only letters, digits and a few punctuation marks survive; long tokens (keys, hashes,
+ * request ids) and endpoint names are removed, so it can appear in public CI logs.
+ */
+function safeErrorDetail(text) {
+  const line = String(text || '').split('\n').map((value) => value.trim()).find((value) => /error|denied|not found|time ?out|timed out|reset|refused|\(\d{3}\)/i.test(value)) || String(text || '').trim().split('\n')[0] || '';
+  return line
+    .replace(/[^A-Za-z0-9 ():._-]/g, ' ')
+    .split(/\s+/)
+    .filter((token) => token && token.length <= 24 && !/digitaloceanspaces|amazonaws|^[A-Za-z0-9_-]{16,}$/i.test(token))
+    .join(' ')
+    .slice(0, 160);
 }
 
 function assert(condition, code, message) {
@@ -128,7 +143,7 @@ function aws(args, errorCode, allowNotFound = false, awaitVisibility = false) {
   if (/401|403|accessdenied|invalidaccesskey|signaturedoesnotmatch/i.test(lastText)) {
     fail('REMOTE_AUTH_FAILED', 'Remote authentication or authorization failed');
   }
-  fail(errorCode, 'Remote S3-compatible operation failed');
+  fail(errorCode, 'Remote S3-compatible operation failed', safeErrorDetail(lastText));
 }
 
 function metadataValue(head, key) {

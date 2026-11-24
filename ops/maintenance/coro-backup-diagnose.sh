@@ -56,3 +56,6 @@ echo "APT_CACHE_BYTES=$(du -sb /var/cache/apt/archives 2>/dev/null | awk '{print
 journalctl -u coro-db-backup.service -n 30 --no-pager -o cat \
   | grep -Eo 'ERROR_CODE=[A-Z0-9_]+|BACKUP_[A-Z0-9_]+|LOCAL_BACKUP_FAILED|REMOTE_[A-Z0-9_]+' \
   | sort -u || true
+journalctl -u coro-db-backup.service -n 60 --no-pager -o cat \
+  | grep -E '^ERROR_DETAIL=[A-Za-z0-9 ():._-]{0,160}$' \
+  | tail -n 5 || true
