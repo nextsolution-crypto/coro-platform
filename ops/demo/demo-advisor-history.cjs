@@ -349,11 +349,12 @@ async function assertTarget(tx) {
 async function register(tx, key, entityType, entityId) {
   const where = { organizationId_fixtureNamespace_fixtureKey: { organizationId: TARGET.organizationId, fixtureNamespace: NAMESPACE, fixtureKey: key } };
   const existing = await tx.demoFixtureRecord.findUnique({ where });
-  if (existing && (existing.entityType !== entityType || existing.entityId !== entityId)) throw new Error('FIXTURE_REGISTRY_COLLISION');
+  // Une entrée retirée par « reset » peut être réutilisée pour une nouvelle entité.
+  if (existing && existing.state === 'ACTIVE' && (existing.entityType !== entityType || existing.entityId !== entityId)) throw new Error('FIXTURE_REGISTRY_COLLISION');
   await tx.demoFixtureRecord.upsert({
     where,
     create: { organizationId: TARGET.organizationId, fixtureNamespace: NAMESPACE, fixtureKey: key, entityType, entityId, baseline: { lot: 1 } },
-    update: { state: 'ACTIVE' },
+    update: { state: 'ACTIVE', entityType, entityId },
   });
 }
 
