@@ -1045,7 +1045,7 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     'Opérations',
     both,
     '/security-workstation',
-    ['main', 'courante', 'journal', 'entrée', 'événement', 'heure', 'correction', 'tardive', 'registre'],
+    ['main', 'courante', 'journal', 'entrée', 'événement', 'heure', 'correction', 'tardive', 'retard', 'registre'],
     'Consigner les faits d’un quart avec l’heure réelle de l’événement, de façon probante.',
     [
       'Dans le Poste de sécurité, choisissez le bâtiment puis Saisie rapide (app) ou l’onglet Main courante puis Nouvel élément (portail).',
@@ -1064,6 +1064,7 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     [
       'Une heure d’événement dans le futur est refusée (tolérance de 5 minutes).',
       'Une heure de plus de 30 jours est refusée : consignez alors l’événement dans un rapport CORO Report.',
+      'Dans l’onglet Main courante du portail, une entrée saisie plus d’une heure après l’événement affiche « Saisi le … » avec l’écart (par exemple + 90 min).',
       'Seuls l’auteur, le superviseur de quart ou un administrateur de la main courante peuvent corriger une entrée. Aucune entrée n’est effacée.',
     ],
   ),
