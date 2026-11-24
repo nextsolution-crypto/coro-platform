@@ -755,14 +755,16 @@ function ItemList({
                 "Élément opérationnel"}
             </div>
             <div className={styles.meta}>
-              <span>{item.status ?? item.priority ?? "ACTIF"}</span>
+              <span>{statusLabel(item.status ?? item.priority)}</span>
               <span>
                 {formatDate(
                   item.eventAt ??
-                    item.updatedAt ??
-                    item.createdAt ??
+                    item.plannedStartAt ??
+                    item.publishedAt ??
+                    item.dueAt ??
                     item.importedAt ??
-                    item.plannedStartAt,
+                    item.createdAt ??
+                    item.updatedAt,
                 )}
               </span>
               {lateEntryMinutes(item) !== null && (
@@ -2140,6 +2142,38 @@ function Loading() {
 
 /** M8-02 : une saisie faite plus d'une heure après l'événement est signalée. */
 const LATE_ENTRY_THRESHOLD_MINUTES = 60;
+const STATUS_LABELS: Record<string, string> = {
+  OPEN: "Ouvert",
+  FOLLOW_UP: "Suivi requis",
+  RESOLVED: "Résolu",
+  ARCHIVED: "Archivé",
+  PLANNED: "Planifié",
+  HANDOVER_PENDING: "Relève en attente",
+  CLOSED: "Fermé",
+  CANCELLED: "Annulé",
+  DRAFT: "Brouillon",
+  SUBMITTED: "Soumis",
+  IN_REVIEW: "En révision",
+  CORRECTION_REQUESTED: "Correction demandée",
+  APPROVED: "Approuvé",
+  PUBLISHED: "Publié",
+  EXPIRED: "Expiré",
+  REVOKED: "Révoqué",
+  SUPERSEDED: "Remplacé",
+  ASSIGNED: "Assigné",
+  IN_PROGRESS: "En cours",
+  COMPLETED: "Terminé",
+  VERIFIED: "Vérifié",
+  NORMAL: "Normale",
+  IMPORTANT: "Importante",
+  CRITICAL: "Critique",
+};
+
+function statusLabel(value?: string): string {
+  if (!value) return "Actif";
+  return STATUS_LABELS[value] ?? value;
+}
+
 function lateEntryMinutes(item: { eventAt?: string; recordedAt?: string }): number | null {
   if (!item.eventAt || !item.recordedAt) return null;
   const minutes = Math.round((Date.parse(item.recordedAt) - Date.parse(item.eventAt)) / 60000);
