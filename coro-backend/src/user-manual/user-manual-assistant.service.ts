@@ -54,7 +54,7 @@ export class UserManualAssistantService {
         answer: emergencyReply(),
         uncertainty: null,
         explanation: 'Urgence en cours : appelez le 911.',
-        articles: [],
+        articles: [] as ManualArticleView[],
       };
     if (this.grounding.suspicious(text))
       return {
@@ -65,7 +65,7 @@ export class UserManualAssistantService {
         uncertainty:
           'La demande contient des instructions incompatibles avec la politique de sécurité.',
         explanation: keyword.explanation,
-        articles: [],
+        articles: [] as ManualArticleView[],
       };
     const ranked = this.manual.retrieve(audience, text, 4);
     if (this.config.aiProvider === 'bedrock' && ranked.length) {

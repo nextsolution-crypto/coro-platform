@@ -68,7 +68,7 @@ describe('CORO AI on the user manual', () => {
       'CLIENT',
       'Comment traiter les demandes de support dans la console ?',
     );
-    expect(result.articles.some((a) => a.id === 'support-console')).toBe(false);
+    expect((result.articles as { id: string }[]).some((a) => a.id === 'support-console')).toBe(false);
   });
 
   it('suggests manual articles to other assistants without any model', () => {
