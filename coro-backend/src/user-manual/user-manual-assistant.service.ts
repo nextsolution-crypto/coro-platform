@@ -92,6 +92,8 @@ export class UserManualAssistantService {
           'Question sur l utilisation du logiciel CORO. Reponds en francais, en suivant les etapes des articles. ' +
             'Respecte les Limites et les Prerequis : si un article indique qu une fonction, un type ou une option ' +
             'n est pas disponible, dis-le clairement et ne decris aucune facon de le faire. ' +
+            'Si aucun article ne traite exactement de la fonction demandee, reponds que le manuel ne la decrit pas ' +
+            'pour ce compte, sans transposer les etapes d une autre fonction (par exemple un rapport CORO Report n est pas un plan). ' +
             `Question : ${text}`,
           hits,
         );
