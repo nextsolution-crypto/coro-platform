@@ -104,6 +104,17 @@ export default function BuildingsPage() {
     void fetchData();
   }, [fetchData, isAuthenticated, router]);
 
+  // Ouverture directe du formulaire depuis la fiche d'un client (?nouveau=1&clientId=…).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('nouveau') !== '1') return;
+    const clientId = params.get('clientId') || '';
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setForm((current) => ({ ...current, clientId }));
+    setShowModal(true);
+    window.history.replaceState(null, '', '/buildings');
+  }, []);
+
   const handleDelete = async (id: string) => {
     try {
       await api.delete(`/buildings/${id}`);

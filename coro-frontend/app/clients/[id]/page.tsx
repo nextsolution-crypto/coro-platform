@@ -373,21 +373,38 @@ export default function ClientDetailPage() {
           </div>
 
           {/* Bâtiments associés */}
-          {client.buildings?.length > 0 && (
+          {(
             <div className="rounded-md p-4 sm:p-6"
               style={{
                 backgroundColor: '#FFFFFF',
                 border: '1px solid #E9ECEF',
                 boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
               }}>
-              <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>
-                Bâtiments associés
-              </h3>
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <h3 className="font-semibold" style={{ color: '#2C3E50' }}>
+                  Bâtiments associés
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => router.push(`/buildings?nouveau=1&clientId=${clientId}`)}
+                  className="rounded px-3 py-1.5 text-sm font-medium"
+                  style={{ backgroundColor: '#C0392B', color: '#FFFFFF' }}
+                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#A93226'; }}
+                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#C0392B'; }}
+                >
+                  + Ajouter un bâtiment
+                </button>
+              </div>
+              {!client.buildings?.length && (
+                <p className="text-sm" style={{ color: '#6C757D' }}>
+                  Aucun bâtiment pour ce client. Ajoutez le premier pour préparer son plan.
+                </p>
+              )}
               <div className="space-y-2">
-                {client.buildings.map((building: any) => (
+                {(client.buildings ?? []).map((building: any) => (
                   <div
                     key={building.id}
-                    onClick={() => router.push('/buildings')}
+                    onClick={() => router.push(`/buildings/${building.id}`)}
                     className="flex items-start justify-between gap-3 rounded px-3 sm:px-4 py-3 cursor-pointer transition-all"
                     style={{
                       backgroundColor: '#F8F9FA',
