@@ -13,7 +13,7 @@ export type ManualArticle = {
   route: string;
   sourceRefs: string[];
 };
-export const MANUAL_VERSION = '2026-11-24.1';
+export const MANUAL_VERSION = '2026-11-24.2';
 const both: ManualAudience[] = ['INTERNAL', 'CLIENT'];
 const internal: ManualAudience[] = ['INTERNAL'];
 const client: ManualAudience[] = ['CLIENT'];
@@ -91,8 +91,8 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     'Retrouver les espaces de travail et les fonctions accessibles à votre compte.',
     [
       'Après connexion, le Tableau de bord s’ouvre.',
-      'App conseiller : le menu regroupe Mon travail (Poste de sécurité, Projets, Activités, Timelog, Planification, Quarts, Consignes), Portefeuille (Clients, Bâtiments, Carte, Conformité, CORO Display), Ressources (Bibliothèque, Manuel, Centre d’aide) et, selon le rôle, Administration et Commercial.',
-      'Portail client : le menu donne accès à vos bâtiments et à Sentinelle, à vos documents, aux activités et réservations, à la carte, à Intelligence, à CORO Display, au manuel et à Aide et support.',
+      'App conseiller : le menu regroupe Mon travail (Projets, Activités, Timelog, Planification), Portefeuille (Clients, Bâtiments, Carte, Conformité, CORO Display), Ressources (Bibliothèque, Manuel, Centre d’aide) et, selon le rôle, Administration et Commercial.',
+      'Portail client : le menu donne accès au Poste de sécurité, à vos bâtiments et à Sentinelle, à vos documents, aux activités et réservations, à la carte, à Intelligence, à CORO Display, au manuel et à Aide et support.',
       'Le tableau de bord de l’app signale les actions requises : tâches en retard, documents à approuver, documents bientôt à renouveler, délais de mandats et activités des 30 prochains jours. Celui du portail présente vos bâtiments avec leur état de résilience, les dossiers de conformité et les activités à venir.',
       'Si une fonction est absente, faites confirmer vos droits et son activation par votre administrateur.',
     ],
@@ -1016,15 +1016,14 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     'poste-securite',
     'Utiliser le Poste de sécurité',
     'Opérations',
-    both,
+    client,
     '/security-workstation',
     ['poste', 'sécurité', 'agent', 'garde', 'quart', 'main', 'courante', 'consigne', 'suivi', 'rapport', 'report'],
     'Le Poste de sécurité réunit, pour un bâtiment, le quart en cours, la main courante, les consignes, les suivis et les rapports CORO Report.',
     [
-      'Ouvrez Poste de sécurité dans le menu. Choisissez le bâtiment dans la liste « Bâtiment autorisé » (app conseiller) ou « Bâtiment actif » (portail). Seuls les bâtiments où un module opérationnel est autorisé sont proposés.',
-      'Dans l’app conseiller, la page affiche le quart actuel, les consignes à confirmer, les suivis en retard et les rapports à traiter, avec la chronologie récente de la main courante. Utilisez Actualiser pour recharger.',
-      'Dans le portail, les onglets sont : Vue d’ensemble, Main courante, Quarts et relève, Consignes, Suivis et Rapports. Un onglet absent correspond à une fonction non activée pour ce bâtiment ou à un droit manquant.',
-      'Pour consigner un fait, utilisez Saisie rapide (app) ou Nouvel élément dans l’onglet Main courante (portail) : catégorie, emplacement, priorité, description, et cochez « Un suivi est requis » si une action doit suivre.',
+      'Ouvrez Poste de sécurité dans le menu du portail et choisissez le bâtiment dans la liste « Bâtiment actif ». Seuls les bâtiments où un module opérationnel est autorisé sont proposés.',
+      'Les onglets sont : Vue d’ensemble, Main courante, Quarts et relève, Consignes, Suivis et Rapports. Un onglet absent correspond à une fonction non activée pour ce bâtiment ou à un droit manquant.',
+      'Pour consigner un fait, utilisez Nouvel élément dans l’onglet Main courante : catégorie, emplacement, priorité, description, et cochez « Un suivi est requis » si une action doit suivre.',
       'Pour une consigne à lire, utilisez Confirmer ma lecture. Pour un suivi, utilisez les actions proposées (Commencer, Terminer, Vérifier, Clore) selon votre rôle.',
       'Pour un rapport, utilisez Nouveau rapport ou ouvrez l’onglet Rapports. Un rapport documente un événement après coup; une urgence en cours se déclenche depuis Sentinelle (bouton URGENCE ou Déclencher une urgence).',
     ],
@@ -1043,12 +1042,12 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     'main-courante',
     'Tenir la main courante',
     'Opérations',
-    both,
+    client,
     '/security-workstation',
     ['main', 'courante', 'journal', 'entrée', 'événement', 'heure', 'correction', 'tardive', 'retard', 'registre'],
     'Consigner les faits d’un quart avec l’heure réelle de l’événement, de façon probante.',
     [
-      'Dans le Poste de sécurité, choisissez le bâtiment puis Saisie rapide (app) ou l’onglet Main courante puis Nouvel élément (portail).',
+      'Dans le Poste de sécurité, choisissez le bâtiment, puis l’onglet Main courante et Nouvel élément.',
       'Renseignez la catégorie, l’emplacement si utile, la priorité (Faible, Normale, Élevée, Critique) et une description factuelle.',
       'Indiquez l’heure réelle de l’événement. L’heure est celle de votre appareil et elle est enregistrée avec son fuseau.',
       'Cochez « Un suivi est requis » si une action doit être confiée à quelqu’un; le suivi apparaît ensuite dans Consignes et suivis.',
@@ -1072,12 +1071,12 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     'quarts-releve',
     'Ouvrir un quart et préparer la relève',
     'Opérations',
-    both,
+    client,
     '/security-workstation',
     ['quart', 'relève', 'releve', 'shift', 'ouvrir', 'fermer', 'passation', 'agent', 'continuité'],
     'Assurer la continuité du poste entre deux quarts : ouverture, relève, acceptation et fermeture.',
     [
-      'Ouvrez Quarts et relève (menu Mon travail dans l’app conseiller, ou onglet Quarts et relève du Poste de sécurité), puis choisissez le bâtiment.',
+      'Dans le Poste de sécurité, choisissez le bâtiment puis l’onglet Quarts et relève.',
       'Un quart planifié s’ouvre avec Ouvrir et reconnaître les consignes : les consignes publiées et en vigueur du bâtiment sont alors présentées au responsable du quart.',
       'Avant la fin, utilisez Préparer la relève. Seul un quart ouvert peut préparer une relève; vous pouvez désigner le quart entrant du même bâtiment.',
       'Le responsable du quart entrant décide de la relève : Accuser réception, ou Demander une clarification.',
@@ -1099,12 +1098,12 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     'consignes-suivis',
     'Diffuser une consigne et suivre une action',
     'Opérations',
-    internal,
-    '/operational-directives',
+    client,
+    '/security-workstation',
     ['consigne', 'directive', 'instruction', 'avis', 'publier', 'approuver', 'lecture', 'suivi', 'action', 'échéance'],
     'Publier une consigne gouvernée, obtenir les confirmations de lecture et faire avancer les suivis entre les quarts.',
     [
-      'Ouvrez Consignes et suivis (menu Mon travail) et choisissez le bâtiment.',
+      'Dans le Poste de sécurité, choisissez le bâtiment puis l’onglet Consignes (ou Suivis).',
       'Dans Nouvelle consigne, saisissez le titre, la description, le type (Directive de quart, Instruction particulière, Avis opérationnel), la durée (Temporaire ou Permanente) et la priorité (Normale, Importante, Critique). Cochez « Confirmation explicite requise » si chaque agent doit confirmer sa lecture. Utilisez Créer le brouillon.',
       'Faites avancer la consigne : Soumettre, puis Approuver par une autre personne habilitée, puis Publier. Une consigne publiée peut être révoquée.',
       'Les agents confirment avec Confirmer ma lecture; à l’ouverture d’un quart, les consignes publiées et en vigueur leur sont présentées.',
@@ -1128,12 +1127,12 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     'coro-report',
     'Rédiger, faire réviser et exporter un rapport CORO Report',
     'Opérations',
-    both,
+    client,
     '/security-workstation',
     ['rapport', 'report', 'incident', 'formulaire', 'modèle', 'révision', 'réviseur', 'approuver', 'pdf', 'export', 'sceau', 'pièce', 'jointe'],
     'Documenter un événement après coup avec un formulaire gouverné, le faire réviser par une autre personne, puis l’exporter en PDF probant.',
     [
-      'Dans le Poste de sécurité, ouvrez l’onglet Rapports (portail) ou Rapports professionnels (app conseiller), choisissez le bâtiment puis le type de rapport (modèle).',
+      'Dans le Poste de sécurité, ouvrez l’onglet Rapports, choisissez le bâtiment puis le type de rapport (modèle).',
       'Remplissez le formulaire section par section (Précédent, Suivant), puis utilisez Vérifier l’aperçu. Les heures saisies sont celles de votre appareil, enregistrées avec leur fuseau. Sauvegardez pour reprendre plus tard.',
       'Ajoutez au besoin une pièce jointe : PDF ou JPG, 25 Mo maximum. Elle passe par l’antivirus avant d’être accessible.',
       'Choisissez le réviseur parmi les personnes admissibles du bâtiment, puis Soumettre.',
@@ -1838,7 +1837,6 @@ export const MANUAL_NAVIGATION_COVERAGE: Readonly<
 > = {
   INTERNAL: {
     '/manual': 'demarrer',
-    '/operational-shifts': 'quarts-releve',
     '/admin/commercial': 'preparer-offre',
     '/admin/commercial/proposals': 'preparer-offre',
     '/admin/commercial/proposals/new': 'preparer-offre',

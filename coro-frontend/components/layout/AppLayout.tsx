@@ -41,13 +41,10 @@ const NAV_GROUPS = [
   {
     label: 'Mon travail',
     items: [
-      { label: 'Poste de sécurité', path: '/security-workstation', icon: '◉' },
       { label: 'Projets',    path: '/projects',            icon: '📁' },
       { label: 'Activités', path: '/activities/portfolio', icon: '📅' },
       { label: 'Timelog',   path: '/timelog',              icon: '⏱' },
       { label: 'Planification d’équipe', path: '/planning', icon: '🗓' },
-      { label: 'Quarts et relève', path: '/operational-shifts', icon: '⇄' },
-      { label: 'Consignes et suivis', path: '/operational-directives', icon: '✓' },
     ],
   },
   {

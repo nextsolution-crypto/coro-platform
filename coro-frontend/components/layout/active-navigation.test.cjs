@@ -25,9 +25,9 @@ const destinationsWithAliases = destinations.map((destination) => {
   return destination;
 });
 
-test("les 60 destinations réelles sont toutes auditées et uniques", () => {
-  assert.equal(destinations.length, 60);
-  assert.equal(new Set(destinations.map(({ path: destination }) => destination)).size, 60);
+test("les 57 destinations réelles sont toutes auditées et uniques", () => {
+  assert.equal(destinations.length, 57);
+  assert.equal(new Set(destinations.map(({ path: destination }) => destination)).size, 57);
 });
 
 for (const [pathname, expected] of [
