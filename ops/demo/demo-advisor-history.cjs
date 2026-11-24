@@ -363,6 +363,138 @@ async function register(tx, key, entityType, entityId) {
   });
 }
 
+
+// ── Lot 2 : interactions clients et circuit d'approbation ───────────────
+const OBSERVATIONS = [
+  ['Module 2', 'Préciser le point de rassemblement secondaire en cas de vent dominant.'],
+  ['Module 3', 'Ajouter le numéro du centre antipoison dans les contacts d’urgence.'],
+  ['Module 4', 'La procédure d’évacuation des personnes à mobilité réduite doit nommer un responsable par étage.'],
+  ['Module 5', 'Mettre à jour la liste des membres de l’équipe d’urgence après les départs de l’été.'],
+  ['Annexes', 'Joindre le plan d’étage révisé du rez-de-chaussée.'],
+];
+const COMMENTS_INTERNAL = [
+  'Visite faite, relevé des équipements complété. Il manque le registre d’inspection des extincteurs.',
+  'Client relancé pour la liste à jour des responsables d’étage.',
+  'Brouillon des procédures prêt pour la révision interne.',
+  'Rencontre de présentation fixée avec la direction du bâtiment.',
+];
+const COMMENTS_CLIENT = [
+  'Merci, nous transmettons le registre d’inspection d’ici vendredi.',
+  'La direction a validé les dates proposées pour la formation.',
+  'Pouvez-vous ajouter notre nouveau gestionnaire d’immeuble comme contact ?',
+];
+
+function buildLot2(plan) {
+  const r = rng('lot2');
+  const clientUsers = CLIENTS.map((c) => ({
+    id: id(`client-user-${c.key}`), clientId: c.id,
+    email: `contact.${c.key}@example.invalid`, firstName: 'Responsable', lastName: c.name.replace(' — Démo', ''),
+  }));
+  const observations = [];
+  const comments = [];
+  const audit = [];
+  for (const m of plan.mandates) {
+    const cu = clientUsers.find((u) => u.clientId === m.building.clientId);
+    const labels = { DRAFT: 'Brouillon', IN_PROGRESS: 'En cours', REVIEW: 'En révision', VALIDATED: 'Validé', EXPORTED: 'Exporté' };
+    const steps = ['DRAFT', 'IN_PROGRESS', 'REVIEW', 'VALIDATED', 'EXPORTED'];
+    const reached = steps.slice(0, steps.indexOf(m.status) + 1);
+    const span = Math.max(1, (m.plannedEnd - m.start) / 86400000);
+    const at = (ratio) => new Date(Math.min(m.start.getTime() + span * ratio * 86400000, day(AS_OF).getTime() + 16 * 3600000));
+    const when = { IN_PROGRESS: 0.05, REVIEW: 0.8, VALIDATED: 0.92, EXPORTED: 0.97 };
+    for (let i = 1; i < reached.length; i += 1) {
+      const to = reached[i];
+      audit.push({
+        id: id(`audit-${m.key}-${to}`), action: to === 'EXPORTED' ? 'EXPORT' : 'STATUS_CHANGE', entityType: 'Project', entityId: m.projectId,
+        projectId: m.projectId, userId: to === 'VALIDATED' ? null : m.owner.id, adminApproval: to === 'VALIDATED',
+        description: to === 'EXPORTED' ? 'Export du document (FR et EN)' : `Statut : ${labels[reached[i - 1]]} → ${labels[to]}`,
+        createdAt: local(iso(at(when[to])), '15:20'),
+      });
+    }
+    if (['REVIEW', 'VALIDATED', 'EXPORTED'].includes(m.status)) {
+      const n = 2 + Math.floor(r() * 2);
+      for (let k = 0; k < n; k += 1) {
+        const [module, texte] = OBSERVATIONS[(m.index + k) % OBSERVATIONS.length];
+        observations.push({
+          id: id(`obs-${m.key}-${k}`), projectId: m.projectId, module, texte,
+          statut: m.status === 'REVIEW' && k === 0 ? 'OUVERTE' : 'TRAITEE',
+          ownerId: m.owner.id, createdAt: at(0.82),
+        });
+      }
+    }
+    if (m.status !== 'DRAFT') {
+      comments.push({ id: id(`comment-${m.key}-0`), projectId: m.projectId, actorType: 'INTERNAL_USER', userId: m.owner.id, clientUserId: null, contenu: COMMENTS_INTERNAL[m.index % COMMENTS_INTERNAL.length], createdAt: at(0.3) });
+      if (cu && r() < 0.6) comments.push({ id: id(`comment-${m.key}-1`), projectId: m.projectId, actorType: 'CLIENT_USER', userId: null, clientUserId: cu.id, contenu: COMMENTS_CLIENT[m.index % COMMENTS_CLIENT.length], createdAt: at(0.35) });
+    }
+  }
+  // Demandes de réservation des clients, à confirmer en direct pendant la présentation.
+  const future = plan.activities.filter((a) => a.status === 'a_faire' && ['formation_equipe_urgence', 'exercice_evacuation', 'exercice_table'].includes(a.type));
+  const bookings = future.slice(0, 4).map((a, k) => {
+    const m = plan.mandates.find((x) => x.projectId === a.projectId);
+    const cu = clientUsers.find((u) => u.clientId === m.building.clientId);
+    return {
+      key: `booking-${k}`, id: id(`booking-${k}`), activityId: a.id, projectId: m.projectId, buildingId: m.building.id,
+      clientUserId: cu.id, advisorId: m.owner.id, activityType: a.type, requestedDate: a.scheduledDate, duration: 180,
+      participants: 8 + k * 4, comment: ['Nous aimerions inclure les nouveaux employés.', 'Prévoir une salle pour 15 personnes.', 'Merci de confirmer la date avec notre direction.', 'Possible de tenir l’exercice en fin d’après-midi ?'][k],
+    };
+  });
+  return { clientUsers, observations, comments, audit, bookings };
+}
+
+async function prepareLot2(prisma, plan, admin) {
+  const org = TARGET.organizationId;
+  const lot = buildLot2(plan);
+  const { createCommitmentVersion } = require('/app/dist/src/bookings/booking-commitment.js');
+  await prisma.$transaction(async (tx) => {
+    await assertTarget(tx);
+    for (const u of lot.clientUsers) {
+      const row = await tx.clientUser.upsert({
+        where: { email: u.email },
+        create: { id: u.id, email: u.email, password: `disabled-${crypto.randomUUID()}`, firstName: u.firstName, lastName: u.lastName, clientId: u.clientId, organizationId: org, isActive: true },
+        update: {},
+      });
+      if (row.id !== u.id || row.organizationId !== org) throw new Error('FIXTURE_COLLISION_CLIENT_USER');
+      await register(tx, `client-user-${u.clientId}`, 'ClientUser', u.id);
+    }
+    await tx.reviewObservation.createMany({
+      data: lot.observations.map((o) => ({ id: o.id, projectId: o.projectId, organizationId: org, module: o.module, texte: o.texte, statut: o.statut, createdById: admin.id, treatedById: o.statut === 'TRAITEE' ? o.ownerId : null, createdAt: o.createdAt })),
+      skipDuplicates: true,
+    });
+    await tx.projectComment.createMany({
+      data: lot.comments.map((c) => ({ ...c, organizationId: org })),
+      skipDuplicates: true,
+    });
+    await tx.auditLog.createMany({
+      data: lot.audit.map(({ adminApproval, ...a }) => ({ ...a, userId: adminApproval ? admin.id : a.userId, organizationId: org })),
+      skipDuplicates: true,
+    });
+    // Admissibilité des conseillers et activités réservables par le client.
+    for (const m of plan.mandates) {
+      for (const advisor of [m.owner, m.support]) {
+        await tx.projectAdvisorEligibility.upsert({
+          where: { id: id(`eligibility-${m.key}-${advisor.key}`) },
+          create: { id: id(`eligibility-${m.key}-${advisor.key}`), organizationId: org, projectId: m.projectId, advisorUserId: advisor.id, priority: advisor.id === m.owner.id ? 10 : 50, authorizedByUserId: admin.id },
+          update: {},
+        });
+      }
+    }
+    await tx.projectActivity.updateMany({
+      where: { organizationId: org, projectId: { in: plan.mandates.map((m) => m.projectId) }, status: 'a_faire', type: { in: ['formation_equipe_urgence', 'exercice_evacuation', 'exercice_table'] } },
+      data: { clientBookable: true },
+    });
+    for (const b of lot.bookings) {
+      if (await tx.booking.findUnique({ where: { id: b.id } })) continue;
+      await tx.booking.create({ data: { id: b.id, projectId: b.projectId, activityId: b.activityId, organizationId: org, clientUserId: b.clientUserId, assignedUserId: b.advisorId, activityType: b.activityType, requestedDate: b.requestedDate, duration: b.duration, participants: b.participants, comment: b.comment, status: 'DEMANDEE' } });
+      const commitment = await createCommitmentVersion(tx, {
+        bookingId: b.id, projectId: b.projectId, activityId: b.activityId, buildingId: b.buildingId, advisorId: b.advisorId,
+        startAt: b.requestedDate, durationMinutes: b.duration, changeType: 'INITIAL_REQUEST',
+        proposedByActorType: 'CLIENT', proposedByActorId: b.clientUserId, customerRequested: true,
+      });
+      await tx.bookingAssignment.create({ data: { id: id(`assignment-${b.key}`), bookingId: b.id, userId: b.advisorId, role: 'LEAD', status: 'PENDING', commitmentVersionId: commitment.id } });
+      await tx.booking.update({ where: { id: b.id }, data: { pendingCommitmentVersionId: commitment.id, commitmentLockVersion: { increment: 1 } } });
+    }
+  }, { timeout: 180000 });
+}
+
 async function counts(tx) {
   const where = { organizationId: TARGET.organizationId };
   const advisorIds = ADVISORS.map((a) => a.id);
@@ -378,11 +510,19 @@ async function counts(tx) {
     tx.timePeriodClosure.findMany({ where: { ...where, period: { in: CLOSED_PERIODS }, reopenedAt: null }, select: { period: true } }),
     tx.demoFixtureRecord.count({ where: { ...where, fixtureNamespace: NAMESPACE, state: 'ACTIVE' } }),
   ]);
+  const [observations, comments, auditLogs, bookings, clientUsers] = await Promise.all([
+    tx.reviewObservation.count({ where: { ...where, projectId: { in: projectIds } } }),
+    tx.projectComment.count({ where: { ...where, projectId: { in: projectIds } } }),
+    tx.auditLog.count({ where: { ...where, projectId: { in: projectIds } } }),
+    tx.booking.count({ where: { ...where, projectId: { in: projectIds } } }),
+    tx.clientUser.count({ where: { ...where, id: { in: CLIENTS.map((c) => id(`client-user-${c.key}`)) } } }),
+  ]);
   return {
     advisors: users, projects, mandates, tasks,
     taskTimeEntries: taskTime._count, taskHours: Math.round((taskTime._sum.heures || 0) * 100) / 100,
     timelogEntries: timelog._count, timelogHours: Math.round((timelog._sum.heures || 0) * 100) / 100,
     activities, closedPeriods: closures.map((c) => c.period).sort(), registeredRecords: records,
+    observations, comments, auditLogs, bookings, clientUsers,
   };
 }
 
@@ -523,6 +663,7 @@ async function prepare(prisma) {
     }
   }, { timeout: 180000 });
 
+  await prepareLot2(prisma, plan, admin);
   return summary('prepare', { current: await prisma.$transaction((tx) => counts(tx)) }, { mutation: true });
 }
 
@@ -550,12 +691,24 @@ async function reset(prisma) {
     await tx.timePeriodClosure.deleteMany({ where: { organizationId: org, id: { in: closureIds } } });
     await tx.taskTimeEntry.deleteMany({ where: { organizationId: org, userId: { in: advisorIds } } });
     await tx.timelogEntry.deleteMany({ where: { organizationId: org, userId: { in: advisorIds } } });
+    const bookingIds = (await tx.booking.findMany({ where: { organizationId: org, projectId: { in: projectIds } }, select: { id: true } })).map((b) => b.id);
+    await tx.booking.updateMany({ where: { organizationId: org, id: { in: bookingIds } }, data: { pendingCommitmentVersionId: null, currentCommitmentVersionId: null } });
+    await tx.bookingAssignment.deleteMany({ where: { booking: { organizationId: org, id: { in: bookingIds } } } });
+    await tx.bookingCommitmentVersion.deleteMany({ where: { booking: { organizationId: org, id: { in: bookingIds } } } });
+    await tx.bookingNotification.deleteMany({ where: { bookingId: { in: bookingIds } } });
+    await tx.booking.deleteMany({ where: { organizationId: org, id: { in: bookingIds } } });
+    await tx.projectAdvisorEligibility.deleteMany({ where: { organizationId: org, projectId: { in: projectIds } } });
+    await tx.reviewObservation.deleteMany({ where: { organizationId: org, projectId: { in: projectIds } } });
+    await tx.projectComment.deleteMany({ where: { organizationId: org, projectId: { in: projectIds } } });
+    await tx.auditLog.deleteMany({ where: { organizationId: org, projectId: { in: projectIds } } });
+    await tx.notification.deleteMany({ where: { organizationId: org, projectId: { in: projectIds } } });
     await tx.projectTaskAssignee.deleteMany({ where: { task: { projectId: { in: projectIds } } } });
     await tx.projectTask.deleteMany({ where: { organizationId: org, projectId: { in: projectIds } } });
     await tx.projectActivity.deleteMany({ where: { organizationId: org, projectId: { in: projectIds } } });
     await tx.projectMandate.deleteMany({ where: { organizationId: org, projectId: { in: projectIds } } });
     await tx.project.deleteMany({ where: { organizationId: org, id: { in: projectIds } } });
     await tx.building.deleteMany({ where: { organizationId: org, id: { in: BUILDINGS.map((b) => b.id) }, projects: { none: {} } } });
+    await tx.clientUser.deleteMany({ where: { organizationId: org, id: { in: CLIENTS.map((c) => id(`client-user-${c.key}`)) } } });
     await tx.client.deleteMany({ where: { organizationId: org, id: { in: CLIENTS.map((c) => c.id) }, buildings: { none: {} }, projects: { none: {} } } });
     await tx.userUnavailability.deleteMany({ where: { organizationId: org, userId: { in: advisorIds } } });
     await tx.userWorkScheduleInterval.deleteMany({ where: { schedule: { userId: { in: advisorIds } } } });
@@ -583,7 +736,7 @@ async function main() {
   }
 }
 
-module.exports = { AS_OF, ADVISORS, BUILDINGS, CLIENTS, CLOSED_PERIODS, build, buildMandates, id, run };
+module.exports = { buildLot2, AS_OF, ADVISORS, BUILDINGS, CLIENTS, CLOSED_PERIODS, build, buildMandates, id, run };
 
 if (require.main === module) {
   main().catch((error) => {

@@ -45,6 +45,15 @@ test('every write is scoped to the demo organization', () => {
   const src = fs.readFileSync(path.join(__dirname, 'demo-advisor-history.cjs'), 'utf8');
   assert.match(src, /organizationId: '916f54ec-af22-45e0-99db-a369d9630002'/);
   const deletes = src.match(/deleteMany\(\{ where: \{[^}]*/g) || [];
-  for (const d of deletes) assert.ok(/organizationId: org|task: \{ projectId|schedule: \{ userId/.test(d), d);
+  for (const d of deletes) assert.ok(/organizationId: org|task: \{ projectId|schedule: \{ userId|bookingId: \{ in: bookingIds/.test(d), d);
   assert.doesNotMatch(src, /\$executeRawUnsafe\((?!'SET TRANSACTION READ ONLY')/);
 });
+
+test('lot 2 adds observations, comments, audit trail and live booking requests', () => {
+  const lot = h.buildLot2(h.build());
+  assert.ok(lot.observations.length > 20 && lot.comments.length > 20 && lot.audit.length > 50);
+  assert.strictEqual(lot.bookings.length, 4);
+  for (const b of lot.bookings) assert.ok(b.requestedDate.toISOString().slice(0, 10) >= h.AS_OF);
+  for (const u of lot.clientUsers) assert.match(u.email, /@example\.invalid$/);
+});
+
