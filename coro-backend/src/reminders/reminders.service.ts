@@ -296,17 +296,24 @@ export class RemindersService {
 
         if (gapRoles.length === 0) continue;
 
-        // Vérifier qu'on n'a pas déjà notifié dans la dernière heure
-        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-        const recentNotif = await this.prisma.notification.findFirst({
+        // Une lacune ne compte que si des personnes sont présentes dans le bâtiment :
+        // la nuit ou la fin de semaine, un bâtiment vide n'a besoin de personne.
+        const occupantsPresent = await this.prisma.occupancyRecord.count({
+          where: { buildingId: building.id, status: 'IN', checkedInAt: { gte: startOfDay } },
+        });
+        if (occupantsPresent === 0) continue;
+
+        // Au plus une alerte par bâtiment et par jour (avant : toutes les heures, 24 h sur 24).
+        const alreadyToday = await this.prisma.notification.findFirst({
           where: {
             organizationId: building.organizationId,
             type: 'LACUNE_RESILIENCE',
-            message: { contains: building.id },
-            createdAt: { gte: oneHourAgo },
+            link: `/buildings/${building.id}`,
+            createdAt: { gte: startOfDay },
           },
+          select: { id: true },
         });
-        if (recentNotif) continue;
+        if (alreadyToday) continue;
 
         // Trouver les ClientUsers du bâtiment
         const clientUsers = await this.prisma.clientUser.findMany({
@@ -322,7 +329,7 @@ export class RemindersService {
 
         const gapLabels = gapRoles.map(r => ROLE_LABELS[r] || r).join(', ');
         const title = `⚠️ Lacune opérationnelle — ${building.name}`;
-        const message = `Aucun ${gapLabels} présent actuellement. Bâtiment : ${building.id}`;
+        const message = `Des occupants sont présents, mais aucun ${gapLabels} n’est pointé dans le bâtiment.`;
 
         // Créer une notification in-app pour les ADMIN de l'organisation
         const admins = await this.prisma.user.findMany({
@@ -343,6 +350,7 @@ export class RemindersService {
               title,
               message,
               projectId:      null,
+              link:           `/buildings/${building.id}`,
             },
           });
         }

@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import { useState, useEffect, useRef, useSyncExternalStore } from 'react';
 import api from '@/lib/api';
+import { badgeLabel, notificationAge, notificationDestination, type AdvisorNotification } from '@/lib/notification-destination';
 import { useToast } from '@/hooks/useToast';
 import ToastContainer from '@/components/ui/ToastContainer';
 import { useTheme } from '@/design-system/theme/ThemeProvider';
@@ -272,18 +273,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [notifUnreadCount, setNotifUnreadCount] = useState(0);
+  const [recentNotifs, setRecentNotifs] = useState<AdvisorNotification[]>([]);
   const canReviewApprovals = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
 
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const [updatesRes, approvalsRes, unreadRes] = await Promise.all([
+        const [updatesRes, approvalsRes, unreadRes, recentRes] = await Promise.all([
           api.get('/projects/upcoming-updates'),
           canReviewApprovals
             ? api.get('/projects/pending-approval')
             : Promise.resolve({ data: [] }),
           api.get('/notifications/unread-count').catch(() => ({ data: { count: 0 } })),
+          api.get('/notifications?take=8').catch(() => ({ data: [] })),
         ]);
+        setRecentNotifs(Array.isArray(recentRes.data) ? recentRes.data : []);
         setUpdates(updatesRes.data || []);
         setPendingApprovals(approvalsRes.data || []);
         setNotifUnreadCount(unreadRes.data?.count || 0);
@@ -445,6 +449,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const handleLogout = () => { logout(); router.push('/login'); };
 
   const urgentCount = updates.filter(u => u.level === 'URGENT').length;
+
+  const openNotification = async (notification: AdvisorNotification) => {
+    if (!notification.isRead) {
+      setRecentNotifs(list => list.map(n => (n.id === notification.id ? { ...n, isRead: true } : n)));
+      setNotifUnreadCount(count => Math.max(0, count - 1));
+      await api.put(`/notifications/${notification.id}/read`).catch(() => undefined);
+    }
+    const destination = notificationDestination(notification);
+    setShowNotif(false);
+    router.push(destination ?? '/notifications');
+  };
+
+  const markAllNotificationsRead = async () => {
+    await api.put('/notifications/read-all').catch(() => undefined);
+    setRecentNotifs(list => list.map(n => ({ ...n, isRead: true })));
+    setNotifUnreadCount(0);
+  };
   const totalCount  = updates.length + pendingApprovals.length + notifUnreadCount;
 
   const typeIcon: Record<string, string> = {
@@ -586,7 +607,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             >
               {glass ? <GlassIcon name="bell" size={20} /> : <span style={{ fontSize: '18px' }}>🔔</span>}
               {totalCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 text-white text-xs font-bold rounded-full flex items-center justify-center"
+                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 text-white text-xs font-bold rounded-full flex items-center justify-center"
                   style={{
                     backgroundColor: pendingApprovals.length > 0 || urgentCount > 0 ? p.bg('#C0392B') : p.bg('#F39C12'),
                     fontSize: '10px',
@@ -596,7 +617,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       ? { backgroundColor: 'var(--cg-notice-bg)', color: 'var(--cg-notice-fg)' }
                       : {}),
                   }}>
-                  {totalCount}
+                  {badgeLabel(totalCount)}
                 </span>
               )}
             </button>
@@ -606,9 +627,38 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 style={{ backgroundColor: p.panel('#FFFFFF'), border: `1px solid ${p.line('#E9ECEF')}`, boxShadow: glass ? 'var(--cg-shadow-3)' : '0 8px 24px rgba(0,0,0,0.12)' }}>
                 <div className="px-4 py-3" style={{ borderBottom: `1px solid ${p.line('#E9ECEF')}` }}>
                   <p className="font-semibold text-sm" style={{ color: p.text('#2C3E50') }}>Notifications</p>
-                  <p className="text-xs mt-0.5" style={{ color: p.text('#ADB5BD') }}>Approbations et documents à renouveler</p>
+                  <p className="text-xs mt-0.5" style={{ color: p.text('#ADB5BD') }}>Notifications, approbations et documents à renouveler</p>
                 </div>
-                <div className="max-h-80 overflow-y-auto">
+                <div className="max-h-96 overflow-y-auto">
+                  {recentNotifs.length > 0 && (
+                    <div>
+                      <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide"
+                        style={{ backgroundColor: p.bg('#F8F9FA'), color: p.text('#6C757D') }}>
+                        Vos notifications{notifUnreadCount > 0 ? ` (${notifUnreadCount} non lue${notifUnreadCount > 1 ? 's' : ''})` : ''}
+                      </p>
+                      {recentNotifs.map(notification => (
+                        <button key={notification.id} type="button"
+                          onClick={() => void openNotification(notification)}
+                          className="w-full text-left px-4 py-3 transition-colors"
+                          style={{ borderBottom: `1px solid ${p.line('#F8F9FA')}`, backgroundColor: notification.isRead ? 'transparent' : p.bg('#FDF6F5') }}
+                          onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#F8F9FA')}
+                          onMouseLeave={e => e.currentTarget.style.backgroundColor = notification.isRead ? 'transparent' : p.bg('#FDF6F5')}>
+                          <div className="flex items-start gap-2">
+                            <span aria-hidden="true" className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full"
+                              style={{ backgroundColor: notification.isRead ? 'transparent' : p.bg('#C0392B') }} />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold truncate" style={{ color: p.text('#2C3E50') }}>
+                                {notification.title}
+                                {!notification.isRead && <span className="sr-only"> (non lue)</span>}
+                              </p>
+                              <p className="text-xs line-clamp-2" style={{ color: p.text('#6C757D') }}>{notification.message}</p>
+                              <p className="text-[11px] mt-0.5" style={{ color: p.text('#ADB5BD') }}>{notificationAge(notification.createdAt)}</p>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   {pendingApprovals.length > 0 && (
                     <div>
                       <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide"
@@ -636,7 +686,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       ))}
                     </div>
                   )}
-                  {updates.length === 0 && pendingApprovals.length === 0 ? (
+                  {updates.length === 0 && pendingApprovals.length === 0 && recentNotifs.length === 0 ? (
                     <div className="px-4 py-6 text-center">
                       <p className="text-sm" style={{ color: p.text('#ADB5BD') }}>✓ Tout est à jour</p>
                     </div>
@@ -671,6 +721,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     className="text-xs font-medium" style={{ color: p.text('#C0392B') }}>
                     Toutes les notifications →
                   </button>
+                  {notifUnreadCount > 0 && (
+                    <button onClick={() => void markAllNotificationsRead()}
+                      className="text-xs font-medium" style={{ color: p.text('#2C3E50') }}>
+                      Tout marquer comme lu
+                    </button>
+                  )}
                   <button onClick={() => { router.push('/dashboard'); setShowNotif(false); }}
                     className="text-xs" style={{ color: p.text('#6C757D') }}>
                     Tableau de bord

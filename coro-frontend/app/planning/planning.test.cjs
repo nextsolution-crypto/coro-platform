@@ -1768,10 +1768,14 @@ test("advisor assignment inbox is personal, actionable and independent from plan
     page.includes("const canMutate = ['ADMIN', 'SUPER_ADMIN'].includes"),
   );
   assert.ok(projection.includes("En attente de votre confirmation"));
-  assert.ok(
-    notifications.includes("notif.type.startsWith('BOOKING_ASSIGNMENT_')"),
+  // La destination des notifications vit dans lib/notification-destination.ts (cloche et page).
+  const destination = fs.readFileSync(
+    path.join(__dirname, "../../lib/notification-destination.ts"),
+    "utf8",
   );
-  assert.ok(notifications.includes("router.push('/planning')"));
+  assert.ok(destination.includes("notification.type.startsWith('BOOKING_ASSIGNMENT_')"));
+  assert.ok(destination.includes("return '/planning';"));
+  assert.ok(notifications.includes("notificationDestination(notif)"));
 });
 
 test("Activity tasks expose empty, aggregate, create, link and unlink contracts without delete", () => {

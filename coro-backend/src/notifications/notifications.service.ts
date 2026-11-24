@@ -14,6 +14,7 @@ export class NotificationsService {
     title: string;
     message: string;
     projectId?: string;
+    link?: string;
   }) {
     return this.prisma.notification.create({ data });
   }
@@ -49,11 +50,18 @@ export class NotificationsService {
   }
 
   // ── Récupérer les notifications d'un utilisateur ────────
-  async findAll(userId: string) {
+  // Page par page (les plus récentes d'abord) : `before` = date de la dernière reçue.
+  async findAll(userId: string, options: { take?: number; before?: string; unreadOnly?: boolean } = {}) {
+    const take = Math.min(Math.max(Number(options.take) || 50, 1), 100);
+    const before = options.before ? new Date(options.before) : null;
     return this.prisma.notification.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
+      where: {
+        userId,
+        ...(options.unreadOnly ? { isRead: false } : {}),
+        ...(before && !Number.isNaN(before.getTime()) ? { createdAt: { lt: before } } : {}),
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take,
     });
   }
 

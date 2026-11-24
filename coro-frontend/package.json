@@ -55,7 +55,7 @@
     "test:control-center": "node app/admin/control-center/control-center.contract.test.cjs",
     "test:pilot-scenarios": "node app/admin/test-scenario-pilots/pilot-scenario.contract.test.cjs",
     "test:security-workstation": "node app/security-workstation/security-workstation.contract.test.cjs",
-    "test:ui-units": "node app/settings/activity-types/activity-types.test.cjs && node components/workScheduleEditor.test.cjs && node app/dashboard/pending-approvals.contract.test.cjs"
+    "test:ui-units": "node app/settings/activity-types/activity-types.test.cjs && node components/workScheduleEditor.test.cjs && node app/dashboard/pending-approvals.contract.test.cjs && node components/layout/notification-bell.contract.test.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
