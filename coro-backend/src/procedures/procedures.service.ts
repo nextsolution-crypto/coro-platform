@@ -1,15 +1,66 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
+import { getAllProcedures } from '../generator/procedures/index';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 
 @Injectable()
-export class ProceduresService {
+export class ProceduresService implements OnModuleInit {
+  private readonly logger = new Logger(ProceduresService.name);
+
   constructor(private prisma: PrismaService) {}
+
+  /**
+   * La bibliothèque CORO vit en base (modifiable par le super-administrateur,
+   * personnalisable par organisation et par projet). Au démarrage, les
+   * procédures de la bibliothèque absentes de la base y sont créées ; une
+   * procédure déjà en base n'est jamais écrasée.
+   */
+  async onModuleInit() {
+    if (process.env.NODE_ENV === 'test') return;
+    try {
+      const existing = new Set(
+        (await this.prisma.procedureDefault.findMany({ select: { code: true } })).map((d) => d.code),
+      );
+      let created = 0;
+      for (const procedure of getAllProcedures()) {
+        if (!procedure?.code || existing.has(procedure.code)) continue;
+        try {
+          await this.prisma.procedureDefault.create({
+            data: { code: procedure.code, content: this.asInputJson(procedure) },
+          });
+          created++;
+        } catch (error: any) {
+          if (error?.code !== 'P2002') throw error; // créée en parallèle par une autre instance
+        }
+      }
+      if (created > 0) this.logger.log(`Bibliothèque : ${created} procédure(s) ajoutée(s) en base.`);
+    } catch (error) {
+      this.logger.error('Synchronisation de la bibliothèque impossible', error as Error);
+    }
+  }
+
+  /**
+   * Identifiant en base d'une procédure de la bibliothèque. Accepte aussi
+   * l'identifiant de bibliothèque (« p005_fuite_gaz ») ou le code (« P005 »)
+   * que portent les documents générés avant la synchronisation.
+   */
+  private async resolveDefaultId(idOrKey: string): Promise<string> {
+    const byId = await this.prisma.procedureDefault.findUnique({ where: { id: idOrKey }, select: { id: true } });
+    if (byId) return byId.id;
+    const code =
+      getAllProcedures().find((p) => p.id === idOrKey)?.code ||
+      (/^P\d{3}$/i.test(idOrKey) ? idOrKey.toUpperCase() : undefined);
+    if (!code) return idOrKey;
+    const byCode = await this.prisma.procedureDefault.findUnique({ where: { code }, select: { id: true } });
+    return byCode?.id || idOrKey;
+  }
 
   private async assertMutableProject(projectId: string, actor: AdviserActor) {
     const project = await this.prisma.project.findFirst({
@@ -52,6 +103,7 @@ export class ProceduresService {
   // Priorité :
   // override projet > override organisation > défaut
   async findOne(id: string, projectId: string | undefined, actor: AdviserActor) {
+    id = await this.resolveDefaultId(id);
     const organizationId = actor.organizationId;
     const proc = await this.prisma.procedureDefault.findUnique({
       where: { id },
@@ -207,6 +259,7 @@ export class ProceduresService {
     content: any,
     actor: AdviserActor,
   ) {
+    id = await this.resolveDefaultId(id);
     await this.assertMutableProject(projectId, actor);
     const organizationId = actor.organizationId;
     const proc = await this.prisma.procedureDefault.findUnique({
@@ -245,6 +298,7 @@ export class ProceduresService {
     organizationId: string,
     content: any,
   ) {
+    id = await this.resolveDefaultId(id);
     const proc = await this.prisma.procedureDefault.findUnique({
       where: { id },
     });
@@ -289,6 +343,7 @@ export class ProceduresService {
     isActive: boolean,
     actor: AdviserActor,
   ) {
+    id = await this.resolveDefaultId(id);
     await this.assertMutableProject(projectId, actor);
     const organizationId = actor.organizationId;
     const proc = await this.prisma.procedureDefault.findUnique({
@@ -346,6 +401,7 @@ export class ProceduresService {
 
   // ── Restaurer la version par défaut pour un projet ─────────
   async restoreForProject(id: string, projectId: string, actor: AdviserActor) {
+    id = await this.resolveDefaultId(id);
     await this.assertMutableProject(projectId, actor);
     const organizationId = actor.organizationId;
     await this.prisma.procedureOverride.deleteMany({
@@ -361,6 +417,7 @@ export class ProceduresService {
 
   // ── Restaurer la version organisation ──────────────────────
   async restoreForOrganization(id: string, organizationId: string) {
+    id = await this.resolveDefaultId(id);
     await this.prisma.procedureOverride.deleteMany({
       where: {
         procedureId: id,
@@ -374,6 +431,7 @@ export class ProceduresService {
 
   // ── Modifier la procédure par défaut (SUPER_ADMIN) ─────────
   async updateDefault(id: string, content: any) {
+    id = await this.resolveDefaultId(id);
     const proc = await this.prisma.procedureDefault.findUnique({
       where: { id },
     });
@@ -433,6 +491,7 @@ export class ProceduresService {
 
   // ── Supprimer une procédure par défaut (SUPER_ADMIN) ───────
   async deleteDefault(id: string) {
+    id = await this.resolveDefaultId(id);
     const proc = await this.prisma.procedureDefault.findUnique({
       where: { id },
     });
