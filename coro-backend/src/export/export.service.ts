@@ -3,6 +3,7 @@ import {
   approvalStampFromVersion,
   shortContentHash,
 } from './approval-stamp';
+import { resolveActiveRoleCodes } from '../generator/regeneration.helpers';
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { StorageService } from '../storage/storage.service';
 import { resolveApprovedPlans } from './approved-plan-blobs';
@@ -891,24 +892,7 @@ export class ExportService {
       module3Content?.sections?.find((s: any) => s.id === '3.1')?.orgRoles ||
       [];
 
-    const activeRoleCodes =
-      savedOrgRoles.length > 0
-        ? savedOrgRoles
-            .filter((r: any) => r.isActive)
-            .map((r: any) => r.roleCode)
-            .filter(Boolean)
-        : [
-            'ROLE-AS',
-            'ROLE-CU',
-            'ROLE-EPI',
-            'ROLE-RM',
-            'ROLE-RPR',
-            'ROLE-SS',
-            'ROLE-BRI',
-            'ROLE-RS',
-            'ROLE-CHE',
-            'ROLE-ACC',
-          ];
+    const activeRoleCodes = resolveActiveRoleCodes(savedOrgRoles, content.config);
 
     return getActiveProcedures(
       content.config || {},

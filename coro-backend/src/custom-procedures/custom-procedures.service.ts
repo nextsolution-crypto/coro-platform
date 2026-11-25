@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { resolveActiveRoleCodes } from '../generator/regeneration.helpers';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdviserActor, assertEditableProject, projectAccessWhere } from '../auth/project-access';
 import { DemoCommunicationChannel } from '@prisma/client';
@@ -224,7 +225,7 @@ RÉPONDS UNIQUEMENT avec ce JSON, sans texte avant ou après :
     });
 
     // Détecter les rôles absents de l'organigramme
-    const activeRoleCodes = orgRoles.filter((r: any) => r.isActive).map((r: any) => r.roleCode);
+    const activeRoleCodes = resolveActiveRoleCodes(orgRoles, content?.config);
     const missingRoles = allRolesDetected
       .filter(code => !activeRoleCodes.includes(code))
       .map(code => KNOWN_ROLES.find(r => r.code === code))

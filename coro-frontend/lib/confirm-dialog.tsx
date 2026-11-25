@@ -57,7 +57,7 @@ function ConfirmDialog({
         <h2 id="coro-confirm-title" style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#2C3E50' }}>
           {options.title ?? 'Confirmer'}
         </h2>
-        <p id="coro-confirm-message" style={{ margin: '12px 0 20px', fontSize: 14, color: '#6C757D', lineHeight: 1.5 }}>
+        <p id="coro-confirm-message" style={{ margin: '12px 0 20px', fontSize: 14, color: '#6C757D', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
           {options.message}
         </p>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>

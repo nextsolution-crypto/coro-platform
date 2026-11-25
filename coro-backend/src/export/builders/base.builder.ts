@@ -1,4 +1,5 @@
 import { PrismaService } from '../../prisma/prisma.service';
+import { resolveActiveRoleCodes } from '../../generator/regeneration.helpers';
 import { ExportDataSource } from '../export-frozen-data';
 
 export const DOCUMENT_TYPE_LABELS: Record<string, { fr: string; en: string }> = {
@@ -32,18 +33,6 @@ type LocalizedStepOverride = {
 
 type StoredStepOverride = string | LocalizedStepOverride;
 
-const DEFAULT_EMERGENCY_ROLE_CODES = [
-  'ROLE-AS',
-  'ROLE-CU',
-  'ROLE-EPI',
-  'ROLE-RM',
-  'ROLE-RPR',
-  'ROLE-SS',
-  'ROLE-BRI',
-  'ROLE-RS',
-  'ROLE-CHE',
-  'ROLE-ACC',
-];
 
 export abstract class BaseDocumentBuilder {
   protected sequentialNumber = 0;
@@ -208,27 +197,14 @@ export abstract class BaseDocumentBuilder {
     const generatedModule3 = this.content.modules_fr?.find(
       (m: any) => m.moduleNumber === 3,
     );
-
-    if (!generatedModule3) {
-      return [...DEFAULT_EMERGENCY_ROLE_CODES];
-    }
-
-    const mergedSections = this.mergeModule3SavedData(
-      generatedModule3.sections || [],
-      this.content.module3,
-    );
-
-    const orgRoles =
-      mergedSections.find((s: any) => s.id === '3.1')?.orgRoles || [];
-
-    if (orgRoles.length === 0) {
-      return [...DEFAULT_EMERGENCY_ROLE_CODES];
-    }
-
-    return orgRoles
-      .filter((r: any) => r.isActive)
-      .map((r: any) => r.roleCode)
-      .filter(Boolean);
+    const orgRoles = generatedModule3
+      ? this.mergeModule3SavedData(
+          generatedModule3.sections || [],
+          this.content.module3,
+        ).find((s: any) => s.id === '3.1')?.orgRoles || []
+      : [];
+    // Même règle qu'à la génération : l'agent de sécurité suit la configuration.
+    return resolveActiveRoleCodes(orgRoles, this.content.config);
   }
 
   private filterRoleSections(procedure: any, activeRoleCodes: string[]): any {
