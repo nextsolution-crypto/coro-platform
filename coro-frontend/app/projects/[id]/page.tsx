@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { toast } from '@/lib/toast';
+import { confirmAction } from '@/lib/confirm-dialog';
 import { PageTitle } from '@/components/ui/Typography';
 import ExportModal from '@/components/ExportModal';
 import EngagementPanel from '@/components/EngagementPanel';
@@ -256,6 +257,19 @@ export default function ProjectDetailPage() {
   };
 
   const handleGenerate = async () => {
+    if (
+      hasDocument &&
+      !(await confirmAction({
+        title: 'Régénérer le document ?',
+        message:
+          'Le contenu sera recalculé à partir du configurateur.\n\n' +
+          'Conservés : les textes que vous avez modifiés dans l’éditeur, les contacts du module 2, ' +
+          'l’organigramme, les plans, les photos et la description du site, les registres et les procédures ajoutées.\n\n' +
+          'Recalculés : les autres textes, les procédures et les sections applicables.',
+        confirmLabel: 'Régénérer',
+      }))
+    )
+      return;
     setGenerating(true);
     const intentStorageKey = `coro_generation_intent_${projectId}`;
     try {

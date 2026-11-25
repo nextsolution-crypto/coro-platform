@@ -48,6 +48,8 @@ interface Section {
 interface Module {
   moduleNumber: number;
   title: string;
+  title_fr?: string;
+  title_en?: string;
   language: string;
   sections: Section[];
   procedures?: any[];
@@ -235,6 +237,10 @@ export default function EditorPage() {
       return;
     router.push(destination);
   };
+
+  // Le module 4 range son titre dans title_fr / title_en.
+  const moduleTitle = (mod?: Module) =>
+    mod?.title || (language === "en" ? mod?.title_en : mod?.title_fr) || "";
 
   const handleSectionClick = (moduleIdx: number, sectionIdx: number) => {
     if (
@@ -981,7 +987,7 @@ export default function EditorPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
             <p className="text-xs mb-1" style={{ color: "#ADB5BD" }}>
-              Module {activeModule + 1} — {currentModule.title}
+              Module {activeModule + 1} — {moduleTitle(currentModule)}
             </p>
             <h2 className="text-xl font-bold" style={{ color: "#2C3E50" }}>
               {activeModule + 1}.{activeSection + 1} — {currentSection?.title}
@@ -1357,7 +1363,7 @@ export default function EditorPage() {
                         }}
                       >
                         <span>
-                          M{modIdx + 1} — {mod.title}
+                          M{modIdx + 1} — {moduleTitle(mod)}
                         </span>
                         <div className="flex items-center gap-1.5">
                           {badgeLabel && (
@@ -1691,7 +1697,7 @@ export default function EditorPage() {
                     >
                       M{modPosition + 1}
                     </span>{" "}
-                    {mod.title}
+                    {moduleTitle(mod)}
                   </button>
                 ))}
               </div>
@@ -1791,7 +1797,7 @@ export default function EditorPage() {
                       }}
                     >
                       <span className="break-words">
-                        M{mod.moduleNumber} — {mod.title}
+                        M{modIdx + 1} — {moduleTitle(mod)}
                       </span>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         {badgeColor && (
@@ -1833,17 +1839,7 @@ export default function EditorPage() {
                     )}
 
                     {(mod.sections || []).map((section, secIdx) => {
-                      if (
-                        mod.moduleNumber === 3 &&
-                        section.id === "3.2" &&
-                        isBureau
-                      )
-                        return null;
-                      if (
-                        mod.moduleNumber === 4 &&
-                        document.project.documentType === "PCA"
-                      )
-                        return null;
+                      if (!isNavSectionVisible(mod, section)) return null;
                       const isActive =
                         activeModule === modIdx && activeSection === secIdx;
 
@@ -1867,7 +1863,11 @@ export default function EditorPage() {
                             fontWeight: isActive ? "600" : "400",
                           }}
                         >
-                          {section.id} — {section.title}
+                          {modIdx + 1}.
+                          {(mod.sections || [])
+                            .filter((candidate) => isNavSectionVisible(mod, candidate))
+                            .findIndex((candidate) => candidate.id === section.id) + 1}{" "}
+                          — {section.title}
                         </button>
                       );
                     })}
@@ -2019,7 +2019,7 @@ export default function EditorPage() {
                       >
                         M{modPosition + 1}
                       </span>{" "}
-                      {mod.title}
+                      {moduleTitle(mod)}
                     </button>
                   ))}
                 </div>

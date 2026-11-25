@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { keepManualEdits, resolveActiveRoleCodes } from './regeneration.helpers';
 import { createHash } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -855,24 +856,7 @@ export class GeneratorService {
         ?.sections?.find((s: any) => s.id === '3.1')?.orgRoles ||
       [];
 
-    const activeRoleCodes =
-      savedOrgRoles.length > 0
-        ? savedOrgRoles
-            .filter((r: any) => r.isActive)
-            .map((r: any) => r.roleCode)
-            .filter(Boolean)
-        : [
-            'ROLE-AS',
-            'ROLE-CU',
-            'ROLE-EPI',
-            'ROLE-RM',
-            'ROLE-RPR',
-            'ROLE-SS',
-            'ROLE-BRI',
-            'ROLE-RS',
-            'ROLE-CHE',
-            'ROLE-ACC',
-          ];
+    const activeRoleCodes = resolveActiveRoleCodes(savedOrgRoles, resolvedConfig);
 
     // Récupère les procédures manuelles ajoutées
     const customProcedureIds =
@@ -944,24 +928,31 @@ export class GeneratorService {
     const documentData = {
       title: `${ctx.documentType} - ${ctx.buildingName} ${ctx.year}`,
       content: {
-        modules_fr: [
-          module1Result.fr,
-          module2Result.fr,
-          ...(isPsi ? [] : [module3Result!.fr]),
-          module4Result,
-          module6FR,
-          module7FR,
-          module8Result.fr,
-        ],
-        modules_en: [
-          module1Result.en,
-          module2Result.en,
-          ...(isPsi ? [] : [module3Result!.en]),
-          module4Result,
-          module6EN,
-          module7EN,
-          module8Result.en,
-        ],
+        // Les sections retouchées à la main dans l'éditeur gardent leur texte.
+        modules_fr: keepManualEdits(
+          [
+            module1Result.fr,
+            module2Result.fr,
+            ...(isPsi ? [] : [module3Result!.fr]),
+            module4Result,
+            module6FR,
+            module7FR,
+            module8Result.fr,
+          ],
+          previousContent.modules_fr,
+        ),
+        modules_en: keepManualEdits(
+          [
+            module1Result.en,
+            module2Result.en,
+            ...(isPsi ? [] : [module3Result!.en]),
+            module4Result,
+            module6EN,
+            module7EN,
+            module8Result.en,
+          ],
+          previousContent.modules_en,
+        ),
         config: resolvedConfig,
         generatedAt: new Date(),
         // Préserve les données éditées manuellement, non régénérées automatiquement
@@ -1022,7 +1013,11 @@ export class GeneratorService {
         );
         if (sectionIdx === -1)
           throw new NotFoundException('Section introuvable');
-        modules[moduleIdx].sections[sectionIdx].content = content;
+        const section = modules[moduleIdx].sections[sectionIdx];
+        section.content = content;
+        // Repère pour la régénération : ce texte ne sera pas écrasé.
+        section.manuallyEdited = true;
+        section.manuallyEditedAt = new Date().toISOString();
         return {
           content: { ...docContent, [modulesKey]: modules },
           value: { moduleId, sectionId, language },
