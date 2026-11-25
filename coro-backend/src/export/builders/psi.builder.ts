@@ -220,15 +220,12 @@ export class PsiBuilder extends PmuBuilder {
       // Aucune seconde lecture du Document en DB pendant la génération PDF.
       const module8Data = this.content.module8 ?? null;
 
-      const allSections8 = renderModule8(
+      // Choix métier PSI : section 8.11 exclue.
+      const sections8 = renderModule8(
         module8Data,
         this.lang,
         this.sequentialNumber,
-      );
-
-      // Choix métier PSI : section 8.11 exclue.
-      const sections8 = allSections8.filter(
-        (s: any) => s.id !== '8.11',
+        this.module8Applicability(['8.11']),
       );
 
       sections8.forEach((section, idx) => {

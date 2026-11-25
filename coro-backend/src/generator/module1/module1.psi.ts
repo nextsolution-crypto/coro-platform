@@ -1,4 +1,4 @@
-import { DocumentContext, REFERENCES } from './module1.context';
+import { DocumentContext, REFERENCES, aRef, leRef, duRef } from './module1.context';
 
 export function generateModule1PsiFR(ctx: DocumentContext): any {
   const ref = REFERENCES[ctx.province] || REFERENCES['Quebec'];
@@ -17,7 +17,7 @@ export function generateModule1PsiFR(ctx: DocumentContext): any {
         title: 'OBJET ET PORTÉE',
         content: `**Objet**
 
-Le présent Plan de sécurité incendie (${docType}) est élaboré conformément à l'${ref.article} du ${ref.code}, ainsi qu'aux règlements municipaux applicables.
+Le présent Plan de sécurité incendie (${docType}) est élaboré conformément ${aRef(ref.article)} ${duRef(ref.code)}, ainsi qu'aux règlements municipaux applicables.
 
 Ses objectifs sont :
 - D'assurer la sécurité de toutes les personnes présentes sur le site, incluant les employés, visiteurs, fournisseurs et autres parties prenantes ;
@@ -30,7 +30,7 @@ Le présent ${docType} définit les procédures d'intervention en cas de situati
 - Bris de gicleurs ou défaillance d'un système de protection incendie ;
 - Tout autre événement nécessitant une évacuation ou une intervention de sécurité incendie.
 
-Il est mis à jour au moins une fois par année, conformément à l'${ref.article} du ${ref.code}, accompagné d'un programme de formation et d'exercices d'évacuation planifiés afin de maintenir un haut niveau de préparation.
+Il est mis à jour au moins une fois par année, conformément ${aRef(ref.article)} ${duRef(ref.code)}, accompagné d'un programme de formation et d'exercices d'évacuation planifiés afin de maintenir un haut niveau de préparation.
 
 **Portée**
 
@@ -56,7 +56,7 @@ Le plan est conçu pour être appliqué en collaboration avec :
 La responsabilité de l'élaboration, de la mise à jour annuelle, de la diffusion et de l'application du présent Plan de sécurité incendie (${docType}) revient au ${responsableTitre} de ${ctx.clientName}.
 
 Ce dernier s'assure que le plan est :
-- Conforme aux lois et règlements en vigueur, incluant l'${ref.article} du ${ref.code} ;
+- Conforme aux lois et règlements en vigueur, incluant ${leRef(ref.article)} ${duRef(ref.code)} ;
 - Adapté aux particularités du site ;
 - Validé périodiquement par le biais de formations, d'exercices et de revues opérationnelles.
 
@@ -119,7 +119,7 @@ La formation vise à :
 
 **Obligations réglementaires**
 
-Conformément à l'${ref.articleFormation}, le personnel chargé de la mise en œuvre du plan de sécurité incendie doit recevoir une formation adéquate et continue, adaptée aux spécificités du bâtiment.
+Conformément ${aRef(ref.articleFormation)}, le personnel chargé de la mise en œuvre du plan de sécurité incendie doit recevoir une formation adéquate et continue, adaptée aux spécificités du bâtiment.
 
 **Contenu de la formation**
 
@@ -135,7 +135,7 @@ La formation comprend les sujets suivants :
 | Moment | Type de formation | Obligation |
 |---|---|---|
 | À l'entrée en fonction | Formation initiale | Obligatoire pour tout nouveau responsable ou membre du personnel de surveillance |
-| Chaque année | Formation de maintien | Obligatoire — conformément à l'${ref.article} du ${ref.code} |
+| Chaque année | Formation de maintien | Obligatoire — conformément ${aRef(ref.article)} ${duRef(ref.code)} |
 | ${exerciceFrequenceCourt} | Exercice d'évacuation pratique | ${ctx.hauteurBatiment ? 'Obligatoire pour les bâtiments à grande hauteur (BGH)' : 'Obligatoire — au moins une fois par année'} |
 
 **Suivi et traçabilité**
@@ -147,7 +147,7 @@ La formation comprend les sujets suivants :
       {
         id: '1.4',
         title: "EXERCICE D'ÉVACUATION",
-        content: `Conformément à l'${ref.articleExercice}, un exercice d'évacuation doit être réalisé ${exerciceFrequence} dans tout bâtiment assujetti à un plan de sécurité incendie${ctx.hauteurBatiment ? '. Ce bâtiment étant un bâtiment à grande hauteur (BGH), la fréquence minimale est augmentée conformément au code applicable.' : '.'}
+        content: `Conformément ${aRef(ref.articleExercice)}, un exercice d'évacuation doit être réalisé ${exerciceFrequence} dans tout bâtiment assujetti à un plan de sécurité incendie${ctx.hauteurBatiment ? '. Ce bâtiment étant un bâtiment à grande hauteur (BGH), la fréquence minimale est augmentée conformément au code applicable.' : '.'}
 
 **1.4.1 Planification et exécution**
 
@@ -180,7 +180,7 @@ Des observateurs désignés évaluent :
         title: 'HISTORIQUE DES MISES À JOUR',
         content: `**1.5.1 Journal des modifications**
 
-Le présent Plan de sécurité incendie (${docType}) est un document évolutif qui doit être révisé au moins une fois tous les 12 mois, conformément à l'${ref.articleRevision} du ${ref.description}.
+Le présent Plan de sécurité incendie (${docType}) est un document évolutif qui doit être révisé au moins une fois tous les 12 mois, conformément ${aRef(ref.articleRevision)} ${duRef(ref.description)}.
 
 | Date | Description de la modification | Personne responsable |
 |---|---|---|

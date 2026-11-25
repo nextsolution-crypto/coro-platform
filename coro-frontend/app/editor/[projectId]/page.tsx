@@ -510,6 +510,16 @@ export default function EditorPage() {
   const isSpecialModule = SPECIAL_MODULES.includes(currentModule?.moduleNumber);
   const isBureau =
     document.project.building.buildingType?.toLowerCase() !== "industriel";
+
+  // Sections listées dans le menu. 3.2 (liste des membres) : bâtiments industriels seulement.
+  // 2.5 (ressources corporatives) s'active par la case à cocher de la page 2.1 et prend sa
+  // place dans le PDF seulement si elle est incluse : on ne la liste pas séparément.
+  const isNavSectionVisible = (mod: Module, section: { id: string }) => {
+    if (mod.moduleNumber === 3 && section.id === "3.2" && isBureau) return false;
+    if (mod.moduleNumber === 4 && document.project.documentType === "PCA") return false;
+    if (mod.moduleNumber === 2 && section.id === "2.5") return false;
+    return true;
+  };
   const isReadOnly =
     ["REVIEW", "VALIDATED", "ARCHIVED"].includes(
       document.project.status || "",
@@ -658,6 +668,7 @@ export default function EditorPage() {
       }
       return (
         <Module8Section
+          displayNumber={activeModule + 1}
           projectId={projectId}
           onLockVersionChange={(lockVersion) =>
             setDocument((current) =>
@@ -721,7 +732,7 @@ export default function EditorPage() {
           </div>
         );
       }
-      return <Module7Section projectId={projectId} language={language} />;
+      return <Module7Section projectId={projectId} language={language} displayNumber={activeModule + 1} />;
     }
     if (n === 6) {
       if (document.project.documentType === "PCA") {
@@ -770,7 +781,7 @@ export default function EditorPage() {
           </div>
         );
       }
-      return <Module6Section projectId={projectId} language={language} />;
+      return <Module6Section projectId={projectId} language={language} displayNumber={activeModule + 1} />;
     }
     if (n === 4) {
       if (document.project.documentType === "PCA") {
@@ -960,10 +971,10 @@ export default function EditorPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
             <p className="text-xs mb-1" style={{ color: "#ADB5BD" }}>
-              Module {currentModule.moduleNumber} — {currentModule.title}
+              Module {activeModule + 1} — {currentModule.title}
             </p>
             <h2 className="text-xl font-bold" style={{ color: "#2C3E50" }}>
-              {currentSection?.id} — {currentSection?.title}
+              {activeModule + 1}.{activeSection + 1} — {currentSection?.title}
             </h2>
           </div>
           {!isEditing && !isReadOnly && (
@@ -1085,7 +1096,7 @@ export default function EditorPage() {
 
   return (
     <div
-      className="min-h-screen flex flex-col"
+      className="min-h-screen flex flex-col xl:h-screen"
       style={{ backgroundColor: "#F8F9FA" }}
     >
       {/* ── Topbar ── */}
@@ -1273,7 +1284,7 @@ export default function EditorPage() {
         </div>
       </div>
 
-      <div className="flex flex-1 min-w-0 xl:overflow-hidden">
+      <div className="flex flex-1 min-w-0 min-h-0 xl:overflow-hidden">
         {/* ── Navigation gauche ── */}
         <div
           className="hidden lg:block w-60 overflow-y-auto flex-shrink-0"
@@ -1336,7 +1347,7 @@ export default function EditorPage() {
                         }}
                       >
                         <span>
-                          M{mod.moduleNumber} — {mod.title}
+                          M{modIdx + 1} — {mod.title}
                         </span>
                         <div className="flex items-center gap-1.5">
                           {badgeLabel && (
@@ -1401,18 +1412,7 @@ export default function EditorPage() {
 
                   {/* Sections normales */}
                   {(mod.sections || []).map((section, secIdx) => {
-                    // Cache 3.2 (Liste des membres) pour les bâtiments non industriels
-                    if (
-                      mod.moduleNumber === 3 &&
-                      section.id === "3.2" &&
-                      isBureau
-                    )
-                      return null;
-                    if (
-                      mod.moduleNumber === 4 &&
-                      document.project.documentType === "PCA"
-                    )
-                      return null;
+                    if (!isNavSectionVisible(mod, section)) return null;
                     const isActive =
                       activeModule === modIdx && activeSection === secIdx;
                     return (
@@ -1438,7 +1438,11 @@ export default function EditorPage() {
                               "transparent";
                         }}
                       >
-                        {section.id} — {section.title}
+                        {modIdx + 1}.
+                        {(mod.sections || [])
+                          .filter((candidate) => isNavSectionVisible(mod, candidate))
+                          .findIndex((candidate) => candidate.id === section.id) + 1}{" "}
+                        — {section.title}
                       </button>
                     );
                   })}
@@ -1660,7 +1664,7 @@ export default function EditorPage() {
                 {language === "fr" ? "Navigation rapide" : "Quick navigation"}
               </p>
               <div className="space-y-1">
-                {modules.map((mod) => (
+                {modules.map((mod, modPosition) => (
                   <div
                     key={mod.moduleNumber}
                     className="text-xs py-1"
@@ -1673,7 +1677,7 @@ export default function EditorPage() {
                       className="font-mono font-bold"
                       style={{ color: "#C0392B" }}
                     >
-                      M{mod.moduleNumber}
+                      M{modPosition + 1}
                     </span>{" "}
                     {mod.title}
                   </div>

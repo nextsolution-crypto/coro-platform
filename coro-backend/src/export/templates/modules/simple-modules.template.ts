@@ -156,9 +156,22 @@ export function renderModule2Section(section: any, idx: number, lang: 'fr' | 'en
 // MODULE 8 — Registres et annexes (9 sous-sections)
 // ============================================================
 
-export function renderModule8(module8Data: any, lang: 'fr' | 'en', moduleSeqNumber: number = 8): { id: string; title: string; html: string }[] {
+const MODULE8_SECTION_IDS = ['8.1', '8.2', '8.3', '8.4', '8.5', '8.6', '8.7', '8.8', '8.9', '8.10', '8.11'];
+
+/**
+ * Rend le module 8. `isApplicable` (drapeaux `applicable` du document généré) retire les
+ * sections qui ne concernent pas le bâtiment (ex. cadenassage pour une tour de bureaux);
+ * les numéros affichés suivent alors l'ordre réel, comme dans le sommaire.
+ */
+export function renderModule8(
+  module8Data: any,
+  lang: 'fr' | 'en',
+  moduleSeqNumber: number = 8,
+  isApplicable?: (id: string) => boolean,
+): { id: string; title: string; html: string }[] {
   if (!module8Data) module8Data = {};
   const isFr = lang === 'fr';
+  const included = MODULE8_SECTION_IDS.filter((id) => !isApplicable || isApplicable(id));
 
   const titles: Record<string, string> = isFr ? {
     '8.1': 'REGISTRE DE FORMATION',
@@ -187,7 +200,8 @@ export function renderModule8(module8Data: any, lang: 'fr' | 'en', moduleSeqNumb
   };
 
   const sectionHeader = (id: string) => {
-    const subNum = id === '8.10' ? 10 : parseInt(id.split('.')[1], 10);
+    const position = included.indexOf(id);
+    const subNum = position >= 0 ? position + 1 : parseInt(id.split('.')[1], 10);
     const displayId = `${moduleSeqNumber}.${subNum}`;
     return `
       <div class="section-header">
@@ -476,7 +490,7 @@ const s83 = `
     { id: '8.9', title: titles['8.9'], html: s89 },
     { id: '8.10', title: titles['8.10'], html: s810 },
     { id: '8.11', title: titles['8.11'], html: s811Html },
-  ];
+  ].filter((section) => included.includes(section.id));
 }
 
 // ============================================================

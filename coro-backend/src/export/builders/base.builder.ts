@@ -47,6 +47,22 @@ const DEFAULT_EMERGENCY_ROLE_CODES = [
 
 export abstract class BaseDocumentBuilder {
   protected sequentialNumber = 0;
+
+  /** Sections du module 8 applicables au bâtiment, selon le document généré. */
+  protected module8Applicability(excluded: string[] = []): (id: string) => boolean {
+    const generated = this.modules.find((m: any) => m.moduleNumber === 8);
+    const flags = new Map<string, boolean | undefined>(
+      (generated?.sections || []).map((s: any) => [s.id, s.applicable]),
+    );
+    const bomaTables = this.content.module8?.section8_11?.tables;
+    return (id: string) => {
+      if (excluded.includes(id)) return false;
+      const flag = flags.get(id);
+      if (flag === false) return false;
+      if (id === '8.11' && flag === undefined) return Array.isArray(bomaTables) && bomaTables.length > 0;
+      return true;
+    };
+  }
   public subsectionTitlesById: Record<string, string> = {};
 
   constructor(
