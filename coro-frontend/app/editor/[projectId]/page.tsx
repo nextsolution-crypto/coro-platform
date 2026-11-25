@@ -661,7 +661,9 @@ export default function EditorPage() {
           projectId={projectId}
           onLockVersionChange={(lockVersion) =>
             setDocument((current) =>
-              current ? { ...current, lockVersion } : current,
+              current && current.lockVersion !== lockVersion
+                ? { ...current, lockVersion }
+                : current,
             )
           }
           language={language}
@@ -779,7 +781,9 @@ export default function EditorPage() {
           projectId={projectId}
           onLockVersionChange={(lockVersion) =>
             setDocument((current) =>
-              current ? { ...current, lockVersion } : current,
+              current && current.lockVersion !== lockVersion
+                ? { ...current, lockVersion }
+                : current,
             )
           }
           language={language}
@@ -838,7 +842,9 @@ export default function EditorPage() {
           projectId={projectId}
           onLockVersionChange={(lockVersion) =>
             setDocument((current) =>
-              current ? { ...current, lockVersion } : current,
+              current && current.lockVersion !== lockVersion
+                ? { ...current, lockVersion }
+                : current,
             )
           }
           language={language}
@@ -905,7 +911,9 @@ export default function EditorPage() {
           projectId={projectId}
           onLockVersionChange={(lockVersion) =>
             setDocument((current) =>
-              current ? { ...current, lockVersion } : current,
+              current && current.lockVersion !== lockVersion
+                ? { ...current, lockVersion }
+                : current,
             )
           }
           language={language}
@@ -2016,7 +2024,9 @@ export default function EditorPage() {
           lockVersion={document.lockVersion}
           onLockVersionChange={(lockVersion) =>
             setDocument((current) =>
-              current ? { ...current, lockVersion } : current,
+              current && current.lockVersion !== lockVersion
+                ? { ...current, lockVersion }
+                : current,
             )
           }
           onRestore={() => {

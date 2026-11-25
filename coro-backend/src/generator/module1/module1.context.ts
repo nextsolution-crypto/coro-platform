@@ -15,6 +15,15 @@ export interface DocumentContext {
   hauteurBatiment: boolean;
   multiLocataires: boolean;
   companyName: string;
+  /** Téléphone de la firme-conseil (paramètres de l'organisation). */
+  companyPhone?: string;
+  /** Responsable du bâtiment réellement saisi (configurateur ou fiche bâtiment). */
+  buildingManagerName?: string;
+  /** Téléphone du responsable du bâtiment (fiche bâtiment). */
+  responsablePhone?: string;
+  /** Centrale de surveillance incendie déclarée au configurateur. */
+  centraleSurveillance?: string;
+  centraleTelephone?: string;
   buildingType: string;
   has_sprinklers?: boolean;
   has_generator?: boolean;

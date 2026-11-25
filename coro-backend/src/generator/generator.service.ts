@@ -631,6 +631,22 @@ export class GeneratorService {
 
       companyName: project.organization.companyName || 'CORO',
 
+      companyPhone: project.organization.companyPhone || '',
+
+      buildingManagerName: isPca
+        ? ''
+        : (config.responsableNom ||
+            [project.building.responsableFirstName, project.building.responsableLastName]
+              .filter(Boolean)
+              .join(' ')
+          ).trim(),
+
+      responsablePhone: isPca ? '' : project.building.responsablePhone || '',
+
+      centraleSurveillance: isPca ? '' : config.centraleSurveillance || '',
+
+      centraleTelephone: isPca ? '' : config.centraleTelephone || '',
+
       buildingType: isPca
         ? project.building.buildingType || ''
         : config.buildingType || project.building.buildingType || 'office',
