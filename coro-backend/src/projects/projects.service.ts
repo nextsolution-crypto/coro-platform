@@ -617,17 +617,34 @@ export class ProjectsService {
     totalScore += hasDoc ? 15 : 0;
 
     // ── 3. Liste téléphonique renseignée (10 pts) ─────────────
+    // Seuls comptent les contacts propres au bâtiment réellement remplis (nom ET
+    // téléphone) : ressources internes, contracteurs et, si incluses, ressources
+    // corporatives. Le 9-1-1 et les ressources externes sont remplis d'office.
     const m2 = modules.find((m: any) => m.moduleNumber === 2);
-    const entries =
-      m2?.sections?.find((s: any) => s.id === '2.1')?.entries || [];
-    const hasContacts = entries.length >= 3;
+    const saved2 = content?.module2 || {};
+    const sectionEntries = (id: string, key: string): any[] => {
+      if (Array.isArray(saved2[key])) return saved2[key];
+      return m2?.sections?.find((s: any) => s.id === id)?.entries || [];
+    };
+    const contactEntries = [
+      ...sectionEntries('2.2', 'section2_2'),
+      ...sectionEntries('2.3', 'section2_3'),
+      ...(saved2.section2_5Enabled && Array.isArray(saved2.section2_5) ? saved2.section2_5 : []),
+    ];
+    const filledContacts = contactEntries.filter(
+      (e: any) => String(e?.name || '').trim() && String(e?.phone || '').trim(),
+    ).length;
+    const hasContacts = filledContacts >= 3;
+    const contactPoints = hasContacts ? 10 : filledContacts > 0 ? 5 : 0;
     details.push({
-      label: 'Liste téléphonique (min. 3 contacts)',
+      label: hasContacts
+        ? 'Liste téléphonique (min. 3 contacts)'
+        : `Liste téléphonique : ${filledContacts} contact${filledContacts > 1 ? 's' : ''} rempli${filledContacts > 1 ? 's' : ''} sur 3 requis (nom et téléphone)`,
       points: 10,
-      earned: hasContacts ? 10 : entries.length > 0 ? 5 : 0,
+      earned: contactPoints,
       ok: hasContacts,
     });
-    totalScore += hasContacts ? 10 : entries.length > 0 ? 5 : 0;
+    totalScore += contactPoints;
 
     // ── 4. Organigramme actif (10 pts) ────────────────────────
     const m3 = modules.find((m: any) => m.moduleNumber === 3);
