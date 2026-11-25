@@ -24,6 +24,8 @@ export default function ClientsPage() {
   const [clients, setClients]     = useState<Client[]>([]);
   const [loading, setLoading]     = useState(true);
   const [showModal, setShowModal] = useState(false);
+  // Logo choisi dans le formulaire de création, envoyé juste après la création.
+  const [newLogo, setNewLogo] = useState<string | null>(null);
   const [loadError, setLoadError] = useState('');
   const [creating, setCreating] = useState(false);
   const createButtonRef = useRef<HTMLButtonElement>(null);
@@ -136,13 +138,20 @@ export default function ClientsPage() {
     setCreating(true);
     try {
       createIdempotencyKeyRef.current ||= crypto.randomUUID();
-      await api.post('/clients', form, { headers: { 'Idempotency-Key': createIdempotencyKeyRef.current } });
+      const created = await api.post('/clients', form, { headers: { 'Idempotency-Key': createIdempotencyKeyRef.current } });
+      let logoSaved = true;
+      if (newLogo && created?.data?.id) {
+        try { await api.put(`/clients/${created.data.id}/logo`, { logoBase64: newLogo }); }
+        catch { logoSaved = false; }
+      }
+      setNewLogo(null);
       closeModal();
       setForm({ name: '', email: '', phone: '', address: '', city: '', province: '', contactFirstName: '', contactLastName: '', contactEmail: '', contactPhone: '' });
       setAddressPaste('');
       createIdempotencyKeyRef.current = null;
       fetchClients();
-      toast('Client créé avec succès.');
+      if (logoSaved) toast('Client créé avec succès.');
+      else toast('Client créé, mais le logo n’a pas pu être enregistré : ajoutez-le depuis la fiche du client.', 'error');
     } catch (err: any) {
       const message = err?.response?.data?.message || 'Erreur lors de la création du client.';
       toast(Array.isArray(message) ? message[0] : message, 'error');
@@ -291,6 +300,43 @@ export default function ClientsPage() {
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
                   onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+              </div>
+
+              {/* Logo (facultatif) — repris en couverture des documents */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Logo du client</label>
+                <div className="flex items-center gap-3">
+                  {newLogo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={newLogo} alt="Logo du client" style={{ height: 40, maxWidth: 120, objectFit: 'contain', border: '1px solid #E9ECEF', borderRadius: 4, padding: 2, backgroundColor: '#FFFFFF' }} />
+                  ) : null}
+                  <label
+                    className="cursor-pointer text-sm px-3 py-2 rounded"
+                    style={{ border: '1px solid #CED4DA', color: '#495057', backgroundColor: '#FFFFFF' }}
+                  >
+                    {newLogo ? 'Changer le logo' : 'Choisir un logo'}
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = '';
+                        if (!file) return;
+                        if (file.size > 2 * 1024 * 1024) { toast('Le logo doit faire moins de 2MB.', 'error'); return; }
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setNewLogo((ev.target?.result as string) || null);
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </label>
+                  {newLogo && (
+                    <button type="button" onClick={() => setNewLogo(null)} className="text-xs" style={{ color: '#6C757D' }}>
+                      Retirer
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>Facultatif · PNG, JPG ou SVG, 2 MB au plus · affiché sur la couverture des plans.</p>
               </div>
 
               {/* Séparateur contact principal */}

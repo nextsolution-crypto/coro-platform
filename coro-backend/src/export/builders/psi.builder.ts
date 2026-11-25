@@ -159,7 +159,16 @@ export class PsiBuilder extends PmuBuilder {
         `${this.project.building.city}, ` +
         `${this.project.building.province}`;
 
+      // Numéro de section (4.1, 4.2…) + code de bibliothèque (P002…) que les
+      // équipes retiennent. Les directives générales (P001) restent sans numéro.
+      let position = 0;
       procedures.forEach((proc: any) => {
+        const isDirectives =
+          proc.code === 'P001' ||
+          (Array.isArray(proc.directivesGenerales) && proc.directivesGenerales.length > 0);
+        const codeLabel = isDirectives
+          ? proc.code
+          : `${this.sequentialNumber}.${++position} · ${proc.code}`;
         const title =
           this.lang === 'fr'
             ? proc.titleFR
@@ -167,7 +176,7 @@ export class PsiBuilder extends PmuBuilder {
 
         this.subsectionTitlesById[
           `${this.sequentialNumber}:${proc.id}`
-        ] = `${proc.code} — ${title}`;
+        ] = `${codeLabel} — ${title}`;
 
         pdfSegments.push({
           type: 'html',
@@ -176,6 +185,7 @@ export class PsiBuilder extends PmuBuilder {
             this.lang,
             buildingAddress,
             this.content.config,
+            codeLabel,
           )}</div>`,
           sequentialNumber: this.sequentialNumber,
           subsectionId: proc.id,

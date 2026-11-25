@@ -215,8 +215,19 @@ function renderStopReflechirAgir(lang: 'fr' | 'en'): string {
 // (P001 directives générales = cas spécial sans rôles)
 // ============================================================
 
-export function renderProcedure(proc: ProcedureTemplate, lang: 'fr' | 'en', buildingAddress: string, config: any = {}): string {
+const escapeBadge = (value: string) =>
+  String(value ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] as string);
+
+export function renderProcedure(
+  proc: ProcedureTemplate,
+  lang: 'fr' | 'en',
+  buildingAddress: string,
+  config: any = {},
+  /** Étiquette affichée en tête (« 4.1 · P002 ») ; le code seul par défaut. */
+  codeLabel?: string,
+): string {
   const title = lang === 'fr' ? proc.titleFR : proc.titleEN;
+  const badge = escapeBadge(codeLabel || proc.code);
 
   // Cas spécial — P001 Directives générales
   if (proc.directivesGenerales && proc.directivesGenerales.length > 0) {
@@ -234,7 +245,7 @@ export function renderProcedure(proc: ProcedureTemplate, lang: 'fr' | 'en', buil
     return `
       <div class="procedure-page">
         <div class="procedure-header">
-          <span class="proc-code">${proc.code}</span>
+          <span class="proc-code">${badge}</span>
         </div>
         <ul class="checklist">${items}</ul>
         ${renderStopReflechirAgir(lang)}
@@ -250,7 +261,7 @@ export function renderProcedure(proc: ProcedureTemplate, lang: 'fr' | 'en', buil
   const firstPageHtml = `
     <div class="procedure-page">
       <div class="procedure-header">
-        <span class="proc-code">${proc.code}</span>
+        <span class="proc-code">${badge}</span>
       </div>
       ${firstRole ? renderRoleContent(firstRole, lang, title, buildingAddress, proc.phase, proc.code, config) : ''}
     </div>
