@@ -309,7 +309,7 @@ export default function Module4ProcedureCard({
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold uppercase tracking-wide" style={{ color: '#495057' }}>
-                      {section.roleCode === 'TOUS' ? roleLabel : `${section.roleCode} — ${roleLabel}`}
+                      {roleLabel}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">

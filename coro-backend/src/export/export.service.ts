@@ -4,6 +4,7 @@ import {
   shortContentHash,
 } from './approval-stamp';
 import { resolveActiveRoleCodes } from '../generator/regeneration.helpers';
+import { sanitizeAssignments } from '../generator/role-coverage';
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { StorageService } from '../storage/storage.service';
 import { resolveApprovedPlans } from './approved-plan-blobs';
@@ -892,7 +893,12 @@ export class ExportService {
       module3Content?.sections?.find((s: any) => s.id === '3.1')?.orgRoles ||
       [];
 
-    const activeRoleCodes = resolveActiveRoleCodes(savedOrgRoles, content.config);
+    const activeCodes = resolveActiveRoleCodes(savedOrgRoles, content.config);
+    const activeRoleCodes = {
+      activeCodes,
+      orgRoles: savedOrgRoles,
+      assignments: sanitizeAssignments(module4Content.roleAssignments, activeCodes),
+    };
 
     return getActiveProcedures(
       content.config || {},

@@ -23,6 +23,8 @@ interface Module4SectionProps {
   language?: "fr" | "en";
   onSave?: (data: any) => void;
   onLockVersionChange?: (lockVersion: number) => void;
+  /** Incrémenté quand le module 4 a été recalculé côté serveur (reprise des rôles). */
+  reloadToken?: number;
 }
 
 type StepOverridesMap = Record<string, LocalizedStepOverride>;
@@ -58,6 +60,7 @@ export default function Module4Section({
   language = "fr",
   onSave,
   onLockVersionChange,
+  reloadToken = 0,
 }: Module4SectionProps) {
   const isFr = language === "fr";
   const isFirstLoad = useRef(true);
@@ -197,7 +200,7 @@ export default function Module4Section({
 
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, initialProcedureKey]);
+  }, [projectId, initialProcedureKey, reloadToken]);
 
   const saveData = useCallback(async () => {
     setSaving(true);

@@ -9,6 +9,7 @@ import api from "@/lib/api";
 // ── Composants éditeur ──────────────────────────────────────
 import Module2Section from "@/components/editor/Module2Section";
 import Module3Section from "@/components/editor/Module3Section";
+import Module4RoleCoverage from "@/components/editor/Module4RoleCoverage";
 import Module4Section from "@/components/editor/Module4Section";
 import Module4PcaSection from "@/components/editor/Module4PcaSection";
 import Module6PcaContacts from "@/components/editor/Module6PcaContacts";
@@ -134,6 +135,7 @@ export default function EditorPage() {
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [hasPlans, setHasPlans] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [module4Reload, setModule4Reload] = useState(0);
   const [infoOpen, setInfoOpen] = useState(false);
   const [saveError, setSaveError] = useState("");
   const documentRequestRef = useRef(0);
@@ -804,7 +806,17 @@ export default function EditorPage() {
         return <Module4PcaSection projectId={projectId} language={language} />;
       }
       return (
+        <>
+        <Module4RoleCoverage
+          projectId={projectId}
+          language={language}
+          onApplied={async () => {
+            await fetchDocument();
+            setModule4Reload((value) => value + 1);
+          }}
+        />
         <Module4Section
+          reloadToken={module4Reload}
           projectId={projectId}
           onLockVersionChange={(lockVersion) =>
             setDocument((current) =>
@@ -820,6 +832,7 @@ export default function EditorPage() {
             customProcedureIds: currentModule.customProcedureIds || [],
           }}
         />
+        </>
       );
     }
     if (n === 3) {
