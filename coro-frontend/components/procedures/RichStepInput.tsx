@@ -124,7 +124,7 @@ export default function RichStepInput({
           const text = e.clipboardData.getData('text/plain').replace(/\s+/g, ' ');
           document.execCommand('insertText', false, text);
         }}
-        className="text-sm px-2 py-1.5 focus:outline-none min-h-[2.5rem] empty:before:content-[attr(data-placeholder)] empty:before:text-[#ADB5BD]"
+        className="text-sm px-2 py-1.5 focus:outline-none min-h-[2.5rem] empty:before:content-[attr(data-placeholder)] empty:before:[color:#ADB5BD]"
         style={{ color: red ? '#C0392B' : '#2C3E50', lineHeight: 1.5, wordBreak: 'break-word' }}
       />
     </div>
