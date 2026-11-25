@@ -26,6 +26,21 @@ export class GeneratorController {
     });
   }
 
+  // ── Module 4 : rôles absents de l'organigramme et reprises ──
+  @Get('role-coverage/:projectId')
+  roleCoverage(@Param('projectId') projectId: string, @Request() req: any) {
+    return this.generatorService.getRoleCoverage(projectId, req.user);
+  }
+
+  @Put('role-coverage/:projectId')
+  saveRoleCoverage(
+    @Param('projectId') projectId: string,
+    @Body() body: { assignments?: Record<string, string>; expectedLockVersion?: number },
+    @Request() req: any,
+  ) {
+    return this.generatorService.saveRoleCoverage(projectId, body, req.user);
+  }
+
   @Get('document/:projectId')
   getDocument(@Param('projectId') projectId: string, @Request() req: any) {
     return this.generatorService.getDocument(projectId, req.user);

@@ -4,6 +4,7 @@
 // ============================================================
 
 import type { ActivationRule, ProcedureTemplate } from './types';
+import { applyRoleCoverage, RoleCoverage, toRoleCoverage } from '../role-coverage';
 
 import { P001_DIRECTIVES_GENERALES } from './p001_directives_generales';
 import { P002_DECOUVERTE_FUMEE } from './p002_decouverte_fumee';
@@ -398,11 +399,9 @@ export const ACTIVATION_RULES: Record<
 export function getActiveProcedures(
   config: any,
   documentType: string,
-  activeRoleCodes: string[],
+  activeRoleCodes: string[] | RoleCoverage,
 ): ProcedureTemplate[] {
-  const safeActiveRoleCodes = Array.isArray(activeRoleCodes)
-    ? activeRoleCodes
-    : [];
+  const coverage = toRoleCoverage(activeRoleCodes);
 
   return PROCEDURES_REGISTRY
 
@@ -444,26 +443,9 @@ export function getActiveProcedures(
     // 2. FILTRAGE DES SECTIONS PAR RÔLES
     // ========================================================
 
-    .map((procedure) => ({
-      ...procedure,
-
-      roleSections: Array.isArray(procedure.roleSections)
-        ? procedure.roleSections.filter(
-            (roleSection) =>
-              // Section applicable à tous.
-              roleSection.roleCode === 'TOUS' ||
-
-              // ROLE-OCC est un rôle générique Occupant /
-              // Travailleur et demeure disponible même s'il
-              // n'est pas explicitement configuré au Module 3.
-              roleSection.roleCode === 'ROLE-OCC' ||
-
-              // Rôle réellement actif dans l'organisation
-              // d'urgence du projet.
-              safeActiveRoleCodes.includes(roleSection.roleCode),
-          )
-        : [],
-    }))
+    // Rôles actifs sous leur nom unique; tâches des rôles absents reprises
+    // selon la décision du conseiller (voir role-coverage.ts).
+    .map((procedure) => applyRoleCoverage(procedure, coverage))
 
     // ========================================================
     // 3. ÉLIMINATION DES PROCÉDURES SANS CONTENU APPLICABLE

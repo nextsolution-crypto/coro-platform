@@ -10,6 +10,7 @@ import {
   getProcedureById,
   PROCEDURES_REGISTRY,
 } from './procedures/index';
+import { applyRoleCoverage, RoleCoverage, toRoleCoverage } from './role-coverage';
 
 export { getActiveProcedures, getAllProcedures, getProcedureById };
 
@@ -20,7 +21,7 @@ export { getActiveProcedures, getAllProcedures, getProcedureById };
 export function generateModule4(
   ctx: DocumentContext,
   config: any = {},
-  activeRoleCodes: string[] = [],
+  activeRoleCodes: string[] | RoleCoverage = [],
   customProcedureIds: string[] = [],
   allProceduresFromDB?: any[], // Si fourni, utilise la DB au lieu des fichiers TS
 ): any {
@@ -42,14 +43,7 @@ export function generateModule4(
       .map(id => getProcedureById(id))
       .filter(Boolean)
       .filter(p => !autoProcedures.find(a => a!.id === p!.id))
-      .map(p => ({
-        ...p!,
-        roleSections: p!.roleSections.filter(rs =>
-          rs.roleCode === 'TOUS' ||
-          rs.roleCode === 'ROLE-OCC' ||
-          activeRoleCodes.includes(rs.roleCode)
-        ),
-      }));
+      .map(p => applyRoleCoverage(p!, activeRoleCodes));
 
     allProcedures = [...autoProcedures, ...manualProcedures];
   }
@@ -70,6 +64,8 @@ export function generateModule4(
     directivesGenerales: directives || null,
     procedures: numbered,
     totalProcedures: numbered.length,
+    // Rôles actifs utilisés pour ce module (repère pour savoir s'il est à jour).
+    activeRoleCodes: toRoleCoverage(activeRoleCodes).activeCodes,
   };
 }
 

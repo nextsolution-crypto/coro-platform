@@ -1,5 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { keepManualEdits, resolveActiveRoleCodes } from './regeneration.helpers';
+import { keepManualEdits, resolveActiveRoleCodes, roleCoverageFromContent } from './regeneration.helpers';
+import { projectRoleChoices } from './role-registry';
+import { applyRoleCoverage, findUncoveredRoles, RoleCoverage, sanitizeAssignments, toRoleCoverage } from './role-coverage';
 import { createHash } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -57,10 +59,11 @@ export class GeneratorService {
     organizationId: string,
     config: any,
     documentType: string,
-    activeRoleCodes: string[],
+    activeRoleCodes: string[] | RoleCoverage,
     customProcedureIds: string[],
     projectId?: string,
   ): Promise<any[]> {
+    const coverage = toRoleCoverage(activeRoleCodes);
     try {
       // ─────────────────────────────────────────────────────────────
       // 1) Procédures par défaut actives
@@ -131,11 +134,7 @@ export class GeneratorService {
       // 4) Déterminer les procédures automatiquement applicables
       //    avec la même logique que la registry TypeScript
       // ─────────────────────────────────────────────────────────────
-      const autoFromTS = getActiveProcedures(
-        config,
-        documentType,
-        activeRoleCodes,
-      );
+      const autoFromTS = getActiveProcedures(config, documentType, coverage);
 
       const autoCodes = new Set(autoFromTS.map((p) => p?.code).filter(Boolean));
 
@@ -145,15 +144,8 @@ export class GeneratorService {
           .filter(Boolean),
       );
 
-      const filterRoleSections = (procedure: any) => ({
-        ...procedure,
-        roleSections: (procedure.roleSections || []).filter(
-          (rs: any) =>
-            rs.roleCode === 'TOUS' ||
-            rs.roleCode === 'ROLE-OCC' ||
-            activeRoleCodes.includes(rs.roleCode),
-        ),
-      });
+      const filterRoleSections = (procedure: any) =>
+        applyRoleCoverage(procedure, coverage);
 
       const isUsable = (procedure: any) => {
         if (!procedure) return false;
@@ -267,12 +259,6 @@ export class GeneratorService {
             phase: content.phase,
             directivesGenerales: content.directivesGenerales || [],
             roleSections: (content.roleSections || [])
-              .filter(
-                (rs: any) =>
-                  rs.roleCode === 'TOUS' ||
-                  rs.roleCode === 'ROLE-OCC' ||
-                  activeRoleCodes.includes(rs.roleCode),
-              )
               .map((rs: any) => ({
                 roleCode: rs.roleCode,
                 roleLabelFR: rs.roleLabelFR || rs.roleName || rs.roleCode,
@@ -857,6 +843,14 @@ export class GeneratorService {
       [];
 
     const activeRoleCodes = resolveActiveRoleCodes(savedOrgRoles, resolvedConfig);
+    const roleCoverage: RoleCoverage = {
+      activeCodes: activeRoleCodes,
+      orgRoles: savedOrgRoles,
+      assignments: sanitizeAssignments(
+        existingContent?.module4?.roleAssignments,
+        activeRoleCodes,
+      ),
+    };
 
     // Récupère les procédures manuelles ajoutées
     const customProcedureIds =
@@ -867,7 +861,7 @@ export class GeneratorService {
       organizationId,
       resolvedConfig,
       ctx.documentType,
-      activeRoleCodes,
+      roleCoverage,
       customProcedureIds,
       projectId,
     );
@@ -881,7 +875,7 @@ export class GeneratorService {
     const module4Result = generateModule4(
       ctx,
       resolvedConfig,
-      activeRoleCodes,
+      roleCoverage,
       customProcedureIds,
       proceduresFromDB,
     );
@@ -973,6 +967,117 @@ export class GeneratorService {
       payloadHash,
       documentData,
     );
+  }
+
+  // ============================================================
+  // Rôles des procédures (module 4) : rôles absents de l'organigramme
+  // et décisions de reprise.
+  // ============================================================
+
+  private async loadRoleCoverageState(projectId: string, actor: AdviserActor) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, ...projectAccessWhere(actor) },
+      select: { documentType: true, organizationId: true },
+    });
+    if (!project) throw new NotFoundException('Projet introuvable');
+    if (project.documentType === 'PCA') {
+      throw new BadRequestException('Les rôles du PCA sont gérés dans son configurateur.');
+    }
+    const document = await this.prisma.document.findFirst({
+      where: { projectId },
+      select: { id: true, content: true, lockVersion: true },
+    });
+    if (!document) throw new NotFoundException('Document introuvable');
+    const content = (document.content as any) || {};
+    const config = await this.resolveGenerationConfig(projectId, project.organizationId, content.config || {});
+    const coverage = roleCoverageFromContent(content, config);
+    return { project, document, content, config, coverage };
+  }
+
+  async getRoleCoverage(projectId: string, actor: AdviserActor) {
+    const { project, document, content, config, coverage } =
+      await this.loadRoleCoverageState(projectId, actor);
+    const customProcedureIds = content?.module4?.customProcedureIds || [];
+    const allNamed = await this.loadProceduresFromDB(
+      project.organizationId,
+      config,
+      project.documentType,
+      { ...coverage, keepAll: true },
+      customProcedureIds,
+      projectId,
+    );
+    const module4 = content?.modules_fr?.find((m: any) => m.moduleNumber === 4);
+    const builtWith: string[] | undefined = module4?.activeRoleCodes;
+    const savedAssignments = content?.module4?.roleAssignments || {};
+    const sameRoles =
+      Array.isArray(builtWith) &&
+      [...builtWith].sort().join('|') === [...coverage.activeCodes].sort().join('|');
+    return {
+      lockVersion: document.lockVersion,
+      activeRoles: projectRoleChoices(coverage.orgRoles, coverage.activeCodes),
+      uncovered: findUncoveredRoles(allNamed, coverage),
+      assignments: coverage.assignments,
+      // Le module 4 du document a-t-il été bâti avec l'organigramme actuel ?
+      upToDate:
+        sameRoles &&
+        JSON.stringify(module4?.roleAssignments || savedAssignments) === JSON.stringify(coverage.assignments),
+    };
+  }
+
+  /** Enregistre les reprises et recalcule le module 4 (seulement) du document. */
+  async saveRoleCoverage(
+    projectId: string,
+    body: { assignments?: unknown; expectedLockVersion?: unknown },
+    actor: AdviserActor,
+  ) {
+    await this.assertMutableProjectAccess(projectId, actor);
+    const { project, document, content, config, coverage } =
+      await this.loadRoleCoverageState(projectId, actor);
+    const assignments = sanitizeAssignments(body?.assignments, coverage.activeCodes);
+    const nextCoverage: RoleCoverage = { ...coverage, assignments };
+    const ctx = await this.buildContext(projectId, config);
+    const customProcedureIds = content?.module4?.customProcedureIds || [];
+    const procedures = await this.loadProceduresFromDB(
+      project.organizationId,
+      config,
+      project.documentType,
+      nextCoverage,
+      customProcedureIds,
+      projectId,
+    );
+    const module4 = {
+      ...generateModule4(ctx, config, nextCoverage, customProcedureIds, procedures),
+      roleAssignments: assignments,
+    };
+    const result = await this.editorIntegrity.mutateContent(
+      document.id,
+      actor,
+      body?.expectedLockVersion,
+      (current) => {
+        const swap = (modules: any[] | undefined) =>
+          (modules || []).map((m: any) => (m?.moduleNumber === 4 ? module4 : m));
+        return {
+          content: {
+            ...current,
+            modules_fr: swap(current.modules_fr),
+            modules_en: swap(current.modules_en),
+            module4: { ...(current.module4 || {}), roleAssignments: assignments },
+          },
+          value: null,
+        };
+      },
+    );
+    await this.auditService.log({
+      action: 'EDIT_SECTION',
+      entityType: 'DOCUMENT',
+      entityId: result.documentId,
+      projectId: result.projectId,
+      description: 'Module 4 : reprise des rôles absents de l\'organigramme',
+      metadata: { assignments, lockVersion: result.lockVersion },
+      userId: actor.userId,
+      organizationId: actor.organizationId,
+    });
+    return this.getRoleCoverage(projectId, actor);
   }
 
   async getDocument(projectId: string, actor: AdviserActor) {

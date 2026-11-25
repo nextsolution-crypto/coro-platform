@@ -1,24 +1,17 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { resolveActiveRoleCodes } from '../generator/regeneration.helpers';
+import { ROLE_REGISTRY } from '../generator/role-registry';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdviserActor, assertEditableProject, projectAccessWhere } from '../auth/project-access';
 import { DemoCommunicationChannel } from '@prisma/client';
 import { DemoCommunicationPolicyService } from '../demo-environment/demo-communication-policy.service';
 
-// ── Rôles CORO connus ───────────────────────────────────────
-const KNOWN_ROLES = [
-  { code: 'ROLE-CU',  labelFR: 'Coordonnateur d\'urgence',           labelEN: 'Emergency Coordinator' },
-  { code: 'ROLE-AS',  labelFR: 'Agent de sécurité / Responsable',    labelEN: 'Security Agent / Manager' },
-  { code: 'ROLE-EPI', labelFR: 'Équipier de première intervention',  labelEN: 'First Response Team Member' },
-  { code: 'ROLE-RM',  labelFR: 'Responsable mécanique',              labelEN: 'Mechanical Supervisor' },
-  { code: 'ROLE-RPR', labelFR: 'Responsable du point de rassemblement', labelEN: 'Assembly Point Supervisor' },
-  { code: 'ROLE-SS',  labelFR: 'Surveillant de sortie',              labelEN: 'Exit Monitor' },
-  { code: 'ROLE-BRI', labelFR: 'Brigadier',                          labelEN: 'Brigadier / Floor Warden' },
-  { code: 'ROLE-RS',  labelFR: 'Responsable de secteur',             labelEN: 'Sector Supervisor' },
-  { code: 'ROLE-CHE', labelFR: 'Chef d\'équipe',                     labelEN: 'Team Leader' },
-  { code: 'ROLE-ACC', labelFR: 'Accompagnateur PPNAE',               labelEN: 'PREA Companion' },
-  { code: 'ROLE-TOUS', labelFR: 'Tous les intervenants',             labelEN: 'All Responders' },
-];
+// ── Rôles CORO connus : la liste unique (role-registry) ────
+const KNOWN_ROLES = ROLE_REGISTRY.map((role) => ({
+  code: role.code,
+  labelFR: role.labelFR,
+  labelEN: role.labelEN,
+}));
 
 @Injectable()
 export class CustomProceduresService {
@@ -77,7 +70,7 @@ export class CustomProceduresService {
     const detected: string[] = [];
     const textLower = text.toLowerCase();
     for (const role of KNOWN_ROLES) {
-      if (role.code === 'ROLE-TOUS') continue;
+      if (role.code === 'TOUS' || role.code === 'ROLE-TOUS') continue;
       const labelFRLower = role.labelFR.toLowerCase();
       const labelENLower = role.labelEN.toLowerCase();
       if (

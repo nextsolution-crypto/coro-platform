@@ -1,5 +1,6 @@
 import { PrismaService } from '../../prisma/prisma.service';
 import { resolveActiveRoleCodes } from '../../generator/regeneration.helpers';
+import { applyRoleCoverage, RoleCoverage, sanitizeAssignments } from '../../generator/role-coverage';
 import { ExportDataSource } from '../export-frozen-data';
 
 export const DOCUMENT_TYPE_LABELS: Record<string, { fr: string; en: string }> = {
@@ -193,7 +194,8 @@ export abstract class BaseDocumentBuilder {
     }));
   }
 
-  private getActiveRoleCodesForModule4(): string[] {
+  /** Rôles actifs, décisions de reprise et organigramme (même règle qu'à la génération). */
+  private getActiveRoleCodesForModule4(): RoleCoverage {
     const generatedModule3 = this.content.modules_fr?.find(
       (m: any) => m.moduleNumber === 3,
     );
@@ -203,19 +205,16 @@ export abstract class BaseDocumentBuilder {
           this.content.module3,
         ).find((s: any) => s.id === '3.1')?.orgRoles || []
       : [];
-    // Même règle qu'à la génération : l'agent de sécurité suit la configuration.
-    return resolveActiveRoleCodes(orgRoles, this.content.config);
+    const activeCodes = resolveActiveRoleCodes(orgRoles, this.content.config);
+    return {
+      activeCodes,
+      orgRoles,
+      assignments: sanitizeAssignments(this.content.module4?.roleAssignments, activeCodes),
+    };
   }
 
-  private filterRoleSections(procedure: any, activeRoleCodes: string[]): any {
-    return {
-      ...procedure,
-      roleSections: (procedure.roleSections || []).filter((rs: any) =>
-        rs.roleCode === 'TOUS' ||
-        rs.roleCode === 'ROLE-OCC' ||
-        activeRoleCodes.includes(rs.roleCode),
-      ),
-    };
+  private filterRoleSections(procedure: any, coverage: RoleCoverage): any {
+    return applyRoleCoverage(procedure, coverage);
   }
 
   private getStepOverrideText(
@@ -282,7 +281,7 @@ export abstract class BaseDocumentBuilder {
     };
   }
 
-  private buildCustomIaProcedure(record: any, activeRoleCodes: string[]): any {
+  private buildCustomIaProcedure(record: any, activeRoleCodes: RoleCoverage): any {
     const content = (record.content as any) || {};
 
     const roleSections = (content.roleSections || []).map((rs: any) => {
