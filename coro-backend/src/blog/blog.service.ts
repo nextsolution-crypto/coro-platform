@@ -1,6 +1,47 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
+
+const EDITABLE_FIELDS = [
+  'slug', 'titleFr', 'titleEn', 'excerptFr', 'excerptEn', 'contentFr', 'contentEn',
+  'coverImage', 'category', 'tags', 'authorName', 'authorTitle',
+  'seoTitleFr', 'seoTitleEn', 'seoDescFr', 'seoDescEn',
+] as const;
+
+/**
+ * Date de publication saisie dans l'éditeur.
+ * - vide → null ;
+ * - « AAAA-MM-JJ » (champ date) → midi UTC ce jour-là, pour que la date
+ *   affichée reste la même au Québec (minuit UTC tombait la veille) ;
+ * - date ISO complète → telle quelle.
+ */
+export function toPublicationDate(value: unknown): Date | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) throw new BadRequestException('Date de publication invalide.');
+    return value;
+  }
+  if (typeof value !== 'string') throw new BadRequestException('Date de publication invalide.');
+  const text = value.trim();
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(text) ? new Date(`${text}T12:00:00.000Z`) : new Date(text);
+  if (Number.isNaN(date.getTime())) throw new BadRequestException('Date de publication invalide.');
+  return date;
+}
+
+/** Ne garde que les champs modifiables : jamais id, createdAt ni l'état de publication. */
+export function editableBlogFields(body: Record<string, unknown>) {
+  const data: Record<string, unknown> = {};
+  for (const key of EDITABLE_FIELDS) {
+    if (body[key] === undefined) continue;
+    if (key === 'tags') {
+      const tags = Array.isArray(body.tags) ? body.tags : typeof body.tags === 'string' ? body.tags.split(',') : [];
+      data.tags = tags.map((t) => String(t).trim()).filter(Boolean);
+    } else {
+      data[key] = body[key];
+    }
+  }
+  return data;
+}
 
 @Injectable()
 export class BlogService {
@@ -97,46 +138,53 @@ export class BlogService {
     });
   }
 
-  async create(data: {
-    slug: string;
-    titleFr: string;
-    titleEn: string;
-    excerptFr?: string;
-    excerptEn?: string;
-    contentFr: string;
-    contentEn: string;
-    coverImage?: string;
-    category?: string;
-    tags?: string[];
-    authorName?: string;
-    authorTitle?: string;
-    seoTitleFr?: string;
-    seoTitleEn?: string;
-    seoDescFr?: string;
-    seoDescEn?: string;
-  }) {
-    return this.prisma.blogPost.create({ data });
+  async create(body: Record<string, unknown>) {
+    const data = editableBlogFields(body);
+    if (!data.titleFr || !data.contentFr) throw new BadRequestException('Le titre et le contenu FR sont obligatoires.');
+    if (!data.slug) data.slug = this.generateSlug(String(data.titleFr));
+    if (!data.titleEn) data.titleEn = data.titleFr;
+    if (!data.contentEn) data.contentEn = data.contentFr;
+    const publishedAt = toPublicationDate(body.publishedAt);
+    return this.prisma.blogPost.create({ data: { ...(data as any), publishedAt } });
   }
 
-  async update(id: string, data: any) {
-    const clean = { ...data };
-    if (clean.publishedAt === '' || clean.publishedAt === undefined) clean.publishedAt = null;
-    if (clean.scheduledAt === '' || clean.scheduledAt === undefined) clean.scheduledAt = null;
-    return this.prisma.blogPost.update({ where: { id }, data: clean });
+  /**
+   * Enregistre l'article. La date de publication n'est modifiée que si elle
+   * est envoyée : c'est ce qui permet d'anti-dater un article déjà publié.
+   */
+  async update(id: string, body: Record<string, unknown>) {
+    const data: Record<string, unknown> = editableBlogFields(body);
+    if ('publishedAt' in body) {
+      const publishedAt = toPublicationDate(body.publishedAt);
+      // Un article publié garde toujours une date : vider le champ ne la retire pas.
+      if (publishedAt) data.publishedAt = publishedAt;
+      else {
+        const current = await this.prisma.blogPost.findUnique({ where: { id }, select: { isPublished: true } });
+        if (!current?.isPublished) data.publishedAt = null;
+      }
+    }
+    return this.prisma.blogPost.update({ where: { id }, data: data as any });
   }
 
-    async publish(id: string, publishedAt?: Date) {
+  async publish(id: string, requestedDate?: unknown) {
+    // Sans date demandée, on garde celle déjà saisie (brouillon anti-daté) ; sinon maintenant.
+    let publishedAt = toPublicationDate(requestedDate);
+    if (!publishedAt) {
+      const current = await this.prisma.blogPost.findUnique({ where: { id }, select: { publishedAt: true } });
+      publishedAt = current?.publishedAt ?? new Date();
+    }
     return this.prisma.blogPost.update({
       where: { id },
       data: {
         isPublished: true,
-        publishedAt: publishedAt || new Date(),
+        publishedAt,
         scheduledAt: null,
       },
     });
   }
 
   async schedule(id: string, scheduledAt: Date) {
+    if (Number.isNaN(scheduledAt.getTime())) throw new BadRequestException('Date de programmation invalide.');
     return this.prisma.blogPost.update({
       where: { id },
       data: {

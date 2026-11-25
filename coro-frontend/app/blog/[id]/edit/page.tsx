@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import api from '@/lib/api';
+import { toast } from '@/lib/toast';
 import AppLayout from '@/components/layout/AppLayout';
 import { ArrowLeft, Save, Eye } from 'lucide-react';
 import DragDropUpload from '@/components/ui/DragDropUpload';
@@ -14,6 +15,21 @@ const CATEGORIES = [
   'Nouvelles CORO',
   'Études de cas',
 ];
+
+/** Date du champ « date » telle quelle (AAAA-MM-JJ), sans décalage de fuseau. */
+function dateOnly(value: unknown): string | null {
+  if (!value) return null;
+  const text = String(value);
+  return /^\d{4}-\d{2}-\d{2}/.test(text) ? text.slice(0, 10) : null;
+}
+
+type ApiError = { response?: { data?: { message?: string | string[] } } };
+
+function saveError(err: unknown): string {
+  const message = (err as ApiError)?.response?.data?.message;
+  const detail = Array.isArray(message) ? message.join(' ') : message;
+  return detail ? `Enregistrement impossible : ${detail}` : "Enregistrement impossible. Réessayez.";
+}
 
 export default function EditBlogPostPage() {
   const router = useRouter();
@@ -63,16 +79,19 @@ export default function EditBlogPostPage() {
       const payload = {
         ...form,
         tags: form.tags ? form.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
-        publishedAt: form.publishedAt || null,
+        publishedAt: dateOnly(form.publishedAt),
       };
       await api.put(`/blog/${postId}`, payload);
       if (publish === true) {
-        const publishedAt = form.publishedAt ? new Date(form.publishedAt).toISOString() : undefined;
+        const publishedAt = dateOnly(form.publishedAt) || undefined;
         await api.post(`/blog/${postId}/publish`, { publishedAt });
       }
       if (publish === false) await api.post(`/blog/${postId}/unpublish`);
       router.push('/blog');
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      toast(saveError(err), 'error');
+    }
     finally { setSaving(false); }
   };
 
@@ -83,14 +102,17 @@ export default function EditBlogPostPage() {
       const payload = {
         ...form,
         tags: form.tags ? form.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
-        publishedAt: form.publishedAt || null,
+        publishedAt: dateOnly(form.publishedAt),
         scheduledAt: null,
       };
       await api.put(`/blog/${postId}`, payload);
       const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
       await api.post(`/blog/${postId}/schedule`, { scheduledAt });
       router.push('/blog');
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      toast(saveError(err), 'error');
+    }
     finally { setScheduling(false); }
   };
 
@@ -417,7 +439,7 @@ export default function EditBlogPostPage() {
               </label>
               <input
                 type="date"
-                value={form.publishedAt ? new Date(form.publishedAt).toISOString().split('T')[0] : ''}
+                value={dateOnly(form.publishedAt) || ''}
                 onChange={e => setForm({ ...form, publishedAt: e.target.value || null })}
                 className="rounded px-3 py-2 text-sm focus:outline-none w-full"
                 style={{ border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF' }}
