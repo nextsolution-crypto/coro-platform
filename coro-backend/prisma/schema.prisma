@@ -43,6 +43,7 @@ model Organization {
   documentReviewNotificationEvents DocumentReviewNotificationEvent[]
   documentPdfExports               DocumentPdfExport[]
   procedureOverrides               ProcedureOverride[]
+  procedureVariants                ProcedureVariant[]
   feedbacks                        Feedback[]
   projectTemplates                 ProjectTemplate[]
   auditLogs                        AuditLog[]
@@ -4198,6 +4199,7 @@ model ProcedureDefault {
   updatedAt DateTime @updatedAt
 
   overrides ProcedureOverride[]
+  variants  ProcedureVariant[]
 }
 
 model ProcedureOverride {
@@ -4215,6 +4217,28 @@ model ProcedureOverride {
   project      Project?         @relation(fields: [projectId], references: [id])
 
   @@unique([procedureId, organizationId, projectId])
+}
+
+/// Version d'une procédure enregistrée par un conseiller pour la réutiliser
+/// dans d'autres projets; partageable avec toute son organisation.
+model ProcedureVariant {
+  id                     String   @id @default(uuid())
+  organizationId         String
+  procedureId            String
+  ownerId                String
+  ownerName              String?
+  name                   String
+  content                Json
+  sharedWithOrganization Boolean  @default(false)
+  sourceProjectId        String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id])
+  procedure    ProcedureDefault @relation(fields: [procedureId], references: [id])
+
+  @@index([organizationId, procedureId])
+  @@index([ownerId])
 }
 
 model Feedback {

@@ -3,6 +3,7 @@ import {
   Get,
   Put,
   Post,
+  Patch,
   Delete,
   Param,
   Body,
@@ -57,6 +58,58 @@ export class ProceduresController {
   }
 
   // ── Une procédure (avec override projet ou org si applicable) ──
+  // ── Procédures personnalisées par l'organisation (codes) ──
+  @Get('organization-versions')
+  organizationVersions(@Request() req: any) {
+    return this.proceduresService.organizationVersions(req.user);
+  }
+
+  // ── Versions enregistrées (avant ':id' : routes spécifiques d'abord) ──
+  @Get('variants')
+  listVariants(@Query('procedureId') procedureId: string | undefined, @Request() req: any) {
+    return this.proceduresService.listVariants(req.user, procedureId);
+  }
+
+  @Patch('variants/:variantId')
+  updateVariant(@Param('variantId') variantId: string, @Body() body: any, @Request() req: any) {
+    return this.proceduresService.updateVariant(variantId, body, req.user);
+  }
+
+  @Delete('variants/:variantId')
+  deleteVariant(@Param('variantId') variantId: string, @Request() req: any) {
+    return this.proceduresService.deleteVariant(variantId, req.user);
+  }
+
+  @Post('variants/:variantId/apply/:projectId')
+  applyVariant(
+    @Param('variantId') variantId: string,
+    @Param('projectId') projectId: string,
+    @Request() req: any,
+  ) {
+    return this.proceduresService.applyVariant(variantId, projectId, req.user);
+  }
+
+  @Post('variants/:variantId/promote')
+  promoteVariant(@Param('variantId') variantId: string, @Request() req: any) {
+    return this.proceduresService.promoteVariant(variantId, req.user);
+  }
+
+  @Post(':id/variants')
+  createVariant(@Param('id') id: string, @Body() body: any, @Request() req: any) {
+    return this.proceduresService.createVariant(id, body, req.user);
+  }
+
+  // ── Version de l'organisation (administrateur) ──
+  @Put(':id/organization')
+  saveOrganizationVersion(@Param('id') id: string, @Body() body: { content: any }, @Request() req: any) {
+    return this.proceduresService.saveOrganizationVersion(id, body?.content, req.user);
+  }
+
+  @Delete(':id/organization')
+  resetOrganizationVersion(@Param('id') id: string, @Request() req: any) {
+    return this.proceduresService.resetOrganizationVersion(id, req.user);
+  }
+
   @Get(':id')
   findOne(
     @Param('id') id: string,
