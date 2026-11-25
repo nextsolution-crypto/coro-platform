@@ -253,6 +253,16 @@ export default function EditorPage() {
     setIsEditing(false);
   };
 
+  // Navigation rapide : ouvre la première section visible du module.
+  const handleModuleJump = (moduleIdx: number) => {
+    const mod = getModules()[moduleIdx];
+    if (!mod) return;
+    const firstVisible = (mod.sections || []).findIndex((section) =>
+      isNavSectionVisible(mod, section),
+    );
+    handleSectionClick(moduleIdx, firstVisible >= 0 ? firstVisible : 0);
+  };
+
   const handleLanguageChange = (lang: "fr" | "en") => {
     if (
       hasUnsavedChanges &&
@@ -1665,12 +1675,14 @@ export default function EditorPage() {
               </p>
               <div className="space-y-1">
                 {modules.map((mod, modPosition) => (
-                  <div
+                  <button
+                    type="button"
                     key={mod.moduleNumber}
-                    className="text-xs py-1"
+                    onClick={() => handleModuleJump(modPosition)}
+                    className="block w-full text-left text-xs py-1 hover:underline"
                     style={{
                       borderBottom: "1px solid #E9ECEF",
-                      color: "#495057",
+                      color: modPosition === activeModule ? "#C0392B" : "#495057",
                     }}
                   >
                     <span
@@ -1680,7 +1692,7 @@ export default function EditorPage() {
                       M{modPosition + 1}
                     </span>{" "}
                     {mod.title}
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -1987,23 +1999,28 @@ export default function EditorPage() {
                   {language === "fr" ? "Navigation rapide" : "Quick navigation"}
                 </p>
                 <div className="space-y-1">
-                  {modules.map((mod) => (
-                    <div
+                  {modules.map((mod, modPosition) => (
+                    <button
+                      type="button"
                       key={mod.moduleNumber}
-                      className="text-xs py-1 break-words"
+                      onClick={() => {
+                        handleModuleJump(modPosition);
+                        setNavOpen(false);
+                      }}
+                      className="block w-full text-left text-xs py-1 break-words"
                       style={{
                         borderBottom: "1px solid #E9ECEF",
-                        color: "#495057",
+                        color: modPosition === activeModule ? "#C0392B" : "#495057",
                       }}
                     >
                       <span
                         className="font-mono font-bold"
                         style={{ color: "#C0392B" }}
                       >
-                        M{mod.moduleNumber}
+                        M{modPosition + 1}
                       </span>{" "}
                       {mod.title}
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
