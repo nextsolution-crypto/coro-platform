@@ -14,7 +14,7 @@ export const P101_ALERTE_INCENDIE_IND: ProcedureTemplate = {
   titleEN: 'FIRE ALERT ACTIVATION',
   icon: '🔔',
   headerColor: COLORS.fireAlert,
-  activationRule: 'double_signal',
+  activationRule: 'industrial_with_double_signal',
   documentTypes: ['PMU', 'PSI'],
   phase: 'alerte',
 

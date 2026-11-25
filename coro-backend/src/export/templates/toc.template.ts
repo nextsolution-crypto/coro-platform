@@ -72,6 +72,9 @@ export function generateTocPage(data: TocData): string {
 
 export const TOC_STYLES = `
   html, body {
+    /* Texte du PDF copiable et cherchable : « fi », « fl » restent des lettres séparées. */
+    font-variant-ligatures: none;
+    font-feature-settings: 'liga' 0, 'clig' 0;
     margin: 0;
     padding: 0;
   }

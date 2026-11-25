@@ -16,6 +16,9 @@ export const BASE_STYLES = `
   }
 
   body {
+    /* Texte du PDF copiable et cherchable : « fi », « fl » restent des lettres séparées. */
+    font-variant-ligatures: none;
+    font-feature-settings: 'liga' 0, 'clig' 0;
     font-family: 'Segoe UI', Arial, sans-serif;
     color: #2C3E50;
     font-size: 11pt;

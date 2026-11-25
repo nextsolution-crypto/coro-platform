@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { keepManualEdits, resolveActiveRoleCodes, roleCoverageFromContent } from './regeneration.helpers';
 import { projectRoleChoices } from './role-registry';
+import { refreshSavedModule2 } from './module2-refresh';
 import { applyRoleCoverage, findUncoveredRoles, RoleCoverage, sanitizeAssignments, toRoleCoverage } from './role-coverage';
 import { createHash } from 'crypto';
 import { Prisma } from '@prisma/client';
@@ -950,7 +951,10 @@ export class GeneratorService {
         config: resolvedConfig,
         generatedAt: new Date(),
         // Préserve les données éditées manuellement, non régénérées automatiquement
-        module2: previousContent.module2 || undefined,
+        // Liste enregistrée conservée; lignes jamais remplies alignées sur le modèle à jour.
+        module2: previousContent.module2
+          ? refreshSavedModule2(previousContent.module2, module2Result.fr)
+          : undefined,
         module3: previousContent.module3 || undefined,
         module4: previousContent.module4 || undefined,
         module8: previousContent.module8 || undefined,
