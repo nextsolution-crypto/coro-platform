@@ -9,6 +9,7 @@
 // ============================================================
 
 import { isGenericRole, isNameOfRole, roleDefinition, roleLabel } from './role-registry';
+import { harmonizeStep } from './step-style';
 
 /** Valeur d'une décision : code du rôle qui reprend les tâches, ou NONE. */
 export type RoleAssignment = string;
@@ -126,7 +127,19 @@ export function applyRoleCoverage<T extends { roleSections?: any[] }>(
     ];
   }
 
-  return { ...procedure, roleSections: result };
+  // Même style partout : verbe vouvoyé à l'impératif, en gras (voir step-style.ts).
+  const styled = result.map((section) => ({
+    ...section,
+    steps: (section.steps || []).map((step: any) => harmonizeStep(step)),
+  }));
+  const directives = (procedure as any).directivesGenerales;
+  return {
+    ...procedure,
+    roleSections: styled,
+    ...(Array.isArray(directives)
+      ? { directivesGenerales: directives.map((step: any) => harmonizeStep(step)) }
+      : {}),
+  };
 }
 
 export interface UncoveredRole {

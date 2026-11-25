@@ -74,6 +74,22 @@ export default function ProjectProceduresPage() {
     }
   };
 
+  // Ce que le conseiller doit vérifier après la structuration par l'IA.
+  const reviewNote = (data: {
+    unmappedRoles?: string[];
+    missingRoles?: { labelFR: string }[];
+    templateIssues?: unknown[];
+  }) => {
+    const parts: string[] = [];
+    if (data?.unmappedRoles?.length)
+      parts.push(`rôles du texte rattachés à l'organigramme : ${data.unmappedRoles.join(', ')}`);
+    if (data?.missingRoles?.length)
+      parts.push(`rôles absents de l'organigramme : ${data.missingRoles.map((r) => r.labelFR).join(', ')}`);
+    if (data?.templateIssues?.length)
+      parts.push(`${data.templateIssues.length} point(s) de style à revoir dans l'éditeur`);
+    return parts.length ? ` — À vérifier : ${parts.join(' ; ')}.` : '';
+  };
+
   const handleGenerate = async () => {
     if (!textForm.text.trim()) { setError('Veuillez saisir une description de la procédure.'); return; }
     setGenerating(true);
@@ -85,7 +101,7 @@ export default function ProjectProceduresPage() {
         projectId,
       });
       setPreviewProc(res.data.procedure.content);
-      setSuccess(`✅ Procédure ${res.data.procedure.code} générée — ${res.data.rolesDetected?.length || 0} rôle(s) détecté(s)`);
+      setSuccess(`✅ Procédure ${res.data.procedure.code} générée — ${res.data.rolesDetected?.length || 0} rôle(s)${reviewNote(res.data)}`);
       await fetchData();
       setTextForm({ text: '' });
       setActiveTab('list');
@@ -121,7 +137,7 @@ export default function ProjectProceduresPage() {
         projectId,
       });
       setPreviewProc(res.data.procedure.content);
-      setSuccess(`✅ Procédure ${res.data.procedure.code} importée depuis "${fileForm.fileName}"`);
+      setSuccess(`✅ Procédure ${res.data.procedure.code} importée depuis "${fileForm.fileName}"${reviewNote(res.data)}`);
       await fetchData();
       setFileForm({ fileName: '', fileBase64: '', mimeType: '' });
       setActiveTab('list');
@@ -438,8 +454,19 @@ export default function ProjectProceduresPage() {
                     {(role.steps || role.actions || []).map((step: any, si: number) => (
                       <li key={si} className="text-sm flex gap-2">
                         <span className="font-bold flex-shrink-0" style={{ color: '#ADB5BD' }}>{si + 1}.</span>
-                        <span style={{ fontWeight: step.isBold ? 700 : 400, color: step.isRed ? '#C0392B' : '#2C3E50' }}>
-                          {step.textFR || step}
+                        <span style={{ color: step.isRed ? '#C0392B' : '#2C3E50' }}>
+                          {String(step.textFR || step)
+                            .split(/(\*\*[^*]+\*\*)/g)
+                            .map((part: string, pi: number) =>
+                              part.startsWith('**') ? <strong key={pi}>{part.slice(2, -2)}</strong> : <span key={pi}>{part}</span>,
+                            )}
+                          {Array.isArray(step.subSteps) && step.subSteps.length > 0 && (
+                            <ul className="list-disc ml-5 mt-1" style={{ color: '#495057' }}>
+                              {step.subSteps.map((sub: { textFR?: string }, ssi: number) => (
+                                <li key={ssi}>{sub.textFR}</li>
+                              ))}
+                            </ul>
+                          )}
                         </span>
                       </li>
                     ))}
