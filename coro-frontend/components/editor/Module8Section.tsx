@@ -67,6 +67,8 @@ interface Module8SectionProps {
     sections: any[];
   };
   onLockVersionChange?: (lockVersion: number) => void;
+  /** Numéro du module dans le document exporté (le PMU n'a pas de module 5). */
+  displayNumber?: number;
 }
 
 // ============================================================
@@ -112,6 +114,16 @@ function isDefaultLithiumAnnexe(
     Object.keys(DEFAULT_LITHIUM_ANNEXE_DATA) as Array<keyof LithiumAnnexeData>
   ).every((key) => merged[key] === DEFAULT_LITHIUM_ANNEXE_DATA[key]);
 }
+
+// Nombre de lignes pour afficher tout le texte sans barre de défilement.
+const fitRows = (text: string | undefined, charsPerLine: number, minRows: number) => {
+  const lines = (text || "").split("\n");
+  const total = lines.reduce(
+    (sum, line) => sum + Math.max(1, Math.ceil(line.length / charsPerLine)),
+    0,
+  );
+  return Math.max(minRows, total);
+};
 
 // ============================================================
 // SOUS-COMPOSANTS STATIQUES
@@ -322,6 +334,7 @@ export default function Module8Section({
   activeSectionFromParent,
   initialData,
   onLockVersionChange,
+  displayNumber = 8,
 }: Module8SectionProps) {
   const isFr = language === "fr";
   const isFirstLoad = useRef(true);
@@ -712,6 +725,12 @@ export default function Module8Section({
     unsaved: isFr ? "Non sauvegardé" : "Unsaved changes",
     loading: isFr ? "Chargement..." : "Loading...",
   };
+  // Numéro affiché = position réelle dans le document, comme dans le PDF.
+  const displayId = (id: string) => {
+    const position = t.sections.findIndex((section) => section.id === id);
+    return position >= 0 ? `${displayNumber}.${position + 1}` : id;
+  };
+
 
   // Si une section devenue non applicable était encore sélectionnée par le parent,
   // on revient proprement à la première section disponible.
@@ -761,7 +780,7 @@ export default function Module8Section({
   const render8_1 = () => (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <SectionHeader sectionId="8.1" title={currentSectionMeta.title} />
+        <SectionHeader sectionId={displayId("8.1")} title={currentSectionMeta.title} />
         <button
           onClick={handlePrintAttendance}
           disabled={printingAttendance}
@@ -885,7 +904,7 @@ export default function Module8Section({
 
   const render8_2 = () => (
     <div>
-      <SectionHeader sectionId="8.2" title={currentSectionMeta.title} />
+      <SectionHeader sectionId={displayId("8.2")} title={currentSectionMeta.title} />
       <div
         className="rounded overflow-hidden shadow-sm"
         style={{ border: "1px solid #DEE2E6" }}
@@ -942,7 +961,7 @@ export default function Module8Section({
                       );
                       markDirty();
                     }}
-                    rows={3}
+                    rows={fitRows(msg.messageFR, 42, 2)}
                     className="w-full px-2 py-1 text-xs bg-transparent border-0 outline-none resize-none"
                     style={{ color: "#495057" }}
                   />
@@ -960,7 +979,7 @@ export default function Module8Section({
                       );
                       markDirty();
                     }}
-                    rows={3}
+                    rows={fitRows(msg.messageEN, 42, 2)}
                     className="w-full px-2 py-1 text-xs bg-transparent border-0 outline-none resize-none"
                     style={{ color: "#495057" }}
                   />
@@ -1038,7 +1057,7 @@ export default function Module8Section({
 
     return (
       <div>
-        <SectionHeader sectionId="8.3" title={currentSectionMeta.title} />
+        <SectionHeader sectionId={displayId("8.3")} title={currentSectionMeta.title} />
         <div
           className="rounded-md p-6"
           style={{ backgroundColor: "#FFFFFF", border: "1px solid #E9ECEF" }}
@@ -1142,7 +1161,7 @@ export default function Module8Section({
 
   const render8_4 = () => (
     <div>
-      <SectionHeader sectionId="8.4" title={currentSectionMeta.title} />
+      <SectionHeader sectionId={displayId("8.4")} title={currentSectionMeta.title} />
       <div
         className="rounded overflow-hidden shadow-sm"
         style={{ border: "1px solid #DEE2E6" }}
@@ -1244,7 +1263,7 @@ export default function Module8Section({
 
   const render8_5 = () => (
     <div>
-      <SectionHeader sectionId="8.5" title={currentSectionMeta.title} />
+      <SectionHeader sectionId={displayId("8.5")} title={currentSectionMeta.title} />
       <div
         className="rounded overflow-hidden shadow-sm"
         style={{ border: "1px solid #DEE2E6" }}
@@ -1390,7 +1409,7 @@ export default function Module8Section({
       case "8.6":
         return (
           <TextSection
-            sectionId="8.6"
+            sectionId={displayId("8.6")}
             title={currentSectionMeta.title}
             value={section8_6}
             setValue={setSection8_6}
@@ -1401,7 +1420,7 @@ export default function Module8Section({
       case "8.7":
         return (
           <TextSection
-            sectionId="8.7"
+            sectionId={displayId("8.7")}
             title={currentSectionMeta.title}
             value={section8_7}
             setValue={setSection8_7}
@@ -1412,7 +1431,7 @@ export default function Module8Section({
       case "8.8":
         return (
           <TextSection
-            sectionId="8.8"
+            sectionId={displayId("8.8")}
             title={currentSectionMeta.title}
             value={section8_8}
             setValue={setSection8_8}
@@ -1423,7 +1442,7 @@ export default function Module8Section({
       case "8.9":
         return (
           <TextSection
-            sectionId="8.9"
+            sectionId={displayId("8.9")}
             title={currentSectionMeta.title}
             value={section8_9}
             setValue={setSection8_9}
@@ -1443,7 +1462,7 @@ export default function Module8Section({
       case "8.11":
         return (
           <div>
-            <SectionHeader sectionId="8.11" title={currentSectionMeta.title} />
+            <SectionHeader sectionId={displayId("8.11")} title={currentSectionMeta.title} />
             <div
               className="rounded-md p-3 mb-4 flex items-start gap-2"
               style={{
@@ -1518,8 +1537,8 @@ export default function Module8Section({
                               width: "20%",
                             }}
                           >
-                            <input
-                              type="text"
+                            <textarea
+                              rows={fitRows(row.categorie, 18, 1)}
                               value={row.categorie || ""}
                               onChange={(e) => {
                                 const updated = JSON.parse(
@@ -1530,7 +1549,7 @@ export default function Module8Section({
                                 setSection8_11(updated);
                                 markDirty();
                               }}
-                              className="w-full px-2 py-1 text-xs bg-transparent border-0 outline-none"
+                              className="w-full px-2 py-1 text-xs bg-transparent border-0 outline-none resize-none"
                               style={{ color: "#2C3E50", fontWeight: "600" }}
                             />
                           </td>
@@ -1552,7 +1571,7 @@ export default function Module8Section({
                                 setSection8_11(updated);
                                 markDirty();
                               }}
-                              rows={2}
+                              rows={fitRows(row.zones, 30, 2)}
                               className="w-full px-2 py-1 text-xs bg-transparent border-0 outline-none resize-none"
                               style={{ color: "#495057" }}
                             />
@@ -1575,7 +1594,7 @@ export default function Module8Section({
                                 setSection8_11(updated);
                                 markDirty();
                               }}
-                              rows={2}
+                              rows={fitRows(row.risque, 30, 2)}
                               className="w-full px-2 py-1 text-xs bg-transparent border-0 outline-none resize-none"
                               style={{ color: "#495057" }}
                             />
@@ -1680,7 +1699,7 @@ export default function Module8Section({
             className="text-xs font-bold uppercase tracking-widest mb-1"
             style={{ color: "#ADB5BD" }}
           >
-            Module 8
+            Module {displayNumber}
           </p>
           <h1
             className="text-3xl font-black uppercase"

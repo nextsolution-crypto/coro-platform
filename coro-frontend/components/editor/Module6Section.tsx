@@ -26,6 +26,8 @@ interface BuildingPlan {
 }
 
 interface Module6SectionProps {
+  /** Numéro du module dans le document exporté (le PMU n'a pas de module 5). */
+  displayNumber?: number;
   projectId: string;
   language?: 'fr' | 'en';
 }
@@ -373,8 +375,9 @@ function PlanModal({
 // COMPOSANT PRINCIPAL
 // ============================================================
 
-export default function Module6Section({ projectId, language = 'fr' }: Module6SectionProps) {
+export default function Module6Section({ projectId, language = 'fr', displayNumber = 6 }: Module6SectionProps) {
   const isFr = language === 'fr';
+  const numbered = (label: string) => label.replace(/^\d+\./, `${displayNumber}.`);
   const [plans, setPlans] = useState<BuildingPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedSections, setExpandedSections] = useState<Set<PlanSection>>(
@@ -473,7 +476,7 @@ export default function Module6Section({ projectId, language = 'fr' }: Module6Se
       {/* En-tête */}
       <div className="mb-6">
         <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#ADB5BD' }}>
-          Module 6
+          Module {displayNumber}
         </p>
         <h1 className="text-3xl font-black uppercase leading-tight" style={{ color: '#2C3E50' }}>
           {isFr ? 'PLANS TECHNIQUES' : 'TECHNICAL PLANS'}
@@ -586,7 +589,7 @@ export default function Module6Section({ projectId, language = 'fr' }: Module6Se
                 <FileText size={16} style={{ color: '#C0392B' }} />
                 <div>
                   <p className="font-semibold text-sm" style={{ color: '#2C3E50' }}>
-                    {isFr ? section.labelFR : section.labelEN}
+                    {numbered(isFr ? section.labelFR : section.labelEN)}
                   </p>
                   <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>
                     {isFr ? section.descFR : section.descEN}
@@ -753,7 +756,7 @@ export default function Module6Section({ projectId, language = 'fr' }: Module6Se
         <PlanModal
           plan={modal.plan}
           sectionKey={modal.sectionKey}
-          sectionLabelFR={SECTIONS.find(s => s.key === modal.sectionKey)?.labelFR || ''}
+          sectionLabelFR={numbered(SECTIONS.find(s => s.key === modal.sectionKey)?.labelFR || '')}
           language={language}
           onSave={handleSave}
           onClose={() => setModal(null)}

@@ -14,6 +14,8 @@ import { displayOption } from '@/lib/option-display';
 // ============================================================
 
 interface Module7SectionProps {
+  /** Numéro du module dans le document exporté (le PMU n'a pas de module 5). */
+  displayNumber?: number;
   projectId: string;
   language?: 'fr' | 'en';
 }
@@ -194,7 +196,9 @@ function BooleanChecklist({
 export default function Module7Section({
   projectId,
   language = 'fr',
+  displayNumber = 7,
 }: Module7SectionProps) {
+  const numbered = (label: string) => label.replace(/^\d+\./, `${displayNumber}.`);
   const router = useRouter();
   const isFirstLoad = useRef(true);
 
@@ -422,7 +426,7 @@ export default function Module7Section({
             className="text-xs font-bold uppercase tracking-widest mb-1"
             style={{ color: '#ADB5BD' }}
           >
-            Module 7
+            Module {displayNumber}
           </p>
           <h1
             className="text-3xl font-black uppercase leading-tight"
@@ -511,7 +515,7 @@ export default function Module7Section({
       </div>
 
       {/* ── 7.1 DESCRIPTION GÉNÉRALE ── */}
-      <SectionCard title="7.1 — Description générale">
+      <SectionCard title={numbered("7.1 — Description générale")}>
         <p
           className="text-xs font-semibold mb-3 flex items-center"
           style={{ color: '#6C757D' }}
@@ -841,7 +845,7 @@ export default function Module7Section({
       </SectionCard>
 
       {/* ── 7.2 MÉCANIQUE DU BÂTIMENT ── */}
-      <SectionCard title="7.2 — Mécanique du bâtiment">
+      <SectionCard title={numbered("7.2 — Mécanique du bâtiment")}>
         <p
           className="text-xs font-semibold mb-3 flex items-center"
           style={{ color: '#6C757D' }}
@@ -1110,7 +1114,7 @@ export default function Module7Section({
       </SectionCard>
 
       {/* ── 7.3 RÉSEAU D'ALARME INCENDIE ── */}
-      <SectionCard title="7.3 — Réseau d'alarme incendie">
+      <SectionCard title={numbered("7.3 — Réseau d'alarme incendie")}>
         <p
           className="text-xs font-semibold mb-3 flex items-center"
           style={{ color: '#6C757D' }}
@@ -1282,7 +1286,7 @@ export default function Module7Section({
       </SectionCard>
 
       {/* ── 7.4 GICLEURS ET PROTECTION INCENDIE ── */}
-      <SectionCard title="7.4 — Système de gicleurs et protection incendie">
+      <SectionCard title={numbered("7.4 — Système de gicleurs et protection incendie")}>
         <p
           className="text-xs font-semibold mb-3 flex items-center"
           style={{ color: '#6C757D' }}
@@ -1498,7 +1502,7 @@ export default function Module7Section({
       </SectionCard>
 
       {/* ── 7.5 MATIÈRES DANGEREUSES ── */}
-      <SectionCard title="7.5 — Matières dangereuses">
+      <SectionCard title={numbered("7.5 — Matières dangereuses")}>
         <p
           className="text-xs font-semibold mb-3 flex items-center"
           style={{ color: '#6C757D' }}
@@ -1654,7 +1658,7 @@ export default function Module7Section({
       </SectionCard>
 
       {/* ── 7.6 EXTINCTEURS PORTATIFS ── */}
-      <SectionCard title="7.6 — Extincteurs portatifs">
+      <SectionCard title={numbered("7.6 — Extincteurs portatifs")}>
         <p
           className="text-xs font-semibold mb-3 flex items-center"
           style={{ color: '#6C757D' }}
@@ -1767,7 +1771,7 @@ export default function Module7Section({
       </SectionCard>
 
       {/* ── 7.7 PREMIERS SOINS ── */}
-      <SectionCard title="7.7 — Équipements de premiers soins">
+      <SectionCard title={numbered("7.7 — Équipements de premiers soins")}>
         <p
           className="text-xs font-semibold mb-3 flex items-center"
           style={{ color: '#6C757D' }}
@@ -1840,7 +1844,7 @@ export default function Module7Section({
       </SectionCard>
 
       {/* ── 7.8 DÉTECTEURS DE GAZ ── */}
-      <SectionCard title="7.8 — Détecteurs de gaz">
+      <SectionCard title={numbered("7.8 — Détecteurs de gaz")}>
         <p
           className="text-xs font-semibold mb-3 flex items-center"
           style={{ color: '#6C757D' }}
@@ -1887,7 +1891,7 @@ export default function Module7Section({
       </SectionCard>
 
       {/* ── 7.9 PHOTOS ── */}
-      <SectionCard title="7.9 — Photos des équipements de protection">
+      <SectionCard title={numbered("7.9 — Photos des équipements de protection")}>
         <p
           className="text-xs font-semibold mb-4 flex items-center"
           style={{ color: '#6C757D' }}
@@ -2074,7 +2078,7 @@ export default function Module7Section({
       {/* ── TRAVAUX PAR POINTS CHAUDS ── */}
       {config.travauxPointsChauds &&
         config.travauxPointsChauds !== 'Jamais' && (
-          <SectionCard title="7.10 — Travaux par points chauds">
+          <SectionCard title={numbered("7.10 — Travaux par points chauds")}>
             <p
               className="text-xs font-semibold mb-3 flex items-center"
               style={{ color: '#6C757D' }}
@@ -2115,7 +2119,7 @@ export default function Module7Section({
 
       {/* ── LABORATOIRES ── */}
       {config.laboratoirePresent && (
-        <SectionCard title="7.11 — Laboratoires">
+        <SectionCard title={numbered("7.11 — Laboratoires")}>
           <p
             className="text-xs font-semibold mb-3 flex items-center"
             style={{ color: '#6C757D' }}
@@ -2159,7 +2163,7 @@ export default function Module7Section({
       {/* ── SECTIONS INDUSTRIELLES ── */}
       {isIndustriel && (
         <>
-          <SectionCard title="7.12 — Installations industrielles">
+          <SectionCard title={numbered("7.12 — Installations industrielles")}>
             <p
               className="text-xs font-semibold mb-3 flex items-center"
               style={{ color: '#6C757D' }}
@@ -2326,7 +2330,7 @@ export default function Module7Section({
             )}
           </SectionCard>
 
-          <SectionCard title="7.13 — Procédés dangereux">
+          <SectionCard title={numbered("7.13 — Procédés dangereux")}>
             <p
               className="text-xs font-semibold mb-3 flex items-center"
               style={{ color: '#6C757D' }}

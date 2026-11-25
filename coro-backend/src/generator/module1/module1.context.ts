@@ -73,9 +73,9 @@ export const REFERENCES: Record<string, ReglementRef> = {
     code: 'Ontario Fire Code (O. Reg. 213/07) sous la Loi sur la prévention et la protection contre l\'incendie, 1997 (FPPA)',
     article: 'Division B, Section 2.8',
     description: 'Ontario Fire Code (O. Reg. 213/07)',
-    articleFormation: 'Division B, Section 2.8 du Ontario Fire Code (O. Reg. 213/07)',
-    articleExercice: 'Division B, Section 2.8 du Ontario Fire Code (O. Reg. 213/07)',
-    articleRevision: 'Division B, Section 2.8 du Ontario Fire Code (O. Reg. 213/07)',
+    articleFormation: 'Division B, Section 2.8 de l\'Ontario Fire Code (O. Reg. 213/07)',
+    articleExercice: 'Division B, Section 2.8 de l\'Ontario Fire Code (O. Reg. 213/07)',
+    articleRevision: 'Division B, Section 2.8 de l\'Ontario Fire Code (O. Reg. 213/07)',
     exerciceStandard: 'au moins une fois par année',
     exerciceBGH: 'aux trois mois (minimum 4 fois par année)',
     code_en: 'Ontario Fire Code (O. Reg. 213/07) under the Fire Protection and Prevention Act, 1997 (FPPA)',
@@ -106,3 +106,17 @@ export const REFERENCES: Record<string, ReglementRef> = {
     exerciceBGH_en: 'every two months (minimum 6 times per year)',
   },
 };
+/** « à l'article 2.8 », « à la section 2.8 », « à la Division B, Section 2.8 ». */
+export function aRef(reference: string): string {
+  return /^[aeiouyéèêh]/i.test(reference) ? `à l'${reference}` : `à la ${reference}`;
+}
+
+/** « l'article 2.8 », « la section 2.8 ». */
+export function leRef(reference: string): string {
+  return /^[aeiouyéèêh]/i.test(reference) ? `l'${reference}` : `la ${reference}`;
+}
+
+/** « du Code national… », « de l'Ontario Fire Code ». */
+export function duRef(reference: string): string {
+  return /^[aeiouyéèêh]/i.test(reference) ? `de l'${reference}` : `du ${reference}`;
+}
