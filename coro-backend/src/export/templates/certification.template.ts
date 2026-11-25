@@ -49,6 +49,9 @@ export const CERTIFICATION_STYLES = `
   * { box-sizing: border-box; }
 
   html, body {
+    /* Texte du PDF copiable et cherchable : « fi », « fl » restent des lettres séparées. */
+    font-variant-ligatures: none;
+    font-feature-settings: 'liga' 0, 'clig' 0;
     width: 8.5in;
     height: 11in;
     margin: 0;
