@@ -1,6 +1,8 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
-import { resolveActiveRoleCodes } from '../generator/regeneration.helpers';
-import { ROLE_REGISTRY } from '../generator/role-registry';
+import { orgRolesFromContent, resolveActiveRoleCodes } from '../generator/regeneration.helpers';
+import { templateIssues, toTemplateContent } from './procedure-template';
+import { buildCorrectionPrompt, buildProcedurePrompt, parseJsonAnswer } from './procedure-prompt';
+import { projectRoleChoices, ROLE_REGISTRY } from '../generator/role-registry';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdviserActor, assertEditableProject, projectAccessWhere } from '../auth/project-access';
 import { DemoCommunicationChannel } from '@prisma/client';
@@ -93,7 +95,7 @@ export class CustomProceduresService {
     await this.assertMutableProject(projectId, actor);
     const organizationId = actor.organizationId;
     const userId = actor.userId;
-    if (typeof text !== 'string' || text.trim().length < 50 || text.length > 8000)
+    if (typeof text !== 'string' || text.trim().length < 50 || text.length > 20000)
       throw new BadRequestException('Texte de procédure invalide.');
     await this.requireExternalAi(organizationId, 'CUSTOM_PROCEDURE_GENERATION', {
       textLength: text.length,
@@ -101,133 +103,86 @@ export class CustomProceduresService {
     const Anthropic = require('@anthropic-ai/sdk').default;
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    // Récupérer l'organigramme existant pour contexte
+    // Rôles de l'organigramme du projet (liste unique, rôles ajoutés compris)
     const doc = await this.prisma.document.findFirst({
       where: { projectId },
       select: { content: true },
     });
     const content = (doc?.content as any) || {};
-    const modules = content?.modules_fr || [];
-    const m3 = modules.find((m: any) => m.moduleNumber === 3);
-    const orgRoles = m3?.sections?.find((s: any) => s.id === '3.1')?.orgRoles || [];
-    const activeRoles = orgRoles
-      .filter((r: any) => r.isActive)
-      .map((r: any) => `${r.roleCode} (${r.roleName})`)
-      .join(', ') || 'Non défini';
+    const orgRoles = orgRolesFromContent(content);
+    const activeRoleCodes = resolveActiveRoleCodes(orgRoles, content?.config);
+    const promptRoles = projectRoleChoices(orgRoles, activeRoleCodes);
 
-    const prompt = `Tu es un expert en rédaction de procédures d'urgence pour bâtiments québécois.
-
-Analyse ce texte et structure-le en procédure d'urgence selon le format JSON strict ci-dessous.
-
-RÔLES ACTIFS DANS L'ORGANIGRAMME DU PROJET :
-${activeRoles}
-
-RÔLES DISPONIBLES DANS CORO :
-${KNOWN_ROLES.map(r => `${r.code} = ${r.labelFR}`).join('\n')}
-
-TEXTE À STRUCTURER :
-${text}
-
-RÈGLES STRICTES :
-- titleFR et titleEN : titres courts (max 8 mots) en MAJUSCULES
-- objective : 1-2 phrases décrivant l'objectif de la procédure
-- color : choisir selon le type (#C0392B=incendie/évacuation, #E67E22=bris/panne, #8E44AD=sécurité/confinement, #2980B9=médical/technique, #27AE60=environnement)
-- roleSections : max 4 rôles, chacun avec max 8 actions impératives courtes (verbe à l'infinitif)
-- importantBoxes : max 2 encadrés (type IMPORTANT ou NOTE)
-- rolesDetected : liste des codes de rôles CORO trouvés dans le texte
-- crossReferences : codes de procédures liées mentionnées (ex: ["P001", "P005"])
-- actionsEN : traduction anglaise de chaque action (même ordre que actions)
-- roleNameEN : nom du rôle en anglais
-
-RÉPONDS UNIQUEMENT avec ce JSON, sans texte avant ou après :
-
-{
-  "titleFR": "TITRE EN FRANÇAIS",
-  "titleEN": "TITLE IN ENGLISH",
-  "objective": "Objectif de la procédure...",
-  "color": "#C0392B",
-  "rolesDetected": ["ROLE-CU", "ROLE-EPI"],
-  "crossReferences": [],
-  "roleSections": [
-    {
-      "roleCode": "ROLE-CU",
-      "roleName": "Coordonnateur d'urgence",
-      "roleNameEN": "Emergency Coordinator",
-      "actions": [
-        "Action 1 impérative en français",
-        "Action 2 impérative en français"
-      ],
-      "actionsEN": [
-        "Action 1 in English",
-        "Action 2 in English"
-      ]
-    }
-  ],
-  "importantBoxes": [
-    {
-      "type": "IMPORTANT",
-      "text": "Texte de l'encadré important"
-    }
-  ]
-}`;
-
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const rawText = response.content[0].type === 'text' ? response.content[0].text : '';
-    const clean = rawText.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
-
-    const code = await this.generateCode(organizationId);
-    const rolesDetected = this.detectRoles(text);
-    const allRolesDetected = [...new Set([...rolesDetected, ...(parsed.rolesDetected || [])])];
-
-    // Construire le contenu au format de nos procédures existantes
-    const procedureContent = {
-      code,
-      titleFR: parsed.titleFR,
-      titleEN: parsed.titleEN,
-      objective: parsed.objective,
-      color: parsed.color || '#2C3E50',
-      activationRule: 'manual',
-      roleSections: parsed.roleSections || [],
-      importantBoxes: parsed.importantBoxes || [],
-      crossReferences: parsed.crossReferences || [],
+    const ask = async (prompt: string) => {
+      const response = await client.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 16000,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      const block = response.content.find((b: any) => b.type === 'text');
+      return parseJsonAnswer(block?.text || '');
     };
 
-    // Sauvegarder en DB
+    // 1) Structuration au gabarit de la bibliothèque
+    let parsed = await ask(buildProcedurePrompt(text, promptRoles));
+    const code = await this.generateCode(organizationId);
+    let templated = toTemplateContent({ ...parsed, code }, { code });
+    let issues = templateIssues(templated, activeRoleCodes);
+
+    // 2) Une passe de correction si le résultat s'écarte du gabarit
+    if (issues.length > 0) {
+      try {
+        parsed = await ask(buildCorrectionPrompt(templated, issues, promptRoles));
+        const corrected = toTemplateContent({ ...parsed, code }, { code });
+        const correctedIssues = templateIssues(corrected, activeRoleCodes);
+        if (corrected.roleSections.length && correctedIssues.length <= issues.length) {
+          templated = corrected;
+          issues = correctedIssues;
+        }
+      } catch {
+        // on garde la première version, ses écarts sont signalés au conseiller
+      }
+    }
+
+    const rolesDetected = [...new Set([
+      ...this.detectRoles(text),
+      ...templated.roleSections.map((s) => s.roleCode).filter((c) => c !== 'TOUS'),
+    ])];
+    const unmappedRoles: string[] = Array.isArray(parsed?.unmappedRoles)
+      ? parsed.unmappedRoles.filter((r: unknown) => typeof r === 'string').slice(0, 20)
+      : [];
+
     const procedure = await this.prisma.customProcedure.create({
       data: {
         organizationId,
         projectId,
         code,
-        titleFR: parsed.titleFR,
-        titleEN: parsed.titleEN,
-        objective: parsed.objective,
-        color: parsed.color || '#2C3E50',
+        titleFR: templated.titleFR,
+        titleEN: templated.titleEN,
+        objective: templated.objective,
+        color: templated.color,
         status: 'DRAFT',
-        content: procedureContent,
-        sourceText: text,
+        content: templated as any,
+        sourceText: text.substring(0, 20000),
+        sourceType: 'AI_TEXT',
         isPublished: false,
-        rolesDetected: allRolesDetected,
+        rolesDetected,
         createdById: userId,
       },
     });
 
-    // Détecter les rôles absents de l'organigramme
-    const activeRoleCodes = resolveActiveRoleCodes(orgRoles, content?.config);
-    const missingRoles = allRolesDetected
-      .filter(code => !activeRoleCodes.includes(code))
-      .map(code => KNOWN_ROLES.find(r => r.code === code))
+    // Rôles nommés par la procédure mais absents de l'organigramme
+    const missingRoles = rolesDetected
+      .filter((roleCode) => !activeRoleCodes.includes(roleCode))
+      .map((roleCode) => KNOWN_ROLES.find((r) => r.code === roleCode))
       .filter(Boolean);
 
     return {
       procedure,
       missingRoles,
-      rolesDetected: allRolesDetected,
+      rolesDetected,
+      unmappedRoles,
+      templateIssues: issues,
     };
   }
 
@@ -263,7 +218,7 @@ RÉPONDS UNIQUEMENT avec ce JSON, sans texte avant ou après :
       const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
       const pdfResponse = await client.messages.create({
         model: 'claude-sonnet-4-6',
-        max_tokens: 4000,
+        max_tokens: 16000,
         messages: [{
           role: 'user',
           content: [
@@ -294,7 +249,7 @@ RÉPONDS UNIQUEMENT avec ce JSON, sans texte avant ou après :
 
     // Réutiliser generateFromText avec le texte extrait
     const result = await this.generateFromText(
-      extractedText.substring(0, 8000),
+      extractedText.substring(0, 20000),
       projectId,
       actor,
     );
@@ -312,11 +267,16 @@ RÉPONDS UNIQUEMENT avec ce JSON, sans texte avant ou après :
     return { ...result, sourceFileName: fileName };
   }
 
+  /** Contenu toujours rendu au gabarit (les anciennes procédures IA « actions » sont converties). */
+  private withTemplate<T extends { content: any }>(record: T): T {
+    return record ? { ...record, content: toTemplateContent(record.content, record) } : record;
+  }
+
   // ── CRUD ────────────────────────────────────────────────
   async findAll(projectId: string, actor: AdviserActor) {
     await this.assertReadableProject(projectId, actor);
     const organizationId = actor.organizationId;
-    return this.prisma.customProcedure.findMany({
+    const records = await this.prisma.customProcedure.findMany({
       where: {
         OR: [
           // Procédures du projet courant
@@ -329,6 +289,7 @@ RÉPONDS UNIQUEMENT avec ce JSON, sans texte avant ou après :
       },
       orderBy: { createdAt: 'desc' },
     });
+    return records.map((record) => this.withTemplate(record));
   }
 
   async findOne(id: string, actor: AdviserActor) {
@@ -337,7 +298,7 @@ RÉPONDS UNIQUEMENT avec ce JSON, sans texte avant ou après :
     });
     if (!proc) throw new NotFoundException('Procédure introuvable');
     if (proc.projectId) await this.assertReadableProject(proc.projectId, actor);
-    return proc;
+    return this.withTemplate(proc);
   }
 
   async update(id: string, data: any, actor: AdviserActor) {
@@ -352,6 +313,14 @@ RÉPONDS UNIQUEMENT avec ce JSON, sans texte avant ou après :
       throw new BadRequestException('Aucun champ modifiable fourni.');
     if (update.status && !['DRAFT', 'ACTIVE', 'ARCHIVED'].includes(String(update.status)))
       throw new BadRequestException('Statut de procédure invalide.');
+    if (update.content !== undefined) {
+      // Même gabarit que la bibliothèque, quel que soit l'écran qui enregistre.
+      const templated = toTemplateContent(update.content, { ...procedure, ...update });
+      update.content = templated as any;
+      update.titleFR = templated.titleFR || procedure.titleFR;
+      update.titleEN = templated.titleEN || procedure.titleEN;
+      update.color = templated.color;
+    }
     return this.prisma.customProcedure.update({
       where: { id },
       data: {
@@ -403,10 +372,11 @@ RÉPONDS UNIQUEMENT avec ce JSON, sans texte avant ou après :
   }
 
   async getLibrary(organizationId: string) {
-    return this.prisma.customProcedure.findMany({
+    const records = await this.prisma.customProcedure.findMany({
       where: { organizationId, isPublished: true },
       orderBy: { titleFR: 'asc' },
     });
+    return records.map((record) => this.withTemplate(record));
   }
 
   getKnownRoles() {

@@ -305,16 +305,19 @@ export default function ProcedureProjectEditPage() {
             headerColor: c.color || cr.data.color || '#2C3E50',
             activationRule: c.activationRule || 'manual',
             documentTypes: [],
+            // Le serveur rend toujours le gabarit (étapes, sous-étapes) ; l'ancien format reste lu.
             roleSections: (c.roleSections || []).map((rs: any) => ({
               roleCode: rs.roleCode,
-              roleLabelFR: rs.roleName || rs.roleCode,
-              roleLabelEN: rs.roleNameEN || rs.roleName || rs.roleCode,
-              headerColor: c.color || '#2C3E50',
-              steps: (rs.actions || []).map((action: string, idx: number) => ({
-                id: `step_${idx}`,
-                textFR: action,
-                textEN: (rs.actionsEN && rs.actionsEN[idx]) ? rs.actionsEN[idx] : action,
-              })),
+              roleLabelFR: rs.roleLabelFR || rs.roleName || rs.roleCode,
+              roleLabelEN: rs.roleLabelEN || rs.roleNameEN || rs.roleName || rs.roleCode,
+              headerColor: rs.headerColor || c.color || '#2C3E50',
+              steps: Array.isArray(rs.steps)
+                ? rs.steps
+                : (rs.actions || []).map((action: string, idx: number) => ({
+                    id: `step_${idx}`,
+                    textFR: action,
+                    textEN: (rs.actionsEN && rs.actionsEN[idx]) ? rs.actionsEN[idx] : action,
+                  })),
             })),
           } as ProcedureContent);
           setIsOverridden(false);
@@ -335,16 +338,8 @@ export default function ProcedureProjectEditPage() {
 
       if (!stdRes) {
         // Sinon CustomProcedure IA — reconstruire le content au format CustomProcedure
-        const customContent = {
-          ...content,
-          roleSections: content.roleSections.map(rs => ({
-            roleCode: rs.roleCode,
-            roleName: rs.roleLabelFR,
-            roleNameEN: rs.roleLabelEN,
-            actions: rs.steps.map(s => s.textFR),
-            actionsEN: rs.steps.map(s => s.textEN),
-          })),
-        };
+        // Même gabarit que la bibliothèque : sous-étapes et mise en évidence conservées.
+        const customContent = { ...content, color: content.headerColor };
         await api.put(`/custom-procedures/${procedureId}`, { content: customContent });
       }
 

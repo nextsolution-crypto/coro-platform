@@ -1,6 +1,7 @@
 import { PrismaService } from '../../prisma/prisma.service';
 import { resolveActiveRoleCodes } from '../../generator/regeneration.helpers';
 import { applyRoleCoverage, RoleCoverage, sanitizeAssignments } from '../../generator/role-coverage';
+import { harmonizeStepText } from '../../generator/step-style';
 import { ExportDataSource } from '../export-frozen-data';
 
 export const DOCUMENT_TYPE_LABELS: Record<string, { fr: string; en: string }> = {
@@ -234,6 +235,7 @@ export abstract class BaseDocumentBuilder {
   private applyStepOverridesToSteps(
     steps: any[] | undefined,
     overrides: Record<string, StoredStepOverride>,
+    isSub = false,
   ): any[] {
     return (steps || []).map(step => {
       const overrideText = this.getStepOverrideText(overrides[step.id]);
@@ -242,7 +244,7 @@ export abstract class BaseDocumentBuilder {
         ...step,
         ...(overrideText !== undefined
           ? this.lang === 'fr'
-            ? { textFR: overrideText }
+            ? { textFR: harmonizeStepText(overrideText, { bold: !isSub }) }
             : { textEN: overrideText }
           : {}),
       };
@@ -251,6 +253,7 @@ export abstract class BaseDocumentBuilder {
         updated.subSteps = this.applyStepOverridesToSteps(
           step.subSteps,
           overrides,
+          true,
         );
       }
 
