@@ -4,6 +4,7 @@
 // ============================================================
 
 import { PASS_EXTINGUISHER_IMAGE } from './pass-image.asset';
+import { displayOption } from './option-display';
 
 // ============================================================
 // HELPERS
@@ -32,7 +33,7 @@ function escapeHtml(value: any): string {
 
 function safeVal(v: any, fallback = '—'): string {
   const raw = val(v, fallback);
-  return raw === fallback ? fallback : escapeHtml(raw);
+  return raw === fallback ? fallback : escapeHtml(displayOption(raw));
 }
 
 function listVal(v: any, fallback = '—'): string {

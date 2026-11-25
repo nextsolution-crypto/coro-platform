@@ -7,6 +7,7 @@ import { Settings, Camera, Upload, X, Check, ExternalLink, Plus } from 'lucide-r
 import api from '@/lib/api';
 import SpellCheckedTextarea from './SpellCheckedTextarea';
 import { toast } from '@/lib/toast';
+import { displayOption } from '@/lib/option-display';
 
 // ============================================================
 // TYPES
@@ -52,7 +53,7 @@ const DEFAULT_PHOTO_SLOTS = [
 // ============================================================
 
 const val = (v: any, fallback = '—') =>
-  v !== undefined && v !== null && v !== '' ? String(v) : fallback;
+  v !== undefined && v !== null && v !== '' ? displayOption(String(v)) : fallback;
 
 const bool = (v: any) => (v === true ? 'Oui' : v === false ? 'Non' : '—');
 
@@ -607,7 +608,7 @@ export default function Module7Section({
         />
         <InfoRow
           label="Poste de surveillance"
-          value={val(config.posteSurveillance)}
+          value={bool(config.posteSurveillance)}
         />
         <InfoRow
           label="Contrôle d'accès"
