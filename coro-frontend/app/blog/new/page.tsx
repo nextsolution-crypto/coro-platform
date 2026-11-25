@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import { toast } from '@/lib/toast';
 import AppLayout from '@/components/layout/AppLayout';
 import { ArrowLeft, Save, Eye } from 'lucide-react';
 import DragDropUpload from '@/components/ui/DragDropUpload';
@@ -24,6 +25,21 @@ function generateSlug(title: string): string {
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .trim();
+}
+
+/** Date du champ « date » telle quelle (AAAA-MM-JJ), sans décalage de fuseau. */
+function dateOnly(value: unknown): string | null {
+  if (!value) return null;
+  const text = String(value);
+  return /^\d{4}-\d{2}-\d{2}/.test(text) ? text.slice(0, 10) : null;
+}
+
+type ApiError = { response?: { data?: { message?: string | string[] } } };
+
+function saveError(err: unknown): string {
+  const message = (err as ApiError)?.response?.data?.message;
+  const detail = Array.isArray(message) ? message.join(' ') : message;
+  return detail ? `Enregistrement impossible : ${detail}` : "Enregistrement impossible. Réessayez.";
 }
 
 export default function NewBlogPostPage() {
@@ -65,14 +81,17 @@ export default function NewBlogPostPage() {
     if (!form.titleFr || !form.contentFr) { alert('Le titre et le contenu FR sont obligatoires.'); return; }
     setSaving(true);
     try {
-      const payload = { ...form, tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [], publishedAt: form.publishedAt || null };
+      const payload = { ...form, tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [], publishedAt: dateOnly(form.publishedAt) };
       const res = await api.post('/blog', payload);
       if (publish) {
-        const publishedAt = form.publishedAt ? new Date(form.publishedAt).toISOString() : undefined;
+        const publishedAt = dateOnly(form.publishedAt) || undefined;
         await api.post(`/blog/${res.data.id}/publish`, { publishedAt });
       }
       router.push('/blog');
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      toast(saveError(err), 'error');
+    }
     finally { setSaving(false); }
   };
 
@@ -81,12 +100,15 @@ export default function NewBlogPostPage() {
     if (!form.titleFr || !form.contentFr) { alert('Le titre et le contenu FR sont obligatoires.'); return; }
     setScheduling(true);
     try {
-      const payload = { ...form, tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [], publishedAt: form.publishedAt || null, scheduledAt: null };
+      const payload = { ...form, tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [], publishedAt: dateOnly(form.publishedAt), scheduledAt: null };
       const res = await api.post('/blog', payload);
       const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
       await api.post(`/blog/${res.data.id}/schedule`, { scheduledAt });
       router.push('/blog');
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      toast(saveError(err), 'error');
+    }
     finally { setScheduling(false); }
   };
 

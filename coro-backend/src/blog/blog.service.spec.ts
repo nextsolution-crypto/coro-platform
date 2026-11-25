@@ -50,3 +50,60 @@ describe('BlogService public publication boundaries', () => {
     expect(query.where.publishedAt.lte).toBeInstanceOf(Date);
   });
 });
+
+describe('BlogService anti-datation', () => {
+  const update = jest.fn();
+  const create = jest.fn();
+  const findUnique = jest.fn();
+  const prisma = { blogPost: { update, create, findUnique } } as unknown as PrismaService;
+  const service = new BlogService(prisma);
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    update.mockResolvedValue({});
+    create.mockResolvedValue({});
+  });
+
+  it('enregistre une date du champ date (AAAA-MM-JJ) sans changer de jour au Québec', async () => {
+    await service.update('p1', { titleFr: 'T', publishedAt: '2025-05-01' });
+    const data = update.mock.calls[0][0].data;
+    expect(data.publishedAt.toISOString()).toBe('2025-05-01T12:00:00.000Z');
+    expect(data.publishedAt.toLocaleDateString('fr-CA', { timeZone: 'America/Toronto' })).toBe('2025-05-01');
+  });
+
+  it("ignore les champs non modifiables envoyés par l'éditeur", async () => {
+    await service.update('p1', { id: 'x', createdAt: 'y', updatedAt: 'z', isPublished: true, titleFr: 'T' });
+    const data = update.mock.calls[0][0].data;
+    expect(data).toEqual({ titleFr: 'T' });
+  });
+
+  it("garde la date d'un article publié quand le champ est vidé", async () => {
+    findUnique.mockResolvedValue({ isPublished: true });
+    await service.update('p1', { publishedAt: '' });
+    expect(update.mock.calls[0][0].data).toEqual({});
+  });
+
+  it('publie à la date demandée', async () => {
+    await service.publish('p1', '2024-03-15');
+    expect(update.mock.calls[0][0].data.publishedAt.toISOString()).toBe('2024-03-15T12:00:00.000Z');
+  });
+
+  it("publie un brouillon anti-daté à sa date, sans la remplacer par aujourd'hui", async () => {
+    findUnique.mockResolvedValue({ publishedAt: new Date('2024-01-10T12:00:00.000Z') });
+    await service.publish('p1');
+    expect(update.mock.calls[0][0].data.publishedAt.toISOString()).toBe('2024-01-10T12:00:00.000Z');
+  });
+
+  it('refuse une date invalide au lieu de planter', async () => {
+    await expect(service.update('p1', { publishedAt: 'pas une date' })).rejects.toThrow('Date de publication invalide.');
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('crée un article avec sa date anti-datée', async () => {
+    await service.create({ titleFr: 'Titre', contentFr: 'Texte', publishedAt: '2023-09-01', tags: 'a, b' });
+    const data = create.mock.calls[0][0].data;
+    expect(data.publishedAt.toISOString()).toBe('2023-09-01T12:00:00.000Z');
+    expect(data.slug).toBe('titre');
+    expect(data.tags).toEqual(['a', 'b']);
+  });
+});
