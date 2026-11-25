@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { confirmAction } from '@/lib/confirm-dialog';
 import { toast } from '@/lib/toast';
+import RichStepInput from './RichStepInput';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import { Plus, Trash2, ChevronDown, ChevronUp, ArrowLeft, Save, RotateCcw } from 'lucide-react';
@@ -97,19 +98,13 @@ function StepEditor({
           <div className="flex-1 min-w-0 grid grid-cols-1 lg:grid-cols-2 gap-2">
             <div>
               <label className="block text-xs font-semibold mb-1 uppercase" style={{ color: '#6C757D' }}>Texte FR</label>
-              <textarea value={step.textFR}
-                onChange={e => onUpdate({ ...step, textFR: e.target.value })}
-                rows={2}
-                className="w-full text-sm rounded px-2 py-1.5 focus:outline-none resize-vertical"
-                style={{ border: '1px solid #DEE2E6', color: '#2C3E50' }} />
+              <RichStepInput value={step.textFR} red={!!step.isRed} ariaLabel="Texte français"
+                onChange={(value) => onUpdate({ ...step, textFR: value })} />
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1 uppercase" style={{ color: '#6C757D' }}>Texte EN</label>
-              <textarea value={step.textEN}
-                onChange={e => onUpdate({ ...step, textEN: e.target.value })}
-                rows={2}
-                className="w-full text-sm rounded px-2 py-1.5 focus:outline-none resize-vertical"
-                style={{ border: '1px solid #DEE2E6', color: '#2C3E50' }} />
+              <RichStepInput value={step.textEN} red={!!step.isRed} ariaLabel="Texte anglais"
+                onChange={(value) => onUpdate({ ...step, textEN: value })} />
             </div>
           </div>
           <button onClick={onDelete} className="flex-shrink-0 mt-1 p-1 rounded transition-colors"

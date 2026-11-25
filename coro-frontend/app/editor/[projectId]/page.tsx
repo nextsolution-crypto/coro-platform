@@ -136,6 +136,17 @@ export default function EditorPage() {
   const [hasPlans, setHasPlans] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [module4Reload, setModule4Reload] = useState(0);
+  // Section ouverte, retenue pour l'onglet : au retour d'une procédure (ou d'une
+  // autre page), l'éditeur rouvre la même section au lieu de repartir à 1.1.
+  const positionKey = `coro-editor-position:${projectId}`;
+  const positionRestoredRef = useRef(false);
+  const rememberPosition = (moduleIdx: number, sectionIdx: number) => {
+    try {
+      sessionStorage.setItem(positionKey, JSON.stringify({ moduleIdx, sectionIdx }));
+    } catch {
+      /* stockage indisponible : on garde le comportement par défaut */
+    }
+  };
   const [infoOpen, setInfoOpen] = useState(false);
   const [saveError, setSaveError] = useState("");
   const documentRequestRef = useRef(0);
@@ -166,6 +177,22 @@ export default function EditorPage() {
       ]);
       if (requestId !== documentRequestRef.current) return;
       setDocument(docRes.data);
+      if (!positionRestoredRef.current) {
+        positionRestoredRef.current = true;
+        try {
+          const saved = JSON.parse(sessionStorage.getItem(positionKey) || 'null');
+          const modules = docRes.data?.content?.modules_fr || [];
+          const section = modules[saved?.moduleIdx]?.sections?.[saved?.sectionIdx];
+          const moduleExists = !!modules[saved?.moduleIdx];
+          if (moduleExists && Number.isInteger(saved.sectionIdx)) {
+            setActiveModule(saved.moduleIdx);
+            setActiveSection(saved.sectionIdx);
+            setEditingContent(section?.content || "");
+          }
+        } catch {
+          /* position illisible : début du document */
+        }
+      }
       setHasPlans((plansRes.data || []).length > 0);
       try {
         const valRes = await api.get(`/generator/validate/${projectId}`);
@@ -255,6 +282,7 @@ export default function EditorPage() {
     const modules = getModules();
     setActiveModule(moduleIdx);
     setActiveSection(sectionIdx);
+    rememberPosition(moduleIdx, sectionIdx);
     setEditingContent(
       modules[moduleIdx]?.sections?.[sectionIdx]?.content || "",
     );
