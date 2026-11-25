@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
+import { toast } from '@/lib/toast';
 import {
   Upload, Trash2, Edit2, FileText, ChevronDown, ChevronUp, Plus, X, Check
 } from 'lucide-react';
@@ -247,7 +248,7 @@ function PlanModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: '#495057' }}>
-                {isFr ? 'Date d\'émission' : 'Emission date'}
+                {isFr ? 'Date du plan' : 'Plan date'}
               </label>
               <input
                 type="date"
@@ -378,6 +379,23 @@ function PlanModal({
 export default function Module6Section({ projectId, language = 'fr', displayNumber = 6 }: Module6SectionProps) {
   const isFr = language === 'fr';
   const numbered = (label: string) => label.replace(/^\d+\./, `${displayNumber}.`);
+
+  // Ouvre le PDF dans un nouvel onglet (lecture avec la session courante).
+  const openPlan = async (planId: string) => {
+    const tab = window.open('', '_blank');
+    try {
+      const res = await api.get(`/projects/${projectId}/building-plans/${planId}/file`, {
+        responseType: 'blob',
+      });
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      if (tab) tab.location.href = url;
+      else window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      tab?.close();
+      toast(isFr ? 'Impossible d\'ouvrir le plan.' : 'Unable to open the plan.', 'error');
+    }
+  };
   const [plans, setPlans] = useState<BuildingPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedSections, setExpandedSections] = useState<Set<PlanSection>>(
@@ -631,9 +649,15 @@ export default function Module6Section({ projectId, language = 'fr', displayNumb
                         <div className="flex items-center gap-3 min-w-0">
                           <FileText size={14} style={{ color: '#C0392B', flexShrink: 0 }} />
                           <div className="min-w-0">
-                            <p className="text-sm font-medium truncate" style={{ color: '#2C3E50' }}>
+                            <button
+                              type="button"
+                              onClick={() => openPlan(plan.id)}
+                              className="block max-w-full text-left text-sm font-medium truncate hover:underline"
+                              style={{ color: '#2C3E50' }}
+                              title={isFr ? 'Ouvrir le PDF' : 'Open PDF'}
+                            >
                               {plan.name}
-                            </p>
+                            </button>
                             <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                               <span className="text-xs" style={{ color: '#ADB5BD' }}>
                                 {plan.fileName}
@@ -646,7 +670,7 @@ export default function Module6Section({ projectId, language = 'fr', displayNumb
                                 <>
                                   <span style={{ color: '#DEE2E6' }}>•</span>
                                   <span className="text-xs" style={{ color: '#ADB5BD' }}>
-                                    {isFr ? 'Émis le' : 'Issued'} {formatDate(plan.emissionDate)}
+                                    {isFr ? 'Date du plan :' : 'Plan date:'} {formatDate(plan.emissionDate)}
                                   </span>
                                 </>
                               )}
@@ -739,8 +763,8 @@ export default function Module6Section({ projectId, language = 'fr', displayNumb
                     <Check size={14} style={{ color: '#27AE60' }} />
                     <span className="text-xs" style={{ color: '#27AE60' }}>
                       {isFr
-                        ? 'Plan uploadé — modifier ou remplacer via le bouton crayon'
-                        : 'Plan uploaded — edit or replace via the pencil button'
+                        ? 'Plan téléversé — cliquez sur son nom pour l\'ouvrir, le crayon pour le modifier ou le remplacer'
+                        : 'Plan uploaded — click its name to open it, the pencil to edit or replace it'
                       }
                     </span>
                   </div>

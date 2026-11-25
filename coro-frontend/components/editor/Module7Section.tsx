@@ -35,20 +35,48 @@ interface PhotoEntry {
 
 type PhotosData = Record<string, PhotoEntry | null>;
 
-const DEFAULT_PHOTO_SLOTS = [
+type PhotoSlot = { key: string; label: string; when?: (config: any) => boolean };
+
+const truthy = (v: any) => v === true || v === 'true';
+const filled = (v: any) => typeof v === 'string' && v.trim() !== '';
+
+// Emplacements photo proposés selon ce qui est déclaré au configurateur.
+// Les quatre premiers sont toujours demandés.
+const PHOTO_SLOTS: PhotoSlot[] = [
   { key: '01_entree_principale', label: 'Entrée principale / Poste de commandement' },
   { key: '02_point_rassemblement', label: 'Point de rassemblement' },
-  { key: '03_plan_mesures', label: 'Plan de mesures d\'urgence' },
+  { key: '03_plan_mesures', label: 'Plan de mesures d\'urgence affiché' },
   { key: '04_boite_cles', label: 'Boîte à clés' },
-  { key: '05_ascenseur', label: 'Ascenseur' },
-  { key: '06_escalier_urgence', label: 'Escalier d\'urgence' },
-  { key: '07_acces_toit', label: 'Accès au toit' },
-  { key: '08_separation_coupe_feu', label: 'Séparation coupe-feu' },
-  { key: '09_chute_ordures', label: 'Chute à ordures' },
-  { key: '10_chauffage', label: 'Chauffage' },
-  { key: '11_ventilation', label: 'Ventilation' },
-  { key: '12_salle_electrique', label: 'Salle électrique principale' },
+  { key: '13_panneau_alarme', label: 'Panneau d\'alarme incendie', when: c => truthy(c.panneauAlarme) },
+  { key: '14_salle_gicleurs', label: 'Salle des gicleurs / vanne principale', when: c => truthy(c.gicleurs) },
+  { key: '15_raccord_pompier', label: 'Raccord pompier (siamois)', when: c => truthy(c.raccordPompier) },
+  { key: '16_extincteur', label: 'Extincteur portatif', when: c => truthy(c.extincteurPortatif) },
+  {
+    key: '17_dea',
+    label: 'Défibrillateur (DEA)',
+    when: c => Array.isArray(c.equipementsSoins)
+      && c.equipementsSoins.some((e: any) => /DEA|Defibrillateur|Défibrillateur/i.test(e?.type || '')),
+  },
+  { key: '05_ascenseur', label: 'Ascenseur', when: c => truthy(c.ascenseurs) },
+  { key: '06_escalier_urgence', label: 'Escalier d\'urgence', when: c => Number(c.floors) > 1 || Number(c.nbEscaliers) > 0 },
+  { key: '07_acces_toit', label: 'Accès au toit', when: c => truthy(c.toitVerrouille) || filled(c.accesToit) },
+  { key: '08_separation_coupe_feu', label: 'Séparation coupe-feu', when: c => truthy(c.separationCoupeFeu) },
+  { key: '09_chute_ordures', label: 'Chute à ordures', when: c => truthy(c.chuteADechets) },
+  { key: '10_chauffage', label: 'Chauffage', when: c => filled(c.typeChautfage) },
+  { key: '11_ventilation', label: 'Ventilation', when: c => truthy(c.cvac) },
+  { key: '12_salle_electrique', label: 'Salle électrique principale', when: c => filled(c.salleElectrique) },
+  { key: '18_generatrice', label: 'Génératrice', when: c => truthy(c.generatrice) },
+  { key: '19_matieres_dangereuses', label: 'Entreposage des matières dangereuses', when: c => truthy(c.matieresDangereuses) },
 ];
+
+const DEFAULT_PHOTO_SLOTS = PHOTO_SLOTS;
+
+const recommendedSlots = (config: any) => PHOTO_SLOTS.filter(slot => !slot.when || slot.when(config || {}));
+
+const photoOrder = (key: string) => {
+  const index = PHOTO_SLOTS.findIndex(slot => slot.key === key);
+  return index >= 0 ? index : PHOTO_SLOTS.length;
+};
 
 // ============================================================
 // HELPERS
@@ -235,22 +263,22 @@ export default function Module7Section({
           setQuarts(dataRes.data.quartsData);
         }
 
-        if (
-          dataRes.data?.photosData &&
-          Object.keys(dataRes.data.photosData).length > 0
-        ) {
-          setPhotos(dataRes.data.photosData);
-        } else {
-          const defaultPhotos: PhotosData = {};
-          DEFAULT_PHOTO_SLOTS.forEach(slot => {
-            defaultPhotos[slot.key] = {
-              base64: '',
-              fileName: '',
-              label: slot.label,
-            };
-          });
-          setPhotos(defaultPhotos);
-        }
+        // Emplacements selon le bâtiment. Une photo déjà déposée n'est jamais retirée;
+        // seul un emplacement standard vide qui ne concerne pas ce bâtiment disparaît.
+        const recommended = recommendedSlots(configRes.data || {});
+        const saved: PhotosData = dataRes.data?.photosData || {};
+        const merged: PhotosData = {};
+        Object.entries(saved).forEach(([key, photo]) => {
+          const isStandard = PHOTO_SLOTS.some(slot => slot.key === key);
+          const stillRequired = recommended.some(slot => slot.key === key);
+          if (photo && (photo.base64 || !isStandard || stillRequired)) merged[key] = photo;
+        });
+        recommended.forEach(slot => {
+          if (!(slot.key in merged)) {
+            merged[slot.key] = { base64: '', fileName: '', label: slot.label };
+          }
+        });
+        setPhotos(merged);
 
         if (dataRes.data?.extraData) {
           setExtra(dataRes.data.extraData);
@@ -1913,7 +1941,7 @@ export default function Module7Section({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {Object.entries(photos)
             .filter(([_, photo]) => photo !== null)
-            .sort(([a], [b]) => a.localeCompare(b))
+            .sort(([a], [b]) => photoOrder(a) - photoOrder(b) || a.localeCompare(b))
             .map(([key, photo]) =>
               photo ? (
                 <div
@@ -1942,6 +1970,16 @@ export default function Module7Section({
                       placeholder="Titre de la photo..."
                       style={{ border: 'none' }}
                     />
+                    {PHOTO_SLOTS.some(slot => slot.key === key)
+                      && !recommendedSlots(config).some(slot => slot.key === key) && (
+                      <span
+                        className="flex-shrink-0 ml-2 px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                        style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: '#FFFFFF' }}
+                        title="Cet équipement n'est pas déclaré au configurateur pour ce bâtiment."
+                      >
+                        Non requis
+                      </span>
+                    )}
                     <button
                       onClick={() => removePhoto(key)}
                       className="flex-shrink-0 ml-2 opacity-70 hover:opacity-100"
