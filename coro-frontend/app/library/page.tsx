@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
+import { confirmAction } from '@/lib/confirm-dialog';
+import { toast } from '@/lib/toast';
 
 interface IncidentCode {
   id: string;
@@ -23,7 +25,14 @@ interface Role {
 
 export default function LibraryPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
+  const isManager = ['ADMIN', 'SUPER_ADMIN'].includes(user?.role || '');
+  // Procédures personnalisées par l'organisation (codes) et versions enregistrées.
+  const [orgVersionCodes, setOrgVersionCodes] = useState<Set<string>>(new Set());
+  const [variants, setVariants] = useState<{
+    id: string; code?: string; title?: string; name: string; ownerName?: string | null;
+    isMine: boolean; sharedWithOrganization: boolean;
+  }[]>([]);
   const [activeTab, setActiveTab] = useState<'codes' | 'roles' | 'procedures'>('codes');
   const [incidentCodes, setIncidentCodes] = useState<IncidentCode[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -53,8 +62,40 @@ export default function LibraryPage() {
     else nextErrors.roles = 'Impossible de charger les rôles.';
     if (proceduresRes.status === 'fulfilled') setProcedures(proceduresRes.value.data);
     else nextErrors.procedures = 'Impossible de charger les procédures.';
+    loadVersions();
     setErrors(nextErrors);
     setLoading(false);
+  };
+
+  const loadVersions = async () => {
+    const [orgRes, variantsRes] = await Promise.allSettled([
+      api.get('/procedures/organization-versions'),
+      api.get('/procedures/variants'),
+    ]);
+    if (orgRes.status === 'fulfilled')
+      setOrgVersionCodes(new Set((orgRes.value.data || []).map((o: { code: string }) => o.code)));
+    if (variantsRes.status === 'fulfilled') setVariants(variantsRes.value.data || []);
+  };
+
+  const variantAction = async (
+    variant: { id: string; name: string },
+    action: 'share' | 'unshare' | 'delete' | 'promote',
+  ) => {
+    const prompts = {
+      share: { title: `Partager « ${variant.name} » ?`, message: 'Les conseillers de votre organisation pourront l’appliquer à leurs projets.', label: 'Partager' },
+      unshare: { title: `Retirer le partage de « ${variant.name} » ?`, message: 'Elle redeviendra visible par son auteur seulement. Les projets où elle a été appliquée ne changent pas.', label: 'Retirer le partage' },
+      delete: { title: `Supprimer « ${variant.name} » ?`, message: 'La version enregistrée sera supprimée définitivement. Les projets où elle a été appliquée ne changent pas.', label: 'Supprimer' },
+      promote: { title: `Faire de « ${variant.name} » la version de l’organisation ?`, message: 'Tous les projets de l’organisation qui n’ont pas leur propre version utiliseront celle-ci.', label: 'Confirmer' },
+    }[action];
+    if (!(await confirmAction({ title: prompts.title, message: prompts.message, confirmLabel: prompts.label }))) return;
+    try {
+      if (action === 'delete') await api.delete(`/procedures/variants/${variant.id}`);
+      else if (action === 'promote') await api.post(`/procedures/variants/${variant.id}/promote`);
+      else await api.patch(`/procedures/variants/${variant.id}`, { sharedWithOrganization: action === 'share' });
+      await loadVersions();
+    } catch (err: unknown) {
+      toast((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Action impossible.', 'error');
+    }
   };
 
   const query = search.trim().toLocaleLowerCase('fr-CA');
@@ -243,6 +284,48 @@ export default function LibraryPage() {
           )}
 
           {/* ── PROCÉDURES ── */}
+          {activeTab === 'procedures' && variants.length > 0 && (
+            <div className="mb-4 p-4" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', borderRadius: 6 }}>
+              <p className="text-sm font-semibold" style={{ color: '#2C3E50' }}>Versions enregistrées</p>
+              <p className="text-xs mt-0.5 mb-3" style={{ color: '#6C757D' }}>
+                Vos versions et celles partagées dans l’organisation. On les applique depuis l’éditeur d’une procédure, dans un projet.
+              </p>
+              <div className="space-y-1">
+                {variants.map((variant) => (
+                  <div key={variant.id} className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 px-3 py-2 rounded"
+                    style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
+                    <div className="min-w-0">
+                      <span className="text-xs font-mono font-bold mr-2" style={{ color: '#ADB5BD' }}>{variant.code}</span>
+                      <span className="text-sm" style={{ color: '#2C3E50' }}>{variant.name}</span>
+                      <span className="text-xs ml-2" style={{ color: '#ADB5BD' }}>
+                        {variant.isMine ? 'Ma version' : `par ${variant.ownerName || 'un collègue'}`}
+                        {variant.sharedWithOrganization ? ' · partagée avec l’organisation' : ' · privée'}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {variant.isMine && !variant.sharedWithOrganization && (
+                        <button type="button" onClick={() => variantAction(variant, 'share')} className="text-xs px-2 py-1 rounded"
+                          style={{ border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF' }}>Partager avec l’organisation</button>
+                      )}
+                      {variant.sharedWithOrganization && (variant.isMine || isManager) && (
+                        <button type="button" onClick={() => variantAction(variant, 'unshare')} className="text-xs px-2 py-1 rounded"
+                          style={{ border: '1px solid #CED4DA', color: '#6C757D', backgroundColor: '#FFFFFF' }}>Retirer le partage</button>
+                      )}
+                      {isManager && variant.sharedWithOrganization && (
+                        <button type="button" onClick={() => variantAction(variant, 'promote')} className="text-xs px-2 py-1 rounded"
+                          style={{ border: '1px solid #AED6F1', color: '#2471A3', backgroundColor: '#FFFFFF' }}>Faire la version de l’organisation</button>
+                      )}
+                      {(variant.isMine || (isManager && variant.sharedWithOrganization)) && (
+                        <button type="button" onClick={() => variantAction(variant, 'delete')} className="text-xs px-2 py-1 rounded"
+                          style={{ border: '1px solid #F1948A', color: '#C0392B', backgroundColor: '#FFFFFF' }}>Supprimer</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {activeTab === 'procedures' && (
             <div className="grid gap-1.5">
               {visibleProcedures.map(proc => (
@@ -277,6 +360,12 @@ export default function LibraryPage() {
                           style={{ color: '#ADB5BD' }}>
                           {proc.code}
                         </span>
+                        {orgVersionCodes.has(proc.code) && (
+                          <span className="text-xs px-1.5 py-0.5 rounded font-medium"
+                            style={{ backgroundColor: '#E7F1FB', color: '#2471A3', border: '1px solid #AED6F1' }}>
+                            Version de l’organisation
+                          </span>
+                        )}
                         {proc.phase && (
                           <span className="text-xs px-1.5 py-0.5 rounded font-medium"
                             style={{
@@ -354,6 +443,20 @@ export default function LibraryPage() {
                           </div>
                         ))}
                       </div>
+                      {isManager && (
+                        <div className="px-4 py-2 flex flex-wrap items-center gap-3"
+                          style={{ backgroundColor: '#FFFFFF', borderTop: '1px solid #EFEFEF' }}>
+                          <button type="button"
+                            onClick={() => router.push(`/library/procedures/${proc.id}`)}
+                            className="text-xs px-3 py-1.5 rounded text-white"
+                            style={{ backgroundColor: '#C0392B' }}>
+                            {orgVersionCodes.has(proc.code) ? 'Modifier la version de l’organisation' : 'Personnaliser pour l’organisation'}
+                          </button>
+                          <span className="text-xs" style={{ color: '#6C757D' }}>
+                            S’applique à tous les projets de l’organisation qui n’ont pas leur propre version.
+                          </span>
+                        </div>
+                      )}
                       <div className="px-4 py-2 flex flex-wrap gap-2"
                         style={{ backgroundColor: '#F8F9FA', borderTop: '1px solid #EFEFEF' }}>
                         {proc.documentTypes.map((dt: string) => (

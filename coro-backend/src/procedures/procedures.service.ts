@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -6,6 +7,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { getAllProcedures } from '../generator/procedures/index';
+import { harmonizeStep } from '../generator/step-style';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdviserActor, projectAccessWhere } from '../auth/project-access';
@@ -62,6 +64,25 @@ export class ProceduresService implements OnModuleInit {
     return byCode?.id || idOrKey;
   }
 
+  /** Contenu présenté au même style que le PDF (« **Vérifiez** »), pour l'éditer tel qu'il sera imprimé. */
+  private styled(content: any) {
+    if (!content || typeof content !== 'object') return content;
+    return {
+      ...content,
+      ...(Array.isArray(content.roleSections)
+        ? {
+            roleSections: content.roleSections.map((section: any) => ({
+              ...section,
+              steps: (section.steps || []).map((step: any) => harmonizeStep(step)),
+            })),
+          }
+        : {}),
+      ...(Array.isArray(content.directivesGenerales)
+        ? { directivesGenerales: content.directivesGenerales.map((step: any) => harmonizeStep(step)) }
+        : {}),
+    };
+  }
+
   private async assertMutableProject(projectId: string, actor: AdviserActor) {
     const project = await this.prisma.project.findFirst({
       where: { id: projectId, ...projectAccessWhere(actor), isActive: true },
@@ -81,6 +102,187 @@ export class ProceduresService implements OnModuleInit {
   // l'on réutilise un contenu JSON lu en base dans create/update.
   private asInputJson(value: unknown): Prisma.InputJsonValue {
     return value as Prisma.InputJsonValue;
+  }
+
+  // ============================================================
+  // Versions de procédures : organisation et versions enregistrées
+  // ============================================================
+
+  private requireOrganizationManager(actor: AdviserActor) {
+    if (!['ADMIN', 'SUPER_ADMIN'].includes(actor.role))
+      throw new ForbiddenException(
+        'Seul un administrateur peut modifier la version de l’organisation.',
+      );
+  }
+
+  private assertContentSize(content: unknown) {
+    if (!content || typeof content !== 'object')
+      throw new BadRequestException('Contenu de procédure invalide.');
+    if (JSON.stringify(content).length > 1_500_000)
+      throw new BadRequestException('Procédure trop volumineuse.');
+  }
+
+  /** Codes des procédures que l'organisation a personnalisées. */
+  async organizationVersions(actor: AdviserActor) {
+    const overrides = await this.prisma.procedureOverride.findMany({
+      where: { organizationId: actor.organizationId, projectId: null },
+      select: { updatedAt: true, procedure: { select: { id: true, code: true } } },
+    });
+    return overrides.map((o) => ({ procedureId: o.procedure.id, code: o.procedure.code, updatedAt: o.updatedAt }));
+  }
+
+  /** Version de l'organisation (administrateur). */
+  async saveOrganizationVersion(id: string, content: unknown, actor: AdviserActor) {
+    this.requireOrganizationManager(actor);
+    this.assertContentSize(content);
+    id = await this.resolveDefaultId(id);
+    return this.updateForOrganization(id, actor.organizationId, content);
+  }
+
+  /** Retour à la version CORO pour l'organisation (administrateur). */
+  async resetOrganizationVersion(id: string, actor: AdviserActor) {
+    this.requireOrganizationManager(actor);
+    id = await this.resolveDefaultId(id);
+    await this.restoreForOrganization(id, actor.organizationId);
+    return { success: true };
+  }
+
+  private variantView(variant: any, actor: AdviserActor) {
+    return {
+      id: variant.id,
+      procedureId: variant.procedureId,
+      code: variant.procedure?.code ?? (variant.content as any)?.code,
+      title: (variant.content as any)?.titleFR,
+      name: variant.name,
+      ownerName: variant.ownerName,
+      isMine: variant.ownerId === actor.userId,
+      sharedWithOrganization: variant.sharedWithOrganization,
+      updatedAt: variant.updatedAt,
+    };
+  }
+
+  /** Mes versions + celles partagées dans mon organisation (option : pour une procédure). */
+  async listVariants(actor: AdviserActor, procedureId?: string) {
+    const resolved = procedureId ? await this.resolveDefaultId(procedureId) : undefined;
+    const variants = await this.prisma.procedureVariant.findMany({
+      where: {
+        organizationId: actor.organizationId,
+        ...(resolved ? { procedureId: resolved } : {}),
+        OR: [{ ownerId: actor.userId }, { sharedWithOrganization: true }],
+      },
+      include: { procedure: { select: { code: true } } },
+      orderBy: [{ updatedAt: 'desc' }],
+    });
+    return variants.map((variant) => this.variantView(variant, actor));
+  }
+
+  /** Enregistre la version affichée dans l'éditeur sous un nom, pour la réutiliser. */
+  async createVariant(
+    id: string,
+    body: { name?: unknown; content?: unknown; sourceProjectId?: unknown },
+    actor: AdviserActor & { email?: string; firstName?: string; lastName?: string },
+  ) {
+    id = await this.resolveDefaultId(id);
+    const proc = await this.prisma.procedureDefault.findUnique({ where: { id }, select: { id: true } });
+    if (!proc) throw new NotFoundException('Procédure introuvable');
+    const name = typeof body?.name === 'string' ? body.name.trim().slice(0, 120) : '';
+    if (!name) throw new BadRequestException('Donnez un nom à cette version.');
+    this.assertContentSize(body?.content);
+    const sourceProjectId =
+      typeof body?.sourceProjectId === 'string' && body.sourceProjectId ? body.sourceProjectId : null;
+    if (sourceProjectId) {
+      const project = await this.prisma.project.findFirst({
+        where: { id: sourceProjectId, ...projectAccessWhere(actor) },
+        select: { id: true },
+      });
+      if (!project) throw new NotFoundException('Projet introuvable');
+    }
+    const owner = await this.prisma.user.findUnique({
+      where: { id: actor.userId },
+      select: { firstName: true, lastName: true, email: true },
+    });
+    const ownerName =
+      [owner?.firstName, owner?.lastName].filter(Boolean).join(' ').trim() || owner?.email || null;
+    const variant = await this.prisma.procedureVariant.create({
+      data: {
+        organizationId: actor.organizationId,
+        procedureId: id,
+        ownerId: actor.userId,
+        ownerName,
+        name,
+        content: this.asInputJson(body.content),
+        sourceProjectId,
+      },
+      include: { procedure: { select: { code: true } } },
+    });
+    return this.variantView(variant, actor);
+  }
+
+  private async findVariant(variantId: string, actor: AdviserActor) {
+    const variant = await this.prisma.procedureVariant.findFirst({
+      where: {
+        id: variantId,
+        organizationId: actor.organizationId,
+        OR: [{ ownerId: actor.userId }, { sharedWithOrganization: true }],
+      },
+      include: { procedure: { select: { code: true } } },
+    });
+    if (!variant) throw new NotFoundException('Version introuvable');
+    return variant;
+  }
+
+  /** Renommer ou partager / retirer le partage (auteur; un administrateur peut retirer un partage). */
+  async updateVariant(
+    variantId: string,
+    body: { name?: unknown; sharedWithOrganization?: unknown },
+    actor: AdviserActor,
+  ) {
+    const variant = await this.findVariant(variantId, actor);
+    const isOwner = variant.ownerId === actor.userId;
+    const isManager = ['ADMIN', 'SUPER_ADMIN'].includes(actor.role);
+    const data: { name?: string; sharedWithOrganization?: boolean } = {};
+    if (typeof body?.name === 'string') {
+      if (!isOwner) throw new ForbiddenException('Seul l’auteur peut renommer cette version.');
+      const name = body.name.trim().slice(0, 120);
+      if (!name) throw new BadRequestException('Donnez un nom à cette version.');
+      data.name = name;
+    }
+    if (typeof body?.sharedWithOrganization === 'boolean') {
+      if (!isOwner && !(isManager && body.sharedWithOrganization === false))
+        throw new ForbiddenException('Seul l’auteur peut partager cette version.');
+      data.sharedWithOrganization = body.sharedWithOrganization;
+    }
+    if (Object.keys(data).length === 0) throw new BadRequestException('Aucune modification.');
+    const updated = await this.prisma.procedureVariant.update({
+      where: { id: variant.id },
+      data,
+      include: { procedure: { select: { code: true } } },
+    });
+    return this.variantView(updated, actor);
+  }
+
+  async deleteVariant(variantId: string, actor: AdviserActor) {
+    const variant = await this.findVariant(variantId, actor);
+    const isManager = ['ADMIN', 'SUPER_ADMIN'].includes(actor.role);
+    if (variant.ownerId !== actor.userId && !(isManager && variant.sharedWithOrganization))
+      throw new ForbiddenException('Seul l’auteur peut supprimer cette version.');
+    await this.prisma.procedureVariant.delete({ where: { id: variant.id } });
+    return { success: true };
+  }
+
+  /** Applique une version enregistrée à un projet (devient la version du projet). */
+  async applyVariant(variantId: string, projectId: string, actor: AdviserActor) {
+    const variant = await this.findVariant(variantId, actor);
+    await this.updateForProject(variant.procedureId, projectId, variant.content, actor);
+    return { success: true, procedureId: variant.procedureId };
+  }
+
+  /** Fait d'une version partagée la version officielle de l'organisation (administrateur). */
+  async promoteVariant(variantId: string, actor: AdviserActor) {
+    this.requireOrganizationManager(actor);
+    const variant = await this.findVariant(variantId, actor);
+    await this.updateForOrganization(variant.procedureId, actor.organizationId, variant.content);
+    return { success: true, procedureId: variant.procedureId };
   }
 
   // ── Toutes les procédures par défaut ───────────────────────
@@ -131,12 +333,18 @@ export class ProceduresService implements OnModuleInit {
       });
 
       if (projectOverride) {
+        const hasOrganizationVersion = !!(await this.prisma.procedureOverride.findFirst({
+          where: { procedureId: id, organizationId, projectId: null },
+          select: { id: true },
+        }));
         return {
           ...proc,
-          content: projectOverride.content,
+          content: this.styled(projectOverride.content),
           isActive: projectOverride.isActive,
           isOverridden: true,
           overrideLevel: 'project',
+          // Vers quoi « Restaurer » revient : la version de l'organisation ou celle de CORO.
+          restoresTo: hasOrganizationVersion ? 'organization' : 'coro',
         };
       }
     }
@@ -153,17 +361,20 @@ export class ProceduresService implements OnModuleInit {
     if (orgOverride) {
       return {
         ...proc,
-        content: orgOverride.content,
+        content: this.styled(orgOverride.content),
         isActive: true,
         isOverridden: true,
         overrideLevel: 'organization',
+        restoresTo: 'coro',
       };
     }
 
     return {
       ...proc,
+      content: this.styled(proc.content),
       isOverridden: false,
       overrideLevel: null,
+      restoresTo: null,
     };
   }
 
