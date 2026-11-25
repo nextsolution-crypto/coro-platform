@@ -100,7 +100,8 @@ function convertHead(text: string): { head: string; rest: string } | null {
 
 /** « sans s'exposer » → « sans vous exposer » (le sujet est la personne qui lit). */
 function reflexiveAfterPreposition(rest: string): string {
-  return rest.replace(/\b(sans|pour|afin de|avant de)\s+(?:se\s+|s'|s’)([A-Za-zÀ-ÿœŒ]+)/giu, (all, prep, word) =>
+  // Seulement « sans » : « Désignez un agent pour se rendre » garde « se » (c'est l'agent qui se déplace).
+  return rest.replace(/\b(sans)\s+(?:se\s+|s'|s’)([A-Za-zÀ-ÿœŒ]+)/giu, (all, prep, word) =>
     conjugate(word) ? `${prep} vous ${/^[aeiouhâàéèêîïôûœ]/i.test(word) ? '' : ''}${word}` : all,
   );
 }
@@ -115,7 +116,7 @@ const GOVERNING = /(?:\b(?:de|d'|d’|à|pour|sans|afin de|avant de|après|pouvo
 function convertCoordinated(rest: string, negative: boolean): string {
   const verbToken = new RegExp(`(${WORD})`, 'gu');
   const coordination = new RegExp(
-    `(\\bet|\\bou|\\bpuis|,|;|—)(\\s+)(?:(ne\\s+pas)\\s+)?(?:(se\\s+|s'|s’|les\\s+|leur\\s+|lui\\s+))?(${WORD})\\b`,
+    `(\\bet|\\bou|\\bpuis|,|;|:|—)(\\s+)(?:(ne\\s+pas)\\s+)?(?:(se\\s+|s'|s’|les\\s+|leur\\s+|lui\\s+))?(${WORD})\\b`,
     'giu',
   );
   // Le dernier verbe avant `index` est-il un infinitif dépendant d'une préposition ?
@@ -124,7 +125,9 @@ function convertCoordinated(rest: string, negative: boolean): string {
     for (const m of text.slice(0, index).matchAll(verbToken)) {
       const word = m[1];
       const before = text.slice(0, m.index);
-      if (/ez$/u.test(word) || /^(faites|dites|soyez|sachez)$/iu.test(word)) governed = false;
+      // « laissez le service silencer et réarmer » : l'infinitif dépend de « laissez ».
+      if (/^(laissez|laisser|faites|faire|voyez|regardez|entendez)$/iu.test(word)) governed = true;
+      else if (/ez$/u.test(word) || /^(dites|soyez|sachez)$/iu.test(word)) governed = false;
       else if (conjugate(word) && word === word.toLocaleLowerCase('fr-CA')) governed = GOVERNING.test(before);
     }
     return governed;
@@ -151,7 +154,8 @@ function convertCoordinated(rest: string, negative: boolean): string {
       subjectClause ||
       !verb ||
       word !== word.toLocaleLowerCase('fr-CA') ||
-      (!clauseBreak && lastVerbIsGoverned(output, output.length));
+      (!clauseBreak && lastVerbIsGoverned(output, output.length)) ||
+      GOVERNING.test(`${output}${sep}${space}`); // « pour : superviser »
     if (keep) {
       // Ne consomme que le séparateur : « , ou désigner » sera relu à partir de « ou ».
       output += sep;
@@ -173,11 +177,15 @@ function convertCoordinated(rest: string, negative: boolean): string {
   return reflexiveAfterPreposition(output);
 }
 
+/** Étape qui commence par une condition : la consigne suit la virgule. */
+const CONDITIONAL_START = /^(si|s'il|s’il|en cas d|dès|lorsque|lorsqu|une fois|au besoin|en présence|à l'arrivée|à l’arrivée)\b/iu;
+
 /** Possessifs du lecteur (« gardez son sang-froid » → « votre sang-froid ») et phrases ambiguës. */
 const POSSESSIVES: [RegExp, string][] = [
   [/\bson (sang-froid|calme|dossard|poste|équipement|matériel|radio|cellulaire|emplacement)\b/giu, 'votre $1'],
   [/\bsa (disponibilité|position|radio|zone|veste)\b/giu, 'votre $1'],
   [/\bses (effets personnels|coordonnées|observations|équipements)\b/giu, 'vos $1'],
+  [/\bsoi-même\b/giu, 'vous-même'],
 ];
 const AMBIGUOUS_FIXES: [string, string][] = [
   ['sans les verrouiller et rejoindre', 'sans les verrouiller et rejoignez'],
@@ -204,6 +212,11 @@ export function harmonizeStepText(text: string, options: { bold?: boolean } = {}
   const boldLength = leading ? leading[1].length : 0;
 
   const converted = convertHead(plain.trimStart());
+  if (!converted && CONDITIONAL_START.test(plain)) {
+    // « Si odeur confirmée, revenir immédiatement » → « …, revenez immédiatement »
+    const after = fixAfterConversion(convertCoordinated(plain, false));
+    if (after !== plain) return leading ? `**${leading[1]}**${after.slice(leading[1].length)}` : after;
+  }
   if (!converted) {
     // Déjà vouvoyé : mettre le verbe de tête en gras s'il ne l'est pas.
     if (!bold || leading) return text;
