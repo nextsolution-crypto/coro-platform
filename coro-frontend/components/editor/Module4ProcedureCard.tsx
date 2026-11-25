@@ -221,6 +221,15 @@ export default function Module4ProcedureCard({
                 {procedure.sectionNumber}
               </span>
             )}
+            {/* Code de bibliothèque : c'est lui que les équipes retiennent (P005…). */}
+            {procedure.code && (
+              <span
+                className="text-xs font-mono font-semibold px-1.5 py-0.5"
+                style={{ color: '#6C757D', backgroundColor: '#F8F9FA', border: '1px solid #DEE2E6', borderRadius: 4 }}
+              >
+                {procedure.code}
+              </span>
+            )}
             {procedure.icon && <span className="text-lg">{procedure.icon}</span>}
             <span className="font-bold text-sm uppercase tracking-wide" style={{ color: '#2C3E50' }}>
               {title}
