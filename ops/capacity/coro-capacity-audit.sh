@@ -27,7 +27,10 @@ percent_required=$((total_bytes * min_percent / 100)); history_required=$((large
 ((percent_required > backup_required)) && backup_required="$percent_required"
 ((history_required > backup_required)) && backup_required="$history_required"
 
-active_manifest="$(find "$release_dir" -maxdepth 1 -type f -name 'production-*.json' -print0 | xargs -0 -r stat -c '%Y %n' | sort -rn | cut -d' ' -f2- | while read -r f; do node -e 'const m=require(process.argv[1]);if(m.status==="SUCCESS"){process.stdout.write(process.argv[1]);process.exit(0)}process.exit(1)' "$f" 2>/dev/null && break || true; done)"
+# Liste lue en entier avant la boucle : un `break` dans un pipe ferait
+# échouer `cut` (SIGPIPE) sous pipefail dès que la liste dépasse 64 Ko.
+active_manifest_candidates="$(find "$release_dir" -maxdepth 1 -type f -name 'production-*.json' -print0 | xargs -0 -r stat -c '%Y %n' | sort -rn | cut -d' ' -f2-)"
+active_manifest="$(while read -r f; do node -e 'const m=require(process.argv[1]);if(m.status==="SUCCESS"){process.stdout.write(process.argv[1]);process.exit(0)}process.exit(1)' "$f" 2>/dev/null && break || true; done <<<"$active_manifest_candidates")"
 [[ -n "$active_manifest" && -f "$active_manifest" ]] || { echo 'CAPACITY_AUDIT_FAILED code=ACTIVE_MANIFEST_MISSING'; exit 1; }
 
 mapfile -t active_refs < <(node -e 'const m=require(process.argv[1]);for(const key of ["backend","frontend","clientPortal","website"]){const r=m.images?.[key];if(typeof r!=="string")process.exit(1);console.log(r)}' "$active_manifest")

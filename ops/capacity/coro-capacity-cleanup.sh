@@ -25,7 +25,10 @@ target_free_bytes="$(node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSyn
 bootstrap_marker=""
 marker="$(find "$state_root" -maxdepth 1 -type f -name 'production-*.reconciled.json' -printf '%T@ %p\n' | sort -rn | sed -n '1p' | cut -d' ' -f2-)"
 if [[ -z "$marker" && "$mode" == DRY_RUN ]]; then
-  manifest_preview="$(find "$release_dir" -maxdepth 1 -type f -name 'production-*.json' -printf '%T@ %p\n' | sort -rn | cut -d' ' -f2- | while read -r candidate; do node -e 'const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.exit(m.status==="SUCCESS"?0:1)' "$candidate" 2>/dev/null && { echo "$candidate"; break; } || true; done)"
+  # Liste lue en entier avant la boucle : un `break` dans un pipe ferait
+  # échouer `cut` (SIGPIPE) sous pipefail dès que la liste dépasse 64 Ko.
+  manifest_preview_candidates="$(find "$release_dir" -maxdepth 1 -type f -name 'production-*.json' -printf '%T@ %p\n' | sort -rn | cut -d' ' -f2-)"
+  manifest_preview="$(while read -r candidate; do node -e 'const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.exit(m.status==="SUCCESS"?0:1)' "$candidate" 2>/dev/null && { echo "$candidate"; break; } || true; done <<<"$manifest_preview_candidates")"
   [[ -n "$manifest_preview" ]] || { echo 'CAPACITY_CLEANUP_FAILED code=RECONCILED_RELEASE_MISSING'; exit 1; }
   bootstrap_marker="$(mktemp)"
   node -e 'const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));fs.writeFileSync(process.argv[2],JSON.stringify({releaseId:m.releaseId,manifestPath:process.argv[1],manifestSha256:process.argv[3],reconciledAt:m.timestampUtc}));' "$manifest_preview" "$bootstrap_marker" "$(sha256sum "$manifest_preview" | cut -d' ' -f1)"

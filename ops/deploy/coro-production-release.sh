@@ -185,7 +185,10 @@ done
 
 # Retention rollback is service-specific. An unchanged service keeps its prior
 # rollback instead of rotating merely because another service is released.
-active_manifest="$(find "$RELEASE_DIR" -maxdepth 1 -type f -name 'production-*.json' -printf '%T@ %p\n' | sort -rn | cut -d' ' -f2- | while read -r candidate; do node -e 'const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.exit(m.status==="SUCCESS"?0:1)' "$candidate" 2>/dev/null && { echo "$candidate"; break; } || true; done)"
+# Liste lue en entier avant la boucle : un `break` dans un pipe ferait
+# échouer `cut` (SIGPIPE) sous pipefail dès que la liste dépasse 64 Ko.
+active_manifest_candidates="$(find "$RELEASE_DIR" -maxdepth 1 -type f -name 'production-*.json' -printf '%T@ %p\n' | sort -rn | cut -d' ' -f2-)"
+active_manifest="$(while read -r candidate; do node -e 'const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.exit(m.status==="SUCCESS"?0:1)' "$candidate" 2>/dev/null && { echo "$candidate"; break; } || true; done <<<"$active_manifest_candidates")"
 [[ -n "$active_manifest" && -f "$active_manifest" && ! -L "$active_manifest" ]] || fail RETENTION_ACTIVE_MANIFEST_MISSING
 export RETENTION_ACTIVE_MANIFEST="$active_manifest"
 export RETENTION_CANDIDATE_IMAGES="$(node -e 'process.stdout.write(JSON.stringify({backend:process.env.BACKEND_IMAGE,frontend:process.env.FRONTEND_IMAGE,clientPortal:process.env.CLIENT_PORTAL_IMAGE,website:process.env.WEBSITE_IMAGE}))')"
