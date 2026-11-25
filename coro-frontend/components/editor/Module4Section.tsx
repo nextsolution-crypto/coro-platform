@@ -75,6 +75,13 @@ export default function Module4Section({
   const [isDirty, setIsDirty] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
+  // initialData est recréé à chaque rendu du parent : on ne recharge que si le projet ou la
+  // liste des procédures change vraiment (sinon onLockVersionChange → rendu du parent →
+  // nouveau chargement, en boucle).
+  const initialProcedureKey = (initialData.procedures || [])
+    .map((p: Procedure) => p.id)
+    .join("|");
+
   useEffect(() => {
     const loadData = async () => {
       setLoadingData(true);
@@ -189,7 +196,8 @@ export default function Module4Section({
     };
 
     loadData();
-  }, [projectId, initialData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, initialProcedureKey]);
 
   const saveData = useCallback(async () => {
     setSaving(true);

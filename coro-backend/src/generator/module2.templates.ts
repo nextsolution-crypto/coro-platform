@@ -208,23 +208,21 @@ export const ALL_EQUIPEMENTS_EN = [
 // ============================================================
 
 const RESSOURCES_COMMUNES_FR: ExternalResource[] = [
-  { role: 'Bureau de la sécurité des transports (BST)', phone: '1 (819) 994-3741\nAppels sans frais : 1 (800) 387-3557', url: 'https://www.tsb.gc.ca' },
+  { role: 'Bureau de la sécurité des transports (BST)', phone: '1 (819) 994-3741 · sans frais : 1 (800) 387-3557', url: 'https://www.tsb.gc.ca' },
   { role: 'CANUTEC, Matières Dangereuses (24h/24)', phone: '1 (888) 226-8832', url: 'https://tc.canada.ca/fr/marchandises-dangereuses/canutec' },
   { role: 'Ressources naturelles Canada', phone: '1 (855) 525-9293', url: 'https://www.rncan.gc.ca' },
   { role: 'Séismes Canada', phone: '1 (613) 995-0600', url: 'https://www.seismescanada.rncan.gc.ca' },
   { role: 'Urgence environnement fédéral (Env. Canada)', phone: '1 (866) 283-2333' },
   { role: 'Énergir', phone: '1 (800) 361-8003' },
-  { role: 'Siège social de GardaWorld (Montréal)', phone: '(514) 281-2811', isBold: true },
 ];
 
 const RESSOURCES_COMMUNES_EN: ExternalResource[] = [
-  { role: 'Transportation Safety Board (TSB)', phone: '1 (819) 994-3741\nToll-free: 1 (800) 387-3557', url: 'https://www.tsb.gc.ca' },
+  { role: 'Transportation Safety Board (TSB)', phone: '1 (819) 994-3741 · toll-free: 1 (800) 387-3557', url: 'https://www.tsb.gc.ca' },
   { role: 'CANUTEC, Dangerous Goods (24/7)', phone: '1 (888) 226-8832', url: 'https://tc.canada.ca/en/dangerous-goods/canutec' },
   { role: 'Natural Resources Canada', phone: '1 (855) 525-9293', url: 'https://www.nrcan.gc.ca' },
   { role: 'Earthquakes Canada', phone: '1 (613) 995-0600', url: 'https://www.earthquakescanada.nrcan.gc.ca' },
   { role: 'Federal Environmental Emergency (Env. Canada)', phone: '1 (866) 283-2333' },
   { role: 'Énergir', phone: '1 (800) 361-8003' },
-  { role: 'GardaWorld Head Office (Montréal)', phone: '(514) 281-2811', isBold: true },
 ];
 
 const RESSOURCES_QC_FR: ExternalResource[] = [
@@ -287,6 +285,16 @@ const RESSOURCES_AB_EN: ExternalResource[] = [
   ...RESSOURCES_COMMUNES_EN,
 ];
 
+function firmHeadOffice(ctx: DocumentContext, lang: 'fr' | 'en'): ExternalResource[] {
+  const name = (ctx.companyName || '').trim();
+  if (!name || name === 'CORO') return [];
+  return [{
+    role: lang === 'fr' ? `Siège social — ${name}` : `${name} Head Office`,
+    phone: ctx.companyPhone || '',
+    isBold: true,
+  }];
+}
+
 function getExternalResources(province: string, lang: 'fr' | 'en'): ExternalResource[] {
   const p = province?.toLowerCase();
   if (lang === 'fr') {
@@ -302,13 +310,28 @@ function getExternalResources(province: string, lang: 'fr' | 'en'): ExternalReso
   }
 }
 
+// Le configurateur enregistre le libellé français (« Tour à bureaux », « Industriel »…);
+// les anciens projets ont « office » / « industrial ». Seul un bâtiment industriel reçoit
+// les rôles d'usine; tous les autres reçoivent les rôles de gestion d'immeuble.
+export function isIndustrialBuilding(buildingType?: string): boolean {
+  return /industri/i.test(buildingType || '');
+}
+
 // ============================================================
 // GÉNÉRATION SECTION 2.2 — RESSOURCES INTERNES
 // ============================================================
 
 function buildSection2_2(ctx: DocumentContext, lang: 'fr' | 'en'): PhoneEntry[] {
-  const isBureau = ctx.buildingType === 'office' || ctx.buildingType === 'bureau'
-    || ctx.buildingType === 'commercial';
+  const known = buildSection2_2Base(ctx, lang);
+  const name = (ctx.buildingManagerName || '').trim();
+  if (!name) return known;
+  const role = (ctx.responsableTitre || '').trim()
+    || (lang === 'fr' ? 'Responsable du bâtiment' : 'Building manager');
+  return [{ role, name, phone: ctx.responsablePhone || '' }, ...known];
+}
+
+function buildSection2_2Base(ctx: DocumentContext, lang: 'fr' | 'en'): PhoneEntry[] {
+  const isBureau = !isIndustrialBuilding(ctx.buildingType);
 
   if (lang === 'fr') {
     if (isBureau) {
@@ -364,7 +387,7 @@ function buildSection2_3(ctx: DocumentContext, lang: 'fr' | 'en'): PhoneEntry[] 
   if (ctx.has_generator)          extra.push(...cond.has_generator);
   if (ctx.has_elevators)          extra.push(...cond.has_elevators);
   if (ctx.has_hazardous_materials) extra.push(...cond.has_hazardous_materials);
-  if (ctx.buildingType === 'industrial' || ctx.buildingType === 'industriel') {
+  if (isIndustrialBuilding(ctx.buildingType)) {
     extra.push(...cond.building_type_industrial);
   }
 
@@ -372,11 +395,17 @@ function buildSection2_3(ctx: DocumentContext, lang: 'fr' | 'en'): PhoneEntry[] 
     ? 'Conseillers en prévention incendie et mesures d\'urgence'
     : 'Fire safety and emergency management consultants';
 
-  // On insère les extras avant la ligne GardaWorld
+  // Les extras passent avant la ligne de la firme-conseil.
+  const centrale = lang === 'fr' ? 'Centrale d\'alarme incendie' : base[0];
+  const firm = (ctx.companyName || '').trim();
   const entries: PhoneEntry[] = [
-    ...base.map(role => ({ role, name: '', phone: '' })),
+    ...base.map(role => (role === centrale && ctx.centraleSurveillance
+      ? { role, name: ctx.centraleSurveillance, phone: ctx.centraleTelephone || '' }
+      : { role, name: '', phone: '' })),
     ...extra.map(role => ({ role, name: '', phone: '' })),
-    { role: gardaRole, name: 'GardaWorld', phone: '(514) 123-4567', isBold: true },
+    ...(firm && firm !== 'CORO'
+      ? [{ role: gardaRole, name: firm, phone: ctx.companyPhone || '', isBold: true }]
+      : []),
   ];
 
   return entries;
@@ -387,8 +416,7 @@ function buildSection2_3(ctx: DocumentContext, lang: 'fr' | 'en'): PhoneEntry[] 
 // ============================================================
 
 function generateModule2FR(ctx: DocumentContext): any {
-  const isBureau = ctx.buildingType === 'office' || ctx.buildingType === 'bureau'
-    || ctx.buildingType === 'commercial';
+  const isBureau = !isIndustrialBuilding(ctx.buildingType);
 
   return {
     moduleNumber: 2,
@@ -458,7 +486,7 @@ function generateModule2FR(ctx: DocumentContext): any {
         allowAdd: true,
         allowDelete: true,
         useDropdown: false,
-        entries: getExternalResources(ctx.province, 'fr'),
+        entries: [...getExternalResources(ctx.province, 'fr'), ...firmHeadOffice(ctx, 'fr')],
       },
     ],
   };
@@ -469,8 +497,7 @@ function generateModule2FR(ctx: DocumentContext): any {
 // ============================================================
 
 function generateModule2EN(ctx: DocumentContext): any {
-  const isBureau = ctx.buildingType === 'office' || ctx.buildingType === 'bureau'
-    || ctx.buildingType === 'commercial';
+  const isBureau = !isIndustrialBuilding(ctx.buildingType);
 
   return {
     moduleNumber: 2,
@@ -540,7 +567,7 @@ function generateModule2EN(ctx: DocumentContext): any {
         allowAdd: true,
         allowDelete: true,
         useDropdown: false,
-        entries: getExternalResources(ctx.province, 'en'),
+        entries: [...getExternalResources(ctx.province, 'en'), ...firmHeadOffice(ctx, 'en')],
       },
     ],
   };
