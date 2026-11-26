@@ -140,3 +140,20 @@ describe('Traduction — robustesse', () => {
     expect(map.has('texte libre')).toBe(false);
   });
 });
+
+describe('Traduction — dernière passe', () => {
+  it('reprend un par un les textes encore en français', async () => {
+    const env = { ...process.env };
+    process.env.CORO_AI_PROVIDER = 'bedrock';
+    process.env.CORO_AI_BEDROCK_INVOCATION_ENABLED = 'true';
+    delete process.env.ANTHROPIC_API_KEY;
+    const prisma = { textTranslation: { findMany: jest.fn().mockResolvedValue([]), upsert: jest.fn().mockResolvedValue({}) } };
+    const translator: any = new ExportTranslator(prisma);
+    jest.spyOn(translator, 'translateWithBedrock').mockResolvedValue(null);
+    const one = jest.spyOn(translator, 'translateOneWithBedrock').mockResolvedValue('EVACUATION');
+    const map = await translator.translate(['ÉVACUATION']);
+    expect(one).toHaveBeenCalledWith('ÉVACUATION');
+    expect(map.get('ÉVACUATION')).toBe('EVACUATION');
+    process.env = env;
+  });
+});
