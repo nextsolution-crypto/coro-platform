@@ -13,7 +13,8 @@ export type AuditAction =
   | 'PROCEDURE_TOGGLE'
   | 'PROCEDURE_EDIT'
   | 'TEMPLATE_CREATE'
-  | 'LOGIN';
+  | 'LOGIN'
+  | 'OWNER_CHANGE';
 
 @Injectable()
 export class AuditService {
