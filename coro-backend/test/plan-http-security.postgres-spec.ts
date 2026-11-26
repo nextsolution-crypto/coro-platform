@@ -502,7 +502,8 @@ describe('Plan authenticated HTTP security boundaries', () => {
     for (const [method, path, bearer, status, body] of cases) {
       let call = http[method as 'get'](path).set(auth(bearer));
       if (body != null) call = call.send(body);
-      await call.expect(Number(status));
+      const response = await call;
+      expect({ method, path, status: response.status }).toEqual({ method, path, status: Number(status) });
     }
     expect(await securityState()).toEqual(before);
   });
