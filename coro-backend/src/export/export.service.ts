@@ -1,6 +1,6 @@
 import { translateModule2Row } from '../generator/module2.templates';
 import { ExportTranslator } from './export-translator';
-import { prepareEnglishContent, withCurrentReferences } from './english-content';
+import { englishModule7, prepareEnglishContent, protectedNames, withCurrentReferences } from './english-content';
 import {
   ApprovalStamp,
   approvalStampFromVersion,
@@ -308,7 +308,17 @@ export class ExportService {
   ): Promise<Buffer> {
     const project = doc.project;
     content = withCurrentReferences(content);
-    if (lang === 'en') content = await this.englishContent(content, project);
+    if (lang === 'en') {
+      content = await this.englishContent(content, project);
+      // Module 7 : informations d'occupation et légendes de photos traduites.
+      const sourceData = data;
+      const module7 = await englishModule7(
+        this.translator!,
+        await sourceData.module7(),
+        protectedNames(content, project),
+      );
+      data = { ...sourceData, module7: async () => module7 };
+    }
     const modules = lang === 'fr' ? content.modules_fr : content.modules_en;
     const isFr = lang === 'fr';
     const isIndustrielForExport =

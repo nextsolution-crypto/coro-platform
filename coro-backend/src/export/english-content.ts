@@ -15,6 +15,7 @@ import {
   replaceInsertedValues,
   streetOf,
 } from './export-translator';
+import { optionToEnglish } from './templates/modules/option-display';
 
 function module2WithEnglishLabels(saved: any): any {
   if (!saved || typeof saved !== 'object') return saved;
@@ -114,4 +115,39 @@ export function withCurrentReferences(content: any): any {
     return node;
   };
   return { ...content, modules_fr: fix(content.modules_fr), modules_en: fix(content.modules_en) };
+}
+
+
+/**
+ * Données du module 7 saisies hors configurateur (informations sur
+ * l'occupation, légendes des photos) : copie traduite pour le PDF anglais.
+ */
+export async function englishModule7(
+  translator: ExportTranslator,
+  module7: any,
+  names: string[],
+): Promise<any> {
+  if (!module7 || typeof module7 !== 'object') return module7;
+  const quarts = { ...(module7.quartsData || {}) };
+  const photos: Record<string, any> = { ...(module7.photosData || {}) };
+  const texts = new Set<string>();
+  const labelOf = (value: unknown) =>
+    typeof value === 'string' && value.trim() ? value : null;
+  const info = labelOf(quarts.infosSup);
+  if (info) texts.add(info);
+  for (const photo of Object.values(photos)) {
+    const label = labelOf((photo as any)?.label);
+    if (label && optionToEnglish(label) === label) texts.add(label);
+  }
+  const translated = texts.size ? await translator.translate(texts, names) : new Map<string, string>();
+  const english = (value: string) => {
+    const option = optionToEnglish(value);
+    return option !== value ? option : translated.get(value) ?? value;
+  };
+  if (info) quarts.infosSup = english(info);
+  for (const [key, photo] of Object.entries(photos)) {
+    const label = labelOf((photo as any)?.label);
+    if (label) photos[key] = { ...(photo as any), label: english(label) };
+  }
+  return { ...module7, quartsData: quarts, photosData: photos };
 }

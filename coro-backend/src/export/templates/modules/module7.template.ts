@@ -902,7 +902,7 @@ function renderModule7Sections(
               isFr
                 ? 'Informations supplémentaires'
                 : 'Additional information'
-            } :</strong> ${escapeHtml(quarts.infosSup)}</p>`
+            }${isFr ? ' :' : ':'}</strong> ${escapeHtml(quarts.infosSup)}</p>`
           : ''
       }
 
