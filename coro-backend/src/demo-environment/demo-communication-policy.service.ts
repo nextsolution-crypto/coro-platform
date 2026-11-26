@@ -50,6 +50,12 @@ const AUTHENTICATION_LIVE_OPERATIONS = new Set([
   'CLIENT_INVITATION',
   'ORGANIZATION_USER_INVITATION',
   'SENTINELLE_EMPLOYEE_PIN',
+  // Circuit documentaire : mêmes destinataires autorisés que l'authentification,
+  // pour pouvoir tester de bout en bout avec les comptes de démonstration.
+  'DOCUMENT_AVAILABLE',
+  'DOCUMENT_REFUSED',
+  'DOCUMENT_SIGNED',
+  'DOCUMENT_REMINDER',
 ]);
 const CORO_DEMO_ORGANIZATION_ID = '916f54ec-af22-45e0-99db-a369d9630002';
 
@@ -607,6 +613,8 @@ export class DemoCommunicationPolicyService {
       clientUser.isActive === true &&
       clientUser.client.isActive === true;
     if (request.operation.startsWith('CLIENT_')) return eligibleClientUser;
+    if (request.operation.startsWith('DOCUMENT_'))
+      return Number(eligibleUser) + Number(eligibleClientUser) === 1;
     if (request.operation === 'SENTINELLE_EMPLOYEE_PIN') {
       // A PIN is an access credential. Keep the existing authentication
       // allowlist and require one active account plus its active employee.

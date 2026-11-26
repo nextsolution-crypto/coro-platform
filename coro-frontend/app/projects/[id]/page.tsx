@@ -172,6 +172,8 @@ export default function ProjectDetailPage() {
   const [approvalComment, setApprovalComment] = useState('');
   const [processingApproval, setProcessingApproval] = useState(false);
   const [observations, setObservations] = useState<any[]>([]);
+  // Dernier retour (conseiller) ou refus (client) : affiché quand le plan revient « En cours ».
+  const [lastReturn, setLastReturn] = useState<null | { type: 'INTERNAL_RETURN' | 'CLIENT_REFUSED' | 'REOPENED'; by: string | null; at: string; reason: string }>(null);
   const [showObservations, setShowObservations] = useState(false);
   const [newObservation, setNewObservation] = useState('');
   const [newObsModule, setNewObsModule] = useState('');
@@ -197,10 +199,22 @@ export default function ProjectDetailPage() {
     }
   }, [isAuthenticated, projectId]);
 
-  const fetchData = async () => {
+  // Retour sur l'onglet : relire l'état (soumission, retour, observations
+  // d'un collègue) pour ne pas travailler sur une page périmée.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const onVisible = () => {
+      // Rafraîchissement discret : pas d'écran de chargement, rien de perdu.
+      if (document.visibilityState === 'visible' && !showApprovalModal) fetchData(true);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [isAuthenticated, projectId, showApprovalModal]);
+
+  const fetchData = async (silent = false) => {
   if (!projectId) return;
   const sequence = ++requestSequence.current;
-  setLoading(true);
+  if (!silent) setLoading(true);
   setLoadError(null);
   setSecondaryWarning(false);
   try {
@@ -233,15 +247,21 @@ export default function ProjectDetailPage() {
 
       // Observations et permission d'approuver
       try {
-        const [obsRes, canRes, commentsRes] = await Promise.all([
+        const [obsRes, canRes, commentsRes, returnRes] = await Promise.allSettled([
           api.get(`/approval/${projectId}/observations`),
           api.get(`/approval/${projectId}/can-approve`),
-          api.get(`/projects/${projectId}/comments`).catch(() => ({ data: [] })),
+          api.get(`/projects/${projectId}/comments`),
+          api.get(`/approval/${projectId}/last-return`),
         ]);
-        setObservations(obsRes.data || []);
-        setCanApprove(canRes.data?.canApprove || false);
-        setReviewRequest(canRes.data?.reviewRequest || null);
-        setProjectComments(commentsRes.data || []);
+        if (sequence !== requestSequence.current) return;
+        if (obsRes.status === 'fulfilled') setObservations(obsRes.value.data || []);
+        if (canRes.status === 'fulfilled') {
+          setCanApprove(canRes.value.data?.canApprove || false);
+          setReviewRequest(canRes.value.data?.reviewRequest || null);
+        }
+        setProjectComments(commentsRes.status === 'fulfilled' ? commentsRes.value.data || [] : []);
+        setLastReturn(returnRes.status === 'fulfilled' ? returnRes.value.data || null : null);
+        if (obsRes.status === 'rejected' || canRes.status === 'rejected') setSecondaryWarning(true);
       } catch { if (sequence === requestSequence.current) setSecondaryWarning(true); }
 
       try {
@@ -250,11 +270,12 @@ export default function ProjectDetailPage() {
           versionNumber: v.versionNumber,
           label:         v.label || `v${v.versionNumber}`,
           createdAt:     v.createdAt,
-          approvedBy:    v.snapshot?.approvedBy    ?? null,
-          approvedAt:    v.snapshot?.approvedAt    ?? null,
-          signedBy:      v.snapshot?.signedBy      ?? null,
-          signedAt:      v.snapshot?.signedAt      ?? null,
-          signedEmail:   v.snapshot?.signedEmail   ?? null,
+          approvedBy:    v.approvedBy    ?? null,
+          approvedAt:    v.approvedAt    ?? null,
+          signedBy:      v.signedBy      ?? null,
+          signedAt:      v.signedAt      ?? null,
+          signedEmail:   v.signedEmail   ?? null,
+          decision:      v.decision      ?? null,
         }));
         setVersionHistory(versions);
       } catch { if (sequence === requestSequence.current) setSecondaryWarning(true); }
@@ -380,7 +401,16 @@ export default function ProjectDetailPage() {
       if (action === 'submit') {
         await api.post(`/approval/${projectId}/submit`);
       } else if (action === 'approve') {
-        await api.post(`/approval/${projectId}/approve`);
+        const open = observations.filter(o => o.statut === 'OUVERTE').length;
+        if (open > 0) {
+          const ok = await confirmAction({
+            title: 'Observations non réglées',
+            message: `${open} observation${open > 1 ? 's' : ''} ${open > 1 ? 'sont encore ouvertes' : 'est encore ouverte'}. Approuver quand même ?`,
+            confirmLabel: 'Approuver quand même',
+          });
+          if (!ok) return;
+        }
+        await api.post(`/approval/${projectId}/approve`, approvalComment.trim() ? { commentaire: approvalComment.trim() } : {});
       } else {
         await api.post(`/approval/${projectId}/request-revision`, { commentaire: approvalComment });
       }
@@ -523,6 +553,13 @@ export default function ProjectDetailPage() {
   };
 
   const handleDeleteObservation = async (id: string) => {
+    const ok = await confirmAction({
+      title: 'Supprimer l\'observation',
+      message: 'Cette observation sera supprimée définitivement.',
+      confirmLabel: 'Supprimer',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await api.delete(`/approval/observations/${id}`);
       setObservations(prev => prev.filter(o => o.id !== id));
@@ -698,7 +735,7 @@ export default function ProjectDetailPage() {
               </button>
             )}
 
-            {/* Approuver / Rejeter */}
+            {/* Approuver / Retourner */}
             {project.status === 'REVIEW' && canApprove && (
               <>
                 <button
@@ -717,7 +754,7 @@ export default function ProjectDetailPage() {
                   onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
                   onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
-                  ✕ Rejeter
+                  ↩ Retourner
                 </button>
               </>
             )}
@@ -812,6 +849,47 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
+{/* Corrections demandées : motif du dernier retour ou refus + observations ouvertes */}
+      {['DRAFT', 'IN_PROGRESS'].includes(project.status) && (lastReturn || observations.some(o => o.statut === 'OUVERTE')) && (
+        <div className="rounded-md mb-6 p-4" style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
+          <p className="text-sm font-semibold" style={{ color: '#C0392B' }}>
+            {lastReturn?.type === 'CLIENT_REFUSED' ? '✕ Document refusé par le client — corrections demandées'
+              : lastReturn?.type === 'REOPENED' ? '✏️ Document déverrouillé pour mise à jour'
+              : '↩ Document retourné pour corrections'}
+          </p>
+          {lastReturn && (
+            <div className="mt-2 text-sm" style={{ color: '#2C3E50' }}>
+              <p>
+                <strong>Motif :</strong> {lastReturn.reason || '—'}
+              </p>
+              <p className="text-xs mt-1" style={{ color: '#6C757D' }}>
+                {lastReturn.by ? `${lastReturn.by} · ` : ''}
+                {new Date(lastReturn.at).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </p>
+            </div>
+          )}
+          {observations.some(o => o.statut === 'OUVERTE') && (
+            <div className="mt-3">
+              <p className="text-xs font-semibold mb-1.5" style={{ color: '#495057' }}>
+                Observations ouvertes du réviseur
+              </p>
+              <ul className="space-y-1.5">
+                {observations.filter(o => o.statut === 'OUVERTE').map(obs => (
+                  <li key={obs.id} className="text-sm rounded px-3 py-2" style={{ backgroundColor: '#FFFFFF', border: '1px solid #F5B7B1', color: '#2C3E50' }}>
+                    {obs.module && (
+                      <span className="text-xs font-bold px-1.5 py-0.5 rounded mr-2" style={{ backgroundColor: '#EBF5FB', color: '#2980B9' }}>
+                        {obs.module}
+                      </span>
+                    )}
+                    {obs.texte}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
 {/* Bannière statut approbation */}
       {project.status === 'REVIEW' && (
         <div className="rounded-md mb-6 overflow-hidden"
@@ -878,7 +956,7 @@ export default function ProjectDetailPage() {
                       className="rounded px-2 py-1.5 text-xs focus:outline-none"
                       style={{ border: '1px solid #CED4DA', color: '#6C757D', minWidth: '120px' }}>
                       <option value="">Module (optionnel)</option>
-                      {['Module 1', 'Module 2', 'Module 3', 'Module 4', 'Module 5', 'Module 6', 'Module 7', 'Module 8'].map(m => (
+                      {(project.documentType === 'PCA' ? [1, 2, 3, 4, 5, 6, 7, 8] : [1, 2, 3, 4, 6, 7, 8]).map(n => `Module ${n}`).map(m => (
                         <option key={m} value={m}>{m}</option>
                       ))}
                     </select>
@@ -988,7 +1066,7 @@ export default function ProjectDetailPage() {
                     ✅ Approuver le document
                   </button>
                   <button
-                    onClick={() => setShowApprovalModal('request-revision')}
+                    onClick={() => setShowApprovalModal('reject')}
                     className="flex-1 font-medium py-2.5 rounded text-sm transition-colors"
                     style={{ border: '1px solid #F1948A', color: '#C0392B' }}
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
@@ -1495,7 +1573,13 @@ export default function ProjectDetailPage() {
                       </span>
                       <span className="text-xs font-medium"
                         style={{ color: v.signedAt ? '#8E44AD' : '#2980B9' }}>
-                        {v.signedAt ? '✍️ Signé' : '⏳ En attente de signature'}
+                        {v.signedAt
+                          ? '✍️ Signé'
+                          : v.decision?.type === 'CLIENT_REFUSED'
+                            ? '✕ Refusé par le client'
+                            : v.decision
+                              ? '↺ Retiré pour mise à jour'
+                              : '⏳ En attente de signature'}
                       </span>
                     </div>
                     <span className="text-xs" style={{ color: '#ADB5BD' }}>
@@ -1545,6 +1629,23 @@ export default function ProjectDetailPage() {
                             })}
                           </p>
                         )}
+                      </div>
+                    ) : v.decision ? (
+                      <div className="rounded px-3 py-2"
+                        style={{
+                          backgroundColor: v.decision.type === 'CLIENT_REFUSED' ? '#FDEDEC' : '#F8F9FA',
+                          border: `1px solid ${v.decision.type === 'CLIENT_REFUSED' ? '#F1948A' : '#DEE2E6'}`,
+                        }}>
+                        <p className="text-xs font-semibold" style={{ color: v.decision.type === 'CLIENT_REFUSED' ? '#C0392B' : '#6C757D' }}>
+                          {v.decision.type === 'CLIENT_REFUSED' ? '✕ Refusé par le client' : '↺ Retiré pour mise à jour'}
+                          {v.decision.by ? ` — ${v.decision.by}` : ''}
+                        </p>
+                        {v.decision.reason && (
+                          <p className="text-xs mt-0.5" style={{ color: '#2C3E50' }}>Motif : {v.decision.reason}</p>
+                        )}
+                        <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>
+                          {new Date(v.decision.at).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
                       </div>
                     ) : (
                       <div className="rounded px-3 py-2"
@@ -1625,22 +1726,22 @@ export default function ProjectDetailPage() {
             style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
             <h3 className="font-semibold text-lg mb-2" style={{ color: '#2C3E50' }}>
               {showApprovalModal === 'approve' ? '✓ Approuver le document' :
-               showApprovalModal === 'reject' ? '✕ Rejeter le document' :
+               showApprovalModal === 'reject' ? '↩ Retourner pour corrections' :
                '✏️ Apporter une mise à jour'}
             </h3>
             <p className="text-sm mb-6" style={{ color: '#6C757D' }}>
               {showApprovalModal === 'approve'
                 ? 'Le document sera verrouillé en lecture seule après approbation.'
                 : showApprovalModal === 'reject'
-                ? 'Le document retournera en statut "En cours" pour modification.'
+                ? 'Le document revient « En cours ». Le propriétaire voit le motif et les observations ouvertes.'
                 : 'Le document sera déverrouillé pour modification et devra être soumis à nouveau pour approbation.'}
             </p>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
                   {showApprovalModal === 'approve' ? 'Commentaire (optionnel)' :
-                   showApprovalModal === 'reject' ? 'Motif du rejet *' :
-                   'Raison de la mise à jour (optionnel)'}
+                   showApprovalModal === 'reject' ? 'Motif du retour *' :
+                   'Raison de la mise à jour *'}
                 </label>
                 <textarea
                   value={approvalComment}
@@ -1672,7 +1773,7 @@ export default function ProjectDetailPage() {
                   {processingApproval ? 'Traitement...' :
                    showApprovalModal === 'approve' ? '✓ Approuver' :
                    showApprovalModal === 'request-revision' ? '✏️ Déverrouiller pour mise à jour' :
-                   '✕ Rejeter'}
+                   '↩ Retourner pour corrections'}
                 </button>
               </div>
             </div>

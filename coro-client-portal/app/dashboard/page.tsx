@@ -30,6 +30,7 @@ export default function DashboardPage() {
   const [loadingDash, setLoadingDash] = useState(true);
   const [loadingR, setLoadingR]       = useState(false);
   const [search, setSearch]           = useState('');
+  const [toSign, setToSign]           = useState<any[]>([]);
   const [page, setPage]               = useState(1);
 
   useEffect(() => {
@@ -50,6 +51,9 @@ export default function DashboardPage() {
       setUpcomingActivities(dashRes?.upcomingActivities || []);
       setBuildings(buildingsRes || []);
       saveEmergencyCard(buildingsRes);
+      apiGet('/client-portal/notifications')
+        .then((res: any[]) => setToSign((res || []).filter((n) => n.type === 'TO_SIGN')))
+        .catch(() => setToSign([]));
       fetchReadiness();
     } catch (err) { console.error(err); }
     finally { setLoadingDash(false); }
@@ -104,6 +108,32 @@ export default function DashboardPage() {
           {user.clientName} — Retrouvez vos bâtiments, leur conformité et leur documentation.
         </p>
       </header>
+
+      {/* ── Documents en attente d'approbation ── */}
+      {toSign.length > 0 && (
+        <section
+          style={{ marginBottom: 24, padding: 16, borderRadius: 6, backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}
+          aria-label="Documents en attente de votre approbation"
+        >
+          <p style={{ margin: '0 0 10px', fontSize: 15, fontWeight: 700, color: '#2C3E50' }}>
+            ✍️ {toSign.length === 1 ? '1 document attend votre approbation' : `${toSign.length} documents attendent votre approbation`}
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {toSign.map((n) => (
+              <button
+                key={n.id}
+                onClick={() => router.push(`/documents/${n.projectId}`)}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 4, border: '1px solid #FAD7A0', backgroundColor: '#FFFFFF', cursor: 'pointer', textAlign: 'left' }}
+              >
+                <span style={{ fontSize: 14, color: '#2C3E50', fontWeight: 600 }}>
+                  {n.message}{n.building ? ` · ${n.building}` : ''}
+                </span>
+                <span style={{ fontSize: 13, color: '#C0392B', fontWeight: 700, whiteSpace: 'nowrap' }}>Consulter et signer →</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── Stats ── */}
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 28 }}>

@@ -294,6 +294,50 @@ export class EmailService {
     );
   }
 
+  async sendDocumentReminder(data: {
+    toEmail: string;
+    toName: string;
+    projectName: string;
+    documentType: string;
+    clientName: string;
+    daysWaiting: number;
+    reminderNumber: number;
+  }) {
+    const esc = (v: string) =>
+      String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+    const subject = `Rappel — document en attente de votre approbation : ${data.projectName}`;
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family:-apple-system,sans-serif;background:#F8F9FA;margin:0;padding:0;">
+  <div style="max-width:600px;margin:40px auto;background:#FFFFFF;border-radius:8px;border:1px solid #E9ECEF;">
+    <div style="background:#2C3E50;padding:32px;text-align:center;">
+      <div style="font-size:28px;font-weight:900;color:#FFFFFF;letter-spacing:-1px;">CO<span style="color:#C0392B;">RO</span></div>
+    </div>
+    <div style="padding:40px;">
+      <p style="font-size:22px;font-weight:700;color:#2C3E50;">Document en attente de votre approbation</p>
+      <p style="font-size:15px;color:#6C757D;">Bonjour ${esc(data.toName)},</p>
+      <p style="font-size:15px;color:#6C757D;">Le document ci-dessous vous attend depuis ${data.daysWaiting} jour${data.daysWaiting > 1 ? 's' : ''}. Merci de le consulter, puis de le signer ou de le renvoyer à votre conseiller avec vos commentaires.</p>
+      <div style="background:#FEF9E7;border:1px solid #FAD7A0;border-radius:8px;padding:20px;margin:24px 0;">
+        <p style="font-size:16px;font-weight:700;color:#2C3E50;margin:0 0 4px 0;">${esc(data.projectName)}</p>
+        <p style="font-size:14px;color:#6C757D;margin:0;">${esc(data.documentType)} — ${esc(data.clientName)}</p>
+      </div>
+      <a href="${this.clientPortalBaseUrl()}" style="display:inline-block;background:#C0392B;color:#FFFFFF;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:700;">Consulter le document →</a>
+      <p style="font-size:12px;color:#ADB5BD;margin:24px 0 0;">Rappel n° ${data.reminderNumber}. Vous ne recevrez plus de rappel une fois le document signé ou renvoyé.</p>
+    </div>
+    <div style="background:#F8F9FA;padding:24px;text-align:center;font-size:13px;color:#ADB5BD;border-top:1px solid #E9ECEF;">© 2026 CORO — <a href="https://getcoro.io" style="color:#ADB5BD;">getcoro.io</a></div>
+  </div>
+</body>
+</html>`;
+    return this.sendEmail(
+      { email: data.toEmail, name: data.toName },
+      subject,
+      htmlContent,
+      'DOCUMENT_REMINDER',
+    );
+  }
+
   async sendDocumentRefused(data: {
     toEmail: string;
     toName: string;
