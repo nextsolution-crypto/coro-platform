@@ -80,6 +80,10 @@ export default function DocumentDetailPage() {
 
   const [user, setUser] = useState<any>(null);
   const [project, setProject] = useState<any>(null);
+  // « Document consulté » : aperçu ouvert ou PDF téléchargé depuis l'approbation
+  // de la version en cours (pas une consultation d'une version antérieure).
+  const [lastConsultedAt, setLastConsultedAt] = useState<string | null>(null);
+  const [consultedNow, setConsultedNow] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -136,11 +140,13 @@ export default function DocumentDetailPage() {
       projectRes,
       commentsRes,
       versionsRes,
+      engagementRes,
       signatureStatusRes,
     ] = await Promise.all([
       apiGet(`/client-portal/projects/${projectId}`),
       apiGet(`/client-portal/projects/${projectId}/comments`),
       apiGet(`/client-portal/projects/${projectId}/versions`).catch(() => []),
+      apiGet(`/client-portal/projects/${projectId}/engagement`).catch(() => null),
 
       // IMPORTANT :
       // cet endpoint vérifie uniquement la signature liée à la
@@ -163,6 +169,7 @@ export default function DocumentDetailPage() {
     setProject(projectRes);
     setComments(commentsRes || []);
     setVersionHistory(versionsRes || []);
+    setLastConsultedAt(engagementRes?.lastConsultedAt ?? null);
     setSignatureStatus(
       signatureStatusRes || {
         status: 'NOT_SIGNED',
@@ -331,6 +338,8 @@ const handleRefuse = async () => {
         return url;
       });
       setShowPdfViewer(true);
+      setConsultedNow(true);
+      apiPost(`/client-portal/projects/${projectId}/engagement`, { event: 'viewed' }).catch(() => undefined);
     } catch {
       toast('Aperçu indisponible pour le moment. Réessayez dans un instant.', 'error');
     }
@@ -390,6 +399,7 @@ const handleRefuse = async () => {
 
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       const device = isMobile ? 'mobile' : 'desktop';
+      setConsultedNow(true);
       await apiPost(`/client-portal/projects/${projectId}/engagement`, {
         event: 'downloaded',
         device,
@@ -461,6 +471,13 @@ const handleRefuse = async () => {
 
   // Signature de l'utilisateur pour la VERSION COURANTE uniquement.
 // /sign-status est désormais version-aware côté backend.
+const documentConsulted =
+  consultedNow ||
+  Boolean(
+    lastConsultedAt &&
+      (!project?.approvedAt || new Date(lastConsultedAt) >= new Date(project.approvedAt)),
+  );
+
 const mySignature =
   signatureStatus?.status === 'NOT_SIGNED'
     ? null
@@ -1089,7 +1106,11 @@ const mySignature =
             >
               {[
                 { label: 'Document reçu', done: true, color: '#27AE60' },
-                { label: 'Document consulté', done: true, color: '#27AE60' },
+                {
+                  label: 'Document consulté',
+                  done: documentConsulted,
+                  color: documentConsulted ? '#27AE60' : '#ADB5BD',
+                },
                 {
                   label: 'Document signé',
                   done: !!mySignature,
@@ -1507,8 +1528,14 @@ const mySignature =
                       }}>
                         v{v.versionNumber}
                       </span>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: v.signedAt ? '#8E44AD' : '#F39C12' }}>
-                        {v.signedAt ? '✍️ Signé' : '⏳ En attente'}
+                      <span style={{ fontSize: 12, fontWeight: 600, color: v.signedAt ? '#8E44AD' : v.decision?.type === 'CLIENT_REFUSED' ? '#C0392B' : v.decision ? '#6C757D' : '#F39C12' }}>
+                        {v.signedAt
+                          ? '✍️ Signé'
+                          : v.decision?.type === 'CLIENT_REFUSED'
+                            ? '✕ Refusé'
+                            : v.decision
+                              ? '↺ Retiré pour mise à jour'
+                              : '⏳ En attente'}
                       </span>
                     </div>
                     <span style={{ fontSize: 11, color: '#ADB5BD' }}>
@@ -1521,6 +1548,19 @@ const mySignature =
                       ✓ Approuvé par <strong>{v.approvedBy}</strong>
                       {v.approvedAt && ` · ${new Date(v.approvedAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })}`}
                     </p>
+                  )}
+
+                  {!v.signedAt && v.decision && (
+                    <div style={{ marginTop: 6, padding: '8px 10px', borderRadius: 6, backgroundColor: v.decision.type === 'CLIENT_REFUSED' ? '#FDEDEC' : '#F8F9FA', border: `1px solid ${v.decision.type === 'CLIENT_REFUSED' ? '#F1948A' : '#DEE2E6'}` }}>
+                      <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: v.decision.type === 'CLIENT_REFUSED' ? '#C0392B' : '#6C757D' }}>
+                        {v.decision.type === 'CLIENT_REFUSED' ? 'Refusé' : 'Retiré pour mise à jour'}
+                        {v.decision.by ? ` par ${v.decision.by}` : ''}
+                        {` · ${new Date(v.decision.at).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })}`}
+                      </p>
+                      {v.decision.reason && (
+                        <p style={{ margin: '2px 0 0', fontSize: 12, color: '#2C3E50' }}>Motif : {v.decision.reason}</p>
+                      )}
+                    </div>
                   )}
 
                   {v.signedBy && (

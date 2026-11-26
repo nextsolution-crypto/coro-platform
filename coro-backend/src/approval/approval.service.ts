@@ -167,7 +167,11 @@ export class ApprovalService {
     };
   }
 
-  async approve(projectId: string, actor: AdviserActor) {
+  async approve(projectId: string, actor: AdviserActor, commentaire?: unknown) {
+    const approvalComment =
+      typeof commentaire === 'string' && commentaire.trim()
+        ? commentaire.trim().slice(0, 2000)
+        : null;
     requireProjectApprover(actor);
     const result = await this.prisma.$transaction(async (tx) => {
       await this.lockProject(tx, projectId);
@@ -263,6 +267,7 @@ export class ApprovalService {
             approvedBy: approverName,
             approvedById: actor.userId,
             approvedAt: now.toISOString(),
+            ...(approvalComment ? { approvalComment } : {}),
           } as Prisma.InputJsonValue,
         },
       });
@@ -273,6 +278,7 @@ export class ApprovalService {
           decidedById: actor.userId,
           decidedAt: now,
           decisionVersion: version,
+          ...(approvalComment ? { decisionReason: approvalComment } : {}),
         },
       });
       const transition = await tx.project.updateMany({
@@ -435,6 +441,64 @@ export class ApprovalService {
       status: 'IN_PROGRESS',
       reviewRequestId: result.request?.id ?? null,
     };
+  }
+
+  /**
+   * Dernière demande de corrections depuis la dernière approbation :
+   * retour du réviseur, déverrouillage ou refus du client.
+   */
+  async getLastReturn(projectId: string, actor: AdviserActor) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, ...projectReadWhere(actor) },
+      select: { id: true, status: true, approvedAt: true, submittedAt: true },
+    });
+    if (!project) throw new NotFoundException('Projet introuvable');
+    if (!['DRAFT', 'IN_PROGRESS'].includes(project.status)) return null;
+    const since = project.approvedAt ?? new Date(0);
+    const [audit, refusal] = await Promise.all([
+      this.prisma.auditLog.findFirst({
+        where: { projectId, action: 'REVIEW_RETURNED', createdAt: { gt: since } },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          createdAt: true,
+          metadata: true,
+          user: { select: { firstName: true, lastName: true } },
+        },
+      }),
+      this.prisma.projectComment.findFirst({
+        where: { projectId, contenu: { startsWith: '[Refus client]' }, createdAt: { gt: since } },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          createdAt: true,
+          contenu: true,
+          clientUser: { select: { firstName: true, lastName: true } },
+        },
+      }),
+    ]);
+    const name = (p?: { firstName?: string | null; lastName?: string | null } | null) =>
+      p ? `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() || null : null;
+    const fromAudit = audit && {
+      type:
+        (audit.metadata as any)?.previousStatus === 'REVIEW'
+          ? ('INTERNAL_RETURN' as const)
+          : ('REOPENED' as const),
+      by: name(audit.user),
+      at: audit.createdAt,
+      reason: String((audit.metadata as any)?.reason ?? ''),
+    };
+    const fromClient = refusal && {
+      type: 'CLIENT_REFUSED' as const,
+      by: name(refusal.clientUser),
+      at: refusal.createdAt,
+      reason: refusal.contenu.replace(/^\[Refus client\]\s*/, ''),
+    };
+    const latest = [fromAudit, fromClient]
+      .filter(Boolean)
+      .sort((a, b) => b!.at.getTime() - a!.at.getTime())[0];
+    // Une resoumission postérieure clôt la demande de corrections.
+    if (!latest || (project.submittedAt && project.submittedAt > latest.at && project.status !== 'IN_PROGRESS'))
+      return null;
+    return latest;
   }
 
   async getObservations(projectId: string, actor: AdviserActor) {
@@ -901,10 +965,101 @@ export class ApprovalService {
     );
     if (failed?.status === 'rejected') throw failed.reason;
   }
-  private async notifyClientUsers(project: any) {
-    const users = await this.prisma.clientUser.findMany({
-      where: { clientId: project.clientId, isActive: true },
+  /** Comptes portail du client qui ont accès à ce bâtiment. */
+  private documentRecipients(project: { clientId: string; buildingId: string }) {
+    return this.prisma.clientUser.findMany({
+      where: {
+        clientId: project.clientId,
+        isActive: true,
+        OR: [
+          { role: 'CLIENT_CORPORATE' },
+          { role: 'CLIENT_MANAGER', buildingIds: { has: project.buildingId } },
+        ],
+      },
     });
+  }
+
+  /**
+   * Relances : tant qu'un plan validé n'est ni signé ni refusé par le client,
+   * un rappel part tous les RELANCE_INTERVAL_DAYS jours, au plus
+   * RELANCE_MAX fois. Chaque envoi est consigné au journal (DOCUMENT_REMINDER).
+   */
+  static readonly RELANCE_INTERVAL_DAYS = 3;
+  static readonly RELANCE_MAX = 5;
+
+  @Cron('0 14 * * 1-5', { timeZone: 'America/Toronto' })
+  async sendSignatureReminders(now = new Date()) {
+    const day = 86_400_000;
+    const interval = ApprovalService.RELANCE_INTERVAL_DAYS * day;
+    const projects = await this.prisma.project.findMany({
+      where: {
+        status: 'VALIDATED',
+        isActive: true,
+        approvedAt: { lte: new Date(now.getTime() - interval) },
+      },
+      include: {
+        client: true,
+        projectVersions: {
+          orderBy: { versionNumber: 'desc' },
+          take: 1,
+          select: { signatures: { select: { id: true } } },
+        },
+      },
+    });
+    let sent = 0;
+    for (const project of projects) {
+      if ((project.projectVersions?.[0]?.signatures?.length ?? 0) > 0) continue;
+      const reminders = await this.prisma.auditLog.findMany({
+        where: {
+          projectId: project.id,
+          action: 'DOCUMENT_REMINDER',
+          createdAt: { gte: project.approvedAt! },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      });
+      if (reminders.length >= ApprovalService.RELANCE_MAX) continue;
+      const last = reminders[0]?.createdAt ?? project.approvedAt!;
+      if (now.getTime() - last.getTime() < interval) continue;
+      const users = await this.documentRecipients(project);
+      if (!users.length) continue;
+      const days = Math.floor((now.getTime() - project.approvedAt!.getTime()) / day);
+      const results = await Promise.allSettled(
+        users.map((user) =>
+          this.emailService.sendDocumentReminder({
+            toEmail: user.email,
+            toName: `${user.firstName} ${user.lastName}`,
+            projectName: project.name,
+            documentType: project.documentType,
+            clientName: project.client.name,
+            daysWaiting: days,
+            reminderNumber: reminders.length + 1,
+          }),
+        ),
+      );
+      await this.prisma.auditLog.create({
+        data: {
+          action: 'DOCUMENT_REMINDER',
+          entityType: 'PROJECT',
+          entityId: project.id,
+          projectId: project.id,
+          description: `Relance signature n° ${reminders.length + 1}`,
+          metadata: {
+            recipients: users.length,
+            delivered: results.filter(
+              (r) => r.status === 'fulfilled' && (r.value as any)?.success,
+            ).length,
+          },
+          organizationId: project.organizationId,
+        },
+      });
+      sent++;
+    }
+    return { sent };
+  }
+
+  private async notifyClientUsers(project: any) {
+    const users = await this.documentRecipients(project);
     const results = await Promise.allSettled(
       users.map((user) =>
         this.emailService.sendDocumentAvailable({

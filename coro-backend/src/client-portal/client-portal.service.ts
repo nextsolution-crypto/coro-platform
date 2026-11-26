@@ -1,3 +1,4 @@
+import { buildVersionHistory } from '../versions/version-history';
 import {
   BadRequestException,
   ConflictException,
@@ -1921,7 +1922,7 @@ export class ClientPortalService {
         organizationId: project.organizationId,
         type: 'RETOUR_REVISION',
         title: 'Refus client — révision requise',
-        message: `Le client a refusé le document "${project.name}" et demande des corrections.`,
+        message: `Le client a refusé le document "${project.name}". Motif : ${refusalComment}`,
         projectId: project.id,
       });
     } catch (e) {
@@ -2109,7 +2110,11 @@ export class ClientPortalService {
       orderBy: { signedAt: 'desc' },
     });
 
+    const consulted = [...viewed, ...downloaded].sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
     return {
+      lastConsultedAt: consulted[0]?.createdAt ?? null,
       totalOpens: opened.length,
       totalViews: viewed.length,
       totalDownloads: downloaded.length,
@@ -2289,28 +2294,20 @@ export class ClientPortalService {
 
   async getProjectVersionHistory(projectId: string, clientUser: any) {
     await this.assertProjectAccess(projectId, clientUser);
-    const versions = await this.prisma.projectVersion.findMany({
-      where: { projectId },
-      orderBy: { versionNumber: 'desc' },
-    });
-
-    return versions.map((v) => {
-      const snap = (v.snapshot as any) || {};
-      return {
-        versionNumber: v.versionNumber,
-        label: v.label || `v${v.versionNumber}`,
-        createdAt: v.createdAt,
-        // Approbation
-        approvedBy: snap.approvedBy ?? null,
-        approvedAt: snap.approvedAt ?? null,
-        // Signature
-        signedBy: snap.signedBy ?? null,
-        signedAt: snap.signedAt ?? null,
-        signedEmail: snap.signedEmail ?? null,
-        // Statut lisible
-        status: snap.signedAt ? 'SIGNÉ' : 'EN ATTENTE DE SIGNATURE',
-      };
-    });
+    const history = await buildVersionHistory(this.prisma as any, projectId);
+    return history.map((v) => ({
+      ...v,
+      statusCode: v.status,
+      // Libellé lisible (compatibilité avec l'affichage existant).
+      status:
+        v.status === 'SIGNED'
+          ? 'SIGNÉ'
+          : v.status === 'REFUSED'
+            ? 'REFUSÉ'
+            : v.status === 'REOPENED'
+              ? 'RETIRÉ POUR MISE À JOUR'
+              : 'EN ATTENTE DE SIGNATURE',
+    }));
   }
 
   async getBuildings(
@@ -2482,7 +2479,13 @@ export class ClientPortalService {
       where,
       include: {
         building: { select: { name: true } },
-        signatures: { select: { clientUser: { select: { email: true } } } },
+        // Seule la version en vigueur compte : une signature d'une version
+        // antérieure ne vaut pas pour la nouvelle.
+        projectVersions: {
+          orderBy: { versionNumber: 'desc' },
+          take: 1,
+          select: { signatures: { select: { id: true } } },
+        },
       },
       orderBy: { updatedAt: 'desc' },
     });
@@ -2493,7 +2496,7 @@ export class ClientPortalService {
     for (const p of projects) {
       // Document validé et non signé
       if (p.status === 'VALIDATED') {
-        const isSigned = p.signatures?.some((s: any) => s.clientUser);
+        const isSigned = (p.projectVersions?.[0]?.signatures?.length ?? 0) > 0;
         if (!isSigned) {
           notifications.push({
             id: `sign-${p.id}`,

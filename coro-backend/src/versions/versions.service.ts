@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { buildVersionHistory } from './version-history';
 import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 import { DocumentEditorIntegrityService } from '../generator/document-editor-integrity.service';
 import { AuditService } from '../audit/audit.service';
@@ -19,11 +20,8 @@ export class VersionsService {
 
   async findAll(projectId: string, actor: AdviserActor) {
     await this.integrity.readableProject(projectId, actor);
-    return this.prisma.projectVersion.findMany({
-      where: { projectId },
-      orderBy: { versionNumber: 'desc' },
-      select: { id: true, versionNumber: true, label: true, createdAt: true },
-    });
+    // Approbation, signature et décision (refus client, déverrouillage) par version.
+    return buildVersionHistory(this.prisma as any, projectId);
   }
 
   async findOne(projectId: string, versionId: string, actor: AdviserActor) {

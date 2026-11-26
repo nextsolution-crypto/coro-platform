@@ -9,6 +9,8 @@ const { ClientPortalService } = require('./client-portal.service');
 describe('ClientPortalService annex resource authorization', () => {
   const prisma = {
     $transaction: jest.fn(),
+    $queryRaw: jest.fn(),
+    auditLog: { findMany: jest.fn().mockResolvedValue([]) },
     project: {
       findFirst: jest.fn(),
       findUnique: jest.fn(),
@@ -111,6 +113,7 @@ describe('ClientPortalService annex resource authorization', () => {
     expect(prisma.projectComment.findMany).not.toHaveBeenCalled();
     expect(prisma.projectComment.create).not.toHaveBeenCalled();
     expect(prisma.projectVersion.findMany).not.toHaveBeenCalled();
+    expect(prisma.$queryRaw).not.toHaveBeenCalled();
     expect(prisma.projectVersion.findFirst).not.toHaveBeenCalled();
     expect(prisma.documentEngagement.findMany).not.toHaveBeenCalled();
     expect(prisma.documentEngagement.create).not.toHaveBeenCalled();
@@ -177,7 +180,8 @@ describe('ClientPortalService annex resource authorization', () => {
       buildingId: 'building-a',
       status: 'ARCHIVED',
     });
-    prisma.projectVersion.findMany.mockResolvedValue([{ id: 'version-a' }]);
+    prisma.$queryRaw.mockResolvedValue([{ id: 'version-a', versionNumber: 1, createdAt: new Date() }]);
+    prisma.projectComment.findMany.mockResolvedValue([]);
 
     await expect(
       service.getProjectVersionHistory('project-a', manager),
@@ -224,7 +228,8 @@ describe('ClientPortalService annex resource authorization', () => {
       clientId: 'client-a',
       buildingId: 'building-a2',
     });
-    prisma.projectVersion.findMany.mockResolvedValue([]);
+    prisma.$queryRaw.mockResolvedValue([]);
+    prisma.projectComment.findMany.mockResolvedValue([]);
 
     await expect(
       service.getProjectVersionHistory('project-a2', corporate),

@@ -24,8 +24,17 @@ export class ApprovalController {
   }
 
   @Post(':projectId/approve')
-  async approve(@Param('projectId') projectId: string, @Request() req: any) {
-    return this.service.approve(projectId, req.user);
+  async approve(
+    @Param('projectId') projectId: string,
+    @Body() body: { commentaire?: string },
+    @Request() req: any,
+  ) {
+    return this.service.approve(projectId, req.user, body?.commentaire);
+  }
+
+  @Get(':projectId/last-return')
+  lastReturn(@Param('projectId') projectId: string, @Request() req: any) {
+    return this.service.getLastReturn(projectId, req.user);
   }
 
   @Post(':projectId/request-revision')
