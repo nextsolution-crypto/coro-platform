@@ -12,6 +12,29 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 
+/**
+ * Corrections de texte des procédures CORO déjà en base. Appliquées au
+ * démarrage, seulement si l'ancien texte est encore présent : une version
+ * déjà modifiée n'est jamais touchée, et les versions d'organisation ou de
+ * projet ne le sont jamais.
+ */
+export const DEFAULT_TEXT_FIXES: Array<{ code: string; from: string; to: string }> = [
+  { code: 'P005', from: 'Informer que la valve interne est située [LOCALISATION VALVE GAZ]', to: 'Informer que la valve interne est située à : [LOCALISATION VALVE GAZ]' },
+  { code: 'P005', from: 'Inform that the internal valve is located [GAS VALVE LOCATION]', to: 'Inform that the internal valve is located at: [GAS VALVE LOCATION]' },
+  { code: 'P013', from: 'Apporter le DEA, situé [LOCALISATION DEA], si :', to: 'Apporter le DEA (emplacement : [LOCALISATION DEA]) si :' },
+  { code: 'P013', from: 'Bring the AED, located [DEA LOCATION], if:', to: 'Bring the AED (location: [DEA LOCATION]) if:' },
+];
+
+/** Remplace un texte dans toutes les chaînes d'un contenu JSON. */
+export function replaceInContent(value: any, from: string, to: string): any {
+  if (typeof value === 'string') return value.split(from).join(to);
+  if (Array.isArray(value)) return value.map((item) => replaceInContent(item, from, to));
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, replaceInContent(v, from, to)]));
+  }
+  return value;
+}
+
 @Injectable()
 export class ProceduresService implements OnModuleInit {
   private readonly logger = new Logger(ProceduresService.name);
@@ -43,9 +66,30 @@ export class ProceduresService implements OnModuleInit {
         }
       }
       if (created > 0) this.logger.log(`Bibliothèque : ${created} procédure(s) ajoutée(s) en base.`);
+      await this.applyDefaultTextFixes();
     } catch (error) {
       this.logger.error('Synchronisation de la bibliothèque impossible', error as Error);
     }
+  }
+
+  async applyDefaultTextFixes(): Promise<number> {
+    let fixed = 0;
+    const codes = [...new Set(DEFAULT_TEXT_FIXES.map((f) => f.code))];
+    const rows = await this.prisma.procedureDefault.findMany({ where: { code: { in: codes } } });
+    for (const row of rows) {
+      let content: any = row.content;
+      for (const fix of DEFAULT_TEXT_FIXES.filter((f) => f.code === row.code)) {
+        if (JSON.stringify(content).includes(JSON.stringify(fix.from).slice(1, -1))) {
+          content = replaceInContent(content, fix.from, fix.to);
+        }
+      }
+      if (JSON.stringify(content) !== JSON.stringify(row.content)) {
+        await this.prisma.procedureDefault.update({ where: { id: row.id }, data: { content: this.asInputJson(content) } });
+        fixed++;
+      }
+    }
+    if (fixed > 0) this.logger.log(`Bibliothèque : texte corrigé dans ${fixed} procédure(s) CORO.`);
+    return fixed;
   }
 
   /**

@@ -1,4 +1,11 @@
 import { translateModule2Row } from '../generator/module2.templates';
+import { localizeModule8ForEnglish } from './module8-localize';
+import {
+  ExportTranslator,
+  applyTexts,
+  collectTexts,
+  replaceInsertedValues,
+} from './export-translator';
 import {
   ApprovalStamp,
   approvalStampFromVersion,
@@ -284,6 +291,51 @@ export class ExportService {
     return result;
   }
 
+  /**
+   * Contenu prêt pour l'export anglais : les libellés CORO prennent leur
+   * version anglaise fixe, puis les textes saisis en français sont traduits
+   * (mémoire des traductions, IA au besoin). Le contenu enregistré n'est
+   * jamais modifié : seule la copie rendue change.
+   */
+  private async englishContent(content: any, project?: any): Promise<any> {
+    const module8 = content.module8
+      ? localizeModule8ForEnglish(content.module8, content.modules_fr, content.modules_en)
+      : content.module8;
+    const module2 = content.module2 ? this.module2WithEnglishLabels(content.module2) : content.module2;
+
+    const texts = new Set<string>();
+    collectTexts(content.config, texts);
+    collectTexts(module2, texts);
+    collectTexts(module8, texts);
+    const tagline: string | undefined = project?.organization?.companyTagline || undefined;
+    if (tagline) collectTexts(tagline, texts);
+    if (texts.size === 0) return { ...content, module2, module8 };
+
+    this.translator = this.translator || new ExportTranslator(this.prisma);
+    const translations = await this.translator.translate(texts);
+    return {
+      ...content,
+      config: applyTexts(content.config, translations),
+      module2: applyTexts(module2, translations),
+      module8: applyTexts(module8, translations),
+      modules_en: replaceInsertedValues(content.modules_en, translations),
+      companyTaglineEn: tagline ? translations.get(tagline) ?? tagline : undefined,
+    };
+  }
+
+  private translator?: ExportTranslator;
+
+  private module2WithEnglishLabels(saved: any): any {
+    if (!saved || typeof saved !== 'object') return saved;
+    const out: Record<string, any> = {};
+    for (const [key, value] of Object.entries(saved)) {
+      out[key] = Array.isArray(value)
+        ? value.map((row: any) => (row && typeof row === 'object' ? translateModule2Row(row) : row))
+        : value;
+    }
+    return out;
+  }
+
   // ============================================================
   // GÉNÉRATION D'UN PDF DANS UNE LANGUE
   // ============================================================
@@ -297,6 +349,7 @@ export class ExportService {
     data: ExportDataSource,
   ): Promise<Buffer> {
     const project = doc.project;
+    if (lang === 'en') content = await this.englishContent(content, project);
     const modules = lang === 'fr' ? content.modules_fr : content.modules_en;
     const isFr = lang === 'fr';
     const isIndustrielForExport =
@@ -677,7 +730,10 @@ export class ExportService {
         companyEmail: project.organization?.companyEmail || undefined,
         companyAddress: project.organization?.companyAddress || undefined,
         companyWebsite: project.organization?.companyWebsite || undefined,
-        companyTagline: project.organization?.companyTagline || undefined,
+        companyTagline:
+          (lang === 'en' && content.companyTaglineEn) ||
+          project.organization?.companyTagline ||
+          undefined,
         year: project.year,
         language: lang,
       });
