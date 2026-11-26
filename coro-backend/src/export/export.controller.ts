@@ -22,7 +22,9 @@ export class ExportController {
 
   @Post()
   async exportPdf(@Param('projectId') projectId: string, @Body() options: ExportOptions & { idempotencyKey?: string }, @Res() res: Response, @Request() req: any) {
-    const project = await this.prisma.project.findFirst({ where: { id: projectId, ...projectReadWhere(req.user) }, include: { building: true } });
+    // Aperçu : lecture ; export officiel : écriture (propriétaire ou administrateur).
+    const scope = options?.isPreview === true ? projectReadWhere(req.user) : projectAccessWhere(req.user);
+    const project = await this.prisma.project.findFirst({ where: { id: projectId, ...scope }, include: { building: true } });
     if (!project) return res.status(404).json({ message: 'Projet introuvable' });
     if (options.isPreview === true) {
       const result = await this.exportService.generatePdf(projectId, { ...options, isPreview: true }, req.user.organizationId);
