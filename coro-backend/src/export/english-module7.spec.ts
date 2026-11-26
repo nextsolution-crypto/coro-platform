@@ -27,3 +27,15 @@ describe('Module 7 dans le PDF anglais', () => {
     expect([...translator.translate.mock.calls[0][0]]).toEqual(['Entrées accessibles avec carte à puce.', 'Salle électrique du 3e']);
   });
 });
+
+describe('Journal des modifications des plans déjà générés', () => {
+  it('accentue en français et traduit en anglais le motif enregistré', () => {
+    const { withCurrentReferences } = require('./english-content');
+    const out = withCurrentReferences({
+      modules_fr: [{ sections: [{ content: '| 2025-06-05 | Creation initiale | A |\n| 2026-09-05 | Mise a jour annuelle | B |' }] }],
+      modules_en: [{ sections: [{ content: '| 2025-06-05 | Creation initiale | A |' }] }],
+    });
+    expect(out.modules_fr[0].sections[0].content).toBe('| 2025-06-05 | Création initiale | A |\n| 2026-09-05 | Mise à jour annuelle | B |');
+    expect(out.modules_en[0].sections[0].content).toBe('| 2025-06-05 | Initial creation | A |');
+  });
+});

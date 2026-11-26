@@ -1,3 +1,4 @@
+import { displayOption, optionToEnglish } from '../../export/templates/modules/option-display';
 import { DocumentContext, REFERENCES, aRef, leRef, duRef } from './module1.context';
 
 export function generateModule1PsiFR(ctx: DocumentContext): any {
@@ -185,8 +186,8 @@ Le présent Plan de sécurité incendie (${docType}) est un document évolutif q
 | Date | Description de la modification | Personne responsable |
 |---|---|---|
 ${(ctx.historiqueList && ctx.historiqueList.length > 0
-  ? ctx.historiqueList.map(h => `| ${h.date || '—'} | ${h.type || '—'} | ${h.responsable || '—'} |`).join('\n')
-  : `| ${ctx.dateReleve || '—'} | ${ctx.versionDocument || 'Création initiale'} | ${ctx.responsableNom || '—'} |`
+  ? ctx.historiqueList.map(h => `| ${h.date || '—'} | ${displayOption(h.type || '—')} | ${h.responsable || '—'} |`).join('\n')
+  : `| ${ctx.dateReleve || '—'} | ${displayOption(ctx.versionDocument || 'Création initiale')} | ${ctx.responsableNom || '—'} |`
 )}
 
 **Révisions périodiques et déclencheurs particuliers**
@@ -395,8 +396,8 @@ This Fire Safety Plan (${docType}) must be reviewed at least once every 12 month
 | Date | Description of Modification | Responsible Person |
 |---|---|---|
 ${(ctx.historiqueList && ctx.historiqueList.length > 0
-  ? ctx.historiqueList.map(h => `| ${h.date || '—'} | ${h.type || '—'} | ${h.responsable || '—'} |`).join('\n')
-  : `| ${ctx.dateReleve || '—'} | ${ctx.versionDocument || 'Initial creation'} | ${ctx.responsableNom || '—'} |`
+  ? ctx.historiqueList.map(h => `| ${h.date || '—'} | ${optionToEnglish(h.type || '—')} | ${h.responsable || '—'} |`).join('\n')
+  : `| ${ctx.dateReleve || '—'} | ${optionToEnglish(ctx.versionDocument || 'Initial creation')} | ${ctx.responsableNom || '—'} |`
 )}
 
 **Specific Triggers for Updates**
