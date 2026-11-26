@@ -247,10 +247,12 @@ export function renderModule8(
   `;
 
   // 8.2 — Messages phoniques
+  // Le document français garde les deux versions (le message est répété en
+  // anglais) ; le document anglais ne montre que la version anglaise.
   const s82Rows = (module8Data.section8_2 || []).map((m: any) => `
     <tr>
       <td style="font-weight:700;color:#C0392B;">${escapeHtml(m.evenement || '')}</td>
-      <td style="font-size:9pt;">${escapeHtml(m.messageFR || '').replace(/\n/g, '<br/>')}</td>
+      ${isFr ? `<td style="font-size:9pt;">${escapeHtml(m.messageFR || '').replace(/\n/g, '<br/>')}</td>` : ''}
       <td style="font-size:9pt;">${escapeHtml(m.messageEN || '').replace(/\n/g, '<br/>')}</td>
     </tr>
   `).join('');
@@ -258,7 +260,7 @@ export function renderModule8(
     <div class="page-break">
       ${sectionHeader('8.2')}
       <table>
-        <thead><tr><th>${isFr ? 'Événement' : 'Event'}</th><th>${isFr ? 'Message français' : 'French message'}</th><th>${isFr ? 'Message anglais' : 'English message'}</th></tr></thead>
+        <thead><tr><th>${isFr ? 'Événement' : 'Event'}</th>${isFr ? '<th>Message français</th><th>Message anglais</th>' : '<th>Message</th>'}</tr></thead>
         <tbody>${s82Rows}</tbody>
       </table>
     </div>
