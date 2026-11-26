@@ -25,7 +25,8 @@ describe('ProjectsService compliance document tracking', () => {
     prisma.building.findMany.mockResolvedValue([]);
     await service.getBuildingsCompliance(operator);
     const query = prisma.building.findMany.mock.calls[0][0];
-    const scope = { organizationId: 'org-1', OR: [{ userId: 'operator-1' }, { lastEditedById: 'operator-1' }] };
+    // Lecture : tous les projets de l'organisation.
+    const scope = { organizationId: 'org-1' };
     expect(query.where).toEqual({ organizationId: 'org-1', isActive: true, projects: { some: scope } });
     expect(query.include.projects.where).toMatchObject({ ...scope, isActive: true, status: { not: 'ARCHIVED' } });
   });

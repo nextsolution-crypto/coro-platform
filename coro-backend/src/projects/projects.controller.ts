@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -78,6 +79,28 @@ export class ProjectsController {
   @Get(':id/quality-score')
   getQualityScore(@Param('id') id: string, @Request() req: any) {
     return this.projectsService.calculateQualityScore(id, req.user);
+  }
+
+  @Patch(':id/owner')
+  async changeOwner(
+    @Param('id') id: string,
+    @Body() body: { userId?: string },
+    @Request() req: any,
+  ) {
+    const result = await this.projectsService.changeOwner(id, body?.userId as string, req.user);
+    if (result.changed) {
+      await this.auditService.log({
+        action: 'OWNER_CHANGE',
+        entityType: 'PROJECT',
+        entityId: id,
+        projectId: id,
+        description: `Propriétaire changé : ${result.ownerName}`,
+        metadata: { previousUserId: result.previousUserId, newUserId: result.userId },
+        userId: req.user.userId,
+        organizationId: req.user.organizationId,
+      });
+    }
+    return result;
   }
 
   @Get(':id')

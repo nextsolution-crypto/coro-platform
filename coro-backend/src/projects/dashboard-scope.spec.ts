@@ -7,7 +7,7 @@ const operator = { userId: 'operator-a', organizationId: 'org-a', role: 'OPERATO
 const admin = { userId: 'admin-a', organizationId: 'org-a', role: 'ADMIN' };
 const operatorScope = {
   organizationId: 'org-a',
-  OR: [{ userId: 'operator-a' }, { lastEditedById: 'operator-a' }],
+  userId: 'operator-a',
 };
 
 function projectHarness() {
@@ -68,19 +68,20 @@ describe('organization dashboard authorization scope', () => {
   it('preserves operator scope while adding search predicates', async () => {
     const h = projectHarness();
     await h.service.globalSearch('alpha', operator);
+    // La recherche couvre tous les projets de l'organisation (lecture).
     expect(h.prisma.project.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           isActive: true,
-          AND: expect.arrayContaining([operatorScope]),
+          AND: expect.arrayContaining([{ organizationId: 'org-a' }]),
         }),
       }),
     );
     expect(h.prisma.client.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ organizationId: 'org-a', projects: { some: operatorScope } }) }),
+      expect.objectContaining({ where: expect.objectContaining({ organizationId: 'org-a', projects: { some: { organizationId: 'org-a' } } }) }),
     );
     expect(h.prisma.building.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ organizationId: 'org-a', projects: { some: operatorScope } }) }),
+      expect.objectContaining({ where: expect.objectContaining({ organizationId: 'org-a', projects: { some: { organizationId: 'org-a' } } }) }),
     );
   });
 

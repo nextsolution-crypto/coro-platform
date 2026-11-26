@@ -48,7 +48,7 @@ export class VersionsService {
     expectedValue: unknown,
     actor: AdviserActor,
   ) {
-    await this.integrity.readableProject(projectId, actor);
+    await this.integrity.writableProject(projectId, actor);
     const expected = this.integrity.requireExpectedLockVersion(expectedValue);
     const result = await this.prisma.$transaction(async (tx) => {
       const document = await this.lockMutableDocument(
@@ -97,7 +97,7 @@ export class VersionsService {
     expectedValue: unknown,
     actor: AdviserActor,
   ) {
-    await this.integrity.readableProject(projectId, actor);
+    await this.integrity.writableProject(projectId, actor);
     const expected = this.integrity.requireExpectedLockVersion(expectedValue);
     const result = await this.prisma.$transaction(async (tx) => {
       const document = await this.lockMutableDocument(
@@ -157,7 +157,7 @@ export class VersionsService {
     expectedValue: unknown,
     actor: AdviserActor,
   ) {
-    await this.integrity.readableProject(projectId, actor);
+    await this.integrity.writableProject(projectId, actor);
     const expected = this.integrity.requireExpectedLockVersion(expectedValue);
     const result = await this.prisma.$transaction(async (tx) => {
       const document = await this.lockMutableDocument(

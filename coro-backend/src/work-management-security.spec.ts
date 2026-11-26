@@ -337,7 +337,7 @@ describe('Work Management security hardening', () => {
       'OPERATOR',
       {
         organizationId: 'org-a',
-        OR: [{ userId: 'user-a' }, { lastEditedById: 'user-a' }],
+        userId: 'user-a',
       },
     ],
   ])(

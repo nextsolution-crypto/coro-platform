@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AdviserActor, assertEditableProject, lockEditableProject, projectAccessWhere } from '../../auth/project-access';
+import { AdviserActor, assertEditableProject, lockEditableProject, projectAccessWhere, projectReadWhere } from '../../auth/project-access';
 
 /** Champs de PcaConfig qu'un client peut écrire (audit M1-04). */
 export const PCA_CONFIG_WRITABLE_FIELDS: ReadonlySet<string> = new Set<string>(
@@ -48,7 +48,7 @@ export class PcaConfiguratorService {
     const project = await this.prisma.project.findFirst({
       where: {
         id: projectId,
-        ...projectAccessWhere(actor),
+        ...projectReadWhere(actor),
       },
       include: {
         client: true,
@@ -301,7 +301,7 @@ export class PcaConfiguratorService {
     const project = await this.prisma.project.findFirst({
       where: {
         id: projectId,
-        ...projectAccessWhere(actor),
+        ...projectReadWhere(actor),
       },
       include: {
         building: true,

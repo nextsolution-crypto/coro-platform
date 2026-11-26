@@ -46,7 +46,6 @@ describe('ProjectFilesService organization project authority', () => {
           id: 'project-b',
           organizationId: 'org-a',
           isActive: true,
-          OR: [{ userId: 'operator-a' }, { lastEditedById: 'operator-a' }],
         }),
       }),
     );

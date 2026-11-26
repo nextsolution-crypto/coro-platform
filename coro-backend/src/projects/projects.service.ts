@@ -10,7 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { getLimitsForLicense } from '../organizations/license-limits';
 import {
   AdviserActor,
-  projectAccessWhere,
+  projectAccessWhere, projectReadWhere, canWriteProject,
   requireProjectApprover,
 } from '../auth/project-access';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -43,7 +43,7 @@ export class ProjectsService {
 
   async getFilterUsers(actor: AdviserActor) {
     const projects = await this.prisma.project.findMany({
-      where: { isActive: true, ...projectAccessWhere(actor) },
+      where: { isActive: true, ...projectReadWhere(actor) },
       select: {
         user: {
           select: { id: true, firstName: true, lastName: true, isActive: true },
@@ -72,10 +72,10 @@ export class ProjectsService {
   }
 
   async findAll(actor: AdviserActor) {
-    const where = { isActive: true, ...projectAccessWhere(actor) };
+    const where = { isActive: true, ...projectReadWhere(actor) };
 
     // Si userId fourni → projets dont l'utilisateur est responsable OU a modifié
-    return this.prisma.project.findMany({
+    const projects = await this.prisma.project.findMany({
       where,
       orderBy: { updatedAt: 'desc' },
       include: {
@@ -86,15 +86,16 @@ export class ProjectsService {
         _count: { select: { documents: true } },
       },
     });
+    return projects.map((project) => ({ ...project, canWrite: canWriteProject(actor, project) }));
   }
 
   async findOne(id: string, actor: AdviserActor) {
     const project = await this.prisma.project.findFirst({
-      where: { id, isActive: true, ...projectAccessWhere(actor) },
+      where: { id, isActive: true, ...projectReadWhere(actor) },
       include: {
         client: true,
         building: true,
-        user: true,
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
         lastEditedBy: { select: { id: true, firstName: true, lastName: true } },
         submittedBy: { select: { id: true, firstName: true, lastName: true } },
         approvedBy: { select: { id: true, firstName: true, lastName: true } },
@@ -104,7 +105,43 @@ export class ProjectsService {
     if (!project) {
       throw new NotFoundException('Projet introuvable');
     }
-    return project;
+    return { ...project, canWrite: canWriteProject(actor, project) };
+  }
+
+  /** Changement de propriétaire : réservé aux administrateurs de l'organisation. */
+  async changeOwner(id: string, newOwnerId: string, actor: AdviserActor) {
+    if (actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Seul un administrateur peut changer le propriétaire');
+    }
+    if (typeof newOwnerId !== 'string' || !newOwnerId) {
+      throw new BadRequestException('Nouveau propriétaire requis');
+    }
+    const [project, owner] = await Promise.all([
+      this.prisma.project.findFirst({
+        where: { id, isActive: true, organizationId: actor.organizationId },
+        select: { id: true, userId: true, name: true },
+      }),
+      this.prisma.user.findFirst({
+        where: {
+          id: newOwnerId,
+          organizationId: actor.organizationId,
+          isActive: true,
+          role: { in: ['ADMIN', 'SUPER_ADMIN', 'OPERATOR'] },
+        },
+        select: { id: true, firstName: true, lastName: true },
+      }),
+    ]);
+    if (!project) throw new NotFoundException('Projet introuvable');
+    if (!owner) throw new BadRequestException('Conseiller introuvable dans votre organisation');
+    if (project.userId === owner.id) return { id: project.id, userId: owner.id, changed: false };
+    await this.prisma.project.update({ where: { id }, data: { userId: owner.id } });
+    return {
+      id: project.id,
+      userId: owner.id,
+      previousUserId: project.userId,
+      ownerName: `${owner.firstName ?? ''} ${owner.lastName ?? ''}`.trim(),
+      changed: true,
+    };
   }
 
   async create(
@@ -563,7 +600,7 @@ export class ProjectsService {
     details: { label: string; points: number; earned: number; ok: boolean }[];
   }> {
     const project = await this.prisma.project.findFirst({
-      where: { id: projectId, isActive: true, ...projectAccessWhere(actor) },
+      where: { id: projectId, isActive: true, ...projectReadWhere(actor) },
     });
     if (!project) throw new NotFoundException('Projet introuvable');
 
@@ -728,7 +765,7 @@ export class ProjectsService {
     return { score: totalScore, level, details };
   }
   async getBuildingsCompliance(actor: AdviserActor) {
-    const projectScope = projectAccessWhere(actor);
+    const projectScope = projectReadWhere(actor);
     const buildings = await this.prisma.building.findMany({
       where: {
         organizationId: actor.organizationId,
@@ -883,7 +920,7 @@ export class ProjectsService {
     requireProjectApprover(actor);
     return this.prisma.project.findMany({
       where: {
-        ...projectAccessWhere(actor),
+        ...projectReadWhere(actor),
         status: 'REVIEW',
         submittedById: { not: actor.userId },
       },
@@ -946,7 +983,7 @@ export class ProjectsService {
     const q = query.trim().toLowerCase();
     if (!q || q.length < 2) return { projects: [], clients: [], buildings: [] };
 
-    const projectScope = projectAccessWhere(actor);
+    const projectScope = projectReadWhere(actor);
 
     const [projects, clients, buildings] = await Promise.all([
       this.prisma.project.findMany({
@@ -1011,7 +1048,7 @@ export class ProjectsService {
 
   async getComments(projectId: string, actor: AdviserActor) {
     const project = await this.prisma.project.findFirst({
-      where: { id: projectId, ...projectAccessWhere(actor) },
+      where: { id: projectId, ...projectReadWhere(actor) },
       select: { id: true },
     });
     if (!project) throw new NotFoundException('Projet introuvable');

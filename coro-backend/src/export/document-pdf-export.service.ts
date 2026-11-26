@@ -8,7 +8,7 @@ import { createHash, timingSafeEqual } from 'crypto';
 import { Prisma, type DocumentPdfExport } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
-import { projectAccessWhere, type AdviserActor } from '../auth/project-access';
+import { projectAccessWhere, projectReadWhere, type AdviserActor } from '../auth/project-access';
 import { hashReviewSnapshot } from '../approval/document-review-integrity';
 import { ExportService, type ExportOptions } from './export.service';
 import { approvalStampFromVersion } from './approval-stamp';
@@ -132,7 +132,7 @@ export class DocumentPdfExportService {
         },
       });
       if (!row) throw new NotFoundException('Export introuvable');
-      await this.assertProjectRead(tx, projectId, actor);
+      await this.assertProjectWrite(tx, projectId, actor);
       const leaseExpired =
         row.status === 'PROCESSING' &&
         (!row.generationLeaseUntil ||
@@ -381,13 +381,26 @@ export class DocumentPdfExportService {
     return { project, review, version };
   }
 
-  private async assertProjectRead(
+  /** Relance d'un export : réservée à qui peut modifier le projet. */
+  private async assertProjectWrite(
     tx: Prisma.TransactionClient | PrismaService,
     projectId: string,
     actor: AdviserActor,
   ) {
     const project = await tx.project.findFirst({
       where: { id: projectId, ...projectAccessWhere(actor) },
+      select: { id: true },
+    });
+    if (!project) throw new NotFoundException('Projet introuvable');
+  }
+
+  private async assertProjectRead(
+    tx: Prisma.TransactionClient | PrismaService,
+    projectId: string,
+    actor: AdviserActor,
+  ) {
+    const project = await tx.project.findFirst({
+      where: { id: projectId, ...projectReadWhere(actor) },
       select: { id: true },
     });
     if (!project) throw new NotFoundException('Projet introuvable');

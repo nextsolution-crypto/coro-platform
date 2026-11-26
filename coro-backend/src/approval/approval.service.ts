@@ -24,7 +24,7 @@ import { StorageService } from '../storage/storage.service';
 import {
   AdviserActor,
   mutableProjectAccessWhere,
-  projectAccessWhere,
+  projectAccessWhere, projectReadWhere,
   requireProjectApprover,
 } from '../auth/project-access';
 import {
@@ -415,7 +415,7 @@ export class ApprovalService {
 
   async getObservations(projectId: string, actor: AdviserActor) {
     const project = await this.prisma.project.findFirst({
-      where: { id: projectId, ...projectAccessWhere(actor) },
+      where: { id: projectId, ...projectReadWhere(actor) },
       select: { id: true },
     });
     if (!project) throw new NotFoundException('Projet introuvable');

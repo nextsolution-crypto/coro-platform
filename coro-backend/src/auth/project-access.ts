@@ -11,6 +11,12 @@ export interface AdviserActor {
   role: string;
 }
 
+/**
+ * Accès en ÉCRITURE à un projet.
+ * - Administrateur : tous les projets de son organisation.
+ * - Opérateur : seulement les projets dont il est propriétaire (Project.userId).
+ *   Un administrateur peut changer le propriétaire (PATCH /projects/:id/owner).
+ */
 export function projectAccessWhere(
   actor: AdviserActor,
 ): Prisma.ProjectWhereInput {
@@ -18,12 +24,32 @@ export function projectAccessWhere(
     return { organizationId: actor.organizationId };
   }
   if (actor.role === 'OPERATOR') {
-    return {
-      organizationId: actor.organizationId,
-      OR: [{ userId: actor.userId }, { lastEditedById: actor.userId }],
-    };
+    return { organizationId: actor.organizationId, userId: actor.userId };
   }
   throw new ForbiddenException('Acces refuse a ce projet');
+}
+
+/**
+ * Accès en LECTURE : tout conseiller voit les projets de son organisation.
+ * Les écritures restent soumises à projectAccessWhere.
+ */
+export function projectReadWhere(
+  actor: AdviserActor,
+): Prisma.ProjectWhereInput {
+  if (['ADMIN', 'SUPER_ADMIN', 'OPERATOR'].includes(actor.role)) {
+    return { organizationId: actor.organizationId };
+  }
+  throw new ForbiddenException('Acces refuse a ce projet');
+}
+
+/** Le conseiller peut-il modifier ce projet (propriétaire ou administrateur)? */
+export function canWriteProject(
+  actor: AdviserActor,
+  project: { organizationId: string; userId: string | null },
+): boolean {
+  if (project.organizationId !== actor.organizationId) return false;
+  if (actor.role === 'ADMIN' || actor.role === 'SUPER_ADMIN') return true;
+  return actor.role === 'OPERATOR' && project.userId === actor.userId;
 }
 
 /**
