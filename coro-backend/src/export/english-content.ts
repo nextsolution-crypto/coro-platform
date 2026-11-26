@@ -15,7 +15,7 @@ import {
   replaceInsertedValues,
   streetOf,
 } from './export-translator';
-import { optionToEnglish } from './templates/modules/option-display';
+import { displayOption, optionToEnglish } from './templates/modules/option-display';
 
 function module2WithEnglishLabels(saved: any): any {
   if (!saved || typeof saved !== 'object') return saved;
@@ -114,7 +114,46 @@ export function withCurrentReferences(content: any): any {
     }
     return node;
   };
-  return { ...content, modules_fr: fix(content.modules_fr), modules_en: fix(content.modules_en) };
+  const historyFr = historyCells('fr');
+  const historyEn = historyCells('en');
+  const cells = (pairs: Array<[string, string]>) => (node: any): any => {
+    if (typeof node === 'string') {
+      let out = node;
+      for (const [from, to] of pairs) if (out.includes(from)) out = out.split(from).join(to);
+      return out;
+    }
+    if (Array.isArray(node)) return node.map(cells(pairs));
+    if (node && typeof node === 'object') {
+      const out: Record<string, any> = {};
+      for (const [key, value] of Object.entries(node)) out[key] = cells(pairs)(value);
+      return out;
+    }
+    return node;
+  };
+  return {
+    ...content,
+    modules_fr: cells(historyFr)(fix(content.modules_fr)),
+    modules_en: cells(historyEn)(fix(content.modules_en)),
+  };
+}
+
+/**
+ * Journal des modifications (section 1.5) des plans déjà générés : le motif
+ * était inséré tel qu'enregistré (« Creation initiale »). Cellule de tableau
+ * remplacée par le libellé accentué, ou anglais dans le document anglais.
+ */
+const HISTORY_TYPES = [
+  'Creation initiale',
+  'Mise a jour annuelle',
+  'Mise a jour suite a incident',
+  'Mise a jour suite a renovation',
+  'Mise a jour suite a changement occupation',
+];
+function historyCells(lang: 'fr' | 'en'): Array<[string, string]> {
+  return HISTORY_TYPES.map((value) => [
+    `| ${value} |`,
+    `| ${lang === 'fr' ? displayOption(value) : optionToEnglish(value)} |`,
+  ]);
 }
 
 

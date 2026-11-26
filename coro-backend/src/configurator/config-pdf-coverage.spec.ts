@@ -131,6 +131,7 @@ describe('Couverture configurateur → PDF', () => {
 
   it('« Version du document » s\'affiche quand l\'historique est vide', async () => {
     const out = await render({ versionDocument: 'Mise a jour annuelle', historiqueList: [] }, 'PMU');
-    expect(out).toContain('Mise a jour annuelle');
+    // Affichée avec ses accents (valeur enregistrée sans accents).
+    expect(out).toContain('Mise à jour annuelle');
   });
 });
