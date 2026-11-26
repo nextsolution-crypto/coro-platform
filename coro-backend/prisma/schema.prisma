@@ -11075,3 +11075,15 @@ model TimeEntryCorrection {
 
   @@index([organizationId, period])
 }
+
+/// Mémoire des traductions automatiques des textes saisis (export anglais).
+model TextTranslation {
+  id             String   @id @default(uuid())
+  sourceHash     String
+  targetLang     String
+  sourceText     String
+  translatedText String
+  createdAt      DateTime @default(now())
+
+  @@unique([sourceHash, targetLang])
+}
