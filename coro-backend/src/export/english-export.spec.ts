@@ -107,3 +107,10 @@ describe('Renvois réglementaires des modules déjà générés', () => {
     expect(out.modules_en[0].sections[0].content).toContain('Sentence (3)(c)');
   });
 });
+
+describe('Module 6 anglais — acronyme du code de prévention', () => {
+  it('écrit NFC et non CNPI', () => {
+    const en = renderModule7({}, { hotWorkFrequency: 'Occasionnellement', travauxPointsChauds: 'Occasionnellement' }, 'en').map((s) => s.html).join('');
+    expect(en).not.toMatch(/\bCNPI\b/);
+  });
+});
