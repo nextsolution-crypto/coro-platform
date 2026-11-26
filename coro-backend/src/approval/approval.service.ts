@@ -366,10 +366,33 @@ export class ApprovalService {
         },
         orderBy: { submittedAt: 'desc' },
       });
-      if (!request)
-        throw new ConflictException(
-          'Cette approbation historique ne possède pas de demande de révision liée',
-        );
+      if (!request) {
+        if (project.status === 'REVIEW')
+          throw new ConflictException('Demande de révision introuvable');
+        // Plan validé avant le circuit de révision actuel : aucune demande
+        // liée. Le déverrouillage reste possible ; il est journalisé.
+        const document = await tx.document.findFirst({
+          where: { projectId },
+          orderBy: { updatedAt: 'desc' },
+          select: { id: true },
+        });
+        await tx.project.update({
+          where: { id: projectId },
+          data: { status: 'IN_PROGRESS' },
+        });
+        await this.createAudit(tx, {
+          action: 'REVIEW_RETURNED',
+          projectId,
+          documentId: document?.id ?? '',
+          requestId: `legacy:${projectId}`,
+          actor,
+          previousStatus: project.status,
+          newStatus: 'IN_PROGRESS',
+          contentHash: '',
+          reason,
+        });
+        return { project, request: null, eventId: null };
+      }
       const now = new Date();
       if (request.status === 'PENDING')
         await tx.documentReviewRequest.update({
@@ -405,11 +428,12 @@ export class ApprovalService {
       );
       return { project, request, eventId: event.id };
     }, this.transactionOptions);
-    void this.processNotificationEvent(result.eventId).catch(() => undefined);
+    if (result.eventId)
+      void this.processNotificationEvent(result.eventId).catch(() => undefined);
     return {
       success: true,
       status: 'IN_PROGRESS',
-      reviewRequestId: result.request.id,
+      reviewRequestId: result.request?.id ?? null,
     };
   }
 
