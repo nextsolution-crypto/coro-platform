@@ -214,6 +214,8 @@ const OPTION_EN: Record<string, string> = {
   // Légendes des photos du bâtiment (module 6)
   'Entrée principale / Poste de commandement': 'Main entrance / Command post',
   'Point de rassemblement': 'Assembly point',
+  'Implantation': 'Site plan',
+  "Plan d'implantation": 'Site plan',
   "Plan de mesures d'urgence affiché": 'Posted emergency response plan',
   "Plan de mesures d'urgence": 'Emergency response plan',
   'Boîte à clés': 'Key box',
