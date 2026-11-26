@@ -309,7 +309,11 @@ export function renderModule7(
 ): { id: string; title: string; html: string }[] {
   renderLang = lang;
   try {
-    return renderModule7Sections(module7Data, config, lang, moduleSeqNumber);
+    const sections = renderModule7Sections(module7Data, config, lang, moduleSeqNumber);
+    // En anglais, le Code national de prévention des incendies se dit « NFC ».
+    return lang === 'en'
+      ? sections.map((section) => ({ ...section, html: section.html.replace(/\bCNPI\b/g, 'NFC') }))
+      : sections;
   } finally {
     renderLang = 'fr';
   }
