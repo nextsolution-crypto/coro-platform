@@ -1,9 +1,13 @@
 import { DocumentContext } from './module1/module1.index';
 import { getActivePcaProcedures } from './procedures/pca/index';
+import { pcaOption } from './pca-display';
 
 export function generatePcaModules(ctx: DocumentContext, pcaConfig: any) {
 
   const cfg = pcaConfig || {};
+  const effectiveDateText = cfg.effectiveDate
+    ? String(cfg.effectiveDate instanceof Date ? cfg.effectiveDate.toISOString() : cfg.effectiveDate).slice(0, 10)
+    : '';
   const clientName = ctx.clientName || '';
   const year = ctx.year || new Date().getFullYear();
 
@@ -143,7 +147,7 @@ Reprise et retour à la normale | Rétablir progressivement les capacités norma
       {
         id: 'm1_s3',
         title: 'Objectif et portée du plan',
-        content: `Organisation visée : ${clientName}
+        content: `${cfg.planName ? `Nom du plan : ${cfg.planName}\n` : ''}Organisation visée : ${clientName}
 Portée : ${cfg.scope === 'ORGANIZATION'
   ? 'Organisation entière'
   : cfg.scope === 'BUILDING'
@@ -153,9 +157,9 @@ Portée : ${cfg.scope === 'ORGANIZATION'
       : 'Non précisée'}
 Secteur d'activité : ${cfg.sector || 'Non précisé'}
 Nombre d'employés : ${cfg.employeeCount ?? 'Non précisé'}
-Heures d'opération : ${cfg.operatingHours || 'Non précisé'}
+Heures d'opération : ${pcaOption(cfg.operatingHours, 'fr') || 'Non précisé'}
 Année d'émission : ${year}
-
+${effectiveDateText ? `Date d'entrée en vigueur : ${effectiveDateText}\n` : ''}
 Le présent Plan de continuité des activités (PCA) a pour objectif de permettre à ${clientName} de maintenir ses activités essentielles à un niveau acceptable et de rétablir les capacités requises conformément aux objectifs de continuité définis dans le BIA. Il établit les priorités de continuité, les stratégies documentées, les responsabilités, les critères d'activation et les mécanismes de suivi nécessaires à une réponse coordonnée.
 
 ⚠️ AVIS IMPORTANT
@@ -253,7 +257,7 @@ Recovery and return to normal | Progressively restore normal capacities and clos
       {
         id: 'm1_s3',
         title: 'Plan objective and scope',
-        content: `Organization: ${clientName}
+        content: `${cfg.planName ? `Plan name: ${cfg.planName}\n` : ''}Organization: ${clientName}
 Scope: ${cfg.scope === 'ORGANIZATION'
   ? 'Entire organization'
   : cfg.scope === 'BUILDING'
@@ -261,11 +265,11 @@ Scope: ${cfg.scope === 'ORGANIZATION'
     : cfg.scope === 'MULTI_BUILDING'
       ? 'Multiple buildings'
       : 'Not specified'}
-Business sector: ${cfg.sector || 'Not specified'}
+Business sector: ${pcaOption(cfg.sector, 'en') || 'Not specified'}
 Number of employees: ${cfg.employeeCount ?? 'Not specified'}
-Operating hours: ${cfg.operatingHours || 'Not specified'}
+Operating hours: ${pcaOption(cfg.operatingHours, 'en') || 'Not specified'}
 Year of issue: ${year}
-
+${effectiveDateText ? `Effective date: ${effectiveDateText}\n` : ''}
 This Business Continuity Plan (BCP) aims to enable ${clientName} to maintain its essential activities at an acceptable level and restore required capabilities in accordance with the continuity objectives established in the BIA. It establishes continuity priorities, documented strategies, responsibilities, activation criteria and monitoring mechanisms required for a coordinated response.
 
 ⚠️ IMPORTANT NOTICE
@@ -340,6 +344,20 @@ Senior Management | |`,
   const substPhone = cfg.substitutePhone || 'À compléter';
   const substEmail = cfg.substituteEmail || 'À compléter';
 
+  const cellMemberDetails = (lang: 'fr' | 'en') => {
+    const rows = cellMembers
+      .filter((m: any) => m.responsibilities || m.alternate)
+      .map((m: any) => {
+        const who = `${m.role || (lang === 'fr' ? 'Membre' : 'Member')}${m.firstName || m.lastName ? ` (${[m.firstName, m.lastName].filter(Boolean).join(' ')})` : ''}`;
+        const parts = lang === 'fr'
+          ? [m.responsibilities && `Responsabilités : ${m.responsibilities}`, m.alternate && `Substitut : ${m.alternate}`]
+          : [m.responsibilities && `Responsibilities: ${m.responsibilities}`, m.alternate && `Alternate: ${m.alternate}`];
+        return `- ${who} — ${parts.filter(Boolean).join(' | ')}`;
+      });
+    if (!rows.length) return '';
+    return `\n\n${lang === 'fr' ? 'RESPONSABILITÉS ET SUBSTITUTS DES MEMBRES' : 'MEMBER RESPONSIBILITIES AND ALTERNATES'}\n${rows.join('\n')}`;
+  };
+
   const cellMembersTable = cellMembers.length > 0
     ? cellMembers.map((m: any) =>
         `${m.role || 'À définir'} | ${m.firstName || ''} ${m.lastName || ''} | ${m.phone || 'À compléter'} | ${m.email || 'À compléter'}`
@@ -377,7 +395,7 @@ PRINCIPES DE FONCTIONNEMENT DE LA CELLULE DE GESTION D'INCIDENT
         content: `Organisation : ${clientName}
 Secteur d'activité : ${cfg.sector || cfg.clientSector || 'Non précisé'}
 Nombre d'employés : ${cfg.employeeCount ?? cfg.clientEmployeeCount ?? 'Non précisé'}
-Heures d'opération : ${cfg.operatingHours || 'Non précisé'}
+Heures d'opération : ${pcaOption(cfg.operatingHours, 'fr') || 'Non précisé'}
 Portée du plan : ${cfg.scope === 'ORGANIZATION'
   ? 'Organisation entière'
   : cfg.scope === 'BUILDING'
@@ -459,7 +477,7 @@ Chef de cellule / Direction générale | À désigner | À compléter | À compl
 ─────────────────────────────────────────────────────────────────────
 Coordonnateur PCA | ${coordName || 'À désigner'} | ${coordPhone} | ${coordEmail}
 ─────────────────────────────────────────────────────────────────────
-${cellMembersTable}
+${cellMembersTable}${cellMemberDetails('fr')}
 
 MATRICE D'AUTORITÉ — À VALIDER PAR L'ORGANISATION
 Les autorités ci-dessous constituent une structure de référence. Elles doivent être confirmées en fonction des délégations de pouvoir, politiques internes et responsabilités réellement applicables.
@@ -545,9 +563,9 @@ INCIDENT MANAGEMENT TEAM OPERATING PRINCIPLES
         id: 'm2_s2',
         title: 'Organization description',
         content: `Organization: ${clientName}
-Business sector: ${cfg.sector || cfg.clientSector || 'Not specified'}
+Business sector: ${pcaOption(cfg.sector, 'en') || cfg.clientSector || 'Not specified'}
 Number of employees: ${cfg.employeeCount ?? cfg.clientEmployeeCount ?? 'Not specified'}
-Operating hours: ${cfg.operatingHours || 'Not specified'}
+Operating hours: ${pcaOption(cfg.operatingHours, 'en') || 'Not specified'}
 Plan scope: ${cfg.scope === 'ORGANIZATION'
   ? 'Entire organization'
   : cfg.scope === 'BUILDING'
@@ -635,7 +653,7 @@ ${cellMembers.length > 0
   ? cellMembers.map((m: any) =>
       `${m.role || 'To be defined'} | ${m.firstName || ''} ${m.lastName || ''} | ${m.phone || 'To be completed'} | ${m.email || 'To be completed'}`
     ).join('\n')
-  : 'Operations | To be designated | To be completed | To be completed\nInformation Technology | To be designated | To be completed | To be completed\nHuman Resources | To be designated | To be completed | To be completed\nCommunications | To be designated | To be completed | To be completed\nFinance / Insurance | To be designated | To be completed | To be completed\nFacilities | To be designated | To be completed | To be completed'}
+  : 'Operations | To be designated | To be completed | To be completed\nInformation Technology | To be designated | To be completed | To be completed\nHuman Resources | To be designated | To be completed | To be completed\nCommunications | To be designated | To be completed | To be completed\nFinance / Insurance | To be designated | To be completed | To be completed\nFacilities | To be designated | To be completed | To be completed'}${cellMemberDetails('en')}
 
 AUTHORITY MATRIX — TO BE VALIDATED BY THE ORGANIZATION
 The authorities below represent a reference structure and must be confirmed against the organization's actual delegation of authority, internal policies and responsibilities.
@@ -706,7 +724,7 @@ Senior Management | |`,
   // ══════════════════════════════════════════════
   const riskTableFR = riskScenarios.length > 0
     ? riskScenarios.map((r: any) => {
-        const sc = scenarioLabel(r.id);
+        const sc = r.id === 'autre' && r.customScenario ? r.customScenario : scenarioLabel(r.id);
         const co = consecLabel(r.id);
 
         const hasProbability = Boolean(r.probability);
@@ -733,7 +751,7 @@ Senior Management | |`,
 
   const riskTableEN = riskScenarios.length > 0
     ? riskScenarios.map((r: any) => {
-        const sc = scenarioLabelEN(r.id);
+        const sc = r.id === 'autre' && r.customScenario ? r.customScenario : scenarioLabelEN(r.id);
         const co = consecLabelEN(r.id);
 
         const hasProbability = Boolean(r.probability);
@@ -757,6 +775,22 @@ Senior Management | |`,
         return `${co} | ${sc} | ${imp} | ${prob} | ${niveau} | ${mesures} | ${commentaires}`;
       }).join('\n')
     : 'No scenarios identified — To be completed in BCP configurator (Section 3)';
+
+  // Détails saisis par scénario (conséquences, activités, dépendances, responsable, traitement)
+  const riskDetails = (lang: 'fr' | 'en') => {
+    const labels = lang === 'fr'
+      ? { title: 'DÉTAIL DES SCÉNARIOS', consequences: 'Conséquences possibles', affectedActivities: 'Activités touchées', dependencies: 'Dépendances', riskOwner: 'Responsable du risque', treatmentActions: 'Actions de traitement prévues' }
+      : { title: 'SCENARIO DETAILS', consequences: 'Potential consequences', affectedActivities: 'Affected activities', dependencies: 'Dependencies', riskOwner: 'Risk owner', treatmentActions: 'Planned treatment actions' };
+    const keys = ['consequences', 'affectedActivities', 'dependencies', 'riskOwner', 'treatmentActions'] as const;
+    const blocks = riskScenarios
+      .filter((r: any) => keys.some((k) => r[k]))
+      .map((r: any) => {
+        const sc = r.id === 'autre' && r.customScenario ? r.customScenario : (lang === 'fr' ? scenarioLabel(r.id) : scenarioLabelEN(r.id));
+        const sep = lang === 'fr' ? ' : ' : ': ';
+        return `${sc}\n${keys.filter((k) => r[k]).map((k) => `- ${labels[k]}${sep}${r[k]}`).join('\n')}`;
+      });
+    return blocks.length ? `\n\n${labels.title}\n${blocks.join('\n\n')}` : '';
+  };
 
   const m3fr = {
     moduleNumber: 3,
@@ -824,7 +858,7 @@ Le niveau de risque ne remplace pas le BIA. L'ARA aide à déterminer ce qui peu
         title: 'Scénarios d\'interruption identifiés',
         content: `CONSÉQUENCE | CAUSE / SCÉNARIO | IMPACT | PROBABILITÉ | NIVEAU DE RISQUE | MESURES EXISTANTES | COMMENTAIRES
 ─────────────────────────────────────────────────────────────────────
-${riskTableFR}
+${riskTableFR}${riskDetails('fr')}
 
 LECTURE DES RÉSULTATS
 L'organisation ne doit pas interpréter un risque faible comme une absence de risque. Un scénario peu probable peut tout de même exiger une stratégie si ses conséquences sont incompatibles avec les tolérances établies au BIA.
@@ -992,7 +1026,7 @@ Risk level does not replace the BIA. The risk assessment helps determine what ma
         title: 'Identified disruption scenarios',
         content: `CONSEQUENCE | CAUSE / SCENARIO | IMPACT | PROBABILITY | RISK LEVEL | EXISTING CONTROLS | COMMENTS
 ─────────────────────────────────────────────────────────────────────
-${riskTableEN}
+${riskTableEN}${riskDetails('en')}
 
 INTERPRETING THE RESULTS
 A low risk level should not be interpreted as the absence of risk. A low-probability scenario may still require a continuity strategy when its consequences are incompatible with the tolerances established through the BIA.
@@ -1210,7 +1244,7 @@ const legalImpactLabelEN = (value: boolean | null | undefined) => {
     ? sortedServices.map((s: any, i: number) => {
         const prio = recoveryPriorityLabelFR(s.recoveryPriority);
         const owner = s.owner || 'À désigner';
-        return `${s.name || `Service ${i + 1}`} | ${owner} | ${s.rto || 'N/D'} | ${s.mad || 'N/D'} | ${s.rpo || 'N/D'} | ${s.financialImpact ?? 'N/D'} | ${prio}`;
+        return `${s.name || `Service ${i + 1}`} | ${owner} | ${pcaOption(s.rto, 'fr') || 'N/D'} | ${pcaOption(s.mad, 'fr') || 'N/D'} | ${pcaOption(s.rpo, 'fr') || 'N/D'} | ${pcaOption(s.financialImpact, 'fr') || 'N/D'} | ${prio}`;
       }).join('\n')
     : 'Aucun service critique défini — À compléter dans le configurateur PCA (Section 4)';
 
@@ -1218,7 +1252,7 @@ const legalImpactLabelEN = (value: boolean | null | undefined) => {
     ? sortedServices.map((s: any, i: number) => {
         const prio = recoveryPriorityLabelEN(s.recoveryPriority);
         const owner = s.owner || 'To be designated';
-        return `${s.name || `Service ${i + 1}`} | ${owner} | ${s.rto || 'N/A'} | ${s.mad || 'N/A'} | ${s.rpo || 'N/A'} | ${s.financialImpact ?? 'N/A'} | ${prio}`;
+        return `${s.name || `Service ${i + 1}`} | ${owner} | ${pcaOption(s.rto, 'en') || 'N/A'} | ${pcaOption(s.mad, 'en') || 'N/A'} | ${pcaOption(s.rpo, 'en') || 'N/A'} | ${pcaOption(s.financialImpact, 'en') || 'N/A'} | ${prio}`;
       }).join('\n')
     : 'No critical services defined — To be completed in BCP configurator (Section 4)';
 
@@ -1231,11 +1265,11 @@ FICHE BIA — ${(s.name || `Service ${i + 1}`).toUpperCase()}
 Responsable | ${s.owner || 'À désigner'}
 Priorité | ${prio}
 Niveau minimal de service | ${s.minServiceLevel || 'À définir'}
-RTO | ${s.rto || 'N/D'}
-MAD / Tolérance maximale | ${s.mad || 'N/D'}
-RPO | ${s.rpo || 'N/D'}
-Impact financier estimé / jour | ${s.financialImpact ?? 'N/D'}
-Impact réputationnel | ${s.reputationalImpact || 'N/D'}
+RTO | ${pcaOption(s.rto, 'fr') || 'N/D'}
+MAD / Tolérance maximale | ${pcaOption(s.mad, 'fr') || 'N/D'}
+RPO | ${pcaOption(s.rpo, 'fr') || 'N/D'}
+Impact financier estimé / jour | ${pcaOption(s.financialImpact, 'fr') || 'N/D'}
+Impact réputationnel | ${pcaOption(s.reputationalImpact, 'fr') || 'N/D'}
 Impact légal, réglementaire ou contractuel | ${legalImpactLabelFR(s.legalImpact)}
 Impact après 4 heures | ${impactLevelLabelFR(s.impact4h)}
 Impact après 24 heures | ${impactLevelLabelFR(s.impact24h)}
@@ -1243,7 +1277,7 @@ Impact après 72 heures | ${impactLevelLabelFR(s.impact72h)}
 Impact après 7 jours | ${impactLevelLabelFR(s.impact7d)}
 Périodes critiques | ${s.criticalPeriods || 'Non précisées'}
 Mode dégradé | ${s.degradedMode || 'Non documenté'}
-Durée soutenable du mode dégradé | ${s.degradedModeDuration || 'Non précisée'}
+Durée soutenable du mode dégradé | ${pcaOption(s.degradedModeDuration, 'fr') || 'Non précisée'}
 
 RESSOURCES MINIMALES
 ─────────────────────────────────────────────────────────────────────
@@ -1263,11 +1297,11 @@ BIA SHEET — ${(s.name || `Service ${i + 1}`).toUpperCase()}
 Owner | ${s.owner || 'To be designated'}
 Priority | ${prio}
 Minimum service level | ${s.minServiceLevel || 'To be defined'}
-RTO | ${s.rto || 'N/A'}
-MAD / Maximum tolerance | ${s.mad || 'N/A'}
-RPO | ${s.rpo || 'N/A'}
-Estimated financial impact / day | ${s.financialImpact ?? 'N/A'}
-Reputational impact | ${s.reputationalImpact || 'N/A'}
+RTO | ${pcaOption(s.rto, 'en') || 'N/A'}
+MAD / Maximum tolerance | ${pcaOption(s.mad, 'en') || 'N/A'}
+RPO | ${pcaOption(s.rpo, 'en') || 'N/A'}
+Estimated financial impact / day | ${pcaOption(s.financialImpact, 'en') || 'N/A'}
+Reputational impact | ${pcaOption(s.reputationalImpact, 'en') || 'N/A'}
 Legal, regulatory or contractual impact | ${legalImpactLabelEN(s.legalImpact)}
 Impact after 4 hours | ${impactLevelLabelEN(s.impact4h)}
 Impact after 24 hours | ${impactLevelLabelEN(s.impact24h)}
@@ -1275,7 +1309,7 @@ Impact after 72 hours | ${impactLevelLabelEN(s.impact72h)}
 Impact after 7 days | ${impactLevelLabelEN(s.impact7d)}
 Critical periods | ${s.criticalPeriods || 'Not specified'}
 Degraded mode | ${s.degradedMode || 'Not documented'}
-Sustainable degraded-mode duration | ${s.degradedModeDuration || 'Not specified'}
+Sustainable degraded-mode duration | ${pcaOption(s.degradedModeDuration, 'en') || 'Not specified'}
 
 MINIMUM RESOURCES
 ─────────────────────────────────────────────────────────────────────
@@ -1290,13 +1324,13 @@ Energy | ${s.resourceEnergy || 'To be documented'}`;
   // Systèmes TI critiques
   const itSystemsFR = criticalITSystems.length > 0
   ? criticalITSystems.map((s: any) =>
-      `${s.name || 'N/D'} | ${s.rto || 'N/D'} | ${s.rpo || 'N/D'} | ${s.degradedMode || 'À documenter'} | ${s.backupSolution || 'À documenter'}`
+      `${s.name || 'N/D'} | ${pcaOption(s.rto, 'fr') || 'N/D'} | ${pcaOption(s.rpo, 'fr') || 'N/D'} | ${s.degradedMode || 'À documenter'} | ${s.backupSolution || 'À documenter'}`
     ).join('\n')
   : 'À documenter — Ajouter les systèmes TI critiques dans le configurateur (Section 5)';
 
 const itSystemsEN = criticalITSystems.length > 0
   ? criticalITSystems.map((s: any) =>
-      `${s.name || 'N/A'} | ${s.rto || 'N/A'} | ${s.rpo || 'N/A'} | ${s.degradedMode || 'To be documented'} | ${s.backupSolution || 'To be documented'}`
+      `${s.name || 'N/A'} | ${pcaOption(s.rto, 'en') || 'N/A'} | ${pcaOption(s.rpo, 'en') || 'N/A'} | ${s.degradedMode || 'To be documented'} | ${s.backupSolution || 'To be documented'}`
     ).join('\n')
   : 'To be documented — Add critical IT systems in configurator (Section 5)';
 
@@ -1306,13 +1340,13 @@ const itSystemsEN = criticalITSystems.length > 0
 
   const criticalSuppliersFR = criticalSuppliers.length > 0
   ? criticalSuppliers.map((s: any) =>
-      `${s.name || 'N/D'} | ${s.service || 'N/D'} | ${s.tolerance || 'N/D'} | ${s.preventiveMeasure || 'À documenter'} | ${s.backupSolution || 'À documenter'} | ${s.activationDelay || 'N/D'} | ${statusLabelFR(s.status || 'A_CONFIRMER')}`
+      `${s.name || 'N/D'} | ${s.service || 'N/D'} | ${pcaOption(s.tolerance, 'fr') || 'N/D'} | ${s.preventiveMeasure || 'À documenter'} | ${s.backupSolution || 'À documenter'} | ${pcaOption(s.activationDelay, 'fr') || 'N/D'} | ${statusLabelFR(s.status || 'A_CONFIRMER')}`
     ).join('\n')
   : 'À documenter — Ajouter les fournisseurs critiques dans le configurateur (Section 5)';
 
 const criticalSuppliersEN = criticalSuppliers.length > 0
   ? criticalSuppliers.map((s: any) =>
-      `${s.name || 'N/A'} | ${s.service || 'N/A'} | ${s.tolerance || 'N/A'} | ${s.preventiveMeasure || 'To be documented'} | ${s.backupSolution || 'To be documented'} | ${s.activationDelay || 'N/A'} | ${statusLabelEN(s.status || 'A_CONFIRMER')}`
+      `${s.name || 'N/A'} | ${s.service || 'N/A'} | ${pcaOption(s.tolerance, 'en') || 'N/A'} | ${s.preventiveMeasure || 'To be documented'} | ${s.backupSolution || 'To be documented'} | ${pcaOption(s.activationDelay, 'en') || 'N/A'} | ${statusLabelEN(s.status || 'A_CONFIRMER')}`
     ).join('\n')
   : 'To be documented — Add critical suppliers in configurator (Section 5)';
 
@@ -1321,12 +1355,12 @@ const criticalSuppliersEN = criticalSuppliers.length > 0
       const activity = s.name || `Activité ${i + 1}`;
 
       return [
-        `Personnel | ${s.resourcePersonnel || 'À déterminer'} | ${activity} | ${s.rto ? `Doit être disponible dans un délai compatible avec le RTO ${s.rto}` : 'Délai requis à déterminer'}`,
-        `Systèmes TI / données | ${s.resourceIT || 'À déterminer'} | ${activity} | ${s.rto ? `Doit être disponible dans un délai compatible avec le RTO ${s.rto}` : 'Délai requis à déterminer'}`,
-        `Équipements / outils | ${s.resourceEquipment || 'À déterminer'} | ${activity} | ${s.rto ? `Doit être disponible dans un délai compatible avec le RTO ${s.rto}` : 'Délai requis à déterminer'}`,
-        `Fournisseurs / partenaires | ${s.resourceSuppliers || 'À déterminer'} | ${activity} | ${s.rto ? `Doit être disponible dans un délai compatible avec le RTO ${s.rto}` : 'Délai requis à déterminer'}`,
-        `Site / installations | ${s.resourceSite || 'À déterminer'} | ${activity} | ${s.rto ? `Doit être disponible dans un délai compatible avec le RTO ${s.rto}` : 'Délai requis à déterminer'}`,
-        `Énergie / services essentiels | ${s.resourceEnergy || 'À déterminer'} | ${activity} | ${s.rto ? `Doit être disponible dans un délai compatible avec le RTO ${s.rto}` : 'Délai requis à déterminer'}`,
+        `Personnel | ${s.resourcePersonnel || 'À déterminer'} | ${activity} | ${pcaOption(s.rto, 'fr') ? `Doit être disponible dans un délai compatible avec le RTO ${pcaOption(s.rto, 'fr')}` : 'Délai requis à déterminer'}`,
+        `Systèmes TI / données | ${s.resourceIT || 'À déterminer'} | ${activity} | ${pcaOption(s.rto, 'fr') ? `Doit être disponible dans un délai compatible avec le RTO ${pcaOption(s.rto, 'fr')}` : 'Délai requis à déterminer'}`,
+        `Équipements / outils | ${s.resourceEquipment || 'À déterminer'} | ${activity} | ${pcaOption(s.rto, 'fr') ? `Doit être disponible dans un délai compatible avec le RTO ${pcaOption(s.rto, 'fr')}` : 'Délai requis à déterminer'}`,
+        `Fournisseurs / partenaires | ${s.resourceSuppliers || 'À déterminer'} | ${activity} | ${pcaOption(s.rto, 'fr') ? `Doit être disponible dans un délai compatible avec le RTO ${pcaOption(s.rto, 'fr')}` : 'Délai requis à déterminer'}`,
+        `Site / installations | ${s.resourceSite || 'À déterminer'} | ${activity} | ${pcaOption(s.rto, 'fr') ? `Doit être disponible dans un délai compatible avec le RTO ${pcaOption(s.rto, 'fr')}` : 'Délai requis à déterminer'}`,
+        `Énergie / services essentiels | ${s.resourceEnergy || 'À déterminer'} | ${activity} | ${pcaOption(s.rto, 'fr') ? `Doit être disponible dans un délai compatible avec le RTO ${pcaOption(s.rto, 'fr')}` : 'Délai requis à déterminer'}`,
       ];
     }).join('\n')
   : 'Aucune ressource minimale documentée — Compléter le BIA dans le configurateur PCA.';
@@ -1336,12 +1370,12 @@ const resourcesTableEN = sortedServices.length > 0
       const activity = s.name || `Activity ${i + 1}`;
 
       return [
-        `Personnel | ${s.resourcePersonnel || 'To be determined'} | ${activity} | ${s.rto ? `Must be available within a timeframe compatible with RTO ${s.rto}` : 'Required timeframe to be determined'}`,
-        `IT systems / data | ${s.resourceIT || 'To be determined'} | ${activity} | ${s.rto ? `Must be available within a timeframe compatible with RTO ${s.rto}` : 'Required timeframe to be determined'}`,
-        `Equipment / tools | ${s.resourceEquipment || 'To be determined'} | ${activity} | ${s.rto ? `Must be available within a timeframe compatible with RTO ${s.rto}` : 'Required timeframe to be determined'}`,
-        `Suppliers / partners | ${s.resourceSuppliers || 'To be determined'} | ${activity} | ${s.rto ? `Must be available within a timeframe compatible with RTO ${s.rto}` : 'Required timeframe to be determined'}`,
-        `Site / facilities | ${s.resourceSite || 'To be determined'} | ${activity} | ${s.rto ? `Must be available within a timeframe compatible with RTO ${s.rto}` : 'Required timeframe to be determined'}`,
-        `Energy / essential utilities | ${s.resourceEnergy || 'To be determined'} | ${activity} | ${s.rto ? `Must be available within a timeframe compatible with RTO ${s.rto}` : 'Required timeframe to be determined'}`,
+        `Personnel | ${s.resourcePersonnel || 'To be determined'} | ${activity} | ${pcaOption(s.rto, 'en') ? `Must be available within a timeframe compatible with RTO ${pcaOption(s.rto, 'en')}` : 'Required timeframe to be determined'}`,
+        `IT systems / data | ${s.resourceIT || 'To be determined'} | ${activity} | ${pcaOption(s.rto, 'en') ? `Must be available within a timeframe compatible with RTO ${pcaOption(s.rto, 'en')}` : 'Required timeframe to be determined'}`,
+        `Equipment / tools | ${s.resourceEquipment || 'To be determined'} | ${activity} | ${pcaOption(s.rto, 'en') ? `Must be available within a timeframe compatible with RTO ${pcaOption(s.rto, 'en')}` : 'Required timeframe to be determined'}`,
+        `Suppliers / partners | ${s.resourceSuppliers || 'To be determined'} | ${activity} | ${pcaOption(s.rto, 'en') ? `Must be available within a timeframe compatible with RTO ${pcaOption(s.rto, 'en')}` : 'Required timeframe to be determined'}`,
+        `Site / facilities | ${s.resourceSite || 'To be determined'} | ${activity} | ${pcaOption(s.rto, 'en') ? `Must be available within a timeframe compatible with RTO ${pcaOption(s.rto, 'en')}` : 'Required timeframe to be determined'}`,
+        `Energy / essential utilities | ${s.resourceEnergy || 'To be determined'} | ${activity} | ${pcaOption(s.rto, 'en') ? `Must be available within a timeframe compatible with RTO ${pcaOption(s.rto, 'en')}` : 'Required timeframe to be determined'}`,
       ];
     }).join('\n')
   : 'No minimum resources documented — Complete the BIA in the BCP configurator.';
@@ -1400,7 +1434,7 @@ ${criticalServices.length > 0 ? `PROFIL TEMPOREL DES IMPACTS
 ACTIVITÉ | 4 h | 24 h | 72 h | 7 jours | MAD
 ─────────────────────────────────────────────────────────────────────
 ${criticalServices.map((s: any) =>
-  `${(s.name || 'Activité').substring(0, 30)} | ${impactLevelLabelFR(s.impact4h)} | ${impactLevelLabelFR(s.impact24h)} | ${impactLevelLabelFR(s.impact72h)} | ${impactLevelLabelFR(s.impact7d)} | ${s.mad || 'À déterminer'}`
+  `${(s.name || 'Activité').substring(0, 30)} | ${impactLevelLabelFR(s.impact4h)} | ${impactLevelLabelFR(s.impact24h)} | ${impactLevelLabelFR(s.impact72h)} | ${impactLevelLabelFR(s.impact7d)} | ${pcaOption(s.mad, 'fr') || 'À déterminer'}`
 ).join('\n')}` : ''}`,
       },
             {
@@ -1482,7 +1516,7 @@ ${criticalServices.length > 0 ? `TIME-BASED IMPACT PROFILE
 ACTIVITY | 4 h | 24 h | 72 h | 7 days | MAD
 ─────────────────────────────────────────────────────────────────────
 ${criticalServices.map((s: any) =>
-  `${(s.name || 'Activity').substring(0, 30)} | ${impactLevelLabelEN(s.impact4h)} | ${impactLevelLabelEN(s.impact24h)} | ${impactLevelLabelEN(s.impact72h)} | ${impactLevelLabelEN(s.impact7d)} | ${s.mad || 'To be determined'}`
+  `${(s.name || 'Activity').substring(0, 30)} | ${impactLevelLabelEN(s.impact4h)} | ${impactLevelLabelEN(s.impact24h)} | ${impactLevelLabelEN(s.impact72h)} | ${impactLevelLabelEN(s.impact7d)} | ${pcaOption(s.mad, 'en') || 'To be determined'}`
 ).join('\n')}` : ''}`,
       },
       {
@@ -1583,7 +1617,7 @@ STRATÉGIE | DISPONIBILITÉ | DÉTAILS
 ─────────────────────────────────────────────────────────────────────
 Relève / redondance TI | ${cfg.itRedundancy ? 'Déclarée disponible' : 'Non documentée'} | ${cfg.itRedundancy ? 'Capacité de relève ou de redondance déclarée — couverture, capacité et délais réels à valider selon les systèmes critiques' : 'Aucune capacité de relève ou de redondance documentée'}
 ─────────────────────────────────────────────────────────────────────
-Sauvegardes hors site | ${cfg.offSiteBackup ? 'Déclarées disponibles' : 'Non documentées'} | ${cfg.offSiteBackup ? `Fréquence déclarée : ${cfg.backupFrequency || 'À documenter'} — capacité de restauration et compatibilité avec les RPO à valider` : 'Aucune sauvegarde hors site documentée — besoin à évaluer selon les RPO des systèmes et activités'}
+Sauvegardes hors site | ${cfg.offSiteBackup ? 'Déclarées disponibles' : 'Non documentées'} | ${cfg.offSiteBackup ? `Fréquence déclarée : ${pcaOption(cfg.backupFrequency, 'fr') || 'À documenter'} — capacité de restauration et compatibilité avec les RPO à valider` : 'Aucune sauvegarde hors site documentée — besoin à évaluer selon les RPO des systèmes et activités'}
 ─────────────────────────────────────────────────────────────────────
 Procédures manuelles | ${cfg.processDocumented ? 'Documentation déclarée disponible' : 'Non documentées'} | ${cfg.processDocumented ? 'Des processus sont déclarés documentés — vérifier les activités pouvant réellement fonctionner manuellement ou en mode dégradé' : 'Identifier les activités nécessitant une procédure manuelle ou un mode dégradé'}
 ─────────────────────────────────────────────────────────────────────
@@ -1615,7 +1649,7 @@ STRATÉGIE | DISPONIBILITÉ | DÉTAILS
 ─────────────────────────────────────────────────────────────────────
 Fournisseurs alternatifs | ${cfg.alternativeSuppliers ? 'Déclarés identifiés' : 'Non documentés'} | ${cfg.alternativeSuppliers ? 'Des fournisseurs alternatifs sont déclarés identifiés — disponibilité, capacité, délais d\'activation et conditions contractuelles à confirmer' : 'Évaluer le besoin de fournisseurs alternatifs selon les dépendances externes du BIA'}
 ─────────────────────────────────────────────────────────────────────
-Stock de sécurité | ${cfg.safetyStock ? 'Déclaré' : 'Non documenté'} | ${cfg.safetyStock ? `Durée déclarée : ${cfg.safetyStockDuration || 'À documenter'} — niveau réel, conditions de maintien et couverture à valider` : 'Évaluer la faisabilité d\'un stock tampon pour les intrants critiques'}
+Stock de sécurité | ${cfg.safetyStock ? 'Déclaré' : 'Non documenté'} | ${cfg.safetyStock ? `Durée déclarée : ${pcaOption(cfg.safetyStockDuration, 'fr') || 'À documenter'} — niveau réel, conditions de maintien et couverture à valider` : 'Évaluer la faisabilité d\'un stock tampon pour les intrants critiques'}
 
 FOURNISSEURS CRITIQUES — MATRICE DE CONTINUITÉ
 FOURNISSEUR | SERVICE | TOLÉRANCE | MESURE PRÉVENTIVE | SOLUTION DE RELÈVE | DÉLAI ACTIVATION | ÉTAT
@@ -1689,7 +1723,7 @@ Continuity strategies are organized according to the five structural consequence
 
 STRATEGY | AVAILABILITY | DETAILS | ACTIVITIES COVERED
 ─────────────────────────────────────────────────────────────────────
-Telework | ${cfg.teleworkPossible || 'Not documented'} | ${cfg.teleworkPossible === 'Oui' ? 'Telework capability declared available — scope and actual capacity to be validated against BIA activities' : cfg.teleworkPossible === 'Partiel' ? 'Partial telework capability declared — covered activities and available capacity to be specified' : 'Applicability to be assessed according to activity and resource requirements'} | Activities whose requirements allow remote operation
+Telework | ${pcaOption(cfg.teleworkPossible, 'en') || 'Not documented'} | ${cfg.teleworkPossible === 'Oui' ? 'Telework capability declared available — scope and actual capacity to be validated against BIA activities' : cfg.teleworkPossible === 'Partiel' ? 'Partial telework capability declared — covered activities and available capacity to be specified' : 'Applicability to be assessed according to activity and resource requirements'} | Activities whose requirements allow remote operation
 ─────────────────────────────────────────────────────────────────────
 Alternate site | ${cfg.alternativeSite ? 'Declared' : 'Not documented'} | ${cfg.alternativeSiteAddress || 'To be defined'} | Activities requiring a physical work location
 ─────────────────────────────────────────────────────────────────────
@@ -1707,7 +1741,7 @@ STRATEGY | AVAILABILITY | DETAILS
 ─────────────────────────────────────────────────────────────────────
 IT recovery / redundancy | ${cfg.itRedundancy ? 'Declared available' : 'Not documented'} | ${cfg.itRedundancy ? 'Recovery or redundancy capability declared — actual coverage, capacity and restoration times to be validated against critical systems' : 'No IT recovery or redundancy capability documented'}
 ─────────────────────────────────────────────────────────────────────
-Off-site backups | ${cfg.offSiteBackup ? 'Declared available' : 'Not documented'} | ${cfg.offSiteBackup ? `Declared frequency: ${cfg.backupFrequency || 'To be documented'} — restoration capability and compatibility with RPOs to be validated` : 'No off-site backup capability documented — requirements should be assessed against system and activity RPOs'}
+Off-site backups | ${cfg.offSiteBackup ? 'Declared available' : 'Not documented'} | ${cfg.offSiteBackup ? `Declared frequency: ${pcaOption(cfg.backupFrequency, 'en') || 'To be documented'} — restoration capability and compatibility with RPOs to be validated` : 'No off-site backup capability documented — requirements should be assessed against system and activity RPOs'}
 ─────────────────────────────────────────────────────────────────────
 Manual procedures | ${cfg.processDocumented ? 'Documentation declared available' : 'Not documented'} | ${cfg.processDocumented ? 'Processes are declared documented — identify which activities can actually operate manually or in degraded mode' : 'Identify activities requiring manual procedures or degraded operating arrangements'}
 ─────────────────────────────────────────────────────────────────────
@@ -1740,7 +1774,7 @@ STRATEGY | AVAILABILITY | DETAILS
 ─────────────────────────────────────────────────────────────────────
 Alternate suppliers | ${cfg.alternativeSuppliers ? 'Declared identified' : 'Not documented'} | ${cfg.alternativeSuppliers ? 'Alternate suppliers are declared identified — availability, capacity, activation lead times and contractual conditions to be confirmed' : 'Assess the need for alternate suppliers based on external BIA dependencies'}
 ─────────────────────────────────────────────────────────────────────
-Safety stock | ${cfg.safetyStock ? 'Declared' : 'Not documented'} | ${cfg.safetyStock ? `Declared duration: ${cfg.safetyStockDuration || 'To be documented'} — minimum levels and actual coverage to be validated` : 'Assess the feasibility and relevance of buffer inventory for critical inputs'}
+Safety stock | ${cfg.safetyStock ? 'Declared' : 'Not documented'} | ${cfg.safetyStock ? `Declared duration: ${pcaOption(cfg.safetyStockDuration, 'en') || 'To be documented'} — minimum levels and actual coverage to be validated` : 'Assess the feasibility and relevance of buffer inventory for critical inputs'}
 
 CRITICAL SUPPLIERS — CONTINUITY MATRIX
 SUPPLIER | SERVICE | TOLERANCE | PREVENTIVE MEASURE | BACKUP SOLUTION | ACTIVATION TIME | STATUS
@@ -1822,9 +1856,9 @@ PRINCIPES DIRECTEURS
 RESPONSABILITÉ DES COMMUNICATIONS
 - Porte-parole désigné : ${cfg.spokesperson || 'À désigner'}
 - Responsable suivi médias sociaux : ${cfg.socialMediaMonitor || 'À désigner'}
-- Canal de communication interne principal : ${cfg.internalChannel || 'À définir'}
+- Canal de communication interne principal : ${pcaOption(cfg.internalChannel, 'fr') || 'À définir'}
 - Système d'alerte de masse : ${cfg.massAlertSystem === true ? 'Déclaré disponible' : cfg.massAlertSystem === false ? 'Déclaré non disponible' : 'À documenter'}
-- Canal de communication externe : ${cfg.externalChannel || 'À définir'}`,
+- Canal de communication externe : ${pcaOption(cfg.externalChannel, 'fr') || 'À définir'}`,
       },
       {
         id: 'm6_s2',
@@ -1850,7 +1884,7 @@ Les fonctions requises sont mobilisées selon la nature, la portée et l'évolut
 La cellule confirme les faits, activités touchées, RTO menacés, ressources disponibles, stratégies à activer et décisions immédiates.
 
 ÉTAPE 6 — COMMUNICATION INTERNE
-Les employés et gestionnaires concernés reçoivent les consignes et les modalités de fonctionnement temporaire via ${cfg.internalChannel || 'le canal interne désigné'}.
+Les employés et gestionnaires concernés reçoivent les consignes et les modalités de fonctionnement temporaire via ${pcaOption(cfg.internalChannel, 'fr') || 'le canal interne désigné'}.
 
 ÉTAPE 7 — COMMUNICATION EXTERNE
 Les clients prioritaires, fournisseurs, autorités, assureurs ou médias sont avisés selon les besoins et les obligations.
@@ -1919,7 +1953,7 @@ Une perturbation visible peut générer rapidement des commentaires, images, hyp
 
 Responsable : ${cfg.socialMediaMonitor || 'À désigner'}
 Fréquence de surveillance : Selon l'évolution de l'incident, l'exposition médiatique et les besoins établis par la cellule
-Canal de réponse officiel : ${cfg.externalChannel || 'À définir'}`,
+Canal de réponse officiel : ${pcaOption(cfg.externalChannel, 'fr') || 'À définir'}`,
       },
       {
         id: 'm6_s5',
@@ -1965,9 +1999,9 @@ GUIDING PRINCIPLES
 COMMUNICATION RESPONSIBILITIES
 - Designated spokesperson: ${cfg.spokesperson || 'To be designated'}
 - Social media monitoring lead: ${cfg.socialMediaMonitor || 'To be designated'}
-- Primary internal communication channel: ${cfg.internalChannel || 'To be defined'}
+- Primary internal communication channel: ${pcaOption(cfg.internalChannel, 'en') || 'To be defined'}
 - Mass alert system: ${cfg.massAlertSystem === true ? 'Declared available' : cfg.massAlertSystem === false ? 'Declared unavailable' : 'To be documented'}
-- External communication channel: ${cfg.externalChannel || 'To be defined'}`,
+- External communication channel: ${pcaOption(cfg.externalChannel, 'en') || 'To be defined'}`,
       },
 
       {
@@ -1994,7 +2028,7 @@ STEP 5 — INITIAL COMMON OPERATING PICTURE
 The incident management team confirms the known facts, affected activities, threatened continuity objectives, available resources, strategies that may be required and immediate decisions.
 
 STEP 6 — INTERNAL COMMUNICATION
-Affected employees and managers receive relevant instructions and temporary operating arrangements through ${cfg.internalChannel || 'the designated internal communication channel'}.
+Affected employees and managers receive relevant instructions and temporary operating arrangements through ${pcaOption(cfg.internalChannel, 'en') || 'the designated internal communication channel'}.
 
 STEP 7 — EXTERNAL COMMUNICATION
 Priority clients, suppliers, authorities, insurers, media or other external parties are notified according to operational needs, legal or contractual obligations and approved communication decisions.
@@ -2059,7 +2093,7 @@ A visible disruption may quickly generate comments, images, assumptions or inacc
 
 Lead: ${cfg.socialMediaMonitor || 'To be designated'}
 Monitoring frequency: According to incident evolution, media exposure and the needs established by the incident management team
-Official response channel: ${cfg.externalChannel || 'To be defined'}`,
+Official response channel: ${pcaOption(cfg.externalChannel, 'en') || 'To be defined'}`,
       },
 
       {
@@ -2092,7 +2126,7 @@ COMMUNICATION CADENCE
   ? sortedServices
       .map(
         (s: any, i: number) =>
-          `${recoveryPriorityLabelFR(s.recoveryPriority)} | ${s.name || `Activité ${i + 1}`} | ${s.rto || 'À déterminer'} | ${s.minServiceLevel || 'À définir'} | ${s.owner || 'À désigner'}`
+          `${recoveryPriorityLabelFR(s.recoveryPriority)} | ${s.name || `Activité ${i + 1}`} | ${pcaOption(s.rto, 'fr') || 'À déterminer'} | ${s.minServiceLevel || 'À définir'} | ${s.owner || 'À désigner'}`
       )
       .join('\n')
   : 'À déterminer | À définir une fois le BIA complété (chapitre 4) | — | — | —';
@@ -2184,13 +2218,13 @@ ${cellMembers.slice(0, 5).map((m: any) => `☐ ${m.firstName || ''} ${m.lastName
 PHASE 3 — ACTIVATION DES STRATÉGIES
 ☐ Situation commune établie avec la cellule — activités touchées et RTO menacés identifiés
 ☐ Stratégies de continuité activées selon le type d'incident
-${criticalServices.slice(0, 5).map((s: any, i: number) => `☐ ${s.name || `Service ${i + 1}`} — RTO : ${s.rto || 'N/D'} — Statut : _______________`).join('\n')}
+${criticalServices.slice(0, 5).map((s: any, i: number) => `☐ ${s.name || `Service ${i + 1}`} — RTO : ${pcaOption(s.rto, 'fr') || 'N/D'} — Statut : _______________`).join('\n')}
 ☐ Site alternatif activé si requis : ${cfg.alternativeSiteAddress || 'N/A'}
 ☐ Télétravail activé si applicable : ${cfg.teleworkPossible || 'N/A'}
 ☐ Fournisseurs alternatifs contactés si requis
 
 PHASE 4 — COMMUNICATION
-☐ Communication interne envoyée via ${cfg.internalChannel || 'canal désigné'}
+☐ Communication interne envoyée via ${pcaOption(cfg.internalChannel, 'fr') || 'canal désigné'}
 ☐ Clients prioritaires avisés selon la liste du chapitre 6
 ☐ Autorités réglementaires avisées si applicable
 ☐ Communication externe approuvée par ${cfg.spokesperson || 'porte-parole désigné'}
@@ -2357,13 +2391,13 @@ ${cellMembers.slice(0, 5).map((m: any) => `☐ ${m.firstName || ''} ${m.lastName
 PHASE 3 — STRATEGY ACTIVATION
 ☐ Common operating picture established — affected activities and threatened recovery objectives identified
 ☐ Continuity strategies activated according to the incident consequences
-${criticalServices.slice(0, 5).map((s: any, i: number) => `☐ ${s.name || `Activity ${i + 1}`} — RTO: ${s.rto || 'N/A'} — Status: _______________`).join('\n')}
+${criticalServices.slice(0, 5).map((s: any, i: number) => `☐ ${s.name || `Activity ${i + 1}`} — RTO: ${pcaOption(s.rto, 'en') || 'N/A'} — Status: _______________`).join('\n')}
 ☐ Alternate site activated if required: ${cfg.alternativeSiteAddress || 'N/A'}
-☐ Telework activated if applicable: ${cfg.teleworkPossible || 'N/A'}
+☐ Telework activated if applicable: ${pcaOption(cfg.teleworkPossible, 'en') || 'N/A'}
 ☐ Alternate suppliers contacted if required
 
 PHASE 4 — COMMUNICATION
-☐ Internal communication issued through ${cfg.internalChannel || 'designated channel'}
+☐ Internal communication issued through ${pcaOption(cfg.internalChannel, 'en') || 'designated channel'}
 ☐ Priority clients notified according to Chapter 6
 ☐ Regulatory authorities notified where applicable
 ☐ External communication approved by ${cfg.spokesperson || 'designated spokesperson'}
@@ -2394,7 +2428,7 @@ ${sortedServices.length > 0
   ? sortedServices
       .map(
         (s: any, i: number) =>
-          `${recoveryPriorityLabelEN(s.recoveryPriority)} | ${s.name || `Activity ${i + 1}`} | ${s.rto || 'To be determined'} | ${s.minServiceLevel || 'To be defined'} | ${s.owner || 'To be designated'}`
+          `${recoveryPriorityLabelEN(s.recoveryPriority)} | ${s.name || `Activity ${i + 1}`} | ${pcaOption(s.rto, 'en') || 'To be determined'} | ${s.minServiceLevel || 'To be defined'} | ${s.owner || 'To be designated'}`
       )
       .join('\n')
   : 'To be determined | To be defined once BIA is completed (Chapter 4) | — | — | —'}
@@ -2613,7 +2647,7 @@ ACTIVITÉ / CAPACITÉ | OBJECTIF | RÉSULTAT RÉEL | ÉCART | CONCLUSION
 Activation PCA | Selon les critères et l'objectif de mobilisation établis par l'organisation | _____ | _____ | Atteint / Partiel / Non atteint
 ─────────────────────────────────────────────────────────────────────
 ${criticalServices.slice(0, 5).map((s: any) =>
-  `${(s.name || 'Activité').substring(0, 25)} | RTO ${s.rto || 'N/D'} | _____ | _____ | Atteint / Partiel / Non atteint`
+  `${(s.name || 'Activité').substring(0, 25)} | RTO ${pcaOption(s.rto, 'fr') || 'N/D'} | _____ | _____ | Atteint / Partiel / Non atteint`
 ).join('\n')}
 
 RÉDIGER PAR : _________________________  DATE : _______________
@@ -2714,15 +2748,15 @@ A scenario provides context. The actual objective is to validate capabilities su
 
 TYPE | OBJECTIVE | PARTICIPANTS | FREQUENCY | EXAMPLES OF VALIDATION
 ─────────────────────────────────────────────────────────────────────
-Formative / discussion exercise | Review the BCP, clarify roles and identify gaps | BCP managers and relevant functions | ${cfg.exerciseFormative || 'Once per year — reference frequency from the Government of Quebec guide'} | Contacts, responsibilities, procedures, documentation
+Formative / discussion exercise | Review the BCP, clarify roles and identify gaps | BCP managers and relevant functions | ${pcaOption(cfg.exerciseFormative, 'en') || 'Once per year — reference frequency from the Government of Quebec guide'} | Contacts, responsibilities, procedures, documentation
 ─────────────────────────────────────────────────────────────────────
-Tabletop exercise | Simulate a scenario and require participants to make decisions | Incident management team | ${cfg.exerciseTable || 'Once per year — reference frequency from the Government of Quebec guide'} | Activation, BIA, strategies, communications, SITREP
+Tabletop exercise | Simulate a scenario and require participants to make decisions | Incident management team | ${pcaOption(cfg.exerciseTable, 'en') || 'Once per year — reference frequency from the Government of Quebec guide'} | Activation, BIA, strategies, communications, SITREP
 ─────────────────────────────────────────────────────────────────────
-IT / technical test | Demonstrate a specific technological capability | IT + suppliers + key users | ${cfg.exerciseIT || 'Once per year — reference frequency from the Government of Quebec guide'} | Restoration, actual RPO/RTO, remote access, telecommunications
+IT / technical test | Demonstrate a specific technological capability | IT + suppliers + key users | ${pcaOption(cfg.exerciseIT, 'en') || 'Once per year — reference frequency from the Government of Quebec guide'} | Restoration, actual RPO/RTO, remote access, telecommunications
 ─────────────────────────────────────────────────────────────────────
 Functional test | Operate an activity under continuity arrangements | Relevant operational team | According to the program established by the organization | Manual mode, telework, alternate supplier
 ─────────────────────────────────────────────────────────────────────
-Real-time simulation | Deploy multiple resources and functions under realistic conditions | Incident management team + operational teams | ${cfg.exerciseSimulation || 'Every 3 years — reference frequency from the Government of Quebec guide'} | Mobilization, alternate site, coordination, recovery
+Real-time simulation | Deploy multiple resources and functions under realistic conditions | Incident management team + operational teams | ${pcaOption(cfg.exerciseSimulation, 'en') || 'Every 3 years — reference frequency from the Government of Quebec guide'} | Mobilization, alternate site, coordination, recovery
 
 ⚠️ FUNDAMENTAL REMINDER
 An organization's ability to maintain its activities cannot be demonstrated until its business continuity plan has been exercised. — Government of Quebec Business Continuity Management Guide`,
@@ -2734,7 +2768,7 @@ An organization's ability to maintain its activities cannot be demonstrated unti
         content: `PLAN OWNER | ${cfg.planOwner || coordName || 'To be designated'}
 ─────────────────────────────────────────────────────────────────────
 ALTERNATE | ${substName || 'To be designated'}
-GENERAL REVIEW FREQUENCY | ${cfg.reviewFrequency || 'Annual — reference frequency from the Government of Quebec maintenance program'}
+GENERAL REVIEW FREQUENCY | ${pcaOption(cfg.reviewFrequency, 'en') || 'Annual — reference frequency from the Government of Quebec maintenance program'}
 NEXT SCHEDULED REVIEW | ${cfg.nextReviewDate ? new Date(cfg.nextReviewDate).toLocaleDateString('en-CA') : 'To be scheduled'}
 APPROVER | Senior Management
 
@@ -2803,9 +2837,9 @@ Review following a significant incident | New controlled version`,
 
 DATE | TYPE | SCENARIO / CAPABILITY | PARTICIPANTS | RESULT | GAPS | ACTIONS / REFERENCE
 ─────────────────────────────────────────────────────────────────────
-[First exercise to be scheduled] | ${cfg.exerciseTable || 'Tabletop'} | Scenario to be defined | Incident management team | To be conducted | — | —
+[First exercise to be scheduled] | ${pcaOption(cfg.exerciseTable, 'en') || 'Tabletop'} | Scenario to be defined | Incident management team | To be conducted | — | —
 ─────────────────────────────────────────────────────────────────────
-[IT test to be scheduled] | ${cfg.exerciseIT || 'Technical test'} | Restoration of critical systems | IT + suppliers | To be conducted | — | —
+[IT test to be scheduled] | ${pcaOption(cfg.exerciseIT, 'en') || 'Technical test'} | Restoration of critical systems | IT + suppliers | To be conducted | — | —
 
 The fields should be completed after each exercise and linked to evaluation reports and corrective actions.`,
       },
@@ -2889,7 +2923,7 @@ ACTIVITY / CAPABILITY | OBJECTIVE | ACTUAL RESULT | GAP | CONCLUSION
 BCP activation | According to the criteria and mobilization objective established by the organization | _____ | _____ | Achieved / Partial / Not achieved
 ─────────────────────────────────────────────────────────────────────
 ${criticalServices.slice(0, 5).map((s: any) =>
-  `${(s.name || 'Activity').substring(0, 25)} | RTO ${s.rto || 'N/A'} | _____ | _____ | Achieved / Partial / Not achieved`
+  `${(s.name || 'Activity').substring(0, 25)} | RTO ${pcaOption(s.rto, 'en') || 'N/A'} | _____ | _____ | Achieved / Partial / Not achieved`
 ).join('\n')}
 
 PREPARED BY: _________________________  DATE: _______________
