@@ -5,7 +5,7 @@ import {
   AdviserActor,
   assertEditableProject,
   lockEditableProject,
-  projectAccessWhere,
+  projectAccessWhere, projectReadWhere,
 } from '../auth/project-access';
 
 type Module7Dto = { quartsData?: unknown; photosData?: unknown; extraData?: unknown };
@@ -21,7 +21,7 @@ export class Module7Service {
 
   private async readableProject(projectId: string, actor: AdviserActor) {
     const project = await this.prisma.project.findFirst({
-      where: { id: projectId, ...projectAccessWhere(actor) },
+      where: { id: projectId, ...projectReadWhere(actor) },
       include: { module7: true },
     });
     if (!project) throw new NotFoundException('Projet introuvable');

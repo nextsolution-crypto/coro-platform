@@ -105,6 +105,17 @@ export class DocumentEditorIntegrityService {
     );
   }
 
+  /** Projet modifiable par ce conseiller (propriétaire ou administrateur). */
+  async writableProject(projectId: string, actor: AdviserActor) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, ...projectAccessWhere(actor) },
+      select: { id: true, isActive: true, status: true, organizationId: true },
+    });
+    if (!project || !project.isActive)
+      throw new NotFoundException('Projet introuvable');
+    return project;
+  }
+
   async readableProject(projectId: string, actor: AdviserActor) {
     const project = await this.prisma.project.findFirst({
       where: { id: projectId, ...projectReadWhere(actor) },
