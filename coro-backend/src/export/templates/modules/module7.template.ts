@@ -509,7 +509,9 @@ function renderModule7Sections(
           <tbody>
             ${infoRow(
               isFr ? 'Code de sécurité' : 'Fire Safety Code',
-              'CNPI 2020 modifié Québec (Chapitre VIII)',
+              isFr
+                ? 'CNPI 2020 modifié Québec (Chapitre VIII)'
+                : 'NFC 2020 as amended in Quebec (Chapter VIII)',
             )}
             ${hasValue(config.reglementMunicipal) ? infoRow(
               isFr ? 'Règlement municipal applicable' : 'Applicable municipal regulation',
@@ -521,7 +523,7 @@ function renderModule7Sections(
                 isFr
                   ? 'Référentiel de construction'
                   : 'Construction reference',
-                `${ref.label} <span style="color:#6C757D;font-size:8pt;">(${ref.periode})</span>`,
+                `${isFr ? ref.label : ref.label.replace(/^CNB (\d{4}) modifié Québec$/, 'NBC $1 as amended in Quebec')} <span style="color:#6C757D;font-size:8pt;">(${ref.periode})</span>`,
               );
             })()}
             ${infoRow(

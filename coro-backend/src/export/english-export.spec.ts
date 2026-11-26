@@ -69,3 +69,13 @@ describe('Export anglais — textes fournis par CORO', () => {
     expect(unescapeNewlines('a\\n- b')).toBe('a\n- b');
   });
 });
+
+describe('Export anglais — références de code', () => {
+  it('affiche les codes en anglais', () => {
+    const en = renderModule7({}, { anneeConstruction: 2016 }, 'en').map((s) => s.html).join('');
+    expect(en).toContain('NFC 2020 as amended in Quebec (Chapter VIII)');
+    expect(en).toContain('NBC 2010 as amended in Quebec');
+    const fr = renderModule7({}, { anneeConstruction: 2016 }, 'fr').map((s) => s.html).join('');
+    expect(fr).toContain('CNB 2010 modifié Québec');
+  });
+});
