@@ -3,6 +3,7 @@
 // ============================================================
 
 import type { DocumentContext } from './module1/module1.index';
+import { optionToEnglish } from '../export/templates/modules/option-display';
 
 // ============================================================
 // TYPES
@@ -355,13 +356,13 @@ function buildLockoutContext(config: Module8Config, lang: 'fr' | 'en'): string {
     if (hasValue(config.espaceClosLieu)) lines.push(`- Emplacement(s) d'espace clos déclaré(s) : ${config.espaceClosLieu}`);
     if (config.systemeCadenassage != null) lines.push(`- Système de cadenassage en place : ${yesNo(config.systemeCadenassage, 'fr')}`);
     if (config.espaceClos != null) lines.push(`- Présence d'espace clos : ${yesNo(config.espaceClos, 'fr')}`);
-    return lines.length ? `**Informations propres au site**\n${lines.join('\\n')}\n\n` : '';
+    return lines.length ? `**Informations propres au site**\n${lines.join('\n')}\n\n` : '';
   }
 
   if (hasValue(config.espaceClosLieu)) lines.push(`- Declared confined-space location(s): ${config.espaceClosLieu}`);
   if (config.systemeCadenassage != null) lines.push(`- Lockout/tagout system in place: ${yesNo(config.systemeCadenassage, 'en')}`);
   if (config.espaceClos != null) lines.push(`- Confined spaces present: ${yesNo(config.espaceClos, 'en')}`);
-  return lines.length ? `**Site-specific information**\n${lines.join('\\n')}\n\n` : '';
+  return lines.length ? `**Site-specific information**\n${lines.join('\n')}\n\n` : '';
 }
 
 function buildHotWorkContext(config: Module8Config, lang: 'fr' | 'en'): string {
@@ -374,17 +375,17 @@ function buildHotWorkContext(config: Module8Config, lang: 'fr' | 'en'): string {
     if (config.inspectionFinaleDocumentee != null) lines.push(`- Inspection finale documentée : ${yesNo(config.inspectionFinaleDocumentee, 'fr')}`);
     if (hasValue(config.methodeInspectionTPC)) lines.push(`- Méthode d'inspection : ${config.methodeInspectionTPC}`);
     if (config.travauxToiture != null) lines.push(`- Travaux de toiture : ${yesNo(config.travauxToiture, 'fr')}`);
-    return lines.length ? `**Informations propres au site**\n${lines.join('\\n')}\n\n` : '';
+    return lines.length ? `**Informations propres au site**\n${lines.join('\n')}\n\n` : '';
   }
 
-  if (hasValue(config.travauxPointsChauds)) lines.push(`- Hot work: ${config.travauxPointsChauds}`);
+  if (hasValue(config.travauxPointsChauds)) lines.push(`- Hot work: ${optionToEnglish(String(config.travauxPointsChauds))}`);
   if (config.permisTravauxChauds != null) lines.push(`- Hot-work permit: ${yesNo(config.permisTravauxChauds, 'en')}`);
   if (config.surveillanceIncendieTPC != null) lines.push(`- Fire watch: ${yesNo(config.surveillanceIncendieTPC, 'en')}`);
   if (hasValue(config.responsableTravauxChauds)) lines.push(`- Responsible person: ${config.responsableTravauxChauds}`);
   if (config.inspectionFinaleDocumentee != null) lines.push(`- Final inspection documented: ${yesNo(config.inspectionFinaleDocumentee, 'en')}`);
-  if (hasValue(config.methodeInspectionTPC)) lines.push(`- Inspection method: ${config.methodeInspectionTPC}`);
+  if (hasValue(config.methodeInspectionTPC)) lines.push(`- Inspection method: ${optionToEnglish(String(config.methodeInspectionTPC))}`);
   if (config.travauxToiture != null) lines.push(`- Roofing work: ${yesNo(config.travauxToiture, 'en')}`);
-  return lines.length ? `**Site-specific information**\n${lines.join('\\n')}\n\n` : '';
+  return lines.length ? `**Site-specific information**\n${lines.join('\n')}\n\n` : '';
 }
 
 // ============================================================

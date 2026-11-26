@@ -272,7 +272,7 @@ export class PmuBuilder extends BaseDocumentBuilder {
     if (moduleNum === 8) {
       // Le builder rend strictement le snapshot reçu par ExportService.
       // Aucune seconde lecture du Document en DB pendant la génération PDF.
-      const module8Data = this.content.module8 ?? null;
+      const module8Data = this.module8ForExport();
 
       const sections8 = renderModule8(
         module8Data,

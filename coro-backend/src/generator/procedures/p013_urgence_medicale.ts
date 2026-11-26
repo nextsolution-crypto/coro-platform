@@ -126,7 +126,7 @@ export const P013_URGENCE_MEDICALE: ProcedureTemplate = {
             {
           id: sid(CODE, 16),
           textFR: 'Apporter le DEA, situé [LOCALISATION DEA], si : personne inconsciente, signes d\'arrêt cardiaque ou de respiration anormale — aucune formation préalable requise, suivre les instructions vocales de l\'appareil',
-          textEN: 'Bring the AED, located [DEA LOCATION], if: person is unconscious, signs of cardiac arrest or abnormal breathing — no prior training required, follow the device\'s voice instructions',
+          textEN: 'Bring the AED (location: [DEA LOCATION]) if: person is unconscious, signs of cardiac arrest or abnormal breathing — no prior training required, follow the device\'s voice instructions',
           isList: true,
         },
             {

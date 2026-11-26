@@ -117,14 +117,14 @@ export function generateCoverPage(data: CoverData): string {
 
   // Découpage intelligent selon le type de document
   if (data.documentType === 'PCA') {
-    line1 = 'PLAN DE CONTINUITÉ';
-    line2 = 'DES AFFAIRES';
+    line1 = isFr ? 'PLAN DE CONTINUITÉ' : 'BUSINESS CONTINUITY';
+    line2 = isFr ? 'DES AFFAIRES' : 'PLAN';
   } else if (data.documentType === 'PSI') {
-    line1 = 'PLAN DE SÉCURITÉ';
-    line2 = 'INCENDIE';
+    line1 = isFr ? 'PLAN DE SÉCURITÉ' : 'FIRE SAFETY';
+    line2 = isFr ? 'INCENDIE' : 'PLAN';
   } else if (data.documentType === 'PMU') {
-    line1 = 'PLAN DE MESURES';
-    line2 = 'D\'URGENCE';
+    line1 = isFr ? 'PLAN DE MESURES' : 'EMERGENCY';
+    line2 = isFr ? 'D\'URGENCE' : 'RESPONSE PLAN';
   } else {
     line1 = words[0] + (words[1] ? ' ' + words[1] : '');
     line2 = words.slice(2).join(' ');

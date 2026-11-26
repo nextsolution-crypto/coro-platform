@@ -1,3 +1,4 @@
+import { translateModule2Row } from '../generator/module2.templates';
 import {
   ApprovalStamp,
   approvalStampFromVersion,
@@ -942,7 +943,13 @@ export class ExportService {
           };
         }
         if (savedKey && savedModule2[savedKey]) {
-          const updated = { ...section, entries: savedModule2[savedKey] };
+          const savedEntries = savedModule2[savedKey];
+          const updated = {
+            ...section,
+            entries: isFr || !Array.isArray(savedEntries)
+              ? savedEntries
+              : savedEntries.map((row: any) => translateModule2Row(row)),
+          };
           if (section.id === '2.1') {
             updated.internalEmergencyNumber =
               savedModule2.internalEmergencyNumber || '';
