@@ -15,7 +15,7 @@ import { optionToEnglish } from './templates/modules/option-display';
 import { KnowledgeConfig } from '../knowledge/knowledge.config';
 
 // Version de la mémoire : la changer fait refaire toutes les traductions.
-const TARGET = 'en-v2';
+const TARGET = 'en-v3';
 const BATCH_SIZE = 60;
 const BEDROCK_BATCH_SIZE = 20;
 const BEDROCK_PARALLEL = 3;
@@ -32,7 +32,7 @@ export function hashText(text: string): string {
 /** Indice qu'un texte est encore en français (accents ou mots courants). */
 export function looksFrench(text: string): boolean {
   return /[àâçéèêëîïôûùüÿœ]/i.test(text) ||
-    /\b(le|la|les|des|du|de|et|ou|au|aux|une|un|sur|sous|dans|avec|pour|par|près|entre|chaque|salle|étage|entrée|côté|poste|porte|mur|rue)\b/i.test(text);
+    /(^|[^A-Za-zÀ-ÿ])(le|la|les|des|du|de|et|ou|au|aux|une|un|sur|sous|dans|avec|pour|par|près|entre|chaque|salle|étage|entrée|côté|poste|porte|mur|rue|interrupteur|principale?|sous-sol|local|armoire|gauche|droite|arrière|escalier|ascenseurs?|toit|quai|chargement|stationnement|bureau|cuisine|vanne|panneau|extérieure?|intérieure?|niveau|garage|hall|accès)([^A-Za-zÀ-ÿ]|$)/i.test(text);
 }
 
 /** Une « traduction » identique à un texte français n'en est pas une. */
@@ -154,18 +154,24 @@ export class ExportTranslator {
     }
 
     const toStore: Array<{ sourceHash: string; targetLang: string; sourceText: string; translatedText: string }> = [];
-    const keep = (batch: string[], answer: Record<string, string> | null) => {
+    const keep = (batch: string[], answer: Record<string, string> | null, loose = false) => {
       batch.forEach((source, i) => {
         const translated = this.unmask(source, answer?.[String(i)]);
-        if (typeof translated === 'string' && isRealTranslation(source, translated)) {
+        // Une traduction qui contient encore du français est redemandée ;
+        // à la dernière passe, la meilleure réponse obtenue est gardée.
+        const complete = typeof translated === 'string' && !looksFrench(this.mask(translated));
+        if (typeof translated === 'string' && isRealTranslation(source, translated) && (complete || loose)) {
           result.set(source, translated);
           toStore.push({ sourceHash: hashText(source), targetLang: TARGET, sourceText: source, translatedText: translated });
         }
       });
     };
 
+    // Un texte déjà en anglais (une fois les noms retirés) n'est jamais envoyé.
+    const needsTranslation = (t: string) => !result.has(t) && looksFrench(this.mask(t));
+
     // 1. CORO AI (AWS Bedrock, région Canada) quand il est activé.
-    let missing = unique.filter((t) => !result.has(t));
+    let missing = unique.filter(needsTranslation);
     if (missing.length > 0 && this.bedrockReady()) {
       const batches = chunk(missing, BEDROCK_BATCH_SIZE);
       for (let i = 0; i < batches.length; i += BEDROCK_PARALLEL) {
@@ -174,26 +180,26 @@ export class ExportTranslator {
         answers.forEach((answer, b) => keep(group[b], answer));
       }
       // Seconde passe, par petits lots, pour ce que le modèle a sauté ou laissé en français.
-      const skipped = unique.filter((t) => !result.has(t));
+      const skipped = unique.filter(needsTranslation);
       for (const batch of chunk(skipped, 5)) {
         keep(batch, await this.translateWithBedrock(batch.map((t) => this.mask(t)), true));
       }
       // Dernière passe : un texte à la fois, en conversation simple.
-      const stubborn = unique.filter((t) => !result.has(t) && looksFrench(t));
+      const stubborn = unique.filter(needsTranslation);
       for (const group of chunk(stubborn, BEDROCK_PARALLEL)) {
         const answers = await Promise.all(group.map((text) => this.translateOneWithBedrock(this.mask(text))));
-        group.forEach((text, i) => keep([text], answers[i] ? { '0': answers[i] as string } : null));
+        group.forEach((text, i) => keep([text], answers[i] ? { '0': answers[i] as string } : null, true));
       }
     }
 
     // 2. Anthropic en secours, pour ce qui reste.
-    missing = unique.filter((t) => !result.has(t));
+    missing = unique.filter(needsTranslation);
     if (missing.length > 0 && process.env.ANTHROPIC_API_KEY) {
       const batches = chunk(missing, BATCH_SIZE);
       const answers = await Promise.all(batches.map((batch) => this.translateBatch(batch.map((t) => this.mask(t)))));
       answers.forEach((answer, b) => keep(batches[b], answer));
     }
-    const untranslated = unique.filter((t) => !result.has(t) && looksFrench(t)).length;
+    const untranslated = unique.filter(needsTranslation).length;
     this.logger.log(`Traduction anglaise : ${unique.length - untranslated}/${unique.length} texte(s) prêts, ${untranslated} resté(s) en français.`);
     if (toStore.length > 0) {
       try {
