@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ExportTranslator } from '../export/export-translator';
-import { prepareEnglishContent, protectedNames } from '../export/english-content';
+import { prepareEnglishContent, protectedNames, withCurrentReferences } from '../export/english-content';
 import { optionToEnglish } from '../export/templates/modules/option-display';
 import { PrismaService } from '../prisma/prisma.service';
 import puppeteer from 'puppeteer';
@@ -29,7 +29,7 @@ export class GuideService {
     if (!doc) throw new NotFoundException('Document introuvable');
 
     const project = doc.project;
-    let content = doc.content as any;
+    let content = withCurrentReferences(doc.content as any);
     let taglineForLang: string | undefined = project.organization?.companyTagline || undefined;
     if (lang === 'en') {
       // Même contenu anglais que le PMU : saisies traduites, noms protégés.

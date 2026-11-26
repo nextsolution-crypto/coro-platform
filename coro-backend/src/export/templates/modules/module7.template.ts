@@ -827,10 +827,10 @@ function renderModule7Sections(
               config.signalisationIssueType === 'Piles de secours intégrées'
                 ? isFr
                   ? 'Mensuelle (piles) + annuelle — CNPI 2020 art. 6.5.1.8'
-                  : 'Monthly (battery) + annual — CNPI 2020 art. 6.5.1.8'
+                  : 'Monthly (battery) + annual — NFC 2020 art. 6.5.1.8'
                 : isFr
                   ? 'Annuelle — CNPI 2020 art. 6.5.1.8'
-                  : 'Annual — CNPI 2020 art. 6.5.1.8',
+                  : 'Annual — NFC 2020 art. 6.5.1.8',
             )}
           </tbody>
         </table>
@@ -1256,7 +1256,7 @@ function renderModule7Sections(
                 isFr ? 'Fréquence requise' : 'Required frequency',
                 isFr
                   ? 'Aux 12 mois — CNPI 2020 art. 2.2.2.4'
-                  : 'Every 12 months — CNPI 2020 art. 2.2.2.4',
+                  : 'Every 12 months — NFC 2020 art. 2.2.2.4',
               )}
             </tbody>
           </table>
@@ -2068,10 +2068,10 @@ function renderModule7Sections(
               config.psiEntreePrincipale
                 ? isFr
                   ? "✓ PSI conservé et accessible à l'entrée principale (CNPI 2020 art. 2.8.2.12 par. 3)"
-                  : '✓ Fire safety plan stored and accessible at main entrance (CNPI 2020 art. 2.8.2.12 par. 3)'
+                  : '✓ Fire safety plan stored and accessible at main entrance (NFC 2020 art. 2.8.2.12 par. 3)'
                 : isFr
                   ? "✗ PSI non accessible à l'entrée principale — CNPI 2020 art. 2.8.2.12 par. 3"
-                  : '✗ Fire safety plan not accessible at main entrance — CNPI 2020 art. 2.8.2.12 par. 3'
+                  : '✗ Fire safety plan not accessible at main entrance — NFC 2020 art. 2.8.2.12 par. 3'
             }
           </p>
         </div>
@@ -2740,7 +2740,7 @@ function renderModule7Sections(
           ${
             isFr
               ? "ℹ Exercices d'incendie : tous les 3 mois (laboratoire hors école — CNPI 2020 art. 2.8.3.2)"
-              : 'ℹ Fire drills: every 3 months (laboratory, non-educational — CNPI 2020 art. 2.8.3.2)'
+              : 'ℹ Fire drills: every 3 months (laboratory, non-educational — NFC 2020 art. 2.8.3.2)'
           }
         </p>
       </div>

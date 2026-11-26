@@ -95,3 +95,15 @@ describe('Tableau 8.4 — renvois vérifiés au CNPI 2020 mod. Québec', () => {
     expect(en[0]).toMatchObject({ article: 'art. 6.3.1.2 (1)', codeNorme: 'NFC / CAN/ULC-S536' });
   });
 });
+
+describe('Renvois réglementaires des modules déjà générés', () => {
+  const { withCurrentReferences } = require('./english-content');
+  it('remplace les anciens paragraphes de 2.8.2.1 en FR et en EN', () => {
+    const out = withCurrentReferences({
+      modules_fr: [{ sections: [{ content: "Conformément à l'article 2.8.2.1 (4) du Code national de prévention des incendies – Canada 2020, incorporé" }] }],
+      modules_en: [{ sections: [{ content: 'In accordance with article 2.8.2.1 (3) of the amended NFCC 2020, personnel' }] }],
+    });
+    expect(out.modules_fr[0].sections[0].content).toContain('2.8.2.1, paragraphe 2)');
+    expect(out.modules_en[0].sections[0].content).toContain('Sentence (3)(c)');
+  });
+});

@@ -77,3 +77,41 @@ export async function prepareEnglishContent(
     companyTaglineEn: tagline ? translations.get(tagline) ?? tagline : undefined,
   };
 }
+
+/**
+ * Renvois réglementaires corrigés après vérification au texte officiel
+ * (nov. 2026). Les modules déjà générés gardent l'ancien texte : il est mis
+ * à jour à l'export, en français comme en anglais, sans régénérer le projet.
+ */
+const REFERENCE_FIXES: Array<[string, string]> = [
+  ["l'article 2.8.2.1 (3) du CNPI 2020 modifié", "l'article 2.8.2.1, paragraphe 3) c), du CNPI 2020 modifié Québec"],
+  ["l'article 2.8.2.1 (4) du Code national de prévention des incendies – Canada 2020", "l'article 2.8.2.1, paragraphe 2), du Code national de prévention des incendies – Canada 2020 (modifié Québec)"],
+  ['article 2.8.2.1 (3) of the amended NFCC 2020', 'Article 2.8.2.1, Sentence (3)(c), of the National Fire Code of Canada 2020 (Quebec amended)'],
+  ['article 2.8.2.1 (4) of the National Fire Code of Canada 2020', 'Article 2.8.2.1, Sentence (2), of the National Fire Code of Canada 2020'],
+  ['article 2.8.2.1 (3) du NFC(AE)', 'article 2.8.2.1, phrase (3), alinéa (c), du NFC(AE)'],
+  ['article 2.8.2.1 (4) du NFC(AE)', 'article 2.8.2.1, phrase (2), du NFC(AE)'],
+  ['article 2.8.3.1 du National Fire Code – 2023 Alberta Edition', 'article 2.8.3.2 du National Fire Code – 2023 Alberta Edition'],
+  ['article 2.8.2.1 (3) of the NFC(AE)', 'Article 2.8.2.1, Sentence (3), Clause (c), of the NFC(AE)'],
+  ['article 2.8.2.1 (4) of the NFC(AE)', 'Article 2.8.2.1, Sentence (2), of the NFC(AE)'],
+  ['article 2.8.3.1 of the National Fire Code – 2023 Alberta Edition', 'Article 2.8.3.2 of the National Fire Code – 2023 Alberta Edition'],
+];
+
+export function withCurrentReferences(content: any): any {
+  if (!content) return content;
+  const map = new Map(REFERENCE_FIXES);
+  const fix = (node: any): any => {
+    if (typeof node === 'string') {
+      let out = node;
+      for (const [from, to] of map) if (out.includes(from)) out = out.split(from).join(to);
+      return out;
+    }
+    if (Array.isArray(node)) return node.map(fix);
+    if (node && typeof node === 'object') {
+      const out: Record<string, any> = {};
+      for (const [k, v] of Object.entries(node)) out[k] = fix(v);
+      return out;
+    }
+    return node;
+  };
+  return { ...content, modules_fr: fix(content.modules_fr), modules_en: fix(content.modules_en) };
+}
