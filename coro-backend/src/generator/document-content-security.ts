@@ -58,7 +58,10 @@ const POLICY: sanitizeHtml.IOptions = {
 };
 
 export function sanitizeDocumentString(value: string): string {
-  return sanitizeHtml(value, POLICY);
+  // sanitize-html encode chaque « & » du texte en « &amp; » ; les gabarits
+  // l'encodent à nouveau, d'où « &amp; » visible dans le PDF. On rétablit le
+  // « & » seul (jamais « < » ni « > », qui restent encodés).
+  return sanitizeHtml(value, POLICY).replace(/&amp;(?!(?:[a-z]+|#\d+|#x[0-9a-f]+);)/gi, '&');
 }
 
 /**
