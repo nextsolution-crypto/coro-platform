@@ -188,3 +188,22 @@ describe('Traduction — noms protégés', () => {
     process.env = env;
   });
 });
+
+describe('Traduction — textes déjà en anglais et traductions partielles', () => {
+  it("n'envoie pas un texte anglais qui contient un nom accentué, redemande une traduction partielle", async () => {
+    const env = { ...process.env };
+    process.env.CORO_AI_PROVIDER = 'bedrock';
+    process.env.CORO_AI_BEDROCK_INVOCATION_ENABLED = 'true';
+    delete process.env.ANTHROPIC_API_KEY;
+    const prisma = { textTranslation: { findMany: jest.fn().mockResolvedValue([]), upsert: jest.fn().mockResolvedValue({}) } };
+    const translator: any = new ExportTranslator(prisma);
+    const bedrock = jest.spyOn(translator, 'translateWithBedrock')
+      .mockResolvedValueOnce({ '0': 'Electrical room SS1, interrupteur principal' })
+      .mockResolvedValueOnce({ '0': 'Electrical room SS1, main switch' });
+    const map = await translator.translate(['CORO Démo Head Office', 'Salle électrique SS1, interrupteur principal'], ['CORO Démo']);
+    expect(bedrock.mock.calls[0][0]).toEqual(['Salle électrique SS1, interrupteur principal']);
+    expect(map.has('CORO Démo Head Office')).toBe(false);
+    expect(map.get('Salle électrique SS1, interrupteur principal')).toBe('Electrical room SS1, main switch');
+    process.env = env;
+  });
+});
