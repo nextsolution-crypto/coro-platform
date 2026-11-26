@@ -656,3 +656,9 @@ export function translateModule2Row<T extends { role?: string; phone?: string; u
   const role = roleLabelsFrToEn().get(normLabel(row.role));
   return role ? { ...row, role } : row;
 }
+
+/** Noms officiels des organismes externes (FR et EN) : jamais traduits. */
+export function officialOrganizationNames(): string[] {
+  const lists = [RESSOURCES_QC_FR, RESSOURCES_QC_EN, RESSOURCES_ON_FR, RESSOURCES_ON_EN, RESSOURCES_AB_FR, RESSOURCES_AB_EN];
+  return [...new Set(lists.flat().map((row) => row.role).filter(Boolean))];
+}

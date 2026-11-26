@@ -1,4 +1,4 @@
-import { translateModule2Row } from '../generator/module2.templates';
+import { officialOrganizationNames, translateModule2Row } from '../generator/module2.templates';
 import { localizeModule8ForEnglish } from './module8-localize';
 import {
   ExportTranslator,
@@ -6,6 +6,7 @@ import {
   collectOptionTranslations,
   collectTexts,
   replaceInsertedValues,
+  streetOf,
 } from './export-translator';
 import {
   ApprovalStamp,
@@ -308,6 +309,17 @@ export class ExportService {
     collectTexts(content.config, texts);
     collectTexts(module2, texts);
     collectTexts(module8, texts);
+    // Noms officiels déjà en version CORO : jamais envoyés à la traduction.
+    const official = new Set(officialOrganizationNames());
+    for (const text of [...texts]) if (official.has(text)) texts.delete(text);
+    const building = project?.building || {};
+    const protectedTerms = [
+      building.address, streetOf(building.address), building.name, building.city,
+      project?.client?.name, project?.organization?.companyName, project?.organization?.companyAddress,
+      streetOf(project?.organization?.companyAddress),
+      content.config?.adresse, streetOf(content.config?.adresse),
+      ...official,
+    ].filter((term): term is string => typeof term === 'string' && term.trim().length >= 3);
     const tagline: string | undefined = project?.organization?.companyTagline || undefined;
     if (tagline) collectTexts(tagline, texts);
     if (texts.size === 0) {
@@ -320,14 +332,14 @@ export class ExportService {
     }
 
     this.translator = this.translator || new ExportTranslator(this.prisma);
-    const translations = await this.translator.translate(texts);
+    const translations = await this.translator.translate(texts, protectedTerms);
     const options = collectOptionTranslations(content.config);
     return {
       ...content,
       config: applyTexts(content.config, translations),
       module2: applyTexts(module2, translations),
       // Le permis de travail à chaud reprend des choix de liste dans son texte.
-      module8: replaceInsertedValues(applyTexts(module8, translations), options),
+      module8: replaceInsertedValues(applyTexts(module8, translations), new Map([...options, ...translations])),
       // Valeurs françaises insérées à la génération : saisies traduites et choix de liste.
       modules_en: replaceInsertedValues(
         content.modules_en,
