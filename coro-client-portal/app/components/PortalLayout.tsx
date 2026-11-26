@@ -523,11 +523,11 @@ export default function PortalLayout({
               <span className="hidden 2xl:inline">Déconnexion</span>
             </button>
 
-            {/* Hamburger (mobile) */}
+            {/* Menu complet (libellés) : sur ordinateur, la barre ne montre que des icônes */}
             <button
               type="button"
               onClick={() => setMenuOpen((prev) => !prev)}
-              className="md:hidden"
+              className=""
               aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
               aria-expanded={menuOpen}
               style={{
@@ -549,10 +549,10 @@ export default function PortalLayout({
           </div>
         </div>
 
-        {/* ── Menu mobile (drawer) ── */}
+        {/* ── Menu déroulant (tous formats) ── */}
         {menuOpen && (
           <div
-            className="md:hidden"
+            className=""
             style={{
               borderTop: "1px solid #E9ECEF",
               backgroundColor: "#FFFFFF",
