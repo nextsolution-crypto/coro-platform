@@ -117,8 +117,8 @@ export const P016_COUPURE_COURANT: ProcedureTemplate = {
             },
             {
               id: sid(CODE, 15),
-              textFR: 'Vérifier les niveaux de diesel dans les réservoirs (norme CSA C282 : minimum 2 heures à pleine charge)',
-              textEN: 'Check diesel levels in tanks (CSA C282 standard: minimum 2 hours at full load)',
+              textFR: 'Vérifier les niveaux de diesel dans les réservoirs (norme CSA C282 : réserve d\'au moins 2 heures à pleine charge, 24 heures pour un établissement de soins)',
+              textEN: 'Check diesel levels in tanks (CSA C282: fuel for at least 2 hours at full load, 24 hours for a health care facility)',
               isList: true,
             },
           ],

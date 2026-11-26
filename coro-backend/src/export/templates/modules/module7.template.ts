@@ -181,9 +181,9 @@ function computeReferentielCNB(anneeRaw: any): { label: string; periode: string 
   if (annee <= 1985)
     return { label: 'CNB 1980', periode: '1984–1986' };
   if (annee <= 1993)
-    return { label: 'CNB 1985 modifié Québec', periode: '1986–1993' };
+    return { label: 'CNB 1985', periode: '1986–1993' };
   if (annee <= 2000)
-    return { label: 'CNB 1990 modifié Québec', periode: '1993–2000' };
+    return { label: 'CNB 1990', periode: '1993–2000' };
   if (annee <= 2008)
     return { label: 'CNB 1995 modifié Québec', periode: '2000–2008' };
   if (annee <= 2015)
@@ -231,13 +231,18 @@ function computePsiRequisLabel(config: any, isFr: boolean): string {
       : 'To verify — Confirm medical treatments';
   }
 
-  if (
-    usage.startsWith('A1') ||
-    usage.startsWith('A2') ||
-    usage.startsWith('A3') ||
-    usage.startsWith('A4')
-  ) {
-    return isFr ? '✓ Requis' : '✓ Required';
+  // CNPI 2020 mod. Québec art. 2.8.1.1 a) à c) et f) : requis sans seuil de personnes.
+  if (config.residencePriveeAines) {
+    return isFr ? '✓ Requis — Résidence privée pour aînés (art. 2.8.1.1 a)' : '✓ Required — Private seniors\' residence (art. 2.8.1.1 a)';
+  }
+  if (config.ecoleGarderie) {
+    return isFr ? '✓ Requis — École ou garderie (art. 2.8.1.1 b)' : '✓ Required — School or daycare (art. 2.8.1.1 b)';
+  }
+  if (config.restaurantBar) {
+    return isFr ? '✓ Requis — Restaurant ou débit de boissons (art. 2.8.1.1 c)' : '✓ Required — Restaurant or licensed beverage establishment (art. 2.8.1.1 c)';
+  }
+  if (config.panneauAlarme === true) {
+    return isFr ? '✓ Requis — Système d\'alarme incendie (art. 2.8.1.1 f)' : '✓ Required — Fire alarm system (art. 2.8.1.1 f)';
   }
 
   if (usage.startsWith('A')) {
@@ -270,41 +275,26 @@ function computePsiRequisLabel(config: any, isFr: boolean): string {
 }
 
 function computeFrequenceLabel(config: any, isFr: boolean): string {
+  // CNPI 2020 mod. Québec art. 2.8.3.2 — la fréquence la plus exigeante s'applique.
   const usage = (config.usagePrincipal || '').trim();
+  const label = (fr: string, en: string) => (isFr ? fr : en);
 
-  if (config.laboratoirePresent && !usage.startsWith('A2')) {
-    return isFr
-      ? 'Tous les 3 mois (laboratoire — art. 2.8.3.2)'
-      : 'Every 3 months (laboratory — art. 2.8.3.2)';
+  if (config.laboratoirePresent && !config.ecoleGarderie) {
+    return label('Tous les 3 mois (laboratoire — art. 2.8.3.2 par. 2)', 'Every 3 months (laboratory — art. 2.8.3.2 (2))');
   }
-
-  if (usage.startsWith('B') || config.lieuSommeil) {
-    return isFr
-      ? 'Tous les 6 mois (art. 2.8.3.2)'
-      : 'Every 6 months (art. 2.8.3.2)';
-  }
-
-  if (isHighRise(config) && !usage.startsWith('C')) {
-    return isFr
-      ? 'Tous les 6 mois — grande hauteur (art. 2.8.3.2)'
-      : 'Every 6 months — high-rise (art. 2.8.3.2)';
-  }
-
   if (usage.startsWith('A1')) {
-    return isFr
-      ? 'Tous les 3 mois (art. 2.8.3.2)'
-      : 'Every 3 months (art. 2.8.3.2)';
+    return label('Tous les 3 mois (usage A-1 — art. 2.8.3.2 d)', 'Every 3 months (Group A, Division 1 — art. 2.8.3.2 d)');
   }
-
-  if (usage.startsWith('A2')) {
-    return isFr
-      ? '2 fois par an — automne et printemps (art. 2.8.3.2)'
-      : 'Twice a year — fall and spring (art. 2.8.3.2)';
+  if (usage.startsWith('B') || config.residencePriveeAines) {
+    return label('Tous les 6 mois (groupe B ou RPA — art. 2.8.3.2 a)', 'Every 6 months (Group B or seniors\' residence — art. 2.8.3.2 a)');
   }
-
-  return isFr
-    ? 'Tous les 12 mois (art. 2.8.3.2)'
-    : 'Every 12 months (art. 2.8.3.2)';
+  if (isHighRise(config) && !usage.startsWith('C')) {
+    return label('Tous les 6 mois — grande hauteur (art. 2.8.3.2 c)', 'Every 6 months — high-rise (art. 2.8.3.2 c)');
+  }
+  if (config.ecoleGarderie) {
+    return label('Automne et printemps — évacuation complète (art. 2.8.3.2 b)', 'Fall and spring — full evacuation (art. 2.8.3.2 b)');
+  }
+  return label('Tous les 12 mois (art. 2.8.3.2)', 'Every 12 months (art. 2.8.3.2)');
 }
 
 // ============================================================
@@ -523,7 +513,7 @@ function renderModule7Sections(
                 isFr
                   ? 'Référentiel de construction'
                   : 'Construction reference',
-                `${isFr ? ref.label : ref.label.replace(/^CNB (\d{4}) modifié Québec$/, 'NBC $1 as amended in Quebec')} <span style="color:#6C757D;font-size:8pt;">(${ref.periode})</span>`,
+                `${isFr ? ref.label : ref.label.replace(/^CNB (\d{4}) modifié Québec$/, 'NBC $1 as amended in Quebec').replace(/^CNB (\d{4})$/, 'NBC $1')} <span style="color:#6C757D;font-size:8pt;">(${isFr ? ref.periode : ref.periode.replace('Depuis le 17 avril 2025', 'Since April 17, 2025')})</span>`,
               );
             })()}
             ${infoRow(
@@ -2077,11 +2067,11 @@ function renderModule7Sections(
             ${
               config.psiEntreePrincipale
                 ? isFr
-                  ? "✓ PSI conservé et accessible à l'entrée principale (CNPI 2020 art. 2.8.2.12)"
-                  : '✓ Fire safety plan stored and accessible at main entrance (CNPI 2020 art. 2.8.2.12)'
+                  ? "✓ PSI conservé et accessible à l'entrée principale (CNPI 2020 art. 2.8.2.12 par. 3)"
+                  : '✓ Fire safety plan stored and accessible at main entrance (CNPI 2020 art. 2.8.2.12 par. 3)'
                 : isFr
-                  ? "✗ PSI non accessible à l'entrée principale — CNPI 2020 art. 2.8.2.12"
-                  : '✗ Fire safety plan not accessible at main entrance — CNPI 2020 art. 2.8.2.12'
+                  ? "✗ PSI non accessible à l'entrée principale — CNPI 2020 art. 2.8.2.12 par. 3"
+                  : '✗ Fire safety plan not accessible at main entrance — CNPI 2020 art. 2.8.2.12 par. 3'
             }
           </p>
         </div>

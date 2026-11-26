@@ -326,6 +326,27 @@ export class ConfiguratorService {
               tooltip:
                 'Cocher OUI si des personnes dorment dans le batiment (hotel, residence, dortoir, RPA). Active des procedures d evacuation specifiques et des exigences supplementaires selon le CNPI.',
             },
+            {
+              key: 'residencePriveeAines',
+              label: 'Résidence privée pour aînés (RPA)',
+              type: 'boolean',
+              tooltip:
+                'RPA au sens de la Loi sur les services de santé et les services sociaux. Plan de sécurité incendie obligatoire et exercices d evacuation au plus tous les 6 mois (CNPI 2020 mod. Quebec, art. 2.8.1.1 et 2.8.3.2).',
+            },
+            {
+              key: 'ecoleGarderie',
+              label: 'École ou garderie',
+              type: 'boolean',
+              tooltip:
+                'Ecole, college, universite ou garderie. Plan de securite incendie obligatoire et evacuation complete une fois a l automne et une fois au printemps (CNPI 2020 mod. Quebec, art. 2.8.1.1 et 2.8.3.2).',
+            },
+            {
+              key: 'restaurantBar',
+              label: 'Restaurant ou débit de boissons',
+              type: 'boolean',
+              tooltip:
+                'Restaurant, bar ou autre debit de boissons. Plan de securite incendie obligatoire quel que soit le nombre de personnes (CNPI 2020 mod. Quebec, art. 2.8.1.1).',
+            },
             { key: 'securite24h', label: 'Sécurité 24 h/7', type: 'boolean' },
             {
               key: 'agentSecurite',
@@ -497,7 +518,7 @@ export class ConfiguratorService {
               label: 'Date de la dernière révision du PSI',
               type: 'date',
               tooltip:
-                "Le CNPI 2020 art. 2.8.2.2 exige une révision à intervalles ne dépassant pas 12 mois. Cette date déclenche automatiquement les alertes dans le panneau d'analyse.",
+                "Le CNPI 2020 art. 2.8.2.1 exige une révision à intervalles ne dépassant pas 12 mois. Cette date déclenche automatiquement les alertes dans le panneau d'analyse.",
             },
             {
               key: 'programmeInspectionEntretien',

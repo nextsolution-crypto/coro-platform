@@ -172,17 +172,17 @@ const MESSAGES_PHONIQUES_FR: PhoneticMessage[] = [
 // ============================================================
 
 const INSPECTIONS_RISQUES_FR: RiskInspectionRow[] = [
-  { equipement: 'SORTIE DE SECOURS', codeNorme: 'CNPI', article: 'art. 2.7.2.1 (2)', observations: '' },
+  { equipement: 'SORTIE DE SECOURS', codeNorme: 'CNPI', article: 'art. 2.7.1.6 (1)', observations: '' },
   { equipement: 'SÉPARATIONS COUPE-FEU', codeNorme: 'CNPI', article: 'art. 2.2.1.2 (1)', observations: '' },
-  { equipement: 'PANNEAU INCENDIE', codeNorme: 'CNPI / CAN/ULC-S536', article: 'art. 6.3.1.1 (1)', observations: '' },
-  { equipement: 'AVERTISSEUR DE MONOXYDE DE CARBONE', codeNorme: 'CNPI', article: 'art. 6.3.1.2 (1)', observations: '' },
+  { equipement: 'PANNEAU INCENDIE', codeNorme: 'CNPI / CAN/ULC-S536', article: 'art. 6.3.1.2 (1)', observations: '' },
+  { equipement: 'AVERTISSEUR DE MONOXYDE DE CARBONE', codeNorme: 'CNPI', article: 'art. 6.7.1.1 (1)', observations: '' },
   { equipement: 'SYSTÈME DE GICLEURS', codeNorme: 'CNPI / NFPA 25', article: 'art. 6.4.1.1 (1)', observations: '' },
   { equipement: 'EXTINCTEURS PORTATIFS', codeNorme: 'CNPI / NFPA 10', article: 'art. 6.2.1.1 (1)', observations: '' },
   { equipement: 'POMPE INCENDIE', codeNorme: 'NFPA 25', article: 'Tableau 8.1', observations: '' },
   { equipement: 'RACCORD-POMPIER', codeNorme: 'CNPI', article: 'art. 2.5.1.4 (1)', observations: '' },
   { equipement: 'ACCÈS AU TOIT', codeNorme: 'CNPI', article: 'art. 2.5.1.3 (1)', observations: '' },
   { equipement: 'ASCENSEUR', codeNorme: 'ASME A17.1 / CSA B44', article: 'art. 7.2.2.1 (2)', observations: '' },
-  { equipement: 'SYSTÈME D\'EXTINCTION SPÉCIAL', codeNorme: 'CNPI', article: 'art. 6.7.1.2 (1)', observations: '' },
+  { equipement: 'SYSTÈME D\'EXTINCTION SPÉCIAL', codeNorme: 'CNPI', article: 'art. 6.6.1.1 (1)', observations: '' },
   { equipement: 'GÉNÉRATRICE', codeNorme: 'CAN/CSA-C282', article: '—', observations: '' },
   { equipement: 'VENTILATION', codeNorme: 'CNPI', article: 'art. 7.2.4.1 (1)', observations: '' },
   { equipement: 'ÉCLAIRAGE D\'URGENCE', codeNorme: 'CNPI', article: 'art. 6.5.1.7 (1)', observations: '' },
@@ -193,24 +193,24 @@ const INSPECTIONS_RISQUES_FR: RiskInspectionRow[] = [
 ];
 
 const INSPECTIONS_RISQUES_EN: RiskInspectionRow[] = [
-  { equipement: 'EMERGENCY EXIT', codeNorme: 'NBC', article: 'art. 2.7.2.1 (2)', observations: '' },
-  { equipement: 'FIRE SEPARATIONS', codeNorme: 'NBC', article: 'art. 2.2.1.2 (1)', observations: '' },
-  { equipement: 'FIRE ALARM PANEL', codeNorme: 'NBC / CAN/ULC-S536', article: 'art. 6.3.1.1 (1)', observations: '' },
-  { equipement: 'CARBON MONOXIDE DETECTOR', codeNorme: 'NBC', article: 'art. 6.3.1.2 (1)', observations: '' },
-  { equipement: 'SPRINKLER SYSTEM', codeNorme: 'NBC / NFPA 25', article: 'art. 6.4.1.1 (1)', observations: '' },
-  { equipement: 'PORTABLE FIRE EXTINGUISHERS', codeNorme: 'NBC / NFPA 10', article: 'art. 6.2.1.1 (1)', observations: '' },
+  { equipement: 'EMERGENCY EXIT', codeNorme: 'NFC', article: 'art. 2.7.1.6 (1)', observations: '' },
+  { equipement: 'FIRE SEPARATIONS', codeNorme: 'NFC', article: 'art. 2.2.1.2 (1)', observations: '' },
+  { equipement: 'FIRE ALARM PANEL', codeNorme: 'NFC / CAN/ULC-S536', article: 'art. 6.3.1.2 (1)', observations: '' },
+  { equipement: 'CARBON MONOXIDE DETECTOR', codeNorme: 'NFC', article: 'art. 6.7.1.1 (1)', observations: '' },
+  { equipement: 'SPRINKLER SYSTEM', codeNorme: 'NFC / NFPA 25', article: 'art. 6.4.1.1 (1)', observations: '' },
+  { equipement: 'PORTABLE FIRE EXTINGUISHERS', codeNorme: 'NFC / NFPA 10', article: 'art. 6.2.1.1 (1)', observations: '' },
   { equipement: 'FIRE PUMP', codeNorme: 'NFPA 25', article: 'Table 8.1', observations: '' },
-  { equipement: 'FIRE DEPARTMENT CONNECTION', codeNorme: 'NBC', article: 'art. 2.5.1.4 (1)', observations: '' },
-  { equipement: 'ROOF ACCESS', codeNorme: 'NBC', article: 'art. 2.5.1.3 (1)', observations: '' },
+  { equipement: 'FIRE DEPARTMENT CONNECTION', codeNorme: 'NFC', article: 'art. 2.5.1.4 (1)', observations: '' },
+  { equipement: 'ROOF ACCESS', codeNorme: 'NFC', article: 'art. 2.5.1.3 (1)', observations: '' },
   { equipement: 'ELEVATOR', codeNorme: 'ASME A17.1 / CSA B44', article: 'art. 7.2.2.1 (2)', observations: '' },
-  { equipement: 'SPECIAL SUPPRESSION SYSTEM', codeNorme: 'NBC', article: 'art. 6.7.1.2 (1)', observations: '' },
+  { equipement: 'SPECIAL SUPPRESSION SYSTEM', codeNorme: 'NFC', article: 'art. 6.6.1.1 (1)', observations: '' },
   { equipement: 'GENERATOR', codeNorme: 'CAN/CSA-C282', article: '—', observations: '' },
-  { equipement: 'VENTILATION', codeNorme: 'NBC', article: 'art. 7.2.4.1 (1)', observations: '' },
-  { equipement: 'EMERGENCY LIGHTING', codeNorme: 'NBC', article: 'art. 6.5.1.7 (1)', observations: '' },
-  { equipement: 'COMMERCIAL COOKING EQUIPMENT', codeNorme: 'NBC', article: 'art. 2.6.1.9 (1)', observations: '' },
-  { equipement: 'COMBUSTIBLE WASTE STORAGE', codeNorme: 'NBC', article: 'art. 2.4.1.1 (1)', observations: '' },
-  { equipement: 'COMBUSTIBLE MATERIAL ACCUMULATION', codeNorme: 'NBC', article: 'art. 2.4.1.1 (1)', observations: '' },
-  { equipement: 'FIRE SAFETY PLAN & EMERGENCY MEASURES — TRAINING AND DRILL', codeNorme: 'NBC', article: 'art. 2.8.2.1 (1)', observations: '' },
+  { equipement: 'VENTILATION', codeNorme: 'NFC', article: 'art. 7.2.4.1 (1)', observations: '' },
+  { equipement: 'EMERGENCY LIGHTING', codeNorme: 'NFC', article: 'art. 6.5.1.7 (1)', observations: '' },
+  { equipement: 'COMMERCIAL COOKING EQUIPMENT', codeNorme: 'NFC', article: 'art. 2.6.1.9 (1)', observations: '' },
+  { equipement: 'COMBUSTIBLE WASTE STORAGE', codeNorme: 'NFC', article: 'art. 2.4.1.1 (1)', observations: '' },
+  { equipement: 'COMBUSTIBLE MATERIAL ACCUMULATION', codeNorme: 'NFC', article: 'art. 2.4.1.1 (1)', observations: '' },
+  { equipement: 'FIRE SAFETY PLAN & EMERGENCY MEASURES — TRAINING AND DRILL', codeNorme: 'NFC', article: 'art. 2.8.2.1 (1)', observations: '' },
 ];
 
 // ============================================================
@@ -913,4 +913,31 @@ export function generateModule8(ctx: DocumentContext, config: Module8Config = {}
     fr: generateModule8FR(ctx, config),
     en: generateModule8EN(ctx, config),
   };
+}
+/**
+ * Anciens renvois du tableau 8.4, vérifiés au texte officiel du CNPI 2020
+ * modifié Québec (nov. 2026) : appliqués aux lignes déjà enregistrées.
+ */
+const INSPECTION_ARTICLE_FIXES: Array<{ equipement: RegExp; from: string; to: string }> = [
+  { equipement: /^(SORTIE DE SECOURS|EMERGENCY EXIT)$/i, from: 'art. 2.7.2.1 (2)', to: 'art. 2.7.1.6 (1)' },
+  { equipement: /^(PANNEAU INCENDIE|FIRE ALARM PANEL)$/i, from: 'art. 6.3.1.1 (1)', to: 'art. 6.3.1.2 (1)' },
+  { equipement: /^(AVERTISSEUR DE MONOXYDE DE CARBONE|CARBON MONOXIDE DETECTOR)$/i, from: 'art. 6.3.1.2 (1)', to: 'art. 6.7.1.1 (1)' },
+  { equipement: /^(SYSTÈME D'EXTINCTION SPÉCIAL|SPECIAL SUPPRESSION SYSTEM)$/i, from: 'art. 6.7.1.2 (1)', to: 'art. 6.6.1.1 (1)' },
+];
+
+export function fixLegacyInspectionRows<T extends { equipement?: string; article?: string; codeNorme?: string }>(rows: T[], lang: 'fr' | 'en'): T[] {
+  if (!Array.isArray(rows)) return rows;
+  return rows.map((row) => {
+    if (!row || typeof row !== 'object') return row;
+    let out = row;
+    for (const fix of INSPECTION_ARTICLE_FIXES) {
+      if (fix.equipement.test(String(row.equipement || '').trim()) && String(row.article || '').trim() === fix.from) {
+        out = { ...out, article: fix.to };
+      }
+    }
+    if (lang === 'en' && typeof out.codeNorme === 'string' && /^NBC( \/|$)/.test(out.codeNorme)) {
+      out = { ...out, codeNorme: out.codeNorme.replace(/^NBC/, 'NFC') };
+    }
+    return out;
+  });
 }
