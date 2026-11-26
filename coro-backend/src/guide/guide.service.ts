@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ExportTranslator, streetOf } from '../export/export-translator';
+import { optionToEnglish } from '../export/templates/modules/option-display';
 import { PrismaService } from '../prisma/prisma.service';
 import puppeteer from 'puppeteer';
 import { PDFDocument } from 'pdf-lib';
@@ -27,6 +29,7 @@ export class GuideService {
 
     const project = doc.project;
     const content = doc.content as any;
+    let taglineForLang: string | undefined = project.organization?.companyTagline || undefined;
     const config = content?.config || {};
     const isFr = lang === 'fr';
 
@@ -159,6 +162,21 @@ export class GuideService {
       };
 
       // ── SECTION 1 : sous-sections individuelles ──
+      if (!isFr) {
+        // Guide anglais : légende du plan et slogan traduits comme dans le PMU.
+        const caption = planImplantation?.name ? optionToEnglish(String(planImplantation.name)) : undefined;
+        const texts = [caption, taglineForLang].filter((t): t is string => !!t);
+        if (texts.length) {
+          const building = project.building || {};
+          const translations = await new ExportTranslator(this.prisma).translate(texts, [
+            building.address, streetOf(building.address), building.name, project.client?.name,
+            project.organization?.companyName, project.organization?.companyAddress,
+          ].filter((t): t is string => typeof t === 'string'));
+          if (caption) planImplantation = { ...planImplantation, name: translations.get(caption) ?? caption };
+          if (taglineForLang) taglineForLang = translations.get(taglineForLang) ?? taglineForLang;
+        }
+      }
+
       const s1SubSections = this.buildSection1Subsections(config, content, module3, savedModule3, isFr, isDoubleSignal, buildingAddress, project, planImplantation);
       for (const sub of s1SubSections) {
         const buf = await renderHtml(sub.html);
@@ -269,7 +287,7 @@ export class GuideService {
         companyEmail: project.organization?.companyEmail || undefined,
         companyAddress: project.organization?.companyAddress || undefined,
         companyWebsite: project.organization?.companyWebsite || undefined,
-        companyTagline: project.organization?.companyTagline || undefined,
+        companyTagline: taglineForLang,
         year: project.year,
         language: lang,
       });
@@ -336,9 +354,10 @@ export class GuideService {
     const responsableTitre = config.responsableTitre || '—';
 
     let orgHtml = '';
-    if (module3 && savedModule3) {
+    // Comme le PMU : l'organigramme généré s'affiche même sans version modifiée du module 3.
+    if (module3) {
       const mergedSections = (module3.sections || []).map((s: any) => {
-        if (s.id === '3.1' && savedModule3.orgRoles) return { ...s, orgRoles: savedModule3.orgRoles };
+        if (s.id === '3.1' && savedModule3?.orgRoles) return { ...s, orgRoles: savedModule3.orgRoles };
         return s;
       });
       const { html31 } = renderModule3(mergedSections, isFr ? 'fr' : 'en', 1);
