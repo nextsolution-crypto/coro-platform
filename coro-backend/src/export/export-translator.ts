@@ -14,7 +14,8 @@ import { Logger } from '@nestjs/common';
 import { optionToEnglish } from './templates/modules/option-display';
 import { KnowledgeConfig } from '../knowledge/knowledge.config';
 
-const TARGET = 'en';
+// Version de la mémoire : la changer fait refaire toutes les traductions.
+const TARGET = 'en-v2';
 const BATCH_SIZE = 60;
 const BEDROCK_BATCH_SIZE = 20;
 const BEDROCK_PARALLEL = 3;
@@ -22,7 +23,7 @@ const MAX_TEXT_LENGTH = 8000;
 const CALL_TIMEOUT_MS = 90_000;
 
 /** Clés qui ne contiennent jamais de texte à traduire. */
-const SKIP_KEYS = /^(id|_?originalId|uuid|email|courriel|phone|telephone|tel|fax|url|website|siteWeb|date\w*|\w*Date|\w*At|\w*Base64|\w*B64|photo\w*|logo\w*|image\w*|code|codeNorme|article|hash|token|type|status|lang|language|province|postalCode|codePostal)$/i;
+const SKIP_KEYS = /^(id|name|nom|prenom|firstName|lastName|fullName|companyName|clientName|buildingName|adresse\w*|address\w*|\w*Adresse|\w*Address|ville|city|_?originalId|uuid|email|courriel|phone|telephone|tel|fax|url|website|siteWeb|date\w*|\w*Date|\w*At|\w*Base64|\w*B64|photo\w*|logo\w*|image\w*|code|codeNorme|article|hash|token|type|status|lang|language|province|postalCode|codePostal)$/i;
 
 export function hashText(text: string): string {
   return createHash('sha256').update(text).digest('hex');
@@ -115,6 +116,8 @@ const SYSTEM_PROMPT = [
   'Rules:',
   '- Translate meaning faithfully, in the concise style of a technical plan. Use standard Canadian fire-safety terms (NBC, NFC, AED, sprinkler, fire alarm panel, assembly point).',
   '- Keep unchanged: proper names (people, companies, buildings, parks), street names and civic addresses, room or local codes (SS1, B2-01, RDC → keep as written), phone numbers, regulation numbers.',
+  '- A French proper name stays in French, including its generic word: "Parc des Cèdres", "avenue des Cèdres", "Centre communautaire des Cèdres", "Info-Santé", "Régie du bâtiment du Québec" are never translated. Translate only the words around them.',
+  '- Markers like ⟦0⟧ stand for protected names: copy each marker exactly, once, where it belongs.',
   '- Translate generic words around names: "Parc de l\'autre côté de la rue" → "Park across the street"; "Salle des serveurs, 2e étage" → "Server room, 2nd floor".',
   '- Keep Markdown markers (**bold**, "- " list items, line breaks) exactly as in the source.',
   '- If a value is already in English or is only a name, return it unchanged.',
@@ -127,8 +130,10 @@ export class ExportTranslator {
   constructor(private readonly prisma: any) {}
 
   /** Traductions anglaises des textes donnés (texte d'origine si indisponible). */
-  async translate(texts: Iterable<string>): Promise<Map<string, string>> {
+  async translate(texts: Iterable<string>, protectedTerms: string[] = []): Promise<Map<string, string>> {
     const unique = [...new Set(texts)].filter(isTranslatable);
+    this.protectedTerms = [...new Set(protectedTerms.map((t) => (t || '').trim()).filter((t) => t.length >= 3))]
+      .sort((a, b) => b.length - a.length);
     const result = new Map<string, string>();
     if (unique.length === 0) return result;
 
@@ -151,7 +156,7 @@ export class ExportTranslator {
     const toStore: Array<{ sourceHash: string; targetLang: string; sourceText: string; translatedText: string }> = [];
     const keep = (batch: string[], answer: Record<string, string> | null) => {
       batch.forEach((source, i) => {
-        const translated = answer?.[String(i)];
+        const translated = this.unmask(source, answer?.[String(i)]);
         if (typeof translated === 'string' && isRealTranslation(source, translated)) {
           result.set(source, translated);
           toStore.push({ sourceHash: hashText(source), targetLang: TARGET, sourceText: source, translatedText: translated });
@@ -165,18 +170,18 @@ export class ExportTranslator {
       const batches = chunk(missing, BEDROCK_BATCH_SIZE);
       for (let i = 0; i < batches.length; i += BEDROCK_PARALLEL) {
         const group = batches.slice(i, i + BEDROCK_PARALLEL);
-        const answers = await Promise.all(group.map((batch) => this.translateWithBedrock(batch)));
+        const answers = await Promise.all(group.map((batch) => this.translateWithBedrock(batch.map((t) => this.mask(t)))));
         answers.forEach((answer, b) => keep(group[b], answer));
       }
       // Seconde passe, par petits lots, pour ce que le modèle a sauté ou laissé en français.
       const skipped = unique.filter((t) => !result.has(t));
       for (const batch of chunk(skipped, 5)) {
-        keep(batch, await this.translateWithBedrock(batch, true));
+        keep(batch, await this.translateWithBedrock(batch.map((t) => this.mask(t)), true));
       }
       // Dernière passe : un texte à la fois, en conversation simple.
       const stubborn = unique.filter((t) => !result.has(t) && looksFrench(t));
       for (const group of chunk(stubborn, BEDROCK_PARALLEL)) {
-        const answers = await Promise.all(group.map((text) => this.translateOneWithBedrock(text)));
+        const answers = await Promise.all(group.map((text) => this.translateOneWithBedrock(this.mask(text))));
         group.forEach((text, i) => keep([text], answers[i] ? { '0': answers[i] as string } : null));
       }
     }
@@ -185,7 +190,7 @@ export class ExportTranslator {
     missing = unique.filter((t) => !result.has(t));
     if (missing.length > 0 && process.env.ANTHROPIC_API_KEY) {
       const batches = chunk(missing, BATCH_SIZE);
-      const answers = await Promise.all(batches.map((batch) => this.translateBatch(batch)));
+      const answers = await Promise.all(batches.map((batch) => this.translateBatch(batch.map((t) => this.mask(t)))));
       answers.forEach((answer, b) => keep(batches[b], answer));
     }
     const untranslated = unique.filter((t) => !result.has(t) && looksFrench(t)).length;
@@ -202,6 +207,33 @@ export class ExportTranslator {
       }
     }
     return result;
+  }
+
+  private protectedTerms: string[] = [];
+
+  /** Remplace les noms protégés par des repères ⟦n⟧ avant l'envoi au modèle. */
+  mask(text: string): string {
+    let out = text;
+    this.protectedTerms.forEach((term, i) => {
+      if (out.toLowerCase().includes(term.toLowerCase())) {
+        out = out.replace(new RegExp(escapeRegExp(term), 'gi'), `⟦${i}⟧`);
+      }
+    });
+    return out;
+  }
+
+  /** Remet les noms protégés ; refuse une réponse qui a perdu ou ajouté un repère. */
+  unmask(source: string, translated: unknown): string | undefined {
+    if (typeof translated !== 'string') return undefined;
+    const masked = this.mask(source);
+    const expected = (masked.match(/⟦\d+⟧/g) || []).sort().join();
+    const got = (translated.match(/⟦\d+⟧/g) || []).sort().join();
+    if (expected !== got) return undefined;
+    return translated.replace(/⟦(\d+)⟧/g, (_m, n) => {
+      const term = this.protectedTerms[Number(n)];
+      const original = source.match(new RegExp(escapeRegExp(term), 'i'));
+      return original ? original[0] : term;
+    });
   }
 
   private bedrockReady(): boolean {
@@ -372,4 +404,15 @@ export function collectOptionTranslations(value: any, out = new Map<string, stri
     for (const [k, v] of Object.entries(value)) collectOptionTranslations(v, out, k);
   }
   return out;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Rue d'une adresse civique (« 4200, avenue des Cèdres, Laval » → « avenue des Cèdres »). */
+export function streetOf(address: string | undefined | null): string | null {
+  if (!address) return null;
+  const first = address.split(',').map((part) => part.trim()).find((part) => /[A-Za-zÀ-ÿ]{3,}/.test(part) && !/^\d+$/.test(part));
+  return first ? first.replace(/^\d+[A-Za-z]?\s+/, '').trim() || null : null;
 }

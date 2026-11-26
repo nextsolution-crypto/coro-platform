@@ -157,3 +157,34 @@ describe('Traduction — dernière passe', () => {
     process.env = env;
   });
 });
+
+describe('Traduction — noms protégés', () => {
+  const { streetOf } = require('./export-translator');
+
+  it('extrait la rue d\'une adresse', () => {
+    expect(streetOf('4200, avenue des Cèdres, Laval, QC')).toBe('avenue des Cèdres');
+    expect(streetOf('409 rue de la réussite, Montréal')).toBe('rue de la réussite');
+  });
+
+  it('masque les noms, les remet tels quels, et refuse une réponse qui les perd', async () => {
+    const env = { ...process.env };
+    process.env.CORO_AI_PROVIDER = 'bedrock';
+    process.env.CORO_AI_BEDROCK_INVOCATION_ENABLED = 'true';
+    delete process.env.ANTHROPIC_API_KEY;
+    const prisma = { textTranslation: { findMany: jest.fn().mockResolvedValue([]), upsert: jest.fn().mockResolvedValue({}) } };
+    const translator: any = new ExportTranslator(prisma);
+    const bedrock = jest.spyOn(translator, 'translateWithBedrock')
+      .mockImplementationOnce(async (batch: any) => {
+        // Le modèle reçoit des repères, jamais le nom.
+        expect(batch).toEqual(['Parc en face de l\'⟦0⟧', 'Entrée sur ⟦0⟧']);
+        return { '0': 'Park across from ⟦0⟧', '1': 'Entrance on Cedars Avenue' };
+      })
+      .mockResolvedValue(null);
+    jest.spyOn(translator, 'translateOneWithBedrock').mockResolvedValue(null);
+    const map = await translator.translate(['Parc en face de l\'avenue des Cèdres', 'Entrée sur avenue des Cèdres'], ['avenue des Cèdres']);
+    expect(bedrock).toHaveBeenCalled();
+    expect(map.get('Parc en face de l\'avenue des Cèdres')).toBe('Park across from avenue des Cèdres');
+    expect(map.has('Entrée sur avenue des Cèdres')).toBe(false);
+    process.env = env;
+  });
+});
