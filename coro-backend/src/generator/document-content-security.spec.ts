@@ -28,3 +28,13 @@ describe('sanitizeDocumentContent', () => {
     ).toEqual({ count: 3, enabled: false, empty: null });
   });
 });
+
+describe('sanitizeDocumentString — esperluette', () => {
+  const { sanitizeDocumentString } = require('./document-content-security');
+  it('garde « & » tel quel mais encode toujours < et >', () => {
+    expect(sanitizeDocumentString('Circulation & routes')).toBe('Circulation & routes');
+    expect(sanitizeDocumentString('a < b & c > d')).toBe('a &lt; b & c &gt; d');
+    expect(sanitizeDocumentString('<script>alert(1)</script>Texte & suite')).toBe('Texte & suite');
+    expect(sanitizeDocumentString('&lt;img src=x onerror=1&gt;')).toBe('&lt;img src=x onerror=1&gt;');
+  });
+});
