@@ -225,6 +225,7 @@ const OPTION_EN: Record<string, string> = {
   'Extincteur portatif': 'Portable fire extinguisher',
   'Ascenseur': 'Elevator',
   "Escalier d'urgence": 'Emergency stairwell',
+  "Escaliers d'urgence": 'Emergency stairwells',
   'Accès au toit': 'Roof access',
   'Séparation coupe-feu': 'Fire separation',
   'Chute à ordures': 'Garbage chute',

@@ -40,6 +40,7 @@ export function generateCoverPage(data: CoverData): string {
     tagline: isFr ? 'Expert-conseil en résilience et mesures d\'urgence' : 'Expert advisory in resilience and emergency planning',
     creationDate: isFr ? 'Date de création' : 'Creation date',
     version: isFr ? 'Version' : 'Version',
+    colon: isFr ? ' :' : ':',
     approvedVersion: isFr ? 'Version approuvée' : 'Approved version',
     approvedOn: isFr ? 'approuvée le' : 'approved on',
     by: isFr ? 'par' : 'by',
@@ -99,15 +100,15 @@ export function generateCoverPage(data: CoverData): string {
   // compte de lignes d'historique (M1-05).
   const approvalHtml = data.approval
     ? [
-        `<span>${labels.approvedVersion} : v${data.approval.versionNumber}${
+        `<span>${labels.approvedVersion}${labels.colon} v${data.approval.versionNumber}${
           data.approval.approvedAt ? ` — ${labels.approvedOn} ${formatDate(data.approval.approvedAt)}` : ''
         }${data.approval.approvedBy ? ` ${labels.by} ${escapeHtml(data.approval.approvedBy)}` : ''}</span>`,
         data.approval.shortHash
-          ? `<span>${labels.fingerprint} : ${escapeHtml(data.approval.shortHash)}</span>`
+          ? `<span>${labels.fingerprint}${labels.colon} ${escapeHtml(data.approval.shortHash)}</span>`
           : '',
       ].join('')
     : data.guideMention
-      ? `<span>${labels.version} : ${versionLabel}</span>`
+      ? `<span>${labels.version}${labels.colon} ${versionLabel}</span>`
       : `<span>${labels.workingVersion}</span>`;
 
   // Sépare le label de type de document en deux lignes
@@ -186,7 +187,7 @@ export function generateCoverPage(data: CoverData): string {
             ${clientLogoHtml}
             <p class="cover-info-name">${escapeHtml(data.clientName)}</p>
             <p class="cover-info-line">${escapeHtml(data.buildingAddress)}</p>
-            ${data.clientPhone ? `<p class="cover-info-line">${labels.phone} : ${escapeHtml(data.clientPhone)}</p>` : ''}
+            ${data.clientPhone ? `<p class="cover-info-line">${labels.phone}${labels.colon} ${escapeHtml(data.clientPhone)}</p>` : ''}
           </div>
           <div class="cover-info-col">
             <p class="cover-info-heading">${labels.preparedBy.toUpperCase()}</p>
@@ -202,7 +203,7 @@ export function generateCoverPage(data: CoverData): string {
       <div class="cover-footer-dark">
         <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
           <div style="display:flex;flex-direction:column;gap:4px;">
-            <span>${revisionTypeLabel} : ${fullDate}</span>
+            <span>${revisionTypeLabel}${labels.colon} ${fullDate}</span>
             ${approvalHtml}
             <span>${labels.confidential}</span>
           </div>

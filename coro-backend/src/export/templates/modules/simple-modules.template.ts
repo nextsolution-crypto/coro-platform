@@ -73,7 +73,7 @@ export function renderModule2Section(section: any, idx: number, lang: 'fr' | 'en
 
       const internalEmergencyHtml = section.internalEmergencyNumber ? `
         <div style="margin-top:20px;display:flex;align-items:center;gap:10px;">
-          <span style="font-weight:600;color:#2C3E50;">${lang === 'fr' ? 'Numéro d\'urgence interne' : 'Internal emergency number'} :</span>
+          <span style="font-weight:600;color:#2C3E50;">${lang === 'fr' ? 'Numéro d\'urgence interne :' : 'Internal emergency number:'}</span>
           <span style="font-size:14pt;font-weight:800;color:#C0392B;">${escapeHtml(section.internalEmergencyNumber)}</span>
         </div>
       ` : '';
