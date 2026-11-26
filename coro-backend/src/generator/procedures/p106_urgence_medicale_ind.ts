@@ -79,8 +79,8 @@ export const P106_URGENCE_MEDICALE_IND: ProcedureTemplate = {
         },
         {
           id: sid(CODE, 9),
-          textFR: 'Communiquer immédiatement avec les secouristes en premiers soins identifiés sur le site — le Règlement sur les normes minimales de premiers secours et de premiers soins exige au moins un secouriste par quart de travail (50 travailleurs ou moins), deux de 51 à 150, puis un de plus par tranche de 100',
-          textEN: 'Immediately communicate with first aid responders identified on site — Quebec\'s first aid regulation requires at least one first aider per shift (50 workers or fewer), two for 51 to 150, then one more per additional 100',
+          textFR: 'Communiquer immédiatement avec les secouristes en premiers soins identifiés sur le site — le Règlement sur les normes minimales de premiers secours et de premiers soins exige au moins un secouriste lorsque 50 travailleurs ou moins sont présents simultanément, puis un de plus par centaine additionnelle (depuis février 2026)',
+          textEN: 'Immediately communicate with first aid responders identified on site — Quebec\'s first aid regulation requires at least one first aider when 50 or fewer workers are present at the same time, plus one for each additional 100 (since February 2026)',
           isBold: false,
         },
         {
