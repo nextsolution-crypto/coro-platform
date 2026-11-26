@@ -79,3 +79,19 @@ describe('Export anglais — références de code', () => {
     expect(fr).toContain('CNB 2010 modifié Québec');
   });
 });
+
+describe('Tableau 8.4 — renvois vérifiés au CNPI 2020 mod. Québec', () => {
+  const { fixLegacyInspectionRows } = require('../generator/module8.templates');
+  it('corrige les anciens articles des lignes enregistrées et met NFC en anglais', () => {
+    const rows = fixLegacyInspectionRows([
+      { equipement: 'SORTIE DE SECOURS', article: 'art. 2.7.2.1 (2)', codeNorme: 'CNPI' },
+      { equipement: 'PANNEAU INCENDIE', article: 'art. 6.3.1.1 (1)', codeNorme: 'CNPI / CAN/ULC-S536' },
+      { equipement: 'AVERTISSEUR DE MONOXYDE DE CARBONE', article: 'art. 6.3.1.2 (1)', codeNorme: 'CNPI' },
+      { equipement: 'SYSTÈME D\'EXTINCTION SPÉCIAL', article: 'art. 6.7.1.2 (1)', codeNorme: 'CNPI' },
+      { equipement: 'ASCENSEUR', article: 'art. 7.2.2.1 (2)', codeNorme: 'ASME A17.1 / CSA B44' },
+    ], 'fr');
+    expect(rows.map((r: any) => r.article)).toEqual(['art. 2.7.1.6 (1)', 'art. 6.3.1.2 (1)', 'art. 6.7.1.1 (1)', 'art. 6.6.1.1 (1)', 'art. 7.2.2.1 (2)']);
+    const en = fixLegacyInspectionRows([{ equipement: 'FIRE ALARM PANEL', article: 'art. 6.3.1.1 (1)', codeNorme: 'NBC / CAN/ULC-S536' }], 'en');
+    expect(en[0]).toMatchObject({ article: 'art. 6.3.1.2 (1)', codeNorme: 'NFC / CAN/ULC-S536' });
+  });
+});

@@ -25,6 +25,8 @@ export const DEFAULT_TEXT_FIXES: Array<{ code: string; from: string; to: string 
   { code: 'P013', from: 'Bring the AED, located [DEA LOCATION], if:', to: 'Bring the AED (location: [DEA LOCATION]) if:' },
   { code: 'P106', from: "en milieu industriel, la CNESST exige qu'au moins un secouriste certifié soit disponible par quart de travail", to: "le Règlement sur les normes minimales de premiers secours et de premiers soins exige au moins un secouriste par quart de travail (50 travailleurs ou moins), deux de 51 à 150, puis un de plus par tranche de 100" },
   { code: 'P106', from: 'in industrial settings, CNESST requires at least one certified first aider available per work shift', to: "Quebec's first aid regulation requires at least one first aider per shift (50 workers or fewer), two for 51 to 150, then one more per additional 100" },
+  { code: 'P016', from: '(norme CSA C282 : minimum 2 heures à pleine charge)', to: "(norme CSA C282 : réserve d'au moins 2 heures à pleine charge, 24 heures pour un établissement de soins)" },
+  { code: 'P016', from: '(CSA C282 standard: minimum 2 hours at full load)', to: '(CSA C282: fuel for at least 2 hours at full load, 24 hours for a health care facility)' },
 ];
 
 /** Remplace un texte dans toutes les chaînes d'un contenu JSON. */

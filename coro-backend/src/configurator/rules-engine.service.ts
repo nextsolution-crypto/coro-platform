@@ -801,8 +801,8 @@ export class RulesEngineService {
       result.validations.push({
         type: 'RECOMMANDATION',
         code: 'ALARME-003',
-        message: 'Aucune centrale de télésurveillance déclarée. Recommandé pour conformité ULC-S536.',
-        reference: 'ULC-S536',
+        message: 'Aucune centrale de télésurveillance déclarée. Si le système d\'alarme est relié à une centrale, celle-ci doit être conforme à CAN/ULC-S561.',
+        reference: 'CAN/ULC-S561',
       });
     }
 

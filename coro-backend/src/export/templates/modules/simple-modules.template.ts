@@ -4,6 +4,7 @@
 
 import { escapeHtml } from '../cover.template';
 import { unescapeNewlines } from '../../module8-localize';
+import { fixLegacyInspectionRows } from '../../../generator/module8.templates';
 
 // ============================================================
 // MODULE 1 — Texte simple
@@ -369,7 +370,7 @@ const s83 = `
 `;
 
   // 8.4 — Inspections et surveillances
-  const s84Rows = (module8Data.section8_4 || []).map((row: any) => `
+  const s84Rows = fixLegacyInspectionRows(module8Data.section8_4 || [], isFr ? 'fr' : 'en').map((row: any) => `
     <tr>
       <td style="font-weight:600;">${escapeHtml(row.equipement || '')}</td>
       <td>${escapeHtml(row.codeNorme || '')}</td>
