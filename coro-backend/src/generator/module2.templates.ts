@@ -617,6 +617,8 @@ function roleLabelsFrToEn(): Map<string, string> {
   zipLabels(map, ALL_EQUIPEMENTS_FR, ALL_EQUIPEMENTS_EN);
   map.set(normLabel('Responsable du bâtiment'), 'Building manager');
   map.set(normLabel('Concierge'), 'Janitor');
+  map.set(normLabel('Pompier'), 'Fire Department');
+  map.set(normLabel('Pompiers'), 'Fire Department');
   roleDictionary = map;
   return map;
 }

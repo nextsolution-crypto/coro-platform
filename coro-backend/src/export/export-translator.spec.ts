@@ -86,16 +86,57 @@ describe('Traduction par CORO AI (Bedrock)', () => {
     process.env.CORO_AI_PROVIDER = 'bedrock';
     process.env.CORO_AI_BEDROCK_INVOCATION_ENABLED = 'true';
     process.env.ANTHROPIC_API_KEY = 'test';
-    const prisma = { textTranslation: { findMany: jest.fn().mockResolvedValue([]), createMany: jest.fn() } };
+    const upsert = jest.fn().mockResolvedValue({});
+    const prisma = { textTranslation: { findMany: jest.fn().mockResolvedValue([]), upsert } };
     const translator: any = new ExportTranslator(prisma);
-    const bedrock = jest.spyOn(translator, 'translateWithBedrock').mockResolvedValue({ '0': 'Security desk' });
+    const bedrock = jest.spyOn(translator, 'translateWithBedrock')
+      .mockResolvedValueOnce({ '0': 'Security desk' })
+      .mockResolvedValueOnce(null);
     const anthropic = jest.spyOn(translator, 'translateBatch').mockResolvedValue({ '0': 'Main entrance, west door' });
     const map = await translator.translate(['Console de sécurité', 'Entrée principale, porte Ouest']);
-    expect(bedrock).toHaveBeenCalledWith(['Console de sécurité', 'Entrée principale, porte Ouest']);
+    expect(bedrock.mock.calls[0][0]).toEqual(['Console de sécurité', 'Entrée principale, porte Ouest']);
+    expect(bedrock.mock.calls[1]).toEqual([['Entrée principale, porte Ouest'], true]);
     expect(anthropic).toHaveBeenCalledWith(['Entrée principale, porte Ouest']);
     expect(map.get('Console de sécurité')).toBe('Security desk');
     expect(map.get('Entrée principale, porte Ouest')).toBe('Main entrance, west door');
-    expect(prisma.textTranslation.createMany.mock.calls[0][0].data).toHaveLength(2);
+    expect(upsert).toHaveBeenCalledTimes(2);
     process.env = env;
+  });
+});
+
+describe('Traduction — robustesse', () => {
+  const { looksFrench, collectOptionTranslations } = require('./export-translator');
+
+  it('reconnaît un texte encore en français', () => {
+    expect(looksFrench('Poste 2200 (poste de sécurité)')).toBe(true);
+    expect(looksFrench('Security desk, ground floor')).toBe(false);
+  });
+
+  it('ne garde pas une « traduction » identique au français et la redemande', async () => {
+    const env = { ...process.env };
+    process.env.CORO_AI_PROVIDER = 'bedrock';
+    process.env.CORO_AI_BEDROCK_INVOCATION_ENABLED = 'true';
+    delete process.env.ANTHROPIC_API_KEY;
+    const upsert = jest.fn().mockResolvedValue({});
+    const prisma = { textTranslation: {
+      findMany: jest.fn().mockResolvedValue([{ sourceHash: hashText('Poste 2200 (poste de sécurité)'), translatedText: 'Poste 2200 (poste de sécurité)' }]),
+      upsert,
+    } };
+    const translator: any = new ExportTranslator(prisma);
+    const bedrock = jest.spyOn(translator, 'translateWithBedrock')
+      .mockResolvedValueOnce({ '0': 'Poste 2200 (poste de sécurité)' })
+      .mockResolvedValueOnce({ '0': 'Ext. 2200 (security desk)' });
+    const map = await translator.translate(['Poste 2200 (poste de sécurité)']);
+    expect(bedrock).toHaveBeenCalledTimes(2);
+    expect(bedrock.mock.calls[1][1]).toBe(true);
+    expect(map.get('Poste 2200 (poste de sécurité)')).toBe('Ext. 2200 (security desk)');
+    expect(upsert).toHaveBeenCalledTimes(1);
+    process.env = env;
+  });
+
+  it('remplace aussi les choix de liste insérés dans le texte généré', () => {
+    const map = collectOptionTranslations({ methodeInspectionTPC: "4 heures après l'achèvement des travaux", note: 'texte libre' });
+    expect(map.get("4 heures après l'achèvement des travaux")).toBe('4 hours after work completion');
+    expect(map.has('texte libre')).toBe(false);
   });
 });

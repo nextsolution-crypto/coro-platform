@@ -3,6 +3,7 @@ import { localizeModule8ForEnglish } from './module8-localize';
 import {
   ExportTranslator,
   applyTexts,
+  collectOptionTranslations,
   collectTexts,
   replaceInsertedValues,
 } from './export-translator';
@@ -309,7 +310,14 @@ export class ExportService {
     collectTexts(module8, texts);
     const tagline: string | undefined = project?.organization?.companyTagline || undefined;
     if (tagline) collectTexts(tagline, texts);
-    if (texts.size === 0) return { ...content, module2, module8 };
+    if (texts.size === 0) {
+      return {
+        ...content,
+        module2,
+        module8,
+        modules_en: replaceInsertedValues(content.modules_en, collectOptionTranslations(content.config)),
+      };
+    }
 
     this.translator = this.translator || new ExportTranslator(this.prisma);
     const translations = await this.translator.translate(texts);
@@ -318,7 +326,11 @@ export class ExportService {
       config: applyTexts(content.config, translations),
       module2: applyTexts(module2, translations),
       module8: applyTexts(module8, translations),
-      modules_en: replaceInsertedValues(content.modules_en, translations),
+      // Valeurs françaises insérées à la génération : saisies traduites et choix de liste.
+      modules_en: replaceInsertedValues(
+        content.modules_en,
+        new Map([...collectOptionTranslations(content.config), ...translations]),
+      ),
       companyTaglineEn: tagline ? translations.get(tagline) ?? tagline : undefined,
     };
   }
