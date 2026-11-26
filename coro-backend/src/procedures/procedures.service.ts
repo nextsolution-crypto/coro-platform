@@ -23,6 +23,8 @@ export const DEFAULT_TEXT_FIXES: Array<{ code: string; from: string; to: string 
   { code: 'P005', from: 'Inform that the internal valve is located [GAS VALVE LOCATION]', to: 'Inform that the internal valve is located at: [GAS VALVE LOCATION]' },
   { code: 'P013', from: 'Apporter le DEA, situé [LOCALISATION DEA], si :', to: 'Apporter le DEA (emplacement : [LOCALISATION DEA]) si :' },
   { code: 'P013', from: 'Bring the AED, located [DEA LOCATION], if:', to: 'Bring the AED (location: [DEA LOCATION]) if:' },
+  { code: 'P106', from: "en milieu industriel, la CNESST exige qu'au moins un secouriste certifié soit disponible par quart de travail", to: "le Règlement sur les normes minimales de premiers secours et de premiers soins exige au moins un secouriste par quart de travail (50 travailleurs ou moins), deux de 51 à 150, puis un de plus par tranche de 100" },
+  { code: 'P106', from: 'in industrial settings, CNESST requires at least one certified first aider available per work shift', to: "Quebec's first aid regulation requires at least one first aider per shift (50 workers or fewer), two for 51 to 150, then one more per additional 100" },
 ];
 
 /** Remplace un texte dans toutes les chaînes d'un contenu JSON. */

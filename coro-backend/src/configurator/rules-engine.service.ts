@@ -52,6 +52,9 @@ export interface BuildingConfig {
   occupationSoir?: boolean;
   occupationNuit?: boolean;
   lieuSommeil?: boolean;
+  residencePriveeAines?: boolean;
+  ecoleGarderie?: boolean;
+  restaurantBar?: boolean;
   securite24h?: boolean;
   agentSecurite?: boolean;
   posteSurveillance?: boolean | string;
@@ -527,13 +530,13 @@ export class RulesEngineService {
     }
     if (annee <= 1993) {
       return {
-        referentielCNB: 'CNB 1985 modifié Québec',
+        referentielCNB: 'CNB 1985',
         referentielAnnee: '1986–1993',
       };
     }
     if (annee <= 2000) {
       return {
-        referentielCNB: 'CNB 1990 modifié Québec',
+        referentielCNB: 'CNB 1990',
         referentielAnnee: '1993–2000',
       };
     }
@@ -620,22 +623,25 @@ export class RulesEngineService {
       };
     }
 
+    // CNPI 2020 mod. Québec art. 2.8.1.1 : RPA (a), écoles et garderies (b),
+    // débits de boissons et restaurants (c) — toujours, sans seuil de personnes.
+    if (config.residencePriveeAines) {
+      return { statut: 'OUI', code: 'PSI-RPA', message: 'PSI requis — résidence privée pour aînés (CNPI 2020 art. 2.8.1.1 a)' };
+    }
+    if (config.ecoleGarderie) {
+      return { statut: 'OUI', code: 'PSI-ECOLE-GARDERIE', message: 'PSI requis — école, collège, université ou garderie (CNPI 2020 art. 2.8.1.1 b)' };
+    }
+    if (config.restaurantBar) {
+      return { statut: 'OUI', code: 'PSI-RESTAURANT-BAR', message: 'PSI requis — restaurant ou débit de boissons (CNPI 2020 art. 2.8.1.1 c)' };
+    }
+    // Tout bâtiment muni d'un système d'alarme incendie, exigé ou volontaire (f).
+    if (config.panneauAlarme === true && !usage.startsWith('D')) {
+      return { statut: 'OUI', code: 'PSI-ALARME', message: 'PSI requis — bâtiment muni d\'un système d\'alarme incendie (CNPI 2020 art. 2.8.1.1 f)' };
+    }
+
     if (usage.startsWith('A')) {
-      if (usage.startsWith('A1') || usage.startsWith('A3') || usage.startsWith('A4')) {
-        return {
-          statut: 'OUI',
-          code: 'PSI-GROUPE-A-TOUJOURS',
-          message: 'PSI requis — établissement de réunion non admissible à l\'exemption (spectacle, aréna, plein air)',
-        };
-      }
-      if (usage.startsWith('A2')) {
-        return {
-          statut: 'OUI',
-          code: 'PSI-GROUPE-A2',
-          message: 'PSI requis — usage A2 (éducation, culte, divertissement, restauration)',
-        };
-      }
-      if (capacite === 0) {
+      // Autres établissements de réunion : requis au-delà de 30 personnes (d).
+    if (capacite === 0) {
         return {
           statut: 'VERIFICATION_REQUISE',
           code: 'PSI-GROUPE-A-CAPACITE-MANQUANTE',
@@ -688,47 +694,25 @@ export class RulesEngineService {
   }
 
   private computeFrequenceExercices(config: BuildingConfig): { frequence: string; base: string } {
+    // CNPI 2020 mod. Québec art. 2.8.3.2 — la fréquence la plus exigeante s'applique.
     const usage = (config.usagePrincipal || '').trim();
 
-    if (config.laboratoirePresent && !usage.startsWith('A2')) {
-      return {
-        frequence: 'Tous les 3 mois',
-        base: 'Laboratoire présent hors établissement scolaire (CNPI 2020 art. 2.8.3.2 d)',
-      };
+    if (config.laboratoirePresent && !config.ecoleGarderie) {
+      return { frequence: 'Tous les 3 mois', base: 'Laboratoire hors école (CNPI 2020 art. 2.8.3.2 par. 2)' };
     }
-
-    if (usage.startsWith('B') || config.lieuSommeil) {
-      return {
-        frequence: 'Tous les 6 mois',
-        base: 'Usage B ou lieu de sommeil (art. 2.8.3.2 a)',
-      };
-    }
-
-    if (this.isHighRise(config) && !usage.startsWith('C')) {
-      return {
-        frequence: 'Tous les 6 mois',
-        base: 'Bâtiment grande hauteur, usage non résidentiel (art. 2.8.3.2 c)',
-      };
-    }
-
     if (usage.startsWith('A1')) {
-      return {
-        frequence: 'Tous les 3 mois',
-        base: 'Usage A, division 1 — établissement de spectacle (art. 2.8.3.2 d)',
-      };
+      return { frequence: 'Tous les 3 mois', base: 'Usage A, division 1 (CNPI 2020 art. 2.8.3.2 par. 1 d)' };
     }
-
-    if (usage.startsWith('A2')) {
-      return {
-        frequence: '2 fois par an (automne et printemps)',
-        base: 'Usage A2 — école ou garderie inclus (art. 2.8.3.2 b)',
-      };
+    if (usage.startsWith('B') || config.residencePriveeAines) {
+      return { frequence: 'Tous les 6 mois', base: 'Groupe B ou résidence privée pour aînés (CNPI 2020 art. 2.8.3.2 par. 1 a)' };
     }
-
-    return {
-      frequence: 'Tous les 12 mois',
-      base: 'Fréquence standard (art. 2.8.3.2)',
-    };
+    if (this.isHighRise(config) && !usage.startsWith('C')) {
+      return { frequence: 'Tous les 6 mois', base: 'Bâtiment de grande hauteur, usage principal autre que C (CNPI 2020 art. 2.8.3.2 par. 1 c)' };
+    }
+    if (config.ecoleGarderie) {
+      return { frequence: '2 fois par an (automne et printemps)', base: 'École ou garderie — évacuation complète (CNPI 2020 art. 2.8.3.2 par. 1 b)' };
+    }
+    return { frequence: 'Tous les 12 mois', base: 'Règle générale (CNPI 2020 art. 2.8.3.2 par. 1)' };
   }
 
   private addPsiValidation(profil: ProfilReglementaire, result: ConfiguratorResult): void {
@@ -791,8 +775,8 @@ export class RulesEngineService {
       result.validations.push({
         type: 'CRITIQUE',
         code: 'ALARME-001',
-        message: 'Aucun panneau alarme incendie déclaré. Requis par le CNPI 2020 art. 2.8.',
-        reference: 'CNPI 2020',
+        message: 'Aucun panneau d\'alarme incendie déclaré — vérifier si un système d\'alarme est exigé par le code de construction applicable (selon l\'usage, le nombre d\'occupants et la hauteur).',
+        reference: 'Code de construction du Québec, chap. I',
       });
       return;
     }
@@ -1085,7 +1069,7 @@ export class RulesEngineService {
       result.validations.push({
         type: 'AVERTISSEMENT',
         code: 'OCCUP-002',
-        message: 'Lieu de sommeil : exigences renforcées CNPI 2020 Québec applicables.',
+        message: 'Lieu de sommeil : préciser s\'il s\'agit d\'une RPA (exercices aux 6 mois) ou d\'un autre usage (hôtel, logement).',
         reference: 'Code sécurité Québec',
       });
     }
@@ -1352,14 +1336,14 @@ export class RulesEngineService {
         type: 'INFO',
         code: 'T10-PSI-ENTREE-OK',
         message: 'PSI conservé et accessible à l\'entrée principale ✓',
-        reference: 'CNPI 2020 art. 2.8.2.12',
+        reference: 'CNPI 2020 art. 2.8.2.12 par. 3',
       });
     } else {
       result.validations.push({
         type: 'AVERTISSEMENT',
         code: 'T10-PSI-ENTREE-NR',
         message: 'Matières dangereuses déclarées — confirmer que le PSI est accessible à l\'entrée principale du bâtiment (intervenants d\'urgence).',
-        reference: 'CNPI 2020 art. 2.8.2.12',
+        reference: 'CNPI 2020 art. 2.8.2.12 par. 3',
       });
     }
 
@@ -1384,7 +1368,7 @@ export class RulesEngineService {
         type: 'RECOMMANDATION',
         code: 'T10-EMPLACEMENT-MANQUANT',
         message: `${substancesSansEmplacement.length} substance(s) sans emplacement précis documenté — requis pour l'annexe PSI destinée aux intervenants.`,
-        reference: 'CNPI 2020 art. 2.8.2.12',
+        reference: 'CNPI 2020 art. 2.8.2.12 par. 3',
       });
     }
   }
@@ -1401,7 +1385,7 @@ export class RulesEngineService {
         type: 'RECOMMANDATION',
         code: 'PSI-REVISION-NR',
         message: 'Date de dernière révision du PSI non renseignée — révision annuelle obligatoire (intervalles ≤ 12 mois).',
-        reference: 'CNPI 2020 art. 2.8.2.2',
+        reference: 'CNPI 2020 art. 2.8.2.1',
       });
       return;
     }
@@ -1418,21 +1402,21 @@ export class RulesEngineService {
         type: 'ERREUR',
         code: 'PSI-REVISION-ECHUE',
         message: `Révision annuelle du PSI échue depuis ${diff - 365} jour(s) — intervalle de 12 mois dépassé.`,
-        reference: 'CNPI 2020 art. 2.8.2.2',
+        reference: 'CNPI 2020 art. 2.8.2.1',
       });
     } else if (diff > 305) {
       result.validations.push({
         type: 'AVERTISSEMENT',
         code: 'PSI-REVISION-PROCHE',
         message: `Révision du PSI à prévoir dans ${365 - diff} jour(s) — échéance : ${prochaine}.`,
-        reference: 'CNPI 2020 art. 2.8.2.2',
+        reference: 'CNPI 2020 art. 2.8.2.1',
       });
     } else {
       result.validations.push({
         type: 'INFO',
         code: 'PSI-REVISION-OK',
         message: `Révision annuelle du PSI en règle ✓ — prochaine révision avant le ${prochaine}.`,
-        reference: 'CNPI 2020 art. 2.8.2.2',
+        reference: 'CNPI 2020 art. 2.8.2.1',
       });
     }
   }
