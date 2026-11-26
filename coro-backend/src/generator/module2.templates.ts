@@ -583,3 +583,74 @@ export function generateModule2(ctx: DocumentContext): any {
     en: generateModule2EN(ctx),
   };
 }
+// ============================================================
+// TRADUCTION DE LA LISTE ENREGISTRÉE (export anglais)
+// La liste téléphonique sauvegardée n'existe qu'en français : à l'export
+// anglais, les libellés et numéros fournis par CORO sont traduits. Ce que
+// le conseiller a saisi lui-même reste tel quel.
+// ============================================================
+
+function normLabel(value: string): string {
+  return (value || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[’']/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function zipLabels(map: Map<string, string>, fr: string[], en: string[]) {
+  fr.forEach((label, i) => { if (en[i] && !map.has(normLabel(label))) map.set(normLabel(label), en[i]); });
+}
+
+let roleDictionary: Map<string, string> | null = null;
+let externalDictionary: Map<string, ExternalResource> | null = null;
+
+function roleLabelsFrToEn(): Map<string, string> {
+  if (roleDictionary) return roleDictionary;
+  const map = new Map<string, string>();
+  // La liste FR des bureaux a deux variantes de « Directeur, Exploitation ».
+  map.set(normLabel('Directrice, Exploitation'), 'Director, Operations');
+  zipLabels(map, ROLES_INTERNES_BUREAU_FR.slice(1), ROLES_INTERNES_BUREAU_EN);
+  zipLabels(map, ROLES_INTERNES_INDUSTRIEL_FR, ROLES_INTERNES_INDUSTRIEL_EN);
+  zipLabels(map, ALL_EQUIPEMENTS_FR, ALL_EQUIPEMENTS_EN);
+  map.set(normLabel('Responsable du bâtiment'), 'Building manager');
+  map.set(normLabel('Concierge'), 'Janitor');
+  roleDictionary = map;
+  return map;
+}
+
+function externalFrToEn(): Map<string, ExternalResource> {
+  if (externalDictionary) return externalDictionary;
+  const map = new Map<string, ExternalResource>();
+  const pairs: Array<[ExternalResource[], ExternalResource[]]> = [
+    [RESSOURCES_QC_FR, RESSOURCES_QC_EN],
+    [RESSOURCES_ON_FR, RESSOURCES_ON_EN],
+    [RESSOURCES_AB_FR, RESSOURCES_AB_EN],
+  ];
+  for (const [fr, en] of pairs) {
+    fr.forEach((row, i) => { if (en[i]) map.set(normLabel(row.role), { ...en[i], frPhone: row.phone } as any); });
+  }
+  externalDictionary = map;
+  return map;
+}
+
+/** Traduit une ligne enregistrée si son libellé est celui d'un modèle CORO. */
+export function translateModule2Row<T extends { role?: string; phone?: string; url?: string }>(row: T): T {
+  if (!row || typeof row.role !== 'string') return row;
+  const external = externalFrToEn().get(normLabel(row.role)) as (ExternalResource & { frPhone?: string }) | undefined;
+  if (external) {
+    const samePhone = (row.phone || '').trim() === (external.frPhone || '').trim();
+    return {
+      ...row,
+      role: external.role,
+      phone: samePhone ? external.phone : row.phone,
+      ...(external.url && row.url && row.url.includes('/fr/') ? { url: external.url } : {}),
+    };
+  }
+  const head = /^Siège social — (.+)$/.exec(row.role.trim());
+  if (head) return { ...row, role: `${head[1]} Head Office` };
+  const role = roleLabelsFrToEn().get(normLabel(row.role));
+  return role ? { ...row, role } : row;
+}

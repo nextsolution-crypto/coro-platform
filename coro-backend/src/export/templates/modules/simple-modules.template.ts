@@ -3,6 +3,7 @@
 // ============================================================
 
 import { escapeHtml } from '../cover.template';
+import { unescapeNewlines } from '../../module8-localize';
 
 // ============================================================
 // MODULE 1 — Texte simple
@@ -406,7 +407,7 @@ const s83 = `
   const textSection = (id: string, content: string) => `
     <div class="page-break">
       ${sectionHeader(id)}
-      ${renderFormattedText(content || '')}
+      ${renderFormattedText(unescapeNewlines(content || ''))}
     </div>
   `;
 

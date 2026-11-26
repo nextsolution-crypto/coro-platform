@@ -228,7 +228,7 @@ export class PsiBuilder extends PmuBuilder {
     if (moduleNum === 8) {
       // Le builder rend strictement le snapshot reçu par ExportService.
       // Aucune seconde lecture du Document en DB pendant la génération PDF.
-      const module8Data = this.content.module8 ?? null;
+      const module8Data = this.module8ForExport();
 
       // Choix métier PSI : section 8.11 exclue.
       const sections8 = renderModule8(

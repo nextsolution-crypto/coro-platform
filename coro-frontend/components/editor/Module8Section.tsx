@@ -485,10 +485,13 @@ export default function Module8Section({
                 >,
               )
             : generatedS5;
-          const resolvedS6 = saved.section8_6 ?? generatedS6;
-          const resolvedS7 = saved.section8_7 ?? generatedS7;
-          const resolvedS8 = saved.section8_8 ?? generatedS8;
-          const resolvedS9 = saved.section8_9 ?? generatedS9;
+          // D'anciennes versions enregistraient « \n » en toutes lettres.
+          const realNewlines = (text: string | null | undefined): string =>
+            String(text ?? "").replace(/\\n/g, "\n");
+          const resolvedS6 = realNewlines(saved.section8_6 ?? generatedS6);
+          const resolvedS7 = realNewlines(saved.section8_7 ?? generatedS7);
+          const resolvedS8 = realNewlines(saved.section8_8 ?? generatedS8);
+          const resolvedS9 = realNewlines(saved.section8_9 ?? generatedS9);
           const resolvedS11 = saved.section8_11 ?? generatedS11;
 
           setSection8_1(resolvedS1);

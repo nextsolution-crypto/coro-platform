@@ -2,6 +2,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { resolveActiveRoleCodes } from '../../generator/regeneration.helpers';
 import { applyRoleCoverage, RoleCoverage, sanitizeAssignments } from '../../generator/role-coverage';
 import { harmonizeStepText } from '../../generator/step-style';
+import { translateModule2Row } from '../../generator/module2.templates';
+import { localizeModule8ForEnglish } from '../module8-localize';
 import { ExportDataSource } from '../export-frozen-data';
 
 export const DOCUMENT_TYPE_LABELS: Record<string, { fr: string; en: string }> = {
@@ -106,6 +108,13 @@ export abstract class BaseDocumentBuilder {
     return this.lang === 'fr' ? this.content.modules_fr : this.content.modules_en;
   }
 
+  /** Module 8 enregistré, avec les textes du modèle en anglais pour l'export anglais. */
+  module8ForExport(): any {
+    const saved = this.content.module8 ?? null;
+    if (!saved || this.lang === 'fr') return saved;
+    return localizeModule8ForEnglish(saved, this.content.modules_fr, this.content.modules_en);
+  }
+
   get orderedModules() {
     return this.options.moduleOrder.filter(n => this.options.selectedModules.includes(n));
   }
@@ -139,9 +148,12 @@ export abstract class BaseDocumentBuilder {
         }
 
         if (savedKey && savedModule2[savedKey]) {
+          const savedEntries = savedModule2[savedKey];
           const updated = {
             ...section,
-            entries: savedModule2[savedKey],
+            entries: isFr || !Array.isArray(savedEntries)
+              ? savedEntries
+              : savedEntries.map((row: any) => translateModule2Row(row)),
           };
 
           if (section.id === '2.1') {

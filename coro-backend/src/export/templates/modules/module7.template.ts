@@ -4,7 +4,14 @@
 // ============================================================
 
 import { PASS_EXTINGUISHER_IMAGE } from './pass-image.asset';
-import { displayOption } from './option-display';
+import { displayOption, optionToEnglish } from './option-display';
+
+// Langue du rendu en cours (le rendu est synchrone) : en anglais, les choix
+// du configurateur enregistrés en français sont traduits à l'affichage.
+let renderLang: 'fr' | 'en' = 'fr';
+function shown(value: string): string {
+  return renderLang === 'en' ? optionToEnglish(value) : value;
+}
 
 // ============================================================
 // HELPERS
@@ -23,7 +30,7 @@ function bool(v: any, isFr: boolean): string {
 
 function escapeHtml(value: any): string {
   if (value === undefined || value === null) return '';
-  return String(value)
+  return shown(String(value))
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -33,7 +40,7 @@ function escapeHtml(value: any): string {
 
 function safeVal(v: any, fallback = '—'): string {
   const raw = val(v, fallback);
-  return raw === fallback ? fallback : escapeHtml(displayOption(raw));
+  return raw === fallback ? fallback : escapeHtml(renderLang === 'en' ? raw : displayOption(raw));
 }
 
 function listVal(v: any, fallback = '—'): string {
@@ -309,6 +316,20 @@ export function renderModule7(
   config: any,
   lang: 'fr' | 'en',
   moduleSeqNumber: number = 7,
+): { id: string; title: string; html: string }[] {
+  renderLang = lang;
+  try {
+    return renderModule7Sections(module7Data, config, lang, moduleSeqNumber);
+  } finally {
+    renderLang = 'fr';
+  }
+}
+
+function renderModule7Sections(
+  module7Data: any,
+  config: any,
+  lang: 'fr' | 'en',
+  moduleSeqNumber: number,
 ): { id: string; title: string; html: string }[] {
   const isFr = lang === 'fr';
   config = config || {};
