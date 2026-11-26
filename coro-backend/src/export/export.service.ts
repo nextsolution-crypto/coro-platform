@@ -1,13 +1,6 @@
-import { officialOrganizationNames, translateModule2Row } from '../generator/module2.templates';
-import { localizeModule8ForEnglish } from './module8-localize';
-import {
-  ExportTranslator,
-  applyTexts,
-  collectOptionTranslations,
-  collectTexts,
-  replaceInsertedValues,
-  streetOf,
-} from './export-translator';
+import { translateModule2Row } from '../generator/module2.templates';
+import { ExportTranslator } from './export-translator';
+import { prepareEnglishContent } from './english-content';
 import {
   ApprovalStamp,
   approvalStampFromVersion,
@@ -293,74 +286,13 @@ export class ExportService {
     return result;
   }
 
-  /**
-   * Contenu prêt pour l'export anglais : les libellés CORO prennent leur
-   * version anglaise fixe, puis les textes saisis en français sont traduits
-   * (mémoire des traductions, IA au besoin). Le contenu enregistré n'est
-   * jamais modifié : seule la copie rendue change.
-   */
+  /** Contenu prêt pour l'export anglais (voir english-content.ts). */
   private async englishContent(content: any, project?: any): Promise<any> {
-    const module8 = content.module8
-      ? localizeModule8ForEnglish(content.module8, content.modules_fr, content.modules_en)
-      : content.module8;
-    const module2 = content.module2 ? this.module2WithEnglishLabels(content.module2) : content.module2;
-
-    const texts = new Set<string>();
-    collectTexts(content.config, texts);
-    collectTexts(module2, texts);
-    collectTexts(module8, texts);
-    // Noms officiels déjà en version CORO : jamais envoyés à la traduction.
-    const official = new Set(officialOrganizationNames());
-    for (const text of [...texts]) if (official.has(text)) texts.delete(text);
-    const building = project?.building || {};
-    const protectedTerms = [
-      building.address, streetOf(building.address), building.name, building.city,
-      project?.client?.name, project?.organization?.companyName, project?.organization?.companyAddress,
-      streetOf(project?.organization?.companyAddress),
-      content.config?.adresse, streetOf(content.config?.adresse),
-      ...official,
-    ].filter((term): term is string => typeof term === 'string' && term.trim().length >= 3);
-    const tagline: string | undefined = project?.organization?.companyTagline || undefined;
-    if (tagline) collectTexts(tagline, texts);
-    if (texts.size === 0) {
-      return {
-        ...content,
-        module2,
-        module8: replaceInsertedValues(module8, collectOptionTranslations(content.config)),
-        modules_en: replaceInsertedValues(content.modules_en, collectOptionTranslations(content.config)),
-      };
-    }
-
     this.translator = this.translator || new ExportTranslator(this.prisma);
-    const translations = await this.translator.translate(texts, protectedTerms);
-    const options = collectOptionTranslations(content.config);
-    return {
-      ...content,
-      config: applyTexts(content.config, translations),
-      module2: applyTexts(module2, translations),
-      // Le permis de travail à chaud reprend des choix de liste dans son texte.
-      module8: replaceInsertedValues(applyTexts(module8, translations), new Map([...options, ...translations])),
-      // Valeurs françaises insérées à la génération : saisies traduites et choix de liste.
-      modules_en: replaceInsertedValues(
-        content.modules_en,
-        new Map([...options, ...translations]),
-      ),
-      companyTaglineEn: tagline ? translations.get(tagline) ?? tagline : undefined,
-    };
+    return prepareEnglishContent(this.translator, content, project);
   }
 
   private translator?: ExportTranslator;
-
-  private module2WithEnglishLabels(saved: any): any {
-    if (!saved || typeof saved !== 'object') return saved;
-    const out: Record<string, any> = {};
-    for (const [key, value] of Object.entries(saved)) {
-      out[key] = Array.isArray(value)
-        ? value.map((row: any) => (row && typeof row === 'object' ? translateModule2Row(row) : row))
-        : value;
-    }
-    return out;
-  }
 
   // ============================================================
   // GÉNÉRATION D'UN PDF DANS UNE LANGUE
