@@ -69,3 +69,33 @@ describe('Traduction des textes saisis (export anglais)', () => {
     if (prev !== undefined) process.env.ANTHROPIC_API_KEY = prev;
   });
 });
+
+describe('Traduction par CORO AI (Bedrock)', () => {
+  const { parseBedrockTranslations } = require('./export-translator');
+
+  it('lit les traductions de l\'outil et ignore les identifiants inconnus', () => {
+    const response = { output: { message: { content: [{ toolUse: { name: 'coro_translations', input: { translations: [
+      { id: '0', text: 'Security desk' }, { id: '7', text: 'intrus' }, { id: '1', text: '' },
+    ] } } }] } } };
+    expect(parseBedrockTranslations(response, 2)).toEqual({ '0': 'Security desk' });
+    expect(parseBedrockTranslations({}, 2)).toBeNull();
+  });
+
+  it('passe par Bedrock d\'abord, puis Anthropic pour le reste, et mémorise', async () => {
+    const env = { ...process.env };
+    process.env.CORO_AI_PROVIDER = 'bedrock';
+    process.env.CORO_AI_BEDROCK_INVOCATION_ENABLED = 'true';
+    process.env.ANTHROPIC_API_KEY = 'test';
+    const prisma = { textTranslation: { findMany: jest.fn().mockResolvedValue([]), createMany: jest.fn() } };
+    const translator: any = new ExportTranslator(prisma);
+    const bedrock = jest.spyOn(translator, 'translateWithBedrock').mockResolvedValue({ '0': 'Security desk' });
+    const anthropic = jest.spyOn(translator, 'translateBatch').mockResolvedValue({ '0': 'Main entrance, west door' });
+    const map = await translator.translate(['Console de sécurité', 'Entrée principale, porte Ouest']);
+    expect(bedrock).toHaveBeenCalledWith(['Console de sécurité', 'Entrée principale, porte Ouest']);
+    expect(anthropic).toHaveBeenCalledWith(['Entrée principale, porte Ouest']);
+    expect(map.get('Console de sécurité')).toBe('Security desk');
+    expect(map.get('Entrée principale, porte Ouest')).toBe('Main entrance, west door');
+    expect(prisma.textTranslation.createMany.mock.calls[0][0].data).toHaveLength(2);
+    process.env = env;
+  });
+});
