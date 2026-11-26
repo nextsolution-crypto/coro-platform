@@ -198,9 +198,11 @@ describe('Plan security PostgreSQL authorization', () => {
     await expect(
       projects.findOne(ids.projectA, operatorA),
     ).resolves.toMatchObject({ id: ids.projectA });
-    await expect(projects.findOne(ids.projectA, operatorC)).rejects.toThrow(
-      'Projet introuvable',
-    );
+    // Même organisation, non propriétaire : lecture permise, sans droit d'écriture.
+    await expect(projects.findOne(ids.projectA, operatorC)).resolves.toMatchObject({
+      id: ids.projectA,
+      canWrite: false,
+    });
     await expect(projects.findOne(ids.projectA, operatorB)).rejects.toThrow(
       'Projet introuvable',
     );

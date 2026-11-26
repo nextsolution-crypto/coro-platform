@@ -132,7 +132,7 @@ export class DocumentPdfExportService {
         },
       });
       if (!row) throw new NotFoundException('Export introuvable');
-      await this.assertProjectRead(tx, projectId, actor);
+      await this.assertProjectWrite(tx, projectId, actor);
       const leaseExpired =
         row.status === 'PROCESSING' &&
         (!row.generationLeaseUntil ||
@@ -379,6 +379,19 @@ export class DocumentPdfExportService {
     if (![2, 3].includes(this.jsonObject(review.snapshot)?.schemaVersion as number))
       throw new ConflictException('APPROVED_SNAPSHOT_UNSUPPORTED');
     return { project, review, version };
+  }
+
+  /** Relance d'un export : réservée à qui peut modifier le projet. */
+  private async assertProjectWrite(
+    tx: Prisma.TransactionClient | PrismaService,
+    projectId: string,
+    actor: AdviserActor,
+  ) {
+    const project = await tx.project.findFirst({
+      where: { id: projectId, ...projectAccessWhere(actor) },
+      select: { id: true },
+    });
+    if (!project) throw new NotFoundException('Projet introuvable');
   }
 
   private async assertProjectRead(

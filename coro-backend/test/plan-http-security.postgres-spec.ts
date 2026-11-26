@@ -406,10 +406,27 @@ describe('Plan authenticated HTTP security boundaries', () => {
       .expect(200);
   });
 
+  it('lets an unassigned operator of the same organization read without writing', async () => {
+    const before = await securityState();
+    const detail = await http
+      .get(`/api/projects/${ids.pmu}`)
+      .set(auth(tokens.operatorC))
+      .expect(200);
+    expect(detail.body.canWrite).toBe(false);
+    for (const path of [
+      `/api/configurator/load/${ids.pmu}`,
+      `/api/configurator/load/${ids.psi}`,
+      `/api/pca/configurator/${ids.pca}`,
+      `/api/projects/${ids.pmu}/versions`,
+    ]) {
+      await http.get(path).set(auth(tokens.operatorC)).expect(200);
+    }
+    expect(await securityState()).toEqual(before);
+  });
+
   it('denies the complete unassigned and cross-tenant HTTP surface with zero mutation', async () => {
     const before = await securityState();
     const cases: Array<[string, string, string, string, unknown?]> = [
-      ['get', `/api/projects/${ids.pmu}`, tokens.operatorC, '404'],
       [
         'put',
         `/api/projects/${ids.pmu}`,
@@ -427,7 +444,6 @@ describe('Plan authenticated HTTP security boundaries', () => {
         '403',
         { name: 'Blocked foreign' },
       ],
-      ['get', `/api/configurator/load/${ids.pmu}`, tokens.operatorC, '403'],
       [
         'post',
         `/api/configurator/save/${ids.pmu}`,
@@ -435,7 +451,6 @@ describe('Plan authenticated HTTP security boundaries', () => {
         '403',
         {},
       ],
-      ['get', `/api/configurator/load/${ids.psi}`, tokens.operatorC, '403'],
       [
         'post',
         `/api/configurator/save/${ids.psi}`,
@@ -443,9 +458,7 @@ describe('Plan authenticated HTTP security boundaries', () => {
         '403',
         {},
       ],
-      ['get', `/api/pca/configurator/${ids.pca}`, tokens.operatorC, '404'],
       ['post', `/api/pca/configurator/${ids.pca}`, tokens.operatorC, '404', {}],
-      ['get', `/api/projects/${ids.pmu}/versions`, tokens.operatorC, '404'],
       [
         'post',
         `/api/projects/${ids.pmu}/versions/${ids.version}/restore`,
@@ -465,7 +478,6 @@ describe('Plan authenticated HTTP security boundaries', () => {
         '404',
         {},
       ],
-      ['get', `/api/generator/document/${ids.pmu}`, tokens.operatorC, '404'],
       [
         'post',
         `/api/projects/${ids.pmu}/export`,
