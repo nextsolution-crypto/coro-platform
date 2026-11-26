@@ -314,22 +314,24 @@ export class ExportService {
       return {
         ...content,
         module2,
-        module8,
+        module8: replaceInsertedValues(module8, collectOptionTranslations(content.config)),
         modules_en: replaceInsertedValues(content.modules_en, collectOptionTranslations(content.config)),
       };
     }
 
     this.translator = this.translator || new ExportTranslator(this.prisma);
     const translations = await this.translator.translate(texts);
+    const options = collectOptionTranslations(content.config);
     return {
       ...content,
       config: applyTexts(content.config, translations),
       module2: applyTexts(module2, translations),
-      module8: applyTexts(module8, translations),
+      // Le permis de travail à chaud reprend des choix de liste dans son texte.
+      module8: replaceInsertedValues(applyTexts(module8, translations), options),
       // Valeurs françaises insérées à la génération : saisies traduites et choix de liste.
       modules_en: replaceInsertedValues(
         content.modules_en,
-        new Map([...collectOptionTranslations(content.config), ...translations]),
+        new Map([...options, ...translations]),
       ),
       companyTaglineEn: tagline ? translations.get(tagline) ?? tagline : undefined,
     };
