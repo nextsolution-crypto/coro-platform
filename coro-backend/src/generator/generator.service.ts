@@ -6,7 +6,7 @@ import { applyRoleCoverage, findUncoveredRoles, RoleCoverage, sanitizeAssignment
 import { createHash } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { AdviserActor, editableProjectAccessWhere, projectAccessWhere } from '../auth/project-access';
+import { AdviserActor, editableProjectAccessWhere, projectAccessWhere, projectReadWhere } from '../auth/project-access';
 import { generateModule1, DocumentContext } from './module1/module1.index';
 import { generateModule2 } from './module2.templates';
 import { generateModule3 } from './module3.templates';
@@ -315,7 +315,7 @@ export class GeneratorService {
 
   private async assertProjectOwnership(projectId: string, actor: AdviserActor) {
     const project = await this.prisma.project.findFirst({
-      where: { id: projectId, isActive: true, ...projectAccessWhere(actor) },
+      where: { id: projectId, isActive: true, ...projectReadWhere(actor) },
     });
     if (!project) {
       throw new NotFoundException('Projet introuvable');

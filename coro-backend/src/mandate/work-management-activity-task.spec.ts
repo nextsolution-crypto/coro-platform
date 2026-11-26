@@ -204,7 +204,7 @@ describe('ProjectTask activity provenance', () => {
       where: {
         id: 'project-a',
         organizationId: 'org-a',
-        OR: [{ userId: 'operator-b' }, { lastEditedById: 'operator-b' }],
+        userId: 'operator-b',
       },
       select: { id: true },
     });

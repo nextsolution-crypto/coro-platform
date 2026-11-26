@@ -35,7 +35,6 @@ describe('ProjectsService project-detail security', () => {
     await expect(h.service.calculateQualityScore('project-a', operator)).rejects.toBeInstanceOf(NotFoundException);
     expect(h.prisma.project.findFirst.mock.calls[0][0].where).toMatchObject({
       id: 'project-a', isActive: true, organizationId: 'org-a',
-      OR: [{ userId: 'operator-a' }, { lastEditedById: 'operator-a' }],
     });
   });
 

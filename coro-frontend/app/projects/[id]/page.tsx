@@ -25,7 +25,8 @@ interface Project {
   buildingId: string;
   client: { id: string; name: string };
   building: { id: string; name: string; address: string };
-  user: { id: string; firstName: string; lastName: string };
+  user: { id: string; firstName: string; lastName: string; email?: string };
+  canWrite?: boolean;
   submittedById?: string | null;
   approvedById?: string | null;
   approvedAt?: string | null;
@@ -66,6 +67,38 @@ export default function ProjectDetailPage() {
   const { user: authUser, isAuthenticated, initAuth } = useAuthStore();
 
   const [project,     setProject]     = useState<Project | null>(null);
+  const isAdmin = authUser?.role === 'ADMIN' || authUser?.role === 'SUPER_ADMIN';
+  const [orgUsers, setOrgUsers] = useState<Array<{ id: string; firstName?: string; lastName?: string; email: string; isActive?: boolean; role?: string }>>([]);
+  const [ownerSaving, setOwnerSaving] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated || !isAdmin) return;
+    api.get('/users/organization')
+      .then(res => setOrgUsers((res.data || []).filter((u: any) => u.isActive !== false && ['ADMIN', 'SUPER_ADMIN', 'OPERATOR'].includes(u.role))))
+      .catch(() => setOrgUsers([]));
+  }, [isAuthenticated, isAdmin]);
+
+  const changeOwner = async (userId: string) => {
+    if (!project || !userId || userId === project.user?.id) return;
+    const next = orgUsers.find(u => u.id === userId);
+    const name = next ? `${next.firstName ?? ''} ${next.lastName ?? ''}`.trim() || next.email : 'ce conseiller';
+    const ok = await confirmAction({
+      title: 'Changer le propriétaire',
+      message: `${name} deviendra propriétaire du projet et pourra le modifier et le soumettre.`,
+      confirmLabel: 'Changer',
+    });
+    if (!ok) return;
+    setOwnerSaving(true);
+    try {
+      await api.patch(`/projects/${project.id}/owner`, { userId });
+      toast(`Propriétaire changé : ${name}`, 'success');
+      await fetchData();
+    } catch (err: any) {
+      toast(err?.response?.data?.message || 'Le propriétaire n\'a pas pu être changé.', 'error');
+    } finally {
+      setOwnerSaving(false);
+    }
+  };
   const [loading,     setLoading]     = useState(true);
   const [loadError, setLoadError] = useState<{ kind: 'not-found' | 'forbidden' | 'session' | 'unavailable'; message: string } | null>(null);
   const [secondaryWarning, setSecondaryWarning] = useState(false);
@@ -552,8 +585,12 @@ export default function ProjectDetailPage() {
 
   // Règle unique des écritures documentaires (audit M1-02) : en révision,
   // validé ou exporté, le plan est en lecture seule jusqu'au retour en révision.
-  const planIsEditable = ['DRAFT', 'IN_PROGRESS'].includes(project.status);
-  const lockedLabel = 'Verrouillé (plan soumis ou approuvé)';
+  // Écriture : propriétaire du projet ou administrateur. Les autres conseillers
+  // de l'organisation consultent le projet en lecture seule.
+  const canWrite = project.canWrite !== false;
+  const ownerName = project.user ? `${project.user.firstName ?? ''} ${project.user.lastName ?? ''}`.trim() : '';
+  const planIsEditable = canWrite && ['DRAFT', 'IN_PROGRESS'].includes(project.status);
+  const lockedLabel = canWrite ? 'Verrouillé (plan soumis ou approuvé)' : 'Lecture seule';
 
   const steps = [
     {
@@ -609,6 +646,12 @@ export default function ProjectDetailPage() {
         ← Retour aux projets
       </button>
 
+      {!canWrite && (
+        <div className="rounded-md px-4 py-3 mb-4 text-sm" style={{ backgroundColor: '#EBF5FB', border: '1px solid #AED6F1', color: '#2C3E50' }}>
+          <strong>Lecture seule.</strong> Ce projet appartient à {ownerName || 'un autre conseiller'}. Seul son propriétaire ou un administrateur peut le modifier ou le soumettre.
+        </div>
+      )}
+
       {/* Header projet */}
       <div className="flex flex-col lg:flex-row items-start justify-between gap-4 mb-8">
         <div>
@@ -642,7 +685,7 @@ export default function ProjectDetailPage() {
           <div className="flex w-full lg:w-auto items-center gap-2 flex-wrap">
 
             {/* Soumettre pour approbation */}
-            {project.status === 'IN_PROGRESS' && hasDocument && (
+            {project.status === 'IN_PROGRESS' && hasDocument && canWrite && (
               <button
                 onClick={() => handleApproval('submit')}
                 disabled={statusChanging || processingApproval}
@@ -1539,13 +1582,30 @@ export default function ProjectDetailPage() {
           Informations du projet
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <p className="text-xs" style={{ color: '#ADB5BD' }}>Propriétaire</p>
+            {isAdmin && orgUsers.length > 0 ? (
+              <select
+                value={project.user?.id || ''}
+                disabled={ownerSaving}
+                onChange={e => changeOwner(e.target.value)}
+                className="text-sm mt-1 font-medium rounded px-2 py-1"
+                style={{ color: '#2C3E50', border: '1px solid #CED4DA', backgroundColor: '#FFFFFF' }}
+              >
+                {orgUsers.map(u => (
+                  <option key={u.id} value={u.id}>{`${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.email}</option>
+                ))}
+              </select>
+            ) : (
+              <p className="text-sm mt-1 font-medium" style={{ color: '#2C3E50' }}>{ownerName || '—'}</p>
+            )}
+          </div>
           {[
             { label: 'Client',            value: project.client.name },
             { label: 'Bâtiment',          value: project.building.name },
             { label: 'Adresse',           value: project.building.address },
             { label: 'Type de document',  value: project.documentType },
             { label: 'Année',             value: project.year.toString() },
-            { label: 'Responsable',       value: `${project.user.firstName} ${project.user.lastName}` },
           ].map(info => (
             <div key={info.label}>
               <p className="text-xs" style={{ color: '#ADB5BD' }}>{info.label}</p>

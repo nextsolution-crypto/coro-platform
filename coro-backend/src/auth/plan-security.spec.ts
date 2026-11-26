@@ -37,12 +37,9 @@ describe('plan document security boundaries', () => {
       prisma.project.findMany.mock.calls[0][0],
       prisma.project.findFirst.mock.calls[0][0],
     ]) {
-      expect(call.where).toEqual(
-        expect.objectContaining({
-          organizationId: 'org-a',
-          OR: [{ userId: 'operator-a' }, { lastEditedById: 'operator-a' }],
-        }),
-      );
+      // Lecture : tous les projets de l'organisation, sans filtre propriétaire.
+      expect(call.where).toEqual(expect.objectContaining({ organizationId: 'org-a' }));
+      expect(call.where).not.toHaveProperty('userId');
     }
   });
 
@@ -254,7 +251,6 @@ describe('plan document security boundaries', () => {
     expect(prisma.project.findFirst.mock.calls[0][0].where).toEqual(
       expect.objectContaining({
         organizationId: 'org-a',
-        OR: [{ userId: 'operator-a' }, { lastEditedById: 'operator-a' }],
       }),
     );
   });
@@ -281,7 +277,7 @@ describe('plan document security boundaries', () => {
       expect.objectContaining({
         where: expect.objectContaining({
           organizationId: 'org-a',
-          OR: [{ userId: 'operator-a' }, { lastEditedById: 'operator-a' }],
+          userId: 'operator-a',
         }),
       }),
     );

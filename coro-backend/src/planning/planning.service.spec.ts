@@ -1034,7 +1034,7 @@ describe('PlanningService', () => {
     await service.context({}, { ...actor, role: 'OPERATOR' });
     const scope = {
       organizationId: 'org-a',
-      OR: [{ userId: 'u1' }, { lastEditedById: 'u1' }],
+      userId: 'u1',
     };
     expect(prisma.client.findMany.mock.calls[0][0].where.projects.some).toEqual(
       scope,

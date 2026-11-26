@@ -2,7 +2,7 @@ import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { questionnaireFields, validateBuildingConfig } from './config-validation';
 import { RulesEngineService, BuildingConfig } from './rules-engine.service';
-import { AdviserActor, assertEditableProject, editableProjectAccessWhere, projectAccessWhere } from '../auth/project-access';
+import { AdviserActor, assertEditableProject, editableProjectAccessWhere, projectAccessWhere, projectReadWhere } from '../auth/project-access';
 
 @Injectable()
 export class ConfiguratorService {
@@ -42,7 +42,7 @@ export class ConfiguratorService {
 
   async getConfiguration(projectId: string, actor: AdviserActor) {
     const project = await this.prisma.project.findFirst({
-      where: { id: projectId, ...projectAccessWhere(actor) },
+      where: { id: projectId, ...projectReadWhere(actor) },
       select: { configData: true },
     });
     if (!project) throw new ForbiddenException('Acces refuse a ce projet');

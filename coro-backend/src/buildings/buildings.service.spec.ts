@@ -51,7 +51,7 @@ describe('BuildingsService governed authority', () => {
     await h.service.findProjects('building-a', { ...actor, role: 'OPERATOR', userId: 'operator-a' });
     expect(h.prisma.building.findFirst).toHaveBeenCalledWith({ where: expect.objectContaining({ projects: { some: { OR: [{ userId: 'operator-a' }, { lastEditedById: 'operator-a' }] } } }) });
     expect(h.prisma.project.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
-      buildingId: 'building-a', organizationId: 'org-a', OR: [{ userId: 'operator-a' }, { lastEditedById: 'operator-a' }],
+      buildingId: 'building-a', organizationId: 'org-a', userId: 'operator-a',
     }) }));
   });
 

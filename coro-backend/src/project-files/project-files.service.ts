@@ -16,7 +16,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { assertClientUploadSize, detectAllowedFileType } from './file-type-policy';
 import { createHash, randomUUID } from 'crypto';
 import { Prisma, ProjectFileLifecycleState } from '@prisma/client';
-import { AdviserActor, projectAccessWhere } from '../auth/project-access';
+import { AdviserActor, projectAccessWhere, projectReadWhere } from '../auth/project-access';
 
 const PRIVATE_PROJECT_FILE_URL = 'private:project-file';
 
@@ -723,7 +723,7 @@ export class ProjectFilesService {
         id: projectId,
         organizationId,
         isActive: true,
-        ...(actor ? projectAccessWhere(actor) : {}),
+        ...(actor ? projectReadWhere(actor) : {}),
         ...(permittedBuildingIds !== undefined
           ? { buildingId: { in: permittedBuildingIds } }
           : {}),
@@ -795,7 +795,7 @@ export class ProjectFilesService {
         organizationId,
         ...(actor
           ? {
-              project: { is: { isActive: true, ...projectAccessWhere(actor) } },
+              project: { is: { isActive: true, ...projectReadWhere(actor) } },
             }
           : {}),
       },
@@ -821,7 +821,7 @@ export class ProjectFilesService {
         organizationId,
         ...(actor
           ? {
-              project: { is: { isActive: true, ...projectAccessWhere(actor) } },
+              project: { is: { isActive: true, ...projectReadWhere(actor) } },
             }
           : {}),
         ...(sharedOnly ? { visibility: 'shared' } : {}),
@@ -894,7 +894,7 @@ export class ProjectFilesService {
         organizationId,
         ...(actor
           ? {
-              project: { is: { isActive: true, ...projectAccessWhere(actor) } },
+              project: { is: { isActive: true, ...projectReadWhere(actor) } },
             }
           : {}),
         OR: [

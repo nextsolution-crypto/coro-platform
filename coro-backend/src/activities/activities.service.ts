@@ -10,7 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   AdviserActor,
   mutableProjectAccessWhere,
-  projectAccessWhere,
+  projectAccessWhere, projectReadWhere,
 } from '../auth/project-access';
 import { ActivityTypesService } from '../activity-types/activity-types.service';
 import { ActivityTaskListsService } from './activity-task-lists.service';
@@ -57,7 +57,7 @@ export class ActivitiesService {
   // Récupérer les activités d'un projet
   async getActivities(projectId: string, actor: AdviserActor) {
     const project = await this.prisma.project.findFirst({
-      where: { id: projectId, ...projectAccessWhere(actor) },
+      where: { id: projectId, ...projectReadWhere(actor) },
       select: { id: true },
     });
     if (!project) throw new NotFoundException('Projet introuvable');

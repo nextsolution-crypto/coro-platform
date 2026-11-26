@@ -408,7 +408,6 @@ describe('ActivitiesService exercise report summary', () => {
       where: {
         id: 'project-a',
         organizationId: 'org-a',
-        OR: [{ userId: 'operator-b' }, { lastEditedById: 'operator-b' }],
       },
       select: { id: true },
     });
@@ -660,7 +659,7 @@ describe('ActivitiesService mandate origin', () => {
         project: {
           is: {
             organizationId: 'org-a',
-            OR: [{ userId: 'operator-a' }, { lastEditedById: 'operator-a' }],
+            userId: 'operator-a',
             isActive: true,
             status: { not: 'ARCHIVED' },
           },
@@ -686,7 +685,7 @@ describe('ActivitiesService mandate origin', () => {
           project: {
             is: {
               organizationId: 'org-a',
-              OR: [{ userId: 'operator-a' }, { lastEditedById: 'operator-a' }],
+              userId: 'operator-a',
             },
           },
         },

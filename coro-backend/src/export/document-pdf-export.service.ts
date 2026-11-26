@@ -8,7 +8,7 @@ import { createHash, timingSafeEqual } from 'crypto';
 import { Prisma, type DocumentPdfExport } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
-import { projectAccessWhere, type AdviserActor } from '../auth/project-access';
+import { projectAccessWhere, projectReadWhere, type AdviserActor } from '../auth/project-access';
 import { hashReviewSnapshot } from '../approval/document-review-integrity';
 import { ExportService, type ExportOptions } from './export.service';
 import { approvalStampFromVersion } from './approval-stamp';
@@ -387,7 +387,7 @@ export class DocumentPdfExportService {
     actor: AdviserActor,
   ) {
     const project = await tx.project.findFirst({
-      where: { id: projectId, ...projectAccessWhere(actor) },
+      where: { id: projectId, ...projectReadWhere(actor) },
       select: { id: true },
     });
     if (!project) throw new NotFoundException('Projet introuvable');

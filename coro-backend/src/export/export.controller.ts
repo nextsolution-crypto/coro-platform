@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Post, Request, Res, UseGuards } from '@ne
 import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
-import { projectAccessWhere } from '../auth/project-access';
+import { projectAccessWhere, projectReadWhere } from '../auth/project-access';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
@@ -22,7 +22,7 @@ export class ExportController {
 
   @Post()
   async exportPdf(@Param('projectId') projectId: string, @Body() options: ExportOptions & { idempotencyKey?: string }, @Res() res: Response, @Request() req: any) {
-    const project = await this.prisma.project.findFirst({ where: { id: projectId, ...projectAccessWhere(req.user) }, include: { building: true } });
+    const project = await this.prisma.project.findFirst({ where: { id: projectId, ...projectReadWhere(req.user) }, include: { building: true } });
     if (!project) return res.status(404).json({ message: 'Projet introuvable' });
     if (options.isPreview === true) {
       const result = await this.exportService.generatePdf(projectId, { ...options, isPreview: true }, req.user.organizationId);
@@ -64,7 +64,7 @@ export class ExportController {
   async downloadOfficialPdf(@Param('projectId') projectId: string, @Param('lang') lang: string, @Res() res: Response, @Request() req: any) {
     const normalizedLang = lang.toLowerCase();
     if (!['fr', 'en'].includes(normalizedLang)) return res.status(400).json({ message: 'Langue invalide' });
-    const project = await this.prisma.project.findFirst({ where: { id: projectId, ...projectAccessWhere(req.user) }, include: { building: true } });
+    const project = await this.prisma.project.findFirst({ where: { id: projectId, ...projectReadWhere(req.user) }, include: { building: true } });
     if (!project) return res.status(404).json({ message: 'Projet introuvable' });
     const pdfUrl = normalizedLang === 'fr' ? project.officialPdfFr : project.officialPdfEn;
     if (!pdfUrl) return res.status(404).json({ message: 'Le PDF officiel signé n’est pas encore disponible' });

@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { DocumentStatus, Prisma, ProjectStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { AdviserActor, projectAccessWhere } from '../auth/project-access';
+import { AdviserActor, projectAccessWhere, projectReadWhere } from '../auth/project-access';
 import { sanitizeDocumentContent } from './document-content-security';
 
 const MUTABLE_PROJECT_STATES: ProjectStatus[] = ['DRAFT', 'IN_PROGRESS'];
@@ -107,7 +107,7 @@ export class DocumentEditorIntegrityService {
 
   async readableProject(projectId: string, actor: AdviserActor) {
     const project = await this.prisma.project.findFirst({
-      where: { id: projectId, ...projectAccessWhere(actor) },
+      where: { id: projectId, ...projectReadWhere(actor) },
       select: { id: true, isActive: true, status: true, organizationId: true },
     });
     if (!project || !project.isActive)
