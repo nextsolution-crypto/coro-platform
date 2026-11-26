@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ExportTranslator, streetOf } from '../export/export-translator';
+import { ExportTranslator } from '../export/export-translator';
+import { prepareEnglishContent, protectedNames } from '../export/english-content';
 import { optionToEnglish } from '../export/templates/modules/option-display';
 import { PrismaService } from '../prisma/prisma.service';
 import puppeteer from 'puppeteer';
@@ -28,8 +29,13 @@ export class GuideService {
     if (!doc) throw new NotFoundException('Document introuvable');
 
     const project = doc.project;
-    const content = doc.content as any;
+    let content = doc.content as any;
     let taglineForLang: string | undefined = project.organization?.companyTagline || undefined;
+    if (lang === 'en') {
+      // Même contenu anglais que le PMU : saisies traduites, noms protégés.
+      content = await prepareEnglishContent(new ExportTranslator(this.prisma), content, project);
+      taglineForLang = content.companyTaglineEn || taglineForLang;
+    }
     const config = content?.config || {};
     const isFr = lang === 'fr';
 
@@ -162,19 +168,13 @@ export class GuideService {
       };
 
       // ── SECTION 1 : sous-sections individuelles ──
-      if (!isFr) {
-        // Guide anglais : légende du plan et slogan traduits comme dans le PMU.
-        const caption = planImplantation?.name ? optionToEnglish(String(planImplantation.name)) : undefined;
-        const texts = [caption, taglineForLang].filter((t): t is string => !!t);
-        if (texts.length) {
-          const building = project.building || {};
-          const translations = await new ExportTranslator(this.prisma).translate(texts, [
-            building.address, streetOf(building.address), building.name, project.client?.name,
-            project.organization?.companyName, project.organization?.companyAddress,
-          ].filter((t): t is string => typeof t === 'string'));
-          if (caption) planImplantation = { ...planImplantation, name: translations.get(caption) ?? caption };
-          if (taglineForLang) taglineForLang = translations.get(taglineForLang) ?? taglineForLang;
-        }
+      if (!isFr && planImplantation?.name) {
+        // Légende du plan : choix fixe (« Implantation ») ou texte saisi traduit.
+        const caption = optionToEnglish(String(planImplantation.name));
+        const translated = caption !== planImplantation.name
+          ? caption
+          : (await new ExportTranslator(this.prisma).translate([caption], protectedNames(content, project))).get(caption) ?? caption;
+        planImplantation = { ...planImplantation, name: translated };
       }
 
       const s1SubSections = this.buildSection1Subsections(config, content, module3, savedModule3, isFr, isDoubleSignal, buildingAddress, project, planImplantation);
@@ -360,7 +360,8 @@ export class GuideService {
         if (s.id === '3.1' && savedModule3?.orgRoles) return { ...s, orgRoles: savedModule3.orgRoles };
         return s;
       });
-      const { html31 } = renderModule3(mergedSections, isFr ? 'fr' : 'en', 1);
+      // Le guide a déjà son titre 1.6 : pas de second titre numéroté.
+      const { html31 } = renderModule3(mergedSections, isFr ? 'fr' : 'en', 1, { showHeader: false });
       orgHtml = html31;
     }
 

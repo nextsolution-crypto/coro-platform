@@ -5,7 +5,12 @@
 
 import { escapeHtml } from '../cover.template';
 
-export function renderModule3(sections: any[], lang: 'fr' | 'en', moduleSeqNumber: number = 3): { html31: string; html32: string; has32: boolean } {
+export function renderModule3(
+  sections: any[],
+  lang: 'fr' | 'en',
+  moduleSeqNumber: number = 3,
+  options: { showHeader?: boolean } = {},
+): { html31: string; html32: string; has32: boolean } {
   const isFr = lang === 'fr';
   const s31 = sections.find((s: any) => s.id === '3.1');
   const s32 = sections.find((s: any) => s.id === '3.2');
@@ -89,7 +94,7 @@ export function renderModule3(sections: any[], lang: 'fr' | 'en', moduleSeqNumbe
 
   const html31 = `
     <div>
-      ${sectionHeader('3.1', s31?.title || (isFr ? 'ORGANIGRAMME' : 'ORGANIZATIONAL CHART'))}
+      ${options.showHeader === false ? '' : sectionHeader('3.1', s31?.title || (isFr ? 'ORGANIGRAMME' : 'ORGANIZATIONAL CHART'))}
       <div style="border:1px solid #E9ECEF;border-radius:8px;padding:14px;">
         ${topHtml}
         ${fullHtml}
