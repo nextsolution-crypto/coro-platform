@@ -1,6 +1,6 @@
 import { translateModule2Row } from '../generator/module2.templates';
 import { ExportTranslator } from './export-translator';
-import { prepareEnglishContent } from './english-content';
+import { prepareEnglishContent, withCurrentReferences } from './english-content';
 import {
   ApprovalStamp,
   approvalStampFromVersion,
@@ -307,6 +307,7 @@ export class ExportService {
     data: ExportDataSource,
   ): Promise<Buffer> {
     const project = doc.project;
+    content = withCurrentReferences(content);
     if (lang === 'en') content = await this.englishContent(content, project);
     const modules = lang === 'fr' ? content.modules_fr : content.modules_en;
     const isFr = lang === 'fr';
