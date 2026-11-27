@@ -390,7 +390,7 @@ export class PlanningActionsService {
         entityType: 'ProjectActivity',
         entityId: activity.id,
         projectId: activity.projectId,
-        description: 'Activite planifiee depuis le Planner.',
+        description: 'Activité planifiée depuis la planification.',
         metadata: {
           bookingId: booking.id,
           startUtc,

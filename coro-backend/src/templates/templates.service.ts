@@ -49,7 +49,7 @@ export class TemplatesService {
       documentConfig: doc?.content ? (doc.content as any).config : null,
     };
 
-    return this.prisma.projectTemplate.create({
+    const template = await this.prisma.projectTemplate.create({
       data: {
         name,
         description,
@@ -59,6 +59,20 @@ export class TemplatesService {
         createdById: userId,
       },
     });
+    await this.prisma.auditLog
+      .create({
+        data: {
+          action: 'TEMPLATE_CREATE',
+          entityType: 'PROJECT_TEMPLATE',
+          entityId: template.id,
+          projectId,
+          description: `Modèle « ${name} » créé à partir du projet`,
+          userId,
+          organizationId,
+        },
+      })
+      .catch(() => undefined);
+    return template;
   }
 
   // ── Supprimer un modèle ────────────────────────────────────

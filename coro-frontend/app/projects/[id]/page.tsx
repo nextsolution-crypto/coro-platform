@@ -8,6 +8,7 @@ import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { toast } from '@/lib/toast';
 import { confirmAction } from '@/lib/confirm-dialog';
+import { groupAuditLogs } from '@/lib/auditLabels';
 import { PageTitle } from '@/components/ui/Typography';
 import ExportModal from '@/components/ExportModal';
 import EngagementPanel from '@/components/EngagementPanel';
@@ -1904,38 +1905,31 @@ export default function ProjectDetailPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {auditLogs.map(log => {
-                    const actionConfig: Record<string, { icon: string; color: string }> = {
-                      GENERATE:         { icon: '⚙', color: '#2980B9' },
-                      EDIT_SECTION:     { icon: '✏️', color: '#F39C12' },
-                      EXPORT:           { icon: '📄', color: '#27AE60' },
-                      STATUS_CHANGE:    { icon: '🔄', color: '#8E44AD' },
-                      VERSION_SAVE:     { icon: '💾', color: '#2980B9' },
-                      VERSION_RESTORE:  { icon: '↩️', color: '#E67E22' },
-                      PROCEDURE_TOGGLE: { icon: '🔧', color: '#6C757D' },
-                      PROCEDURE_EDIT:   { icon: '📝', color: '#F39C12' },
-                      TEMPLATE_CREATE:  { icon: '📋', color: '#27AE60' },
-                    };
-                    const cfg = actionConfig[log.action] || { icon: '○', color: '#ADB5BD' };
-
+                  {groupAuditLogs(auditLogs).map(log => {
+                    const when = (value: string) => new Date(value).toLocaleDateString('fr-CA', {
+                      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                    });
                     return (
                       <div key={log.id} className="flex items-start gap-3 p-3 rounded-md"
                         style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
-                        <span className="text-base flex-shrink-0 mt-0.5">{cfg.icon}</span>
+                        <span className="text-base flex-shrink-0 mt-0.5" aria-hidden="true">{log.icon}</span>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>
-                            {log.description}
+                            {log.label}
+                            {log.count > 1 && (
+                              <span className="ml-2 text-xs px-1.5 py-0.5 rounded"
+                                style={{ backgroundColor: '#E9ECEF', color: '#6C757D' }}>
+                                × {log.count}
+                              </span>
+                            )}
                           </p>
                           <p className="text-xs mt-0.5" style={{ color: '#6C757D' }}>
-                            {log.user.firstName} {log.user.lastName}
+                            {`${log.user?.firstName ?? ''} ${log.user?.lastName ?? ''}`.trim() || 'Système'}
                           </p>
                         </div>
                         <div className="flex-shrink-0 text-right">
                           <p className="text-xs" style={{ color: '#ADB5BD' }}>
-                            {new Date(log.createdAt).toLocaleDateString('fr-CA', {
-                              month: 'short', day: 'numeric',
-                              hour: '2-digit', minute: '2-digit'
-                            })}
+                            {log.count > 1 ? `${when(log.firstAt)} → ${when(log.createdAt)}` : when(log.createdAt)}
                           </p>
                         </div>
                       </div>
