@@ -167,7 +167,7 @@ async function main() {
     if (!type) continue;
     const existingPolicy = await prisma.activityTypeTaskListPolicy.findFirst({ where: { activityTypeId: type.id, organizationId: null } });
     if (existingPolicy) continue;
-    const lists = [];
+    const lists: Array<{ id: string }> = [];
     for (const name of listNames) {
       const list = await prisma.taskList.findFirst({ where: { name, organizationId: null, isActive: true } });
       if (list) lists.push(list);
