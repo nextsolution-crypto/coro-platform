@@ -4,6 +4,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
+import { confirmAction } from '@/lib/confirm-dialog';
+import { toast } from '@/lib/toast';
 import { ArrowLeft, Sparkles, Upload, Check, X, Eye, Trash2 } from 'lucide-react';
 
 interface CustomProcedure {
@@ -17,6 +19,7 @@ interface CustomProcedure {
   sourceFileName?: string;
   isGlobal: boolean;
   isPublished: boolean;
+  projectId?: string | null;
   rolesDetected: string[];
   createdAt: string;
   content: any;
@@ -148,19 +151,58 @@ export default function ProjectProceduresPage() {
     }
   };
 
-  const handlePublish = async (id: string) => {
-    try {
-      await api.post(`/custom-procedures/${id}/publish`);
-      await fetchData();
-    } catch (err) { console.error(err); }
+  const isManager = ['ADMIN', 'SUPER_ADMIN'].includes(user?.role || '');
+  const errorMessage = (err: any, fallback: string) => {
+    const message = err?.response?.data?.message || fallback;
+    return Array.isArray(message) ? message[0] : message;
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Supprimer cette procédure ?')) return;
+  // Active / brouillon : une procédure active apparaît dans l'éditeur (Module 4) pour être ajoutée au document.
+  const handleToggleStatus = async (proc: CustomProcedure) => {
+    const next = proc.status === 'ACTIVE' ? 'DRAFT' : 'ACTIVE';
     try {
-      await api.delete(`/custom-procedures/${id}`);
+      await api.put(`/custom-procedures/${proc.id}`, { status: next });
+      toast(next === 'ACTIVE'
+        ? `${proc.code} activée : ajoutez-la au document dans l’éditeur, Module 4.`
+        : `${proc.code} remise en brouillon.`, 'success');
       await fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      toast(errorMessage(err, 'Impossible de changer le statut de la procédure.'), 'error');
+    }
+  };
+
+  const handlePublish = async (proc: CustomProcedure) => {
+    const ok = await confirmAction({
+      title: `Partager ${proc.code} avec l’organisation ?`,
+      message: 'La procédure sera disponible pour tous les projets de votre organisation (éditeur, Module 4) et dans la bibliothèque. Elle ne sera plus propre à ce projet.',
+      confirmLabel: 'Partager',
+    });
+    if (!ok) return;
+    try {
+      await api.post(`/custom-procedures/${proc.id}/publish`);
+      toast(`${proc.code} partagée avec l’organisation.`, 'success');
+      await fetchData();
+    } catch (err: any) {
+      toast(errorMessage(err, 'Impossible de partager la procédure.'), 'error');
+    }
+  };
+
+  const handleDelete = async (proc: CustomProcedure) => {
+    const ok = await confirmAction({
+      title: `Supprimer ${proc.code} ?`,
+      message: proc.projectId
+        ? 'La procédure sera supprimée définitivement de ce projet.'
+        : 'Cette procédure est partagée : elle sera supprimée définitivement pour tous les projets de l’organisation.',
+      confirmLabel: 'Supprimer',
+    });
+    if (!ok) return;
+    try {
+      await api.delete(`/custom-procedures/${proc.id}`);
+      toast(`${proc.code} supprimée.`, 'success');
+      await fetchData();
+    } catch (err: any) {
+      toast(errorMessage(err, 'Impossible de supprimer la procédure.'), 'error');
+    }
   };
 
   const inputStyle = { border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF' };
@@ -258,6 +300,10 @@ export default function ProjectProceduresPage() {
             </div>
           ) : (
             <div className="space-y-3">
+              <p className="text-xs" style={{ color: '#6C757D' }}>
+                Une procédure <strong>active</strong> devient disponible dans l’éditeur du document (Module 4), où vous l’ajoutez au plan.
+                Une procédure en brouillon n’y apparaît pas.
+              </p>
               {procedures.map(proc => {
                 const status = STATUS_LABELS[proc.status] || STATUS_LABELS.DRAFT;
                 const source = SOURCE_LABELS[proc.sourceType] || SOURCE_LABELS.MANUAL;
@@ -279,6 +325,12 @@ export default function ProjectProceduresPage() {
                             style={{ backgroundColor: '#F8F9FA', color: '#6C757D' }}>
                             {source.icon} {source.label}
                           </span>
+                          {!proc.projectId && (
+                            <span className="text-xs px-2 py-0.5 rounded"
+                              style={{ backgroundColor: '#EBF5FB', color: '#2980B9' }}>
+                              {proc.isGlobal ? 'Procédure CORO' : 'Partagée à l’organisation'}
+                            </span>
+                          )}
                         </div>
                         <p className="font-medium text-sm" style={{ color: '#2C3E50' }}>{proc.titleFR}</p>
                         <p className="text-xs" style={{ color: '#ADB5BD' }}>{proc.titleEN}</p>
@@ -297,11 +349,20 @@ export default function ProjectProceduresPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        {proc.status === 'DRAFT' && (
-                          <button onClick={() => handlePublish(proc.id)}
+                        {(proc.projectId || isManager) && !proc.isGlobal && (
+                          <button onClick={() => handleToggleStatus(proc)}
                             className="text-xs px-3 py-1.5 rounded font-medium"
-                            style={{ backgroundColor: '#EAFAF1', color: '#27AE60', border: '1px solid #A9DFBF' }}>
-                            Activer
+                            style={proc.status === 'ACTIVE'
+                              ? { backgroundColor: '#FFFFFF', color: '#6C757D', border: '1px solid #DEE2E6' }
+                              : { backgroundColor: '#EAFAF1', color: '#27AE60', border: '1px solid #A9DFBF' }}>
+                            {proc.status === 'ACTIVE' ? 'Désactiver' : 'Activer'}
+                          </button>
+                        )}
+                        {isManager && proc.projectId && (
+                          <button onClick={() => handlePublish(proc)}
+                            className="text-xs px-3 py-1.5 rounded font-medium"
+                            style={{ backgroundColor: '#FFFFFF', color: '#8E44AD', border: '1px solid #D2B4DE' }}>
+                            Partager à l’organisation
                           </button>
                         )}
                         <button onClick={() => setPreviewProc(proc.content)}
@@ -311,13 +372,14 @@ export default function ProjectProceduresPage() {
                           onMouseLeave={e => e.currentTarget.style.color = '#ADB5BD'}>
                           <Eye size={14} />
                         </button>
-                        <button onClick={() => handleDelete(proc.id)}
+                        {(proc.projectId || isManager) && !proc.isGlobal && <button onClick={() => handleDelete(proc)}
+                          aria-label={`Supprimer ${proc.code}`}
                           className="p-1.5 rounded transition-colors"
                           style={{ color: '#ADB5BD' }}
                           onMouseEnter={e => e.currentTarget.style.color = '#C0392B'}
                           onMouseLeave={e => e.currentTarget.style.color = '#ADB5BD'}>
                           <Trash2 size={14} />
-                        </button>
+                        </button>}
                       </div>
                     </div>
                   </div>
