@@ -15,7 +15,7 @@ export class ConfigurePopulationProgramDto {
    * Identifiant public stable utilisé par le futur portail citoyen.
    *
    * Exemple :
-   * sobeys-boucherville
+   * epicerie-demo-ville
    */
   @IsString()
   @MinLength(3)
