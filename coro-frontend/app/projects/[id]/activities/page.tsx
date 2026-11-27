@@ -58,6 +58,7 @@ export default function ActivitiesPage() {
   const sameLabelIndex = (id: string, label: string) =>
     activities.filter(item => labelOf(item) === label).findIndex(item => item.id === id) + 1;
   const [activityCatalog, setActivityCatalog] = useState<any[]>([]);
+  const [advisors, setAdvisors] = useState<Array<{ id: string; email: string; firstName: string; lastName: string }>>([]);
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -79,11 +80,13 @@ export default function ActivitiesPage() {
 
   const fetchData = async () => {
     try {
-      const [projectRes, activitiesRes, catalogRes] = await Promise.all([
+      const [projectRes, activitiesRes, catalogRes, advisorsRes] = await Promise.all([
         api.get(`/projects/${projectId}`),
         api.get(`/projects/${projectId}/activities`),
         api.get('/activities/catalog'),
+        api.get('/users/organization/advisors').catch(() => ({ data: [] })),
       ]);
+      setAdvisors(advisorsRes.data || []);
       setProject(projectRes.data);
       setActivities(activitiesRes.data);
       setActivityCatalog(catalogRes.data);
@@ -297,7 +300,7 @@ export default function ActivitiesPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-4 text-xs" style={{ color: '#6C757D' }}>
-                        {activity.assigneeEmail && <span>👤 {activity.assigneeEmail}</span>}
+                        {activity.assigneeEmail && <span>👤 {(() => { const advisor = advisors.find(item => item.email.toLowerCase() === String(activity.assigneeEmail).toLowerCase()); return advisor ? `${advisor.firstName} ${advisor.lastName}`.trim() : activity.assigneeEmail; })()}</span>}
                         {activity.clientEmail && <span>🏢 {activity.clientEmail}</span>}
                       </div>
                       {activity.notes && (
@@ -420,12 +423,18 @@ export default function ActivitiesPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Courriel conseiller</label>
-                <input type="email" value={form.assigneeEmail}
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Responsable</label>
+                <select value={form.assigneeEmail}
                   onChange={e => setForm({ ...form, assigneeEmail: e.target.value })}
-                  placeholder="conseiller@votreorganisation.com"
                   className="w-full px-3 py-2.5 text-sm rounded"
-                  style={{ border: '1px solid #CED4DA', color: '#2C3E50' }} />
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50', background: '#FFFFFF' }}>
+                  <option value="">À affecter plus tard (depuis la planification)</option>
+                  {advisors.map(advisor => (
+                    <option key={advisor.id} value={advisor.email}>
+                      {`${advisor.firstName} ${advisor.lastName}`.trim() || advisor.email}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>

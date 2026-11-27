@@ -59,6 +59,7 @@ type Action = {
   projectName?: string;
   clientName?: string;
   buildingName?: string;
+  buildingAddress?: string;
   userName?: string;
   activityTypeId?: string;
   activityTypeName?: string;
@@ -759,6 +760,7 @@ export class PlanningService {
                 building: {
                   select: {
                     name: true,
+                    address: true,
                     timeZone: true,
                     timeZoneVerified: true,
                   },
@@ -865,6 +867,7 @@ export class PlanningService {
                 building: {
                   select: {
                     name: true,
+                    address: true,
                     timeZone: true,
                     timeZoneVerified: true,
                   },
@@ -1030,11 +1033,9 @@ export class PlanningService {
                 ? 'PROVISIONAL'
                 : 'CONFIRMED',
           label: detailed
-            ? booking.status === 'DEMANDEE'
-              ? 'Demande client — non confirmée'
-              : booking.activity?.customLabel ||
-                booking.activity?.label ||
-                booking.activityType
+            ? booking.activity?.customLabel ||
+              booking.activity?.label ||
+              booking.activityType
             : 'Occupé',
           ...(detailed
             ? {
@@ -1066,6 +1067,7 @@ export class PlanningService {
                 projectName: booking.project.name,
                 clientName: booking.project.client.name,
                 buildingName: booking.project.building?.name,
+                buildingAddress: booking.project.building?.address,
                 ownerName:
                   `${booking.project.user.firstName} ${booking.project.user.lastName}`.trim(),
                 bookingStatus: booking.status,
@@ -1259,6 +1261,7 @@ export class PlanningService {
                 projectName: activity.project.name,
                 clientName: activity.project.client.name,
                 buildingName: activity.project.building?.name,
+                buildingAddress: activity.project.building?.address,
               }
             : {}),
           needsAction: false,
@@ -1321,6 +1324,79 @@ export class PlanningService {
             );
             return hours ? Math.round(hours * 60) : undefined;
           })(),
+        });
+      }
+    }
+    // Les demandes client restent visibles quelle que soit la période affichée :
+    // une demande pour le mois prochain doit apparaître dans « Demandes client ».
+    if (!query.bookingStatus || query.bookingStatus === 'DEMANDEE') {
+      const seen = new Set(
+        actions
+          .filter((a) => a.type === 'BOOKING_REQUESTED')
+          .map((a) => a.bookingId),
+      );
+      const pendingRequests = await this.prisma.booking.findMany({
+        where: {
+          organizationId: actor.organizationId,
+          status: 'DEMANDEE',
+          OR: [
+            { reportedDate: null, requestedDate: { gte: earliest } },
+            { reportedDate: { gte: earliest } },
+          ],
+          ...(query.clientId || query.buildingId || query.projectId
+            ? {
+                project: {
+                  ...(query.clientId ? { clientId: query.clientId } : {}),
+                  ...(query.buildingId ? { buildingId: query.buildingId } : {}),
+                  ...(query.projectId ? { id: query.projectId } : {}),
+                },
+              }
+            : {}),
+          ...(own || filteredUsers
+            ? {
+                assignments: {
+                  some: {
+                    userId: { in: own ? [actor.userId] : ids },
+                    status: { in: ['PENDING', 'ACCEPTED'] },
+                  },
+                },
+              }
+            : {}),
+        },
+        select: {
+          id: true,
+          status: true,
+          requestedDate: true,
+          reportedDate: true,
+          projectId: true,
+          project: {
+            select: {
+              name: true,
+              clientId: true,
+              buildingId: true,
+              client: { select: { name: true } },
+              building: { select: { name: true } },
+            },
+          },
+        },
+        orderBy: { requestedDate: 'asc' },
+        take: 100,
+      });
+      for (const request of pendingRequests) {
+        if (request.status !== 'DEMANDEE' || seen.has(request.id)) continue;
+        actions.push({
+          id: `requested:${request.id}`,
+          type: 'BOOKING_REQUESTED',
+          groupId: request.id,
+          bookingId: request.id,
+          startUtc: request.reportedDate ?? request.requestedDate,
+          label: 'Demande client — non confirmée',
+          clientId: request.project.clientId,
+          buildingId: request.project.buildingId,
+          projectId: request.projectId,
+          projectName: request.project.name,
+          clientName: request.project.client.name,
+          buildingName: request.project.building?.name,
         });
       }
     }

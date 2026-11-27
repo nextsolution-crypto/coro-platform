@@ -9,7 +9,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import ResourceTimeline from './ResourceTimeline';
 import MonthCalendar from './MonthCalendar';
-import { eventForUser, eventLabel, eventStatus, planningErrorMessage } from './projection';
+import { eventForUser, eventStatus, eventSummary, planningErrorMessage } from './projection';
 import PlanningDrawer, { type PlanningDrawerMode } from './PlanningDrawer';
 import PlanningActionCenter from './PlanningActionCenter';
 import ActivityPlanningDrawer from './ActivityPlanningDrawer';
@@ -320,7 +320,7 @@ export default function TeamPlannerPage() {
             {mobileEvents.filter(event => segmentForDay(event, day, displayedZone, { start: 0, end: 1440 })).length ?
               mobileEvents.filter(event => segmentForDay(event, day, displayedZone, { start: 0, end: 1440 }))
                 .map(event => <button type="button" key={`${event.id}:${event.userIds.join(',')}`} onClick={() => openEvent(event)} className={styles.agendaCard}>
-                  <strong>{formatClock(event.startUtc, displayedZone)} · {eventLabel(event)}</strong>
+                  <strong>{eventSummary(event, formatClock(event.startUtc, displayedZone))}</strong>
                   <span>{eventStatus(event)} · {event.userIds.length ? event.userIds.map(id => data.users.find(person => person.id === id)?.name ?? 'Conseiller').join(', ') : 'À affecter'}</span>
                   {(event.needsAction || event.warnings.length > 0) && <span>⚠ {event.needsAction ? 'Action requise' : 'À vérifier'}</span>}
                 </button>) : <p>Aucun événement ce jour.</p>}

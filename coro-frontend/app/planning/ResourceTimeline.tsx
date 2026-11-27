@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { PlannerEvent, PlannerResponse, PlannerUser } from './types';
 import { dateKey, formatClock, formatDay, nowMarker, segmentForDay, timelineDayMinWidth, timelineGridLayout, timelineLabelTicks, visibleHours } from './time';
-import { eventForUser, eventLabel, eventStatus } from './projection';
+import { eventForUser, eventLabel, eventStatus, eventSummary, eventSummaryParts } from './projection';
 import { getActivityTypeVisual } from './activityTypeVisual';
 import styles from './planning.module.css';
 
@@ -15,6 +15,12 @@ function AdvisorLabel({ user }: { user: PlannerUser }) {
     {user.availability === 'GENERIC' && <small>Disponibilité générale</small>}
     {user.workScheduleConfigured === false && <small>Horaire non configuré</small>}
   </div>;
+}
+
+// Couleur du type d'activité : fond teinté et bande à gauche. Le contour (plein ou pointillé)
+// reste celui du statut : confirmé, provisoire ou demande.
+function typeColors(color: string) {
+  return { background: `${color}1F`, borderLeft: `5px solid ${color}`, color: '#2C3E50' };
 }
 
 export default function ResourceTimeline({ data, days, onSelect, onCreate }: {
@@ -54,7 +60,12 @@ export default function ResourceTimeline({ data, days, onSelect, onCreate }: {
   }, [data.workIntervals]);
 
   if (!rows.length) return <p className={styles.empty}>Aucun conseiller pour ces filtres.</p>;
-  return <div className={styles.timelineScroll} role="region" aria-label="Planification de l'équipe" tabIndex={0}>
+  const legend = Array.from(new Map(data.events.filter(event => event.activityType)
+    .map(event => [event.activityType!.code, getActivityTypeVisual(event.activityType)])).values());
+  return <>{legend.length > 0 && <div className={styles.typeLegend} aria-label="Légende des types d'activité">
+    {legend.map(item => <span key={item.label}><i style={{ background: item.color }} aria-hidden="true" />{item.label}</span>)}
+    <span className={styles.legendNote}>Contour plein : confirmé · pointillé : à confirmer</span>
+  </div>}<div className={styles.timelineScroll} role="region" aria-label="Planification de l'équipe" tabIndex={0}>
     <div className={styles.timeline} style={{ gridTemplateColumns: `205px repeat(${days.length}, minmax(${timelineDayMinWidth(days.length)}px, 1fr))` }}>
       <div className={`${styles.corner} ${styles.stickyLeft}`} style={{ gridColumn: 1, gridRow: 1 }}>
         <strong>Conseillers</strong>
@@ -106,16 +117,18 @@ export default function ResourceTimeline({ data, days, onSelect, onCreate }: {
                 event.status === 'REQUESTED' ? styles.requested :
                 event.status === 'PROVISIONAL' ? styles.provisional :
                 event.status === 'BUSY' ? styles.busy : styles.confirmed}`}
-              style={{ left: `${segment!.left}%`, width: `${Math.max(segment!.width, 1)}%`, borderTopColor: visual.color,
+              title={`${eventSummary(event, formatClock(event.startUtc, timeZone))} — ${eventStatus(event)}`}
+              style={{ left: `${segment!.left}%`, width: `${Math.max(segment!.width, 1)}%`,
+                ...(event.activityType ? typeColors(visual.color) : {}),
                 top: `${6 + index * 38}px` }}
               aria-label={`${eventLabel(event)}, ${eventStatus(event)}, ${formatClock(event.startUtc, timeZone)} à ${formatClock(event.endUtc, timeZone)}${event.needsAction ? ', action requise' : ''}${event.warnings.length ? ', à vérifier' : ''}`}>
-              <span className={styles.eventTitle}><span aria-hidden="true">{visual.icon}</span> {eventLabel(event)}</span>
-              <span className={styles.eventMeta}>{formatClock(event.startUtc, timeZone)} · {eventStatus(event)}{event.needsAction || event.warnings.length ? ' · ⚠' : ''}</span>
+              <span className={styles.eventTitle}>{formatClock(event.startUtc, timeZone)} · {eventSummaryParts(event).slice(0, -1).join(' · ') || eventLabel(event)}</span>
+              <span className={styles.eventMeta}><span aria-hidden="true">{visual.icon}</span> {eventSummaryParts(event).length > 1 ? eventLabel(event) : ''}{eventSummaryParts(event).length > 1 ? ' · ' : ''}{eventStatus(event)}{event.needsAction || event.warnings.length ? ' · ⚠' : ''}</span>
             </button>; })}
           </div>;
         })}
       </div>)}
     </div>
     {data.events.length === 0 && <p className={styles.timelineEmpty}><strong>Aucun événement planifié pour cette période.</strong><span>Les horaires affichés restent indicatifs.</span></p>}
-  </div>;
+  </div></>;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { commitmentStatusLabel } from "@/lib/commitmentStatus";
 import axios from "axios";
 import api from "@/lib/api";
 import type { MyAssignment, MyAssignmentsResponse } from "./types";
@@ -204,9 +205,10 @@ export default function MyAssignmentsPanel({
                     {evidence.kind === "governed" ? (
                       <>
                         <span>
-                          Version d’engagement{" "}
-                          {evidence.commitment.versionNumber} ·{" "}
-                          {evidence.commitment.status}
+                          {commitmentStatusLabel(evidence.commitment.status)}
+                          {evidence.commitment.versionNumber > 1
+                            ? ` · modification n° ${evidence.commitment.versionNumber - 1}`
+                            : ""}
                         </span>
                         <span>
                           {formatDay(

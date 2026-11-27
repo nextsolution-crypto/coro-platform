@@ -135,3 +135,8 @@
   .actionList li { align-items: stretch; flex-direction: column; }
   .actionButtons { justify-content: flex-start; }
 }
+
+.typeLegend { display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; padding:8px 12px; font-size:11px; color:var(--cg-skin-text-secondary, #4e555d) }
+.typeLegend span { display:inline-flex; align-items:center; gap:5px }
+.typeLegend i { display:inline-block; width:12px; height:12px; border-radius:3px }
+.legendNote { color:var(--cg-skin-text-muted, #6c757d); font-style:italic }

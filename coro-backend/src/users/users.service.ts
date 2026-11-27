@@ -289,6 +289,18 @@ export class UsersService {
   // GESTION DES UTILISATEURS PAR ORGANISATION (ADMIN uniquement)
   // ============================================================
 
+  async findActiveAdvisors(organizationId: string) {
+    return this.prisma.user.findMany({
+      where: {
+        organizationId,
+        isActive: true,
+        role: { in: ['ADMIN', 'SUPER_ADMIN', 'OPERATOR'] },
+      },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+      select: { id: true, email: true, firstName: true, lastName: true },
+    });
+  }
+
   async findByOrganization(organizationId: string) {
     return this.prisma.user.findMany({
       where: { organizationId },

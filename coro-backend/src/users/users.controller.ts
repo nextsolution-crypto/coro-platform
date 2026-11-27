@@ -34,6 +34,15 @@ export class UsersController {
     return this.usersService.getDashboardSummary(req.user.organizationId);
   }
 
+  // Liste minimale des conseillers actifs, pour choisir un responsable d'activité.
+  @Get('organization/advisors')
+  @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
+  async getOrganizationAdvisors(@Request() req: any) {
+    if (!['ADMIN', 'SUPER_ADMIN', 'OPERATOR'].includes(req.user.role))
+      throw new ForbiddenException('Accès réservé aux conseillers.');
+    return this.usersService.findActiveAdvisors(req.user.organizationId);
+  }
+
   @Get('organization')
   @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
   async getOrganizationUsers(@Request() req: any) {
