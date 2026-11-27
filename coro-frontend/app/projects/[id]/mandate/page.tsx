@@ -180,6 +180,7 @@ export default function MandatePage() {
             error: normalizeMandateApiError(error, "L'offre commerciale n'a pas pu être chargée.").message });
         }
       }
+      if (ficheSaved) void mandateWork.refresh();
       setSaveSuccess(fieldsWereDirty && servicesWereDirty ? 'Mandat et offre enregistrés.'
         : servicesWereDirty ? 'Offre enregistrée.' : 'Mandat enregistré.');
     } catch (error: unknown) {
@@ -262,9 +263,11 @@ export default function MandatePage() {
   const inputSty = { border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF' };
 
   // Calcul délai livraison
+  // La date limite est une date sans heure stockée à minuit UTC : on compare des jours calendaires.
   const today = new Date();
   const dateLimite = mandate?.dateLimite ? new Date(mandate.dateLimite) : null;
-  const diffDays = dateLimite ? Math.ceil((dateLimite.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null;
+  const diffDays = dateLimite ? Math.round((Date.UTC(dateLimite.getUTCFullYear(), dateLimite.getUTCMonth(), dateLimite.getUTCDate())
+    - Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())) / (1000 * 60 * 60 * 24)) : null;
   const delaiLevel = diffDays === null ? null
     : diffDays < 0 ? 'DEPASSE'
     : diffDays <= 3 ? 'CRITIQUE'
@@ -691,7 +694,7 @@ export default function MandatePage() {
                          `✅ ${diffDays} jour(s) restants`}
                       </p>
                       <p className="text-xs" style={{ color: '#6C757D' }}>
-                        Date limite : {new Date(mandate.dateLimite).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        Date limite : {new Date(mandate.dateLimite).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })}
                         {mandate.delaiJours && ` (${mandate.delaiJours} jours)`}
                       </p>
                     </div>
