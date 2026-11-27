@@ -11,7 +11,7 @@ import TimesheetTab from './TimesheetTab';
 import MandateServicesEditor from './MandateServicesEditor';
 import { useAuthStore } from '@/stores/auth.store';
 import { ActivityCatalogItem } from './mandateSelection';
-import { emptyMandateForm, MandateForm, mandateFieldsAreEqual, mandateFormFromServer,
+import { emptyMandateForm, MandateForm, mandateFieldsAreEqual, mandateFormFromServer, heuresBudgeteesSuggerees,
   } from './mandateFormState';
 import { buildSaveMandateServicesPayload, deriveHistoricalCommercialTransition, emptyMandateCommercialState,
   mandateServicesAreDirty, normalizeMandateApiError, resetServiceDrafts, serviceDraftsFromServer,
@@ -199,6 +199,10 @@ export default function MandatePage() {
     } finally { setSaving(false); }
   };
 
+  const withSuggestedHours = (montantVendu: string, tauxHoraire: string): Partial<MandateForm> => {
+    const heures = heuresBudgeteesSuggerees(montantVendu, tauxHoraire);
+    return heures === null ? {} : { heuresBudgetees: heures };
+  };
   const updateForm = (change: Partial<MandateForm>) => {
     setForm(current => ({ ...current, ...change }));
     setSaveError('');
@@ -472,16 +476,18 @@ export default function MandatePage() {
                 <div>
                   <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Montant vendu ($)</label>
                   <input type="number" value={form.montantVendu}
-                    disabled={!canEditMandate} onChange={e => updateForm({ montantVendu: e.target.value })}
+                    disabled={!canEditMandate} onChange={e => updateForm({ montantVendu: e.target.value,
+                      ...withSuggestedHours(e.target.value, form.tauxHoraire) })}
                     placeholder="0.00" min="0" step="0.01"
                     className={inputCls} style={inputSty}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
                     onBlur={e => e.target.style.borderColor = '#CED4DA'} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Taux horaire ($/h)</label>
+                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Taux horaire facturé ($/h)</label>
                   <input type="number" value={form.tauxHoraire}
-                    disabled={!canEditMandate} onChange={e => updateForm({ tauxHoraire: e.target.value })}
+                    disabled={!canEditMandate} onChange={e => updateForm({ tauxHoraire: e.target.value,
+                      ...withSuggestedHours(form.montantVendu, e.target.value) })}
                     placeholder="0.00" min="0" step="0.01"
                     className={inputCls} style={inputSty}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
@@ -495,6 +501,9 @@ export default function MandatePage() {
                     className={inputCls} style={inputSty}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
                     onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                  <p className="text-xs mt-1" style={{ color: '#6C757D' }}>
+                    Calculées pour 50 % de marge : (montant ÷ 2) ÷ taux facturé. Modifiables.
+                  </p>
                 </div>
               </div>
 
@@ -579,7 +588,7 @@ export default function MandatePage() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-xs" style={{ color: '#6C757D' }}>Coût réel {heuresReelles === null ? '' : `(${heuresReelles}h × ${taux}$)`}</span>
+                  <span className="text-xs" style={{ color: '#6C757D' }}>Temps consommé {heuresReelles === null ? '' : `(${heuresReelles} h × ${taux} $)`}</span>
                   <span className="text-sm font-bold" style={{ color: '#2C3E50' }}>
                     {coutReel !== null && coutReel > 0 ? `${coutReel.toFixed(2)} $` : '—'}
                   </span>
