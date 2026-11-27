@@ -31,6 +31,6 @@ export class TemplatesController {
 
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req: any) {
-    return this.templatesService.remove(id, req.user.organizationId);
+    return this.templatesService.remove(id, req.user);
   }
 }

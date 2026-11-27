@@ -33,10 +33,14 @@ export default function LibraryPage() {
     id: string; code?: string; title?: string; name: string; ownerName?: string | null;
     isMine: boolean; sharedWithOrganization: boolean;
   }[]>([]);
-  const [activeTab, setActiveTab] = useState<'codes' | 'roles' | 'procedures'>('codes');
+  const [activeTab, setActiveTab] = useState<'codes' | 'roles' | 'procedures' | 'templates'>('codes');
   const [incidentCodes, setIncidentCodes] = useState<IncidentCode[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [procedures, setProcedures] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<{
+    id: string; name: string; description?: string | null; documentType: string; createdAt: string;
+    createdById: string; createdBy?: { firstName: string; lastName: string } | null;
+  }[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedProc, setExpandedProc] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -48,14 +52,19 @@ export default function LibraryPage() {
   }, [isAuthenticated]);
 
   const fetchData = async () => {
+    let nextErrorsTemplates = '';
     setLoading(true);
     setErrors({});
-    const [codesRes, rolesRes, proceduresRes] = await Promise.allSettled([
+    const [codesRes, rolesRes, proceduresRes, templatesRes] = await Promise.allSettled([
       api.get('/library/incident-codes'),
       api.get('/library/roles'),
       api.get('/library/procedures'),
+      api.get('/templates'),
     ]);
+    if (templatesRes.status === 'fulfilled') setTemplates(templatesRes.value.data || []);
+    else nextErrorsTemplates = 'Impossible de charger les modèles de projet.';
     const nextErrors: Record<string, string> = {};
+    if (nextErrorsTemplates) nextErrors.templates = nextErrorsTemplates;
     if (codesRes.status === 'fulfilled') setIncidentCodes(codesRes.value.data);
     else nextErrors.codes = 'Impossible de charger les codes incidents.';
     if (rolesRes.status === 'fulfilled') setRoles(rolesRes.value.data);
@@ -108,11 +117,32 @@ export default function LibraryPage() {
   const visibleProcedures = procedures.filter((item) =>
     [item.code, item.titleFR, item.titleEN].some((value: string | undefined) => value?.toLocaleLowerCase('fr-CA').includes(query)),
   );
+  const visibleTemplates = templates.filter((item) =>
+    [item.name, item.description ?? '', item.documentType].some((value) => value.toLocaleLowerCase('fr-CA').includes(query)),
+  );
   const visibleCount = activeTab === 'codes'
     ? visibleCodes.length
     : activeTab === 'roles'
       ? visibleRoles.length
-      : visibleProcedures.length;
+      : activeTab === 'templates'
+        ? visibleTemplates.length
+        : visibleProcedures.length;
+
+  const deleteTemplate = async (template: { id: string; name: string }) => {
+    const ok = await confirmAction({
+      title: `Supprimer le modèle « ${template.name} » ?`,
+      message: 'Le modèle sera supprimé définitivement. Les projets déjà créés à partir de ce modèle ne changent pas.',
+      confirmLabel: 'Supprimer',
+    });
+    if (!ok) return;
+    try {
+      await api.delete(`/templates/${template.id}`);
+      setTemplates(current => current.filter(item => item.id !== template.id));
+      toast('Modèle supprimé.', 'success');
+    } catch (err: any) {
+      toast(err?.response?.data?.message || 'Impossible de supprimer ce modèle.', 'error');
+    }
+  };
 
   const getActivationLabel = (rule: string) => {
     const map: Record<string, string> = {
@@ -134,6 +164,7 @@ export default function LibraryPage() {
     { key: 'codes',      label: 'Codes incidents', count: incidentCodes.length },
     { key: 'roles',      label: 'Rôles',           count: roles.length },
     { key: 'procedures', label: 'Procédures',       count: procedures.length },
+    { key: 'templates',  label: 'Modèles de projet', count: templates.length },
   ];
 
   return (
@@ -144,7 +175,7 @@ export default function LibraryPage() {
           Bibliothèque centrale
         </h2>
         <p className="text-sm mt-1" style={{ color: '#6C757D' }}>
-          Catalogue global en lecture seule : codes incidents, rôles et procédures officielles CORO
+          Codes incidents, rôles et procédures officielles CORO, et modèles de projet de votre organisation
         </p>
       </div>
 
@@ -475,6 +506,47 @@ export default function LibraryPage() {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* ── MODÈLES DE PROJET ── */}
+          {activeTab === 'templates' && (
+            <div className="grid gap-1.5">
+              <p className="text-xs mb-2" style={{ color: '#6C757D' }}>
+                Un modèle reprend les réponses du configurateur d’un projet pour démarrer un autre bâtiment du même type
+                (Projet → 💾 Modèle). Il se choisit à la création d’un projet.
+              </p>
+              {visibleTemplates.map(template => {
+                const canDelete = isManager || template.createdById === user?.id;
+                return (
+                  <div key={template.id} className="flex items-start justify-between gap-3 p-3"
+                    style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', borderRadius: '4px' }}>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium break-words" style={{ color: '#2C3E50' }}>
+                        {template.name}
+                        <span className="ml-2 text-xs px-1.5 py-0.5"
+                          style={{ backgroundColor: '#EBF5FB', color: '#2980B9', borderRadius: '3px' }}>
+                          {template.documentType}
+                        </span>
+                      </p>
+                      {template.description && (
+                        <p className="text-xs break-words mt-0.5" style={{ color: '#6C757D' }}>{template.description}</p>
+                      )}
+                      <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>
+                        {template.createdBy ? `${template.createdBy.firstName} ${template.createdBy.lastName}`.trim() : 'Auteur inconnu'}
+                        {' · '}{new Date(template.createdAt).toLocaleDateString('fr-CA')}
+                      </p>
+                    </div>
+                    {canDelete && (
+                      <button type="button" onClick={() => deleteTemplate(template)}
+                        className="text-xs px-3 py-1.5 rounded flex-shrink-0"
+                        style={{ border: '1px solid #F1948A', color: '#C0392B', backgroundColor: '#FFFFFF' }}>
+                        Supprimer
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </>
