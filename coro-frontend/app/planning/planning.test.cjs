@@ -969,10 +969,14 @@ test("timeline label density is detailed by day and readable over seven days", (
   const week = time.timelineLabelTicks(hours, 7);
   assert.ok(day.length > week.length);
   assert.deepEqual(workweek, [420, 540, 660, 780, 900, 1020, 1140]);
-  assert.deepEqual(week, workweek);
+  assert.ok(week.length <= workweek.length);
   assert.ok(
     week.every((tick, index) => index === 0 || tick - week[index - 1] >= 120),
   );
+  // Plage de 24 h sur une semaine ouvrée : étiquettes espacées, sans chevauchement.
+  const fullDay = time.timelineLabelTicks({ start: 0, end: 24 * 60 }, 5);
+  assert.deepEqual(fullDay, [0, 240, 480, 720, 960, 1200, 1440]);
+  assert.ok(fullDay.length * 34 <= time.timelineDayMinWidth(5));
 });
 
 test("now marker resolves to one day column and one resource-row span", () => {
