@@ -158,8 +158,8 @@ export class BookingEligibilityService {
   async resolveEligible(
     tx: Prisma.TransactionClient,
     input: { organizationId: string; projectId: string; activityId?: string },
-  ): Promise<ProjectAdvisorEligibility[]> {
-    return tx.projectAdvisorEligibility.findMany({
+  ): Promise<Array<Pick<ProjectAdvisorEligibility, 'advisorUserId' | 'priority'>>> {
+    const explicit = await tx.projectAdvisorEligibility.findMany({
       where: {
         organizationId: input.organizationId,
         projectId: input.projectId,
@@ -171,5 +171,24 @@ export class BookingEligibilityService {
       },
       orderBy: [{ priority: 'asc' }, { advisorUserId: 'asc' }],
     });
+    if (explicit.length) return explicit;
+    // Sans désignation explicite, le conseiller responsable du mandat puis le propriétaire
+    // du projet sont admissibles : un client peut réserver sans configuration préalable.
+    const project = await tx.project.findFirst({
+      where: { id: input.projectId, organizationId: input.organizationId },
+      select: { userId: true, mandate: { select: { ownerId: true } } },
+    });
+    const candidates = [project?.mandate?.ownerId, project?.userId]
+      .filter((id): id is string => !!id)
+      .filter((id, index, list) => list.indexOf(id) === index);
+    if (!candidates.length) return [];
+    const active = await tx.user.findMany({
+      where: { id: { in: candidates }, organizationId: input.organizationId, isActive: true },
+      select: { id: true },
+    });
+    const activeIds = new Set(active.map((user) => user.id));
+    return candidates
+      .filter((id) => activeIds.has(id))
+      .map((advisorUserId, index) => ({ advisorUserId, priority: 100 + index }));
   }
 }

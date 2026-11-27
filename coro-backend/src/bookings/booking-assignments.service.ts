@@ -194,9 +194,16 @@ export class BookingAssignmentsService {
       },
       select: { id: true },
     });
-    if (!eligibility) {
+    if (eligibility) return;
+    // Un projet sans aucune désignation explicite n'est pas restreint : tout conseiller actif
+    // de l'organisation peut y être affecté. Dès qu'une liste existe, elle fait foi.
+    const restricted = await tx.projectAdvisorEligibility.findFirst({
+      where: { organizationId, projectId: booking.projectId, status: 'ACTIVE' },
+      select: { id: true },
+    });
+    if (restricted) {
       throw new BadRequestException(
-        'Le conseiller n’est pas explicitement admissible pour cette activité',
+        'Le conseiller n’est pas admissible pour cette activité',
       );
     }
   }
