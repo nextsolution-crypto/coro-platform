@@ -151,7 +151,7 @@ export class ActivityTaskListsService {
         entityType: 'ProjectActivity',
         entityId: activity.id,
         projectId: project.id,
-        description: 'Checklists applicables ajoutées à l’activité.',
+        description: 'Listes de tâches ajoutées à l’activité.',
         metadata: {
           activityId: activity.id,
           taskListIdsCreated: createdLists,

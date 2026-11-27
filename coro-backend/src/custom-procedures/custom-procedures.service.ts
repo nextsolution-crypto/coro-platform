@@ -321,13 +321,31 @@ export class CustomProceduresService {
       update.titleEN = templated.titleEN || procedure.titleEN;
       update.color = templated.color;
     }
-    return this.prisma.customProcedure.update({
+    const saved = await this.prisma.customProcedure.update({
       where: { id },
       data: {
         ...update,
         updatedAt: new Date(),
       },
     });
+    if (procedure.projectId && (update.status || update.content !== undefined)) {
+      await this.prisma.auditLog
+        .create({
+          data: {
+            action: update.status ? 'PROCEDURE_TOGGLE' : 'PROCEDURE_EDIT',
+            entityType: 'CUSTOM_PROCEDURE',
+            entityId: id,
+            projectId: procedure.projectId,
+            description: update.status
+              ? `Procédure ${procedure.code} ${update.status === 'ACTIVE' ? 'activée' : update.status === 'ARCHIVED' ? 'archivée' : 'remise en brouillon'}`
+              : `Procédure ${procedure.code} modifiée`,
+            userId: actor.userId,
+            organizationId: actor.organizationId,
+          },
+        })
+        .catch(() => undefined);
+    }
+    return saved;
   }
 
   async clone(id: string, projectId: string, actor: AdviserActor) {
