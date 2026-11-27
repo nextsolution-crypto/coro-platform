@@ -120,10 +120,18 @@ export function timelineGridLayout(dayCount: number, resourceCount: number) {
 }
 
 export function timelineLabelTicks(hours: { start: number; end: number }, dayCount: number): number[] {
-  const step = dayCount === 1 ? 60 : 120;
+  // Espace les étiquettes selon la largeur d'une journée : au moins ~34 px par étiquette
+  // (« 08h »), sinon elles se chevauchent quand la plage couvre toute la journée.
+  const maxLabels = Math.max(2, Math.floor(timelineDayMinWidth(dayCount) / 34));
+  const span = Math.max(60, hours.end - hours.start);
+  const minimum = dayCount === 1 ? 60 : 120;
+  const step = [60, 120, 180, 240, 360, 480, 720].find(candidate =>
+    candidate >= minimum && Math.floor(span / candidate) + 1 <= maxLabels) ?? 720;
   const ticks: number[] = [];
   for (let minute = hours.start; minute <= hours.end; minute += step) ticks.push(minute);
-  if (ticks.at(-1) !== hours.end) ticks.push(hours.end);
+  // La borne de fin n'est ajoutée que si elle ne colle pas à la dernière étiquette.
+  const last = ticks.at(-1) ?? hours.start;
+  if (last !== hours.end && hours.end - last >= step / 2) ticks.push(hours.end);
   return ticks;
 }
 
