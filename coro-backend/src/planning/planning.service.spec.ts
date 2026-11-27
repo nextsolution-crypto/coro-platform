@@ -311,7 +311,7 @@ describe('PlanningService', () => {
   it('returns open task deadlines per advisor and day, without time slots', async () => {
     const { service, prisma } = setup();
     prisma.booking.findMany.mockResolvedValue([]);
-    prisma.projectTask = {
+    (prisma as any).projectTask = {
       findMany: jest.fn().mockResolvedValue([
         {
           id: 't1', taskTitle: 'Envoyer le rapport', dueDate: new Date('2026-09-24T00:00:00.000Z'),
