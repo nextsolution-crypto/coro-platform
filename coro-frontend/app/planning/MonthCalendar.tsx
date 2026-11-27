@@ -2,7 +2,7 @@
 
 import type { PlannerEvent } from './types';
 import { formatClock, formatDay, monthDaySummary, monthGridDays } from './time';
-import { eventLabel } from './projection';
+import { eventSummary } from './projection';
 import { getActivityTypeVisual } from './activityTypeVisual';
 import styles from './planning.module.css';
 
@@ -31,8 +31,8 @@ export default function MonthCalendar({ monthDays, events, actions, timeZone, to
               {unknown > 0 && <span>? À vérifier {unknown}</span>}{unplanned > 0 && <span>À planifier {unplanned}</span>}
             </span>}
           </button>
-          {!outside && <div className={styles.monthEvents}>{dayEvents.slice(0, 2).map(event => { const visual = getActivityTypeVisual(event.activityType); return <button type="button" key={event.id} onClick={() => onSelect(event)} title={`${visual.label} · ${eventLabel(event)}`} style={{ borderLeftColor: visual.color }}>
-              <span aria-hidden="true">{visual.icon}</span> {formatClock(event.startUtc, timeZone)} {eventLabel(event)}
+          {!outside && <div className={styles.monthEvents}>{dayEvents.slice(0, 2).map(event => { const visual = getActivityTypeVisual(event.activityType); return <button type="button" key={event.id} onClick={() => onSelect(event)} title={eventSummary(event, formatClock(event.startUtc, timeZone))} style={{ borderLeftColor: visual.color }}>
+              <span aria-hidden="true">{visual.icon}</span> {eventSummary(event, formatClock(event.startUtc, timeZone))}
             </button>; })}{dayEvents.length > 2 && <span>+ {dayEvents.length - 2} autres</span>}</div>}
         </div>;
       })}

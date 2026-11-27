@@ -37,6 +37,7 @@ export type PlannerEvent = {
   projectName?: string;
   clientName?: string;
   buildingName?: string;
+  buildingAddress?: string;
   ownerName?: string;
   activityType?: {
     code: string;

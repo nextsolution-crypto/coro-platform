@@ -6,6 +6,18 @@ export function eventLabel(event: PlannerEvent): string {
   return event.label;
 }
 
+// Format commun à tous les conseillers : « 09 h 30 · Client · Adresse · Activité ».
+// L'adresse est raccourcie au numéro et à la rue (avant la première virgule).
+export function eventSummaryParts(event: PlannerEvent): string[] {
+  if (event.source === 'USER_UNAVAILABILITY' || event.status === 'BUSY') return [eventLabel(event)];
+  const place = (event.buildingAddress || event.buildingName || '').split(',')[0].trim();
+  return [event.clientName, place, eventLabel(event)].filter((part): part is string => !!part && part.trim().length > 0);
+}
+
+export function eventSummary(event: PlannerEvent, clock: string): string {
+  return [clock, ...eventSummaryParts(event)].join(' · ');
+}
+
 export function eventForUser(event: PlannerEvent, userId: string): PlannerEvent {
   if (event.source !== 'BOOKING' || event.status === 'REQUESTED' || event.status === 'BUSY') return event;
   const assignment = event.assignments?.find(item => item.userId === userId);

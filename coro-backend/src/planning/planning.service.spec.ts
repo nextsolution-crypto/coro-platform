@@ -284,7 +284,7 @@ describe('PlanningService', () => {
       result.events.find((e: any) => e.bookingId === 'b-DEMANDEE'),
     ).toMatchObject({
       status: 'REQUESTED',
-      label: 'Demande client — non confirmée',
+      label: 'Visite privée',
       needsAction: true,
     });
     expect(
@@ -306,6 +306,20 @@ describe('PlanningService', () => {
       pendingAssignments: 1,
     });
     expect(scheduling.analyzeManySlots).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps client requests in the action center even outside the displayed window', async () => {
+    const { service, prisma } = setup();
+    const later = {
+      ...booking('DEMANDEE', 'PENDING'),
+      id: 'b-later',
+      requestedDate: new Date('2027-01-15T15:00:00.000Z'),
+    };
+    prisma.booking.findMany
+      .mockResolvedValueOnce([booking('CONFIRMEE', 'ACCEPTED')])
+      .mockResolvedValueOnce([later]);
+    const result: any = await service.team({ start, end }, actor);
+    expect(result.actionSummary.requestedBookings).toBe(1);
   });
 
   it('projects mutation identifiers and the effective reported slot', async () => {

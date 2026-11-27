@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { commitmentStatusLabel } from "@/lib/commitmentStatus";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import AppLayout from "@/components/layout/AppLayout";
@@ -940,7 +941,7 @@ export default function BookingsPage() {
                           key={assignment.id}
                           className="flex flex-wrap items-center gap-2 mb-2 text-xs"
                         >
-                          <span className="font-bold">{assignment.role}</span>
+                          <span className="font-bold">{assignment.role === "LEAD" ? "Responsable" : assignment.role === "SUPPORT" ? "Renfort" : assignment.role}</span>
                           <span>
                             {assignment.user?.firstName}{" "}
                             {assignment.user?.lastName}
@@ -955,8 +956,10 @@ export default function BookingsPage() {
                               aria-label="Conditions de l’engagement proposé"
                             >
                               <p className="font-bold mb-2">
-                                Version d’engagement {commitment.versionNumber}{" "}
-                                · {commitment.status}
+                                {commitmentStatusLabel(commitment.status)}
+                                {commitment.versionNumber > 1
+                                  ? ` · modification n° ${commitment.versionNumber - 1}`
+                                  : ""}
                               </p>
                               <p>
                                 Activité :{" "}
