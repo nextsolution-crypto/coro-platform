@@ -9,6 +9,10 @@ import { formatCivilDate } from '@/app/planning/time';
 import type { MandateActivity as Activity, MandatePerson as Person, MandateTask as Task,
   MandateTaskGroup as TaskGroup, MandateWorkView } from './useMandateWork';
 
+const ACTIVITY_STATUS_LABELS: Record<string, string> = {
+  a_faire: 'À faire', fait: 'Fait', reporte: 'Reporté', annule: 'Annulé', termine: 'Terminé',
+};
+
 const planningLabels: Record<string, string> = { TO_PLAN: 'À planifier', LEAD_PENDING: 'Affectation à confirmer',
   PLANNED: 'Planifiée', CONFIRMED: 'Confirmée' };
 const statusLabels: Record<string, string> = { a_faire: 'À faire', en_cours: 'En cours', fait: 'Fait' };
@@ -133,7 +137,7 @@ export default function MandateWorkTab({ projectId, teamMembers, view, loading, 
           <button type="button" className="w-full text-left flex justify-between gap-4 items-start"
             onClick={() => setExpandedActivities(value => ({ ...value, [activity.id]: !open }))} aria-expanded={open}>
             <span><strong>{activity.label}</strong><small className="block text-gray-500 mt-1">{activity.scheduledDate ? formatCivilDate(activity.scheduledDate) : 'Date à déterminer'} · {planningLabels[activity.planningStatus] ?? activity.planningStatus}{activity.lead ? ` · ${activity.lead.displayName}` : ''}</small>
-              <small className="block text-gray-500">{activity.completedTaskCount} / {activity.taskCount} tâches · {hours(activity.actualHours)} · {activity.status}</small></span>
+              <small className="block text-gray-500">{activity.completedTaskCount} / {activity.taskCount} tâches · {hours(activity.actualHours)} · {ACTIVITY_STATUS_LABELS[activity.status] ?? activity.status}</small></span>
             <span className="text-xs whitespace-nowrap">{open ? 'Replier' : 'Ouvrir'}</span>
           </button>
           {open && <div className="grid gap-3 mt-4">
