@@ -523,15 +523,17 @@ export class SchedulingService {
         for (const known of validity) {
           const inside = work.filter((range) => overlaps(known, range));
           for (const gap of uncovered(known, inside)) {
+            // Hors horaire habituel (ex. formation un samedi) : possible, mais à confirmer
+            // explicitement. Seuls les vrais conflits (congé, autre activité) bloquent.
             result.conflicts.push({
-              severity: 'BLOCKED',
+              severity: 'SOFT_CONFLICT',
               source: 'WORK_SCHEDULE',
               sourceId: known.scheduleId,
               startUtc: gap.startUtc,
               endUtc: gap.endUtc,
               timeZone: known.timeZone,
-              label: 'Hors horaire de travail',
-              reason: 'Le créneau dépasse l’horaire de travail',
+              label: 'Hors horaire habituel',
+              reason: 'Le créneau sort de l’horaire habituel du conseiller : à confirmer',
             });
           }
         }
