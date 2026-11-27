@@ -22,7 +22,7 @@ export interface ExternalResource {
   role: string;       // Rôle / organisme
   phone: string;      // Numéro(s) de téléphone
   url?: string;       // Lien hypertexte optionnel
-  isBold?: boolean;   // Ligne surlignée (ex: GardaWorld)
+  isBold?: boolean;   // Ligne surlignée (ex. : la firme-conseil)
   isFixed?: boolean;  // Entrée système non supprimable
 }
 
@@ -391,7 +391,7 @@ function buildSection2_3(ctx: DocumentContext, lang: 'fr' | 'en'): PhoneEntry[] 
     extra.push(...cond.building_type_industrial);
   }
 
-  const gardaRole = lang === 'fr'
+  const firmRole = lang === 'fr'
     ? 'Conseillers en prévention incendie et mesures d\'urgence'
     : 'Fire safety and emergency management consultants';
 
@@ -404,7 +404,7 @@ function buildSection2_3(ctx: DocumentContext, lang: 'fr' | 'en'): PhoneEntry[] 
       : { role, name: '', phone: '' })),
     ...extra.map(role => ({ role, name: '', phone: '' })),
     ...(firm && firm !== 'CORO'
-      ? [{ role: gardaRole, name: firm, phone: ctx.companyPhone || '', isBold: true }]
+      ? [{ role: firmRole, name: firm, phone: ctx.companyPhone || '', isBold: true }]
       : []),
   ];
 

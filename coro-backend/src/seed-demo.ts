@@ -88,10 +88,10 @@ async function main() {
   // ── 3. CLIENTS ──────────────────────────────────────
   const client1 = await prisma.client.create({
     data: {
-      name: 'Groupe Immobilier Petra',
-      email: 'gestion@groupepetra.ca',
+      name: 'Groupe Immobilier Démo Horizon',
+      email: 'gestion@horizon-demo.example',
       phone: '(450) 555-0200',
-      address: '3000 boul. Le Carrefour',
+      address: '100 boul. Fictif',
       city: 'Laval',
       province: 'QC',
       organizationId: org.id,
@@ -114,8 +114,8 @@ async function main() {
   // ── 4. BÂTIMENTS ────────────────────────────────────
   const building1 = await prisma.building.create({
     data: {
-      name: 'Tour Le Carrefour',
-      address: '3000 boul. Le Carrefour',
+      name: 'Tour Horizon',
+      address: '100 boul. Fictif',
       city: 'Laval',
       province: 'QC',
       postalCode: 'H7T 2P5',
@@ -125,7 +125,7 @@ async function main() {
       responsableFirstName: 'Michel',
       responsableLastName: 'Beauchamp',
       responsableTitre: 'Directeur immobilier',
-      responsableEmail: 'michel.beauchamp@groupepetra.ca',
+      responsableEmail: 'michel.beauchamp@horizon-demo.example',
       responsablePhone: '(450) 555-0201',
       organizationId: org.id,
       clientId: client1.id,
@@ -165,7 +165,7 @@ async function main() {
       responsableFirstName: 'François',
       responsableLastName: 'Dubé',
       responsableTitre: 'Gestionnaire immobilier',
-      responsableEmail: 'francois.dube@groupepetra.ca',
+      responsableEmail: 'francois.dube@horizon-demo.example',
       responsablePhone: '(514) 555-0301',
       organizationId: org.id,
       clientId: client1.id,
@@ -178,7 +178,7 @@ async function main() {
   // Projet 1 — PMU Tour à bureaux (VALIDATED)
   const projet1 = await prisma.project.create({
     data: {
-      name: 'PMU Tour Le Carrefour 2026',
+      name: 'PMU Tour Horizon 2026',
       documentType: 'PMU',
       status: 'VALIDATED',
       year: 2026,
@@ -457,7 +457,7 @@ async function main() {
   console.log('  OPERATOR → marie.leclair@demo.getcoro.io / Conseiller2026!');
   console.log('');
   console.log('Projets :');
-  console.log('  PMU Tour Le Carrefour 2026 → VALIDÉ ✅');
+  console.log('  PMU Tour Horizon 2026 → VALIDÉ ✅');
   console.log('  PMU Usine Boréal Site A 2026 → EN COURS 🔵');
   console.log('  PSI Complexe Saint-Laurent 2026 → EN RÉVISION 🟡');
   console.log('─────────────────────────────────────');

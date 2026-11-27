@@ -575,7 +575,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
     };
 
     const configureDto = {
-      publicSlug: 'sobeys-boucherville',
+      publicSlug: 'epicerie-demo-ville',
       nameFR: 'Programme d’alerte publique',
       registrationEnabled: true,
       smsEnabled: true,

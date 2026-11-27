@@ -421,10 +421,10 @@ describe('PopulationService', () => {
     };
 
     const publicProgram = {
-      publicSlug: 'sobeys-boucherville',
+      publicSlug: 'epicerie-demo-ville',
 
-      nameFR: 'Alertes publiques Sobeys Boucherville',
-      nameEN: 'Sobeys Boucherville Public Alerts',
+      nameFR: 'Alertes publiques Épicerie Démo',
+      nameEN: 'Demo Grocery Public Alerts',
 
       descriptionFR: 'Programme d’alerte à la population.',
       descriptionEN: 'Public alert program.',
@@ -458,11 +458,11 @@ describe('PopulationService', () => {
         },
       });
 
-      const result = await service.getPublicProgram('sobeys-boucherville');
+      const result = await service.getPublicProgram('epicerie-demo-ville');
 
       expect(prisma.populationProgram.findUnique).toHaveBeenCalledWith({
         where: {
-          publicSlug: 'sobeys-boucherville',
+          publicSlug: 'epicerie-demo-ville',
         },
         select: expect.objectContaining({
           publicSlug: true,
@@ -526,7 +526,7 @@ describe('PopulationService', () => {
       });
 
       await expect(
-        service.getPublicProgram('sobeys-boucherville'),
+        service.getPublicProgram('epicerie-demo-ville'),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -541,7 +541,7 @@ describe('PopulationService', () => {
       });
 
       await expect(
-        service.getPublicProgram('sobeys-boucherville'),
+        service.getPublicProgram('epicerie-demo-ville'),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -556,7 +556,7 @@ describe('PopulationService', () => {
       });
 
       await expect(
-        service.getPublicProgram('sobeys-boucherville'),
+        service.getPublicProgram('epicerie-demo-ville'),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
@@ -592,10 +592,10 @@ describe('PopulationService', () => {
         populationProgram: {
           id: 'population-program-1',
           status: PopulationProgramStatus.ACTIVE,
-          publicSlug: 'sobeys-boucherville',
+          publicSlug: 'epicerie-demo-ville',
 
-          nameFR: 'Alertes publiques Sobeys Boucherville',
-          nameEN: 'Sobeys Boucherville Public Alerts',
+          nameFR: 'Alertes publiques Épicerie Démo',
+          nameEN: 'Demo Grocery Public Alerts',
 
           descriptionFR: 'Programme d’alerte à la population.',
           descriptionEN: 'Public alert program.',
@@ -638,10 +638,10 @@ describe('PopulationService', () => {
         status: PopulationProgramStatus.ACTIVE,
         program: {
           id: 'population-program-1',
-          publicSlug: 'sobeys-boucherville',
+          publicSlug: 'epicerie-demo-ville',
 
-          nameFR: 'Alertes publiques Sobeys Boucherville',
-          nameEN: 'Sobeys Boucherville Public Alerts',
+          nameFR: 'Alertes publiques Épicerie Démo',
+          nameEN: 'Demo Grocery Public Alerts',
 
           descriptionFR: 'Programme d’alerte à la population.',
           descriptionEN: 'Public alert program.',
@@ -693,7 +693,7 @@ describe('PopulationService', () => {
 
   describe('configureProgram', () => {
     const dto = {
-      publicSlug: 'sobeys-boucherville',
+      publicSlug: 'epicerie-demo-ville',
       nameFR: 'Programme d’alerte publique',
       nameEN: 'Public Alert Program',
       descriptionFR: 'Programme destiné à la population environnante.',
@@ -895,7 +895,7 @@ describe('PopulationService', () => {
       id: 'program-1',
       rueFacilityProfileId: 'profile-1',
       status: PopulationProgramStatus.CONFIGURING,
-      publicSlug: 'sobeys-boucherville',
+      publicSlug: 'epicerie-demo-ville',
       nameFR: 'Programme d’alerte publique',
       smsEnabled: true,
       emailEnabled: true,
@@ -1119,7 +1119,7 @@ describe('PopulationService', () => {
       id: 'program-1',
       rueFacilityProfileId: 'profile-1',
       status: PopulationProgramStatus.CONFIGURING,
-      publicSlug: 'sobeys-boucherville',
+      publicSlug: 'epicerie-demo-ville',
       nameFR: 'Programme d’alerte publique',
       smsEnabled: true,
       emailEnabled: true,
@@ -1251,7 +1251,7 @@ describe('PopulationService', () => {
       id: 'program-1',
       rueFacilityProfileId: 'profile-1',
       status: PopulationProgramStatus.READY,
-      publicSlug: 'sobeys-boucherville',
+      publicSlug: 'epicerie-demo-ville',
       nameFR: 'Programme d’alerte publique',
       smsEnabled: true,
       emailEnabled: true,
@@ -1857,7 +1857,7 @@ describe('PopulationService', () => {
       });
 
       await expect(
-        service.registerSubscriber('sobeys-boucherville', {
+        service.registerSubscriber('epicerie-demo-ville', {
           email: 'citizen@example.com',
           preferredLanguage: PopulationPreferredLanguage.FR,
           consentVersion: '2026-09-v1',
@@ -1926,7 +1926,7 @@ describe('PopulationService', () => {
         disclosureSnapshot: 'UNTRUSTED CLIENT LEGAL TEXT',
       };
       const result = await service.registerSubscriber(
-        'sobeys-boucherville',
+        'epicerie-demo-ville',
         requestWithUntrustedSnapshot,
       );
 
@@ -2011,7 +2011,7 @@ describe('PopulationService', () => {
     });
 
     it('keeps presentation input and uses E.164 for identity and delivery', async () => {
-      await service.registerSubscriber('sobeys-boucherville', {
+      await service.registerSubscriber('epicerie-demo-ville', {
         phone: '(450) 555-1234',
         preferredLanguage: PopulationPreferredLanguage.FR,
         consentVersion: '2026-09-v1',
@@ -2038,7 +2038,7 @@ describe('PopulationService', () => {
 
     it('rejects an invalid phone before persistence or SMS', async () => {
       await expect(
-        service.registerSubscriber('sobeys-boucherville', {
+        service.registerSubscriber('epicerie-demo-ville', {
           phone: '12345',
           preferredLanguage: PopulationPreferredLanguage.FR,
           consentVersion: '2026-09-v1',
@@ -2065,7 +2065,7 @@ describe('PopulationService', () => {
         emailEnabled: false,
         createdAt: new Date('2026-09-17T12:00:00Z'),
       });
-      await service.registerSubscriber('sobeys-boucherville', {
+      await service.registerSubscriber('epicerie-demo-ville', {
         email: 'Citoyen@Example.com',
         preferredLanguage: PopulationPreferredLanguage.EN,
         consentVersion: '2026-09-v1',
@@ -2106,7 +2106,7 @@ describe('PopulationService', () => {
       'refuse une inscription SMS lorsque le consentement explicite vaut %s',
       async (smsConsent) => {
         await expect(
-          service.registerSubscriber('sobeys-boucherville', {
+          service.registerSubscriber('epicerie-demo-ville', {
             phone: '+14505551234',
             preferredLanguage: PopulationPreferredLanguage.FR,
             consentVersion: '2026-09-v1',
@@ -2126,7 +2126,7 @@ describe('PopulationService', () => {
         new PopulationProviderError('BREVO_NETWORK_ERROR', 'indisponible'),
       );
 
-      const result = await service.registerSubscriber('sobeys-boucherville', {
+      const result = await service.registerSubscriber('epicerie-demo-ville', {
         phone: '+14505551234',
         preferredLanguage: PopulationPreferredLanguage.FR,
         consentVersion: '2026-09-v1',
@@ -2159,7 +2159,7 @@ describe('PopulationService', () => {
       });
 
       await expect(
-        service.registerSubscriber('sobeys-boucherville', {
+        service.registerSubscriber('epicerie-demo-ville', {
           phone: '+14505551234',
           preferredLanguage: PopulationPreferredLanguage.FR,
           consentVersion: '2026-09-v1',
@@ -2174,7 +2174,7 @@ describe('PopulationService', () => {
       });
 
       await expect(
-        service.registerSubscriber('sobeys-boucherville', {
+        service.registerSubscriber('epicerie-demo-ville', {
           phone: '+14505551234',
           preferredLanguage: PopulationPreferredLanguage.FR,
           consentVersion: '2026-09-v1',
@@ -2186,7 +2186,7 @@ describe('PopulationService', () => {
 
     it('refuse une version de consentement périmée', async () => {
       await expect(
-        service.registerSubscriber('sobeys-boucherville', {
+        service.registerSubscriber('epicerie-demo-ville', {
           phone: '+14505551234',
           preferredLanguage: PopulationPreferredLanguage.FR,
           consentVersion: 'ancienne-version',
@@ -2203,7 +2203,7 @@ describe('PopulationService', () => {
       });
 
       await expect(
-        service.registerSubscriber('sobeys-boucherville', {
+        service.registerSubscriber('epicerie-demo-ville', {
           phone: '+14505551234',
           preferredLanguage: PopulationPreferredLanguage.FR,
           consentVersion: '2026-09-v1',
@@ -2218,7 +2218,7 @@ describe('PopulationService', () => {
       });
 
       await expect(
-        service.registerSubscriber('sobeys-boucherville', {
+        service.registerSubscriber('epicerie-demo-ville', {
           email: 'citoyen@example.com',
           preferredLanguage: PopulationPreferredLanguage.FR,
           consentVersion: '2026-09-v1',
@@ -2268,7 +2268,7 @@ describe('PopulationService', () => {
 
     it('crée un nouvel OTP SMS hashé', async () => {
       const result = await service.resendVerification(
-        'sobeys-boucherville',
+        'epicerie-demo-ville',
         'subscriber-1',
         {
           channel: PopulationVerificationChannel.SMS,
@@ -2308,7 +2308,7 @@ describe('PopulationService', () => {
       );
 
       const result = await service.resendVerification(
-        'sobeys-boucherville',
+        'epicerie-demo-ville',
         'subscriber-1',
         { channel: PopulationVerificationChannel.SMS },
       );
@@ -2324,7 +2324,7 @@ describe('PopulationService', () => {
       });
 
       await expect(
-        service.resendVerification('sobeys-boucherville', 'subscriber-1', {
+        service.resendVerification('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.SMS,
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
@@ -2340,7 +2340,7 @@ describe('PopulationService', () => {
       prisma.populationVerification.count.mockResolvedValue(5);
 
       await expect(
-        service.resendVerification('sobeys-boucherville', 'subscriber-1', {
+        service.resendVerification('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.SMS,
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
@@ -2356,7 +2356,7 @@ describe('PopulationService', () => {
       });
 
       await expect(
-        service.resendVerification('sobeys-boucherville', 'subscriber-1', {
+        service.resendVerification('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.SMS,
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
@@ -2369,7 +2369,7 @@ describe('PopulationService', () => {
       });
 
       await expect(
-        service.resendVerification('sobeys-boucherville', 'subscriber-1', {
+        service.resendVerification('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.EMAIL,
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
@@ -2382,7 +2382,7 @@ describe('PopulationService', () => {
       });
 
       await expect(
-        service.resendVerification('sobeys-boucherville', 'subscriber-1', {
+        service.resendVerification('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.SMS,
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
@@ -2416,7 +2416,7 @@ describe('PopulationService', () => {
         emailEnabled: false,
       });
       const result = await service.resendVerification(
-        'sobeys-boucherville',
+        'epicerie-demo-ville',
         'subscriber-1',
         {
           channel: PopulationVerificationChannel.EMAIL,
@@ -2450,7 +2450,7 @@ describe('PopulationService', () => {
         emailEnabled: false,
       });
       await expect(
-        service.resendVerification('sobeys-boucherville', 'subscriber-1', {
+        service.resendVerification('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.EMAIL,
           accessToken: token(),
         }),
@@ -2466,7 +2466,7 @@ describe('PopulationService', () => {
         emailEnabled: true,
       });
       await expect(
-        service.resendVerification('sobeys-boucherville', 'subscriber-1', {
+        service.resendVerification('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.EMAIL,
           accessToken: secondChannelToken(),
         }),
@@ -2479,7 +2479,7 @@ describe('PopulationService', () => {
 
       await expect(
         service.resendVerification(
-          'sobeys-boucherville',
+          'epicerie-demo-ville',
           'subscriber-autre-programme',
           {
             channel: PopulationVerificationChannel.SMS,
@@ -2567,7 +2567,7 @@ describe('PopulationService', () => {
 
     it('vérifie un OTP valide et active l’abonné SMS', async () => {
       const result = await service.verifySubscriber(
-        'sobeys-boucherville',
+        'epicerie-demo-ville',
         'subscriber-1',
         {
           channel: PopulationVerificationChannel.SMS,
@@ -2642,7 +2642,7 @@ describe('PopulationService', () => {
 
     it('incrémente attemptCount lorsque le code est invalide', async () => {
       await expect(
-        service.verifySubscriber('sobeys-boucherville', 'subscriber-1', {
+        service.verifySubscriber('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.SMS,
           code: '999999',
         }),
@@ -2671,7 +2671,7 @@ describe('PopulationService', () => {
       });
 
       await expect(
-        service.verifySubscriber('sobeys-boucherville', 'subscriber-1', {
+        service.verifySubscriber('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.SMS,
           code: validCode,
         }),
@@ -2688,7 +2688,7 @@ describe('PopulationService', () => {
       });
 
       await expect(
-        service.verifySubscriber('sobeys-boucherville', 'subscriber-1', {
+        service.verifySubscriber('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.SMS,
           code: validCode,
         }),
@@ -2702,7 +2702,7 @@ describe('PopulationService', () => {
 
       await expect(
         service.verifySubscriber(
-          'sobeys-boucherville',
+          'epicerie-demo-ville',
           'subscriber-autre-programme',
           {
             channel: PopulationVerificationChannel.SMS,
@@ -2723,7 +2723,7 @@ describe('PopulationService', () => {
       });
 
       await expect(
-        service.verifySubscriber('sobeys-boucherville', 'subscriber-1', {
+        service.verifySubscriber('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.SMS,
           code: validCode,
         }),
@@ -2738,7 +2738,7 @@ describe('PopulationService', () => {
       prisma.populationVerification.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.verifySubscriber('sobeys-boucherville', 'subscriber-1', {
+        service.verifySubscriber('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.SMS,
           code: validCode,
         }),
@@ -2808,7 +2808,7 @@ describe('PopulationService', () => {
 
     it('active EMAIL sans désactiver SMS', async () => {
       const result = await service.verifySubscriber(
-        'sobeys-boucherville',
+        'epicerie-demo-ville',
         'subscriber-1',
         {
           channel: PopulationVerificationChannel.EMAIL,
@@ -2854,7 +2854,7 @@ describe('PopulationService', () => {
 
     it('refuse un code arbitraire pour un canal SMS déjà actif', async () => {
       await expect(
-        service.verifySubscriber('sobeys-boucherville', 'subscriber-1', {
+        service.verifySubscriber('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.SMS,
           code: '000000',
         }),
@@ -2905,7 +2905,7 @@ describe('PopulationService', () => {
 
     it('crée et transmet un OTP d’accès sans le conserver en clair', async () => {
       const result = await service.requestSubscriberAccess(
-        'sobeys-boucherville',
+        'epicerie-demo-ville',
         'subscriber-1',
         { channel: PopulationVerificationChannel.SMS },
       );
@@ -2934,7 +2934,7 @@ describe('PopulationService', () => {
       prisma.populationSubscriber.findFirst.mockResolvedValue(null);
 
       const result = await service.requestSubscriberAccess(
-        'sobeys-boucherville',
+        'epicerie-demo-ville',
         'subscriber-inconnu',
         { channel: PopulationVerificationChannel.SMS },
       );
@@ -2954,7 +2954,7 @@ describe('PopulationService', () => {
       });
 
       const result = await service.requestSubscriberAccess(
-        'sobeys-boucherville',
+        'epicerie-demo-ville',
         'subscriber-1',
         { channel: PopulationVerificationChannel.SMS },
       );
@@ -2969,7 +2969,7 @@ describe('PopulationService', () => {
       );
 
       await expect(
-        service.requestSubscriberAccess('sobeys-boucherville', 'subscriber-1', {
+        service.requestSubscriberAccess('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.SMS,
         }),
       ).resolves.toEqual(genericResponse);
@@ -3026,7 +3026,7 @@ describe('PopulationService', () => {
 
     it('consomme un OTP valide, émet un token court et autorise profile', async () => {
       const access = await service.verifySubscriberAccess(
-        'sobeys-boucherville',
+        'epicerie-demo-ville',
         'subscriber-1',
         {
           channel: PopulationVerificationChannel.SMS,
@@ -3049,7 +3049,7 @@ describe('PopulationService', () => {
       });
 
       const profile = await service.getSubscriberProfile(
-        'sobeys-boucherville',
+        'epicerie-demo-ville',
         'subscriber-1',
         { accessToken: access.accessToken },
       );
@@ -3062,7 +3062,7 @@ describe('PopulationService', () => {
       });
 
       await expect(
-        service.verifySubscriberAccess('sobeys-boucherville', 'subscriber-1', {
+        service.verifySubscriberAccess('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.SMS,
           code: validCode,
         }),
@@ -3071,7 +3071,7 @@ describe('PopulationService', () => {
 
     it('refuse un code invalide et incrémente les tentatives', async () => {
       await expect(
-        service.verifySubscriberAccess('sobeys-boucherville', 'subscriber-1', {
+        service.verifySubscriberAccess('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.SMS,
           code: '999999',
         }),
@@ -3087,7 +3087,7 @@ describe('PopulationService', () => {
       prisma.populationVerification.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.verifySubscriberAccess('sobeys-boucherville', 'subscriber-1', {
+        service.verifySubscriberAccess('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.SMS,
           code: validCode,
         }),
@@ -3101,7 +3101,7 @@ describe('PopulationService', () => {
       });
 
       await expect(
-        service.verifySubscriberAccess('sobeys-boucherville', 'subscriber-1', {
+        service.verifySubscriberAccess('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.SMS,
           code: validCode,
         }),
@@ -3115,7 +3115,7 @@ describe('PopulationService', () => {
       });
 
       await expect(
-        service.verifySubscriberAccess('sobeys-boucherville', 'subscriber-1', {
+        service.verifySubscriberAccess('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.SMS,
           code: validCode,
         }),
@@ -3126,7 +3126,7 @@ describe('PopulationService', () => {
       prisma.populationVerification.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.verifySubscriberAccess('sobeys-boucherville', 'subscriber-1', {
+        service.verifySubscriberAccess('epicerie-demo-ville', 'subscriber-1', {
           channel: PopulationVerificationChannel.SMS,
           code: validCode,
         }),
@@ -8502,7 +8502,7 @@ describe('PopulationService', () => {
 
     it('retourne le profil authentifié avec les coordonnées masquées', async () => {
       const result = await service.getSubscriberProfile(
-        'sobeys-boucherville',
+        'epicerie-demo-ville',
         'subscriber-1',
         {
           accessToken: createAccessToken(),
@@ -8569,7 +8569,7 @@ describe('PopulationService', () => {
         unsubscribedAt: null,
       });
       const result = await service.getSubscriberProfile(
-        'sobeys-boucherville',
+        'epicerie-demo-ville',
         'subscriber-1',
         { accessToken: createAccessToken() },
       );
@@ -8595,7 +8595,7 @@ describe('PopulationService', () => {
       });
 
       const result = await service.getSubscriberProfile(
-        'sobeys-boucherville',
+        'epicerie-demo-ville',
         'subscriber-1',
         {
           accessToken: createAccessToken(),
@@ -8617,7 +8617,7 @@ describe('PopulationService', () => {
 
     it('refuse un jeton appartenant à un autre abonné', async () => {
       await expect(
-        service.getSubscriberProfile('sobeys-boucherville', 'subscriber-1', {
+        service.getSubscriberProfile('epicerie-demo-ville', 'subscriber-1', {
           accessToken: createAccessToken('subscriber-2', 'program-1'),
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
@@ -8627,7 +8627,7 @@ describe('PopulationService', () => {
 
     it('refuse un jeton expiré', async () => {
       await expect(
-        service.getSubscriberProfile('sobeys-boucherville', 'subscriber-1', {
+        service.getSubscriberProfile('epicerie-demo-ville', 'subscriber-1', {
           accessToken: createAccessToken(
             'subscriber-1',
             'program-1',
@@ -9077,7 +9077,7 @@ describe('PopulationService', () => {
 
     it('modifie la langue et crée une preuve CONSENT_UPDATED', async () => {
       const result = await service.updateSubscriberPreferences(
-        'sobeys-boucherville',
+        'epicerie-demo-ville',
         'subscriber-1',
         {
           accessToken: createAccessToken(),
@@ -9115,7 +9115,7 @@ describe('PopulationService', () => {
 
     it('est idempotent lorsque la langue ne change pas', async () => {
       const result = await service.updateSubscriberPreferences(
-        'sobeys-boucherville',
+        'epicerie-demo-ville',
         'subscriber-1',
         {
           accessToken: createAccessToken(),
@@ -9141,7 +9141,7 @@ describe('PopulationService', () => {
 
       await expect(
         service.updateSubscriberPreferences(
-          'sobeys-boucherville',
+          'epicerie-demo-ville',
           'subscriber-1',
           {
             accessToken: createAccessToken(),
@@ -9158,7 +9158,7 @@ describe('PopulationService', () => {
     it('refuse un jeton appartenant à un autre programme', async () => {
       await expect(
         service.updateSubscriberPreferences(
-          'sobeys-boucherville',
+          'epicerie-demo-ville',
           'subscriber-1',
           {
             accessToken: createAccessToken('subscriber-1', 'program-2'),
@@ -9238,7 +9238,7 @@ describe('PopulationService', () => {
 
     it('désabonne un abonné ACTIVE avec un jeton valide', async () => {
       const result = await service.unsubscribeSubscriber(
-        'sobeys-boucherville',
+        'epicerie-demo-ville',
         'subscriber-1',
         {
           accessToken: createAccessToken(),
@@ -9281,7 +9281,7 @@ describe('PopulationService', () => {
       const [payload] = validToken.split('.');
 
       await expect(
-        service.unsubscribeSubscriber('sobeys-boucherville', 'subscriber-1', {
+        service.unsubscribeSubscriber('epicerie-demo-ville', 'subscriber-1', {
           accessToken: `${payload}.signature-invalide`,
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
@@ -9291,7 +9291,7 @@ describe('PopulationService', () => {
 
     it('refuse un jeton expiré', async () => {
       await expect(
-        service.unsubscribeSubscriber('sobeys-boucherville', 'subscriber-1', {
+        service.unsubscribeSubscriber('epicerie-demo-ville', 'subscriber-1', {
           accessToken: createAccessToken(
             'subscriber-1',
             'program-1',
@@ -9305,7 +9305,7 @@ describe('PopulationService', () => {
 
     it('refuse un jeton appartenant à un autre abonné', async () => {
       await expect(
-        service.unsubscribeSubscriber('sobeys-boucherville', 'subscriber-1', {
+        service.unsubscribeSubscriber('epicerie-demo-ville', 'subscriber-1', {
           accessToken: createAccessToken('subscriber-2', 'program-1'),
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
@@ -9315,7 +9315,7 @@ describe('PopulationService', () => {
 
     it('refuse un jeton appartenant à un autre programme', async () => {
       await expect(
-        service.unsubscribeSubscriber('sobeys-boucherville', 'subscriber-1', {
+        service.unsubscribeSubscriber('epicerie-demo-ville', 'subscriber-1', {
           accessToken: createAccessToken('subscriber-1', 'program-2'),
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
@@ -9331,7 +9331,7 @@ describe('PopulationService', () => {
       });
 
       const result = await service.unsubscribeSubscriber(
-        'sobeys-boucherville',
+        'epicerie-demo-ville',
         'subscriber-1',
         {
           accessToken: createAccessToken(),

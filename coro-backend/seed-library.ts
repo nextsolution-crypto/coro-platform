@@ -48,7 +48,7 @@ async function main() {
 
   // ============================================================
   // RÔLES OFFICIELS CORO
-  // Enrichis selon gabarits GardaWorld et exemples clients réels
+  // Enrichis selon des gabarits professionnels et des exemples anonymisés
   // ============================================================
 
   const roles = [
