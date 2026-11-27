@@ -1,3 +1,4 @@
+import { projectAccessWhere } from '../auth/project-access';
 import {
   BadRequestException,
   ConflictException,
@@ -46,17 +47,56 @@ export class PlanningActionsService {
     @Optional() private readonly activityTaskLists?: ActivityTaskListsService,
   ) {}
 
-  private manager(actor: Actor) {
+  // Planifier et affecter : un administrateur ou un coordinateur partout ; un conseiller sur les projets
+  // qu'il peut modifier (dont il est propriétaire). Les autres projets de l'organisation restent en lecture seule.
+  private async manager(
+    actor: Actor,
+    target: { projectId?: string; activityId?: string; bookingId?: string },
+  ) {
     if (
       !actor?.organizationId ||
       !actor.userId ||
-      !['ADMIN', 'SUPER_ADMIN'].includes(actor.role)
+      !['ADMIN', 'SUPER_ADMIN', 'OPERATOR'].includes(actor.role)
     ) {
+      throw new ForbiddenException('Planification non autorisée');
+    }
+    if (['ADMIN', 'SUPER_ADMIN'].includes(actor.role)) return;
+    // Droit délégué « Coordination planification » : tous les projets de l'organisation.
+    const coordinator = await this.prisma.user.findFirst({
+      where: { id: actor.userId, organizationId: actor.organizationId, isActive: true, planningCoordinator: true },
+      select: { id: true },
+    });
+    if (coordinator) return;
+    let projectId = target.projectId;
+    if (!projectId && target.activityId) {
+      projectId = (
+        await this.prisma.projectActivity.findFirst({
+          where: { id: target.activityId, organizationId: actor.organizationId },
+          select: { projectId: true },
+        })
+      )?.projectId;
+    }
+    if (!projectId && target.bookingId) {
+      projectId = (
+        await this.prisma.booking.findFirst({
+          where: { id: target.bookingId, organizationId: actor.organizationId },
+          select: { projectId: true },
+        })
+      )?.projectId;
+    }
+    const writable = projectId
+      ? await this.prisma.project.findFirst({
+          where: { id: projectId, ...projectAccessWhere(actor) },
+          select: { id: true },
+        })
+      : null;
+    if (!writable) {
       throw new ForbiddenException(
-        'Mutations du Planner reservees aux administrateurs',
+        "Seul le propriétaire du projet ou un administrateur peut planifier cette activité",
       );
     }
   }
+
 
   private async replayPlanning(
     tx: Prisma.TransactionClient,
@@ -377,7 +417,7 @@ export class PlanningActionsService {
     dto: PlanExistingActivityDto,
     actor: Actor,
   ) {
-    this.manager(actor);
+    await this.manager(actor, { activityId });
     return this.prisma.$transaction(
       async (tx) => {
         const operation = 'PLAN_EXISTING_ACTIVITY' as const;
@@ -414,7 +454,7 @@ export class PlanningActionsService {
   }
 
   async deleteUnplannedActivity(activityId: string, actor: Actor) {
-    this.manager(actor);
+    await this.manager(actor, { activityId });
     return this.prisma.$transaction(
       async (tx) => {
         await this.lockActivity(tx, activityId, actor.organizationId);
@@ -474,7 +514,7 @@ export class PlanningActionsService {
   }
 
   async cancelActivity(activityId: string, actor: Actor) {
-    this.manager(actor);
+    await this.manager(actor, { activityId });
     return this.prisma.$transaction(
       async (tx) => {
         await this.lockActivity(tx, activityId, actor.organizationId);
@@ -526,7 +566,7 @@ export class PlanningActionsService {
   }
 
   async createAndPlan(dto: CreateAndPlanActivityDto, actor: Actor) {
-    this.manager(actor);
+    await this.manager(actor, { projectId: dto.projectId });
     return this.prisma.$transaction(
       async (tx) => {
         const operation = 'CREATE_AND_PLAN_ACTIVITY' as const;
@@ -625,7 +665,7 @@ export class PlanningActionsService {
     dto: UpdatePlanningSlotDto,
     actor: Actor,
   ) {
-    this.manager(actor);
+    await this.manager(actor, { bookingId });
     return this.prisma.$transaction(
       async (tx) => {
         await this.scheduling.lockBooking(tx, actor.organizationId, bookingId);
@@ -725,7 +765,7 @@ export class PlanningActionsService {
     dto: ReassignPlanningTeamDto,
     actor: Actor,
   ) {
-    this.manager(actor);
+    await this.manager(actor, { bookingId });
     return this.prisma.$transaction(
       async (tx) => {
         await this.scheduling.lockBooking(tx, actor.organizationId, bookingId);
@@ -845,7 +885,7 @@ export class PlanningActionsService {
   }
 
   async cancelSchedule(bookingId: string, actor: Actor) {
-    this.manager(actor);
+    await this.manager(actor, { bookingId });
     return this.prisma.$transaction(
       async (tx) => {
         await this.scheduling.lockBooking(tx, actor.organizationId, bookingId);

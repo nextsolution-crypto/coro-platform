@@ -7,6 +7,7 @@ import {
   Body,
   UseGuards,
   Request,
+  BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -84,6 +85,25 @@ export class UsersController {
       body.isActive,
       req.user,
       body.reason,
+    );
+  }
+
+  @Put('organization/:id/planning-coordinator')
+  @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
+  async setPlanningCoordinator(
+    @Param('id') id: string,
+    @Body() body: { enabled: boolean },
+    @Request() req: any,
+  ) {
+    this.assertAdmin(req);
+    if (typeof body?.enabled !== 'boolean') {
+      throw new BadRequestException('enabled doit être vrai ou faux.');
+    }
+    return this.usersService.setPlanningCoordinator(
+      id,
+      req.user.organizationId,
+      body.enabled,
+      req.user,
     );
   }
 

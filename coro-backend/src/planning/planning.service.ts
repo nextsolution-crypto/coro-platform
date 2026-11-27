@@ -1341,6 +1341,15 @@ export class PlanningService {
         (a) => a.type === 'UNPLANNED_ACTIVITY',
       ).length,
     };
+    // canManage : l'utilisateur peut planifier et affecter (admin, ou conseiller propriétaire du projet).
+    const writableProjects = await this.writableProjectIds(actor, [
+      ...events.map((event: any) => event.projectId),
+      ...actions.map((action: any) => action.projectId),
+    ]);
+    const canManage = (projectId?: string | null) =>
+      writableProjects === 'ALL' || (!!projectId && writableProjects.has(projectId));
+    const managedEvents = events.map((event: any) => ({ ...event, canManage: canManage(event.projectId) }));
+    const managedActions = actions.map((action: any) => ({ ...action, canManage: canManage(action.projectId) }));
     return {
       asOf: new Date(),
       window,
@@ -1349,12 +1358,28 @@ export class PlanningService {
       workIntervals,
       events:
         query.needsAction === 'true'
-          ? events.filter((event) => event.needsAction)
-          : events,
+          ? managedEvents.filter((event) => event.needsAction)
+          : managedEvents,
       actionSummary: summary,
-      actions,
+      actions: managedActions,
       warnings,
     };
+  }
+
+  private async writableProjectIds(actor: Actor, projectIds: (string | null | undefined)[]) {
+    if (['ADMIN', 'SUPER_ADMIN'].includes(actor.role)) return 'ALL' as const;
+    const coordinator = await this.prisma.user.findFirst({
+      where: { id: actor.userId, organizationId: actor.organizationId, isActive: true, planningCoordinator: true },
+      select: { id: true },
+    });
+    if (coordinator) return 'ALL' as const;
+    const ids = [...new Set(projectIds.filter((id): id is string => !!id))];
+    if (!ids.length) return new Set<string>();
+    const projects = await this.prisma.project.findMany({
+      where: { id: { in: ids }, ...projectAccessWhere(actor) },
+      select: { id: true },
+    });
+    return new Set(projects.map((project) => project.id));
   }
 
   async team(query: PlanningWindowDto, actor: Actor) {

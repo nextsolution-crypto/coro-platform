@@ -15,6 +15,7 @@ export type PlannerUser = {
 };
 
 export type PlannerEvent = {
+  canManage?: boolean;
   id: string;
   source: "BOOKING" | "USER_UNAVAILABILITY" | "LEGACY_ACTIVITY";
   startUtc: string;
@@ -106,6 +107,7 @@ export type CreatePlanningActivityResponse = {
 };
 
 export type PlanningAction = {
+  canManage?: boolean;
   id: string;
   type: string;
   label: string;
