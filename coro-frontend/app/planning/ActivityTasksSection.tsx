@@ -38,6 +38,18 @@ function hours(value: number) {
   return minutes ? `${whole} h ${String(minutes).padStart(2, '0')}` : `${whole} h`;
 }
 
+// Les modèles numérotent les tâches à l'intérieur de chaque phase : on affiche les phases
+// dans l'ordre du travail (préparation → opération → … → administration), puis par numéro.
+const PHASE_RANK: Record<string, number> = {
+  'PRÉPARATION': 1, 'OPÉRATION': 2, 'VÉRIFICATIONS INTERNES': 3, 'APPROBATION CLIENT': 4,
+  'IMPRESSION / LIVRAISON / INSTALLATION': 5, 'MANUTENTION': 6, 'ADMINISTRATION': 7,
+};
+function sortTasksByPhase<T extends { categoryName: string; order?: number | null; taskTitle: string }>(tasks: T[]): T[] {
+  const rank = (task: T) => PHASE_RANK[task.categoryName?.trim().toUpperCase()] ?? 8;
+  return [...tasks].sort((a, b) => rank(a) - rank(b) || (a.order ?? 0) - (b.order ?? 0)
+    || a.taskTitle.localeCompare(b.taskTitle, 'fr'));
+}
+
 export default function ActivityTasksSection({ projectId, activityId, canMutate }: {
   projectId: string; activityId: string; canMutate: boolean;
 }) {
@@ -98,7 +110,7 @@ export default function ActivityTasksSection({ projectId, activityId, canMutate 
     finally { setBusy(''); }
   };
 
-  const renderTasks = (tasks: ActivityTask[]) => tasks.map(task => <article className={styles.taskRow} key={task.id}>
+  const renderTasks = (tasks: ActivityTask[]) => sortTasksByPhase(tasks).map(task => <article className={styles.taskRow} key={task.id}>
     <div><strong>{task.status === 'fait' ? '✓' : '○'} {task.taskTitle}</strong>
       <span>{statusLabels[task.status] ?? task.status} · {task.categoryName}{task.actualHours ? ` · ${hours(task.actualHours)}` : ''}</span>
       {(task.assignee || task.assignees?.length) && <small>Responsable : {task.assignee ? `${task.assignee.firstName} ${task.assignee.lastName}` : task.assignees?.map(item => `${item.user.firstName} ${item.user.lastName}`).join(', ')}</small>}

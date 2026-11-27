@@ -111,9 +111,19 @@ export class BookingsService {
           left.advisorUserId.localeCompare(right.advisorUserId)
         );
       });
-      const selected = ordered.find(
-        (item) => availability.get(item.advisorUserId)?.status === 'AVAILABLE',
-      );
+      // Un conseiller disponible d'abord ; sinon un conseiller seulement hors horaire habituel
+      // (ex. samedi) : la demande reste à confirmer par le conseiller.
+      const selected =
+        ordered.find(
+          (item) => availability.get(item.advisorUserId)?.status === 'AVAILABLE',
+        ) ??
+        ordered.find((item) => {
+          const result = availability.get(item.advisorUserId);
+          return (
+            result?.status === 'SOFT_CONFLICT' &&
+            result.conflicts.every((conflict) => conflict.source === 'WORK_SCHEDULE')
+          );
+        });
       if (!selected) {
         throw new ConflictException({
           message: 'Aucune capacité admissible disponible',

@@ -222,7 +222,7 @@ describe('SchedulingService', () => {
       expect((await service.analyzeUser(slot)).status).toBe('UNKNOWN');
     });
 
-    it('blocks the 12:00-13:00 lunch gap and accepts a slot after 13:00', async () => {
+    it('flags the 12:00-13:00 lunch gap to confirm and accepts a slot after 13:00', async () => {
       prisma.userWorkSchedule.findMany.mockResolvedValue([
         version('2026-09-22T04:00:00.000Z'),
       ]);
@@ -231,7 +231,7 @@ describe('SchedulingService', () => {
         startUtc: new Date('2026-09-23T16:15:00.000Z'),
         endUtc: new Date('2026-09-23T16:45:00.000Z'),
       };
-      expect((await service.analyzeUser(lunch)).status).toBe('BLOCKED');
+      expect((await service.analyzeUser(lunch)).status).toBe('SOFT_CONFLICT');
       expect((await service.analyzeUser(slot)).status).toBe('AVAILABLE');
     });
 
@@ -310,25 +310,26 @@ describe('SchedulingService', () => {
     ['after', date(9), date(12), 300, 360],
     ['partial', date(9), date(12), 300, 420],
   ])(
-    'blocks %s a verified work interval',
+    'flags %s a verified work interval as a soft conflict to confirm',
     async (_label, startUtc, endUtc, startTime, endTime) => {
       prisma.userWorkSchedule.findMany.mockResolvedValue([
         { ...fullSchedule, intervals: [{ dayOfWeek: 4, startTime, endTime }] },
       ]);
       const result = await service.analyzeUser({ ...target, startUtc, endUtc });
-      expect(result.status).toBe('BLOCKED');
+      expect(result.status).toBe('SOFT_CONFLICT');
       expect(result.conflicts).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             source: 'WORK_SCHEDULE',
-            label: 'Hors horaire de travail',
+            label: 'Hors horaire habituel',
+            severity: 'SOFT_CONFLICT',
           }),
         ]),
       );
     },
   );
 
-  it('blocks a lunch gap but accepts adjacent intervals', async () => {
+  it('flags a lunch gap to confirm but accepts adjacent intervals', async () => {
     prisma.userWorkSchedule.findMany.mockResolvedValue([
       {
         ...fullSchedule,
@@ -338,7 +339,7 @@ describe('SchedulingService', () => {
         ],
       },
     ]);
-    expect((await service.analyzeUser(target)).status).toBe('BLOCKED');
+    expect((await service.analyzeUser(target)).status).toBe('SOFT_CONFLICT');
     prisma.userWorkSchedule.findMany.mockResolvedValue([
       {
         ...fullSchedule,
@@ -351,7 +352,7 @@ describe('SchedulingService', () => {
     expect((await service.analyzeUser(target)).status).toBe('AVAILABLE');
   });
 
-  it('blocks a Saturday slot when the verified schedule only covers Monday to Friday', async () => {
+  it('allows a Saturday slot to confirm when the verified schedule only covers Monday to Friday', async () => {
     prisma.userWorkSchedule.findMany.mockResolvedValue([
       {
         ...fullSchedule,
@@ -367,12 +368,13 @@ describe('SchedulingService', () => {
       startUtc: new Date('2026-10-03T14:00:00Z'),
       endUtc: new Date('2026-10-03T15:30:00Z'),
     });
-    expect(result.status).toBe('BLOCKED');
+    expect(result.status).toBe('SOFT_CONFLICT');
     expect(result.conflicts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           source: 'WORK_SCHEDULE',
-          label: 'Hors horaire de travail',
+          label: 'Hors horaire habituel',
+            severity: 'SOFT_CONFLICT',
         }),
       ]),
     );

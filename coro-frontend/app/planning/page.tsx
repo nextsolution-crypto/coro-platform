@@ -78,7 +78,7 @@ export default function TeamPlannerPage() {
         Number.isFinite(new Date(`${requestedDate}T12:00:00Z`).getTime()) ? requestedDate : dateKey(new Date(), initialZone));
       const requestedView = params.get('view');
       setView(requestedView && ['day', 'week', 'workweek', 'month'].includes(requestedView)
-        ? requestedView as PlannerView : !params.has('view') && window.innerWidth < 700 ? 'day' : 'workweek');
+        ? requestedView as PlannerView : !params.has('view') && window.innerWidth < 700 ? 'day' : 'week');
       setSearch(params.get('search') ?? '');
       setClientId(params.get('clientId') ?? '');
       setBuildingId(params.get('buildingId') ?? '');
