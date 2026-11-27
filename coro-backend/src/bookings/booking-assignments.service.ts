@@ -444,6 +444,19 @@ export class BookingAssignmentsService {
                 commitmentLockVersion: { increment: 1 },
               },
             });
+            // Le rendez-vous confirmé fixe la date de l'activité réservée : le client
+            // la voit datée dans son portail, le conseiller dans le projet.
+            if (booking.activityId) {
+              const minutes = assignment.commitmentVersion.durationMinutes;
+              await tx.projectActivity.updateMany({
+                where: { id: booking.activityId, organizationId: actor.organizationId },
+                data: {
+                  scheduledDate: assignment.commitmentVersion.startAt,
+                  duration: `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, '0')}`,
+                  dureeHeures: minutes / 60,
+                },
+              });
+            }
           }
         }
         await tx.auditLog.create({
