@@ -23,9 +23,10 @@ const emptyLabels: Record<string, string> = {
 };
 
 export default function PlanningActionCenter({ summary, activeType, items, total, page, loading, error,
-  timeZone, canManage, onOpen, onClose, onPage, onAction, onRemove }: {
+  timeZone, canManage: canManageAll, canManageItem, onOpen, onClose, onPage, onAction, onRemove }: {
   summary: PlannerResponse['actionSummary']; activeType: string; items: PlanningAction[]; total: number; page: number;
   loading: boolean; error: string; timeZone: string; canManage: boolean;
+  canManageItem?: (item: PlanningAction) => boolean;
   onOpen: (type: string) => void; onClose: () => void; onPage: (page: number) => void;
   onAction: (item: PlanningAction, mode: PlanningDrawerMode | 'PLAN_EXISTING') => void;
   onRemove: (item: PlanningAction) => Promise<void>;
@@ -48,7 +49,7 @@ export default function PlanningActionCenter({ summary, activeType, items, total
         <button type="button" onClick={onClose} aria-label="Fermer le centre d’actions">×</button></div>
       {loading && <p role="status">Chargement des actions…</p>}
       {error && <p className={styles.error} role="alert">{error}</p>}
-      {!loading && !error && (items.length ? <ul>{items.map(item => <li key={item.id} className={item.type === 'UNPLANNED_ACTIVITY' ? styles.backlogCard : undefined}>
+      {!loading && !error && (items.length ? <ul>{items.map(item => { const canManage = canManageItem ? canManageItem(item) : canManageAll; return <li key={item.id} className={item.type === 'UNPLANNED_ACTIVITY' ? styles.backlogCard : undefined}>
         <div className={styles.actionContent}><div className={styles.actionTitle}><strong>{item.label}</strong>
           {item.type === 'UNPLANNED_ACTIVITY' && <em>{item.hasBookingHistory ? 'À replanifier' : 'À planifier'}</em>}</div>
           {item.activityTypeName && item.activityTypeName !== item.label && <span>{item.activityTypeName}</span>}
@@ -72,7 +73,7 @@ export default function PlanningActionCenter({ summary, activeType, items, total
           {item.type === 'UNPLANNED_ACTIVITY' && canManage && <button type="button" className={styles.inlineButton}
             onClick={() => setPendingRemoval(item)}>{item.removalAction === 'DELETE' ? 'Supprimer' : 'Annuler l’activité'}</button>}
         </div>
-      </li>)}</ul> : <p className={styles.compactEmpty}>{activeType === 'UNPLANNED_ACTIVITY' ? '✓ Toutes les activités sont planifiées ou traitées.' : emptyLabels[activeType] ?? 'Aucune action de ce type.'}</p>)}
+      </li>; })}</ul> : <p className={styles.compactEmpty}>{activeType === 'UNPLANNED_ACTIVITY' ? '✓ Toutes les activités sont planifiées ou traitées.' : emptyLabels[activeType] ?? 'Aucune action de ce type.'}</p>)}
       {pendingRemoval && <section className={styles.confirmPanel} role="alertdialog" aria-label="Confirmer le retrait de l’activité">
         <h3>{pendingRemoval.removalAction === 'DELETE' ? 'Supprimer cette activité ?' : 'Annuler cette activité ?'}</h3>
         <p>{pendingRemoval.removalAction === 'DELETE'

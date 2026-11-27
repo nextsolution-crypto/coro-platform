@@ -75,6 +75,10 @@ function setup(status: 'AVAILABLE' | 'BLOCKED' | 'UNKNOWN' = 'AVAILABLE') {
   };
   const prisma = {
     $transaction: jest.fn(async (callback: any) => callback(tx)),
+    // Contrôle d'accès conseiller : projet introuvable en écriture par défaut.
+    projectActivity: { findFirst: jest.fn().mockResolvedValue({ projectId: 'project' }) },
+    booking: { findFirst: jest.fn().mockResolvedValue({ projectId: 'project' }) },
+    project: { findFirst: jest.fn().mockResolvedValue(null) },
   };
   const result = {
     status,
@@ -661,6 +665,23 @@ describe('PlanningActionsService', () => {
       data: { status: 'annule', scheduledDate: null, reportedDate: null },
     });
     expect(tx.projectActivity.delete).not.toHaveBeenCalled();
+  });
+
+  it("lets an advisor plan only the activities of projects he can write", async () => {
+    const { service, prisma } = setup();
+    const operator = { ...actor, role: 'OPERATOR' };
+    await expect(
+      (service as any).manager(operator, { activityId: 'activity' }),
+    ).rejects.toThrow(ForbiddenException);
+    prisma.project.findFirst.mockResolvedValueOnce({ id: 'project' });
+    await expect(
+      (service as any).manager(operator, { activityId: 'activity' }),
+    ).resolves.toBeUndefined();
+    expect(prisma.project.findFirst).toHaveBeenLastCalledWith({
+      where: { id: 'project', organizationId: actor.organizationId, userId: actor.userId },
+      select: { id: true },
+    });
+    await expect((service as any).manager(actor, { activityId: 'activity' })).resolves.toBeUndefined();
   });
 
   it('enforces tenant and manager permissions for backlog removal', async () => {

@@ -254,7 +254,7 @@ export default function TeamPlannerPage() {
 
       {data && <PlanningActionCenter summary={data.actionSummary} activeType={actionType} items={actionItems}
         total={actionTotal} page={actionPage} loading={actionLoading} error={actionError} timeZone={displayedZone}
-        canManage={canMutate} onOpen={type => { setActionType(type); setActionPage(1); }} onClose={() => setActionType('')}
+        canManage={canMutate} canManageItem={item => canMutate || item.canManage === true} onOpen={type => { setActionType(type); setActionPage(1); }} onClose={() => setActionType('')}
         onRemove={async item => {
           if (!item.activityId) return;
           if (item.removalAction === 'DELETE') await api.delete(`/planning/activities/${item.activityId}`);
@@ -331,7 +331,7 @@ export default function TeamPlannerPage() {
       {!data && !loading && !error && <p className={styles.empty}>Aucune projection disponible.</p>}
     </div>
     <PlanningDrawer event={selected} users={data?.users ?? []} displayTimeZone={displayedZone}
-      canMutate={canMutate} canManageTasks={canManageTasks} initialMode={selectedMode} onClose={closeDrawer}
+      canMutate={canMutate || selected?.canManage === true} canManageTasks={canManageTasks} initialMode={selectedMode} onClose={closeDrawer}
       onMutated={() => setRefreshKey(key => key + 1)} />
     {activityDrawer && context && <ActivityPlanningDrawer mode={activityDrawer.mode} action={activityDrawer.action}
       initialSlot={activityDrawer.initialSlot} context={context} onClose={() => setActivityDrawer(null)} onCreated={() => setRefreshKey(key => key + 1)} />}

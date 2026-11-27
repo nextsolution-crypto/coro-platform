@@ -251,7 +251,7 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
           <button type="button" className={styles.inlineButton} onClick={() => setMode('REASSIGN')}>Réaffecter</button>
           <button type="button" className={styles.dangerButton} onClick={() => setMode('CANCEL_SCHEDULE')}>Annuler la planification</button>
         </div></section>}
-        {!canMutate && event.bookingId && <p className={styles.notice}>Consultation seulement. Les modifications de planification sont réservées aux administrateurs.</p>}
+        {!canMutate && event.bookingId && <p className={styles.notice}>Consultation seulement. Seuls le propriétaire du projet et les administrateurs peuvent modifier cette planification.</p>}
         <div className={styles.drawerLinks}>
           {event.projectId && <Link href={`/projects/${event.projectId}`}>Ouvrir le mandat</Link>}
           {event.clientId && <Link href={`/clients/${event.clientId}`}>Ouvrir le client</Link>}
