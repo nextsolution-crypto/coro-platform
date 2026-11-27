@@ -1460,7 +1460,79 @@ export class PlanningService {
 
   async team(query: PlanningWindowDto, actor: Actor) {
     const { actions, ...response } = await this.snapshot(query, actor, true);
-    return { version: 1, ...response };
+    const taskDeadlines = await this.taskDeadlines(
+      response.window,
+      response.users.map((user: any) => user.id).filter((id: string) => !id.startsWith('__')),
+      actor,
+      query,
+    ).catch(() => []);
+    return { version: 1, ...response, taskDeadlines };
+  }
+
+  // Échéances des tâches ouvertes : repères du planning, sans occuper de créneau.
+  // Une tâche revient à son responsable, sinon au propriétaire du projet.
+  private async taskDeadlines(
+    window: { startUtc: Date; endUtc: Date },
+    userIds: string[],
+    actor: Actor,
+    query: PlanningWindowDto,
+  ) {
+    const visible = actor.role === 'OPERATOR' ? userIds.filter((id) => id === actor.userId) : userIds;
+    if (!visible.length) return [];
+    const start = new Date(window.startUtc.getTime() - DAY);
+    const tasks = await this.prisma.projectTask.findMany({
+      where: {
+        organizationId: actor.organizationId,
+        status: { not: 'fait' },
+        dueDate: { gte: start, lt: window.endUtc },
+        project: {
+          isActive: true,
+          ...(query.clientId ? { clientId: query.clientId } : {}),
+          ...(query.buildingId ? { buildingId: query.buildingId } : {}),
+          ...(query.projectId ? { id: query.projectId } : {}),
+        },
+        OR: [
+          { assigneeId: { in: visible } },
+          { assignees: { some: { userId: { in: visible } } } },
+          { assigneeId: null, assignees: { none: {} }, project: { userId: { in: visible } } },
+        ],
+      },
+      select: {
+        id: true,
+        taskTitle: true,
+        dueDate: true,
+        assigneeId: true,
+        assignees: { select: { userId: true } },
+        projectId: true,
+        activityId: true,
+        project: { select: { name: true, userId: true, client: { select: { name: true } } } },
+      },
+      orderBy: [{ dueDate: 'asc' }, { taskTitle: 'asc' }],
+      take: 500,
+    });
+    const groups = new Map<string, { userId: string; date: string; tasks: any[] }>();
+    for (const task of tasks) {
+      const owners = task.assigneeId
+        ? [task.assigneeId]
+        : task.assignees.length
+          ? task.assignees.map((item) => item.userId)
+          : [task.project.userId];
+      const date = task.dueDate!.toISOString().slice(0, 10);
+      for (const userId of owners.filter((id) => visible.includes(id))) {
+        const key = `${userId}:${date}`;
+        const group = groups.get(key) ?? { userId, date, tasks: [] };
+        group.tasks.push({
+          id: task.id,
+          title: task.taskTitle,
+          projectId: task.projectId,
+          activityId: task.activityId,
+          projectName: task.project.name,
+          clientName: task.project.client?.name,
+        });
+        groups.set(key, group);
+      }
+    }
+    return [...groups.values()].map((group) => ({ ...group, count: group.tasks.length }));
   }
 
   async actions(query: PlanningActionsDto, actor: Actor) {

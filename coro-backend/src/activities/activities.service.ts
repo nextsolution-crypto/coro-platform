@@ -18,6 +18,7 @@ import { requireInternal } from '../auth/work-management-access';
 import { OPEN_BOOKING_STATUSES } from '../bookings/booking-status';
 
 import { round2 } from '../common/exact-amounts';
+import { delayKindForActivityCode, startMandateDelay } from '../mandate/mandate-delay';
 
 @Injectable()
 export class ActivitiesService {
@@ -394,13 +395,20 @@ export class ActivitiesService {
   // Mettre à jour une activité
   async updateActivity(activityId: string, actor: AdviserActor, dto: any) {
     const organizationId = actor.organizationId;
-    const activity = await this.prisma.projectActivity.findFirst({
+    let activity = await this.prisma.projectActivity.findFirst({
       where: {
         id: activityId,
         organizationId,
         project: { is: mutableProjectAccessWhere(actor) },
       },
     });
+    // Le conseiller affecté à l'activité peut en changer le statut (réalisée, en cours…),
+    // pas le reste : date, type, client et visibilité restent au propriétaire du projet.
+    const statusOnly = Object.keys(dto ?? {}).every((key) =>
+      ['status', 'expectedUpdatedAt'].includes(key),
+    );
+    if (!activity && statusOnly && dto.status !== 'reporte')
+      activity = await this.findActivityForAssignee(activityId, actor);
     if (!activity) throw new NotFoundException('Activité introuvable');
 
     const selectedType = dto.activityTypeId
@@ -526,8 +534,53 @@ export class ActivitiesService {
         "L'activité a été modifiée. Rechargez le planning avant de réessayer.",
       );
     }
-    return this.prisma.projectActivity.findUniqueOrThrow({
+    const saved = await this.prisma.projectActivity.findUniqueOrThrow({
       where: { id: activityId },
+    });
+    // Relevé technique ou inspection réalisés : le délai du mandat démarre à leur date.
+    if (dto.status === 'termine' && activity.status !== 'termine') {
+      const kind = delayKindForActivityCode(saved.type);
+      if (kind)
+        await startMandateDelay(
+          this.prisma,
+          saved.projectId,
+          organizationId,
+          kind,
+          saved.scheduledDate,
+        ).catch(() => null);
+    }
+    return saved;
+  }
+
+  private async findActivityForAssignee(activityId: string, actor: AdviserActor) {
+    if (actor.role !== 'OPERATOR') return null;
+    const user = await this.prisma.user.findFirst({
+      where: { id: actor.userId, organizationId: actor.organizationId, isActive: true },
+      select: { email: true, planningCoordinator: true },
+    });
+    if (!user) return null;
+    return this.prisma.projectActivity.findFirst({
+      where: {
+        id: activityId,
+        organizationId: actor.organizationId,
+        project: { is: { isActive: true, status: { not: 'ARCHIVED' } } },
+        ...(user.planningCoordinator
+          ? {}
+          : {
+              OR: [
+                { assigneeEmail: { equals: user.email, mode: 'insensitive' as const } },
+                {
+                  bookings: {
+                    some: {
+                      assignments: {
+                        some: { userId: actor.userId, status: { in: ['PENDING', 'ACCEPTED'] } },
+                      },
+                    },
+                  },
+                },
+              ],
+            }),
+      },
     });
   }
 

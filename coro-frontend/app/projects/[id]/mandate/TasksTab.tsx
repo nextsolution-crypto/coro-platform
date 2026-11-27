@@ -3,12 +3,14 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '@/lib/api';
+import { useRouter } from 'next/navigation';
+import { toast } from '@/lib/toast';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   a_faire:    { label: 'À faire',    color: '#2980B9', bg: '#EBF5FB' },
   en_cours:   { label: 'En cours',   color: '#F39C12', bg: '#FEF9E7' },
   en_attente: { label: 'En attente', color: '#95A5A6', bg: '#F8F9FA' },
-  termine:    { label: 'Terminé',    color: '#27AE60', bg: '#EAFAF1' },
+  fait:       { label: 'Terminé',    color: '#27AE60', bg: '#EAFAF1' },
 };
 
 interface Props {
@@ -25,6 +27,44 @@ export default function TasksTab({ projectId, documentType, teamMembers }: Props
   const [timeModal, setTimeModal] = useState<any>(null);
   const [timeForm, setTimeForm] = useState({ date: new Date().toISOString().split('T')[0], heures: '', note: '' });
   const [savingTime, setSavingTime] = useState(false);
+  const router = useRouter();
+  // « Planifier comme rendez-vous » : la tâche devient une activité à placer dans le planning.
+  const [appointment, setAppointment] = useState<{ task: any; type: string } | null>(null);
+  const [catalog, setCatalog] = useState<any[]>([]);
+  const [creatingAppointment, setCreatingAppointment] = useState(false);
+
+  const openAppointment = async (task: any) => {
+    setAppointment({ task, type: 'autre' });
+    if (!catalog.length) {
+      try { setCatalog((await api.get('/activities/catalog')).data || []); } catch { setCatalog([]); }
+    }
+  };
+
+  const createAppointment = async () => {
+    if (!appointment) return;
+    const item = catalog.find(entry => entry.type === appointment.type);
+    const other = appointment.type === 'autre';
+    setCreatingAppointment(true);
+    try {
+      const created = await api.post(`/projects/${projectId}/activities`, {
+        type: appointment.type,
+        activityTypeId: item?.activityTypeId,
+        label: other ? appointment.task.taskTitle : (item?.label || appointment.task.taskTitle),
+        duration: item?.duration || '',
+        mode: 'presentiel',
+        customLabel: other ? appointment.task.taskTitle : null,
+        customDuration: null,
+      });
+      await api.put(`/projects/${projectId}/tasks/${appointment.task.id}/activity`, { activityId: created.data.id });
+      toast('Rendez-vous créé : choisissez sa date dans le planning.');
+      setAppointment(null);
+      router.push(`/planning?projectId=${projectId}&actions=UNPLANNED_ACTIVITY`);
+    } catch (err: any) {
+      toast(err?.response?.data?.message || 'Impossible de créer le rendez-vous.', 'error');
+    } finally {
+      setCreatingAppointment(false);
+    }
+  };
 
   useEffect(() => { fetchTasks(); }, [projectId]);
 
@@ -117,7 +157,7 @@ export default function TasksTab({ projectId, documentType, teamMembers }: Props
   const totalHeures = tasks.reduce((sum, t) =>
     sum + (t.timeEntries || []).reduce((s: number, e: any) => s + e.heures, 0), 0);
 
-  const totalTerminees = tasks.filter(t => t.status === 'termine').length;
+  const totalTerminees = tasks.filter(t => t.status === 'fait').length;
 
   if (loading) return (
     <div className="flex items-center justify-center py-16">
@@ -165,7 +205,7 @@ export default function TasksTab({ projectId, documentType, teamMembers }: Props
         {sortedCategories.map(category => {
           const categoryTasks = grouped[category];
           const isExpanded = expandedCategories[category] !== false;
-          const catTerminees = categoryTasks.filter(t => t.status === 'termine').length;
+          const catTerminees = categoryTasks.filter(t => t.status === 'fait').length;
 
           return (
             <div key={category} className="rounded-md overflow-hidden"
@@ -208,15 +248,15 @@ export default function TasksTab({ projectId, documentType, teamMembers }: Props
                         <div className="flex items-center gap-3 px-5 py-3">
                           {/* Checkbox */}
                           <input type="checkbox"
-                            checked={task.status === 'termine'}
-                            onChange={e => handleStatusChange(task.id, e.target.checked ? 'termine' : 'a_faire')}
+                            checked={task.status === 'fait'}
+                            onChange={e => handleStatusChange(task.id, e.target.checked ? 'fait' : 'a_faire')}
                             style={{ accentColor: '#27AE60', width: '16px', height: '16px', flexShrink: 0 }} />
 
                           {/* Titre */}
                           <span className="flex-1 text-sm"
                             style={{
-                              color: task.status === 'termine' ? '#ADB5BD' : '#2C3E50',
-                              textDecoration: task.status === 'termine' ? 'line-through' : 'none',
+                              color: task.status === 'fait' ? '#ADB5BD' : '#2C3E50',
+                              textDecoration: task.status === 'fait' ? 'line-through' : 'none',
                             }}>
                             {task.taskTitle}
                           </span>
@@ -245,6 +285,15 @@ export default function TasksTab({ projectId, documentType, teamMembers }: Props
                             onChange={e => handleDueDateChange(task.id, e.target.value)}
                             className="text-xs px-2 py-1 rounded"
                             style={{ border: '1px solid #DEE2E6', color: '#6C757D', fontSize: '11px' }} />
+
+                          {!task.activityId && task.status === 'a_faire' && !(task.timeEntries?.length > 0) && (
+                            <button onClick={() => openAppointment(task)}
+                              className="text-xs px-2.5 py-1 rounded transition-colors"
+                              style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+                              title="Cette tâche est un rendez-vous (visite, rencontre) : la placer dans le planning">
+                              📅 Planifier comme rendez-vous
+                            </button>
+                          )}
 
                           {/* Bouton + Temps */}
                           <button onClick={() => setTimeModal(task)}
@@ -357,6 +406,32 @@ export default function TasksTab({ projectId, documentType, teamMembers }: Props
                 className="flex-1 py-2.5 rounded text-sm text-white font-medium disabled:opacity-50"
                 style={{ backgroundColor: '#2980B9' }}>
                 {savingTime ? 'Sauvegarde...' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {appointment && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <div className="w-full max-w-md rounded-md p-6" style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
+            <h3 className="font-semibold mb-1" style={{ color: '#2C3E50' }}>Planifier comme rendez-vous</h3>
+            <p className="text-sm mb-4" style={{ color: '#6C757D' }}>
+              « {appointment.task.taskTitle} » devient une activité, avec la tâche rattachée. Vous choisirez la date et le conseiller dans le planning.
+            </p>
+            <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Type d’activité</label>
+            <select value={appointment.type} onChange={e => setAppointment({ ...appointment, type: e.target.value })}
+              className="w-full px-3 py-2.5 text-sm rounded mb-5" style={{ border: '1px solid #CED4DA', color: '#2C3E50', background: '#FFFFFF' }}>
+              <option value="autre">Autre (titre de la tâche)</option>
+              {catalog.filter(entry => entry.type !== 'autre').map(entry => (
+                <option key={entry.type} value={entry.type}>{entry.label}</option>
+              ))}
+            </select>
+            <div className="flex gap-3">
+              <button onClick={() => setAppointment(null)} className="flex-1 py-2.5 rounded text-sm"
+                style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}>Annuler</button>
+              <button onClick={createAppointment} disabled={creatingAppointment}
+                className="flex-1 py-2.5 rounded text-sm text-white disabled:opacity-50" style={{ backgroundColor: '#C0392B' }}>
+                Créer et planifier
               </button>
             </div>
           </div>

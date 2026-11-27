@@ -49,6 +49,11 @@ export default function ResourceTimeline({ data, days, onSelect, onCreate }: {
     }
     return map;
   }, [data.events]);
+  const deadlinesByCell = useMemo(() => {
+    const map = new Map<string, NonNullable<PlannerResponse['taskDeadlines']>[number]>();
+    for (const item of data.taskDeadlines ?? []) map.set(`${item.userId}:${item.date}`, item);
+    return map;
+  }, [data.taskDeadlines]);
   const workByUser = useMemo(() => {
     const map = new Map<string, PlannerResponse['workIntervals']>();
     for (const interval of data.workIntervals) {
@@ -64,7 +69,7 @@ export default function ResourceTimeline({ data, days, onSelect, onCreate }: {
     .map(event => [event.activityType!.code, getActivityTypeVisual(event.activityType)])).values());
   return <>{legend.length > 0 && <div className={styles.typeLegend} aria-label="Légende des types d'activité">
     {legend.map(item => <span key={item.label}><i style={{ background: item.color }} aria-hidden="true" />{item.label}</span>)}
-    <span className={styles.legendNote}>Contour plein : confirmé · pointillé : à confirmer</span>
+    <span className={styles.legendNote}>Contour plein : confirmé · pointillé : à confirmer · ⚑ échéances de tâches (sans créneau)</span>
   </div>}<div className={styles.timelineScroll} role="region" aria-label="Planification de l'équipe" tabIndex={0}>
     <div className={styles.timeline} style={{ gridTemplateColumns: `205px repeat(${days.length}, minmax(${timelineDayMinWidth(days.length)}px, 1fr))` }}>
       <div className={`${styles.corner} ${styles.stickyLeft}`} style={{ gridColumn: 1, gridRow: 1 }}>
@@ -104,6 +109,15 @@ export default function ResourceTimeline({ data, days, onSelect, onCreate }: {
               event.preventDefault(); const minute = Math.round(((hours.start + hours.end) / 2) / 15) * 15;
               onCreate({ date: day, time: `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`, leadId: user.id });
             }}>
+            {(() => {
+              const deadline = deadlinesByCell.get(`${user.id}:${day}`);
+              if (!deadline) return null;
+              const detail = deadline.tasks.map(task => `• ${task.title} — ${[task.clientName, task.projectName].filter(Boolean).join(' · ')}`).join('\n');
+              return <a className={styles.deadlineBadge} href={`/projects/${deadline.tasks[0].projectId}/mandate`}
+                title={`Échéance${deadline.count > 1 ? 's' : ''} du jour (n’occupe${deadline.count > 1 ? 'nt' : ''} pas l’agenda) :\n${detail}`}
+                aria-label={`${deadline.count} échéance${deadline.count > 1 ? 's' : ''} de tâche ce jour`}
+                onClick={event => event.stopPropagation()}>⚑ {deadline.count}</a>;
+            })()}
             <div className={styles.trackLines}>{ticks.map((tick, index) =>
               <span key={tick} style={{ left: `${index / (ticks.length - 1) * 100}%` }} />)}</div>
             {work.map(({ interval, segment }, index) => <div key={`${interval.startUtc}-${index}`}

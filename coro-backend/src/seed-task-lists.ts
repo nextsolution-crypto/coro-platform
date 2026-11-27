@@ -112,6 +112,45 @@ async function main() {
         { categoryName: 'ADMINISTRATION', taskTitle: 'Demande de facturation', order: 1 },
       ],
     },
+    {
+      name: 'Relevé technique',
+      description: 'Tâches pour la visite de relevé technique d\'un bâtiment',
+      category: 'ACTIVITE',
+      documentTypes: [],
+      isDefault: true,
+      templates: [
+        { categoryName: 'PRÉPARATION', taskTitle: 'Prise de contact avec le client', order: 1 },
+        { categoryName: 'PRÉPARATION', taskTitle: 'Demander les plans et les documents existants', order: 2 },
+        { categoryName: 'PRÉPARATION', taskTitle: 'Confirmer le rendez-vous et l\'accès au bâtiment', order: 3 },
+        { categoryName: 'PRÉPARATION', taskTitle: 'Préparer la liste de vérification du relevé', order: 4 },
+        { categoryName: 'OPÉRATION', taskTitle: 'Relevé technique sur site', order: 1 },
+        { categoryName: 'OPÉRATION', taskTitle: 'Photos des équipements, issues et points de rassemblement', order: 2 },
+        { categoryName: 'OPÉRATION', taskTitle: 'Téléchargement des médias sur le Drive', order: 3 },
+        { categoryName: 'OPÉRATION', taskTitle: 'Compléter le configurateur à partir du relevé', order: 4 },
+        { categoryName: 'APPROBATION CLIENT', taskTitle: 'Confirmer au client la date de livraison prévue', order: 1 },
+      ],
+    },
+    {
+      name: 'Inspection',
+      description: 'Tâches pour une inspection sur site et son rapport',
+      category: 'ACTIVITE',
+      documentTypes: [],
+      isDefault: true,
+      templates: [
+        { categoryName: 'PRÉPARATION', taskTitle: 'Prise de contact avec le client', order: 1 },
+        { categoryName: 'PRÉPARATION', taskTitle: 'Revue des documents et des inspections antérieures', order: 2 },
+        { categoryName: 'PRÉPARATION', taskTitle: 'Confirmer le rendez-vous et l\'accès au bâtiment', order: 3 },
+        { categoryName: 'PRÉPARATION', taskTitle: 'Préparer la grille d\'inspection', order: 4 },
+        { categoryName: 'OPÉRATION', taskTitle: 'Inspection sur site', order: 1 },
+        { categoryName: 'OPÉRATION', taskTitle: 'Photos et consignation des constats', order: 2 },
+        { categoryName: 'OPÉRATION', taskTitle: 'Téléchargement des médias sur le Drive', order: 3 },
+        { categoryName: 'OPÉRATION', taskTitle: 'Rédaction du rapport d\'inspection', order: 4 },
+        { categoryName: 'OPÉRATION', taskTitle: 'Validation, contrôle qualité', order: 5 },
+        { categoryName: 'APPROBATION CLIENT', taskTitle: 'Envoi du rapport au client format PDF', order: 1 },
+        { categoryName: 'APPROBATION CLIENT', taskTitle: 'Présentation des recommandations au client', order: 2 },
+        { categoryName: 'ADMINISTRATION', taskTitle: 'Demande de facturation', order: 1 },
+      ],
+    },
   ];
 
   for (const listData of TASK_LISTS) {
@@ -161,6 +200,9 @@ async function main() {
     ['formation_locataires', ["Formation mesures d'urgence"]],
     ['exercice_table', ["Exercice d'évacuation"]],
     ['exercice_evacuation', ["Exercice d'évacuation"]],
+    ['releve_technique', ['Relevé technique']],
+    ['inspection_securite_physique', ['Inspection']],
+    ['inspection_code', ['Inspection']],
   ];
   for (const [code, listNames] of DEFAULT_LINKS) {
     const type = await prisma.activityType.findFirst({ where: { code, organizationId: null, isSystem: true } });

@@ -147,3 +147,6 @@
 .taskTimeForm input { border:1px solid var(--cg-skin-border-default, #ced4da); border-radius:4px; padding:4px 6px; font-size:12px; min-width:90px }
 .taskTimeForm small { flex-basis:100%; color:var(--cg-skin-text-muted, #6c757d); font-size:11px }
 .realizedTime { margin:6px 0 10px }
+
+.deadlineBadge { position:absolute; top:3px; right:4px; z-index:3; font-size:10px; font-weight:700; padding:1px 5px; border-radius:8px; background:var(--cg-skin-bg-warning, #fff4db); color:var(--cg-skin-text-warning, #795500); border:1px solid #d9a632; text-decoration:none; line-height:14px }
+.deadlineBadge:hover { filter:brightness(.96) }

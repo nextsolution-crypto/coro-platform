@@ -27,6 +27,7 @@ model Organization {
   mandateShortDeliveryDays     Int                     @default(21)
   mandateLongDeliveryDays      Int                     @default(90)
   evacuationPlanDeliveryDays   Int                     @default(10)
+  inspectionReportDeliveryDays Int                     @default(10)
   companyLogoFullB64     String?
   companyPhone           String?
   companyEmail           String?

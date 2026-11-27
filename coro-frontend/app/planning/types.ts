@@ -71,6 +71,15 @@ export type PlannerResponse = {
     unplannedActivities: number;
   };
   warnings: string[];
+  /** Échéances des tâches ouvertes, par conseiller et par jour (repères, sans créneau). */
+  taskDeadlines?: PlannerTaskDeadline[];
+};
+
+export type PlannerTaskDeadline = {
+  userId: string;
+  date: string;
+  count: number;
+  tasks: Array<{ id: string; title: string; projectId: string; activityId?: string | null; projectName: string; clientName?: string }>;
 };
 
 export type PlanningContext = {

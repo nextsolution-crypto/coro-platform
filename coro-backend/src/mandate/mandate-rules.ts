@@ -5,6 +5,7 @@ export type MandateRules = {
   mandateShortDeliveryDays: number;
   mandateLongDeliveryDays: number;
   evacuationPlanDeliveryDays: number;
+  inspectionReportDeliveryDays: number;
 };
 
 export const DEFAULT_MANDATE_RULES: MandateRules = {
@@ -13,6 +14,7 @@ export const DEFAULT_MANDATE_RULES: MandateRules = {
   mandateShortDeliveryDays: 21,
   mandateLongDeliveryDays: 90,
   evacuationPlanDeliveryDays: 10,
+  inspectionReportDeliveryDays: 10,
 };
 
 export const MANDATE_RULE_LIMITS: Record<keyof MandateRules, [number, number]> = {
@@ -21,6 +23,7 @@ export const MANDATE_RULE_LIMITS: Record<keyof MandateRules, [number, number]> =
   mandateShortDeliveryDays: [1, 365],
   mandateLongDeliveryDays: [1, 730],
   evacuationPlanDeliveryDays: [1, 365],
+  inspectionReportDeliveryDays: [1, 365],
 };
 
 export const MANDATE_RULE_SELECT = {
@@ -29,11 +32,13 @@ export const MANDATE_RULE_SELECT = {
   mandateShortDeliveryDays: true,
   mandateLongDeliveryDays: true,
   evacuationPlanDeliveryDays: true,
+  inspectionReportDeliveryDays: true,
 } as const;
 
 // Délai de livraison forfaitaire après le relevé technique.
 export function deliveryDays(rules: MandateRules, typeDelai: string | null | undefined, heures: number): number {
   if (typeDelai === 'EVACUATION') return rules.evacuationPlanDeliveryDays;
+  if (typeDelai === 'INSPECTION') return rules.inspectionReportDeliveryDays;
   return heures >= rules.mandateLongThresholdHours ? rules.mandateLongDeliveryDays : rules.mandateShortDeliveryDays;
 }
 
