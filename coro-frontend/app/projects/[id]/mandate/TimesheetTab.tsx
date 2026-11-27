@@ -186,7 +186,7 @@ export default function TimesheetTab({ projectId, mandate }: Props) {
           </div>
         </div>
         <div className="rounded-md p-4" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-          <p className="text-xs font-medium mb-1" style={{ color: '#6C757D' }}>Coût réel</p>
+          <p className="text-xs font-medium mb-1" style={{ color: '#6C757D' }}>Temps consommé</p>
           <p className="text-2xl font-black" style={{ color: '#2C3E50' }}>
             {taux > 0 ? `${coutReel.toFixed(0)} $` : '—'}
           </p>

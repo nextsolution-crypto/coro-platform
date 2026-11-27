@@ -24,7 +24,7 @@ export function previewOperations(services: PreviewService[], activities: Previe
     const linkedActive = linked.filter(active);
     const linkedCompleted = linked.filter(completed);
     const linkedCancelled = linked.filter(item => item.status === 'annule');
-    let action: PreviewAction = 'NO_ACTION'; let reasonCode = 'ACTIVE_ACTIVITY_EXISTS';
+    let action: PreviewAction = 'NO_ACTION'; let reasonCode = 'ACTIVE_ACTIVITY_EXISTS'; let missingCount = 0;
     const contextInvalid = !service.activityType || service.projectId === '' || service.organizationId === ''
       || (service.activityType.organizationId !== null && service.activityType.organizationId !== service.organizationId)
       || linked.some(item => item.projectId !== service.projectId || item.organizationId !== service.organizationId
@@ -33,28 +33,25 @@ export function previewOperations(services: PreviewService[], activities: Previe
     else if (service.commercialStatus === 'REMOVED') {
       action = linkedActive.length ? 'REQUIRES_DECISION' : 'NO_ACTION';
       reasonCode = linkedActive.length ? 'SERVICE_REMOVED_WITH_ACTIVE_ACTIVITY' : 'SERVICE_REMOVED_NO_ACTIVE_ACTIVITY';
-    } else if (linkedActive.length > 1) { action = 'REQUIRES_DECISION'; reasonCode = 'MULTIPLE_ACTIVE_ACTIVITIES'; }
-    else if (linkedActive.length === 1) {
-      if (service.recurrenceMode === 'ANNUAL' || service.quantity > 1) {
-        action = 'REQUIRES_DECISION'; reasonCode = 'QUANTITY_REQUIRES_SCHEDULING_POLICY';
-      }
-    } else if (linkedCompleted.length) {
-      if (service.recurrenceMode === 'ONCE' && service.quantity === 1) reasonCode = 'COMPLETED_ACTIVITY_EXISTS';
-      else { action = 'REQUIRES_DECISION'; reasonCode = 'QUANTITY_REQUIRES_SCHEDULING_POLICY'; }
-    } else if (linkedCancelled.length) { action = 'REQUIRES_DECISION'; reasonCode = 'LATEST_ACTIVITY_CANCELLED'; }
-    else if (legacy.length) { action = 'REQUIRES_DECISION'; reasonCode = legacy.length === 1
-      ? 'LEGACY_ACTIVITY_CANDIDATE' : 'LEGACY_MULTIPLE_CANDIDATES'; }
-    else if (!service.activityType!.isActive) { action = 'BLOCKED'; reasonCode = 'ACTIVITY_TYPE_ARCHIVED'; }
-    else if (service.recurrenceMode === 'ANNUAL' || service.quantity > 1) {
-      action = 'REQUIRES_DECISION'; reasonCode = service.recurrenceMode === 'ANNUAL'
-        ? 'RECURRENCE_REQUIRES_SCHEDULING_POLICY' : 'QUANTITY_REQUIRES_SCHEDULING_POLICY';
+    } else {
+      // Une activité par unité vendue. Un projet couvre une année : un service annuel
+      // compte donc « quantité » activités pour l'année du projet.
+      const expected = Math.max(service.quantity, 1);
+      const counted = linkedActive.length + linkedCompleted.length;
+      if (counted > expected) { action = 'REQUIRES_DECISION'; reasonCode = 'MULTIPLE_ACTIVE_ACTIVITIES'; }
+      else if (counted === expected) reasonCode = linkedActive.length ? 'ACTIVE_ACTIVITY_EXISTS' : 'COMPLETED_ACTIVITY_EXISTS';
+      else if (counted === 0 && expected === 1 && linkedCancelled.length) {
+        action = 'REQUIRES_DECISION'; reasonCode = 'LATEST_ACTIVITY_CANCELLED';
+      } else if (linked.length === 0 && legacy.length) {
+        action = 'REQUIRES_DECISION'; reasonCode = legacy.length === 1 ? 'LEGACY_ACTIVITY_CANDIDATE' : 'LEGACY_MULTIPLE_CANDIDATES';
+      } else if (!service.activityType!.isActive) { action = 'BLOCKED'; reasonCode = 'ACTIVITY_TYPE_ARCHIVED'; }
+      else { action = 'CREATE_ACTIVITY'; reasonCode = 'NO_ACTIVITY_EXISTS'; missingCount = expected - counted; }
     }
-    else { action = 'CREATE_ACTIVITY'; reasonCode = 'NO_ACTIVITY_EXISTS'; }
     const relevant = [...linked, ...legacy];
     const hasOpenBooking = relevant.some(item => item.bookings.length > 0);
     return { serviceId: service.id, activityTypeId: service.activityTypeId, commercialStatus: service.commercialStatus,
       recurrenceMode: service.recurrenceMode, quantity: service.quantity, displayOrder: service.displayOrder,
-      action, reasonCode, reasonCodes: [...new Set([reasonCode, ...(hasOpenBooking ? ['OPEN_BOOKING_EXISTS'] : [])])],
+      action, reasonCode, missingCount, reasonCodes: [...new Set([reasonCode, ...(hasOpenBooking ? ['OPEN_BOOKING_EXISTS'] : [])])],
       hasOpenBooking, linkedActivities: linked.map(view), legacyCandidates: legacy.map(view) };
   });
 }

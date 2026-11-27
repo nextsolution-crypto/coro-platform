@@ -585,7 +585,7 @@ describePostgres('Mandate service operational Apply F2-F on PostgreSQL', () => {
     ).toBe(1);
   });
 
-  it('rejects stale revision, removed, annual, quantity and archived creation without Operation', async () => {
+  it('rejects stale revision, removed and archived creation without Operation', async () => {
     const stale = await scenario();
     await expect(
       apply.apply(
@@ -611,13 +611,6 @@ describePostgres('Mandate service operational Apply F2-F on PostgreSQL', () => {
         removedAt: new Date(),
         removedById: stale.fixture.admin.id,
       },
-      {
-        commercialStatus: 'ACTIVE' as const,
-        removedAt: null,
-        removedById: null,
-        recurrenceMode: 'ANNUAL' as const,
-      },
-      { recurrenceMode: 'ONCE' as const, quantity: 2 },
     ]) {
       const s = await scenario();
       await prisma.projectMandateService.update({
@@ -661,6 +654,26 @@ describePostgres('Mandate service operational Apply F2-F on PostgreSQL', () => {
         ]),
       ),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('creates one Activity per sold unit, then reports the service as up to date', async () => {
+    const s = await scenario();
+    await prisma.projectMandateService.update({
+      where: { id: s.services[0].id },
+      data: { recurrenceMode: 'ANNUAL', quantity: 2 },
+    });
+    const current = (await commercial.list(s.fixture.project.id, s.actor)).revision;
+    const result = await apply.apply(
+      s.fixture.project.id,
+      s.actor,
+      dto(current, [{ mandateServiceId: s.services[0].id, action: Action.CREATE_ACTIVITY }]),
+    );
+    const created = await prisma.projectActivity.findMany({
+      where: { mandateServiceId: s.services[0].id },
+    });
+    expect(created).toHaveLength(2);
+    expect(created.every((activity) => activity.isRecurring)).toBe(true);
+    expect(result.preview.operations[0]).toMatchObject({ action: 'NO_ACTION', reasonCode: 'ACTIVE_ACTIVITY_EXISTS' });
   });
 
   it('serializes concurrent same-key and different-key CREATE_ACTIVITY requests', async () => {
