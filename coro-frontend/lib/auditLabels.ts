@@ -75,7 +75,11 @@ export type AuditGroup = AuditLogRow & { count: number; firstAt: string; label: 
 export function groupAuditLogs(logs: AuditLogRow[]): AuditGroup[] {
   const groups: AuditGroup[] = [];
   for (const log of logs) {
-    const { label, icon } = auditEntry(log.action, log.description);
+    const entry = auditEntry(log.action, log.description);
+    // Les aperçus PDF FR et EN alternent : on les regroupe en une seule ligne.
+    const pdfPreview = /^Aperçu PDF/.test(entry.label);
+    const label = pdfPreview ? 'Aperçu PDF du document' : entry.label;
+    const icon = entry.icon;
     const who = `${log.user?.firstName ?? ''} ${log.user?.lastName ?? ''}`.trim();
     const day = log.createdAt.slice(0, 10);
     const last = groups[groups.length - 1];
