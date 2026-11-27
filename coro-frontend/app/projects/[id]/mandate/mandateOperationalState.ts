@@ -6,6 +6,7 @@ export type PreviewOperation = {
   commercialStatus?: string;
   recurrenceMode?: string;
   quantity?: number;
+  missingCount?: number;
   action: string;
   reasonCode: string;
   reasonCodes?: string[];
@@ -38,7 +39,8 @@ export type OperationSuccess = { serviceId: string; action: ApplyDecisionAction 
 
 export type OperationalServiceView = { status: string; label: string; description: string;
   mutationAllowed: boolean; primaryAction: 'CREATE' | 'EXAMINE_ADOPT' | 'EXAMINE_REPLACEMENT'
-    | 'APPLYING' | 'RETRY_CREATE' | null; planningAction: boolean; decisionMode: DecisionMode | null };
+    | 'APPLYING' | 'RETRY_CREATE' | null; planningAction: boolean; decisionMode: DecisionMode | null;
+  missingCount?: number };
 
 const knownActions = new Set<PreviewAction>(['NO_ACTION', 'CREATE_ACTIVITY', 'REQUIRES_DECISION', 'BLOCKED']);
 const knownReasons = new Set([
@@ -56,7 +58,7 @@ export function mapPreviewOperation(operation: PreviewOperation) {
       description: operation.reasonCode, suggestedUiAction: null, mutationAllowed: false };
   }
   const labels: Record<PreviewAction, string> = {
-    NO_ACTION: 'À jour', CREATE_ACTIVITY: 'Activity à créer',
+    NO_ACTION: 'À jour', CREATE_ACTIVITY: 'Activité à créer',
     REQUIRES_DECISION: 'Décision requise', BLOCKED: 'Vérification requise',
   };
   const statuses: Record<PreviewAction, string> = { NO_ACTION: operation.reasonCode === 'COMPLETED_ACTIVITY_EXISTS'
@@ -105,8 +107,14 @@ export function operationalViewForService(input: {
   const idleAllowed = input.canApply && input.applyStatus === 'IDLE';
   const allowed = candidate && input.canApply && (input.applyStatus === 'IDLE' || retry);
   const planningStatus = mapped.linkedActivities?.[0]?.planningStatus;
-  return { status: planningStatus || mapped.status, label: planningStatus ? planningStatusLabel(planningStatus) : mapped.label,
-    description: mapped.action === 'CREATE_ACTIVITY' ? "Le service est vendu, mais aucune activité opérationnelle n'est encore associée."
+  const missingCount = mapped.action === 'CREATE_ACTIVITY' ? Math.max(mapped.missingCount ?? 1, 1) : 0;
+  const createLabel = missingCount > 1 ? `${missingCount} activités à créer` : mapped.label;
+  return { status: mapped.action === 'CREATE_ACTIVITY' ? mapped.status : planningStatus || mapped.status,
+    label: mapped.action === 'CREATE_ACTIVITY' ? createLabel : planningStatus ? planningStatusLabel(planningStatus) : mapped.label,
+    missingCount,
+    description: mapped.action === 'CREATE_ACTIVITY' ? (missingCount > 1
+      ? `Le service est vendu ${mapped.quantity ?? missingCount} fois : ${missingCount} activités opérationnelles restent à créer.`
+      : "Le service est vendu, mais une activité opérationnelle reste à créer.")
       : mapped.action === 'REQUIRES_DECISION' ? 'Une décision humaine est requise avant toute action.'
         : mapped.action === 'BLOCKED' ? 'Cet état doit être vérifié avant toute action.' : 'L’état opérationnel est à jour.',
     mutationAllowed: allowed || idleAllowed && (adopt || replacement),

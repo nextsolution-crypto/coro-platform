@@ -36,11 +36,16 @@ describe('Mandate service operational preview engine', () => {
     expect(operation([service()], [activity(), activity({ id: 'activity-b' })])[0]).toMatchObject({
       action: 'REQUIRES_DECISION', reasonCode: 'MULTIPLE_ACTIVE_ACTIVITIES' });
   });
-  it('does not infer quantity or annual coverage', () => {
-    expect(operation([service({ quantity: 2 })])[0].reasonCode).toBe('QUANTITY_REQUIRES_SCHEDULING_POLICY');
-    expect(operation([service({ recurrenceMode: 'ANNUAL' })])[0].reasonCode).toBe('RECURRENCE_REQUIRES_SCHEDULING_POLICY');
+  it('creates one Activity per sold unit for the project year', () => {
+    expect(operation([service({ quantity: 2 })])[0]).toMatchObject({ action: 'CREATE_ACTIVITY', reasonCode: 'NO_ACTIVITY_EXISTS', missingCount: 2 });
+    expect(operation([service({ quantity: 2 })], [activity()])[0]).toMatchObject({ action: 'CREATE_ACTIVITY', missingCount: 1 });
+    expect(operation([service({ quantity: 2 })], [activity(), activity({ id: 'activity-b', status: 'termine' })])[0])
+      .toMatchObject({ action: 'NO_ACTION', reasonCode: 'ACTIVE_ACTIVITY_EXISTS' });
+    expect(operation([service({ quantity: 2 })], [activity(), activity({ id: 'activity-b' }), activity({ id: 'activity-c' })])[0])
+      .toMatchObject({ action: 'REQUIRES_DECISION', reasonCode: 'MULTIPLE_ACTIVE_ACTIVITIES' });
+    expect(operation([service({ recurrenceMode: 'ANNUAL' })])[0]).toMatchObject({ action: 'CREATE_ACTIVITY', missingCount: 1 });
     expect(operation([service({ recurrenceMode: 'ANNUAL' })], [activity({ status: 'termine' })])[0])
-      .toMatchObject({ action: 'REQUIRES_DECISION', reasonCode: 'QUANTITY_REQUIRES_SCHEDULING_POLICY' });
+      .toMatchObject({ action: 'NO_ACTION', reasonCode: 'COMPLETED_ACTIVITY_EXISTS' });
   });
   it('handles removed services without mutating linked Activities', () => {
     expect(operation([service({ commercialStatus: 'REMOVED' })])[0]).toMatchObject({ action: 'NO_ACTION',

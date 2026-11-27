@@ -213,23 +213,26 @@ export class MandateOperationsApplyService {
           );
         }
         this.assertCreatable(service);
-        const activityId = randomUUID();
-        const activity = await this.createActivity(
-          tx,
-          project,
-          actor,
-          service,
-          activityId,
-          null,
-          dto,
-        );
-        applied.push({
-          mandateServiceId: service.id,
-          action: decision.action,
-          activityId: activity.id,
-          created: true,
-          sourceActivityId: null,
-        });
+        // Crée d'un coup toutes les activités manquantes (une par unité vendue).
+        const missing = Math.max(operation.missingCount ?? 1, 1);
+        for (let index = 0; index < missing; index += 1) {
+          const activity = await this.createActivity(
+            tx,
+            project,
+            actor,
+            service,
+            randomUUID(),
+            null,
+            dto,
+          );
+          applied.push({
+            mandateServiceId: service.id,
+            action: decision.action,
+            activityId: activity.id,
+            created: true,
+            sourceActivityId: null,
+          });
+        }
       } else if (
         decision.action === MandateOperationDecisionAction.ADOPT_LEGACY_ACTIVITY
       ) {
@@ -369,14 +372,8 @@ export class MandateOperationsApplyService {
     quantity: number;
     activityType: { isActive: boolean };
   }) {
-    if (
-      service.commercialStatus !== 'ACTIVE' ||
-      service.recurrenceMode !== 'ONCE' ||
-      service.quantity !== 1
-    ) {
-      throw new ConflictException(
-        'Ce service requiert une politique de planification hors V1',
-      );
+    if (service.commercialStatus !== 'ACTIVE') {
+      throw new ConflictException("Ce service n'est plus actif dans l'offre");
     }
     if (!service.activityType.isActive)
       throw new ConflictException("Le type d'activité est archivé");
@@ -389,6 +386,7 @@ export class MandateOperationsApplyService {
     service: {
       id: string;
       activityTypeId: string;
+      recurrenceMode: string;
       activityType: {
         code: string;
         nameFR: string;
@@ -415,7 +413,7 @@ export class MandateOperationsApplyService {
         mode: 'presentiel',
         status: 'a_faire',
         sourceMandate: true,
-        isRecurring: false,
+        isRecurring: service.recurrenceMode === 'ANNUAL',
         dureeHeures: minutes ? minutes / 60 : null,
         clientVisible: true,
         clientBookable: service.activityType.clientBookableDefault,

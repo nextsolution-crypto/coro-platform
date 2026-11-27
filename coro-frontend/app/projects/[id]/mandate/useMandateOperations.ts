@@ -109,7 +109,7 @@ export function useMandateOperations(input: { projectId: string; revision: strin
 
   const createActivity = useCallback((serviceId: string, serviceName: string) => {
     if (!input.canApply || !input.revision || input.servicesDirty || applyState.status !== 'IDLE') return;
-    if (!window.confirm(`Créer l'activité pour « ${serviceName} » ?\n\nCORO créera l'activité opérationnelle et les tâches prévues par sa configuration.`)) return;
+    if (!window.confirm(`Créer les activités manquantes pour « ${serviceName} » ?\n\nCORO créera une activité par unité vendue, avec les tâches prévues par sa configuration.`)) return;
     const decisions = [{ mandateServiceId: serviceId, action: 'CREATE_ACTIVITY' as const }];
     const signature = JSON.stringify({ projectId: input.projectId,
       intent: applyIntentSignature(input.revision, decisions) });
