@@ -651,6 +651,7 @@ export default function MandatePage() {
                       {[
                         { value: 'STANDARD', label: 'PMU/PSI/PCA' },
                         { value: 'EVACUATION', label: 'Plan évacuation' },
+                        { value: 'INSPECTION', label: 'Rapport d’inspection' },
                       ].map(opt => (
                         <button key={opt.value}
                           disabled={!canEditMandate} onClick={() => updateForm({ typeDelai: opt.value })}

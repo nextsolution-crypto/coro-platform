@@ -308,6 +308,24 @@ describe('PlanningService', () => {
     expect(scheduling.analyzeManySlots).toHaveBeenCalledTimes(1);
   });
 
+  it('returns open task deadlines per advisor and day, without time slots', async () => {
+    const { service, prisma } = setup();
+    prisma.booking.findMany.mockResolvedValue([]);
+    prisma.projectTask = {
+      findMany: jest.fn().mockResolvedValue([
+        {
+          id: 't1', taskTitle: 'Envoyer le rapport', dueDate: new Date('2026-09-24T00:00:00.000Z'),
+          assigneeId: null, assignees: [], projectId: 'p1', activityId: null,
+          project: { name: 'Projet privé', userId: 'u2', client: { name: 'Client privé' } },
+        },
+      ]),
+    };
+    const result: any = await service.team({ start, end }, actor);
+    expect(result.taskDeadlines).toEqual([
+      expect.objectContaining({ userId: 'u2', date: '2026-09-24', count: 1 }),
+    ]);
+  });
+
   it('keeps client requests in the action center even outside the displayed window', async () => {
     const { service, prisma } = setup();
     const later = {

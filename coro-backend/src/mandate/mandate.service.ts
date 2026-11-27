@@ -1,5 +1,6 @@
 import { deliveryDays, loadMandateRules } from './mandate-rules';
 import { parseActivityDurationHours } from './capacity-duration';
+import { startMandateDelay } from './mandate-delay';
 import {
   BadRequestException,
   ConflictException,
@@ -441,30 +442,17 @@ export class MandateService {
     });
     if (!task) return;
 
-    const mandate = task.project.mandate;
-    if (!mandate || mandate.typeMandat !== 'FORFAITAIRE') return;
-    if (mandate.dateDebutDelai) return; // déjà déclenché
-
-    // Vérifier si c'est une tâche de type "relevé technique" ou "visite"
-    const isReleve =
-      task.taskTitle.toLowerCase().includes('relev') ||
-                     task.taskTitle.toLowerCase().includes('visite');
-    if (!isReleve) return;
-
-    const heures = mandate.heuresBudgetees || 0;
-    const typeDelai = mandate.typeDelai || 'STANDARD';
-    let delaiJours: number;
-
-    delaiJours = deliveryDays(await loadMandateRules(db, mandate.organizationId), typeDelai, heures);
-
-    const dateDebutDelai = new Date();
-    const dateLimite = new Date();
-    dateLimite.setDate(dateLimite.getDate() + delaiJours);
-
-    await db.projectMandate.update({
-      where: { projectId: task.projectId },
-      data: { dateDebutDelai, dateLimite, delaiJours },
-    });
+    // Une tâche de réalisation (phase Opération) de relevé, de visite ou d'inspection, cochée
+    // « fait », démarre le délai si l'activité ne l'a pas déjà fait.
+    if (!/OP[ÉE]RATION/i.test(task.categoryName ?? '')) return;
+    const title = task.taskTitle.toLowerCase();
+    const kind = title.includes('inspection')
+      ? 'INSPECTION'
+      : title.includes('relev') || title.includes('visite')
+        ? 'SURVEY'
+        : null;
+    if (!kind) return;
+    await startMandateDelay(db, task.projectId, organizationId, kind);
   }
 
   // ── COMMENTAIRES ─────────────────────────────────────────
@@ -743,7 +731,9 @@ export class MandateService {
       where: { id: taskId, projectId, organizationId },
     });
     if (!task) throw new NotFoundException('Tâche introuvable');
-    if (dto.status !== undefined && !['a_faire', 'en_cours', 'fait'].includes(dto.status))
+    // « termine » (ancien libellé de l'onglet Tâches) est enregistré comme « fait ».
+    if (dto.status === 'termine') dto = { ...dto, status: 'fait' };
+    if (dto.status !== undefined && !['a_faire', 'en_cours', 'en_attente', 'fait'].includes(dto.status))
       throw new BadRequestException('Statut de tâche invalide');
     if (dto.assigneeId) {
           const assignee = await tx.user.findFirst({

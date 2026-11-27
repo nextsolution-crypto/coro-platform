@@ -56,6 +56,7 @@ export type MandateRules = {
   mandateShortDeliveryDays: number;
   mandateLongDeliveryDays: number;
   evacuationPlanDeliveryDays: number;
+  inspectionReportDeliveryDays: number;
 };
 export const DEFAULT_MANDATE_RULES: MandateRules = {
   mandateTargetMarginPercent: 50,
@@ -63,6 +64,7 @@ export const DEFAULT_MANDATE_RULES: MandateRules = {
   mandateShortDeliveryDays: 21,
   mandateLongDeliveryDays: 90,
   evacuationPlanDeliveryDays: 10,
+  inspectionReportDeliveryDays: 10,
 };
 
 // La part (100 % − marge visée) du montant vendu paie le temps des conseillers au taux facturé.
@@ -77,6 +79,7 @@ export function heuresBudgeteesSuggerees(montantVendu: string, tauxHoraire: stri
 
 export function deliveryDaysLabel(rules: MandateRules, typeDelai: string, heures: number): string {
   const days = typeDelai === 'EVACUATION' ? rules.evacuationPlanDeliveryDays
+    : typeDelai === 'INSPECTION' ? rules.inspectionReportDeliveryDays
     : heures >= rules.mandateLongThresholdHours ? rules.mandateLongDeliveryDays : rules.mandateShortDeliveryDays;
   return `${days} jours max`;
 }

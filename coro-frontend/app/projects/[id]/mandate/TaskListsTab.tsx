@@ -8,7 +8,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   a_faire:    { label: 'À faire',    color: '#2980B9', bg: '#EBF5FB' },
   en_cours:   { label: 'En cours',   color: '#F39C12', bg: '#FEF9E7' },
   en_attente: { label: 'En attente', color: '#95A5A6', bg: '#F8F9FA' },
-  termine:    { label: 'Terminé',    color: '#27AE60', bg: '#EAFAF1' },
+  fait:       { label: 'Terminé',    color: '#27AE60', bg: '#EAFAF1' },
 };
 
 const CATEGORY_ORDER = [
@@ -204,7 +204,7 @@ export default function TaskListsTab({ projectId, teamMembers }: Props) {
   }] : projectTaskLists;
   const totalTaches = displayGroups.reduce((sum, l) => sum + (l.tasks?.length || 0), 0);
   const totalTerminees = displayGroups.reduce((sum, l) =>
-    sum + (l.tasks?.filter((t: any) => t.status === 'termine').length || 0), 0);
+    sum + (l.tasks?.filter((t: any) => t.status === 'fait').length || 0), 0);
   const totalHeures = displayGroups.reduce((sum, l) =>
     sum + (l.tasks?.reduce((s: number, t: any) =>
       s + (t.timeEntries || []).reduce((se: number, e: any) => se + e.heures, 0), 0) || 0), 0);
@@ -264,7 +264,7 @@ export default function TaskListsTab({ projectId, teamMembers }: Props) {
       <div className="space-y-6">
         {displayGroups.map(list => {
           const isExpanded = expandedLists[list.id] !== false;
-          const listTerminees = list.tasks?.filter((t: any) => t.status === 'termine').length || 0;
+          const listTerminees = list.tasks?.filter((t: any) => t.status === 'fait').length || 0;
           const listTotal = list.tasks?.length || 0;
           const listHeures = list.tasks?.reduce((s: number, t: any) =>
             s + (t.timeEntries || []).reduce((se: number, e: any) => se + e.heures, 0), 0) || 0;
@@ -349,7 +349,7 @@ export default function TaskListsTab({ projectId, teamMembers }: Props) {
                   {grouped.map(({ category, tasks }) => {
                     const catKey = `${list.id}-${category}`;
                     const isCatExpanded = expandedCategories[catKey] !== false;
-                    const catTerminees = tasks.filter(t => t.status === 'termine').length;
+                    const catTerminees = tasks.filter(t => t.status === 'fait').length;
 
                     return (
                       <div key={category} style={{ borderBottom: '1px solid #F8F9FA' }}>
@@ -388,8 +388,8 @@ export default function TaskListsTab({ projectId, teamMembers }: Props) {
                               <div className="flex flex-wrap items-center gap-3 px-5 py-3 min-w-0">
                                 {/* Checkbox */}
                                 <input type="checkbox"
-                                  checked={task.status === 'termine'}
-                                  onChange={e => handleStatusChange(task.id, e.target.checked ? 'termine' : 'a_faire')}
+                                  checked={task.status === 'fait'}
+                                  onChange={e => handleStatusChange(task.id, e.target.checked ? 'fait' : 'a_faire')}
                                   style={{ accentColor: '#27AE60', width: '16px', height: '16px', flexShrink: 0 }} />
 
                                 {/* Titre éditable */}
@@ -415,8 +415,8 @@ export default function TaskListsTab({ projectId, teamMembers }: Props) {
                                   <span
                                     className="flex-1 min-w-48 text-sm cursor-pointer break-words"
                                     style={{
-                                      color: task.status === 'termine' ? '#ADB5BD' : '#2C3E50',
-                                      textDecoration: task.status === 'termine' ? 'line-through' : 'none',
+                                      color: task.status === 'fait' ? '#ADB5BD' : '#2C3E50',
+                                      textDecoration: task.status === 'fait' ? 'line-through' : 'none',
                                     }}
                                     onDoubleClick={() => { setEditingTaskId(task.id); setEditingTaskTitle(task.taskTitle); }}
                                     title="Double-cliquer pour modifier">

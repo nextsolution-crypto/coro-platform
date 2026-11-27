@@ -15,6 +15,8 @@ const FIELDS: Array<{ key: keyof MandateRules; label: string; unit: string; help
     help: 'Après le relevé technique, à partir du seuil.' },
   { key: 'evacuationPlanDeliveryDays', label: 'Délai plan d’évacuation', unit: 'jours',
     help: 'Après le relevé technique.' },
+  { key: 'inspectionReportDeliveryDays', label: 'Délai rapport d’inspection', unit: 'jours',
+    help: 'Après l’inspection (sécurité physique ou code).' },
 ];
 
 // Règles des mandats de l'organisation : valeurs par défaut CORO, modifiables par l'administrateur.
