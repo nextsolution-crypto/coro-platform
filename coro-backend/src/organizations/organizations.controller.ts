@@ -61,6 +61,20 @@ export class OrganizationsController {
     return this.organizationsService.updateSettings(req.user.organizationId, body, req.user);
   }
 
+  @Get('me/mandate-rules')
+  getMyMandateRules(@Request() req: any) {
+    if (!['ADMIN', 'SUPER_ADMIN', 'OPERATOR'].includes(req.user.role)) {
+      throw new ForbiddenException('Accès réservé aux conseillers.');
+    }
+    return this.organizationsService.getMandateRules(req.user.organizationId);
+  }
+
+  @Put('me/mandate-rules')
+  updateMyMandateRules(@Request() req: any, @Body() body: Record<string, unknown>) {
+    this.assertOrganizationAdmin(req);
+    return this.organizationsService.updateMandateRules(req.user.organizationId, body, req.user);
+  }
+
   @Get('admin/all-projects')
   @SuperAdminOnly()
   getAllProjectsGlobal() {

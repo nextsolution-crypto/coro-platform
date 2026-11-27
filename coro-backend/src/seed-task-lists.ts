@@ -147,6 +147,39 @@ async function main() {
     console.log(`✓ Liste créée: ${list.name} (${templates.length} tâches)`);
   }
 
+  // Réglage CORO par défaut : relier chaque type d'activité système à sa liste globale
+  // (même correspondance que la migration 20261231050000_default_activity_task_lists).
+  const DEFAULT_LINKS: Array<[string, string[]]> = [
+    ['creation_document', ['Production documentaire']],
+    ['formation_equipe_urgence', ["Formation mesures d'urgence"]],
+    ['formation_equipe_urgence_exercice', ["Formation mesures d'urgence", "Exercice d'évacuation"]],
+    ['formation_travail_chaud', ["Formation mesures d'urgence"]],
+    ['formation_coordonnateur', ["Formation mesures d'urgence"]],
+    ['formation_epi', ["Formation mesures d'urgence"]],
+    ['formation_communication', ["Formation mesures d'urgence"]],
+    ['formation_comportement', ["Formation mesures d'urgence"]],
+    ['formation_locataires', ["Formation mesures d'urgence"]],
+    ['exercice_table', ["Exercice d'évacuation"]],
+    ['exercice_evacuation', ["Exercice d'évacuation"]],
+  ];
+  for (const [code, listNames] of DEFAULT_LINKS) {
+    const type = await prisma.activityType.findFirst({ where: { code, organizationId: null, isSystem: true } });
+    if (!type) continue;
+    const existingPolicy = await prisma.activityTypeTaskListPolicy.findFirst({ where: { activityTypeId: type.id, organizationId: null } });
+    if (existingPolicy) continue;
+    const lists: Array<{ id: string }> = [];
+    for (const name of listNames) {
+      const list = await prisma.taskList.findFirst({ where: { name, organizationId: null, isActive: true } });
+      if (list) lists.push(list);
+    }
+    if (!lists.length) continue;
+    await prisma.activityTypeTaskListPolicy.create({ data: {
+      activityTypeId: type.id, organizationId: null, mode: 'REPLACE',
+      associations: { create: lists.map((list, displayOrder) => ({ taskListId: list.id, displayOrder })) },
+    } });
+    console.log(`✓ Listes par défaut reliées : ${code}`);
+  }
+
   console.log('Seed terminé.');
 }
 

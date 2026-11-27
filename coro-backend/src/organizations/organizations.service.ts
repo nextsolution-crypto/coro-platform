@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { DEFAULT_MANDATE_RULES, MANDATE_RULE_LIMITS, MANDATE_RULE_SELECT, MandateRules, loadMandateRules } from '../mandate/mandate-rules';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
 import * as bcrypt from 'bcryptjs';
 import { randomInt } from 'crypto';
@@ -122,6 +123,37 @@ export class OrganizationsService {
         targetId: id, organizationId: id, beforeData: before as any, afterData: data as any,
       });
       return updated;
+    });
+  }
+
+  // Règles des mandats : lisibles par tous les conseillers, modifiables par l'administrateur.
+  getMandateRules(organizationId: string) {
+    return loadMandateRules(this.prisma, organizationId);
+  }
+
+  async updateMandateRules(organizationId: string, input: Record<string, unknown>, actor: any) {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) {
+      throw new BadRequestException('Règles des mandats invalides.');
+    }
+    const data: Partial<MandateRules> = {};
+    for (const [field, value] of Object.entries(input)) {
+      const limits = MANDATE_RULE_LIMITS[field as keyof MandateRules];
+      if (!limits) throw new BadRequestException(`Règle inconnue : ${field}`);
+      if (!Number.isInteger(value) || (value as number) < limits[0] || (value as number) > limits[1]) {
+        throw new BadRequestException(`Valeur invalide pour ${field} (entre ${limits[0]} et ${limits[1]}).`);
+      }
+      data[field as keyof MandateRules] = value as number;
+    }
+    if (!Object.keys(data).length) throw new BadRequestException('Aucune modification fournie.');
+    return this.prisma.$transaction(async (tx) => {
+      const before = await tx.organization.findUnique({ where: { id: organizationId }, select: MANDATE_RULE_SELECT });
+      if (!before) throw new NotFoundException('Organisation introuvable');
+      const updated = await tx.organization.update({ where: { id: organizationId }, data, select: MANDATE_RULE_SELECT });
+      await this.adminAudit.record(tx, {
+        actorUserId: actor.userId, action: 'ORGANIZATION_MANDATE_RULES_UPDATED', targetType: 'Organization',
+        targetId: organizationId, organizationId, beforeData: before as any, afterData: data as any,
+      });
+      return { ...DEFAULT_MANDATE_RULES, ...updated };
     });
   }
 

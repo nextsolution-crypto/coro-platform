@@ -11,7 +11,7 @@ import TimesheetTab from './TimesheetTab';
 import MandateServicesEditor from './MandateServicesEditor';
 import { useAuthStore } from '@/stores/auth.store';
 import { ActivityCatalogItem } from './mandateSelection';
-import { emptyMandateForm, MandateForm, mandateFieldsAreEqual, mandateFormFromServer, heuresBudgeteesSuggerees,
+import { emptyMandateForm, MandateForm, mandateFieldsAreEqual, mandateFormFromServer, heuresBudgeteesSuggerees, deliveryDaysLabel, DEFAULT_MANDATE_RULES, type MandateRules,
   } from './mandateFormState';
 import { buildSaveMandateServicesPayload, deriveHistoricalCommercialTransition, emptyMandateCommercialState,
   mandateServicesAreDirty, normalizeMandateApiError, resetServiceDrafts, serviceDraftsFromServer,
@@ -63,6 +63,13 @@ export default function MandatePage() {
   const historicalActivities = useRef<{ projectId: string; activities: Array<{ sourceMandate?: boolean }> } | null>(null);
 
   useEffect(() => { fetchData(); }, [projectId]);
+  // Règles des mandats de l'organisation (marge visée, délais de livraison).
+  const [mandateRules, setMandateRules] = useState<MandateRules>(DEFAULT_MANDATE_RULES);
+  useEffect(() => {
+    api.get('/organizations/me/mandate-rules')
+      .then(response => setMandateRules({ ...DEFAULT_MANDATE_RULES, ...response.data }))
+      .catch(() => setMandateRules(DEFAULT_MANDATE_RULES));
+  }, []);
 
   useEffect(() => {
     const request = ++commercialRequest.current;
@@ -200,7 +207,7 @@ export default function MandatePage() {
   };
 
   const withSuggestedHours = (montantVendu: string, tauxHoraire: string): Partial<MandateForm> => {
-    const heures = heuresBudgeteesSuggerees(montantVendu, tauxHoraire);
+    const heures = heuresBudgeteesSuggerees(montantVendu, tauxHoraire, mandateRules.mandateTargetMarginPercent);
     return heures === null ? {} : { heuresBudgetees: heures };
   };
   const updateForm = (change: Partial<MandateForm>) => {
@@ -502,7 +509,7 @@ export default function MandatePage() {
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
                     onBlur={e => e.target.style.borderColor = '#CED4DA'} />
                   <p className="text-xs mt-1" style={{ color: '#6C757D' }}>
-                    Calculées pour 50 % de marge : (montant ÷ 2) ÷ taux facturé. Modifiables.
+                    Calculées pour {mandateRules.mandateTargetMarginPercent} % de marge : montant × {100 - mandateRules.mandateTargetMarginPercent} % ÷ taux facturé. Modifiables.
                   </p>
                 </div>
               </div>
@@ -658,7 +665,7 @@ export default function MandatePage() {
                       ))}
                     </div>
                     <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>
-                      {form.typeDelai === 'EVACUATION' ? '10 jours max' : parseFloat(form.heuresBudgetees) >= 80 ? '90 jours max' : '21 jours max'}
+                      {deliveryDaysLabel(mandateRules, form.typeDelai, parseFloat(form.heuresBudgetees) || 0)}
                     </p>
                   </div>
 
