@@ -203,7 +203,7 @@ export class BookingAssignmentsService {
 
   private async notify(
     tx: Prisma.TransactionClient,
-    booking: { projectId: string },
+    booking: { projectId: string; activityId?: string | null },
     actor: BookingActor,
     userId: string,
     kind: AssignmentNotificationKind,
@@ -213,6 +213,7 @@ export class BookingAssignmentsService {
       userId,
       organizationId: actor.organizationId,
       projectId: booking.projectId,
+      activityId: booking.activityId ?? null,
     });
   }
 

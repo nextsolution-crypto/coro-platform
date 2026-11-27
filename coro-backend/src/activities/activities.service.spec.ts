@@ -197,6 +197,17 @@ describe('ActivitiesService exercise report summary', () => {
       expect.objectContaining({
         include: {
           exerciseReport: { select: { id: true, status: true } },
+          bookings: {
+            where: { status: { notIn: ['ANNULEE', 'REFUSEE'] } },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: {
+              assignments: {
+                where: { status: { in: ['PENDING', 'ACCEPTED'] } },
+                select: { role: true, user: { select: { firstName: true, lastName: true } } },
+              },
+            },
+          },
           tasks: {
             include: {
               assignee: {

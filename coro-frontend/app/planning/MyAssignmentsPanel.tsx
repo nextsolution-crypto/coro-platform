@@ -191,7 +191,7 @@ export default function MyAssignmentsPanel({
                   <div className={styles.actionContent}>
                     <div className={styles.actionTitle}>
                       <strong>{item.title}</strong>
-                      <em>{item.role}</em>
+                      <em>{item.role === 'LEAD' ? 'Responsable' : 'Renfort'}</em>
                     </div>
                     {item.activityType !== item.title && (
                       <span>{item.activityType}</span>

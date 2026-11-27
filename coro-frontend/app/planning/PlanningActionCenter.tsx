@@ -9,7 +9,7 @@ import styles from './planning.module.css';
 
 const categories = [
   ['Demandes client', 'requestedBookings', 'BOOKING_REQUESTED'],
-  ['LEAD à confirmer', 'bookingsWithoutAcceptedLead', 'NO_ACCEPTED_LEAD'],
+  ['Responsable à confirmer', 'bookingsWithoutAcceptedLead', 'NO_ACCEPTED_LEAD'],
   ['Affectations en attente', 'pendingAssignments', 'PENDING_ASSIGNMENT'],
   ['Conflits', 'blockedConflicts', 'SCHEDULING_BLOCKED'],
   ['Disponibilités à vérifier', 'unknownAvailability', 'SCHEDULING_UNKNOWN'],
@@ -17,7 +17,7 @@ const categories = [
 ] as const;
 
 const emptyLabels: Record<string, string> = {
-  BOOKING_REQUESTED: 'Aucune demande client.', NO_ACCEPTED_LEAD: 'Aucun LEAD à confirmer.',
+  BOOKING_REQUESTED: 'Aucune demande client.', NO_ACCEPTED_LEAD: 'Aucun responsable à confirmer.',
   PENDING_ASSIGNMENT: 'Aucune affectation en attente.', SCHEDULING_BLOCKED: 'Aucun conflit.',
   SCHEDULING_UNKNOWN: 'Aucune disponibilité à vérifier.', UNPLANNED_ACTIVITY: 'Aucune activité à planifier.',
 };
@@ -57,7 +57,7 @@ export default function PlanningActionCenter({ summary, activeType, items, total
           {item.userName && <span>Conseiller : {item.userName}</span>}
           {(item.lastEffectiveStartUtc || item.lastLead) && <div className={styles.actionHistory}>
             {item.lastEffectiveStartUtc && <span><small>Dernier créneau</small>{formatDay(dateKey(new Date(item.lastEffectiveStartUtc), timeZone))} · {formatClock(item.lastEffectiveStartUtc, timeZone)}</span>}
-            {item.lastLead && <span><small>Dernier LEAD</small>{item.lastLead.displayName}</span>}
+            {item.lastLead && <span><small>Dernier responsable</small>{item.lastLead.displayName}</span>}
           </div>}
           {item.startUtc && item.type !== 'UNPLANNED_ACTIVITY' && <span>{formatDay(dateKey(new Date(item.startUtc), timeZone))} · {formatClock(item.startUtc, timeZone)}</span>}
         </div><div className={styles.actionButtons}>

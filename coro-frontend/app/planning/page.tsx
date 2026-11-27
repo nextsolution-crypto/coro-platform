@@ -86,6 +86,9 @@ export default function TeamPlannerPage() {
       setProjectId(params.get('projectId') ?? '');
       setActivityTypeId(params.get('activityTypeId') ?? '');
       setNeedsAction(params.get('needsAction') === 'true');
+      // Lien direct vers une liste d'actions, ex. ?actions=UNPLANNED_ACTIVITY depuis un projet.
+      const requestedActions = params.get('actions');
+      if (requestedActions && /^[A-Z_]+$/.test(requestedActions)) setActionType(requestedActions);
       setReady(true);
     });
     return () => { cancelled = true; };
