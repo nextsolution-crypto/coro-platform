@@ -48,3 +48,15 @@ export function normalizedMandateForm(value: MandateForm) {
 
 export const mandateFieldsAreEqual = (a: MandateForm, b: MandateForm) =>
   JSON.stringify(normalizedMandateForm(a)) === JSON.stringify(normalizedMandateForm(b));
+
+// Règle GardaWorld : on vise 50 % de marge sur chaque mandat. La moitié du montant vendu
+// paie le temps des conseillers au taux facturé ; le reste est la marge.
+export const MARGE_VISEE = 0.5;
+
+export function heuresBudgeteesSuggerees(montantVendu: string, tauxHoraire: string): string | null {
+  const montant = parseFloat(montantVendu);
+  const taux = parseFloat(tauxHoraire);
+  if (!(montant > 0) || !(taux > 0)) return null;
+  // Arrondi à la demi-heure, comme le pas du champ.
+  return String(Math.round((montant * (1 - MARGE_VISEE) / taux) * 2) / 2);
+}
