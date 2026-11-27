@@ -1610,7 +1610,7 @@ test("backlog distinguishes replanning context and keeps destructive actions exp
   for (const label of [
     "À replanifier",
     "Dernier créneau",
-    "Dernier LEAD",
+    "Dernier responsable",
     "Replanifier",
     "Supprimer cette activité ?",
     "Supprimer définitivement",
@@ -1713,7 +1713,9 @@ test("Project Activity cards distinguish equal titles with exact civil dates and
     path.join(__dirname, "../projects/[id]/activities/page.tsx"),
     "utf8",
   );
-  assert.ok(activities.includes("formatCivilDate(activity.scheduledDate)"));
+  assert.ok(activities.includes("formatActivityWhen(activity.scheduledDate)"));
+  assert.ok(activities.includes("formatCivilDate(value)"));
+  assert.ok(activities.includes("sameLabelIndex(activity.id, label)"));
   assert.ok(activities.includes("STATUS_CONFIG[activity.status]"));
   assert.ok(activities.includes("<select value={activity.status}"));
   assert.doesNotMatch(

@@ -210,7 +210,7 @@ export default function MandateServicesEditor({ state, catalog, catalogError, hi
                 onClick={() => onRetryCreate(service.id!)} className="text-xs px-3 py-2 rounded text-white disabled:opacity-50"
                 style={{ background: '#C0392B' }}>Réessayer</button>}
               {operational.planningAction && <button type="button" onClick={onOpenPlanner}
-                className="text-xs px-3 py-2 rounded" style={{ border: '1px solid #2980B9', color: '#2980B9' }}>Ouvrir le Planner</button>}
+                className="text-xs px-3 py-2 rounded" style={{ border: '1px solid #2980B9', color: '#2980B9' }}>Ouvrir la planification</button>}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="text-xs">Récurrence

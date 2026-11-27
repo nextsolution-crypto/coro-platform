@@ -107,6 +107,7 @@ export class PlanningActionsService {
     projectId: string,
     userIds: string[],
     kind: AssignmentNotificationKind,
+    activityId?: string | null,
   ) {
     for (const userId of [...new Set(userIds)]) {
       await createAssignmentNotification(tx, {
@@ -114,6 +115,7 @@ export class PlanningActionsService {
         userId,
         organizationId: actor.organizationId,
         projectId,
+        activityId,
       });
     }
   }
@@ -332,7 +334,6 @@ export class PlanningActionsService {
         commitmentLockVersion: { increment: 1 },
       },
     });
-    await this.notifyUsers(tx, actor, activity.projectId, team.userIds, 'NEW');
     await tx.projectActivity.update({
       where: { id: activity.id },
       data: {
@@ -341,6 +342,8 @@ export class PlanningActionsService {
         dureeHeures: input.durationMinutes / 60,
       },
     });
+    // Après la mise à jour, pour que la notification porte la date et l'heure planifiées.
+    await this.notifyUsers(tx, actor, activity.projectId, team.userIds, 'NEW', activity.id);
     await tx.auditLog.create({
       data: {
         action: 'PLANNED',

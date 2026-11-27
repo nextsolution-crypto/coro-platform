@@ -66,6 +66,18 @@ export class ActivitiesService {
       orderBy: [{ scheduledDate: 'asc' }],
       include: {
         exerciseReport: { select: { id: true, status: true } },
+        // Équipe de la réservation en cours, pour afficher le conseiller responsable.
+        bookings: {
+          where: { status: { notIn: ['ANNULEE', 'REFUSEE'] } },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            assignments: {
+              where: { status: { in: ['PENDING', 'ACCEPTED'] } },
+              select: { role: true, user: { select: { firstName: true, lastName: true } } },
+            },
+          },
+        },
         tasks: {
           include: {
             assignee: { select: { id: true, firstName: true, lastName: true } },

@@ -109,7 +109,7 @@ export default function ActivityPlanningDrawer({ mode, action, context, initialS
     setError('');
     if (mutationInFlight.current) return;
     if (!building || !slotComplete || !durationMinutes || !team.leadId) {
-      setError('Définissez un créneau et choisissez un LEAD.'); return;
+      setError('Définissez un créneau et choisissez un responsable.'); return;
     }
     const selected = candidates.filter(candidate => candidate.userId === team.leadId || team.supportIds.includes(candidate.userId));
     if (selected.some(candidate => candidate.availabilityStatus === 'UNKNOWN') && !confirmUnknown) {

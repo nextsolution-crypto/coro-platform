@@ -18,6 +18,32 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   termine:  { label: 'Terminé',  color: '#1A5276', bg: '#D6EAF8' },
 };
 
+// Types réalisés au bureau du conseiller : le mode présentiel / Teams n'a pas de sens.
+const DESK_TYPES = new Set(['creation_document', 'mise_a_jour_document']);
+
+// Une activité planifiée porte son heure de début (UTC) ; une date seule est stockée à minuit UTC.
+function formatActivityWhen(value: string): string {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '';
+  if (date.getUTCHours() === 0 && date.getUTCMinutes() === 0) return formatCivilDate(value);
+  return date.toLocaleString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', timeZone: 'America/Toronto' });
+}
+
+// « 3h00 » et « 3h » s'affichent pareil : « 3 h », ou « 2 h 30 ».
+function formatDuration(value: string): string {
+  const match = /^(\d+)\s*h\s*(\d{0,2})$/i.exec(value.trim());
+  if (!match) return value;
+  const minutes = Number(match[2] || 0);
+  return minutes ? `${match[1]} h ${String(minutes).padStart(2, '0')}` : `${match[1]} h`;
+}
+
+type ActivityTeam = { bookings?: { assignments: { role: string; user: { firstName: string; lastName: string } }[] }[] };
+function leadName(activity: ActivityTeam): string {
+  const lead = activity.bookings?.[0]?.assignments.find(item => item.role === 'LEAD');
+  return lead ? `${lead.user.firstName} ${lead.user.lastName}` : '';
+}
+
 export default function ActivitiesPage() {
   const params = useParams();
   const router = useRouter();
@@ -26,6 +52,11 @@ export default function ActivitiesPage() {
   const canManageTasks = ['ADMIN', 'SUPER_ADMIN', 'OPERATOR'].includes(authUser?.role ?? '');
 
   const [activities, setActivities] = useState<any[]>([]);
+  // Numérote les activités homonymes (ex. 2 formations identiques vendues dans le mandat).
+  const labelOf = (activity: any) => activity.customLabel || activity.label;
+  const sameLabelCount = (label: string) => activities.filter(item => labelOf(item) === label).length;
+  const sameLabelIndex = (id: string, label: string) =>
+    activities.filter(item => labelOf(item) === label).findIndex(item => item.id === id) + 1;
   const [activityCatalog, setActivityCatalog] = useState<any[]>([]);
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -242,15 +273,27 @@ export default function ActivitiesPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         <span className="text-sm font-semibold" style={{ color: '#2C3E50' }}>{label}</span>
-                        {activity.scheduledDate && (
-                          <span className="text-xs font-semibold" style={{ color: '#6C757D' }}>📅 {formatCivilDate(activity.scheduledDate)}</span>
+                        {sameLabelCount(label) > 1 && (
+                          <span className="text-xs font-semibold" style={{ color: '#6C757D' }}>({sameLabelIndex(activity.id, label)}/{sameLabelCount(label)})</span>
                         )}
-                        <span className="text-xs px-2 py-0.5 rounded-full"
+                        {activity.scheduledDate && (
+                          <span className="text-xs font-semibold" style={{ color: '#6C757D' }}>📅 {formatActivityWhen(activity.scheduledDate)}</span>
+                        )}
+                        {leadName(activity) && (
+                          <span className="text-xs font-semibold" style={{ color: '#6C757D' }}>👤 {leadName(activity)}</span>
+                        )}
+                        {!DESK_TYPES.has(activity.type) && <span className="text-xs px-2 py-0.5 rounded-full"
                           style={{ backgroundColor: activity.mode === 'teams' ? '#EBF5FB' : '#EAFAF1', color: activity.mode === 'teams' ? '#2980B9' : '#27AE60' }}>
                           {activity.mode === 'teams' ? '💻 Teams' : '📍 Présentiel'}
-                        </span>
+                        </span>}
                         {activity.duration && (
-                          <span className="text-xs" style={{ color: '#ADB5BD' }}>⏱ {activity.duration}</span>
+                          <span className="text-xs" style={{ color: '#ADB5BD' }}>⏱ {formatDuration(activity.duration)}</span>
+                        )}
+                        {!activity.scheduledDate && !['annule', 'termine', 'fait'].includes(activity.status) && (
+                          <button type="button" onClick={() => router.push(`/planning?projectId=${projectId}&actions=UNPLANNED_ACTIVITY`)}
+                            className="text-xs px-2 py-0.5 rounded font-semibold text-white" style={{ backgroundColor: '#C0392B' }}>
+                            Planifier
+                          </button>
                         )}
                       </div>
                       <div className="flex items-center gap-4 text-xs" style={{ color: '#6C757D' }}>

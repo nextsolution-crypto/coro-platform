@@ -199,7 +199,7 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
   const descriptions: Record<PlanningDrawerMode, string> = {
     VIEW: isUnavailability ? 'Période non disponible' : 'Détail de la planification', EDIT_SLOT: 'Ajustez le créneau en conservant la même activité.',
     RESCHEDULE: 'Choisissez un nouveau créneau. L’équipe actuelle est conservée et revérifiée.',
-    REASSIGN: 'Choisissez un nouveau LEAD et, au besoin, des SUPPORT.',
+    REASSIGN: 'Choisissez un nouveau responsable et, au besoin, des renforts.',
     CANCEL_SCHEDULE: 'Le créneau et les affectations seront annulés. L’activité restera à réaliser et retournera dans Activités à planifier.',
   };
 
@@ -238,7 +238,7 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
         </dl></section>
         {event.assignments?.length ? <section className={styles.drawerSection}><h3>Équipe</h3><ul>
           {event.assignments.map(assignment => <li key={`${assignment.userId}-${assignment.role}`}>
-            <strong>{assignment.role}</strong> · {names.get(assignment.userId) ?? 'Conseiller'} · {assignmentStatusLabel[assignment.status] ?? 'État inconnu'}
+            <strong>{assignment.role === 'LEAD' ? 'Responsable' : 'Renfort'}</strong> · {names.get(assignment.userId) ?? 'Conseiller'} · {assignmentStatusLabel[assignment.status] ?? 'État inconnu'}
           </li>)}</ul></section> : null}
         {event.warnings.length > 0 && <section className={styles.drawerSection}><h3>À vérifier</h3>
           <ul>{event.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul></section>}
@@ -251,7 +251,7 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
           <button type="button" className={styles.inlineButton} onClick={() => setMode('REASSIGN')}>Réaffecter</button>
           <button type="button" className={styles.dangerButton} onClick={() => setMode('CANCEL_SCHEDULE')}>Annuler la planification</button>
         </div></section>}
-        {!canMutate && event.bookingId && <p className={styles.notice}>Consultation seulement. Les mutations du Planner sont réservées aux administrateurs.</p>}
+        {!canMutate && event.bookingId && <p className={styles.notice}>Consultation seulement. Les modifications de planification sont réservées aux administrateurs.</p>}
         <div className={styles.drawerLinks}>
           {event.projectId && <Link href={`/projects/${event.projectId}`}>Ouvrir le mandat</Link>}
           {event.clientId && <Link href={`/clients/${event.clientId}`}>Ouvrir le client</Link>}
@@ -278,7 +278,7 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
       </>}
 
       {mode === 'REASSIGN' && <>
-        <p className={styles.notice}>LEAD actuel : {names.get(initialTeam.leadId) ?? 'Aucun'}<br />SUPPORT actuels : {initialTeam.supportIds.map(id => names.get(id)).filter(Boolean).join(', ') || 'Aucun'}</p>
+        <p className={styles.notice}>Responsable actuel : {names.get(initialTeam.leadId) ?? 'Aucun'}<br />Renforts actuels : {initialTeam.supportIds.map(id => names.get(id)).filter(Boolean).join(', ') || 'Aucun'}</p>
         {previewError && <p className={styles.error} role="alert">{previewError}</p>}
         {!previewError && <TeamPicker candidates={candidates} team={team} onChange={setTeam} />}
         {!previewError && <SchedulingPreview complete loading={previewLoading} candidates={candidates} team={team} timeZone={event.sourceTimeZone} />}
