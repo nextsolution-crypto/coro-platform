@@ -17,7 +17,7 @@ export function parseCivilDate(value: string): Date {
 
 export const DEFAULT_CATEGORIES = [
   { key: 'lecture_email', label: 'Lecture de email', order: 1 },
-  { key: 'rencontre_hebdo_smu', label: 'Rencontre hebdomadaire SMU', order: 2 },
+  { key: 'rencontre_hebdo_smu', label: "Rencontre hebdomadaire d'équipe", order: 2 },
   { key: 'echange_collegue', label: 'Échange avec un collègue (sans rapport dossier)', order: 3 },
   { key: 'feuille_depenses', label: 'Feuille de dépenses et kilométrage mensuelle', order: 4 },
   { key: 'formation_interne', label: 'Formation interne', order: 5 },
@@ -28,9 +28,9 @@ export const DEFAULT_CATEGORIES = [
   { key: 'deplacement_autre', label: 'Déplacement autre que chez le client', order: 10 },
   { key: 'probleme_technique', label: 'Problème technique / Support informatique / Aide', order: 11 },
   { key: 'vente', label: 'Vente', order: 12 },
-  { key: 'maj_drive', label: 'Mise à jour du drive Garda', order: 13 },
+  { key: 'maj_drive', label: 'Mise à jour du Drive partagé', order: 13 },
   { key: 'redaction_gabarit', label: 'Rédaction de gabarit ou de procédures (sans dossier client)', order: 14 },
-  { key: 'rencontre_myriam', label: 'Rencontre de suivi de projet avec Myriam', order: 15 },
+  { key: 'rencontre_myriam', label: 'Rencontre de suivi de projet avec la direction', order: 15 },
   { key: 'dev_innovation', label: 'Développement solution innovation technologique', order: 16 },
   { key: 'creation_design', label: 'Création d\'icônes / logo / design', order: 17 },
   { key: 'amelioration_methode', label: 'Amélioration / organisation / méthode de travail', order: 18 },

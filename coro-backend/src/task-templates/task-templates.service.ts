@@ -144,19 +144,19 @@ export class TaskTemplatesService {
       { categoryName: 'OPÉRATION', taskTitle: 'Visite pour le relevé technique', documentTypes: ['PMU', 'PSI'], order: 1 },
       { categoryName: 'OPÉRATION', taskTitle: 'Téléchargement des médias sur le Drive', documentTypes: ['PMU', 'PSI'], order: 2 },
       { categoryName: 'OPÉRATION', taskTitle: 'Écriture et/ou mise à jour du document', documentTypes: ['PMU', 'PSI', 'PCA', 'PGC', 'PRA', 'PUE'], order: 3 },
-      { categoryName: 'OPÉRATION', taskTitle: 'Mise à jour des plans pour G-Link', documentTypes: ['PMU', 'PSI'], order: 4 },
-      { categoryName: 'OPÉRATION', taskTitle: 'Envoi des plans à G-Link', documentTypes: ['PMU', 'PSI'], order: 5 },
-      { categoryName: 'OPÉRATION', taskTitle: 'Vérification des plans G-Link', documentTypes: ['PMU', 'PSI'], order: 6 },
-      { categoryName: 'OPÉRATION', taskTitle: 'Déposer les plans de G-Link dans le Drive', documentTypes: ['PMU', 'PSI'], order: 7 },
+      { categoryName: 'OPÉRATION', taskTitle: 'Mise à jour des plans pour le fournisseur de plans', documentTypes: ['PMU', 'PSI'], order: 4 },
+      { categoryName: 'OPÉRATION', taskTitle: 'Envoi des plans au fournisseur de plans', documentTypes: ['PMU', 'PSI'], order: 5 },
+      { categoryName: 'OPÉRATION', taskTitle: 'Vérification des plans du fournisseur', documentTypes: ['PMU', 'PSI'], order: 6 },
+      { categoryName: 'OPÉRATION', taskTitle: 'Déposer les plans du fournisseur dans le Drive', documentTypes: ['PMU', 'PSI'], order: 7 },
       // VÉRIFICATIONS INTERNES
       { categoryName: 'VÉRIFICATIONS INTERNES', taskTitle: 'Révision supérieure', documentTypes: ['PMU', 'PSI', 'PCA', 'PGC', 'PRA', 'PUE'], order: 1 },
       { categoryName: 'VÉRIFICATIONS INTERNES', taskTitle: 'Validation, contrôle qualité', documentTypes: ['PMU', 'PSI', 'PCA', 'PGC', 'PRA', 'PUE'], order: 2 },
       // APPROBATION CLIENT
-      { categoryName: 'APPROBATION CLIENT', taskTitle: 'Valider avec Myriam si le mandat est facturé à 100%', documentTypes: ['PMU', 'PSI', 'PCA', 'PGC', 'PRA', 'PUE'], order: 1 },
+      { categoryName: 'APPROBATION CLIENT', taskTitle: 'Valider avec la direction que le mandat est facturé à 100 %', documentTypes: ['PMU', 'PSI', 'PCA', 'PGC', 'PRA', 'PUE'], order: 1 },
       { categoryName: 'APPROBATION CLIENT', taskTitle: 'Envoi du document PDF au client pour approbation', documentTypes: ['PMU', 'PSI', 'PCA', 'PGC', 'PRA', 'PUE'], order: 2 },
       // MANUTENTION
       { categoryName: 'MANUTENTION', taskTitle: 'Valider avec le client l\'adresse de livraison', documentTypes: ['PMU', 'PSI'], order: 1 },
-      { categoryName: 'MANUTENTION', taskTitle: 'Envoi des documents à Nouveau Concept pour impression et envoi au client', documentTypes: ['PMU', 'PSI'], order: 2 },
+      { categoryName: 'MANUTENTION', taskTitle: "Envoi des documents à l'imprimeur pour impression et envoi au client", documentTypes: ['PMU', 'PSI'], order: 2 },
       // ADMINISTRATION
       { categoryName: 'ADMINISTRATION', taskTitle: 'Demande de facturation', documentTypes: ['PMU', 'PSI', 'PCA', 'PGC', 'PRA', 'PUE'], order: 1 },
     ];

@@ -572,7 +572,7 @@ export default function OrganizationsAdminPage() {
                           name: e.target.value,
                         })
                       }
-                      placeholder="Ex: Firme Sécurité GardaWorld"
+                      placeholder="Ex: Firme de sécurité Exemple inc."
                       className="rounded px-4 py-2.5 text-sm focus:outline-none"
                       style={inputStyle}
                       onFocus={(e) => (e.target.style.borderColor = "#C0392B")}
