@@ -49,14 +49,34 @@ export function normalizedMandateForm(value: MandateForm) {
 export const mandateFieldsAreEqual = (a: MandateForm, b: MandateForm) =>
   JSON.stringify(normalizedMandateForm(a)) === JSON.stringify(normalizedMandateForm(b));
 
-// Règle GardaWorld : on vise 50 % de marge sur chaque mandat. La moitié du montant vendu
-// paie le temps des conseillers au taux facturé ; le reste est la marge.
-export const MARGE_VISEE = 0.5;
+// Règles des mandats de l'organisation (Paramètres > Organisation). Valeurs par défaut CORO.
+export type MandateRules = {
+  mandateTargetMarginPercent: number;
+  mandateLongThresholdHours: number;
+  mandateShortDeliveryDays: number;
+  mandateLongDeliveryDays: number;
+  evacuationPlanDeliveryDays: number;
+};
+export const DEFAULT_MANDATE_RULES: MandateRules = {
+  mandateTargetMarginPercent: 50,
+  mandateLongThresholdHours: 80,
+  mandateShortDeliveryDays: 21,
+  mandateLongDeliveryDays: 90,
+  evacuationPlanDeliveryDays: 10,
+};
 
-export function heuresBudgeteesSuggerees(montantVendu: string, tauxHoraire: string): string | null {
+// La part (100 % − marge visée) du montant vendu paie le temps des conseillers au taux facturé.
+export function heuresBudgeteesSuggerees(montantVendu: string, tauxHoraire: string,
+  margePercent = DEFAULT_MANDATE_RULES.mandateTargetMarginPercent): string | null {
   const montant = parseFloat(montantVendu);
   const taux = parseFloat(tauxHoraire);
   if (!(montant > 0) || !(taux > 0)) return null;
   // Arrondi à la demi-heure, comme le pas du champ.
-  return String(Math.round((montant * (1 - MARGE_VISEE) / taux) * 2) / 2);
+  return String(Math.round((montant * (1 - margePercent / 100) / taux) * 2) / 2);
+}
+
+export function deliveryDaysLabel(rules: MandateRules, typeDelai: string, heures: number): string {
+  const days = typeDelai === 'EVACUATION' ? rules.evacuationPlanDeliveryDays
+    : heures >= rules.mandateLongThresholdHours ? rules.mandateLongDeliveryDays : rules.mandateShortDeliveryDays;
+  return `${days} jours max`;
 }

@@ -21,6 +21,12 @@ model Organization {
   updatedAt              DateTime                @updatedAt
   companyName            String?
   companyLogoB64         String?
+  /// Règles des mandats (réglables par l'administrateur ; valeurs par défaut CORO).
+  mandateTargetMarginPercent   Int                     @default(50)
+  mandateLongThresholdHours    Int                     @default(80)
+  mandateShortDeliveryDays     Int                     @default(21)
+  mandateLongDeliveryDays      Int                     @default(90)
+  evacuationPlanDeliveryDays   Int                     @default(10)
   companyLogoFullB64     String?
   companyPhone           String?
   companyEmail           String?
