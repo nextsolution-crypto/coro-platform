@@ -1368,6 +1368,11 @@ export class PlanningService {
 
   private async writableProjectIds(actor: Actor, projectIds: (string | null | undefined)[]) {
     if (['ADMIN', 'SUPER_ADMIN'].includes(actor.role)) return 'ALL' as const;
+    const coordinator = await this.prisma.user.findFirst({
+      where: { id: actor.userId, organizationId: actor.organizationId, isActive: true, planningCoordinator: true },
+      select: { id: true },
+    });
+    if (coordinator) return 'ALL' as const;
     const ids = [...new Set(projectIds.filter((id): id is string => !!id))];
     if (!ids.length) return new Set<string>();
     const projects = await this.prisma.project.findMany({

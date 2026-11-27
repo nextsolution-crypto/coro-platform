@@ -79,6 +79,7 @@ function setup(status: 'AVAILABLE' | 'BLOCKED' | 'UNKNOWN' = 'AVAILABLE') {
     projectActivity: { findFirst: jest.fn().mockResolvedValue({ projectId: 'project' }) },
     booking: { findFirst: jest.fn().mockResolvedValue({ projectId: 'project' }) },
     project: { findFirst: jest.fn().mockResolvedValue(null) },
+    user: { findFirst: jest.fn().mockResolvedValue(null) },
   };
   const result = {
     status,
@@ -682,6 +683,9 @@ describe('PlanningActionsService', () => {
       select: { id: true },
     });
     await expect((service as any).manager(actor, { activityId: 'activity' })).resolves.toBeUndefined();
+    // Coordination planification : tous les projets, sans être propriétaire.
+    prisma.user.findFirst.mockResolvedValueOnce({ id: actor.userId });
+    await expect((service as any).manager(operator, { activityId: 'activity' })).resolves.toBeUndefined();
   });
 
   it('enforces tenant and manager permissions for backlog removal', async () => {

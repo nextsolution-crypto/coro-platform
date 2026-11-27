@@ -300,10 +300,44 @@ export class UsersService {
         lastName: true,
         role: true,
         isActive: true,
+        planningCoordinator: true,
         displayPermissions: true,
         displayBuildingIds: true,
         createdAt: true,
       },
+    });
+  }
+
+  // Droit « Coordination planification » : planifier et affecter les activités de tous les projets.
+  async setPlanningCoordinator(
+    userId: string,
+    organizationId: string,
+    enabled: boolean,
+    actor: { userId: string; role: UserRole },
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findFirst({
+        where: { id: userId, organizationId },
+        select: { id: true, email: true, role: true, planningCoordinator: true },
+      });
+      if (!user) throw new NotFoundException('Utilisateur introuvable dans cette organisation.');
+      const updated = await tx.user.update({
+        where: { id: userId },
+        data: { planningCoordinator: enabled },
+        select: { id: true, planningCoordinator: true },
+      });
+      await this.audit.record(tx, {
+        actorUserId: actor.userId,
+        action: enabled ? 'PLANNING_COORDINATOR_GRANTED' : 'PLANNING_COORDINATOR_REVOKED',
+        targetType: 'User',
+        targetId: userId,
+        targetLabel: user.email,
+        organizationId,
+        reason: enabled ? 'Droit de coordination de la planification accordé' : 'Droit de coordination de la planification retiré',
+        beforeData: { planningCoordinator: user.planningCoordinator },
+        afterData: { planningCoordinator: enabled },
+      });
+      return updated;
     });
   }
 

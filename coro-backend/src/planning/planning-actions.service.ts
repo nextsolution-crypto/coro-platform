@@ -47,8 +47,8 @@ export class PlanningActionsService {
     @Optional() private readonly activityTaskLists?: ActivityTaskListsService,
   ) {}
 
-  // Planifier et affecter : un administrateur partout ; un conseiller sur les projets qu'il peut modifier
-  // (dont il est propriétaire). Les autres projets de l'organisation restent en lecture seule.
+  // Planifier et affecter : un administrateur ou un coordinateur partout ; un conseiller sur les projets
+  // qu'il peut modifier (dont il est propriétaire). Les autres projets de l'organisation restent en lecture seule.
   private async manager(
     actor: Actor,
     target: { projectId?: string; activityId?: string; bookingId?: string },
@@ -61,6 +61,12 @@ export class PlanningActionsService {
       throw new ForbiddenException('Planification non autorisée');
     }
     if (['ADMIN', 'SUPER_ADMIN'].includes(actor.role)) return;
+    // Droit délégué « Coordination planification » : tous les projets de l'organisation.
+    const coordinator = await this.prisma.user.findFirst({
+      where: { id: actor.userId, organizationId: actor.organizationId, isActive: true, planningCoordinator: true },
+      select: { id: true },
+    });
+    if (coordinator) return;
     let projectId = target.projectId;
     if (!projectId && target.activityId) {
       projectId = (

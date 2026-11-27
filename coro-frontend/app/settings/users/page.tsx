@@ -17,6 +17,7 @@ interface TeamUser {
   role: string;
   isActive: boolean;
   displayPermissions: string[];
+  planningCoordinator?: boolean;
   displayBuildingIds: string[];
   createdAt: string;
 }
@@ -253,6 +254,19 @@ export default function TeamUsersPage() {
     }
   };
 
+  const handlePlanningCoordinator = async (userId: string, enabled: boolean) => {
+    try {
+      await api.put(`/users/organization/${userId}/planning-coordinator`, { enabled });
+      await fetchData();
+    } catch (err: unknown) {
+      const message =
+        axios.isAxiosError(err) && typeof err.response?.data?.message === "string"
+          ? err.response.data.message
+          : "Impossible de modifier ce droit.";
+      window.alert(message);
+    }
+  };
+
   const handleToggleActive = async (userId: string, isActive: boolean) => {
     let reason: string | undefined;
     if (!isActive) {
@@ -470,6 +484,14 @@ export default function TeamUsersPage() {
                   style={{ color: "#495057" }}
                 >
                   {roleLabels[u.role] || u.role}
+                  {u.role === "OPERATOR" && (
+                    <label className="flex items-center gap-1.5 mt-1 text-xs" style={{ color: "#495057" }}
+                      title="Planifier et affecter les activités de tous les projets de l'organisation">
+                      <input type="checkbox" checked={u.planningCoordinator === true}
+                        onChange={(e) => handlePlanningCoordinator(u.id, e.target.checked)} />
+                      Coordination planification
+                    </label>
+                  )}
                 </p>
               </div>
 
@@ -548,6 +570,14 @@ export default function TeamUsersPage() {
                   style={{ color: "#6C757D" }}
                 >
                   {roleLabels[u.role] || u.role}
+                  {u.role === "OPERATOR" && (
+                    <label className="flex items-center gap-1.5 mt-1 text-xs" style={{ color: "#495057" }}
+                      title="Planifier et affecter les activités de tous les projets de l'organisation">
+                      <input type="checkbox" checked={u.planningCoordinator === true}
+                        onChange={(e) => handlePlanningCoordinator(u.id, e.target.checked)} />
+                      Coordination planification
+                    </label>
+                  )}
                 </td>
 
                 <td className="px-4 py-3 whitespace-nowrap">
