@@ -158,7 +158,7 @@ export class BookingEligibilityService {
   async resolveEligible(
     tx: Prisma.TransactionClient,
     input: { organizationId: string; projectId: string; activityId?: string },
-  ): Promise<Array<Pick<ProjectAdvisorEligibility, 'advisorUserId' | 'priority'>>> {
+  ): Promise<Array<{ id: string | null; advisorUserId: string; priority: number }>> {
     const explicit = await tx.projectAdvisorEligibility.findMany({
       where: {
         organizationId: input.organizationId,
@@ -189,6 +189,6 @@ export class BookingEligibilityService {
     const activeIds = new Set(active.map((user) => user.id));
     return candidates
       .filter((id) => activeIds.has(id))
-      .map((advisorUserId, index) => ({ advisorUserId, priority: 100 + index }));
+      .map((advisorUserId, index) => ({ id: null, advisorUserId, priority: 100 + index }));
   }
 }

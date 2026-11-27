@@ -22,8 +22,8 @@ describe('BookingEligibilityService.resolveEligible', () => {
   it('retombe sur le conseiller du mandat puis le propriétaire actifs', async () => {
     const client = tx([], { userId: 'owner', mandate: { ownerId: 'mandate' } }, ['owner', 'mandate']);
     await expect(service.resolveEligible(client, input)).resolves.toEqual([
-      { advisorUserId: 'mandate', priority: 100 },
-      { advisorUserId: 'owner', priority: 101 },
+      { id: null, advisorUserId: 'mandate', priority: 100 },
+      { id: null, advisorUserId: 'owner', priority: 101 },
     ]);
   });
 
