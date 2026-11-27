@@ -49,6 +49,9 @@ export class MandateService {
       },
     });
 
+    // Sans fiche enregistrée, on renvoie null : le frontend sait alors que le Mandat n'existe pas encore.
+    if (!mandate) return null;
+
     const tasks = await this.prisma.projectTask.findMany({
       where: { projectId, organizationId: actor.organizationId },
       include: { timeEntries: true },

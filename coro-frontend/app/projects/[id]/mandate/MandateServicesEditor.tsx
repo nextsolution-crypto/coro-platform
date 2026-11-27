@@ -168,7 +168,7 @@ export default function MandateServicesEditor({ state, catalog, catalogError, hi
           return <article key={key} className="rounded p-3" style={{ border: '1px solid #DEE2E6', background: removing ? '#FEF9E7' : '#FFFFFF' }}>
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <div><p className="text-sm font-semibold">{serviceName(service)}</p>
-                <span className="text-xs" style={{ color: removing ? '#B9770E' : '#27864A' }}>{badge}</span></div>
+                <span className="text-xs" style={{ color: removing || !service.id || restoring ? '#B9770E' : '#27864A' }}>{badge}</span></div>
               {canEdit && (!service.id ? <button type="button" disabled={disabled} className="text-xs underline"
                 onClick={() => onChange(removeServiceDraft(state.draft, key))}>Annuler l’ajout</button>
                 : removing ? <button type="button" disabled={disabled} className="text-xs underline"
