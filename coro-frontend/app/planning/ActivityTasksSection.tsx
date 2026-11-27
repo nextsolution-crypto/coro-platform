@@ -50,8 +50,10 @@ function sortTasksByPhase<T extends { categoryName: string; order?: number | nul
     || a.taskTitle.localeCompare(b.taskTitle, 'fr'));
 }
 
-export default function ActivityTasksSection({ projectId, activityId, canMutate }: {
+export default function ActivityTasksSection({ projectId, activityId, canMutate, canWork = canMutate }: {
   projectId: string; activityId: string; canMutate: boolean;
+  /** Cocher les tâches et saisir du temps : propriétaire, administrateur ou conseiller affecté. */
+  canWork?: boolean;
 }) {
   const [view, setView] = useState<TaskView | null>(null);
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
@@ -59,6 +61,9 @@ export default function ActivityTasksSection({ projectId, activityId, canMutate 
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
+  const [timeTaskId, setTimeTaskId] = useState<string | null>(null);
+  const [timeForm, setTimeForm] = useState({ date: new Date().toISOString().slice(0, 10), heures: '', note: '' });
+  const [realized, setRealized] = useState<{ open: boolean; heures: string; date: string }>({ open: false, heures: '', date: '' });
 
   const load = useCallback(async () => {
     const response = await api.get<TaskView>(`/projects/${projectId}/activities/${activityId}/tasks`);
@@ -97,6 +102,43 @@ export default function ActivityTasksSection({ projectId, activityId, canMutate 
     finally { setBusy(''); }
   };
 
+  const toggleDone = async (task: ActivityTask) => {
+    setBusy(task.id); setError('');
+    try {
+      await api.put(`/projects/${projectId}/tasks/${task.id}`, { status: task.status === 'fait' ? 'a_faire' : 'fait' });
+      await load();
+    } catch (cause) { setError(message(cause)); }
+    finally { setBusy(''); }
+  };
+
+  const addTime = async (taskId: string) => {
+    const value = parseFloat(timeForm.heures.replace(',', '.'));
+    if (!Number.isFinite(value) || value <= 0) { setError('Indiquez un nombre d’heures.'); return; }
+    setBusy(`time:${taskId}`); setError('');
+    try {
+      await api.post(`/projects/${projectId}/tasks/${taskId}/time`, { date: timeForm.date, heures: value, note: timeForm.note || undefined });
+      toast(`${hours(value)} enregistrée${value >= 2 ? 's' : ''} — visible dans Timelog et Rendement.`);
+      setTimeTaskId(null); setTimeForm(form => ({ ...form, heures: '', note: '' }));
+      await load();
+    } catch (cause) { setError(message(cause)); }
+    finally { setBusy(''); }
+  };
+
+  // Temps d'une activité réalisée : sa durée (ou les heures indiquées) sur sa tâche de réalisation.
+  const logRealized = async () => {
+    setBusy('realized'); setError('');
+    try {
+      const value = realized.heures ? parseFloat(realized.heures.replace(',', '.')) : undefined;
+      const response = await api.post<{ heures: number }>(`/projects/${projectId}/activities/${activityId}/realized-time`, {
+        ...(value ? { heures: value } : {}), ...(realized.date ? { date: realized.date } : {}),
+      });
+      toast(`${hours(response.data.heures)} enregistrée${response.data.heures >= 2 ? 's' : ''} pour cette activité.`);
+      setRealized({ open: false, heures: '', date: '' });
+      await load();
+    } catch (cause) { setError(message(cause)); }
+    finally { setBusy(''); }
+  };
+
   const instantiateMissing = async () => {
     setBusy('instantiate'); setError('');
     try {
@@ -116,8 +158,21 @@ export default function ActivityTasksSection({ projectId, activityId, canMutate 
       {(task.assignee || task.assignees?.length) && <small>Responsable : {task.assignee ? `${task.assignee.firstName} ${task.assignee.lastName}` : task.assignees?.map(item => `${item.user.firstName} ${item.user.lastName}`).join(', ')}</small>}
       {task.dueDate && <small>Échéance : {new Date(task.dueDate).toLocaleDateString('fr-CA')}</small>}
     </div>
-    {canMutate && !task.projectTaskListId && task.status === 'a_faire' && task.actualHours === 0 && <button type="button" className={styles.inlineButton}
-      disabled={busy === task.id} onClick={() => setActivity(task.id, null)}>Retirer de cette activité</button>}
+    <div className={styles.taskRowActions}>
+      {canWork && <button type="button" className={styles.inlineButton} disabled={busy === task.id}
+        aria-pressed={task.status === 'fait'} onClick={() => toggleDone(task)}>
+        {task.status === 'fait' ? 'Rouvrir' : 'Marquer fait'}</button>}
+      {canWork && <button type="button" className={styles.inlineButton}
+        onClick={() => setTimeTaskId(current => current === task.id ? null : task.id)}>+ Temps</button>}
+      {canMutate && !task.projectTaskListId && task.status === 'a_faire' && task.actualHours === 0 && <button type="button" className={styles.inlineButton}
+        disabled={busy === task.id} onClick={() => setActivity(task.id, null)}>Retirer de cette activité</button>}
+    </div>
+    {timeTaskId === task.id && <div className={styles.taskTimeForm}>
+      <label>Date<input type="date" value={timeForm.date} onChange={event => setTimeForm({ ...timeForm, date: event.target.value })} /></label>
+      <label>Heures<input inputMode="decimal" placeholder="1,5" value={timeForm.heures} onChange={event => setTimeForm({ ...timeForm, heures: event.target.value })} /></label>
+      <label>Note<input value={timeForm.note} maxLength={200} onChange={event => setTimeForm({ ...timeForm, note: event.target.value })} /></label>
+      <button type="button" className={styles.primaryButton} disabled={busy === `time:${task.id}`} onClick={() => addTime(task.id)}>Enregistrer</button>
+    </div>}
   </article>);
 
   return <section className={styles.taskSection} aria-busy={!view || Boolean(busy)}>
@@ -125,6 +180,17 @@ export default function ActivityTasksSection({ projectId, activityId, canMutate 
       {view && <p>{view.taskCount} au total · {view.taskCompletedCount} terminée{view.taskCompletedCount === 1 ? '' : 's'} · {view.taskOpenCount} ouverte{view.taskOpenCount === 1 ? '' : 's'}</p>}
     </div>{view && <strong>{view.taskProgressPercent === null ? '—' : `${view.taskProgressPercent} %`}</strong>}</div>
     {view && <p className={styles.taskMetrics}>Progression {view.taskProgressPercent === null ? 'non calculée' : `${view.taskProgressPercent} %`} · Temps réalisé {hours(view.actualHours)}</p>}
+    {view && canWork && !view.isCancelled && <div className={styles.realizedTime}>
+      {!realized.open ? <button type="button" className={styles.inlineButton} onClick={() => setRealized({ ...realized, open: true })}>
+        Enregistrer le temps de l’activité réalisée</button> : <div className={styles.taskTimeForm}>
+        <label>Heures<input inputMode="decimal" placeholder="Durée prévue" value={realized.heures}
+          onChange={event => setRealized({ ...realized, heures: event.target.value })} /></label>
+        <label>Date<input type="date" value={realized.date} onChange={event => setRealized({ ...realized, date: event.target.value })} /></label>
+        <button type="button" className={styles.primaryButton} disabled={busy === 'realized'} onClick={logRealized}>Enregistrer</button>
+        <button type="button" className={styles.inlineButton} onClick={() => setRealized({ open: false, heures: '', date: '' })}>Annuler</button>
+        <small>Vide = durée prévue de l’activité, à sa date. Le temps va sur la tâche de réalisation (phase Opération).</small>
+      </div>}
+    </div>}
     {!view && !error && <p className={styles.notice}>Chargement des tâches…</p>}
     {view?.canonicalTypeMissing && <p className={styles.notice}>Définissez d’abord un type d’activité pour déterminer les checklists applicables.</p>}
     {view && view.missingTaskLists.length > 0 && <div className={styles.missingChecklists}>

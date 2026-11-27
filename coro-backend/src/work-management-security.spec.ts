@@ -276,7 +276,7 @@ describe('Work Management security hardening', () => {
   });
 
   it('denies cross-tenant ProjectTask update', async () => {
-    const prisma: any = { project: model(), projectTask: model() };
+    const prisma: any = { project: model(), projectTask: model(), user: model() };
     transactional(prisma);
     prisma.project.findFirst.mockResolvedValue(null);
     prisma.projectTask.findFirst.mockResolvedValue(null);
