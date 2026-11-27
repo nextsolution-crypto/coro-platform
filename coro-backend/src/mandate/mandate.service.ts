@@ -18,6 +18,9 @@ type Db = Prisma.TransactionClient | PrismaService;
 import { assertPeriodWritable, recordCorrectionIfNeeded } from '../timelog/time-periods';
 import { multiply2, round2, sum2 } from '../common/exact-amounts';
 
+
+// Délai de livraison forfaitaire : 3 semaines sous 80 h budgétées, 3 mois à partir de 80 h.
+export const MANDAT_LONG_SEUIL_HEURES = 80;
 @Injectable()
 export class MandateService {
   constructor(
@@ -372,9 +375,9 @@ export class MandateService {
 
       if (documentType === 'EVACUATION') {
         delaiJours = 15;
-      } else if (heures > 0 && heures <= 30) {
+      } else if (heures > 0 && heures < MANDAT_LONG_SEUIL_HEURES) {
         delaiJours = 21;
-      } else if (heures > 30) {
+      } else if (heures >= MANDAT_LONG_SEUIL_HEURES) {
         delaiJours = 90;
       } else {
         delaiJours = 21; // défaut
@@ -461,7 +464,7 @@ export class MandateService {
     let delaiJours: number;
 
     if (typeDelai === 'EVACUATION') delaiJours = 15;
-    else if (heures <= 30) delaiJours = 21;
+    else if (heures < MANDAT_LONG_SEUIL_HEURES) delaiJours = 21;
     else delaiJours = 90;
 
     const dateDebutDelai = new Date();
