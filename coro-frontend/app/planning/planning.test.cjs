@@ -1075,7 +1075,7 @@ test("text projections distinguish requested, confirmed, pending and legacy even
   );
   assert.match(
     projection.eventStatus({ ...base, source: "LEGACY_ACTIVITY" }),
-    /Legacy/,
+    /Date prévue/,
   );
   const teamEvent = {
     ...base,
