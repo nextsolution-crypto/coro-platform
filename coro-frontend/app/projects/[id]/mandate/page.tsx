@@ -649,7 +649,7 @@ export default function MandatePage() {
                       ))}
                     </div>
                     <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>
-                      {form.typeDelai === 'EVACUATION' ? '15 jours max' : parseFloat(form.heuresBudgetees) >= 80 ? '90 jours max' : '21 jours max'}
+                      {form.typeDelai === 'EVACUATION' ? '10 jours max' : parseFloat(form.heuresBudgetees) >= 80 ? '90 jours max' : '21 jours max'}
                     </p>
                   </div>
 
