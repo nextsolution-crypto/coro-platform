@@ -93,7 +93,7 @@ assert.match(
 );
 assert.match(page, /commitment\.startAt/);
 assert.match(page, /commitment\.durationMinutes/);
-assert.match(page, /Version d’engagement/);
+assert.match(page, /commitmentStatusLabel\(commitment.status\)/);
 assert.doesNotMatch(page, /createHash|sha256|crypto/);
 
 console.log("Booking commitment frontend contracts: PASS");
