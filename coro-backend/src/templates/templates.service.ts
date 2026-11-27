@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 
@@ -11,7 +11,13 @@ export class TemplatesService {
     return this.prisma.projectTemplate.findMany({
       where: { organizationId },
       orderBy: { createdAt: 'desc' },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        documentType: true,
+        createdAt: true,
+        createdById: true,
         createdBy: { select: { firstName: true, lastName: true } },
       },
     });
@@ -26,6 +32,9 @@ export class TemplatesService {
   ) {
     const organizationId = actor.organizationId;
     const userId = actor.userId;
+    name = typeof name === 'string' ? name.trim() : '';
+    if (!name || name.length > 120)
+      throw new BadRequestException('Nom du modèle requis (120 caractères maximum)');
     // Affectation du conseiller vérifiée (audit M3-09).
     const project = await this.prisma.project.findFirst({
       where: { id: projectId, ...projectAccessWhere(actor) },
@@ -53,11 +62,18 @@ export class TemplatesService {
   }
 
   // ── Supprimer un modèle ────────────────────────────────────
-  async remove(id: string, organizationId: string) {
+  async remove(id: string, actor: { organizationId: string; userId: string; role: string }) {
     const template = await this.prisma.projectTemplate.findFirst({
-      where: { id, organizationId },
+      where: { id, organizationId: actor.organizationId },
     });
     if (!template) throw new NotFoundException('Modèle introuvable');
+    if (
+      template.createdById !== actor.userId &&
+      !['ADMIN', 'SUPER_ADMIN'].includes(actor.role)
+    )
+      throw new ForbiddenException(
+        'Seul l’auteur du modèle ou un administrateur peut le supprimer',
+      );
 
     return this.prisma.projectTemplate.delete({ where: { id } });
   }

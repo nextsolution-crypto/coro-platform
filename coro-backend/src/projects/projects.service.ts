@@ -18,6 +18,39 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 // Types dotés d'un configurateur (PGC, PRA et PUE : « bientôt disponible »).
 const CREATABLE_DOCUMENT_TYPES = new Set(['PMU', 'PSI', 'PCA']);
 
+
+// Réponses du configurateur propres à un document précis : elles ne suivent pas un modèle
+// appliqué à un autre bâtiment (responsable, date du relevé, version, historique).
+const TEMPLATE_IDENTITY_KEYS = [
+  'responsableNom',
+  'responsableTitre',
+  'dateReleve',
+  'versionDocument',
+  'historiqueList',
+];
+
+export function configFromTemplate(configData: unknown): Record<string, unknown> | null {
+  const source = (configData as any)?.projectConfig;
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return null;
+  const copy: Record<string, unknown> = JSON.parse(JSON.stringify(source));
+  for (const key of TEMPLATE_IDENTITY_KEYS) delete copy[key];
+  return copy;
+}
+
+// Copie pour l'année suivante, même bâtiment : tout est repris sauf la date du relevé,
+// qui sera celle du nouveau relevé technique.
+export function configForNextYear(configData: unknown): Record<string, unknown> | null {
+  if (!configData || typeof configData !== 'object' || Array.isArray(configData)) return null;
+  const copy: Record<string, unknown> = JSON.parse(JSON.stringify(configData));
+  delete copy.dateReleve;
+  return copy;
+}
+
+export function nextYearName(name: string, year: number): string {
+  const next = String(year + 1);
+  return name.includes(String(year)) ? name.split(String(year)).join(next) : `${name} ${next}`;
+}
+
 @Injectable()
 export class ProjectsService {
   constructor(private prisma: PrismaService) {}
@@ -153,6 +186,7 @@ export class ProjectsService {
       buildingId: string;
       userId: string;
       organizationId: string;
+      templateId?: string;
     },
     actor: AdviserActor,
   ) {
@@ -205,6 +239,20 @@ export class ProjectsService {
     }
     data = { ...data, name, year };
 
+    let templateConfig: Record<string, unknown> | null = null;
+    if (data.templateId) {
+      const template = await this.prisma.projectTemplate.findFirst({
+        where: { id: data.templateId, organizationId: actor.organizationId },
+        select: { documentType: true, configData: true },
+      });
+      if (!template) throw new NotFoundException('Modèle introuvable');
+      if (template.documentType !== data.documentType)
+        throw new BadRequestException(
+          'Le modèle choisi est pour un autre type de document',
+        );
+      templateConfig = configFromTemplate(template.configData);
+    }
+
     return this.prisma.project.create({
       data: {
         name: data.name,
@@ -214,11 +262,77 @@ export class ProjectsService {
         buildingId: building.id,
         userId: actor.userId,
         organizationId: actor.organizationId,
+        ...(templateConfig
+          ? { configData: templateConfig as Prisma.InputJsonValue }
+          : {}),
       },
       include: {
         client: true,
         building: true,
       },
+    });
+  }
+
+  // Duplique un projet pour l'année suivante (même bâtiment) : configuration du
+  // document, configuration PCA et procédures propres au projet. Le mandat, les
+  // activités, les tâches et le temps ne sont pas copiés.
+  async duplicateForNextYear(id: string, actor: AdviserActor) {
+    const source = await this.prisma.project.findFirst({
+      where: { id, ...projectAccessWhere(actor), isActive: true },
+      include: { pcaConfig: true },
+    });
+    if (!source) throw new NotFoundException('Projet introuvable');
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: actor.organizationId },
+    });
+    if (!organization) throw new NotFoundException('Organisation introuvable');
+    const limits = getLimitsForLicense(organization.licenseType);
+    if (limits.maxProjects !== null) {
+      const currentCount = await this.prisma.project.count({
+        where: { organizationId: actor.organizationId, isActive: true },
+      });
+      if (currentCount >= limits.maxProjects)
+        throw new ForbiddenException(
+          `Votre licence ${organization.licenseType} est limitée à ${limits.maxProjects} projet(s). Contactez CORO pour mettre à niveau.`,
+        );
+    }
+    const nextYear = source.year + 1;
+    return this.prisma.$transaction(async (tx) => {
+      const config = configForNextYear(source.configData);
+      const created = await tx.project.create({
+        data: {
+          name: nextYearName(source.name, source.year),
+          documentType: source.documentType,
+          year: nextYear,
+          clientId: source.clientId,
+          buildingId: source.buildingId,
+          userId: actor.userId,
+          organizationId: actor.organizationId,
+          ...(config
+            ? {
+                configData: config as Prisma.InputJsonValue,
+                status: 'IN_PROGRESS' as any,
+                progress: 25,
+              }
+            : {}),
+        },
+        select: { id: true, name: true, year: true },
+      });
+      if (source.pcaConfig) {
+        const { id: _id, projectId: _p, createdAt: _c, updatedAt: _u, ...pca } =
+          source.pcaConfig as any;
+        await tx.pcaConfig.create({ data: { ...pca, projectId: created.id } });
+      }
+      const procedures = await tx.customProcedure.findMany({
+        where: { projectId: source.id, organizationId: actor.organizationId },
+      });
+      for (const procedure of procedures) {
+        const { id: _id, createdAt: _c, updatedAt: _u, ...rest } = procedure as any;
+        await tx.customProcedure.create({
+          data: { ...rest, projectId: created.id, createdById: actor.userId },
+        });
+      }
+      return { ...created, sourceProjectId: source.id };
     });
   }
 

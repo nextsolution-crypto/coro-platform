@@ -20,6 +20,7 @@ interface Project {
   status: string;
   year: number;
   progress: number;
+  configData?: Record<string, unknown> | null;
   updatedAt: string;
   clientId: string;
   buildingId: string;
@@ -106,6 +107,8 @@ export default function ProjectDetailPage() {
   const requestSequence = useRef(0);
   const [generating,  setGenerating]  = useState(false);
   const [hasDocument, setHasDocument] = useState(false);
+  // Réponses du configurateur déjà enregistrées : suffisent pour créer un modèle.
+  const hasConfig = !!project?.configData && typeof project.configData === 'object' && Object.keys(project.configData).length > 0;
   const [documentVersion, setDocumentVersion] = useState(0);
   const [justGenerated, setJustGenerated] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -382,6 +385,24 @@ export default function ProjectDetailPage() {
       toast('Erreur lors de l\'enregistrement du modèle.', 'error');
     } finally {
       setSavingTemplate(false);
+    }
+  };
+
+  const handleDuplicate = async () => {
+    const nextYear = (project?.year ?? new Date().getFullYear()) + 1;
+    const ok = await confirmAction({
+      title: `Créer le projet ${nextYear}`,
+      message: `Un nouveau projet ${nextYear} sera créé pour le même bâtiment, avec les réponses du configurateur, la configuration PCA et les procédures propres à ce projet. La date du relevé technique est laissée vide. Le mandat, les activités, les tâches et le temps ne sont pas copiés.`,
+      confirmLabel: `Créer ${nextYear}`,
+    });
+    if (!ok) return;
+    try {
+      const res = await api.post(`/projects/${projectId}/duplicate`);
+      toast(`Projet ${res.data.year} créé : ${res.data.name}`, 'success');
+      router.push(`/projects/${res.data.id}`);
+    } catch (err: any) {
+      const message = err?.response?.data?.message || 'Impossible de créer le projet de l’année suivante.';
+      toast(Array.isArray(message) ? message[0] : message, 'error');
     }
   };
 
@@ -784,10 +805,20 @@ export default function ProjectDetailPage() {
               📅 Activités
             </button>
 
-            <button onClick={() => setShowTemplateModal(true)} disabled={!hasDocument}
+            <button onClick={handleDuplicate}
+              className="text-sm font-medium px-4 py-2 rounded transition-colors"
+              style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+              title="Créer le projet de l’année suivante pour ce bâtiment"
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+              ⧉ Dupliquer pour {(project.year ?? new Date().getFullYear()) + 1}
+            </button>
+
+            <button onClick={() => setShowTemplateModal(true)} disabled={!hasDocument && !hasConfig}
+              title="Réutiliser les réponses du configurateur pour un autre bâtiment"
               className="text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50"
               style={{ border: '1px solid #AED6F1', color: '#2980B9' }}
-              onMouseEnter={e => { if (hasDocument) e.currentTarget.style.backgroundColor = '#EBF5FB'; }}
+              onMouseEnter={e => { if (hasDocument || hasConfig) e.currentTarget.style.backgroundColor = '#EBF5FB'; }}
               onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
               💾 Modèle
             </button>
@@ -1790,7 +1821,7 @@ export default function ProjectDetailPage() {
               Enregistrer comme modèle
             </h3>
             <p className="text-sm mb-6" style={{ color: '#6C757D' }}>
-              La configuration de ce projet sera sauvegardée comme point de départ pour de nouveaux projets similaires.
+              Les réponses du configurateur seront sauvegardées comme point de départ pour un autre bâtiment du même type. Le responsable, la date du relevé, la version et l’historique ne sont pas repris. Vos modèles se gèrent dans Bibliothèque → Modèles de projet.
             </p>
             <form onSubmit={handleSaveAsTemplate} className="space-y-4">
               <div>

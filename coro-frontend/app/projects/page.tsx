@@ -262,9 +262,10 @@ export default function ProjectsPage() {
     if (createSubmitting) return;
     setCreateSubmitting(true);
     try {
-      await api.post('/projects', { ...form, year: parseInt(form.year) });
+      await api.post('/projects', { ...form, year: parseInt(form.year), ...(selectedTemplate ? { templateId: selectedTemplate } : {}) });
       setShowModal(false);
       setForm({ name: '', documentType: '', year: new Date().getFullYear().toString(), clientId: '', buildingId: '' });
+      setSelectedTemplate('');
       fetchData();
       toast('Projet créé avec succès.');
     } catch (err: any) {
@@ -725,13 +726,7 @@ export default function ProjectsPage() {
                             ...prev,
                             documentType: t.documentType || prev.documentType,
                           }));
-                          // Sauvegarder la config du modèle pour le configurateur
-                          if (t.configData?.documentConfig) {
-                            localStorage.setItem('coro_template_config', JSON.stringify(t.configData.documentConfig));
-                          }
                         } catch { console.error('Erreur chargement modèle'); }
-                      } else {
-                        localStorage.removeItem('coro_template_config');
                       }
                     }}
                     className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
@@ -746,7 +741,7 @@ export default function ProjectsPage() {
                   </select>
                   {selectedTemplate && (
                     <p className="text-xs mt-1" style={{ color: '#2980B9' }}>
-                      ✓ La configuration de ce modèle sera appliquée automatiquement
+                      ✓ Les réponses du configurateur seront reprises (sauf responsable, date du relevé, version et historique). Vérifiez-les pour ce bâtiment.
                     </p>
                   )}
                 </div>
@@ -775,7 +770,12 @@ export default function ProjectsPage() {
                   Type de document *
                 </label>
                 <select value={form.documentType}
-                  onChange={e => setForm({ ...form, documentType: e.target.value })} required
+                  onChange={e => {
+                    setForm({ ...form, documentType: e.target.value });
+                    // Un modèle ne vaut que pour son type de document.
+                    const template = templates.find(t => t.id === selectedTemplate);
+                    if (template && template.documentType !== e.target.value) setSelectedTemplate('');
+                  }} required
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
                   onFocus={e => e.target.style.borderColor = '#C0392B'}

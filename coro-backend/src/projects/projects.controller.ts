@@ -154,6 +154,22 @@ export class ProjectsController {
     return this.projectsService.remove(id, req.user);
   }
 
+  @Post(':id/duplicate')
+  async duplicate(@Param('id') id: string, @Request() req: any) {
+    const created = await this.projectsService.duplicateForNextYear(id, req.user);
+    await this.auditService.log({
+      action: 'PROJECT_DUPLICATED',
+      entityType: 'PROJECT',
+      entityId: created.id,
+      projectId: created.id,
+      description: `Projet créé pour ${created.year} à partir du projet de l'année précédente`,
+      metadata: { sourceProjectId: id },
+      userId: req.user.userId,
+      organizationId: req.user.organizationId,
+    });
+    return created;
+  }
+
   @Post(':id/submit')
   async submit(@Param('id') id: string, @Request() req: any) {
     return this.approvalService.submit(id, req.user);

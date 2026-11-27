@@ -14,7 +14,8 @@ export type AuditAction =
   | 'PROCEDURE_EDIT'
   | 'TEMPLATE_CREATE'
   | 'LOGIN'
-  | 'OWNER_CHANGE';
+  | 'OWNER_CHANGE'
+  | 'PROJECT_DUPLICATED';
 
 @Injectable()
 export class AuditService {
