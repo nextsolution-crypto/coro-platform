@@ -474,7 +474,7 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     [
       'Ouvrez Activités. Filtrez par statut : À faire, Fait, Reporté, Annulé, Terminé.',
       'Chaque activité indique sa date et son mode (réunion Teams ou présentiel).',
-      'Si l’activité est planifiable, utilisez PLANIFIER, proposez une date, puis Envoyer la demande.',
+      'Si l’activité est planifiable, elle apparaît dans « À planifier » : utilisez Choisir une date, indiquez le créneau souhaité, puis Envoyer la demande. Votre conseiller confirme ensuite le rendez-vous.',
     ],
     'Vous identifiez l’activité et son état courant.',
     ['coro-client-portal/app/activities/page.tsx'],

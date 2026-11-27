@@ -55,6 +55,30 @@ const STATUS_CONFIG: Record<
   },
 };
 
+// Libellés client des états de réservation (codes internes du serveur).
+const BOOKING_LABELS: Record<string, string> = {
+  DEMANDEE: 'Demande envoyée — en attente de confirmation',
+  CONFIRMEE: 'Rendez-vous confirmé',
+  REASSIGNEE: 'Rendez-vous confirmé',
+  REPORTEE: 'Rendez-vous reporté',
+  REFUSEE: 'Demande refusée',
+  COMPLETEE: 'Réalisée',
+  ANNULEE: 'Rendez-vous annulé',
+};
+
+// « 3h00 », « 1h30 » ou « 2h » → minutes ; 60 par défaut.
+function durationMinutes(value: unknown): number {
+  const match = typeof value === 'string' ? /^(\d+)\s*h\s*(\d{0,2})/i.exec(value.trim()) : null;
+  return match ? Number(match[1]) * 60 + Number(match[2] || 0) : 60;
+}
+
+function bookingErrorMessage(error: unknown): string {
+  const raw = error instanceof Error ? error.message : '';
+  if (/capacit|disponible/i.test(raw)) return 'Aucun conseiller n’est disponible à ce moment. Proposez un autre créneau.';
+  if (/admissible/i.test(raw)) return 'Cette activité ne peut pas encore être réservée. Contactez votre conseiller.';
+  return raw || 'La demande n’a pas pu être envoyée. Réessayez.';
+}
+
 export default function ActivitiesPage() {
   const router = useRouter();
 
@@ -65,20 +89,20 @@ export default function ActivitiesPage() {
   const [filterStatus, setFilterStatus] = useState('');
   const [planningId, setPlanningId] = useState<string | null>(null);
   const [requestedDate, setRequestedDate] = useState('');
-  const [duration, setDuration] = useState(60);
   const [planningError, setPlanningError] = useState('');
 
-  const planActivity = async (activityId: string) => {
-    if (!requestedDate) return;
+  const planActivity = async (activity: any) => {
+    if (!requestedDate) { setPlanningError('Choisissez une date et une heure.'); return; }
     try {
       setPlanningError('');
-      await apiPost(`/client-portal/activities/${activityId}/bookings`, {
-        requestedLocalDateTime: requestedDate, duration,
+      // La durée est celle de l'activité prévue par le conseiller : le client choisit seulement le créneau.
+      await apiPost(`/client-portal/activities/${activity.id}/bookings`, {
+        requestedLocalDateTime: requestedDate, duration: durationMinutes(activity.duration),
       });
       setPlanningId(null);
       await fetchActivities();
     } catch (error) {
-      setPlanningError(error instanceof Error ? error.message : 'Erreur de réservation');
+      setPlanningError(bookingErrorMessage(error));
     }
   };
 
@@ -116,6 +140,9 @@ export default function ActivitiesPage() {
     return true;
   });
 
+  const isOpen = (a: any) => !['fait', 'termine', 'annule'].includes(a.status);
+  // Activités sans date que le client peut réserver lui-même.
+  const toPlan = filtered.filter((a) => !a.scheduledDate && isOpen(a) && a.clientBookable && !a.bookings?.[0]);
   const upcoming = filtered.filter((a) => {
     if (!a.scheduledDate) {
       return false;
@@ -129,6 +156,7 @@ export default function ActivitiesPage() {
   });
 
   const past = filtered.filter((a) => {
+    if (toPlan.includes(a)) return false;
     if (!a.scheduledDate) {
       return true;
     }
@@ -335,17 +363,33 @@ export default function ActivitiesPage() {
           {status.label}
         </span>
         {a.bookings?.[0] ? (
-          <span>Planification : {a.bookings[0].status}</span>
+          <span style={{ fontSize: 13, color: '#2C3E50', fontWeight: 600 }}>
+            {BOOKING_LABELS[a.bookings[0].status] ?? 'Rendez-vous en cours de traitement'}
+          </span>
         ) : a.clientVisible && a.clientBookable && !['fait', 'termine', 'annule'].includes(a.status) ? (
-          <div>
-            <button type="button" onClick={() => setPlanningId(a.id)}>PLANIFIER</button>
-            {planningId === a.id && (
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-                <span>Heure du bâtiment : {a.project?.building?.timeZone || 'America/Toronto'}</span>
-                <input aria-label="Date souhaitée" type="datetime-local" value={requestedDate} onChange={e => setRequestedDate(e.target.value)} />
-                <input aria-label="Durée en minutes" type="number" min={1} max={1440} value={duration} onChange={e => setDuration(Number(e.target.value))} />
-                <button type="button" onClick={() => planActivity(a.id)}>Envoyer la demande</button>
-                {planningError && <span role="alert">{planningError}</span>}
+          <div style={{ flexBasis: '100%' }}>
+            {planningId !== a.id ? (
+              <button type="button" onClick={() => { setPlanningId(a.id); setPlanningError(''); setRequestedDate(''); }}
+                style={{ backgroundColor: '#C0392B', color: '#FFFFFF', border: 'none', borderRadius: 4, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Choisir une date
+              </button>
+            ) : (
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 4 }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: '#6C757D' }}>
+                  Date et heure souhaitées (heure du bâtiment)
+                  <input aria-label="Date souhaitée" type="datetime-local" value={requestedDate} onChange={e => setRequestedDate(e.target.value)}
+                    style={{ padding: '7px 10px', border: '1px solid #CED4DA', borderRadius: 4, fontSize: 14 }} />
+                </label>
+                <span style={{ fontSize: 12, color: '#6C757D', paddingBottom: 9 }}>Durée prévue : {a.duration || '1 h'}</span>
+                <button type="button" onClick={() => planActivity(a)}
+                  style={{ backgroundColor: '#C0392B', color: '#FFFFFF', border: 'none', borderRadius: 4, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  Envoyer la demande
+                </button>
+                <button type="button" onClick={() => setPlanningId(null)}
+                  style={{ background: 'none', border: '1px solid #CED4DA', borderRadius: 4, padding: '8px 14px', fontSize: 13, color: '#6C757D', cursor: 'pointer' }}>
+                  Annuler
+                </button>
+                {planningError && <span role="alert" style={{ flexBasis: '100%', fontSize: 13, color: '#C0392B' }}>{planningError}</span>}
               </div>
             )}
           </div>
@@ -489,6 +533,23 @@ export default function ActivitiesPage() {
         </section>
       )}
 
+      {/* À planifier */}
+      {toPlan.length > 0 && (
+        <section style={{ marginBottom: 32 }}>
+          <h2 style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: '#2C3E50' }}>
+            À planifier ({toPlan.length})
+          </h2>
+          <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6C757D' }}>
+            Proposez une date : votre conseiller la confirmera.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {toPlan.map((a) => (
+              <ActivityCard key={a.id} a={a} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Historique */}
       {past.length > 0 && (
         <section>
@@ -500,7 +561,7 @@ export default function ActivitiesPage() {
               color: '#2C3E50',
             }}
           >
-            Historique ({past.length})
+            Autres activités ({past.length})
           </h2>
 
           <div
