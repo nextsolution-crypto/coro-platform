@@ -155,7 +155,7 @@ export default function ActivityTasksSection({ projectId, activityId, canMutate,
   const renderTasks = (tasks: ActivityTask[]) => sortTasksByPhase(tasks).map(task => <article className={styles.taskRow} key={task.id}>
     <div><strong>{task.status === 'fait' ? '✓' : '○'} {task.taskTitle}</strong>
       <span>{statusLabels[task.status] ?? task.status} · {task.categoryName}{task.actualHours ? ` · ${hours(task.actualHours)}` : ''}</span>
-      {(task.assignee || task.assignees?.length) && <small>Responsable : {task.assignee ? `${task.assignee.firstName} ${task.assignee.lastName}` : task.assignees?.map(item => `${item.user.firstName} ${item.user.lastName}`).join(', ')}</small>}
+      {(task.assignee || (task.assignees?.length ?? 0) > 0) && <small>Responsable : {task.assignee ? `${task.assignee.firstName} ${task.assignee.lastName}` : task.assignees?.map(item => `${item.user.firstName} ${item.user.lastName}`).join(', ')}</small>}
       {task.dueDate && <small>Échéance : {new Date(task.dueDate).toLocaleDateString('fr-CA')}</small>}
     </div>
     <div className={styles.taskRowActions}>
