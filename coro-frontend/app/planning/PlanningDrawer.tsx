@@ -12,6 +12,7 @@ import type { TeamDraft } from './teamPickerState';
 import TeamPicker from './TeamPicker';
 import SchedulingPreview from './SchedulingPreview';
 import ActivityTasksSection from './ActivityTasksSection';
+import { useAuthStore } from '@/stores/auth.store';
 import { buildTeamPreviewRequest, createPreviewCycleGuard, isPreviewCancellation } from './previewCycle';
 import styles from './planning.module.css';
 
@@ -43,6 +44,7 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
   canManageTasks: boolean;
   initialMode?: PlanningDrawerMode; onClose: () => void; onMutated?: () => void;
 }) {
+  const currentUserId = useAuthStore(state => state.user?.id);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const previewCycles = useRef(createPreviewCycleGuard());
   const [mode, setMode] = useState<PlanningDrawerMode>(initialMode);
@@ -244,7 +246,9 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
           <ul>{event.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul></section>}
         {event.needsAction && <p className={styles.actionNotice}>Une action est requise pour cette planification.</p>}
         {event.projectId && event.activityId && <ActivityTasksSection projectId={event.projectId}
-          activityId={event.activityId} canMutate={canManageTasks} />}
+          activityId={event.activityId} canMutate={canManageTasks}
+          canWork={canManageTasks || (!!currentUserId && (event.userIds.includes(currentUserId)
+            || !!event.assignments?.some(item => item.userId === currentUserId)))} />}
         {canMutate && event.bookingId && <section className={styles.drawerSection}><h3>Actions</h3><div className={styles.formActions}>
           <button type="button" className={styles.inlineButton} onClick={() => setMode('EDIT_SLOT')}>Modifier le créneau</button>
           <button type="button" className={styles.inlineButton} onClick={() => setMode('RESCHEDULE')}>Reporter</button>

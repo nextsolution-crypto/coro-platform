@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Plus, Trash2, Download, Copy } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from '@/lib/toast';
+import { confirmAction } from '@/lib/confirm-dialog';
 import { useAuthStore } from '@/stores/auth.store';
 import ActivityTasksSection from '@/app/planning/ActivityTasksSection';
 import { formatCivilDate } from '@/app/planning/time';
@@ -123,12 +124,36 @@ export default function ActivitiesPage() {
     } catch (err) { console.error(err); toast('Impossible de créer l’activité.', 'error'); }
   };
 
+  const taskSummary = (activity: any) => {
+    const tasks: any[] = activity.tasks || [];
+    const done = tasks.filter(task => task.status === 'fait').length;
+    const hours = tasks.reduce((sum, task) => sum + (task.timeEntries || []).reduce((total: number, entry: any) => total + (entry.heures || 0), 0), 0);
+    return { total: tasks.length, done, open: tasks.length - done, hours: Math.round(hours * 100) / 100 };
+  };
+
   const handleStatusChange = async (activity: any, newStatus: string) => {
     if (newStatus === 'reporte') { setReportModal(activity); return; }
+    if (newStatus === 'termine') {
+      const summary = taskSummary(activity);
+      const warnings: string[] = [];
+      if (summary.open > 0) warnings.push(`${summary.open} tâche${summary.open > 1 ? 's' : ''} sur ${summary.total} ${summary.open > 1 ? 'sont' : 'est'} encore ouverte${summary.open > 1 ? 's' : ''}.`);
+      if (summary.hours === 0) warnings.push('Aucun temps n’est saisi sur cette activité : pensez à « Enregistrer le temps de l’activité réalisée » dans ses tâches.');
+      if (warnings.length) {
+        const ok = await confirmAction({
+          title: 'Terminer l’activité ?',
+          message: warnings.join(' '),
+          confirmLabel: 'Terminer quand même',
+        });
+        if (!ok) return;
+      }
+    }
     try {
       await api.put(`/activities/${activity.id}`, { status: newStatus, expectedUpdatedAt: activity.updatedAt });
       fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      console.error(err);
+      toast(err?.response?.data?.message || 'Impossible de changer le statut de l’activité.', 'error');
+    }
   };
 
   const handleClientAccess = async (activity: any, field: 'clientVisible' | 'clientBookable', value: boolean) => {
@@ -302,6 +327,7 @@ export default function ActivitiesPage() {
                       <div className="flex items-center gap-4 text-xs" style={{ color: '#6C757D' }}>
                         {activity.assigneeEmail && <span>👤 {(() => { const advisor = advisors.find(item => item.email.toLowerCase() === String(activity.assigneeEmail).toLowerCase()); return advisor ? `${advisor.firstName} ${advisor.lastName}`.trim() : activity.assigneeEmail; })()}</span>}
                         {activity.clientEmail && <span>🏢 {activity.clientEmail}</span>}
+                        {taskSummary(activity).total > 0 && <span>☑ {taskSummary(activity).done}/{taskSummary(activity).total} tâches · {taskSummary(activity).hours} h saisies</span>}
                       </div>
                       {activity.notes && (
                         <p className="text-xs mt-1" style={{ color: '#6C757D' }}>{activity.notes}</p>

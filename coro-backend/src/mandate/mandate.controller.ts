@@ -216,6 +216,17 @@ export class MandateController {
     return this.service.addTimeEntry(projectId, taskId, req.user, dto);
   }
 
+  @Post('activities/:activityId/realized-time')
+  logActivityRealizedTime(
+    @Param('projectId') projectId: string,
+    @Param('activityId') activityId: string,
+    @Body() dto: any,
+    @Request() req: any,
+  ) {
+    requireInternal(req.user);
+    return this.service.logActivityRealizedTime(projectId, activityId, req.user, dto ?? {});
+  }
+
   @Delete('time/:entryId')
   deleteTimeEntry(
     @Param('projectId') projectId: string,

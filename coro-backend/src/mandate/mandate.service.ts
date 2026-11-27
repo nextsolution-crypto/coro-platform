@@ -1,4 +1,5 @@
 import { deliveryDays, loadMandateRules } from './mandate-rules';
+import { parseActivityDurationHours } from './capacity-duration';
 import {
   BadRequestException,
   ConflictException,
@@ -9,7 +10,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { WorkManagementActor } from '../auth/work-management-access';
-import { lockMutableProject, projectAccessWhere } from '../auth/project-access';
+import { lockMutableProject, lockProjectForTaskWork, projectAccessWhere } from '../auth/project-access';
 import { ActivityTypesService } from '../activity-types/activity-types.service';
 import { OPEN_BOOKING_STATUSES } from '../bookings/booking-status';
 import { mandatePlanningStatus } from './activity-planning-status';
@@ -732,12 +733,18 @@ export class MandateService {
   ) {
     return this.prisma.$transaction(
       async (tx) => {
-        await lockMutableProject(tx, projectId, actor);
+        // Changer seulement le statut est permis aux conseillers affectés à l'activité ;
+        // l'échéance et le responsable restent réservés au propriétaire du projet.
+        const statusOnly = Object.keys(dto ?? {}).every((key) => key === 'status');
+        if (statusOnly) await lockProjectForTaskWork(tx, projectId, taskId, actor);
+        else await lockMutableProject(tx, projectId, actor);
     const organizationId = actor.organizationId;
         const task = await tx.projectTask.findFirst({
       where: { id: taskId, projectId, organizationId },
     });
     if (!task) throw new NotFoundException('Tâche introuvable');
+    if (dto.status !== undefined && !['a_faire', 'en_cours', 'fait'].includes(dto.status))
+      throw new BadRequestException('Statut de tâche invalide');
     if (dto.assigneeId) {
           const assignee = await tx.user.findFirst({
             where: { id: dto.assigneeId, organizationId, isActive: true },
@@ -749,7 +756,9 @@ export class MandateService {
       where: { id: taskId },
       data: {
         status: dto.status,
-        dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+        // Échéance modifiée seulement si elle est envoyée (cocher une tâche ne l'efface plus).
+        dueDate:
+          dto.dueDate === undefined ? undefined : dto.dueDate ? new Date(dto.dueDate) : null,
             assigneeId:
               dto.assigneeId !== undefined ? dto.assigneeId || null : undefined,
       },
@@ -867,13 +876,17 @@ export class MandateService {
   ) {
     return this.prisma.$transaction(
       async (tx) => {
-        await lockMutableProject(tx, projectId, actor);
+        await lockProjectForTaskWork(tx, projectId, taskId, actor);
     const { organizationId, userId } = actor;
         const task = await tx.projectTask.findFirst({
       where: { id: taskId, projectId, organizationId },
     });
     if (!task) throw new NotFoundException('Tâche introuvable');
+        const heures = round2(parseFloat(dto.heures));
+        if (!Number.isFinite(heures) || heures <= 0 || heures > 24)
+          throw new BadRequestException('Heures invalides (entre 0 et 24)');
         const entryDate = new Date(dto.date);
+        if (Number.isNaN(entryDate.getTime())) throw new BadRequestException('Date invalide');
         const period = await assertPeriodWritable(tx, organizationId, entryDate);
         const created = await tx.taskTimeEntry.create({
       data: {
@@ -881,7 +894,7 @@ export class MandateService {
         userId,
         organizationId,
         date: entryDate,
-        heures: round2(parseFloat(dto.heures)),
+        heures,
         note: dto.note || null,
       },
           include: {
@@ -898,6 +911,107 @@ export class MandateService {
     );
   }
 
+  // Temps d'une activité réalisée : enregistre la durée de l'activité sur sa tâche de
+  // réalisation (phase OPÉRATION). Si l'activité n'en a pas, une tâche « Réalisation » est
+  // créée. Refusé si le conseiller a déjà saisi du temps sur cette activité ce jour-là.
+  async logActivityRealizedTime(
+    projectId: string,
+    activityId: string,
+    actor: WorkManagementActor,
+    dto: { heures?: number | string; date?: string; note?: string },
+  ) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        const { organizationId, userId } = actor;
+        const activity = await tx.projectActivity.findFirst({
+          where: { id: activityId, projectId, organizationId },
+          select: {
+            id: true,
+            label: true,
+            customLabel: true,
+            duration: true,
+            customDuration: true,
+            dureeHeures: true,
+            scheduledDate: true,
+            status: true,
+          },
+        });
+        if (!activity) throw new NotFoundException('Activité introuvable');
+        if (activity.status === 'annule')
+          throw new BadRequestException('Activité annulée : aucun temps à enregistrer');
+        const tasks = await tx.projectTask.findMany({
+          where: { activityId, projectId, organizationId },
+          select: { id: true, categoryName: true, order: true },
+          orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+        });
+        let task = tasks.find((item) =>
+          /OP[ÉE]RATION/i.test(item.categoryName ?? ''),
+        );
+        // Droits vérifiés sur une tâche de l'activité (ou sur l'activité si elle n'en a pas).
+        const probe = task ?? tasks[0];
+        if (probe) await lockProjectForTaskWork(tx, projectId, probe.id, actor);
+        else await lockMutableProject(tx, projectId, actor);
+        const fallbackHours =
+          activity.dureeHeures ??
+          parseActivityDurationHours(activity.customDuration || activity.duration);
+        const heures = round2(
+          dto.heures !== undefined && dto.heures !== '' ? parseFloat(String(dto.heures)) : fallbackHours ?? NaN,
+        );
+        if (!Number.isFinite(heures) || heures <= 0 || heures > 24)
+          throw new BadRequestException('Durée de l’activité inconnue : indiquez les heures');
+        const entryDate = dto.date
+          ? new Date(dto.date)
+          : activity.scheduledDate ?? new Date();
+        if (Number.isNaN(entryDate.getTime())) throw new BadRequestException('Date invalide');
+        const dayStart = new Date(Date.UTC(entryDate.getUTCFullYear(), entryDate.getUTCMonth(), entryDate.getUTCDate()));
+        const dayEnd = new Date(dayStart.getTime() + 86_400_000);
+        const existing = await tx.taskTimeEntry.count({
+          where: {
+            userId,
+            organizationId,
+            date: { gte: dayStart, lt: dayEnd },
+            task: { activityId, projectId },
+          },
+        });
+        if (existing > 0)
+          throw new ConflictException(
+            'Du temps est déjà saisi pour cette activité ce jour-là. Ajoutez-le tâche par tâche si besoin.',
+          );
+        if (!task) {
+          task = await tx.projectTask.create({
+            data: {
+              projectId,
+              organizationId,
+              activityId,
+              categoryName: 'OPÉRATION',
+              taskTitle: `Réalisation — ${activity.customLabel || activity.label}`,
+              status: 'fait',
+              order: 0,
+            },
+            select: { id: true, categoryName: true, order: true },
+          });
+        }
+        const period = await assertPeriodWritable(tx, organizationId, entryDate);
+        const created = await tx.taskTimeEntry.create({
+          data: {
+            taskId: task.id,
+            userId,
+            organizationId,
+            date: entryDate,
+            heures,
+            note: dto.note || 'Réalisation de l’activité',
+          },
+        });
+        await recordCorrectionIfNeeded(tx, period, {
+          organizationId, entryType: 'TASK', entryId: created.id, action: 'CREATE',
+          after: { date: entryDate, heures }, actorUserId: userId,
+        });
+        return { ...created, taskId: task.id };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
+  }
+
   async deleteTimeEntry(
     projectId: string,
     entryId: string,
@@ -905,8 +1019,13 @@ export class MandateService {
   ) {
     return this.prisma.$transaction(
       async (tx) => {
-        await lockMutableProject(tx, projectId, actor);
     const { organizationId, userId } = actor;
+        const own = await tx.taskTimeEntry.findFirst({
+          where: { id: entryId, userId, organizationId, task: { projectId, organizationId } },
+          select: { taskId: true },
+        });
+        if (!own) throw new NotFoundException('Entrée introuvable ou non autorisée');
+        await lockProjectForTaskWork(tx, projectId, own.taskId, actor);
         const entry = await tx.taskTimeEntry.findFirst({
           where: {
             id: entryId,

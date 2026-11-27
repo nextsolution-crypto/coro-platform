@@ -175,3 +175,78 @@ export function requireProjectApprover(actor: AdviserActor): void {
     throw new ForbiddenException('Role approbateur requis');
   }
 }
+
+/**
+ * Travail sur une tâche (cocher, saisir du temps) : en plus du propriétaire et de
+ * l'administrateur, le conseiller affecté à l'activité de la tâche (réservation acceptée
+ * ou proposée, ou ancienne affectation par courriel), le responsable de la tâche et le
+ * coordonnateur de planification peuvent travailler dessus. Le projet est verrouillé
+ * comme pour lockMutableProject.
+ */
+export async function lockProjectForTaskWork(
+  tx: Prisma.TransactionClient,
+  projectId: string,
+  taskId: string,
+  actor: AdviserActor,
+): Promise<void> {
+  const owned = await tx.project.findFirst({
+    where: { id: projectId, ...projectAccessWhere(actor) },
+    select: { id: true },
+  });
+  if (owned) {
+    await lockMutableProject(tx, projectId, actor);
+    return;
+  }
+  if (actor.role !== 'OPERATOR') throw new NotFoundException('Projet introuvable');
+  const user = await tx.user.findFirst({
+    where: { id: actor.userId, organizationId: actor.organizationId, isActive: true },
+    select: { email: true, planningCoordinator: true },
+  });
+  if (!user) throw new NotFoundException('Projet introuvable');
+  const task = await tx.projectTask.findFirst({
+    where: { id: taskId, projectId, organizationId: actor.organizationId },
+    select: {
+      assigneeId: true,
+      assignees: { select: { userId: true } },
+      activity: {
+        select: {
+          assigneeEmail: true,
+          bookings: {
+            where: {
+              assignments: {
+                some: { userId: actor.userId, status: { in: ['PENDING', 'ACCEPTED'] } },
+              },
+            },
+            select: { id: true },
+            take: 1,
+          },
+        },
+      },
+    },
+  });
+  if (!task) throw new NotFoundException('Tâche introuvable');
+  const allowed =
+    user.planningCoordinator ||
+    task.assigneeId === actor.userId ||
+    task.assignees.some((item) => item.userId === actor.userId) ||
+    (task.activity?.bookings.length ?? 0) > 0 ||
+    (!!task.activity?.assigneeEmail &&
+      task.activity.assigneeEmail.trim().toLowerCase() === user.email.toLowerCase());
+  if (!allowed)
+    throw new ForbiddenException(
+      'Seuls le propriétaire du projet et les conseillers affectés à l’activité peuvent travailler sur cette tâche.',
+    );
+  await tx.$queryRaw(Prisma.sql`
+    SELECT "id" FROM "Project"
+    WHERE "id" = ${projectId} AND "organizationId" = ${actor.organizationId}
+    FOR UPDATE
+  `);
+  const project = await tx.project.findFirst({
+    where: { id: projectId, organizationId: actor.organizationId },
+    select: { status: true, isActive: true },
+  });
+  if (!project || project.isActive === false || project.status === 'ARCHIVED')
+    throw new ConflictException(
+      'Ce projet est archivé ou inactif et demeure en lecture seule.',
+    );
+}
