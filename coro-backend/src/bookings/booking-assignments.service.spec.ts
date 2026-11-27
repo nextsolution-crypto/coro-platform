@@ -46,6 +46,7 @@ describe('BookingAssignmentsService', () => {
       },
     };
     prisma = {
+      projectActivity: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
       booking: {
         findFirst: jest.fn(({ where }) =>
           where.organizationId === 'org-a' && where.id === 'booking'
@@ -206,6 +207,12 @@ describe('BookingAssignmentsService', () => {
         pendingCommitmentVersionId: null,
       }),
     });
+    // La date confirmée est reportée sur l'activité réservée, si elle existe.
+    if (prisma.projectActivity.updateMany.mock.calls.length) {
+      expect(prisma.projectActivity.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ scheduledDate: commitment.startAt }),
+      }));
+    }
   });
 
   it('rejects stale and administrative responses for a governed commitment', async () => {

@@ -2552,6 +2552,41 @@ export class ClientPortalService {
       }
     }
 
+    // Réponses aux demandes de réservation des 14 derniers jours.
+    const recentBookings = await this.prisma.booking.findMany({
+      where: {
+        projectId: { in: projects.map((p) => p.id) },
+        status: { in: ['CONFIRMEE', 'REASSIGNEE', 'REPORTEE', 'REFUSEE'] },
+        updatedAt: { gte: new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000) },
+      },
+      select: {
+        id: true, status: true, requestedDate: true, reportedDate: true, updatedAt: true, projectId: true,
+        activity: { select: { label: true, customLabel: true } },
+        project: { select: { building: { select: { name: true, timeZone: true } } } },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 20,
+    });
+    for (const b of recentBookings) {
+      const when = (b.reportedDate ?? b.requestedDate).toLocaleString('fr-CA', {
+        day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
+        timeZone: b.project?.building?.timeZone || 'America/Toronto',
+      });
+      const label = b.activity?.customLabel || b.activity?.label || 'Rendez-vous';
+      const refused = b.status === 'REFUSEE';
+      notifications.push({
+        id: `booking-${b.id}-${b.status}`,
+        type: refused ? 'BOOKING_REFUSED' : 'BOOKING_CONFIRMED',
+        priority: refused ? 'HIGH' : 'MEDIUM',
+        title: refused ? 'Demande de rendez-vous refusée'
+          : b.status === 'REPORTEE' ? 'Rendez-vous reporté' : 'Rendez-vous confirmé',
+        message: refused ? `${label} — proposez une autre date` : `${label} — ${when}`,
+        building: b.project?.building?.name || '',
+        projectId: b.projectId,
+        createdAt: b.updatedAt,
+      });
+    }
+
     return notifications.sort((a, b) => {
       const priority = { HIGH: 0, MEDIUM: 1, LOW: 2 };
       return (
