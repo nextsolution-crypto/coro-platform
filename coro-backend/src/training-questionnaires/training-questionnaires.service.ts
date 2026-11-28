@@ -21,6 +21,14 @@ import {
 
 const MAX_QUESTIONS = 40;
 
+export type EffectiveQuestionnaire = {
+  id: string | null;
+  source: 'CORO' | 'ORGANIZATION';
+  title: string;
+  passingPercent: number;
+  questions: QuestionnaireQuestion[];
+};
+
 export type QuestionnaireInput = {
   title?: unknown;
   passingPercent?: unknown;
@@ -82,7 +90,7 @@ export class TrainingQuestionnairesService {
   }
 
   /** Questionnaire en vigueur pour un type : celui de l’organisation, sinon celui de CORO. */
-  private async effective(organizationId: string, code: string) {
+  private async effective(organizationId: string, code: string): Promise<EffectiveQuestionnaire | null> {
     const custom = await this.prisma.trainingQuestionnaire.findFirst({
       where: { organizationId, activityTypeCode: code, isActive: true },
     });
@@ -109,7 +117,11 @@ export class TrainingQuestionnairesService {
       orderBy: [{ displayOrder: 'asc' }, { nameFR: 'asc' }],
       select: { code: true, nameFR: true },
     });
-    const result = [];
+    const result: Array<{
+      activityTypeCode: string;
+      activityTypeName: string;
+      questionnaire: EffectiveQuestionnaire | null;
+    }> = [];
     for (const type of types.filter((t) => isTrainingType(t.code))) {
       const current = await this.effective(actor.organizationId, type.code);
       result.push({
