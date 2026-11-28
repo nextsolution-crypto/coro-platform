@@ -680,29 +680,33 @@ describe('ActivitiesService mandate origin', () => {
     expect(h.prisma.projectActivity.update).not.toHaveBeenCalled();
   });
 
-  it('builds the portfolio with the canonical project scope and no project cap', async () => {
+  it('builds the portfolio from own projects and assigned activities, with no project cap', async () => {
     const h = harness();
     const operator = {
       userId: 'operator-a',
       organizationId: 'org-a',
       role: 'OPERATOR',
     };
+    (h.prisma as any).user = {
+      findFirst: jest.fn().mockResolvedValue({ email: 'a@example.com', planningCoordinator: false }),
+    };
     h.prisma.projectActivity.findMany.mockResolvedValue([]);
     await h.service.getPortfolio(operator);
-    expect(h.prisma.projectActivity.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: {
-          organizationId: 'org-a',
-          project: {
-            is: {
-              organizationId: 'org-a',
-              userId: 'operator-a',
-            },
+    const args = h.prisma.projectActivity.findMany.mock.calls[0][0];
+    expect(args.where.organizationId).toBe('org-a');
+    expect(args.where.OR).toEqual(
+      expect.arrayContaining([
+        { project: { is: { organizationId: 'org-a', userId: 'operator-a' } } },
+        expect.objectContaining({
+          bookings: {
+            some: expect.objectContaining({
+              assignments: { some: { userId: 'operator-a', status: { in: ['PENDING', 'ACCEPTED'] } } },
+            }),
           },
-        },
-        orderBy: [{ scheduledDate: 'asc' }, { id: 'asc' }],
-      }),
+        }),
+      ]),
     );
+    expect(args.take).toBeUndefined();
   });
 
   it('returns every authorized activity beyond the former 200-project boundary', async () => {

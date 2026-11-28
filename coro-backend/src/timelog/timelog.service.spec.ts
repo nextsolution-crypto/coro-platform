@@ -78,3 +78,18 @@ describe('Timelog integrity', () => {
       .rejects.toBeInstanceOf(ConflictException);
   });
 });
+
+describe('objectiveToDate', () => {
+  const { objectiveToDate } = require('./timelog.service');
+  const d = (value: string) => new Date(`${value}T00:00:00.000Z`);
+  it('compte les jours ouvrables jusqu’à aujourd’hui inclus', () => {
+    // Semaine du lundi 23 au dimanche 29 nov. 2026, on est le mercredi 25 : 3 jours × 8 h.
+    expect(objectiveToDate(40, d('2026-11-23'), d('2026-11-29'), new Date(2026, 10, 25, 15))).toBe(24);
+  });
+  it('semaine passée complète : 5 jours ouvrables, fin de semaine exclue', () => {
+    expect(objectiveToDate(35, d('2026-11-16'), d('2026-11-22'), new Date(2026, 10, 25))).toBe(35);
+  });
+  it('période future : aucun objectif', () => {
+    expect(objectiveToDate(40, d('2026-12-07'), d('2026-12-13'), new Date(2026, 10, 25))).toBe(0);
+  });
+});

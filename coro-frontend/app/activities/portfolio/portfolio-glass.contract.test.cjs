@@ -16,7 +16,7 @@ const viewCode = view.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, 
 const { ROUTE_REGISTRY } = require('../../../design-system/routes/route-registry.ts');
 
 // Empreinte (SHA-256) de app/activities/portfolio/page.tsx tel que commité avant la migration (738bba8a), fins de ligne LF.
-const LEGACY_PAGE_SHA256 = '3c3cdcae1dfc9c69308bfe97db7311c2a15a3a77f9c63f05872c8983f36e27d9' // revue M3-05 (22 nov. 2026) : session en cookie httpOnly, sessionMarker();
+const LEGACY_PAGE_SHA256 = 'ee60e5c0377f40c3d96d2023e25a03d8afd2a5700908738fccb57e84fc5cdbcc' // revue 27 nov. 2026 : responsable, tâches, heure planifiée et libellés des types (auparavant M3-05 : session en cookie httpOnly);
 const LEGACY_HEX_COUNT = 101;
 
 function withoutGlassBlocks(src) {

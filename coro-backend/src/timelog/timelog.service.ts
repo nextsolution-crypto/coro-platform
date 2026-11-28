@@ -44,6 +44,22 @@ export const DEFAULT_CATEGORIES = [
 import { assertPeriodFormat, assertPeriodWritable, periodOf, recordCorrectionIfNeeded } from './time-periods';
 import { round2, sum2 } from '../common/exact-amounts';
 
+
+/**
+ * Objectif d'heures « à ce jour » : jours ouvrables (lundi au vendredi) de la période, jusqu'à
+ * aujourd'hui inclus, × horaire hebdomadaire ÷ 5. Une période future n'a pas encore d'objectif.
+ */
+export function objectiveToDate(horaireBase: number, from: Date, to: Date, today = new Date()): number {
+  const todayKey = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const last = Math.min(to.getTime(), todayKey);
+  let days = 0;
+  for (let t = from.getTime(); t <= last; t += 86_400_000) {
+    const weekday = new Date(t).getUTCDay();
+    if (weekday !== 0 && weekday !== 6) days += 1;
+  }
+  return Math.round(((horaireBase / 5) * days) * 100) / 100;
+}
+
 @Injectable()
 export class TimelogService {
   constructor(private prisma: PrismaService) {}
@@ -102,23 +118,24 @@ export class TimelogService {
   }
 
   async getMyTimelog(userId: string, organizationId: string, dateFrom: string, dateTo: string) {
-    const { from, to } = this.parseRange(dateFrom, dateTo);
+    const { from, to, end } = this.parseRange(dateFrom, dateTo);
 
     const [timelogEntries, taskEntries, user, categories] = await Promise.all([
       this.prisma.timelogEntry.findMany({
-        where: { userId, organizationId, date: { gte: from, lte: to } },
+        where: { userId, organizationId, date: { gte: from, lt: end } },
         orderBy: { date: 'asc' },
       }),
       this.prisma.taskTimeEntry.findMany({
         where: {
           userId,
-          date: { gte: from, lte: to },
+          date: { gte: from, lt: end },
           task: { project: { organizationId } },
         },
         include: {
           task: {
             include: {
               project: { include: { client: { select: { name: true } } } },
+              activity: { select: { label: true, customLabel: true } },
             },
           },
         },
@@ -136,10 +153,7 @@ export class TimelogService {
     const heuresTotal = heuresTimelog + heuresTaches;
     const horaireBase = user?.horaireBase || 40;
 
-    const diffMs = to.getTime() - from.getTime();
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24)) + 1;
-    const semaines = diffDays / 7;
-    const objectifPeriode = horaireBase * semaines;
+    const objectifPeriode = objectiveToDate(horaireBase, from, to);
     const tempsCumule = heuresTotal - objectifPeriode;
 
     const categoryMap = Object.fromEntries(categories.map(c => [c.key, c.label]));
@@ -151,9 +165,11 @@ export class TimelogService {
         date: e.date,
         heures: e.heures,
         note: e.note,
+        projectId: e.task.projectId,
         projectName: e.task.project.name,
         clientName: e.task.project.client?.name || '—',
         taskTitle: e.task.taskTitle,
+        activityLabel: e.task.activity ? e.task.activity.customLabel || e.task.activity.label : null,
         isBillable: true,
       })),
       summary: {
@@ -258,7 +274,7 @@ export class TimelogService {
   }
 
   async getTeamTimelog(organizationId: string, dateFrom: string, dateTo: string) {
-    const { from, to } = this.parseRange(dateFrom, dateTo);
+    const { from, to, end } = this.parseRange(dateFrom, dateTo);
 
     const users = await this.prisma.user.findMany({
       where: { organizationId, isActive: true },
@@ -268,10 +284,10 @@ export class TimelogService {
     return Promise.all(users.map(async user => {
       const [timelogEntries, taskEntries] = await Promise.all([
         this.prisma.timelogEntry.findMany({
-          where: { userId: user.id, organizationId, date: { gte: from, lte: to } },
+          where: { userId: user.id, organizationId, date: { gte: from, lt: end } },
         }),
         this.prisma.taskTimeEntry.findMany({
-          where: { userId: user.id, date: { gte: from, lte: to }, task: { project: { organizationId } } },
+          where: { userId: user.id, date: { gte: from, lt: end }, task: { project: { organizationId } } },
         }),
       ]);
 
@@ -279,8 +295,7 @@ export class TimelogService {
       const heuresTaches = sum2(taskEntries, (e) => e.heures);
       const heuresTotal = heuresTimelog + heuresTaches;
       const horaireBase = user.horaireBase || 40;
-      const diffDays = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      const objectifPeriode = horaireBase * (diffDays / 7);
+      const objectifPeriode = objectiveToDate(horaireBase, from, to);
       const tempsCumule = heuresTotal - objectifPeriode;
 
       return {
@@ -309,7 +324,8 @@ export class TimelogService {
     if (from.getTime() > to.getTime()) {
       throw new BadRequestException('La date de début doit précéder ou égaler la date de fin.');
     }
-    return { from, to };
+    // Fin exclusive au lendemain : une saisie datée avec une heure le dernier jour est incluse.
+    return { from, to, end: new Date(to.getTime() + 86_400_000) };
   }
 
   private async throwMissingOrConflict(entryId: string, userId: string, organizationId: string): Promise<never> {

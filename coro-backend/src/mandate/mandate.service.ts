@@ -949,11 +949,14 @@ export class MandateService {
         );
         if (!Number.isFinite(heures) || heures <= 0 || heures > 24)
           throw new BadRequestException('Durée de l’activité inconnue : indiquez les heures');
-        const entryDate = dto.date
-          ? new Date(dto.date)
-          : activity.scheduledDate ?? new Date();
-        if (Number.isNaN(entryDate.getTime())) throw new BadRequestException('Date invalide');
-        const dayStart = new Date(Date.UTC(entryDate.getUTCFullYear(), entryDate.getUTCMonth(), entryDate.getUTCDate()));
+        // Date civile (comme les autres saisies de temps) : jour local de l'activité.
+        const source = dto.date ? new Date(dto.date) : activity.scheduledDate ?? new Date();
+        if (Number.isNaN(source.getTime())) throw new BadRequestException('Date invalide');
+        const civil = dto.date && /^\d{4}-\d{2}-\d{2}$/.test(dto.date)
+          ? dto.date
+          : new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Toronto' }).format(source);
+        const dayStart = new Date(`${civil}T00:00:00.000Z`);
+        const entryDate = dayStart;
         const dayEnd = new Date(dayStart.getTime() + 86_400_000);
         const existing = await tx.taskTimeEntry.count({
           where: {
