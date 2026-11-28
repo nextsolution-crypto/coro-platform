@@ -136,6 +136,7 @@ export default function AdminMandatesPage() {
             <option value="IN_PROGRESS">En cours</option>
             <option value="REVIEW">En révision</option>
             <option value="VALIDATED">Validé</option>
+            <option value="EXPORTED">Exporté</option>
           </select>
         </div>
 
