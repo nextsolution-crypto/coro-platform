@@ -4,11 +4,12 @@ export const P120_PANNE_COURANT_OCC: ProcedureTemplate = {
   id: 'p120_panne_courant_occ', code: CODE,
   titleFR: 'PANNE DE COURANT — OCCUPANTS',
   titleEN: 'POWER OUTAGE — OCCUPANTS',
-  icon: '⚡', headerColor: COLORS.amber,
+  icon: '⚡', headerColor: COLORS.orange,
+  incidentCode: 'CODE_ORANGE',
   activationRule: 'always', documentTypes: ['PMU'],
   roleSections: [{
     roleCode: 'ROLE-OCC', roleLabelFR: 'Occupants / Travailleurs', roleLabelEN: 'Occupants / Workers',
-    headerColor: COLORS.amber,
+    headerColor: COLORS.orange,
     steps: [
       { id: sid(CODE,1), textFR: 'Rester calme et garder son sang-froid — éviter toute panique pour permettre une gestion ordonnée de la situation', textEN: 'Stay calm and keep composure — avoid panic to allow orderly management of the situation', isBold: false },
       { id: sid(CODE,2), textFR: 'Interrompre immédiatement toute activité dépendant de l\'électricité qui pourrait présenter un danger : notamment l\'utilisation d\'équipements roulants, d\'outils électriques ou d\'appareils électroniques', textEN: 'Immediately stop any electricity-dependent activity that could be dangerous: notably use of rolling equipment, power tools, or electronic devices', isBold: false, isRed: true },
