@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { Plus, Trash2 } from 'lucide-react';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
+import { confirmAction } from '@/lib/confirm-dialog';
 
 type ViewMode = 'week' | 'month' | 'year' | 'custom';
 
@@ -29,6 +30,8 @@ export default function TimelogPage() {
   const router = useRouter();
 
   const [viewMode, setViewMode] = useState<ViewMode>('week');
+  // Décalage de période (semaines, mois ou années) pour consulter le passé ou préparer la suite.
+  const [offset, setOffset] = useState(0);
   const [data, setData] = useState<any>(null);
   const [catalog, setCatalog] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,35 +65,43 @@ export default function TimelogPage() {
     clientRequestId: newRequestId(),
   });
 
+  // Dates civiles locales (pas toISOString, qui décale d'un jour le soir à Toronto).
   const getDateRange = (mode: ViewMode) => {
     const n = new Date();
     if (mode === 'week') {
       const day = n.getDay();
-      const from = new Date(n);
-      from.setDate(n.getDate() - (day === 0 ? 6 : day - 1));
-      const to = new Date(from);
-      to.setDate(from.getDate() + 6);
-      return { from: from.toISOString().split('T')[0], to: to.toISOString().split('T')[0] };
+      const from = new Date(n.getFullYear(), n.getMonth(), n.getDate() - (day === 0 ? 6 : day - 1) + offset * 7);
+      const to = new Date(from.getFullYear(), from.getMonth(), from.getDate() + 6);
+      return { from: localCivilDate(from), to: localCivilDate(to) };
     }
     if (mode === 'month') return {
-      from: new Date(n.getFullYear(), n.getMonth(), 1).toISOString().split('T')[0],
-      to: new Date(n.getFullYear(), n.getMonth() + 1, 0).toISOString().split('T')[0],
+      from: localCivilDate(new Date(n.getFullYear(), n.getMonth() + offset, 1)),
+      to: localCivilDate(new Date(n.getFullYear(), n.getMonth() + offset + 1, 0)),
     };
     if (mode === 'year') return {
-      from: new Date(n.getFullYear(), 0, 1).toISOString().split('T')[0],
-      to: new Date(n.getFullYear(), 11, 31).toISOString().split('T')[0],
+      from: localCivilDate(new Date(n.getFullYear() + offset, 0, 1)),
+      to: localCivilDate(new Date(n.getFullYear() + offset, 11, 31)),
     };
     return { from: customFrom, to: customTo };
+  };
+
+  const periodLabel = (mode: ViewMode) => {
+    const { from, to } = getDateRange(mode);
+    const f = new Date(`${from}T12:00:00`); const t = new Date(`${to}T12:00:00`);
+    if (mode === 'week') return `${f.toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' })} – ${t.toLocaleDateString('fr-CA', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    if (mode === 'month') return f.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' });
+    if (mode === 'year') return String(f.getFullYear());
+    return '';
   };
 
   useEffect(() => {
     api.get('/timelog/catalog').then(r => setCatalog(r.data || []));
   }, []);
 
-  useEffect(() => { fetchData(); }, [viewMode, customFrom, customTo]);
+  useEffect(() => { fetchData(); }, [viewMode, offset, customFrom, customTo]);
   useEffect(() => {
     if (activeTab === 'equipe') fetchTeamData();
-  }, [activeTab, viewMode, customFrom, customTo]);
+  }, [activeTab, viewMode, offset, customFrom, customTo]);
 
   const fetchData = async () => {
     const sequence = ++requestSequence.current;
@@ -135,10 +146,18 @@ export default function TimelogPage() {
   };
 
   const handleDelete = async (entry: any) => {
-    if (!confirm('Supprimer cette entrée ?')) return;
+    const ok = await confirmAction({
+      title: 'Supprimer cette entrée ?',
+      message: entry.source === 'task'
+        ? `${entry.heures} h sur « ${entry.label} » seront retirées du projet, du mandat et du rendement.`
+        : `${entry.heures} h de « ${entry.label} » seront supprimées.`,
+      confirmLabel: 'Supprimer',
+    });
+    if (!ok) return;
     try {
       setError('');
-      await api.delete(`/timelog/me/${entry.id}`, { params: { lockVersion: entry.lockVersion } });
+      if (entry.source === 'task') await api.delete(`/projects/${entry.projectId}/time/${entry.id}`);
+      else await api.delete(`/timelog/me/${entry.id}`, { params: { lockVersion: entry.lockVersion } });
       await fetchData();
     } catch (err) { setError(apiErrorMessage(err, 'La suppression n’a pas été confirmée. Rechargez avant de réessayer.')); }
   };
@@ -160,9 +179,9 @@ export default function TimelogPage() {
   };
 
   const VIEW_MODES = [
-    { id: 'week', label: 'Cette semaine' },
-    { id: 'month', label: 'Ce mois' },
-    { id: 'year', label: 'Cette année' },
+    { id: 'week', label: 'Semaine' },
+    { id: 'month', label: 'Mois' },
+    { id: 'year', label: 'Année' },
     { id: 'custom', label: 'Personnalisé' },
   ];
 
@@ -179,6 +198,7 @@ export default function TimelogPage() {
       ...e,
       source: 'task',
       label: e.taskTitle,
+      clientName: [e.clientName, e.projectName, e.activityLabel].filter(Boolean).join(' · '),
       isBillable: true,
     })),
   ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -231,7 +251,7 @@ export default function TimelogPage() {
       {/* Contrôles période */}
       <div className="flex gap-2 mb-6 flex-wrap">
         {VIEW_MODES.map(m => (
-          <button key={m.id} onClick={() => setViewMode(m.id as ViewMode)}
+          <button key={m.id} onClick={() => { setViewMode(m.id as ViewMode); setOffset(0); }}
             className="px-3 py-1.5 rounded text-sm font-medium transition-colors"
             style={{
               backgroundColor: viewMode === m.id ? '#2C3E50' : '#F8F9FA',
@@ -241,6 +261,17 @@ export default function TimelogPage() {
             {m.label}
           </button>
         ))}
+        {viewMode !== 'custom' && (
+          <div className="flex items-center gap-1 ml-auto">
+            <button type="button" onClick={() => setOffset(value => value - 1)} aria-label="Période précédente"
+              className="px-2.5 py-1.5 rounded text-sm" style={{ border: '1px solid #DEE2E6', color: '#2C3E50', backgroundColor: '#FFFFFF' }}>‹</button>
+            <span className="text-sm font-medium px-2" style={{ color: '#2C3E50', minWidth: 150, textAlign: 'center' }}>{periodLabel(viewMode)}</span>
+            <button type="button" onClick={() => setOffset(value => value + 1)} aria-label="Période suivante"
+              className="px-2.5 py-1.5 rounded text-sm" style={{ border: '1px solid #DEE2E6', color: '#2C3E50', backgroundColor: '#FFFFFF' }}>›</button>
+            {offset !== 0 && <button type="button" onClick={() => setOffset(0)} className="px-2.5 py-1.5 rounded text-xs"
+              style={{ border: '1px solid #DEE2E6', color: '#6C757D', backgroundColor: '#FFFFFF' }}>Aujourd’hui</button>}
+          </div>
+        )}
       </div>
 
       {error && (
@@ -305,7 +336,7 @@ export default function TimelogPage() {
                     <p className="text-xs font-medium mb-1" style={{ color: '#6C757D' }}>
                       Temps cumulé
                       <span className="ml-1 text-xs" style={{ color: '#ADB5BD' }}>
-                        (objectif {summary.objectifPeriode}h)
+                        (objectif à ce jour {summary.objectifPeriode}h, jours ouvrables)
                       </span>
                     </p>
                     <p className="text-2xl font-black"
@@ -376,8 +407,9 @@ export default function TimelogPage() {
                           </p>
                         )}
 
-                        {entry.source === 'timelog' && (
+                        {(entry.source === 'timelog' || entry.projectId) && (
                           <div className="flex justify-end gap-2 pt-2" style={{ borderTop: '1px solid #F8F9FA' }}>
+                            {entry.source === 'timelog' && (
                             <button
                               onClick={() => {
                                 setEditingEntry(entry);
@@ -390,6 +422,7 @@ export default function TimelogPage() {
                             >
                               ✏️ Modifier
                             </button>
+                            )}
 
                             <button
                               onClick={() => handleDelete(entry)}
@@ -479,9 +512,9 @@ export default function TimelogPage() {
                             </td>
 
                             <td className="px-3 py-3">
-                              {entry.source === 'timelog' && (
+                              {(entry.source === 'timelog' || entry.projectId) && (
                                 <div className="flex gap-1.5">
-                                  <button
+                                  {entry.source === 'timelog' && <button
                                     onClick={() => {
                                       setEditingEntry(entry);
                                       setEditForm({ heures: entry.heures.toString(), note: entry.note || '' });
@@ -492,7 +525,7 @@ export default function TimelogPage() {
                                     onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                                   >
                                     ✏️
-                                  </button>
+                                  </button>}
 
                                   <button
                                     onClick={() => handleDelete(entry)}

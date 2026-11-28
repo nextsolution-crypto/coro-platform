@@ -97,10 +97,40 @@ export class ActivitiesService {
   }
 
   async getPortfolio(actor: AdviserActor) {
+    // Mon travail : les activités de mes projets, et celles où je suis affecté sur le projet
+    // d'un collègue. Le coordonnateur de planification voit toute l'organisation.
+    let scope: Prisma.ProjectActivityWhereInput = { project: { is: projectAccessWhere(actor) } };
+    if (actor.role === 'OPERATOR') {
+      const user = await this.prisma.user.findFirst({
+        where: { id: actor.userId, organizationId: actor.organizationId, isActive: true },
+        select: { email: true, planningCoordinator: true },
+      });
+      scope = user?.planningCoordinator
+        ? {}
+        : {
+            OR: [
+              { project: { is: projectAccessWhere(actor) } },
+              ...(user?.email
+                ? [{ assigneeEmail: { equals: user.email, mode: 'insensitive' as const } }]
+                : []),
+              {
+                bookings: {
+                  some: {
+                    status: { notIn: ['ANNULEE', 'REFUSEE'] },
+                    assignments: {
+                      some: { userId: actor.userId, status: { in: ['PENDING', 'ACCEPTED'] } },
+                    },
+                  },
+                },
+              },
+            ],
+          };
+    }
     const activities = await this.prisma.projectActivity.findMany({
       where: {
         organizationId: actor.organizationId,
-        project: { is: projectAccessWhere(actor) },
+        project: { is: { organizationId: actor.organizationId, isActive: true } },
+        ...scope,
       },
       include: {
         project: {
@@ -110,23 +140,51 @@ export class ActivitiesService {
             documentType: true,
             clientId: true,
             client: { select: { id: true, name: true } },
-            building: { select: { id: true, name: true } },
+            building: { select: { id: true, name: true, address: true } },
           },
         },
+        activityType: { select: { code: true, nameFR: true, visualToken: true, iconKey: true } },
+        bookings: {
+          where: { status: { notIn: ['ANNULEE', 'REFUSEE'] } },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            assignments: {
+              where: { status: { in: ['PENDING', 'ACCEPTED'] } },
+              select: { role: true, user: { select: { firstName: true, lastName: true } } },
+            },
+          },
+        },
+        tasks: { select: { status: true, timeEntries: { select: { heures: true } } } },
       },
       orderBy: [{ scheduledDate: 'asc' }, { id: 'asc' }],
     });
-    return activities.map((activity) => ({
-      ...activity,
-      projectId: activity.project.id,
-      projectName: activity.project.name,
-      documentType: activity.project.documentType,
-      clientId: activity.project.clientId,
-      clientName: activity.project.client.name,
-      buildingName: activity.project.building.name,
-      project: undefined,
-    }));
+    return activities.map(({ bookings = [], tasks = [], ...activity }: any) => {
+      const lead =
+        bookings[0]?.assignments.find((item: any) => item.role === 'LEAD') ??
+        bookings[0]?.assignments[0];
+      const taskCount = tasks.length;
+      const taskCompletedCount = tasks.filter((task: any) => task.status === 'fait').length;
+      return {
+        ...activity,
+        projectId: activity.project.id,
+        projectName: activity.project.name,
+        documentType: activity.project.documentType,
+        clientId: activity.project.clientId,
+        clientName: activity.project.client.name,
+        buildingName: activity.project.building.name,
+        buildingAddress: activity.project.building.address,
+        leadName: lead ? `${lead.user.firstName} ${lead.user.lastName}`.trim() : null,
+        taskCount,
+        taskCompletedCount,
+        actualHours: round2(
+          tasks.reduce((sum: number, task: any) => sum + (task.timeEntries ?? []).reduce((total: number, entry: any) => total + entry.heures, 0), 0),
+        ),
+        project: undefined,
+      };
+    });
   }
+
 
   async getActivityTasks(
     projectId: string,

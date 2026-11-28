@@ -8,6 +8,24 @@ import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { formatCivilDate } from '@/app/planning/time';
 import { downloadActivityIcs } from '@/lib/download-ics';
+import { getActivityTypeVisual } from '@/app/planning/activityTypeVisual';
+
+// Date seule (minuit UTC) ou date et heure planifiées (fuseau de Toronto).
+function formatWhen(value: string) {
+  const date = new Date(value);
+  const dateOnly = date.getUTCHours() === 0 && date.getUTCMinutes() === 0;
+  if (dateOnly) return formatCivilDate(value, { day: 'numeric', month: 'short', year: 'numeric' });
+  return date.toLocaleString('fr-CA', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Toronto' });
+}
+
+function typeVisual(row: any) {
+  return getActivityTypeVisual(row.activityType ?? { code: row.type, nameFR: row.customLabel || row.label, visualToken: 'NEUTRAL' });
+}
+
+function hoursLabel(value: number) {
+  const whole = Math.floor(value); const minutes = Math.round((value - whole) * 60);
+  return minutes ? `${whole} h ${String(minutes).padStart(2, '0')}` : `${whole} h`;
+}
 // GLASS:begin — vue Liquid Glass (route bêta du registre). Hors des blocs GLASS, ce fichier est le code Legacy d'origine, inchangé.
 import { useTheme } from '@/design-system/theme/ThemeProvider';
 import PortfolioGlassView from './PortfolioGlassView';
@@ -84,12 +102,15 @@ export default function ActivitiesPortfolioPage() {
   });
 
   const total = filtered.length;
-  const done = filtered.filter(r => r.status === 'termine').length;
+  const done = filtered.filter(r => r.status === 'termine' || r.status === 'fait').length;
   const aFaire = filtered.filter(r => r.status === 'a_faire').length;
   const reporte = filtered.filter(r => r.status === 'reporte').length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
-  const uniqueTypes = Array.from(new Set(data.map(r => r.type))).filter(Boolean);
+  const typeOptions = Array.from(new Map(data.filter(r => r.type)
+    .map(r => [r.type, r.activityType?.nameFR || (r.type === 'autre' ? 'Autre' : r.label) || r.type])).entries())
+    .sort((a, b) => String(a[1]).localeCompare(String(b[1]), 'fr'));
+  const uniqueTypes = typeOptions.map(([value]) => value);
 
   if (loadError) return (
     <AppLayout>
@@ -221,8 +242,8 @@ export default function ActivitiesPortfolioPage() {
           className="px-3 py-2 text-sm rounded"
           style={{ border: '1px solid #DEE2E6', color: '#2C3E50', backgroundColor: '#FFFFFF' }}>
           <option value="">Tous les types</option>
-          {uniqueTypes.map(t => (
-            <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
+          {typeOptions.map(([value, name]) => (
+            <option key={value} value={value}>{name}</option>
           ))}
         </select>
       </div>
@@ -311,13 +332,9 @@ export default function ActivitiesPortfolioPage() {
 
                     <div className="flex items-center justify-between gap-3 pt-1">
                       <span className="text-xs" style={{ color: '#495057' }}>
-                        {row.scheduledDate
-                          ? `📅 ${formatCivilDate(row.scheduledDate, {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                            })}`
-                          : '📅 Date à définir'}
+                        {row.scheduledDate ? `📅 ${formatWhen(row.scheduledDate)}` : '📅 Date à définir'}
+                        {row.leadName ? ` · 👤 ${row.leadName}` : ''}
+                        {row.taskCount ? ` · ☑ ${row.taskCompletedCount}/${row.taskCount}` : ''}
                       </span>
 
                       {row.scheduledDate && (
@@ -349,12 +366,12 @@ export default function ActivitiesPortfolioPage() {
             style={{ border: '1px solid #E9ECEF' }}
           >
             <table
-              className="w-full text-sm min-w-[900px]"
+              className="w-full text-sm min-w-[1000px]"
               style={{ borderCollapse: 'collapse' }}
             >
               <thead>
                 <tr style={{ backgroundColor: '#F8F9FA' }}>
-                  {['Client', 'Bâtiment', 'Activité', 'Mode', 'Date prévue', 'Statut', ''].map(col => (
+                  {['Client', 'Bâtiment', 'Activité', 'Responsable', 'Date prévue', 'Statut', 'Tâches', ''].map(col => (
                     <th
                       key={col}
                       className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
@@ -407,7 +424,10 @@ export default function ActivitiesPortfolioPage() {
                           maxWidth: '240px',
                         }}
                       >
-                        <span className="block truncate">{label}</span>
+                        <span className="flex items-center gap-1.5 min-w-0">
+                          <i aria-hidden="true" style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 2, flexShrink: 0, backgroundColor: typeVisual(row).color }} />
+                          <span className="block truncate">{label}</span>
+                        </span>
                         {row.duration && (
                           <span className="text-xs" style={{ color: '#ADB5BD' }}>
                             ⏱ {row.duration}
@@ -415,16 +435,8 @@ export default function ActivitiesPortfolioPage() {
                         )}
                       </td>
 
-                      <td className="px-4 py-3" style={{ border: '1px solid #E9ECEF' }}>
-                        <span
-                          className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap inline-flex items-center"
-                          style={{
-                            backgroundColor: row.mode === 'teams' ? '#EBF5FB' : '#EAFAF1',
-                            color: row.mode === 'teams' ? '#2980B9' : '#27AE60',
-                          }}
-                        >
-                          {row.mode === 'teams' ? '💻 Teams' : '📍 Présentiel'}
-                        </span>
+                      <td className="px-4 py-3 text-xs" style={{ border: '1px solid #E9ECEF', color: '#495057' }}>
+                        {row.leadName || <span style={{ color: '#ADB5BD' }}>À affecter</span>}
                       </td>
 
                       <td
@@ -432,11 +444,7 @@ export default function ActivitiesPortfolioPage() {
                         style={{ border: '1px solid #E9ECEF', color: '#495057' }}
                       >
                         {row.scheduledDate ? (
-                          formatCivilDate(row.scheduledDate, {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })
+                          formatWhen(row.scheduledDate)
                         ) : (
                           <span style={{ color: '#ADB5BD' }}>—</span>
                         )}
@@ -453,6 +461,10 @@ export default function ActivitiesPortfolioPage() {
                         >
                           {status.label}
                         </span>
+                      </td>
+
+                      <td className="px-4 py-3 text-xs whitespace-nowrap" style={{ border: '1px solid #E9ECEF', color: '#495057' }}>
+                        {row.taskCount ? `${row.taskCompletedCount}/${row.taskCount} · ${hoursLabel(row.actualHours || 0)}` : '—'}
                       </td>
 
                       <td

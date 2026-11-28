@@ -124,11 +124,12 @@ export default function ActivitiesPage() {
     } catch (err) { console.error(err); toast('Impossible de créer l’activité.', 'error'); }
   };
 
+  // Résumé calculé par le serveur (taskCount, taskCompletedCount, actualHours).
   const taskSummary = (activity: any) => {
-    const tasks: any[] = activity.tasks || [];
-    const done = tasks.filter(task => task.status === 'fait').length;
-    const hours = tasks.reduce((sum, task) => sum + (task.timeEntries || []).reduce((total: number, entry: any) => total + (entry.heures || 0), 0), 0);
-    return { total: tasks.length, done, open: tasks.length - done, hours: Math.round(hours * 100) / 100 };
+    const total = activity.taskCount ?? (activity.tasks || []).length;
+    const done = activity.taskCompletedCount ?? (activity.tasks || []).filter((task: any) => task.status === 'fait').length;
+    const hours = activity.actualHours ?? 0;
+    return { total, done, open: total - done, hours: Math.round(hours * 100) / 100 };
   };
 
   const handleStatusChange = async (activity: any, newStatus: string) => {
