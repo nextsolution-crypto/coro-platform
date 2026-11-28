@@ -112,7 +112,7 @@ export default function OrgTaskTemplatesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#ADB5BD' }}>Paramètres</p>
-          <h1 className="text-2xl font-black" style={{ color: '#2C3E50' }}>Templates de tâches</h1>
+          <h1 className="text-2xl font-black" style={{ color: '#2C3E50' }}>Modèles de tâches</h1>
           <div className="h-1 w-16 mt-2" style={{ backgroundColor: '#C0392B' }} />
         </div>
         {activeView === 'org' && (
@@ -163,7 +163,7 @@ export default function OrgTaskTemplatesPage() {
       {activeView === 'org' && orgTemplates.length === 0 && !showAddForm && (
         <div className="rounded-md p-4 sm:p-5 mb-6"
           style={{ backgroundColor: '#EBF5FB', border: '1px solid #AED6F1' }}>
-          <p className="text-sm font-medium mb-1" style={{ color: '#2980B9' }}>ℹ️ Aucun template personnalisé</p>
+          <p className="text-sm font-medium mb-1" style={{ color: '#2980B9' }}>ℹ️ Aucun modèle personnalisé</p>
           <p className="text-xs" style={{ color: '#1A5276' }}>
             Vos projets utilisent les tâches CORO par défaut. Ajoutez vos propres tâches pour personnaliser le flux de travail de votre organisation.
             Vos tâches personnalisées remplaceront les tâches par défaut lors de l'initialisation d'un projet.
@@ -248,7 +248,7 @@ export default function OrgTaskTemplatesPage() {
       {currentTemplates.length === 0 && !showAddForm ? (
         <div className="text-center py-16 rounded-md" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
           <p className="text-3xl mb-4">✅</p>
-          <p className="text-sm" style={{ color: '#6C757D' }}>Aucun template personnalisé pour le moment</p>
+          <p className="text-sm" style={{ color: '#6C757D' }}>Aucun modèle personnalisé pour le moment</p>
         </div>
       ) : (
         <div className="space-y-4">

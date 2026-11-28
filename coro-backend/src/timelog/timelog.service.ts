@@ -16,7 +16,7 @@ export function parseCivilDate(value: string): Date {
 }
 
 export const DEFAULT_CATEGORIES = [
-  { key: 'lecture_email', label: 'Lecture de email', order: 1 },
+  { key: 'lecture_email', label: 'Lecture des courriels', order: 1 },
   { key: 'rencontre_hebdo_smu', label: "Rencontre hebdomadaire d'équipe", order: 2 },
   { key: 'echange_collegue', label: 'Échange avec un collègue (sans rapport dossier)', order: 3 },
   { key: 'feuille_depenses', label: 'Feuille de dépenses et kilométrage mensuelle', order: 4 },
@@ -24,7 +24,7 @@ export const DEFAULT_CATEGORIES = [
   { key: 'recherche_norme', label: 'Recherche sur norme ou règlement', order: 6 },
   { key: 'appel_prospect', label: 'Appel avec prospect ou client (sans contrat en cours)', order: 7 },
   { key: 'clinique_dev', label: 'Clinique mensuelle de développement des connaissances', order: 8 },
-  { key: 'meeting_collegues', label: 'Meeting entre collègues', order: 9 },
+  { key: 'meeting_collegues', label: 'Rencontre entre collègues', order: 9 },
   { key: 'deplacement_autre', label: 'Déplacement autre que chez le client', order: 10 },
   { key: 'probleme_technique', label: 'Problème technique / Support informatique / Aide', order: 11 },
   { key: 'vente', label: 'Vente', order: 12 },
@@ -68,8 +68,11 @@ export class TimelogService {
     // Seed si vide
     const count = await this.prisma.timelogCategory.count({ where: { organizationId: null } });
     if (count === 0) {
+      // skipDuplicates : deux premiers chargements simultanés ne créent plus de doublons
+      // (index unique partiel sur key lorsque organizationId est NULL).
       await this.prisma.timelogCategory.createMany({
         data: DEFAULT_CATEGORIES.map(c => ({ ...c, organizationId: null })),
+        skipDuplicates: true,
       });
     }
 
@@ -84,7 +87,15 @@ export class TimelogService {
       orderBy: { order: 'asc' },
     });
 
-    return categories;
+    // Une clé n'apparaît qu'une fois (la catégorie de l'organisation l'emporte sur celle par défaut).
+    const byKey = new Map<string, (typeof categories)[number]>();
+    for (const category of categories) {
+      const existing = byKey.get(category.key);
+      if (!existing || (existing.organizationId === null && category.organizationId !== null)) {
+        byKey.set(category.key, category);
+      }
+    }
+    return [...byKey.values()];
   }
 
   async addCategory(dto: any, organizationId: string) {

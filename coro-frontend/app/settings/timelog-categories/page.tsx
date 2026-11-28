@@ -218,9 +218,15 @@ export default function TimelogCategoriesPage() {
                   <p className="text-sm break-words" style={{ color: '#2C3E50' }}>
                     {cat.label}
                   </p>
-                  <p className="text-xs font-mono break-all" style={{ color: '#ADB5BD' }}>
-                    {cat.key}
-                  </p>
+                  {cat.organizationId !== null ? (
+                    <p className="text-xs font-mono break-all" style={{ color: '#ADB5BD' }}>
+                      {cat.key}
+                    </p>
+                  ) : (
+                    <p className="text-xs" style={{ color: '#ADB5BD' }}>
+                      Catégorie CORO par défaut
+                    </p>
+                  )}
                 </div>
 
                 {cat.organizationId !== null && <div className="flex gap-2 self-end sm:self-auto">
