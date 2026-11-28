@@ -371,6 +371,45 @@ export class TrainingQuestionnairesService {
     };
   }
 
+  /** Portail client : séances des 12 derniers mois d'un bâtiment, avec les participants. */
+  async buildingSessions(buildingId: string, organizationId: string) {
+    const since = new Date(Date.now() - 365 * 86400000);
+    const sessions = await this.prisma.trainingQuestionnaireSession.findMany({
+      where: { buildingId, organizationId, createdAt: { gte: since } },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        responses: { orderBy: { submittedAt: 'asc' } },
+        projectActivity: { select: { label: true, customLabel: true, scheduledDate: true } },
+      },
+    });
+    const trainerIds = [...new Set(sessions.map((s) => s.createdById))];
+    const trainers = trainerIds.length
+      ? await this.prisma.user.findMany({
+          where: { id: { in: trainerIds }, organizationId },
+          select: { id: true, firstName: true, lastName: true },
+        })
+      : [];
+    const names = new Map(trainers.map((t) => [t.id, `${t.firstName} ${t.lastName}`]));
+    return {
+      analysis: await this.buildingAnalysis(buildingId, organizationId),
+      sessions: sessions.map((session) => ({
+        id: session.id,
+        title: session.projectActivity?.customLabel || session.projectActivity?.label || session.title,
+        date: session.projectActivity?.scheduledDate ?? session.createdAt,
+        trainerName: names.get(session.createdById) ?? null,
+        isOpen: session.isOpen,
+        passingPercent: session.passingPercent,
+        ...this.summary(session),
+        responses: session.responses.map((r) => ({
+          participantName: r.participantName,
+          percent: r.percent,
+          passed: r.passed,
+          submittedAt: r.submittedAt,
+        })),
+      })),
+    };
+  }
+
   /** Résultats des 12 derniers mois pour un bâtiment (indice CORO). */
   async buildingAnalysis(buildingId: string, organizationId: string) {
     const since = new Date(Date.now() - 365 * 86400000);

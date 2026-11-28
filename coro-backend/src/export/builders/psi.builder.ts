@@ -238,6 +238,7 @@ export class PsiBuilder extends PmuBuilder {
         this.lang,
         this.sequentialNumber,
         this.module8Applicability(['8.11']),
+        this.data.trainingRegister ? await this.data.trainingRegister() : [],
       );
 
       sections8.forEach((section, idx) => {

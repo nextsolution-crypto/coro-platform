@@ -673,12 +673,32 @@ export class OccupancyService {
     }
 
     // ── Exercices (CNPI 2020 : 1x/an minimum) ────────────────────────────
-    const lastExercise = await this.prisma.evacuationEvent.findFirst({
+    // Source : évacuations Sentinelle résolues et rapports d'exercice
+    // d'évacuation approuvés ou publiés (le plus récent des deux compte).
+    const lastSentinelleExercise = await this.prisma.evacuationEvent.findFirst({
       where: { buildingId, status: 'RESOLVED' },
       orderBy: { triggeredAt: 'desc' },
       select: { triggeredAt: true },
     });
-    const totalExercises = await this.prisma.evacuationEvent.count({ where: { buildingId } });
+    const lastExerciseReport = await this.prisma.exerciseReport.findFirst({
+      where: {
+        buildingId,
+        type: 'EVACUATION',
+        status: { in: ['APPROVED', 'FINALIZING', 'PUBLISHED'] },
+        occurredAt: { not: null },
+      },
+      orderBy: { occurredAt: 'desc' },
+      select: { occurredAt: true },
+    });
+    const exerciseDates = [lastSentinelleExercise?.triggeredAt, lastExerciseReport?.occurredAt]
+      .filter((date): date is Date => Boolean(date))
+      .map((date) => new Date(date).getTime());
+    const lastExercise = exerciseDates.length ? { triggeredAt: new Date(Math.max(...exerciseDates)) } : null;
+    const totalExercises =
+      (await this.prisma.evacuationEvent.count({ where: { buildingId } })) +
+      (await this.prisma.exerciseReport.count({
+        where: { buildingId, type: 'EVACUATION', status: { in: ['APPROVED', 'FINALIZING', 'PUBLISHED'] } },
+      }));
     const daysSinceExercise = lastExercise
       ? Math.floor((Date.now() - new Date(lastExercise.triggeredAt).getTime()) / 86400000)
       : null;
@@ -711,7 +731,11 @@ export class OccupancyService {
     const trainingAverage = trainingParticipants
       ? Math.round(trainingResponses.reduce((sum, r) => sum + r.percent, 0) / trainingParticipants)
       : null;
-    if (trainingPassRate !== null && trainingPassRate < 80) {
+    // Composante Formations : taux de réussite des 12 derniers mois ; 0 sans formation évaluée.
+    const trainingScore = trainingPassRate ?? 0;
+    if (trainingPassRate === null) {
+      recommendations.push({ type: 'WARNING', category: 'TRAINING', message: 'Aucune formation évaluée par questionnaire depuis 12 mois.', action: 'Planifier une formation de l’équipe d’urgence et faire remplir le questionnaire post-formation.' });
+    } else if (trainingPassRate < 80) {
       recommendations.push({ type: 'WARNING', category: 'TRAINING', message: `Taux de réussite aux questionnaires de formation : ${trainingPassRate} % sur 12 mois.`, action: 'Prévoir un rappel de formation pour les participants qui n’ont pas atteint le seuil.' });
     }
 
@@ -775,10 +799,11 @@ export class OccupancyService {
     // ── Score global enrichi ──────────────────────────────────────────────
     const roleScore    = Math.round((base.roleCoverage.filter((r: any) => r.present > 0).length / Math.max(base.roleCoverage.length, 1)) * 100);
     const enrichedScore = Math.round(
-      roleScore    * 0.40 +
-      qualScore    * 0.20 +
-      plansScore   * 0.25 +
-      exercisesScore * 0.15
+      roleScore      * 0.35 +
+      qualScore      * 0.15 +
+      plansScore     * 0.25 +
+      exercisesScore * 0.15 +
+      trainingScore  * 0.10
     );
     const enrichedStatus = enrichedScore >= 85 ? 'READY' : enrichedScore >= 60 ? 'REDUCED' : 'CRITICAL';
 
@@ -792,10 +817,11 @@ export class OccupancyService {
         score:          enrichedScore,
         status:         enrichedStatus,
         components: {
-          roles:       { score: roleScore,      weight: 40 },
-          qualifications: { score: qualScore,   weight: 20 },
+          roles:       { score: roleScore,      weight: 35 },
+          qualifications: { score: qualScore,   weight: 15 },
           plans:       { score: plansScore,     weight: 25 },
           exercises:   { score: exercisesScore, weight: 15 },
+          training:    { score: trainingScore,  weight: 10 },
         },
       },
       plansAnalysis: {

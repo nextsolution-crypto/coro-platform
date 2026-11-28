@@ -1,3 +1,4 @@
+import { TrainingQuestionnairesService } from '../training-questionnaires/training-questionnaires.service';
 import { Throttle } from '@nestjs/throttler';
 import {
   Controller,
@@ -99,6 +100,7 @@ export class ClientPortalController {
     private correctiveActionsService: CorrectiveActionsService,
     private correctiveActionEvidenceService: CorrectiveActionEvidenceService,
     @Optional() private familyEntitlements?: FamilyEntitlementService,
+    @Optional() private trainingQuestionnaires?: TrainingQuestionnairesService,
   ) {}
 
   /** M11-01 — families in the client's contract, so the portal hides the rest. */
@@ -271,6 +273,17 @@ export class ClientPortalController {
       req.clientUser.organizationId,
     );
     return this.occupancyService.getReadinessEnriched(buildingId, kiosk.token);
+  }
+
+  /** Formations du bâtiment : séances de questionnaire et résultats des participants. */
+  @Get('buildings/:buildingId/trainings')
+  async getBuildingTrainings(
+    @Param('buildingId') buildingId: string,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    if (!this.trainingQuestionnaires) return { analysis: null, sessions: [] };
+    return this.trainingQuestionnaires.buildingSessions(buildingId, req.clientUser.organizationId);
   }
 
   @Get('buildings/:buildingId/sentinelle/alarm-token')

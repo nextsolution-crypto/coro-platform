@@ -170,6 +170,7 @@ export function renderModule8(
   lang: 'fr' | 'en',
   moduleSeqNumber: number = 8,
   isApplicable?: (id: string) => boolean,
+  trainingRows: Array<{ nom: string; formation: string; date: string; formateur: string; resultat: string; reussi: boolean }> = [],
 ): { id: string; title: string; html: string }[] {
   if (!module8Data) module8Data = {};
   const isFr = lang === 'fr';
@@ -215,7 +216,35 @@ export function renderModule8(
   };
 
   // 8.1 — Registre de formation
-  const defaultRows = Array.from({ length: 18 }, () => ({ nom: '', titre: '', date: '', formateur: '' }));
+  // Participants des questionnaires post-formation CORO (automatique), puis
+  // lignes manuelles pour les formations tenues hors CORO.
+  const autoRows = trainingRows.map((row) => `
+    <tr>
+      <td>${escapeHtml(row.nom)}</td>
+      <td>${escapeHtml(row.formation)}</td>
+      <td style="width:13%;">${escapeHtml(row.date)}</td>
+      <td style="width:18%;">${escapeHtml(row.formateur)}</td>
+      <td style="width:14%;color:${row.reussi ? '#27AE60' : '#C0392B'};font-weight:600;">${escapeHtml(row.resultat)} ${row.reussi ? (isFr ? 'réussi' : 'passed') : (isFr ? 'à revoir' : 'to review')}</td>
+    </tr>
+  `).join('');
+  const autoTable = trainingRows.length ? `
+      <p style="font-size:9pt;color:#6C757D;margin-bottom:8px;font-style:italic;">
+        ${isFr ? 'Rempli automatiquement à partir des questionnaires post-formation CORO.' : 'Filled automatically from CORO post-training questionnaires.'}
+      </p>
+      <table style="width:100%;margin-bottom:16px;">
+        <thead>
+          <tr>
+            <th style="width:27%;">${isFr ? 'Nom' : 'Name'}</th>
+            <th style="width:28%;">${isFr ? 'Formation' : 'Training'}</th>
+            <th style="width:13%;">Date</th>
+            <th style="width:18%;">${isFr ? 'Formateur' : 'Trainer'}</th>
+            <th style="width:14%;">${isFr ? 'Résultat' : 'Result'}</th>
+          </tr>
+        </thead>
+        <tbody>${autoRows}</tbody>
+      </table>
+  ` : '';
+  const defaultRows = Array.from({ length: trainingRows.length ? 6 : 18 }, () => ({ nom: '', titre: '', date: '', formateur: '' }));
   const s81Entries = (module8Data.section8_1 && module8Data.section8_1.length > 0)
     ? module8Data.section8_1
     : defaultRows;
@@ -230,8 +259,11 @@ export function renderModule8(
   const s81 = `
     <div>
       ${sectionHeader('8.1')}
+      ${autoTable}
       <p style="font-size:9pt;color:#6C757D;margin-bottom:12px;font-style:italic;">
-        ${isFr ? 'À compléter manuellement lors des formations.' : 'To be completed manually during training sessions.'}
+        ${trainingRows.length
+          ? (isFr ? 'Formations tenues hors CORO : à compléter manuellement.' : 'Training held outside CORO: to be completed manually.')
+          : (isFr ? 'À compléter manuellement lors des formations.' : 'To be completed manually during training sessions.')}
       </p>
       <table style="width:100%;">
         <thead>

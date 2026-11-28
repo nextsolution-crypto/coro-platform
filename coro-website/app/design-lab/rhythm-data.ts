@@ -71,7 +71,7 @@ const fr = {
     support: 'Occupation, rôles et procédures réunis dans une seule vue de commandement, avant, pendant et après l’événement.',
     infoLabel: 'Mesure',
     infoHeading: 'Mesurer la préparation, pas seulement la conformité.',
-    infoBody: ['L’Indice CORO agrège quatre composantes pondérées et montre où la préparation est solide et où elle ne l’est pas.'],
+    infoBody: ['L’Indice CORO agrège cinq composantes pondérées et montre où la préparation est solide et où elle ne l’est pas.'],
     metricLabel: 'Indice CORO',
     metricDemo: 'Démo',
     metricNote: 'Valeurs de démonstration, non réelles.',

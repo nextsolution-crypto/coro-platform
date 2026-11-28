@@ -486,7 +486,7 @@ export default function IntelligencePage() {
 
       {/* Note conformité */}
       <p style={{ textAlign: 'center', fontSize: 11, color: '#ADB5BD', marginTop: 24 }}>
-        Analyse basée sur les 4 composantes CORO · Conforme ISO 22301 · CNPI 2020 · CNESST
+        Analyse basée sur les 5 composantes CORO · Conforme ISO 22301 · CNPI 2020 · CNESST
       </p>
     </PortalLayout>
   );

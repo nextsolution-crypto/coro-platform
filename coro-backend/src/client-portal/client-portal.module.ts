@@ -1,3 +1,4 @@
+import { TrainingQuestionnairesModule } from '../training-questionnaires/training-questionnaires.module';
 import { Module } from '@nestjs/common';
 import { ClientPortalController } from './client-portal.controller';
 import { ClientPortalService } from './client-portal.service';
@@ -50,6 +51,7 @@ import { CapabilityEnforcementInterceptor } from './capability-enforcement.inter
     OperationalShiftsModule,
     OperationalDirectivesModule,
     CapabilityEntitlementsModule,
+    TrainingQuestionnairesModule,
     JwtModule.register({
       secret: requireJwtSecret(),
       signOptions: { expiresIn: '7d' },

@@ -281,6 +281,7 @@ export class PmuBuilder extends BaseDocumentBuilder {
         this.lang,
         this.sequentialNumber,
         this.module8Applicability(),
+        this.data.trainingRegister ? await this.data.trainingRegister() : [],
       );
 
       sections8.forEach((section, idx) => {

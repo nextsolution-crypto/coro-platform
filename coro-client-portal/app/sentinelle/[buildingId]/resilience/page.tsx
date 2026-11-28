@@ -56,7 +56,10 @@ export default function ResiliencePage() {
   const [loading, setLoading]   = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [kioskToken, setKioskToken] = useState('');
-  const [activeTab, setActiveTab]     = useState<'overview' | 'roles' | 'intel' | 'trend'>('overview');
+  const [activeTab, setActiveTab]     = useState<'overview' | 'roles' | 'intel' | 'trend' | 'training'>('overview');
+  const [trainings, setTrainings]     = useState<any>(null);
+  const [trainingsError, setTrainingsError] = useState('');
+  const [openSession, setOpenSession] = useState<string | null>(null);
   const [history, setHistory]         = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [error, setError] = useState('');
@@ -95,6 +98,23 @@ export default function ResiliencePage() {
     }
     finally { setLoadingHistory(false); }
   }, [buildingId]);
+
+  const fetchTrainings = useCallback(async () => {
+    setTrainingsError('');
+    try {
+      const res = await fetch(`${API}/client-portal/buildings/${buildingId}/trainings`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('coro_client_token')}` },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setTrainings(await res.json());
+    } catch {
+      setTrainingsError('Impossible de charger les formations.');
+    }
+  }, [buildingId]);
+
+  useEffect(() => {
+    if (activeTab === 'training' && !trainings) void fetchTrainings();
+  }, [activeTab, trainings, fetchTrainings]);
 
   const forceSnapshot = async () => {
     setHistoryError('');
@@ -238,12 +258,13 @@ export default function ResiliencePage() {
         </div>
       </div>
 
-      {/* 4 composantes */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 16 }}>
-        <ComponentCard label="Couverture des rôles"  score={components.roles?.score ?? data.readinessIndex} weight={40} icon="🛡️" />
-        <ComponentCard label="Qualifications"        score={components.qualifications?.score ?? 0}           weight={20} icon="🎓" />
-        <ComponentCard label="Plans approuvés"       score={components.plans?.score ?? 0}                    weight={25} icon="📄" />
-        <ComponentCard label="Exercices (CNPI)"      score={components.exercises?.score ?? 0}                weight={15} icon="🔔" />
+      {/* Composantes de l'indice (pondérations fournies par le serveur) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 16 }}>
+        <ComponentCard label="Couverture des rôles"  score={components.roles?.score ?? data.readinessIndex} weight={components.roles?.weight ?? 35} icon="🛡️" />
+        <ComponentCard label="Qualifications"        score={components.qualifications?.score ?? 0}           weight={components.qualifications?.weight ?? 15} icon="🩺" />
+        <ComponentCard label="Plans approuvés"       score={components.plans?.score ?? 0}                    weight={components.plans?.weight ?? 25} icon="📄" />
+        <ComponentCard label="Exercices (CNPI)"      score={components.exercises?.score ?? 0}                weight={components.exercises?.weight ?? 15} icon="🔔" />
+        <ComponentCard label="Formations"            score={components.training?.score ?? 0}                 weight={components.training?.weight ?? 10} icon="🎓" />
       </div>
 
       {/* Onglets */}
@@ -253,6 +274,7 @@ export default function ResiliencePage() {
           { key: 'roles',    label: '🛡️ Couverture rôles' },
           { key: 'intel',    label: `💡 Intelligence${(data.recommendations || []).length > 0 ? ` (${data.recommendations.length})` : ''}` },
           { key: 'trend',    label: '📈 Tendance 90 jours' },
+          { key: 'training', label: '🎓 Formations' },
         ] as const).map(tab => (
           <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
             style={{ padding: '8px 16px', border: 'none', borderBottom: activeTab === tab.key ? '2px solid #C0392B' : '2px solid transparent', backgroundColor: 'transparent', cursor: 'pointer', fontSize: 13, fontWeight: activeTab === tab.key ? 700 : 500, color: activeTab === tab.key ? '#C0392B' : '#6C757D', marginBottom: -1 }}>
@@ -636,8 +658,86 @@ export default function ResiliencePage() {
         </div>
       )}
 
+      {activeTab === 'training' && (
+        <div>
+          {trainingsError && (
+            <div role="alert" style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 10, border: '1px solid #F1948A', backgroundColor: '#FDEDEC', color: '#922B21' }}>
+              {trainingsError}
+            </div>
+          )}
+          {!trainings && !trainingsError && <p style={{ color: '#ADB5BD', fontSize: 13 }}>Chargement…</p>}
+          {trainings && (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 16 }}>
+                {[
+                  ['Séances (12 mois)', String(trainings.analysis?.sessions ?? 0)],
+                  ['Participants', String(trainings.analysis?.participants ?? 0)],
+                  ['Moyenne', trainings.analysis?.averagePercent == null ? '—' : `${trainings.analysis.averagePercent} %`],
+                  ['Taux de réussite', trainings.analysis?.passRate == null ? '—' : `${trainings.analysis.passRate} %`],
+                ].map(([label, value]) => (
+                  <div key={label} style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', borderRadius: 10, padding: 14, textAlign: 'center' }}>
+                    <p style={{ margin: 0, fontSize: 11, color: '#6C757D' }}>{label}</p>
+                    <p style={{ margin: '4px 0 0', fontSize: 24, fontWeight: 800, color: '#2C3E50' }}>{value}</p>
+                  </div>
+                ))}
+              </div>
+              <p style={{ fontSize: 12, color: '#6C757D', marginBottom: 12 }}>
+                Le taux de réussite aux questionnaires post-formation des 12 derniers mois compte pour 10 % de l’indice CORO.
+              </p>
+              {trainings.sessions.length === 0 ? (
+                <p style={{ fontSize: 13, color: '#ADB5BD' }}>Aucune formation évaluée par questionnaire depuis 12 mois.</p>
+              ) : (
+                trainings.sessions.map((session: any) => {
+                  const open = openSession === session.id;
+                  return (
+                    <div key={session.id} style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', borderRadius: 10, marginBottom: 10 }}>
+                      <button type="button" onClick={() => setOpenSession(open ? null : session.id)} aria-expanded={open}
+                        style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', padding: 14, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                        <span style={{ flex: '1 1 220px' }}>
+                          <strong style={{ display: 'block', color: '#2C3E50', fontSize: 14 }}>{session.title}</strong>
+                          <span style={{ fontSize: 12, color: '#6C757D' }}>
+                            {new Date(session.date).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            {session.trainerName ? ` · ${session.trainerName}` : ''}
+                            {session.isOpen ? ' · en cours' : ''}
+                          </span>
+                        </span>
+                        <span style={{ fontSize: 13, color: '#2C3E50' }}>{session.participants} participant(s)</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: (session.passRate ?? 0) >= 80 ? '#27AE60' : '#C0392B' }}>
+                          {session.passRate == null ? '—' : `${session.passRate} % de réussite`}
+                        </span>
+                        <span style={{ color: '#ADB5BD' }}>{open ? '▾' : '▸'}</span>
+                      </button>
+                      {open && (
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                          <thead>
+                            <tr style={{ textAlign: 'left', color: '#6C757D', fontSize: 11, textTransform: 'uppercase' }}>
+                              <th style={{ padding: '8px 14px' }}>Participant</th>
+                              <th style={{ padding: '8px 14px' }}>Score</th>
+                              <th style={{ padding: '8px 14px' }}>Résultat</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {session.responses.map((r: any, index: number) => (
+                              <tr key={index} style={{ borderTop: '1px solid #F1F3F5' }}>
+                                <td style={{ padding: '8px 14px', color: '#2C3E50' }}>{r.participantName}</td>
+                                <td style={{ padding: '8px 14px' }}>{r.percent} %</td>
+                                <td style={{ padding: '8px 14px', fontWeight: 600, color: r.passed ? '#27AE60' : '#C0392B' }}>{r.passed ? 'Réussi' : 'À revoir'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       <p style={{ textAlign: 'center', fontSize: 11, color: '#ADB5BD', marginTop: 20 }}>
-        Auto-actualisation 30 s · Score pondéré : rôles 40% + qualifications 20% + plans 25% + exercices 15%
+        Auto-actualisation 30 s · Score pondéré : rôles {components.roles?.weight ?? 35} % + qualifications {components.qualifications?.weight ?? 15} % + plans {components.plans?.weight ?? 25} % + exercices {components.exercises?.weight ?? 15} % + formations {components.training?.weight ?? 10} %
       </p>
     </PortalLayout>
   );
