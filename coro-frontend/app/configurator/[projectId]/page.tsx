@@ -976,6 +976,28 @@ export default function ConfiguratorPage() {
     return true;
   };
 
+  // Complétion d'une section : parmi les champs visibles à saisir (hors cases oui/non, qui ont
+  // toujours une valeur), combien sont renseignés. Une section de cases oui/non est « complète »
+  // dès qu'une case est cochée, sinon elle n'affiche pas d'indicateur.
+  const sectionCompletion = (section: Section): { filled: number; total: number; state: 'done' | 'partial' | 'empty' | 'none' } => {
+    const visible = section.fields.filter(isFieldVisible);
+    const inputs = visible.filter(field => field.type !== 'boolean');
+    const isFilled = (value: unknown): boolean => {
+      if (value === null || value === undefined) return false;
+      if (typeof value === 'string') return value.trim().length > 0;
+      if (typeof value === 'number') return Number.isFinite(value);
+      if (Array.isArray(value)) return value.length > 0;
+      if (typeof value === 'object') return Object.keys(value as object).length > 0;
+      return value === true;
+    };
+    if (!inputs.length) {
+      const anyChecked = visible.some(field => config[field.key] === true);
+      return { filled: anyChecked ? 1 : 0, total: anyChecked ? 1 : 0, state: anyChecked ? 'done' : 'none' };
+    }
+    const filled = inputs.filter(field => isFilled(config[field.key])).length;
+    return { filled, total: inputs.length, state: filled === 0 ? 'empty' : filled === inputs.length ? 'done' : 'partial' };
+  };
+
   const currentSection  = sections[activeSection];
   const visibleFields   = currentSection ? currentSection.fields.filter(isFieldVisible) : [];
   const completedFields = visibleFields.filter(f => {
@@ -1140,6 +1162,21 @@ export default function ConfiguratorPage() {
           }}>
           <div className="p-3">
             {(() => {
+              const shown = sections.filter(section => section.id !== 'industriel' || isIndustrialContext);
+              const states = shown.map(sectionCompletion).filter(item => item.state !== 'none');
+              const done = states.filter(item => item.state === 'done').length;
+              return (
+                <div className="px-3 pb-3 mb-3" style={{ borderBottom: '1px solid #F1F3F5' }}>
+                  <p className="text-xs" style={{ color: '#6C757D' }}>
+                    <strong style={{ color: '#2C3E50' }}>{done}/{states.length}</strong> sections complètes
+                  </p>
+                  <p className="text-[11px] mt-1" style={{ color: '#ADB5BD' }}>
+                    <span style={{ color: '#27AE60' }}>✓</span> complète · <span style={{ color: '#E67E22' }}>●</span> à compléter · ○ non commencée
+                  </p>
+                </div>
+              );
+            })()}
+            {(() => {
               const GROUPS: { label: string; ids: string[] }[] = [
                 { label: 'Général',           ids: ['infos_document', 'description', 'certifications', 'emplacements', 'historique'] },
                 { label: 'Sécurité incendie', ids: ['alarme', 'gicleurs', 'systemes_integres', 'extincteurs', 'detecteurs'] },
@@ -1180,7 +1217,18 @@ export default function ConfiguratorPage() {
                           onMouseLeave={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'; }}
                         >
                           <span>{section.icon}</span>
-                          <span>{section.title}</span>
+                          <span className="flex-1">{section.title}</span>
+                          {(() => {
+                            const completion = sectionCompletion(section);
+                            if (completion.state === 'none') return null;
+                            const look = completion.state === 'done'
+                              ? { mark: '✓', color: '#27AE60', label: 'Section complète' }
+                              : completion.state === 'partial'
+                                ? { mark: '●', color: '#E67E22', label: `À compléter : ${completion.filled} champ(s) sur ${completion.total}` }
+                                : { mark: '○', color: '#ADB5BD', label: 'Section non commencée' };
+                            return <span aria-label={look.label} title={look.label}
+                              style={{ color: look.color, fontWeight: 700, fontSize: 12, flexShrink: 0 }}>{look.mark}</span>;
+                          })()}
                         </button>
                       );
                     })}
@@ -1718,7 +1766,15 @@ export default function ConfiguratorPage() {
                               }}
                             >
                               <span className="flex-shrink-0">{section.icon}</span>
-                              <span className="break-words">{section.title}</span>
+                              <span className="break-words flex-1">{section.title}</span>
+                              {(() => {
+                                const completion = sectionCompletion(section);
+                                if (completion.state === 'none') return null;
+                                const mark = completion.state === 'done' ? '✓' : completion.state === 'partial' ? '●' : '○';
+                                const color = completion.state === 'done' ? '#27AE60' : completion.state === 'partial' ? '#E67E22' : '#ADB5BD';
+                                return <span aria-label={completion.state === 'done' ? 'Section complète' : `${completion.filled} champ(s) sur ${completion.total}`}
+                                  style={{ color, fontWeight: 700, flexShrink: 0 }}>{mark}</span>;
+                              })()}
                             </button>
                           );
                         })}
