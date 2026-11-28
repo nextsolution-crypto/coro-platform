@@ -16,11 +16,11 @@ export function renderModule1(sections: any[]): string {
 
 // Rend une seule section de Module 1 — permet à export.service.ts de générer
 // chaque section dans son propre appel Puppeteer, pour connaître sa vraie page
-export function renderModule1Section(section: any, withPageBreak: boolean): string {
+export function renderModule1Section(section: any, withPageBreak: boolean, displayId?: string): string {
   return `
     <div class="${withPageBreak ? 'page-break' : ''}">
       <div class="section-header">
-        <span class="section-id">${section.id}</span>
+        <span class="section-id">${displayId ?? section.id}</span>
         <span class="section-title-line2">${escapeHtml(section.title)}</span>
         <div class="section-bar"></div>
       </div>

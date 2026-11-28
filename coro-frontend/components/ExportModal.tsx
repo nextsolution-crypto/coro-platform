@@ -29,11 +29,13 @@ const pcaModules: ModuleOption[] = [
   { num: 7, label: 'M7 — Activation et procédures de reprise' },
   { num: 8, label: 'M8 — Exercices, registres et maintien' },
 ];
+// Ordre opérationnel CORO par défaut (PMU et PSI). Les modules sont numérotés
+// dans le PDF selon leur position, d'où l'absence de numéro dans les libellés.
 const pmuModules: ModuleOption[] = [
-  { num: 1, label: 'M1 — Introduction' }, { num: 2, label: 'M2 — Liste téléphonique' },
-  { num: 3, label: 'M3 — Rôles et responsabilités' }, { num: 4, label: 'M4 — Procédures' },
-  { num: 6, label: 'M6 — Plans techniques' }, { num: 7, label: 'M7 — Description du site' },
-  { num: 8, label: 'M8 — Registres et annexes' },
+  { num: 2, label: 'Liste téléphonique' }, { num: 6, label: 'Plans techniques' },
+  { num: 3, label: 'Rôles et responsabilités' }, { num: 4, label: 'Procédures' },
+  { num: 7, label: 'Description du site et équipements' }, { num: 1, label: 'Introduction' },
+  { num: 8, label: 'Registres et annexes' },
 ];
 
 export default function ExportModal({ projectId, projectName, documentType, hasPlans, onClose }: ExportModalProps) {
@@ -155,13 +157,16 @@ export default function ExportModal({ projectId, projectName, documentType, hasP
           <button ref={closeRef} onClick={onClose} aria-label="Fermer la fenêtre d'export" style={{ color: '#ADB5BD' }}><X size={20} /></button>
         </div>
         <p className="text-sm font-medium mb-2" style={{ color: '#495057' }}>Modules à inclure (glissez pour réorganiser)</p>
+        {documentType !== 'PCA' && <p className="text-xs mb-2" style={{ color: '#6C757D' }}>Ordre opérationnel CORO par défaut. Les modules sont numérotés dans cet ordre dans le document et le sommaire.</p>}
         <div className="space-y-1.5 mb-5">
           {orderedModules.map((module, index) => {
             const active = selected.has(module.num);
             return <div key={module.num} draggable onDragStart={() => setDragIndex(index)} onDragOver={(event) => { event.preventDefault(); moveModule(index); }} onDragEnd={() => setDragIndex(null)} className="flex items-center gap-2 px-3 py-2.5 rounded" style={{ border: `1px solid ${active ? '#F1948A' : '#E9ECEF'}`, backgroundColor: active ? '#FDEDEC' : '#F8F9FA', cursor: 'grab' }}>
               <GripVertical size={15} style={{ color: '#ADB5BD', flexShrink: 0 }} />
               <input aria-label={`Inclure ${module.label}`} type="checkbox" checked={active} onChange={() => toggleModule(module.num)} className="w-4 h-4 flex-shrink-0" />
-              <span className="text-sm font-medium" style={{ color: active ? '#C0392B' : '#6C757D' }}>{module.label}</span>
+              <span className="text-sm font-medium" style={{ color: active ? '#C0392B' : '#6C757D' }}>
+                {documentType === 'PCA' ? module.label : `${orderedModules.filter(item => selected.has(item.num)).findIndex(item => item.num === module.num) + 1 || '–'}. ${module.label}`}
+              </span>
             </div>;
           })}
         </div>

@@ -80,6 +80,7 @@ const CLIENT_PROJECT_DETAIL_SELECT = {
 } as const;
 
 import { PdfSealService } from '../pdf-seal/pdf-seal.service';
+import { defaultModuleOrder } from '../export/module-order';
 @Injectable()
 export class ClientPortalService {
   constructor(
@@ -1774,14 +1775,8 @@ export class ClientPortalService {
       projectId,
       project.organizationId,
       {
-        selectedModules:
-          project.documentType === 'PCA'
-            ? [1, 2, 3, 4, 5, 6, 7, 8]
-            : [1, 2, 3, 4, 6, 7, 8],
-        moduleOrder:
-          project.documentType === 'PCA'
-            ? [1, 2, 3, 4, 5, 6, 7, 8]
-            : [1, 2, 3, 4, 6, 7, 8],
+        selectedModules: defaultModuleOrder(project.documentType),
+        moduleOrder: defaultModuleOrder(project.documentType),
         language: 'both',
       },
     );

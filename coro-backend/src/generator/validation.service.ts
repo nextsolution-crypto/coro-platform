@@ -271,7 +271,7 @@ export class ValidationService {
         id: 'V-007',
         level: 'AVERTISSEMENT',
         message:
-          "La liste téléphonique (section 2.1 — Numéros d'urgence) est vide.",
+          "La liste téléphonique (Numéros d'urgence) est vide.",
         moduleNumber: 2,
         sectionId: '2.1',
         action: 'Ajouter des contacts dans le Module 2',

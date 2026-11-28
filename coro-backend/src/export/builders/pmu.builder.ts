@@ -8,11 +8,12 @@ import {
 import { renderModule3 } from '../templates/modules/module3.template';
 import { renderProcedure } from '../templates/modules/module4.template';
 import { renderModule7 } from '../templates/modules/module7.template';
+import { defaultModuleOrder } from '../module-order';
 
 export class PmuBuilder extends BaseDocumentBuilder {
 
   getDefaultModules(): number[] {
-    return [1, 2, 3, 4, 6, 7, 8];
+    return defaultModuleOrder('PMU');
   }
 
   async buildModuleSegments(
@@ -101,16 +102,17 @@ export class PmuBuilder extends BaseDocumentBuilder {
       const mod = this.modules.find((m: any) => m.moduleNumber === 1);
       const sections1 = mod?.sections || [];
 
-      sections1.forEach((s: any) => {
+      // Numérotation selon la position du module dans le document (ordre CORO).
+      sections1.forEach((s: any, i: number) => {
         this.subsectionTitlesById[
           `${this.sequentialNumber}:${s.id}`
-        ] = `${s.id} — ${s.title}`;
+        ] = `${this.sequentialNumber}.${i + 1} — ${s.title}`;
       });
 
-      for (const section of sections1) {
+      for (const [i, section] of sections1.entries()) {
         pdfSegments.push({
           type: 'html',
-          content: `<div>${renderModule1Section(section, false)}</div>`,
+          content: `<div>${renderModule1Section(section, false, `${this.sequentialNumber}.${i + 1}`)}</div>`,
           sequentialNumber: this.sequentialNumber,
           subsectionId: section.id,
         });
