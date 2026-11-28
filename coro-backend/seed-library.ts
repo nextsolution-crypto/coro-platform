@@ -14,7 +14,7 @@ async function main() {
   { code: 'CODE_GRIS',      name: 'Code Gris',      color: '#7F8C8D', description: 'Fuite de gaz' },
   { code: 'CODE_BLANC',     name: 'Code Blanc',     color: '#ECF0F1', description: 'Individu violent / menace' },
   { code: 'CODE_NOIR',      name: 'Code Noir',      color: '#2C3E50', description: 'Bombe / colis suspect' },
-  { code: 'CODE_ORANGE',    name: 'Code Orange',    color: '#E67E22', description: 'Panne de courant' },
+  { code: 'CODE_ORANGE',    name: 'Code Orange',    color: '#E67E22', description: 'Panne électrique' },
   { code: 'CODE_JAUNE',     name: 'Code Jaune',     color: '#F1C40F', description: 'Personne manquante' },
   { code: 'CODE_BRUN',      name: 'Code Brun',      color: '#8B4513', description: 'Déversement matières dangereuses' },
   { code: 'CODE_TURQUOISE', name: 'Code Turquoise', color: '#1ABC9C', description: 'Inondation / dégât eau' },
@@ -28,7 +28,8 @@ async function main() {
   { code: 'CODE_TEAL',      name: 'Code Teal',      color: '#008B8B', description: 'Personne coincée dans un ascenseur' },
   { code: 'CODE_ARDOISE',   name: 'Code Ardoise',   color: '#607D8B', description: 'Directives générales' },
   { code: 'CODE_OLIVE',     name: 'Code Olive',     color: '#808000', description: 'Gaz toxique / confinement' },
-  { code: 'CODE_AMBRE',     name: 'Code Ambre',     color: '#FF8F00', description: 'Coupure de courant' },
+  // Fusionné dans Code Orange (panne électrique) : conservé inactif pour l'historique.
+  { code: 'CODE_AMBRE',     name: 'Code Ambre',     color: '#FF8F00', description: 'Coupure de courant', isActive: false },
   { code: 'CODE_ONYX',      name: 'Code Onyx',      color: '#353839', description: 'Menace ou alerte à la bombe' },
   { code: 'CODE_ACIER',     name: 'Code Acier',     color: '#4682B4', description: 'Vents violents' },
   { code: 'CODE_CORAIL',    name: 'Code Corail',    color: '#FF6B6B', description: 'Vagues de chaleur' },
@@ -41,7 +42,7 @@ async function main() {
   for (const code of incidentCodes) {
     await prisma.incidentCode.upsert({
       where: { code: code.code },
-      update: { name: code.name, color: code.color, description: code.description },
+      update: { name: code.name, color: code.color, description: code.description, isActive: code.isActive ?? true },
       create: code,
     });
   }
@@ -175,15 +176,17 @@ async function main() {
     },
     {
       roleCode: 'ROLE-PREP-H',
-      name: 'Préposé à l\'entretien – Homme',
+      name: 'Préposé à l\'entretien ménager',
       description: 'Préposé à l\'entretien ménager.',
       isStandard: false,
     },
     {
+      // Doublon genré retiré : conservé inactif pour l'historique.
       roleCode: 'ROLE-PREP-F',
-      name: 'Préposé à l\'entretien – Femme',
-      description: 'Préposée à l\'entretien ménager.',
+      name: 'Préposé à l\'entretien ménager (ancien)',
+      description: 'Remplacé par ROLE-PREP-H.',
       isStandard: false,
+      isActive: false,
     },
     {
       roleCode: 'ROLE-TECH-ARCH',
@@ -326,8 +329,8 @@ async function main() {
   for (const role of roles) {
     await prisma.role.upsert({
       where: { roleCode: role.roleCode },
-      update: { name: role.name, description: role.description },
-      create: { ...role, isActive: true },
+      update: { name: role.name, description: role.description, isActive: role.isActive ?? true },
+      create: { ...role, isActive: role.isActive ?? true },
     });
   }
 }

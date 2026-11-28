@@ -13,7 +13,8 @@ export const P016_COUPURE_COURANT: ProcedureTemplate = {
   titleFR: 'COUPURE DE COURANT',
   titleEN: 'POWER OUTAGE',
   icon: '⚡',
-  headerColor: COLORS.amber,
+  headerColor: COLORS.orange,
+  incidentCode: 'CODE_ORANGE',
   activationRule: 'always',
   documentTypes: ['PMU'],
   roleSections: [
@@ -21,7 +22,7 @@ export const P016_COUPURE_COURANT: ProcedureTemplate = {
       roleCode: 'ROLE-CU',
       roleLabelFR: 'Coordonnateur d\'urgence',
       roleLabelEN: 'Emergency Coordinator',
-      headerColor: COLORS.amber,
+      headerColor: COLORS.orange,
       steps: [
         // ── Détection de la panne ───────────────────────────
         {
