@@ -811,9 +811,9 @@ export class ActivitiesService {
 
   // Vue portefeuille client — toutes les activités de tous les projets d'un client
   async getClientPortfolio(clientId: string, actor: AdviserActor) {
-    // Vue client : tout conseiller lit les projets de son organisation (comme la fiche projet).
+    // Périmètre canonique (contrat d'affectation M3-09) : les projets du conseiller.
     const projects = await this.prisma.project.findMany({
-      where: { clientId, isActive: true, ...projectReadWhere(actor) },
+      where: { clientId, isActive: true, ...projectAccessWhere(actor) },
       include: {
         building: true,
         activities: {
