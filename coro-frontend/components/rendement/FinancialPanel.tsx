@@ -113,7 +113,7 @@ export default function FinancialPanel({ data }: { data: FinancialResponse }) {
             ))}
             <article className="rounded-md border border-slate-200 bg-white p-5">
               <p className="text-sm text-slate-500">
-                Mandats déficitaires uniques
+                Mandats déficitaires
               </p>
               <p className="text-2xl font-black text-red-700">
                 {summary.lossMaking}
@@ -193,7 +193,7 @@ export default function FinancialPanel({ data }: { data: FinancialResponse }) {
                           )}
                           {mandate.contributionMarginPercent && (
                             <span className="block text-xs text-slate-500">
-                              {mandate.contributionMarginPercent} %
+                              {Number(mandate.contributionMarginPercent).toLocaleString("fr-CA", { maximumFractionDigits: 1 })} %
                             </span>
                           )}
                         </td>

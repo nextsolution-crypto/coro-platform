@@ -684,7 +684,7 @@ export class PlanningActionsService {
         if (!booking || !booking.activity)
           throw new NotFoundException('Planification introuvable');
         const lead = booking.assignments.find((item) => item.role === 'LEAD');
-        if (!lead) throw new BadRequestException('Aucun LEAD actif');
+        if (!lead) throw new BadRequestException('Aucun responsable actif');
         const startUtc = new Date(dto.startUtc);
         const endUtc = new Date(
           startUtc.getTime() + dto.durationMinutes * 60_000,

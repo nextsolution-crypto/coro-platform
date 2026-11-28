@@ -13,7 +13,7 @@ export type ManualArticle = {
   route: string;
   sourceRefs: string[];
 };
-export const MANUAL_VERSION = '2026-11-28.4';
+export const MANUAL_VERSION = '2026-11-28.5';
 const both: ManualAudience[] = ['INTERNAL', 'CLIENT'];
 const internal: ManualAudience[] = ['INTERNAL'];
 const client: ManualAudience[] = ['CLIENT'];
@@ -1790,7 +1790,7 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     ['capacité', 'capacity', 'charge', 'surchargé', 'disponibilité', 'heures', 'conseiller', 'planification'],
     'Comparer la capacité théorique de chaque conseiller à sa charge engagée pour les 12 prochaines semaines.',
     [
-      'Ouvrez Administration puis Capacity Planning.',
+      'Ouvrez Administration puis Capacité de l’équipe.',
       'Pour chaque conseiller, lisez l’utilisation retenue, le niveau, le reste théorique et les mandats actifs. Dépliez la ligne pour le détail : heures saisies (tâches et timelog), charge planifiée, affectations en attente et activités confirmées.',
       'Utilisez Actualiser après une modification de planification.',
     ],

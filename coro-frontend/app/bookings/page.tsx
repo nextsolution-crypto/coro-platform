@@ -77,6 +77,10 @@ const ACTIVITY_LABELS: Record<string, string> = {
   autre: "📅 Autre activité",
 };
 
+/** Réservation close : plus de gestion d'équipe à proposer. */
+const isClosedBooking = (booking: any) =>
+  ["ANNULEE", "REFUSEE", "COMPLETEE"].includes(booking?.status);
+
 const ASSIGNMENT_STATUS_LABELS: Record<string, string> = {
   PENDING: "En attente",
   ACCEPTED: "Acceptée",
@@ -95,6 +99,25 @@ export default function BookingsPage() {
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("");
   const [filterType, setFilterType] = useState("");
+  // Libellés des types d'activité du catalogue (types CORO et personnalisés, archivés compris).
+  const [activityTypeNames, setActivityTypeNames] = useState<Record<string, string>>({});
+  const [activeActivityTypes, setActiveActivityTypes] = useState<[string, string][]>([]);
+  useEffect(() => {
+    api
+      .get("/activity-types?includeArchived=true")
+      .then((response) => {
+        const items: any[] = Array.isArray(response.data) ? response.data : [];
+        setActivityTypeNames(
+          Object.fromEntries(items.filter((t) => t.code).map((t) => [t.code, t.nameFR || t.code])),
+        );
+        setActiveActivityTypes(
+          items.filter((t) => t.code && t.isActive).map((t) => [t.code, t.nameFR || t.code]),
+        );
+      })
+      .catch(() => undefined);
+  }, []);
+  const activityLabel = (code?: string | null) =>
+    (code && (ACTIVITY_LABELS[code] || activityTypeNames[code])) || code || "Activité";
   const [search, setSearch] = useState("");
 
   // Modals
@@ -528,7 +551,12 @@ export default function BookingsPage() {
           }}
         >
           <option value="">Tous les types</option>
-          {Object.entries(ACTIVITY_LABELS).map(([k, v]) => (
+          {[
+            ...activeActivityTypes,
+            ...Object.entries(ACTIVITY_LABELS).filter(
+              ([k]) => bookings.some((b) => b.activityType === k),
+            ),
+          ].map(([k, v]) => (
             <option key={k} value={k}>
               {v}
             </option>
@@ -601,8 +629,7 @@ export default function BookingsPage() {
                         className="font-bold text-base mb-1"
                         style={{ color: "#2C3E50" }}
                       >
-                        {ACTIVITY_LABELS[booking.activityType] ||
-                          booking.activityType}
+                        {activityLabel(booking.activityType)}
                       </h3>
                       <p
                         className="text-sm break-words"
@@ -963,8 +990,7 @@ export default function BookingsPage() {
                               </p>
                               <p>
                                 Activité :{" "}
-                                {ACTIVITY_LABELS[booking.activityType] ||
-                                  booking.activityType}
+                                {activityLabel(booking.activityType)}
                               </p>
                               <p>Projet : {booking.project?.name}</p>
                               <p>
@@ -1058,15 +1084,14 @@ export default function BookingsPage() {
                         </div>
                       );
                     })}
-                    {!(booking.assignments || []).some(
+                    {!isClosedBooking(booking) && !(booking.assignments || []).some(
                       (a: any) => a.role === "LEAD",
                     ) && (
                       <p className="text-xs mb-2" style={{ color: "#C0392B" }}>
-                        Aucun LEAD actif. Une nouvelle proposition est
-                        nécessaire.
+                        Aucun responsable actif. Proposez un responsable.
                       </p>
                     )}
-                    {canManageTeam && (
+                    {canManageTeam && !isClosedBooking(booking) && (
                       <button
                         className="text-xs underline mb-2"
                         onClick={() => fetchAvailableUsers(booking.id)}
@@ -1074,7 +1099,7 @@ export default function BookingsPage() {
                         Voir les disponibilités et la charge
                       </button>
                     )}
-                    {canManageTeam && (
+                    {canManageTeam && !isClosedBooking(booking) && (
                       <div className="flex flex-wrap gap-2 mt-3">
                         <select
                           aria-label="Conseiller à affecter"
@@ -1107,7 +1132,7 @@ export default function BookingsPage() {
                           disabled={!teamUserIds[booking.id]}
                           onClick={() => teamAction(booking.id, "add")}
                         >
-                          Ajouter SUPPORT
+                          Ajouter un renfort
                         </button>
                         {!(booking.assignments || []).some(
                           (a: any) => a.role === "LEAD",
@@ -1117,7 +1142,7 @@ export default function BookingsPage() {
                             disabled={!teamUserIds[booking.id]}
                             onClick={() => teamAction(booking.id, "addLead")}
                           >
-                            Proposer LEAD
+                            Proposer un responsable
                           </button>
                         )}
                         {(booking.assignments || []).find(
@@ -1136,7 +1161,7 @@ export default function BookingsPage() {
                               )
                             }
                           >
-                            Remplacer LEAD
+                            Remplacer le responsable
                           </button>
                         )}
                       </div>
@@ -1264,7 +1289,7 @@ export default function BookingsPage() {
                 {selectedBooking.clientUser?.lastName}
               </strong>{" "}
               pour un{" "}
-              <strong>{ACTIVITY_LABELS[selectedBooking.activityType]}</strong>{" "}
+              <strong>{activityLabel(selectedBooking.activityType)}</strong>{" "}
               le{" "}
               <strong>
                 {new Date(selectedBooking.requestedDate).toLocaleDateString(

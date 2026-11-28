@@ -6,6 +6,10 @@ import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 
+/** Heures au format québécois (virgule décimale). */
+const fmtH = (value: number) =>
+  Number(value || 0).toLocaleString('fr-CA', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
 const NIVEAU_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; icon: string }> = {
   SURCHARGE:  { label: 'Surchargé',   color: '#C0392B', bg: '#FDEDEC', border: '#F1948A', icon: '🔴' },
   CHARGE:     { label: 'Chargé',      color: '#E67E22', bg: '#FEF9E7', border: '#FAD7A0', icon: '🟠' },
@@ -49,7 +53,7 @@ export default function CapacityPage() {
             Administration
           </p>
           <h2 className="text-2xl font-black" style={{ color: '#2C3E50' }}>
-            Capacity Planning
+            Capacité de l’équipe
           </h2>
           <p className="text-sm mt-1" style={{ color: '#6C757D' }}>
             Capacité théorique et charge attribuée sur 12 semaines
@@ -174,7 +178,7 @@ export default function CapacityPage() {
                         className="text-sm font-bold break-words"
                         style={{ color: conseiller.niveau === 'DISPONIBLE' ? '#27AE60' : '#2C3E50' }}
                       >
-                        {conseiller.capaciteRestanteTheorique.toFixed(1)} h
+                        {fmtH(conseiller.capaciteRestanteTheorique)} h
                       </p>
                       <p className="text-xs" style={{ color: '#ADB5BD' }}>
                         sur {conseiller.capacite12Semaines.toFixed(0)} h
@@ -195,13 +199,13 @@ export default function CapacityPage() {
                   <div className="px-4 sm:px-5 pb-5" style={{ borderTop: '1px solid #E9ECEF' }}>
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mt-4 mb-4">
                       {[
-                        { label: 'Heures saisies (tâches)',   value: `${conseiller.heuresTaskTotal.toFixed(1)}h`,    color: '#8E44AD' },
-                        { label: 'Heures saisies (timelog)',  value: `${conseiller.heuresTimelogTotal.toFixed(1)}h`, color: '#8E44AD' },
-                        { label: 'Mandats non ventilés',      value: `${conseiller.chargeMandatNonVentilee.toFixed(1)}h`, color: '#2980B9' },
-                        { label: 'Charge planifiée',          value: `${conseiller.chargePlanifiee.toFixed(1)}h`, color: '#2980B9' },
-                        { label: 'Affectations en attente',   value: `${conseiller.chargeProvisoire.toFixed(1)}h`, color: '#E67E22' },
+                        { label: 'Heures saisies (tâches)',   value: `${fmtH(conseiller.heuresTaskTotal)}h`,    color: '#8E44AD' },
+                        { label: 'Heures saisies (timelog)',  value: `${fmtH(conseiller.heuresTimelogTotal)}h`, color: '#8E44AD' },
+                        { label: 'Mandats non ventilés',      value: `${fmtH(conseiller.chargeMandatNonVentilee)}h`, color: '#2980B9' },
+                        { label: 'Charge planifiée',          value: `${fmtH(conseiller.chargePlanifiee)}h`, color: '#2980B9' },
+                        { label: 'Affectations en attente',   value: `${fmtH(conseiller.chargeProvisoire)}h`, color: '#E67E22' },
                         { label: 'Utilisation activités confirmées', value: `${conseiller.tauxUtilisationConfirmee}%`, color: '#2980B9' },
-                        { label: 'Charge engagée',            value: `${conseiller.chargeEngagee.toFixed(1)}h`, color: '#C0392B' },
+                        { label: 'Charge engagée',            value: `${fmtH(conseiller.chargeEngagee)}h`, color: '#C0392B' },
                         { label: 'Activités planifiées',      value: `${conseiller.activitesFuturesCount}`,          color: '#F39C12' },
                       ].map(stat => (
                         <div key={stat.label} className="rounded p-3"
@@ -238,10 +242,10 @@ export default function CapacityPage() {
                               </div>
                               <div className="text-left sm:text-right w-full sm:w-auto">
                                 <p className="text-xs font-bold" style={{ color: '#2980B9' }}>
-                                  {m.chargeMandatNonVentilee.toFixed(1)}h non ventilées
+                                  {fmtH(m.chargeMandatNonVentilee)}h non ventilées
                                 </p>
                                 <p className="text-xs" style={{ color: '#ADB5BD' }}>
-                                  {m.heuresReelles.toFixed(1)}h réalisées · {m.heuresPlanifieesMandat.toFixed(1)}h planifiées / {m.heuresBudgetees}h budgétées
+                                  {fmtH(m.heuresReelles)}h réalisées · {fmtH(m.heuresPlanifieesMandat)}h planifiées / {m.heuresBudgetees}h budgétées
                                 </p>
                               </div>
                             </div>
@@ -257,7 +261,7 @@ export default function CapacityPage() {
                             <div key={d.assignmentId || `${d.activityId}-${index}`} className="p-3 rounded text-xs flex flex-wrap justify-between gap-2"
                               style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
                               <span>{d.label} — {d.role || 'Activité legacy'} — {d.category === 'PENDING' ? 'en attente' : 'confirmée'}</span>
-                              <span>{d.durationHours.toFixed(1)} h{d.effectiveDate ? ` · ${new Date(d.effectiveDate).toLocaleDateString('fr-CA')}` : ''}</span>
+                              <span>{fmtH(d.durationHours)} h{d.effectiveDate ? ` · ${new Date(d.effectiveDate).toLocaleDateString('fr-CA')}` : ''}</span>
                             </div>
                           ))}
                         </div>

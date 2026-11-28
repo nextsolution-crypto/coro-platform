@@ -80,7 +80,7 @@ export default function OccupationPanel({
                 return (
                   <tr key={advisor.userId} className="border-t border-slate-100">
                     <td className="p-3 font-semibold text-slate-800">{advisor.userName}</td>
-                    <td className="p-3">{advisor.hours.toFixed(1)} h</td>
+                    <td className="p-3">{advisor.hours.toLocaleString("fr-CA", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} h</td>
                     <td className={`p-3 font-bold ${tone(rate)}`}>{rate === null ? "—" : `${rate} %`}</td>
                     <td className="p-3">{advisor.participatedMandates.length}</td>
                     {showActivities && <td className="p-3">{advisor.activities.length}</td>}

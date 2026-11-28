@@ -75,7 +75,7 @@ const ADMIN_GROUP = {
     { label: 'Équipe',               path: '/settings/users',               icon: '👤' },
     { label: 'Recommandations',      path: '/referrals',                    icon: '🎁' },
     { label: 'Portefeuille mandats', path: '/admin/mandates',               icon: '📁' },
-    { label: 'Capacity Planning',    path: '/admin/capacity',               icon: '⚡' },
+    { label: 'Capacité de l’équipe', path: '/admin/capacity',               icon: '⚡' },
     { label: 'Rendement équipe',      path: '/dashboard/rendement',          icon: '📊' },
     { label: 'Modèles de tâches',    path: '/settings/task-templates',      icon: '✅' },
     { label: 'Types d’activités',     path: '/settings/activity-types',      icon: '◆' },

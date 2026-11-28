@@ -1105,7 +1105,7 @@ export class PlanningService {
             groupId: booking.id,
             bookingId: booking.id,
             startUtc: interval.startUtc,
-            label: 'Aucun LEAD accepté',
+            label: 'Aucun responsable accepté',
             clientId: booking.project.clientId,
             buildingId: booking.project.buildingId,
             projectId: booking.projectId,
