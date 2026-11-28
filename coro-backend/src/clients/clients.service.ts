@@ -33,6 +33,52 @@ export class ClientsService {
     private invitationOutbox: ClientInvitationOutboxService,
   ) {}
 
+  // ── Équipe du client ──
+  async getTeam(clientId: string, organizationId: string) {
+    const client = await this.prisma.client.findFirst({ where: { id: clientId, organizationId }, select: { id: true } });
+    if (!client) throw new NotFoundException('Client introuvable');
+    const members = await this.prisma.clientTeamMember.findMany({
+      where: { clientId, organizationId },
+      select: { userId: true, user: { select: { firstName: true, lastName: true, email: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+    return members.map((member) => ({
+      userId: member.userId,
+      name: `${member.user.firstName} ${member.user.lastName}`.trim() || member.user.email,
+      email: member.user.email,
+    }));
+  }
+
+  async setTeam(clientId: string, userIds: unknown, actor: { userId: string; organizationId: string; role: string; planningCoordinator?: boolean }) {
+    if (!['ADMIN', 'SUPER_ADMIN'].includes(actor.role) && !actor.planningCoordinator)
+      throw new ForbiddenException('Réservé aux administrateurs et à la coordination de planification.');
+    if (!Array.isArray(userIds) || userIds.some((id) => typeof id !== 'string') || userIds.length > 50)
+      throw new BadRequestException('Liste de conseillers invalide.');
+    const ids = [...new Set(userIds as string[])];
+    const organizationId = actor.organizationId;
+    return this.prisma.$transaction(async (tx) => {
+      const client = await tx.client.findFirst({ where: { id: clientId, organizationId }, select: { id: true, name: true } });
+      if (!client) throw new NotFoundException('Client introuvable');
+      const advisors = await tx.user.count({
+        where: { id: { in: ids }, organizationId, isActive: true, role: { in: ['ADMIN', 'SUPER_ADMIN', 'OPERATOR'] } },
+      });
+      if (advisors !== ids.length) throw new BadRequestException('Un conseiller choisi est introuvable ou inactif.');
+      const before = await tx.clientTeamMember.findMany({ where: { clientId, organizationId }, select: { userId: true } });
+      await tx.clientTeamMember.deleteMany({ where: { clientId, organizationId, userId: { notIn: ids } } });
+      const existing = new Set(before.map((member) => member.userId));
+      const added = ids.filter((id) => !existing.has(id));
+      if (added.length)
+        await tx.clientTeamMember.createMany({
+          data: added.map((userId) => ({ clientId, userId, organizationId, createdById: actor.userId })),
+        });
+      await this.adminAudit.record(tx, {
+        actorUserId: actor.userId, action: 'CLIENT_TEAM_UPDATED', targetType: 'Client', targetId: clientId, organizationId,
+        beforeData: { userIds: before.map((member) => member.userId) } as any, afterData: { userIds: ids } as any,
+      });
+      return { clientId, userIds: ids };
+    });
+  }
+
   async findAll(organizationId: string) {
     return this.prisma.client.findMany({
       where: { isActive: true, organizationId },

@@ -14,7 +14,7 @@ const OPTIONS: Array<{ value: Visibility; title: string; help: string }> = [
   {
     value: 'RESTRICTED',
     title: 'Restreinte',
-    help: 'Un conseiller voit ses projets, ceux où il est affecté à une activité ou à une tâche, et les documents à approuver. Les administrateurs et la coordination voient tout.',
+    help: 'Un conseiller voit ses projets, ceux des clients dont il fait partie de l’équipe (fiche client), ceux où il est affecté à une activité ou à une tâche, et les documents à approuver. Les administrateurs et la coordination voient tout.',
   },
 ];
 

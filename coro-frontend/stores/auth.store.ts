@@ -11,6 +11,8 @@ interface User {
   organizationId?: string;
   displayPermissions?: string[];
   displayBuildingIds?: string[];
+  /** Droit « Coordination planification ». */
+  planningCoordinator?: boolean;
 }
 
 interface AuthState {

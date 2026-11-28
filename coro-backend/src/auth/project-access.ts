@@ -58,6 +58,8 @@ export function projectReadWhere(
 function restrictedMembership(actor: AdviserActor): Prisma.ProjectWhereInput[] {
   return [
     { userId: actor.userId },
+    // Équipe du client : accès à tous ses projets, y compris les futurs.
+    { client: { teamMembers: { some: { userId: actor.userId } } } },
     {
       activities: {
         some: {
