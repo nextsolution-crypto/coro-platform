@@ -1,4 +1,3 @@
-import { ForbiddenException } from '@nestjs/common';
 import { ActivitiesService } from '../activities/activities.service';
 import { ProjectsService } from './projects.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -31,10 +30,17 @@ describe('organization dashboard authorization scope', () => {
     );
   });
 
-  it('denies the approval aggregate to an operator before querying projects', async () => {
+  it('lists colleagues\' documents awaiting approval to an operator (peer review), never its own', async () => {
     const h = projectHarness();
-    await expect(h.service.findPendingApproval(operator)).rejects.toBeInstanceOf(ForbiddenException);
-    expect(h.prisma.project.findMany).not.toHaveBeenCalled();
+    await h.service.findPendingApproval(operator);
+    expect(h.prisma.project.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: 'REVIEW',
+          NOT: [{ submittedById: 'operator-a' }, { userId: 'operator-a' }],
+        }),
+      }),
+    );
   });
 
   it('keeps approvals in the administrator organization and excludes self-review', async () => {
@@ -45,7 +51,7 @@ describe('organization dashboard authorization scope', () => {
         where: {
           organizationId: 'org-a',
           status: 'REVIEW',
-          submittedById: { not: 'admin-a' },
+          NOT: [{ submittedById: 'admin-a' }, { userId: 'admin-a' }],
         },
       }),
     );
