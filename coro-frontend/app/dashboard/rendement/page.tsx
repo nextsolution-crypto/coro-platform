@@ -8,6 +8,7 @@ import { useAuthStore } from "@/stores/auth.store";
 import FinancialPanel, { type FinancialResponse } from "@/components/rendement/FinancialPanel";
 import OccupationPanel, { type OperationalAdvisor } from "@/components/rendement/OccupationPanel";
 import AdvisorProfitabilityPanel from "@/components/rendement/AdvisorProfitabilityPanel";
+import MonthlyRendementPanel from "@/components/rendement/MonthlyRendementPanel";
 
 // Repères conservés pour le contrat : formatFinancialAmount, financialCurrencyLabel,
 // « Mandats incomplets » et « main-d’œuvre connue » sont rendus par FinancialPanel.
@@ -89,6 +90,8 @@ export default function RendementPage() {
           <input className="mt-1 block w-full rounded border border-slate-300 p-2" type="date" value={to} onChange={(event) => setTo(event.target.value)} />
         </label>
       </section>
+
+      <MonthlyRendementPanel />
 
       {advisors && <OccupationPanel advisors={advisors} from={from} to={to} />}
 

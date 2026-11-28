@@ -13,7 +13,7 @@ export type ManualArticle = {
   route: string;
   sourceRefs: string[];
 };
-export const MANUAL_VERSION = '2026-11-28.6';
+export const MANUAL_VERSION = '2026-11-28.7';
 const both: ManualAudience[] = ['INTERNAL', 'CLIENT'];
 const internal: ManualAudience[] = ['INTERNAL'];
 const client: ManualAudience[] = ['CLIENT'];
@@ -1816,6 +1816,7 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     'Comparer, par conseiller et par mandat, la valeur produite ou le montant vendu au coût de main-d’œuvre connu.',
     [
       'Ouvrez Administration puis Rendement équipe.',
+      'Suivi mensuel et objectif annuel : choisissez l’année, définissez l’objectif annuel de valeur produite de l’équipe (et, au besoin, de chaque conseiller), puis suivez mois par mois les heures, la valeur produite, le coût, la marge et le cumul. La barre de progression indique l’avance ou le retard sur le rythme prévu (objectif ÷ 12 par mois). Un mois « provisoire » touche un mandat non terminé.',
       'Le tableau Rentabilité par conseiller donne pour chacun : heures sur mandats, coût connu (heures × taux interne), valeur produite (montant vendu validé × ses heures ÷ le plus grand de : heures budgétées ou heures saisies sur le mandat), marge et valeur par heure. Cliquez sur un conseiller pour voir ses mandats.',
       'Lisez les indicateurs : montant vendu validé, coût de main-d’œuvre connu, marge des mandats complets, mandats déficitaires et mandats incomplets.',
       'Le tableau Rentabilité cumulative par mandat donne, par client et mandat, le vendu, le coût connu, la marge et la complétude des données.',

@@ -54,3 +54,15 @@ export class ValidateMandateSaleDto {
   @Transform(trim) @IsString() @IsNotEmpty() @MaxLength(1000) reason!: string;
   @IsInt() @Min(0) lockVersion!: number;
 }
+
+export class RendementMonthlyQueryDto {
+  @Transform(({ value }) => (value === undefined ? undefined : Number(value)))
+  @IsOptional() @IsInt() @Min(2000) year?: number;
+}
+
+export class SetRendementObjectiveDto {
+  @IsInt() @Min(2000) year!: number;
+  @IsOptional() @IsString() userId?: string | null;
+  /** Montant en dollars ; vide ou null retire l'objectif. */
+  @IsOptional() @Transform(trim) @Matches(/^\d+(\.\d{1,2})?$/) valueTarget?: string | null;
+}

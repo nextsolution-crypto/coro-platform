@@ -7,6 +7,7 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
 import FinancialPanel, { type FinancialResponse } from "@/components/rendement/FinancialPanel";
 import AdvisorProfitabilityPanel from "@/components/rendement/AdvisorProfitabilityPanel";
+import MonthlyRendementPanel from "@/components/rendement/MonthlyRendementPanel";
 import { occupation, workdaysBetween } from "@/components/rendement/OccupationPanel";
 
 type OperationalResponse = {
@@ -220,6 +221,10 @@ export default function MonRendementPage() {
           </section>
         </>
       )}
+
+      <div className="mt-8">
+        <MonthlyRendementPanel />
+      </div>
 
       {financial && financial.mandates.length > 0 && (
         <div className="mt-8">

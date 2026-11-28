@@ -15,7 +15,9 @@ import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 import { RendementFinancialService } from './rendement-financial.service';
 import {
   FinancialRendementQueryDto,
+  RendementMonthlyQueryDto,
   RendementPeriodQueryDto,
+  SetRendementObjectiveDto,
   ValidateMandateSaleDto,
 } from './rendement.dto';
 
@@ -58,6 +60,24 @@ export class RendementController {
   ) {
     requireInternal(req.user);
     return this.financial.financial(req.user, query);
+  }
+
+  @Get('monthly')
+  getMonthly(
+    @Query() query: RendementMonthlyQueryDto,
+    @Request() req: { user: WorkManagementActor },
+  ) {
+    requireInternal(req.user);
+    return this.financial.monthly(req.user, query);
+  }
+
+  @Put('objectives')
+  setObjective(
+    @Body() dto: SetRendementObjectiveDto,
+    @Request() req: { user: WorkManagementActor },
+  ) {
+    requireInternal(req.user);
+    return this.financial.setObjective(req.user, dto);
   }
 
   @Put('financial/mandates/:mandateId/sale')
