@@ -6,6 +6,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import api from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
 import FinancialPanel, { type FinancialResponse } from "@/components/rendement/FinancialPanel";
+import AdvisorProfitabilityPanel from "@/components/rendement/AdvisorProfitabilityPanel";
 import { occupation, workdaysBetween } from "@/components/rendement/OccupationPanel";
 
 type OperationalResponse = {
@@ -225,6 +226,9 @@ export default function MonRendementPage() {
           <h2 className="mb-3 text-lg font-black text-slate-800">
             Rentabilité de mes mandats
           </h2>
+          {financial.advisors && financial.advisors.length > 0 && (
+            <AdvisorProfitabilityPanel advisors={financial.advisors} />
+          )}
           <FinancialPanel data={financial} />
         </div>
       )}

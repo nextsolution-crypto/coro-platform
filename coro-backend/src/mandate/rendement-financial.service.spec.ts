@@ -48,10 +48,22 @@ describe('RendementFinancialService', () => {
     projectMandate: { findMany: jest.fn() },
     advisorInternalCostRate: { findMany: jest.fn() },
     taskTimeEntry: { findMany: jest.fn() },
+    user: {
+      findMany: jest.fn().mockResolvedValue([
+        { id: 'advisor-a', firstName: 'Alex', lastName: 'A' },
+        { id: 'advisor-b', firstName: 'Béa', lastName: 'B' },
+      ]),
+    },
   } as any;
   const service = new RendementFinancialService(prisma, authority as never);
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    prisma.user.findMany.mockResolvedValue([
+      { id: 'advisor-a', firstName: 'Alex', lastName: 'A' },
+      { id: 'advisor-b', firstName: 'Béa', lastName: 'B' },
+    ]);
+  });
 
   it.each(['USD', 'EUR', 'GBP', 'CHF', 'ZZZ', null])(
     'rejects unsupported new mandate sale currency %p before database access',
@@ -113,6 +125,51 @@ describe('RendementFinancialService', () => {
         contributionMargin: '7200.00',
         contributionMarginPercent: '72.00',
         totalTimeEntries: 2,
+      }),
+    );
+    // Rentabilité par conseiller : valeur au prorata des heures (base 30 h).
+    expect(result.advisors).toEqual([
+      expect.objectContaining({
+        userId: 'advisor-b',
+        userName: 'Béa B',
+        hours: 20,
+        knownLaborCost: '2000.00',
+        producedValue: '6666.67',
+        contributionMargin: '4666.67',
+        completeness: 'COMPLETE',
+      }),
+      expect.objectContaining({
+        userId: 'advisor-a',
+        hours: 10,
+        knownLaborCost: '800.00',
+        producedValue: '3333.33',
+        contributionMargin: '2533.33',
+        valuePerHour: '333.33',
+      }),
+    ]);
+  });
+
+  it('attributes only the realized share of a mandate still under its budgeted hours', async () => {
+    prisma.projectMandate.findMany.mockResolvedValue([mandate({ heuresBudgetees: 60 })]);
+    prisma.advisorInternalCostRate.findMany.mockResolvedValue([
+      {
+        userId: 'advisor-a',
+        currency: 'CAD',
+        hourlyCost: new Prisma.Decimal('80'),
+        effectiveFrom: new Date('2026-01-01'),
+        effectiveUntil: null,
+        supersededEffectiveAt: null,
+      },
+    ]);
+    const result = await service.financial(actor(), { view: 'cumulative' });
+    const a = result.advisors.find((advisor: any) => advisor.userId === 'advisor-a');
+    const b = result.advisors.find((advisor: any) => advisor.userId === 'advisor-b');
+    expect(a).toEqual(expect.objectContaining({ producedValue: '1666.67', completeness: 'COMPLETE' }));
+    expect(b).toEqual(
+      expect.objectContaining({
+        completeness: 'INCOMPLETE',
+        contributionMargin: null,
+        incompleteReasons: ['MISSING_ADVISOR_COST_RATE'],
       }),
     );
   });

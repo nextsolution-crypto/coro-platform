@@ -7,6 +7,7 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
 import FinancialPanel, { type FinancialResponse } from "@/components/rendement/FinancialPanel";
 import OccupationPanel, { type OperationalAdvisor } from "@/components/rendement/OccupationPanel";
+import AdvisorProfitabilityPanel from "@/components/rendement/AdvisorProfitabilityPanel";
 
 // Repères conservés pour le contrat : formatFinancialAmount, financialCurrencyLabel,
 // « Mandats incomplets » et « main-d’œuvre connue » sont rendus par FinancialPanel.
@@ -69,8 +70,8 @@ export default function RendementPage() {
         <p className="mb-1 text-xs font-bold uppercase tracking-widest text-slate-500">Direction</p>
         <h1 className="text-2xl font-black text-slate-800">Rendement et rentabilité de l’équipe</h1>
         <p className="mt-2 max-w-3xl text-sm text-slate-600">
-          Occupation de chaque conseiller sur la période choisie, et rentabilité cumulative de chaque
-          mandat. Les coûts couvrent uniquement la main-d’œuvre connue; un mandat incomplet ne produit
+          Occupation de chaque conseiller sur la période choisie, rentabilité cumulative de chaque
+          conseiller et de chaque mandat. Les coûts couvrent uniquement la main-d’œuvre connue; un mandat incomplet ne produit
           pas de marge présentée comme certaine.
         </p>
       </header>
@@ -97,6 +98,7 @@ export default function RendementPage() {
           {error}
         </p>
       )}
+      {!loading && !error && data?.advisors && <AdvisorProfitabilityPanel advisors={data.advisors} />}
       {!loading && !error && data && <FinancialPanel data={data} />}
     </AppLayout>
   );

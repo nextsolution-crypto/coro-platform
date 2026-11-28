@@ -9,6 +9,8 @@ import api from "@/lib/api";
 import AppLayout from "@/components/layout/AppLayout";
 import WorkScheduleEditorPanel from "@/components/WorkScheduleEditorPanel";
 import InfoTip from '@/components/ui/InfoTip';
+import { confirmAction, promptAction } from '@/lib/confirm-dialog';
+import { toast } from '@/lib/toast';
 
 interface TeamUser {
   id: string;
@@ -236,22 +238,21 @@ export default function TeamUsersPage() {
   };
 
   const handleResendInvite = async (u: TeamUser) => {
-    if (
-      !confirm(
-        `Créer un nouveau lien d'activation pour ${u.firstName} ${u.lastName} ? L'accès actuel ne sera pas modifié tant que le lien n'est pas utilisé.`,
-      )
-    )
-      return;
+    const confirmed = await confirmAction({
+      title: "Renvoyer l’invitation",
+      message: `Créer un nouveau lien d’activation pour ${u.firstName} ${u.lastName} ? L’accès actuel ne sera pas modifié tant que le lien n’est pas utilisé.`,
+      confirmLabel: "Renvoyer",
+      danger: false,
+    });
+    if (!confirmed) return;
     try {
       await api.post(`/users/organization/${u.id}/resend-invite`, {
         requestId: crypto.randomUUID(),
       });
-      alert(
-        `Invitation enregistrée pour ${u.email}. L'envoi est en attente de traitement.`,
-      );
+      toast(`Invitation enregistrée pour ${u.email}. L’envoi est en attente de traitement.`, "success");
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
-      alert(err.response?.data?.message || "Erreur lors de l'envoi.");
+      toast(err.response?.data?.message || "Erreur lors de l’envoi.", "error");
     }
   };
 
@@ -264,20 +265,24 @@ export default function TeamUsersPage() {
         axios.isAxiosError(err) && typeof err.response?.data?.message === "string"
           ? err.response.data.message
           : "Impossible de modifier ce droit.";
-      window.alert(message);
+      toast(message, "error");
     }
   };
 
   const handleToggleActive = async (userId: string, isActive: boolean) => {
     let reason: string | undefined;
     if (!isActive) {
-      const enteredReason = window.prompt(
-        "Indiquez le motif de la désactivation. Ce motif sera conservé dans le journal d’audit.",
-      );
+      const enteredReason = await promptAction({
+        title: "Désactiver le membre",
+        message: "Indiquez le motif de la désactivation. Ce motif sera conservé dans le journal d’audit.",
+        label: "Motif",
+        confirmLabel: "Désactiver",
+        required: true,
+      });
       if (enteredReason === null) return;
       reason = enteredReason.trim();
       if (!reason) {
-        window.alert("Un motif est requis pour désactiver un membre.");
+        toast("Un motif est requis pour désactiver un membre.", "error");
         return;
       }
     }
@@ -295,7 +300,7 @@ export default function TeamUsersPage() {
         typeof err.response?.data?.message === "string"
           ? err.response.data.message
           : "Impossible de modifier le statut du membre.";
-      window.alert(message);
+      toast(message, "error");
     }
   };
 
@@ -342,16 +347,19 @@ export default function TeamUsersPage() {
         <select
           className="border rounded p-2 w-full sm:w-auto"
           value={planningUserId}
-          onChange={(e) => {
+          onChange={async (e) => {
+            const nextUserId = e.target.value;
             if (
               scheduleDirty &&
-              !confirm(
-                "Des modifications de l’horaire ne sont pas enregistrées. Changer de conseiller?",
-              )
+              !(await confirmAction({
+                title: "Modifications non enregistrées",
+                message: "Des modifications de l’horaire ne sont pas enregistrées. Changer de conseiller ?",
+                confirmLabel: "Changer",
+              }))
             )
               return;
             setScheduleDirty(false);
-            setPlanningUserId(e.target.value);
+            setPlanningUserId(nextUserId);
           }}
         >
           <option value="">Choisir un membre</option>
