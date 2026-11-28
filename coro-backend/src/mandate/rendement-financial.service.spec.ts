@@ -48,6 +48,7 @@ describe('RendementFinancialService', () => {
     projectMandate: { findMany: jest.fn() },
     advisorInternalCostRate: { findMany: jest.fn() },
     taskTimeEntry: { findMany: jest.fn() },
+    rendementObjective: { findMany: jest.fn().mockResolvedValue([]) },
     user: {
       findMany: jest.fn().mockResolvedValue([
         { id: 'advisor-a', firstName: 'Alex', lastName: 'A' },
@@ -59,6 +60,7 @@ describe('RendementFinancialService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    prisma.rendementObjective.findMany.mockResolvedValue([]);
     prisma.user.findMany.mockResolvedValue([
       { id: 'advisor-a', firstName: 'Alex', lastName: 'A' },
       { id: 'advisor-b', firstName: 'Béa', lastName: 'B' },
@@ -147,6 +149,39 @@ describe('RendementFinancialService', () => {
         valuePerHour: '333.33',
       }),
     ]);
+  });
+
+  it('builds the monthly view with the team objective and provisional months', async () => {
+    prisma.projectMandate.findMany.mockResolvedValue([
+      {
+        ...mandate(),
+        heuresBudgetees: null,
+        project: { ...mandate().project, status: 'IN_PROGRESS' },
+      },
+    ]);
+    prisma.advisorInternalCostRate.findMany.mockResolvedValue([
+      { userId: 'advisor-a', currency: 'CAD', hourlyCost: new Prisma.Decimal('80'), effectiveFrom: new Date('2026-01-01'), effectiveUntil: null, supersededEffectiveAt: null },
+      { userId: 'advisor-b', currency: 'CAD', hourlyCost: new Prisma.Decimal('100'), effectiveFrom: new Date('2026-01-01'), effectiveUntil: null, supersededEffectiveAt: null },
+    ]);
+    prisma.rendementObjective.findMany.mockResolvedValue([
+      { userId: null, valueTarget: new Prisma.Decimal('120000') },
+    ]);
+    const result = await service.monthly(actor(), { year: 2026 });
+    expect(result.team?.objective).toBe('120000.00');
+    expect(result.team?.months[1]).toEqual(
+      expect.objectContaining({ month: 2, hours: 30, producedValue: '10000.00', knownLaborCost: '2800.00', provisional: true }),
+    );
+    expect(result.team?.totals.producedValue).toBe('10000.00');
+    expect(result.advisors.map((a: any) => a.userId)).toEqual(['advisor-b', 'advisor-a']);
+  });
+
+  it('limits the monthly view of an advisor to their own hours', async () => {
+    prisma.projectMandate.findMany.mockResolvedValue([mandate()]);
+    prisma.advisorInternalCostRate.findMany.mockResolvedValue([]);
+    const result = await service.monthly({ userId: 'advisor-a', organizationId: 'org-a', role: 'OPERATOR' }, { year: 2026 });
+    expect(result.team).toBeNull();
+    expect(result.advisors.map((a: any) => a.userId)).toEqual(['advisor-a']);
+    expect(result.advisors[0].totals.hours).toBe(10);
   });
 
   it('attributes only the realized share of a mandate still under its budgeted hours', async () => {

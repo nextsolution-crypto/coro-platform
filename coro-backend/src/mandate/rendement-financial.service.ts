@@ -11,9 +11,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { governedCurrency } from '../common/financial-currency';
 import {
   FinancialRendementQueryDto,
+  RendementMonthlyQueryDto,
   RendementPeriodQueryDto,
+  SetRendementObjectiveDto,
   ValidateMandateSaleDto,
 } from './rendement.dto';
+import { GOVERNED_CURRENCY } from '../common/financial-currency';
 import {
   assertCivilDate,
   civilDateInToronto,
@@ -646,6 +649,208 @@ export class RendementFinancialService {
         };
       })
       .sort((a, b) => b.hours - a.hours);
+  }
+
+  /**
+   * Suivi mensuel d'une année : heures, coût connu, valeur produite et marge
+   * par mois, pour l'équipe et chaque conseiller, avec l'objectif annuel.
+   * Valeur produite d'un mois = vendu validé × heures du mois ÷ max(heures
+   * budgétées, heures totales du mandat). Un mois qui touche un mandat non
+   * terminé est « provisoire » : sa valeur peut encore baisser si le mandat
+   * dépasse son budget d'heures.
+   */
+  async monthly(actor: FinancialActor, query: RendementMonthlyQueryDto) {
+    const organizationId = actor.organizationId;
+    const team = ['ADMIN', 'SUPER_ADMIN'].includes(actor.role);
+    const year = query.year ?? Number(civilDateInToronto(new Date()).slice(0, 4));
+    const currency = GOVERNED_CURRENCY;
+    const mandates = await this.prisma.projectMandate.findMany({
+      where: {
+        organizationId,
+        ...(team
+          ? {}
+          : { project: { projectTasks: { some: { timeEntries: { some: { userId: actor.userId } } } } } }),
+      },
+      select: {
+        soldAmountDecimal: true,
+        soldCurrency: true,
+        soldAt: true,
+        soldValidatedAt: true,
+        heuresBudgetees: true,
+        project: {
+          select: {
+            status: true,
+            projectTasks: { select: { timeEntries: { select: { userId: true, date: true, heures: true } } } },
+          },
+        },
+      },
+    });
+    const allEntries = mandates.flatMap((m) => m.project.projectTasks.flatMap((t) => t.timeEntries));
+    const userIds = [...new Set(allEntries.map((e) => e.userId))];
+    const rates = userIds.length
+      ? await this.prisma.advisorInternalCostRate.findMany({
+          where: { organizationId, userId: { in: userIds }, currency, status: { in: ['APPROVED', 'SUPERSEDED'] } },
+          orderBy: { effectiveFrom: 'asc' },
+        })
+      : [];
+    type Cell = {
+      hours: number;
+      cost: Prisma.Decimal;
+      value: Prisma.Decimal;
+      provisional: boolean;
+      costPartial: boolean;
+      valuePartial: boolean;
+    };
+    const blank = (): Cell => ({
+      hours: 0,
+      cost: new Prisma.Decimal(0),
+      value: new Prisma.Decimal(0),
+      provisional: false,
+      costPartial: false,
+      valuePartial: false,
+    });
+    const byUser = new Map<string, Cell[]>();
+    const prefix = `${year}-`;
+    for (const mandate of mandates) {
+      const entries = mandate.project.projectTasks.flatMap((t) => t.timeEntries);
+      if (!entries.length) continue;
+      const totalHours = entries.reduce((sum, e) => sum + e.heures, 0);
+      const basis = Math.max(mandate.heuresBudgetees ?? 0, totalHours);
+      const sold = mandate.soldAmountDecimal;
+      const saleValid = Boolean(
+        sold && mandate.soldCurrency === currency && mandate.soldAt && mandate.soldValidatedAt,
+      );
+      const finished = ['VALIDATED', 'EXPORTED', 'ARCHIVED'].includes(mandate.project.status);
+      for (const entry of entries) {
+        if (!team && entry.userId !== actor.userId) continue;
+        const workDate = civilDateInToronto(entry.date);
+        if (!workDate.startsWith(prefix)) continue;
+        const month = Number(workDate.slice(5, 7)) - 1;
+        const cells = byUser.get(entry.userId) ?? Array.from({ length: 12 }, blank);
+        const cell = cells[month];
+        cell.hours = round2(cell.hours + entry.heures);
+        const rate = rates.find((candidate) => {
+          const rateEnd = this.rateEnd(candidate);
+          return (
+            candidate.userId === entry.userId &&
+            this.civilValue(candidate.effectiveFrom) <= workDate &&
+            (!rateEnd || workDate < rateEnd)
+          );
+        });
+        if (rate) cell.cost = cell.cost.plus(new Prisma.Decimal(String(entry.heures)).times(rate.hourlyCost));
+        else cell.costPartial = true;
+        if (saleValid && sold && basis > 0) {
+          cell.value = cell.value.plus(
+            sold.times(new Prisma.Decimal(String(entry.heures))).dividedBy(new Prisma.Decimal(String(basis))),
+          );
+          if (!finished) cell.provisional = true;
+        } else cell.valuePartial = true;
+        byUser.set(entry.userId, cells);
+      }
+    }
+    const objectives = await this.prisma.rendementObjective.findMany({
+      where: { organizationId, year, ...(team ? {} : { OR: [{ userId: actor.userId }, { userId: null }] }) },
+    });
+    const users = byUser.size || objectives.length
+      ? await this.prisma.user.findMany({
+          where: {
+            organizationId,
+            id: { in: [...new Set([...byUser.keys(), ...objectives.map((o) => o.userId).filter((id): id is string => Boolean(id))])] },
+          },
+          select: { id: true, firstName: true, lastName: true },
+        })
+      : [];
+    const names = new Map(users.map((u) => [u.id, `${u.firstName} ${u.lastName}`]));
+    const objectiveFor = (userId: string | null) => {
+      const found = objectives.find((o) => (o.userId ?? null) === userId);
+      return found ? this.money(found.valueTarget) : null;
+    };
+    const serialize = (cells: Cell[]) => {
+      let cumulative = new Prisma.Decimal(0);
+      const months = cells.map((cell, index) => {
+        cumulative = cumulative.plus(cell.value);
+        return {
+          month: index + 1,
+          hours: cell.hours,
+          knownLaborCost: this.money(cell.cost),
+          producedValue: this.money(cell.value),
+          contributionMargin: this.money(cell.value.minus(cell.cost)),
+          cumulativeValue: this.money(cumulative),
+          provisional: cell.provisional,
+          costPartial: cell.costPartial,
+          valuePartial: cell.valuePartial,
+        };
+      });
+      const totalCost = cells.reduce((sum, c) => sum.plus(c.cost), new Prisma.Decimal(0));
+      return {
+        months,
+        totals: {
+          hours: round2(cells.reduce((sum, c) => sum + c.hours, 0)),
+          knownLaborCost: this.money(totalCost),
+          producedValue: this.money(cumulative),
+          contributionMargin: this.money(cumulative.minus(totalCost)),
+        },
+      };
+    };
+    const advisorIds = new Set<string>([...byUser.keys()]);
+    if (team) for (const o of objectives) if (o.userId) advisorIds.add(o.userId);
+    const advisors = [...advisorIds]
+      .map((userId) => ({
+        userId,
+        userName: names.get(userId) ?? 'Conseiller',
+        objective: objectiveFor(userId),
+        ...serialize(byUser.get(userId) ?? Array.from({ length: 12 }, blank)),
+      }))
+      .sort((a, b) => Number(b.totals.producedValue) - Number(a.totals.producedValue));
+    const teamCells = Array.from({ length: 12 }, blank);
+    if (team)
+      for (const cells of byUser.values())
+        cells.forEach((cell, index) => {
+          const t = teamCells[index];
+          t.hours = round2(t.hours + cell.hours);
+          t.cost = t.cost.plus(cell.cost);
+          t.value = t.value.plus(cell.value);
+          t.provisional ||= cell.provisional;
+          t.costPartial ||= cell.costPartial;
+          t.valuePartial ||= cell.valuePartial;
+        });
+    return {
+      year,
+      currency,
+      scope: team ? 'ORGANIZATION' : 'ADVISOR',
+      team: team ? { objective: objectiveFor(null), ...serialize(teamCells) } : null,
+      advisors,
+    };
+  }
+
+  /** Objectif annuel de valeur produite : équipe (sans userId) ou conseiller. */
+  async setObjective(actor: FinancialActor, dto: SetRendementObjectiveDto) {
+    if (!['ADMIN', 'SUPER_ADMIN'].includes(actor.role))
+      throw new ForbiddenException('Réservé aux administrateurs de l’organisation.');
+    const organizationId = actor.organizationId;
+    const userId = dto.userId || null;
+    if (userId) {
+      const member = await this.prisma.user.findFirst({ where: { id: userId, organizationId }, select: { id: true } });
+      if (!member) throw new NotFoundException('Conseiller introuvable');
+    }
+    const existing = await this.prisma.rendementObjective.findFirst({
+      where: { organizationId, year: dto.year, userId },
+      select: { id: true },
+    });
+    if (!dto.valueTarget) {
+      if (existing) await this.prisma.rendementObjective.delete({ where: { id: existing.id } });
+      return { year: dto.year, userId, valueTarget: null };
+    }
+    const valueTarget = new Prisma.Decimal(dto.valueTarget);
+    const saved = existing
+      ? await this.prisma.rendementObjective.update({
+          where: { id: existing.id },
+          data: { valueTarget, updatedById: actor.userId },
+        })
+      : await this.prisma.rendementObjective.create({
+          data: { organizationId, year: dto.year, userId, valueTarget, currency: GOVERNED_CURRENCY, updatedById: actor.userId },
+        });
+    return { year: saved.year, userId: saved.userId, valueTarget: this.money(saved.valueTarget) };
   }
 
   private civilRange(from?: string, to?: string) {

@@ -11,6 +11,7 @@ datasource db {
 }
 
 model Organization {
+  rendementObjectives    RendementObjective[]
   trainingQuestionnaires TrainingQuestionnaire[]
   id                     String                  @id @default(uuid())
   name                   String
@@ -11171,4 +11172,20 @@ model TrainingQuestionnaireResponse {
   submittedAt     DateTime                     @default(now())
 
   @@index([sessionId])
+}
+
+// Objectif annuel de valeur produite : équipe (userId NULL) ou conseiller.
+model RendementObjective {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  year           Int
+  userId         String?
+  valueTarget    Decimal      @db.Decimal(20, 2)
+  currency       String       @default("CAD") @db.Char(3)
+  updatedById    String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId, year])
 }
