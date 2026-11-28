@@ -13,7 +13,7 @@ export type ManualArticle = {
   route: string;
   sourceRefs: string[];
 };
-export const MANUAL_VERSION = '2026-11-28.3';
+export const MANUAL_VERSION = '2026-11-28.4';
 const both: ManualAudience[] = ['INTERNAL', 'CLIENT'];
 const internal: ManualAudience[] = ['INTERNAL'];
 const client: ManualAudience[] = ['CLIENT'];
@@ -1740,7 +1740,7 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     ['équipe', 'membre', 'utilisateur', 'invitation', 'inviter', 'rôle', 'administrateur', 'opérateur', 'désactiver', 'licence', 'display', 'horaire'],
     'Inviter un conseiller, choisir son rôle, renvoyer une invitation ou désactiver un compte.',
     [
-      'Ouvrez Administration puis Équipe, et utilisez + Ajouter un membre : prénom, nom, courriel et rôle (Opérateur ou Administrateur).',
+      'Ouvrez Administration puis Équipe, et utilisez + Ajouter un membre : prénom, nom, courriel et rôle (Conseiller ou Administrateur).',
       'Une invitation sécurisée est envoyée. Le membre choisit lui-même son mot de passe depuis un lien temporaire. Utilisez Renvoyer si le lien a expiré.',
       'Pour retirer un accès, désactivez le membre : un motif est obligatoire.',
       'Pour CORO Display, utilisez Configurer Display : choisissez le profil (créateur et mise à jour, ou réviseur et approbateur), les bâtiments autorisés et une justification d’au moins 10 caractères.',

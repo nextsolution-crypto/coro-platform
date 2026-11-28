@@ -31,14 +31,14 @@ interface BuildingOption {
 
 const displayPermissionOptions = [
   ["DISPLAY_READ", "Ouvrir CORO Display"],
-  ["DISPLAY_DEVICE_MANAGE", "Gerer les ecrans et activations"],
-  ["DISPLAY_CONTENT_MANAGE", "Gerer les contenus"],
+  ["DISPLAY_DEVICE_MANAGE", "Gérer les écrans et activations"],
+  ["DISPLAY_CONTENT_MANAGE", "Gérer les contenus"],
   ["DISPLAY_PLAN_READ", "Consulter les plans"],
-  ["DISPLAY_PLAN_CREATE", "Creer une publication"],
-  ["DISPLAY_PLAN_REVIEW", "Reviser une publication"],
+  ["DISPLAY_PLAN_CREATE", "Créer une publication"],
+  ["DISPLAY_PLAN_REVIEW", "Réviser une publication"],
   ["DISPLAY_PLAN_APPROVE", "Approuver une publication"],
-  ["DISPLAY_PLAN_PUBLISH", "Publier une version approuvÃ©e"],
-  ["DISPLAY_PLAN_REVOKE", "Revoquer une publication"],
+  ["DISPLAY_PLAN_PUBLISH", "Publier une version approuvée"],
+  ["DISPLAY_PLAN_REVOKE", "Révoquer une publication"],
   ["DISPLAY_AUDIT_READ", "Consulter le journal Display"],
 ] as const;
 
@@ -78,7 +78,7 @@ const displayWorkflowPermissions = new Set<string>(
 const roleLabels: Record<string, string> = {
   SUPER_ADMIN: "Super-admin",
   ADMIN: "Administrateur",
-  OPERATOR: "Opérateur",
+  OPERATOR: "Conseiller",
 };
 
 export default function TeamUsersPage() {
@@ -204,7 +204,7 @@ export default function TeamUsersPage() {
     if (!displayUser || savingDisplay) return;
     if (displayReason.trim().length < 10) {
       setError(
-        "La justification Display doit contenir au moins 10 caracteres.",
+        "La justification Display doit contenir au moins 10 caractères.",
       );
       return;
     }
@@ -228,7 +228,7 @@ export default function TeamUsersPage() {
       const candidate = err as { response?: { data?: { message?: string } } };
       setError(
         candidate.response?.data?.message ||
-          "Impossible de modifier les autorites Display.",
+          "Impossible de modifier les autorités Display.",
       );
     } finally {
       setSavingDisplay(false);
@@ -515,7 +515,7 @@ export default function TeamUsersPage() {
               onClick={() => openDisplayAuthority(u)}
               className="mt-3 min-h-11 w-full rounded border border-indigo-200 px-3 py-2 text-sm font-medium text-indigo-800"
             >
-              Configurer Display
+              Accès CORO Display
             </button>
           </div>
         ))}
@@ -610,7 +610,7 @@ export default function TeamUsersPage() {
                     className="mr-2 text-xs font-medium px-3 py-1.5 rounded transition-colors whitespace-nowrap"
                     style={{ border: "1px solid #B8C4FF", color: "#3446A8" }}
                   >
-                    Configurer Display
+                    Accès CORO Display
                   </button>
                   {u.id !== user?.id && (
                     <div className="flex items-center justify-end gap-2">
@@ -765,7 +765,7 @@ export default function TeamUsersPage() {
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={{ border: "1px solid #CED4DA", color: "#2C3E50" }}
                 >
-                  <option value="OPERATOR">Opérateur</option>
+                  <option value="OPERATOR">Conseiller</option>
                   <option value="ADMIN">Administrateur</option>
                 </select>
               </div>
@@ -813,14 +813,14 @@ export default function TeamUsersPage() {
             <p className="mt-2 text-sm text-slate-600">
               L’accès exige au minimum <strong>Ouvrir CORO Display</strong> et
               une affectation explicite à un bâtiment. Les droits d’urgence ne
-              sont pas delegables ici.
+              sont pas délégables ici.
             </p>
             {displayUser.id === user?.id && (
               <p
                 className="mt-3 rounded bg-amber-50 p-3 text-sm text-amber-900"
                 role="status"
               >
-                La modification de vos propres autorites fermera votre session.
+                La modification de vos propres autorités fermera votre session.
                 Reconnectez-vous pour charger les nouveaux droits.
               </p>
             )}
@@ -958,7 +958,7 @@ export default function TeamUsersPage() {
               >
                 {savingDisplay
                   ? "Validation serveur..."
-                  : "Enregistrer les autorites Display"}
+                  : "Enregistrer les autorités Display"}
               </button>
             </div>
           </div>

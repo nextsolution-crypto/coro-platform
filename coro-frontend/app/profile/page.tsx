@@ -183,8 +183,8 @@ export default function ProfilePage() {
             </label>
             <div className="flex flex-col sm:flex-row gap-3">
               {[
-                { value: 37.5, label: '37.5h / semaine', desc: 'Horaire réduit' },
-                { value: 40, label: '40h / semaine', desc: 'Temps plein' },
+                { value: 37.5, label: '37,5 h / semaine', desc: 'Horaire réduit' },
+                { value: 40, label: '40 h / semaine', desc: 'Temps plein' },
               ].map(opt => (
                 <button key={opt.value}
                   onClick={() => setForm({ ...form, horaireBase: opt.value })}
