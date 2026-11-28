@@ -11,6 +11,7 @@ import ActivityTasksSection from '@/app/planning/ActivityTasksSection';
 import { formatCivilDate } from '@/app/planning/time';
 import { downloadActivityIcs } from '@/lib/download-ics';
 import InfoTip from '@/components/ui/InfoTip';
+import TrainingQuestionnaireModal from '@/components/TrainingQuestionnaireModal';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   a_faire:  { label: 'À faire',  color: '#2980B9', bg: '#EBF5FB' },
@@ -65,6 +66,7 @@ export default function ActivitiesPage() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [reportModal, setReportModal] = useState<any>(null);
+  const [questionnaireActivity, setQuestionnaireActivity] = useState<{ id: string; label: string } | null>(null);
   const [duplicating, setDuplicating] = useState(false);
 
   const [form, setForm] = useState({
@@ -364,6 +366,11 @@ export default function ActivitiesPage() {
                           {activity.exerciseReport ? 'Rapport d’exercice' : 'Créer le rapport'}
                         </button>
                       )}
+                      {String(activity.type || '').startsWith('formation') && (
+                        <button onClick={() => setQuestionnaireActivity({ id: activity.id, label })} className="px-3 py-2 rounded text-xs font-bold" style={{ color: '#6C3483', border: '1px solid #D2B4DE' }}>
+                          Questionnaire QR
+                        </button>
+                      )}
                       <button onClick={() => handleDelete(activity.id)}
                         className="p-1.5 rounded transition-colors"
                         style={{ color: '#C0392B', border: '1px solid #F1948A' }}
@@ -558,6 +565,13 @@ export default function ActivitiesPage() {
         </div>
       )}
 
+      {questionnaireActivity && (
+        <TrainingQuestionnaireModal
+          activityId={questionnaireActivity.id}
+          activityLabel={questionnaireActivity.label}
+          onClose={() => setQuestionnaireActivity(null)}
+        />
+      )}
     </div>
   );
 }

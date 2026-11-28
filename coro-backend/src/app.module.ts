@@ -50,6 +50,7 @@ import { ReferralsModule } from './referrals/referrals.module';
 import { PopulationModule } from './population/population.module';
 import { OperationalReviewsModule } from './operational-reviews/operational-reviews.module';
 import { ExerciseReportsModule } from './exercise-reports/exercise-reports.module';
+import { TrainingQuestionnairesModule } from './training-questionnaires/training-questionnaires.module';
 import { WorkSchedulesModule } from './work-schedules/work-schedules.module';
 import { PlanningModule } from './planning/planning.module';
 import { ActivityTypesModule } from './activity-types/activity-types.module';
@@ -192,6 +193,7 @@ import { PdfSealModule } from './pdf-seal/pdf-seal.module';
     PopulationModule,
     OperationalReviewsModule,
     ExerciseReportsModule,
+    TrainingQuestionnairesModule,
     IncidentReportsModule,
     OperationalLogModule,
     OperationalShiftsModule,

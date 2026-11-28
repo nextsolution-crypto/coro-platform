@@ -9,6 +9,7 @@ const CATALOG_HOURS: Record<string, number> = {
   formation_communication: 2,
   formation_comportement: 2,
   formation_locataires: 1,
+  formation_sst_batiment_occupe: 2,
   exercice_table: 2,
   exercice_evacuation: 3,
 };

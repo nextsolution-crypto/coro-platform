@@ -5,6 +5,7 @@ describe('OccupancyService resilience indicator accuracy', () => {
     project: { findFirst: jest.fn() },
     evacuationEvent: { findFirst: jest.fn(), count: jest.fn() },
     incidentEvent: { findMany: jest.fn() },
+    trainingQuestionnaireResponse: { findMany: jest.fn().mockResolvedValue([]) },
   };
   const service = new OccupancyService(prisma as any);
 

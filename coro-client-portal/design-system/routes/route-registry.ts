@@ -354,6 +354,15 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
     validation: ["test:skin"],
   },
   {
+    pattern: "/questionnaire/[token]",
+    family: "public",
+    shell: "none",
+    status: "beta",
+    render: "skin",
+    styling: ["inline-hex"],
+    validation: ["test:skin"],
+  },
+  {
     pattern: "/profile",
     family: "portal",
     shell: "none",

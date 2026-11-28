@@ -36,6 +36,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   '/dashboard/rendement': BarChart3,
   '/settings/task-templates': ListChecks,
   '/settings/activity-types': Shapes,
+  '/settings/training-questionnaires': QrCode,
   '/settings/timelog-categories': Tags,
   '/settings/feedback': MessageSquare,
   '/support': LifeBuoy,

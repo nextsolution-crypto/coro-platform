@@ -13,7 +13,7 @@ export type ManualArticle = {
   route: string;
   sourceRefs: string[];
 };
-export const MANUAL_VERSION = '2026-11-28.5';
+export const MANUAL_VERSION = '2026-11-28.6';
 const both: ManualAudience[] = ['INTERNAL', 'CLIENT'];
 const internal: ManualAudience[] = ['INTERNAL'];
 const client: ManualAudience[] = ['CLIENT'];
@@ -1808,14 +1808,15 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
   ),
   article(
     'rendement-equipe',
-    'Lire le rendement et la rentabilité des mandats',
+    'Lire le rendement et la rentabilité des conseillers et des mandats',
     'Administration',
     internal,
     '/dashboard/rendement',
     ['rendement', 'rentabilité', 'marge', 'vendu', 'coût', 'déficitaire', 'direction', 'financier'],
-    'Comparer, par mandat, le montant vendu au coût de main-d’œuvre connu.',
+    'Comparer, par conseiller et par mandat, la valeur produite ou le montant vendu au coût de main-d’œuvre connu.',
     [
       'Ouvrez Administration puis Rendement équipe.',
+      'Le tableau Rentabilité par conseiller donne pour chacun : heures sur mandats, coût connu (heures × taux interne), valeur produite (montant vendu validé × ses heures ÷ le plus grand de : heures budgétées ou heures saisies sur le mandat), marge et valeur par heure. Cliquez sur un conseiller pour voir ses mandats.',
       'Lisez les indicateurs : montant vendu validé, coût de main-d’œuvre connu, marge des mandats complets, mandats déficitaires et mandats incomplets.',
       'Le tableau Rentabilité cumulative par mandat donne, par client et mandat, le vendu, le coût connu, la marge et la complétude des données.',
     ],
@@ -1823,6 +1824,33 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     ['coro-frontend/app/dashboard/rendement/page.tsx'],
     ['Rôle administrateur.'],
     ['Une marge n’est fiable que si le mandat est complet (montant vendu et heures valorisées). Un mandat incomplet est signalé comme tel.'],
+  ),
+  article(
+    'questionnaire-formation',
+    'Ouvrir un questionnaire post-formation par code QR',
+    'Planification',
+    internal,
+    '/projects',
+    ['questionnaire', 'formation', 'qr', 'code qr', 'quiz', 'participants', 'score', 'réussite', 'sst'],
+    'Mesurer ce que les participants ont retenu, sans compte ni papier, et alimenter l’indice CORO du bâtiment.',
+    [
+      'Dans l’onglet Activités du projet, sur une activité de formation, utilisez Questionnaire QR.',
+      'À la fin de la formation, utilisez Ouvrir le questionnaire et projetez le code QR (ou partagez le lien).',
+      'Chaque participant scanne le code, indique son nom et répond sur son téléphone ; il voit ensuite son score et la correction.',
+      'Suivez les résultats dans la même fenêtre (participants, moyenne, taux de réussite), puis utilisez Fermer le questionnaire.',
+      'Un administrateur adapte les questions de chaque type de formation dans Administration → Questionnaires de formation.',
+    ],
+    'Les scores sont rattachés à l’activité et au bâtiment ; un taux de réussite inférieur à 80 % sur 12 mois ajoute une recommandation à l’indice CORO.',
+    [
+      'coro-frontend/components/TrainingQuestionnaireModal.tsx',
+      'coro-frontend/app/settings/training-questionnaires/page.tsx',
+      'coro-backend/src/training-questionnaires/training-questionnaires.service.ts',
+    ],
+    ['Responsable du projet, conseiller affecté à l’activité ou coordination pour ouvrir et fermer.'],
+    [
+      'Les questions sont figées à l’ouverture : modifier la banque ensuite ne change pas une séance déjà ouverte.',
+      'Les participants n’ont pas de compte ; seul leur nom est conservé avec leur score.',
+    ],
   ),
   article(
     'mon-rendement',
@@ -2046,6 +2074,7 @@ export const MANUAL_NAVIGATION_COVERAGE: Readonly<
 > = {
   INTERNAL: {
     '/manual': 'demarrer',
+    '/settings/training-questionnaires': 'questionnaire-formation',
     '/admin/commercial': 'preparer-offre',
     '/admin/commercial/proposals': 'preparer-offre',
     '/admin/commercial/proposals/new': 'preparer-offre',
