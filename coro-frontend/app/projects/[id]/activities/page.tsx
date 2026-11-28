@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import ActivityTasksSection from '@/app/planning/ActivityTasksSection';
 import { formatCivilDate } from '@/app/planning/time';
 import { downloadActivityIcs } from '@/lib/download-ics';
+import InfoTip from '@/components/ui/InfoTip';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   a_faire:  { label: 'À faire',  color: '#2980B9', bg: '#EBF5FB' },
@@ -339,7 +340,7 @@ export default function ActivitiesPage() {
                         onChange={e => handleClientAccess(activity, 'clientVisible', e.target.checked)} /> Visible client</label>
                       <label className="text-xs"><input type="checkbox" checked={activity.clientBookable ?? false}
                         disabled={!activity.clientVisible}
-                        onChange={e => handleClientAccess(activity, 'clientBookable', e.target.checked)} /> Réservable</label>
+                        onChange={e => handleClientAccess(activity, 'clientBookable', e.target.checked)} /> Réservable<InfoTip text="Le client peut choisir lui-même une date dans son portail. Sa demande arrive dans « Demandes client » du planning et devient confirmée quand le responsable accepte." manual="planning" /></label>
                       <select value={activity.status}
                         onChange={e => handleStatusChange(activity, e.target.value)}
                         className="text-xs px-2 py-1.5 rounded font-medium border-0 outline-none cursor-pointer"

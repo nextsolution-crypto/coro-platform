@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { DEFAULT_MANDATE_RULES, type MandateRules } from '@/app/projects/[id]/mandate/mandateFormState';
+import InfoTip from '@/components/ui/InfoTip';
 
 const FIELDS: Array<{ key: keyof MandateRules; label: string; unit: string; help: string }> = [
   { key: 'mandateTargetMarginPercent', label: 'Marge visée', unit: '%',
@@ -46,7 +47,7 @@ export default function MandateRulesSection() {
 
   return (
     <section className="rounded-lg p-4 sm:p-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-      <h3 className="font-semibold mb-1" style={{ color: '#2C3E50' }}>Règles des mandats</h3>
+      <h3 className="font-semibold mb-1" style={{ color: '#2C3E50' }}>Règles des mandats<InfoTip text="Valeurs par défaut de CORO, propres à votre organisation. Elles s’appliquent aux prochains enregistrements de mandat, pas aux mandats déjà enregistrés." manual="mandat-services" /></h3>
       <p className="text-xs mb-4" style={{ color: '#6C757D' }}>
         Utilisées pour calculer les heures budgétées et la date limite de livraison de chaque mandat.
       </p>

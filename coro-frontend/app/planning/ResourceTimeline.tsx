@@ -6,6 +6,7 @@ import { dateKey, formatClock, formatDay, nowMarker, segmentForDay, timelineDayM
 import { eventForUser, eventLabel, eventStatus, eventSummary, eventSummaryParts } from './projection';
 import { getActivityTypeVisual } from './activityTypeVisual';
 import styles from './planning.module.css';
+import InfoTip from '@/components/ui/InfoTip';
 
 function AdvisorLabel({ user }: { user: PlannerUser }) {
   return <div className={styles.advisor}>
@@ -70,6 +71,7 @@ export default function ResourceTimeline({ data, days, onSelect, onCreate }: {
   return <>{legend.length > 0 && <div className={styles.typeLegend} aria-label="Légende des types d'activité">
     {legend.map(item => <span key={item.label}><i style={{ background: item.color }} aria-hidden="true" />{item.label}</span>)}
     <span className={styles.legendNote}>Contour plein : confirmé · pointillé : à confirmer · ⚑ échéances de tâches (sans créneau)</span>
+    <InfoTip text="Chaque bloc se lit « heure · client · adresse · activité ». La couleur indique le type d’activité ; le contour, le statut. Le repère ⚑ signale des tâches à échéance ce jour-là, sans réserver de créneau." manual="planning" />
   </div>}<div className={styles.timelineScroll} role="region" aria-label="Planification de l'équipe" tabIndex={0}>
     <div className={styles.timeline} style={{ gridTemplateColumns: `205px repeat(${days.length}, minmax(${timelineDayMinWidth(days.length)}px, 1fr))` }}>
       <div className={`${styles.corner} ${styles.stickyLeft}`} style={{ gridColumn: 1, gridRow: 1 }}>

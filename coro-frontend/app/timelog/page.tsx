@@ -8,6 +8,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { confirmAction } from '@/lib/confirm-dialog';
+import InfoTip from '@/components/ui/InfoTip';
 
 type ViewMode = 'week' | 'month' | 'year' | 'custom';
 
@@ -335,6 +336,7 @@ export default function TimelogPage() {
                     }}>
                     <p className="text-xs font-medium mb-1" style={{ color: '#6C757D' }}>
                       Temps cumulé
+                      <InfoTip text="Heures saisies moins l’objectif à ce jour : jours ouvrables écoulés de la période × votre horaire hebdomadaire ÷ 5. Les fins de semaine et les jours futurs ne comptent pas." manual="timelog" />
                       <span className="ml-1 text-xs" style={{ color: '#ADB5BD' }}>
                         (objectif à ce jour {summary.objectifPeriode}h, jours ouvrables)
                       </span>

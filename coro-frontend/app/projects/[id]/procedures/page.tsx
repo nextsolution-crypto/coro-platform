@@ -7,6 +7,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import { confirmAction } from '@/lib/confirm-dialog';
 import { toast } from '@/lib/toast';
 import { ArrowLeft, Sparkles, Upload, Check, X, Eye, Trash2 } from 'lucide-react';
+import InfoTip from '@/components/ui/InfoTip';
 
 interface CustomProcedure {
   id: string;
@@ -301,6 +302,7 @@ export default function ProjectProceduresPage() {
           ) : (
             <div className="space-y-3">
               <p className="text-xs" style={{ color: '#6C757D' }}>
+                <InfoTip text="Activer rend la procédure disponible pour ce projet. Partager à l’organisation (administrateur) la rend disponible pour tous les projets ; elle n’est alors plus propre à ce projet." manual="procedures-ia" />{' '}
                 Une procédure <strong>active</strong> devient disponible dans l’éditeur du document (Module 4), où vous l’ajoutez au plan.
                 Une procédure en brouillon n’y apparaît pas.
               </p>
