@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { activationLabel } from '@/lib/activationLabels';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
@@ -144,21 +145,7 @@ export default function LibraryPage() {
     }
   };
 
-  const getActivationLabel = (rule: string) => {
-    const map: Record<string, string> = {
-      always:         'Toujours actif',
-      double_signal:  'Double signal',
-      has_gas:        'Gaz naturel',
-      has_ammonia:    'Ammoniac',
-      has_sprinklers: 'Gicleurs',
-      has_elevators:  'Ascenseurs',
-      has_hazmat:     'Mat. dangereuses',
-      boma_certified: 'BOMA',
-      has_pool:       'Piscine',
-      has_kitchen:    'Cuisine commerciale',
-    };
-    return map[rule] || rule;
-  };
+  const getActivationLabel = (rule: string) => activationLabel(rule, 'fr');
 
   const tabs = [
     { key: 'codes',      label: 'Codes incidents', count: incidentCodes.length },
@@ -417,12 +404,20 @@ export default function LibraryPage() {
 
                     {/* Méta */}
                     <div className="flex flex-wrap items-center gap-2 sm:gap-4 flex-shrink-0 w-full lg:w-auto lg:justify-end">
-                      <span className="text-xs whitespace-nowrap" style={{ color: '#ADB5BD' }}>
-                        {proc.roleSections?.length || 0} rôle(s)
-                      </span>
-                      <span className="text-xs whitespace-nowrap" style={{ color: '#ADB5BD' }}>
-                        {proc.totalSteps} étape(s)
-                      </span>
+                      {proc.code === 'P001' && !proc.roleSections?.length && !proc.totalSteps ? (
+                        <span className="text-xs whitespace-nowrap" style={{ color: '#6C757D' }}>
+                          Consignes pour tous · en tête des procédures
+                        </span>
+                      ) : (
+                        <>
+                          <span className="text-xs whitespace-nowrap" style={{ color: '#ADB5BD' }}>
+                            {proc.roleSections?.length || 0} rôle(s)
+                          </span>
+                          <span className="text-xs whitespace-nowrap" style={{ color: '#ADB5BD' }}>
+                            {proc.totalSteps} étape(s)
+                          </span>
+                        </>
+                      )}
                       <span className="text-xs px-2 py-0.5 font-medium whitespace-nowrap"
                         style={{
                           backgroundColor: '#F8F9FA',

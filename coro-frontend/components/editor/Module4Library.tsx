@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { activationLabel } from '@/lib/activationLabels';
 import { Plus, Check, X, BookOpen, Search } from 'lucide-react';
 import api from '@/lib/api';
 
@@ -100,21 +101,7 @@ export default function Module4Library({
   const isActive = (id: string) => activeProcedureIds.includes(id);
   const isAuto   = (id: string) => autoActivatedIds.includes(id);
 
-  const getActivationLabel = (rule: string) => {
-    switch (rule) {
-      case 'always':        return isFr ? 'Toujours actif' : 'Always active';
-      case 'double_signal': return 'Double signal';
-      case 'has_gas':       return isFr ? 'Gaz naturel' : 'Natural gas';
-      case 'has_ammonia':   return isFr ? 'Ammoniac' : 'Ammonia';
-      case 'has_sprinklers':return isFr ? 'Gicleurs' : 'Sprinklers';
-      case 'has_elevators': return isFr ? 'Ascenseurs' : 'Elevators';
-      case 'has_hazmat':    return isFr ? 'Mat. dangereuses' : 'Hazmat';
-      case 'has_lithium':   return isFr ? 'Batterie lithium' : 'Lithium battery';
-      case 'boma_certified':return isFr ? 'Certif. BOMA' : 'BOMA certified';
-      case 'manual':        return isFr ? 'Manuel' : 'Manual';
-      default:              return isFr ? 'Conditionnel' : 'Conditional';
-    }
-  };
+  const getActivationLabel = (rule: string) => activationLabel(rule, isFr ? 'fr' : 'en');
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
