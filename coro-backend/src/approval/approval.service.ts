@@ -26,6 +26,7 @@ import {
   mutableProjectAccessWhere,
   projectAccessWhere, projectReadWhere,
   requireProjectApprover,
+  isDocumentProducer,
 } from '../auth/project-access';
 import {
   createReviewSnapshot,
@@ -177,7 +178,7 @@ export class ApprovalService {
     const result = await this.prisma.$transaction(async (tx) => {
       await this.lockProject(tx, projectId);
       const project = await tx.project.findFirst({
-        where: { id: projectId, ...projectAccessWhere(actor) },
+        where: { id: projectId, ...projectReadWhere(actor) },
         include: {
           client: true,
           building: true,
@@ -205,9 +206,9 @@ export class ApprovalService {
       }
       if (project.status !== 'REVIEW')
         throw new ConflictException("Ce projet n'est plus en révision");
-      if (project.submittedById === actor.userId)
+      if (isDocumentProducer(project, actor))
         throw new ForbiddenException(
-          'Vous ne pouvez pas approuver votre propre soumission',
+          'Vous ne pouvez pas approuver un document que vous avez produit',
         );
       const request = await tx.documentReviewRequest.findFirst({
         where: { projectId, status: 'PENDING' },
@@ -352,8 +353,10 @@ export class ApprovalService {
     if (!reason) throw new BadRequestException('Le motif est requis');
     const result = await this.prisma.$transaction(async (tx) => {
       await this.lockProject(tx, projectId);
+      // Renvoi pour correction (REVIEW) : tout collègue sauf le producteur.
+      // Déverrouillage d'un document approuvé : propriétaire ou administrateur.
       const project = await tx.project.findFirst({
-        where: { id: projectId, ...projectAccessWhere(actor) },
+        where: { id: projectId, ...projectReadWhere(actor) },
         include: { client: true, building: true },
       });
       if (!project || !project.isActive || project.status === 'ARCHIVED')
@@ -362,10 +365,17 @@ export class ApprovalService {
         throw new ConflictException(
           'Ce projet ne peut pas être retourné en révision',
         );
-      if (project.status === 'REVIEW' && project.submittedById === actor.userId)
+      if (project.status === 'REVIEW' && isDocumentProducer(project, actor))
         throw new ForbiddenException(
-          'Vous ne pouvez pas retourner votre propre soumission',
+          'Vous ne pouvez pas renvoyer un document que vous avez produit',
         );
+      if (project.status !== 'REVIEW') {
+        const owned = await tx.project.findFirst({
+          where: { id: projectId, ...projectAccessWhere(actor) },
+          select: { id: true },
+        });
+        if (!owned) throw new NotFoundException('Projet introuvable');
+      }
       const request = await tx.documentReviewRequest.findFirst({
         where: {
           projectId,
@@ -530,7 +540,7 @@ export class ApprovalService {
     const project = await this.prisma.project.findFirst({
       where: {
         id: projectId,
-        ...mutableProjectAccessWhere(actor),
+        ...projectReadWhere(actor),
         status: 'REVIEW',
       },
       select: { id: true },
@@ -562,7 +572,7 @@ export class ApprovalService {
     const project = await this.prisma.project.findFirst({
       where: {
         id: observation.projectId,
-        ...mutableProjectAccessWhere(actor),
+        ...projectReadWhere(actor),
         status: 'REVIEW',
       },
       select: { id: true },
@@ -604,7 +614,7 @@ export class ApprovalService {
     const project = await this.prisma.project.findFirst({
       where: {
         id: observation.projectId,
-        ...mutableProjectAccessWhere(actor),
+        ...projectReadWhere(actor),
         status: 'REVIEW',
       },
       select: { id: true },
@@ -636,13 +646,13 @@ export class ApprovalService {
       const project = await this.prisma.project.findFirst({
         where: {
           id: projectId,
-          ...projectAccessWhere(actor),
+          ...projectReadWhere(actor),
           isActive: true,
           status: 'REVIEW',
         },
-        select: { submittedById: true },
+        select: { submittedById: true, userId: true },
       });
-      if (!project || project.submittedById === actor.userId) return null;
+      if (!project || isDocumentProducer(project, actor)) return null;
       return this.prisma.documentReviewRequest.findFirst({
         where: { projectId, status: 'PENDING' },
         orderBy: { submittedAt: 'desc' },

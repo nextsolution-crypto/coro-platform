@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { ProjectsService } from '../src/projects/projects.service';
@@ -229,9 +229,10 @@ describe('Plan security PostgreSQL authorization', () => {
     await expect(
       approval.submit(ids.projectA, operatorB),
     ).rejects.toBeInstanceOf(NotFoundException);
+    // Sans motif, le renvoi est refusé avant toute écriture.
     await expect(
       approval.requestRevision(ids.projectA, operatorC),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
       projects.update(ids.projectA, { status: 'VALIDATED' }, operatorA),
     ).rejects.toBeInstanceOf(ForbiddenException);
@@ -269,13 +270,19 @@ describe('Plan security PostgreSQL authorization', () => {
     await expect(
       approval.approve(ids.projectA, operatorA),
     ).rejects.toBeInstanceOf(ForbiddenException);
+    // Révision par les pairs : un collègue OPERATOR renvoie puis approuve.
     await expect(
-      approval.requestRevision(ids.projectA, adminA, 'Review required'),
+      approval.requestRevision(ids.projectA, operatorC, 'Review required'),
     ).resolves.toMatchObject({ status: 'IN_PROGRESS' });
     await approval.submit(ids.projectA, operatorA);
     await expect(
-      approval.approve(ids.projectA, adminA),
+      approval.approve(ids.projectA, operatorC),
     ).resolves.toMatchObject({ status: 'VALIDATED', version: 1 });
+    // Déverrouiller un document approuvé reste réservé au propriétaire ou à un administrateur.
+    await expect(
+      approval.requestRevision(ids.projectA, operatorC, 'Unlock'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    void adminA;
     for (let attempt = 0; attempt < 20; attempt += 1) {
       const pending = await prisma.documentReviewNotificationEvent.count({
         where: { projectId: ids.projectA, status: 'PENDING' },

@@ -13,7 +13,7 @@ export type ManualArticle = {
   route: string;
   sourceRefs: string[];
 };
-export const MANUAL_VERSION = '2026-11-28.2';
+export const MANUAL_VERSION = '2026-11-28.3';
 const both: ManualAudience[] = ['INTERNAL', 'CLIENT'];
 const internal: ManualAudience[] = ['INTERNAL'];
 const client: ManualAudience[] = ['CLIENT'];
@@ -1161,10 +1161,10 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     [
       'Dans le projet, utilisez Configurer pour compléter le plan dans le configurateur.',
       'Utilisez Soumettre pour approbation. Le projet passe En révision.',
-      'Un administrateur autre que l’auteur de la soumission relit le plan, ajoute au besoin des observations, puis utilise Approuver le document, ou retourne le plan pour révision avec un commentaire.',
+      'N’importe quel collègue conseiller, sauf celui qui a produit le document (propriétaire du projet ou auteur de la soumission), ouvre le projet, relit le plan, ajoute au besoin des observations, puis utilise Approuver le document ou le renvoie pour correction avec un commentaire.',
       'Après approbation, le projet est Validé. Utilisez Exporter le document : choisissez les modules à inclure (glissez pour les réordonner) et la langue (Français, English ou Les deux).',
       'Le client consulte l’aperçu dans le portail et signe le document. CORO prépare ensuite les PDF officiels FR et EN.',
-      'Pour corriger un plan déjà validé, demandez une révision : le plan est déverrouillé et repasse par l’approbation.',
+      'Pour corriger un plan déjà validé, son propriétaire (ou un administrateur) utilise Apporter une mise à jour : le plan est déverrouillé et repasse par l’approbation d’un collègue.',
     ],
     'Le plan est approuvé par une autre personne, exporté et signé par le client, avec sa trace d’audit.',
     [
@@ -1172,9 +1172,9 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
       'coro-frontend/components/ExportModal.tsx',
       'coro-backend/src/approval/approval.service.ts',
     ],
-    ['Rôle administrateur pour approuver.'],
+    ['Être un autre conseiller que celui qui a produit le document.'],
     [
-      'Vous ne pouvez pas approuver votre propre soumission.',
+      'Vous ne pouvez pas approuver un document que vous avez produit.',
       'Le Journal d’audit du projet conserve chaque soumission, décision et export.',
       'L’IA n’approuve aucun document.',
     ],
