@@ -6,6 +6,7 @@ import {
   financialCurrencyLabel,
   formatFinancialAmount,
 } from "@/app/dashboard/rendement/financial-money";
+import type { AdvisorProfitability } from "./AdvisorProfitabilityPanel";
 
 export type FinancialTotal = {
   currency: string;
@@ -33,6 +34,7 @@ export type FinancialResponse = {
     completeness: string;
     incompleteReasons: string[];
   }>;
+  advisors?: AdvisorProfitability[];
 };
 
 const REASON_LABELS: Record<string, string> = {

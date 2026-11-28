@@ -342,6 +342,14 @@ export class RendementFinancialService {
       totals[currency] = current;
     }
 
+    const advisors = await this.advisorProfitability(
+      organizationId,
+      mandates,
+      rates,
+      view,
+      scope === 'ADVISOR' ? actor.userId : undefined,
+    );
+
     return {
       scope: {
         audience: scope,
@@ -353,6 +361,7 @@ export class RendementFinancialService {
         upperBoundExclusive: query.to ? nextCivilDate(query.to) : null,
       },
       mandates: results,
+      advisors,
       totals: Object.values(totals).map((total) => ({
         ...total,
         soldAmount: this.money(total.soldAmount),
@@ -467,6 +476,176 @@ export class RendementFinancialService {
         });
       throw error;
     }
+  }
+
+  /**
+   * Rentabilité par conseiller, à partir des mêmes mandats et taux internes :
+   * - coût de main-d’œuvre connu : ses heures × son taux interne approuvé;
+   * - valeur produite : montant vendu validé × ses heures ÷ max(heures
+   *   budgétées, heures totales saisies sur le mandat). Un mandat en cours
+   *   n’attribue donc que la part réalisée; un dépassement d’heures dilue la
+   *   valeur au lieu de la gonfler;
+   * - marge : valeur produite − coût, seulement si rien ne manque.
+   */
+  private async advisorProfitability(
+    organizationId: string,
+    mandates: Array<{
+      id: string;
+      soldAmountDecimal: Prisma.Decimal | null;
+      soldCurrency: string | null;
+      soldAt: Date | null;
+      soldValidatedAt: Date | null;
+      heuresBudgetees: number | null;
+      project: {
+        id: string;
+        name: string;
+        client: { name: string };
+        projectTasks: Array<{
+          timeEntries: Array<{ userId: string; date: Date; heures: number }>;
+        }>;
+      };
+    }>,
+    rates: Array<{
+      userId: string;
+      currency: string;
+      hourlyCost: Prisma.Decimal;
+      effectiveFrom: Date;
+      effectiveUntil: Date | null;
+      supersededEffectiveAt: Date | null;
+    }>,
+    view: string,
+    onlyUserId?: string,
+  ) {
+    type MandateShare = {
+      projectId: string;
+      projectName: string;
+      clientName: string;
+      hours: number;
+      cost: Prisma.Decimal;
+      value: Prisma.Decimal | null;
+    };
+    type Acc = {
+      userId: string;
+      currency: string | null;
+      hours: number;
+      cost: Prisma.Decimal;
+      value: Prisma.Decimal;
+      reasons: Set<string>;
+      mandates: MandateShare[];
+    };
+    const accs = new Map<string, Acc>();
+    for (const mandate of mandates) {
+      const entries = mandate.project.projectTasks.flatMap((task) => task.timeEntries);
+      if (!entries.length) continue;
+      const totalHours = entries.reduce((sum, entry) => sum + entry.heures, 0);
+      const sold = mandate.soldAmountDecimal;
+      const saleValid = Boolean(
+        sold && mandate.soldCurrency && mandate.soldAt && mandate.soldValidatedAt,
+      );
+      const basis = Math.max(mandate.heuresBudgetees ?? 0, totalHours);
+      const perUser = new Map<string, { hours: number; cost: Prisma.Decimal; missingRate: boolean }>();
+      for (const entry of entries) {
+        const current = perUser.get(entry.userId) ?? {
+          hours: 0,
+          cost: new Prisma.Decimal(0),
+          missingRate: false,
+        };
+        current.hours = round2(current.hours + entry.heures);
+        const workDate = civilDateInToronto(entry.date);
+        const rate = rates.find((candidate) => {
+          const rateEnd = this.rateEnd(candidate);
+          return (
+            candidate.userId === entry.userId &&
+            candidate.currency === mandate.soldCurrency &&
+            this.civilValue(candidate.effectiveFrom) <= workDate &&
+            (!rateEnd || workDate < rateEnd)
+          );
+        });
+        if (rate)
+          current.cost = current.cost.plus(
+            new Prisma.Decimal(String(entry.heures)).times(rate.hourlyCost),
+          );
+        else current.missingRate = true;
+        perUser.set(entry.userId, current);
+      }
+      for (const [userId, share] of perUser) {
+        if (onlyUserId && userId !== onlyUserId) continue;
+        const key = `${userId}|${mandate.soldCurrency ?? 'UNKNOWN'}`;
+        const acc = accs.get(key) ?? {
+          userId,
+          currency: mandate.soldCurrency,
+          hours: 0,
+          cost: new Prisma.Decimal(0),
+          value: new Prisma.Decimal(0),
+          reasons: new Set<string>(),
+          mandates: [],
+        };
+        const value =
+          saleValid && sold && basis > 0
+            ? sold.times(new Prisma.Decimal(String(share.hours))).dividedBy(new Prisma.Decimal(String(basis)))
+            : null;
+        if (!saleValid) acc.reasons.add('MISSING_VALIDATED_SALE');
+        if (share.missingRate) acc.reasons.add('MISSING_ADVISOR_COST_RATE');
+        acc.hours = round2(acc.hours + share.hours);
+        acc.cost = acc.cost.plus(share.cost);
+        if (value) acc.value = acc.value.plus(value);
+        acc.mandates.push({
+          projectId: mandate.project.id,
+          projectName: mandate.project.name,
+          clientName: mandate.project.client.name,
+          hours: share.hours,
+          cost: share.cost,
+          value,
+        });
+        accs.set(key, acc);
+      }
+    }
+    const userIds = [...new Set([...accs.values()].map((acc) => acc.userId))];
+    const users = userIds.length
+      ? await this.prisma.user.findMany({
+          where: { id: { in: userIds }, organizationId },
+          select: { id: true, firstName: true, lastName: true },
+        })
+      : [];
+    const names = new Map(users.map((user) => [user.id, `${user.firstName} ${user.lastName}`]));
+    return [...accs.values()]
+      .map((acc) => {
+        const reasons = [...acc.reasons];
+        if (view === 'work-period') reasons.push('CUMULATIVE_MARGIN_NOT_AVAILABLE_FOR_WORK_PERIOD');
+        const complete = reasons.length === 0;
+        const margin = complete ? acc.value.minus(acc.cost) : null;
+        return {
+          userId: acc.userId,
+          userName: names.get(acc.userId) ?? 'Conseiller',
+          currency: acc.currency,
+          hours: acc.hours,
+          knownLaborCost: this.money(acc.cost),
+          producedValue: this.money(acc.value),
+          contributionMargin: margin ? this.money(margin) : null,
+          contributionMarginPercent:
+            margin && acc.value.greaterThan(0)
+              ? margin.dividedBy(acc.value).times(100).toDecimalPlaces(1, Prisma.Decimal.ROUND_HALF_UP).toFixed(1)
+              : null,
+          valuePerHour:
+            acc.hours > 0
+              ? this.money(acc.value.dividedBy(new Prisma.Decimal(String(acc.hours))))
+              : null,
+          mandateCount: acc.mandates.length,
+          completeness: complete ? 'COMPLETE' : 'INCOMPLETE',
+          incompleteReasons: reasons,
+          mandates: acc.mandates
+            .sort((a, b) => b.hours - a.hours)
+            .map((share) => ({
+              projectId: share.projectId,
+              projectName: share.projectName,
+              clientName: share.clientName,
+              hours: share.hours,
+              knownLaborCost: this.money(share.cost),
+              producedValue: share.value ? this.money(share.value) : null,
+            })),
+        };
+      })
+      .sort((a, b) => b.hours - a.hours);
   }
 
   private civilRange(from?: string, to?: string) {

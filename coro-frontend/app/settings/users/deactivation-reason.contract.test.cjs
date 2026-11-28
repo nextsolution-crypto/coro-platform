@@ -11,11 +11,11 @@ if (!source.includes('reason = enteredReason.trim()')) {
   throw new Error('Le motif de désactivation doit être normalisé avant transmission.');
 }
 
-if (!source.includes('{ isActive, reason }')) {
+if (!/isActive,\s*reason,?\s*\}/.test(source)) {
   throw new Error('Le motif doit être transmis à l’autorité serveur canonique.');
 }
 
-if (!source.includes("window.alert('Un motif est requis pour désactiver un membre.')")) {
+if (!source.includes('toast("Un motif est requis pour désactiver un membre.", "error")') || !source.includes('promptAction(')) {
   throw new Error('Un motif vide doit échouer avant toute requête.');
 }
 
