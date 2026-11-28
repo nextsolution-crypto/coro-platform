@@ -1795,7 +1795,7 @@ export default function ProjectDetailPage() {
                   onChange={e => setApprovalComment(e.target.value)}
                   placeholder={showApprovalModal === 'approve'
                     ? 'Ex: Document conforme aux exigences réglementaires'
-                    : 'Ex: Section 2.1 incomplète, manque les numéros d\'urgence'}
+                    : 'Ex. : liste téléphonique incomplète, il manque les numéros d’urgence'}
                   rows={4}
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-none"
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}

@@ -155,9 +155,10 @@ describe('plan document security boundaries', () => {
     await expect(service.submit('project-a', operator)).rejects.toBeInstanceOf(
       NotFoundException,
     );
+    // Révision par les pairs : un conseiller hors du périmètre de lecture ne trouve pas le projet.
     await expect(
       service.requestRevision('project-a', operator, 'Blocked'),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.project.update).not.toHaveBeenCalled();
   });
 
@@ -316,10 +317,21 @@ describe('plan document security boundaries', () => {
     },
   );
 
-  it('rejects an OPERATOR approver before reading or mutating the project', async () => {
+  it('rejects the producer (project owner) as approver, even as a colleague OPERATOR', async () => {
     const prisma: any = {
-      project: { findFirst: jest.fn(), update: jest.fn() },
-      projectVersion: { create: jest.fn() },
+      $transaction: jest.fn((callback) => callback(prisma)),
+      $queryRaw: jest.fn().mockResolvedValue([]),
+      project: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'project-a',
+          status: 'REVIEW',
+          userId: operator.userId,
+          submittedById: 'someone-else',
+          isActive: true,
+        }),
+        update: jest.fn(),
+      },
+      projectVersion: { findFirst: jest.fn(), create: jest.fn() },
     };
     const service = new ApprovalService(
       prisma,
@@ -331,7 +343,6 @@ describe('plan document security boundaries', () => {
     await expect(service.approve('project-a', operator)).rejects.toBeInstanceOf(
       ForbiddenException,
     );
-    expect(prisma.project.findFirst).not.toHaveBeenCalled();
     expect(prisma.projectVersion.create).not.toHaveBeenCalled();
   });
 

@@ -1046,7 +1046,8 @@ export class ProjectsService {
       where: {
         ...projectReadWhere(actor),
         status: 'REVIEW',
-        submittedById: { not: actor.userId },
+        // Le producteur (propriétaire ou auteur de la soumission) n'approuve jamais.
+        NOT: [{ submittedById: actor.userId }, { userId: actor.userId }],
       },
       include: {
         client: { select: { name: true } },

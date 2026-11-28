@@ -210,10 +210,23 @@ export async function lockEditableProject(
   return project;
 }
 
+/**
+ * Révision par les pairs : tout conseiller de l'organisation (OPERATOR, ADMIN,
+ * SUPER_ADMIN) peut réviser, approuver ou renvoyer un document, sauf celui qui
+ * l'a produit (voir isDocumentProducer).
+ */
 export function requireProjectApprover(actor: AdviserActor): void {
-  if (actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN') {
+  if (!['OPERATOR', 'ADMIN', 'SUPER_ADMIN'].includes(actor.role)) {
     throw new ForbiddenException('Role approbateur requis');
   }
+}
+
+/** Le producteur d'un document (propriétaire du projet ou auteur de la soumission) ne l'approuve jamais. */
+export function isDocumentProducer(
+  project: { userId?: string | null; submittedById?: string | null },
+  actor: AdviserActor,
+): boolean {
+  return project.userId === actor.userId || project.submittedById === actor.userId;
 }
 
 /**

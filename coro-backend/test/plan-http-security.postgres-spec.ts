@@ -495,7 +495,9 @@ describe('Plan authenticated HTTP security boundaries', () => {
         'post',
         `/api/approval/${ids.pmu}/request-revision`,
         tokens.operatorC,
-        '403',
+        // Révision par les pairs : un collègue peut renvoyer un document en
+        // révision ; ce projet n'est pas en révision, donc refus sans écriture.
+        '409',
         { commentaire: 'Blocked' },
       ],
     ];
