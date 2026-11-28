@@ -6,7 +6,7 @@
  */
 const { sleep } = require('./cdp.cjs');
 
-const ADMIN_LABELS = ['Mon profil', 'Organisation', 'Modèle Module 1', 'Membres de l’équipe', 'Types d’activités', 'Catégories de timelog', 'Modèles de tâches', 'Nous écrire'];
+const ADMIN_LABELS = ['Mon profil', 'Organisation', 'Modèle d’introduction', 'Membres de l’équipe', 'Types d’activités', 'Catégories de timelog', 'Modèles de tâches', 'Nous écrire'];
 const CONSEILLER_LABELS = ['Mon profil', 'Catégories de timelog', 'Modèles de tâches', 'Nous écrire'];
 const SECTIONS_ADMIN = ['Mon compte', 'Organisation', 'Outils'];
 const SECTIONS_CONSEILLER = ['Mon compte', 'Outils'];
@@ -14,7 +14,7 @@ const SECTIONS_CONSEILLER = ['Mon compte', 'Outils'];
 const FINAL_PATH = {
   'Mon profil': '/profile',
   'Organisation': '/settings/organization',
-  'Modèle Module 1': '/settings/module1-template',
+  'Modèle d’introduction': '/settings/module1-template',
   'Membres de l’équipe': '/settings/users',
   'Types d’activités': '/settings/activity-types',
   'Catégories de timelog': '/settings/timelog-categories',
@@ -92,7 +92,7 @@ module.exports = [
     async run(s, check) {
       await structureChecks(s, check, true, CONSEILLER_LABELS, SECTIONS_CONSEILLER);
       const text = await s.eval(`document.querySelector('main').innerText`);
-      for (const hidden of ['Organisation', 'Modèle Module 1', 'Membres de l’équipe', 'Types d’activités']) check(`« ${hidden} » absent pour un conseiller`, !text.includes(hidden));
+      for (const hidden of ['Organisation', 'Modèle d’introduction', 'Membres de l’équipe', 'Types d’activités']) check(`« ${hidden} » absent pour un conseiller`, !text.includes(hidden));
     },
   }),
   base('settings-role-conseiller-legacy', 'Rôle non administrateur en Legacy : mêmes cartes que la vue Glass', {

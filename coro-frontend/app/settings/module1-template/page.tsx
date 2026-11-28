@@ -98,9 +98,9 @@ export default function Module1TemplatePage() {
             onMouseLeave={e => e.currentTarget.style.color = '#6C757D'}>
             <ArrowLeft size={16} /> Retour aux paramètres
           </button>
-          <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>Modèle Module 1</h2>
+          <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>Modèle d’introduction</h2>
           <p className="text-sm mt-1" style={{ color: '#6C757D' }}>
-            Personnalisez les sections du Module 1 pour tous les nouveaux projets de votre organisation.
+            Personnalisez les sections de l’Introduction pour tous les nouveaux projets de votre organisation.
           </p>
         </div>
         <button onClick={handleSave} disabled={saving}
@@ -120,7 +120,7 @@ export default function Module1TemplatePage() {
         <div>
           <p className="text-sm font-medium" style={{ color: '#1A5276' }}>Comment fonctionne ce modèle ?</p>
           <p className="text-sm mt-1" style={{ color: '#2980B9' }}>
-            Ces sections remplaceront automatiquement les sections standards du Module 1 (Introduction) lors de la génération de tout nouveau projet de votre organisation. Le contenu HTML est supporté. Les variables dynamiques disponibles sont : <code style={{ backgroundColor: '#D6EAF8', padding: '1px 5px', borderRadius: 3 }}>{'{{clientName}}'}</code>, <code style={{ backgroundColor: '#D6EAF8', padding: '1px 5px', borderRadius: 3 }}>{'{{buildingAddress}}'}</code>, <code style={{ backgroundColor: '#D6EAF8', padding: '1px 5px', borderRadius: 3 }}>{'{{documentType}}'}</code>.
+            Ces sections remplaceront automatiquement les sections standards de l’Introduction lors de la génération de tout nouveau projet de votre organisation. Le contenu HTML est supporté. Les variables dynamiques disponibles sont : <code style={{ backgroundColor: '#D6EAF8', padding: '1px 5px', borderRadius: 3 }}>{'{{clientName}}'}</code>, <code style={{ backgroundColor: '#D6EAF8', padding: '1px 5px', borderRadius: 3 }}>{'{{buildingAddress}}'}</code>, <code style={{ backgroundColor: '#D6EAF8', padding: '1px 5px', borderRadius: 3 }}>{'{{documentType}}'}</code>.
           </p>
         </div>
       </div>

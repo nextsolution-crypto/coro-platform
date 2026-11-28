@@ -13,7 +13,7 @@ export type ManualArticle = {
   route: string;
   sourceRefs: string[];
 };
-export const MANUAL_VERSION = '2026-11-28.1';
+export const MANUAL_VERSION = '2026-11-28.2';
 const both: ManualAudience[] = ['INTERNAL', 'CLIENT'];
 const internal: ManualAudience[] = ['INTERNAL'];
 const client: ManualAudience[] = ['CLIENT'];
@@ -229,7 +229,7 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     [
       'Ouvrez Paramètres.',
       'Mon profil est disponible depuis Mon compte.',
-      'Les administrateurs voient aussi les réglages Organisation, Modèle Module 1, Membres de l’équipe et Types d’activités. Organisation contient la Visibilité des projets (Ouverte ou Restreinte) et les Règles des mandats (marge visée, seuil, délais PMU/PSI, plan d’évacuation et rapport d’inspection).',
+      'Les administrateurs voient aussi les réglages Organisation, Modèle d’introduction, Membres de l’équipe et Types d’activités. Organisation contient la Visibilité des projets (Ouverte ou Restreinte) et les Règles des mandats (marge visée, seuil, délais PMU/PSI, plan d’évacuation et rapport d’inspection).',
       'Les administrateurs voient aussi Catégories de timelog et Modèles de tâches. Pour signaler un bug, poser une question ou proposer une amélioration, utilisez le Centre d’aide (menu Ressources) : chaque demande reçoit un numéro et un suivi.',
       'Ouvrez uniquement le réglage nécessaire et vérifiez les permissions et confirmations présentées par son écran.',
       'Pour changer votre mot de passe, saisissez le mot de passe actuel puis le nouveau secret conforme à la politique affichée. Les sessions et appareils de confiance existants sont révoqués.',
@@ -1107,12 +1107,12 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     'Documents et projets',
     internal,
     '/projects',
-    ['procédure', 'ia', 'générer', 'activer', 'désactiver', 'partager', 'module 4', 'brouillon'],
+    ['procédure', 'ia', 'générer', 'activer', 'désactiver', 'partager', 'module procédures', 'brouillon'],
     'Créer une procédure propre au projet et la rendre disponible pour le document.',
     [
       'Dans le projet, ouvrez Procédures IA et générez la procédure. Elle est créée en brouillon.',
       'Relisez-la avec Aperçu, puis utilisez Activer. Une procédure en brouillon n’apparaît pas dans l’éditeur.',
-      'Ouvrez l’éditeur du document, Module 4, et ajoutez la procédure active au plan.',
+      'Ouvrez l’éditeur du document, module Procédures, et ajoutez la procédure active au plan.',
       'Utilisez Désactiver pour la remettre en brouillon.',
       'Un administrateur peut utiliser Partager à l’organisation : la procédure devient disponible pour tous les projets et n’est plus propre à ce projet.',
     ],

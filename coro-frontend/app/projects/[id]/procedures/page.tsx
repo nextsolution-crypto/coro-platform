@@ -164,7 +164,7 @@ export default function ProjectProceduresPage() {
     try {
       await api.put(`/custom-procedures/${proc.id}`, { status: next });
       toast(next === 'ACTIVE'
-        ? `${proc.code} activée : ajoutez-la au document dans l’éditeur, Module 4.`
+        ? `${proc.code} activée : ajoutez-la au document dans l’éditeur, module Procédures.`
         : `${proc.code} remise en brouillon.`, 'success');
       await fetchData();
     } catch (err: any) {
@@ -175,7 +175,7 @@ export default function ProjectProceduresPage() {
   const handlePublish = async (proc: CustomProcedure) => {
     const ok = await confirmAction({
       title: `Partager ${proc.code} avec l’organisation ?`,
-      message: 'La procédure sera disponible pour tous les projets de votre organisation (éditeur, Module 4) et dans la bibliothèque. Elle ne sera plus propre à ce projet.',
+      message: 'La procédure sera disponible pour tous les projets de votre organisation (éditeur, module Procédures) et dans la bibliothèque. Elle ne sera plus propre à ce projet.',
       confirmLabel: 'Partager',
     });
     if (!ok) return;

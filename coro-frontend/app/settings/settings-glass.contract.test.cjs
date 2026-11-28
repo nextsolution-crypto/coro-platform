@@ -19,7 +19,9 @@ const { ROUTE_REGISTRY } = require('../../design-system/routes/route-registry.ts
 // administratifs sont désormais absents pour OPERATOR dans les deux rendus.
 // Revue M3-05 (22 nov. 2026) : le jeton n’est plus lu dans le navigateur
 // (session en cookie httpOnly, sessionMarker()).
-const LEGACY_PAGE_SHA256 = '54eb9f39d92034ce1b6e94fa9765c8fd63803b46bababacdc004f304bc73a0f4';
+// Revue 28 nov. 2026 : libellé « Modèle Module 1 » renommé « Modèle d’introduction »
+// (l’introduction n’est plus le module 1 dans l’ordre opérationnel CORO).
+const LEGACY_PAGE_SHA256 = '1888fe0ae7ebdbd919e11c77b4b37aa81ff2d6940cfadd995bbe03e740e7599a';
 const LEGACY_HEX_COUNT = 18;
 
 function withoutGlassBlocks(src) {

@@ -775,7 +775,7 @@ export default function OrganizationSettingsPage() {
               }}
             >
               <span className="min-w-0 break-words">
-                📄 Modèle Module 1 — Introduction
+                📄 Modèle d’introduction
               </span>
 
               <span
