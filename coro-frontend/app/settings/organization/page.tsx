@@ -9,6 +9,7 @@ import { ArrowLeft, Save } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import DragDropUpload from '@/components/ui/DragDropUpload';
 import MandateRulesSection from './MandateRulesSection';
+import ProjectVisibilitySection from './ProjectVisibilitySection';
 
 export default function OrganizationSettingsPage() {
   const router = useRouter();
@@ -718,6 +719,7 @@ export default function OrganizationSettingsPage() {
           )}
 
 
+          <ProjectVisibilitySection />
           <MandateRulesSection />
 
           {/* ═════════════════════════════════

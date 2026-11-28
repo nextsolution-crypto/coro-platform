@@ -22,6 +22,8 @@ model Organization {
   companyName            String?
   companyLogoB64         String?
   /// Règles des mandats (réglables par l'administrateur ; valeurs par défaut CORO).
+  /// Visibilité des projets pour les conseillers : OPEN (lecture de tous) ou RESTRICTED (membres).
+  projectVisibility            String                  @default("OPEN")
   mandateTargetMarginPercent   Int                     @default(50)
   mandateLongThresholdHours    Int                     @default(80)
   mandateShortDeliveryDays     Int                     @default(21)
