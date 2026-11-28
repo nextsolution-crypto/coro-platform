@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
+import InfoTip from '@/components/ui/InfoTip';
 
 type Advisor = { id: string; email: string; firstName: string; lastName: string };
 type Member = { userId: string; name: string; email: string };
@@ -57,7 +58,7 @@ export default function ClientTeamSection({ clientId }: { clientId: string }) {
   return (
     <div className="rounded-md p-4 sm:p-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
       <div className="flex items-center justify-between gap-3 mb-2">
-        <h3 className="font-semibold" style={{ color: '#2C3E50' }}>Équipe du client</h3>
+        <h3 className="font-semibold" style={{ color: '#2C3E50' }}>Équipe du client<InfoTip text="Conseillers attitrés à ce client. En visibilité Restreinte, ils voient tous ses projets, y compris les futurs, sans être ajoutés projet par projet." manual="visibilite-equipe-client" /></h3>
         {canEdit && !editing && (
           <button type="button" onClick={startEdit} className="rounded px-3 py-1.5 text-sm font-medium"
             style={{ border: '1px solid #DEE2E6', color: '#2C3E50', backgroundColor: '#FFFFFF' }}>Modifier</button>

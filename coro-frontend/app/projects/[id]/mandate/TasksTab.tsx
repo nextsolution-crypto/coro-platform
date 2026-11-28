@@ -5,6 +5,7 @@ import { Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/lib/toast';
+import InfoTip from '@/components/ui/InfoTip';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   a_faire:    { label: 'À faire',    color: '#2980B9', bg: '#EBF5FB' },
@@ -293,6 +294,9 @@ export default function TasksTab({ projectId, documentType, teamMembers }: Props
                               title="Cette tâche est un rendez-vous (visite, rencontre) : la placer dans le planning">
                               📅 Planifier comme rendez-vous
                             </button>
+                          )}
+                          {!task.activityId && task.status === 'a_faire' && !(task.timeEntries?.length > 0) && (
+                            <InfoTip text="Une date de tâche est une échéance. Si la tâche est en réalité une visite ou une rencontre, transformez-la en activité pour lui réserver un créneau dans le planning." manual="activite-taches-temps" />
                           )}
 
                           {/* Bouton + Temps */}

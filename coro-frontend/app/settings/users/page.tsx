@@ -8,6 +8,7 @@ import { useAuthStore } from "@/stores/auth.store";
 import api from "@/lib/api";
 import AppLayout from "@/components/layout/AppLayout";
 import WorkScheduleEditorPanel from "@/components/WorkScheduleEditorPanel";
+import InfoTip from '@/components/ui/InfoTip';
 
 interface TeamUser {
   id: string;
@@ -490,6 +491,7 @@ export default function TeamUsersPage() {
                       <input type="checkbox" checked={u.planningCoordinator === true}
                         onChange={(e) => handlePlanningCoordinator(u.id, e.target.checked)} />
                       Coordination planification
+                      <InfoTip text="Planifie et affecte les activités de toute l’équipe sans être administrateur, gère l’équipe des clients et voit tous les projets, même en visibilité Restreinte." manual="equipe-utilisateurs" />
                     </label>
                   )}
                 </p>
@@ -576,6 +578,7 @@ export default function TeamUsersPage() {
                       <input type="checkbox" checked={u.planningCoordinator === true}
                         onChange={(e) => handlePlanningCoordinator(u.id, e.target.checked)} />
                       Coordination planification
+                      <InfoTip text="Planifie et affecte les activités de toute l’équipe sans être administrateur, gère l’équipe des clients et voit tous les projets, même en visibilité Restreinte." manual="equipe-utilisateurs" />
                     </label>
                   )}
                 </td>

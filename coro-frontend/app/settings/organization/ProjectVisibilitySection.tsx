@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
+import InfoTip from '@/components/ui/InfoTip';
 
 type Visibility = 'OPEN' | 'RESTRICTED';
 
@@ -46,7 +47,7 @@ export default function ProjectVisibilitySection() {
 
   return (
     <section className="rounded-lg p-4 sm:p-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-      <h3 className="font-semibold mb-1" style={{ color: '#2C3E50' }}>Visibilité des projets</h3>
+      <h3 className="font-semibold mb-1" style={{ color: '#2C3E50' }}>Visibilité des projets<InfoTip text="Ouverte : chacun lit tous les projets. Restreinte : chacun voit ses projets, ceux de ses clients (équipe du client), ses affectations et les documents à approuver." manual="visibilite-equipe-client" /></h3>
       <p className="text-xs mb-4" style={{ color: '#6C757D' }}>
         Détermine quels projets, portefeuilles clients et documents les conseillers peuvent consulter.
       </p>

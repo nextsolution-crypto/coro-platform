@@ -20,6 +20,7 @@ import { getMandateServices, putMandateServices } from './mandateApi';
 import { mandateSavePlan } from './mandateSavePlan';
 import { useMandateOperations } from './useMandateOperations';
 import { useMandateWork } from './useMandateWork';
+import InfoTip from '@/components/ui/InfoTip';
 
 const TABS = [
   { id: 'fiche', domId: 'offer', label: '📋 Fiche & Offre' },
@@ -491,7 +492,7 @@ export default function MandatePage() {
                     onBlur={e => e.target.style.borderColor = '#CED4DA'} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Taux horaire facturé ($/h)</label>
+                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Taux horaire facturé ($/h)<InfoTip text="Taux facturé au client (souvent 120 à 170 $/h). À ne pas confondre avec le salaire horaire du conseiller." manual="mandat-services" /></label>
                   <input type="number" value={form.tauxHoraire}
                     disabled={!canEditMandate} onChange={e => updateForm({ tauxHoraire: e.target.value,
                       ...withSuggestedHours(form.montantVendu, e.target.value) })}
@@ -501,7 +502,7 @@ export default function MandatePage() {
                     onBlur={e => e.target.style.borderColor = '#CED4DA'} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Heures budgétées</label>
+                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Heures budgétées<InfoTip text={`Calcul automatique : montant vendu × (100 % − marge visée de ${mandateRules.mandateTargetMarginPercent} %) ÷ taux facturé. Modifiable au besoin.`} manual="mandat-services" /></label>
                   <input type="number" value={form.heuresBudgetees}
                     disabled={!canEditMandate} onChange={e => updateForm({ heuresBudgetees: e.target.value })}
                     placeholder="0" min="0" step="0.5"
@@ -614,6 +615,7 @@ export default function MandatePage() {
             <div className="rounded-md p-5" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
               <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: '#ADB5BD' }}>
                 ⏱ Délai de livraison
+                <InfoTip text="Le délai démarre quand le relevé technique ou l’inspection est réalisé (activité terminée), à la date de la visite. Durées réglées dans Paramètres → Organisation → Règles des mandats." manual="releve-inspection" />
               </p>
 
               {/* Type de mandat */}
@@ -646,6 +648,7 @@ export default function MandatePage() {
                   <div className="mb-3">
                     <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>
                       Type de document
+                      <InfoTip text="Détermine la durée du délai : PMU/PSI/PCA selon les heures budgétées (court ou long), plan d’évacuation ou rapport d’inspection." manual="mandat-services" />
                     </label>
                     <div className="flex gap-2">
                       {[

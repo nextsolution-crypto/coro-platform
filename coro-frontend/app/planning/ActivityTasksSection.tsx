@@ -5,6 +5,7 @@ import axios from 'axios';
 import api from '@/lib/api';
 import { toast } from '@/lib/toast';
 import styles from './planning.module.css';
+import InfoTip from '@/components/ui/InfoTip';
 
 type Person = { id: string; firstName: string; lastName: string };
 type ActivityTask = {
@@ -181,8 +182,9 @@ export default function ActivityTasksSection({ projectId, activityId, canMutate,
     </div>{view && <strong>{view.taskProgressPercent === null ? '—' : `${view.taskProgressPercent} %`}</strong>}</div>
     {view && <p className={styles.taskMetrics}>Progression {view.taskProgressPercent === null ? 'non calculée' : `${view.taskProgressPercent} %`} · Temps réalisé {hours(view.actualHours)}</p>}
     {view && canWork && !view.isCancelled && <div className={styles.realizedTime}>
-      {!realized.open ? <button type="button" className={styles.inlineButton} onClick={() => setRealized({ ...realized, open: true })}>
-        Enregistrer le temps de l’activité réalisée</button> : <div className={styles.taskTimeForm}>
+      {!realized.open ? <><button type="button" className={styles.inlineButton} onClick={() => setRealized({ ...realized, open: true })}>
+        Enregistrer le temps de l’activité réalisée</button>
+        <InfoTip text="Inscrit en un clic la durée prévue de l’activité, à sa date, sur sa tâche de réalisation. Le temps va au mandat, à votre Timelog et au Rendement." manual="activite-taches-temps" /></> : <div className={styles.taskTimeForm}>
         <label>Heures<input inputMode="decimal" placeholder="Durée prévue" value={realized.heures}
           onChange={event => setRealized({ ...realized, heures: event.target.value })} /></label>
         <label>Date<input type="date" value={realized.date} onChange={event => setRealized({ ...realized, date: event.target.value })} /></label>

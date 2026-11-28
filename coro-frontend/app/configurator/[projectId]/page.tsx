@@ -1132,7 +1132,8 @@ export default function ConfiguratorPage() {
       <div className="flex min-w-0 xl:h-[calc(100vh-65px)]">
 
         {/* Sidebar nav */}
-        <div className="hidden lg:block w-56 overflow-y-auto flex-shrink-0"
+        {/* Colonne des sections : assez large pour les titres longs sur une seule ligne. */}
+        <div className="hidden lg:block w-64 xl:w-72 overflow-y-auto flex-shrink-0"
           style={{
             backgroundColor: '#FFFFFF',
             borderRight: '1px solid #DEE2E6',
@@ -1169,7 +1170,7 @@ export default function ConfiguratorPage() {
                         <button
                           key={section.id}
                           onClick={() => setActiveSection(section.idx)}
-                          className="w-full text-left px-3 py-2 rounded text-xs mb-0.5 transition-colors flex items-center gap-2 font-medium"
+                          className="w-full text-left px-3 py-2 rounded text-[13px] leading-snug mb-0.5 transition-colors flex items-center gap-2 font-medium"
                           style={{
                             backgroundColor: isActive ? '#FDEDEC' : 'transparent',
                             color: isActive ? '#C0392B' : '#495057',
