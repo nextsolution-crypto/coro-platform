@@ -9,6 +9,11 @@ export interface AdviserActor {
   userId: string;
   organizationId: string;
   role: string;
+  /** Réglage d'organisation, fourni par la session : OPEN (défaut) ou RESTRICTED. */
+  projectVisibility?: string;
+  email?: string;
+  /** Droit « Coordination planification » : voit tous les projets même en mode Restreinte. */
+  planningCoordinator?: boolean;
 }
 
 /**
@@ -36,10 +41,43 @@ export function projectAccessWhere(
 export function projectReadWhere(
   actor: AdviserActor,
 ): Prisma.ProjectWhereInput {
+  if (actor.role === 'OPERATOR' && actor.projectVisibility === 'RESTRICTED' && !actor.planningCoordinator) {
+    return { organizationId: actor.organizationId, OR: restrictedMembership(actor) };
+  }
   if (['ADMIN', 'SUPER_ADMIN', 'OPERATOR'].includes(actor.role)) {
     return { organizationId: actor.organizationId };
   }
   throw new ForbiddenException('Acces refuse a ce projet');
+}
+
+/**
+ * Visibilité « Restreinte » : le conseiller voit ses projets, ceux où il est affecté à une
+ * activité (réservation ou ancienne affectation par courriel) ou à une tâche, et les projets
+ * dont un document attend une approbation (pour pouvoir le réviser).
+ */
+function restrictedMembership(actor: AdviserActor): Prisma.ProjectWhereInput[] {
+  return [
+    { userId: actor.userId },
+    {
+      activities: {
+        some: {
+          bookings: {
+            some: {
+              status: { notIn: ['ANNULEE', 'REFUSEE'] },
+              assignments: {
+                some: { userId: actor.userId, status: { in: ['PENDING', 'ACCEPTED'] } },
+              },
+            },
+          },
+        },
+      },
+    },
+    ...(actor.email
+      ? [{ activities: { some: { assigneeEmail: { equals: actor.email, mode: 'insensitive' as const } } } }]
+      : []),
+    { projectTasks: { some: { OR: [{ assigneeId: actor.userId }, { assignees: { some: { userId: actor.userId } } }] } } },
+    { documentReviewRequests: { some: { status: 'PENDING' } } },
+  ];
 }
 
 /** Le conseiller peut-il modifier ce projet (propriétaire ou administrateur)? */

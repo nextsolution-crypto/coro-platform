@@ -157,6 +157,34 @@ export class OrganizationsService {
     });
   }
 
+  async getProjectVisibility(organizationId: string) {
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { projectVisibility: true },
+    });
+    if (!organization) throw new NotFoundException('Organisation introuvable');
+    return { projectVisibility: organization.projectVisibility };
+  }
+
+  async updateProjectVisibility(organizationId: string, value: unknown, actor: any) {
+    if (value !== 'OPEN' && value !== 'RESTRICTED')
+      throw new BadRequestException('Visibilité invalide : OPEN ou RESTRICTED.');
+    return this.prisma.$transaction(async (tx) => {
+      const before = await tx.organization.findUnique({ where: { id: organizationId }, select: { projectVisibility: true } });
+      if (!before) throw new NotFoundException('Organisation introuvable');
+      const updated = await tx.organization.update({
+        where: { id: organizationId },
+        data: { projectVisibility: value },
+        select: { projectVisibility: true },
+      });
+      await this.adminAudit.record(tx, {
+        actorUserId: actor.userId, action: 'ORGANIZATION_PROJECT_VISIBILITY_UPDATED', targetType: 'Organization',
+        targetId: organizationId, organizationId, beforeData: before as any, afterData: updated as any,
+      });
+      return updated;
+    });
+  }
+
     async createWithAdmin(data: {
   organizationName: string;
   licenseType: string;

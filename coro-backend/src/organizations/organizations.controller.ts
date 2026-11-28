@@ -75,6 +75,20 @@ export class OrganizationsController {
     return this.organizationsService.updateMandateRules(req.user.organizationId, body, req.user);
   }
 
+  @Get('me/project-visibility')
+  getMyProjectVisibility(@Request() req: any) {
+    if (!['ADMIN', 'SUPER_ADMIN', 'OPERATOR'].includes(req.user.role)) {
+      throw new ForbiddenException('Accès réservé aux conseillers.');
+    }
+    return this.organizationsService.getProjectVisibility(req.user.organizationId);
+  }
+
+  @Put('me/project-visibility')
+  updateMyProjectVisibility(@Request() req: any, @Body() body: { projectVisibility?: unknown }) {
+    this.assertOrganizationAdmin(req);
+    return this.organizationsService.updateProjectVisibility(req.user.organizationId, body?.projectVisibility, req.user);
+  }
+
   @Get('admin/all-projects')
   @SuperAdminOnly()
   getAllProjectsGlobal() {

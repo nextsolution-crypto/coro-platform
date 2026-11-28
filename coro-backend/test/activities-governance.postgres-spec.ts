@@ -101,12 +101,18 @@ describePostgres('Activities canonical scope on PostgreSQL', () => {
     expect(operatorRows.map((row) => row.projectId)).toEqual([
       fixture.project.id,
     ]);
+    // Visibilité « Restreinte » : le portefeuille client se limite aux projets du conseiller.
     const operatorClient = await service.getClientPortfolio(
       fixture.client.id,
-      operator(),
+      { ...operator(), projectVisibility: 'RESTRICTED' },
     );
     expect(operatorClient.projects.map((project) => project.projectId)).toEqual(
       [fixture.project.id],
+    );
+    // Visibilité « Ouverte » (défaut) : lecture de tous les projets du client.
+    const openClient = await service.getClientPortfolio(fixture.client.id, operator());
+    expect(new Set(openClient.projects.map((project) => project.projectId))).toEqual(
+      new Set([fixture.project.id, forbiddenProjectId]),
     );
     const adminRows = await service.getPortfolio(admin());
     expect(new Set(adminRows.map((row) => row.projectId))).toEqual(
