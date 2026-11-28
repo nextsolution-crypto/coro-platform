@@ -15,6 +15,7 @@ const KNOWN_ORGANIZATION_ONLY = new Map<string, string>([
   ['src/activities/activity-task-lists.service.ts', 'précédé de lockMutableProject (affectation vérifiée)'],
   ['src/bookings/booking-eligibility.service.ts', 'contrôle de rôle dédié'],
   ['src/auth/project-access.ts', 'lockProjectForTaskWork : lecture d’état après vérification de l’affectation à l’activité'],
+  ['src/export/export-frozen-data.ts', 'registre de formation : lecture du bâtiment du projet pendant un rendu PDF déjà autorisé'],
 ]);
 
 const PATTERN = /where:\s*\{\s*id:\s*projectId,\s*organizationId(?:\s*:\s*[\w.]+)?\s*\}/;
