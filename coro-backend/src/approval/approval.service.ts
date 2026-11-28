@@ -31,6 +31,7 @@ import {
   createReviewSnapshot,
   hashReviewSnapshot,
 } from './document-review-integrity';
+import { defaultModuleOrder } from '../export/module-order';
 
 type ReviewAuditInput = {
   action: string;
@@ -876,14 +877,8 @@ export class ApprovalService {
         project.id,
         organizationId,
         {
-          selectedModules:
-            project.documentType === 'PCA'
-              ? [1, 2, 3, 4, 5, 6, 7, 8]
-              : [1, 2, 3, 4, 6, 7, 8],
-          moduleOrder:
-            project.documentType === 'PCA'
-              ? [1, 2, 3, 4, 5, 6, 7, 8]
-              : [1, 2, 3, 4, 6, 7, 8],
+          selectedModules: defaultModuleOrder(project.documentType),
+          moduleOrder: defaultModuleOrder(project.documentType),
           language: 'both',
         },
       )

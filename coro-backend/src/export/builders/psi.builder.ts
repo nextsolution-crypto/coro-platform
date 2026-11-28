@@ -8,6 +8,7 @@ import {
 } from '../templates/modules/simple-modules.template';
 import { renderProcedure } from '../templates/modules/module4.template';
 import { renderModule7 } from '../templates/modules/module7.template';
+import { defaultModuleOrder } from '../module-order';
 
 // Sections du Module 1 désactivées dans un PSI
 const PSI_DISABLED_SECTIONS_M1 = ['1.3', '1.4'];
@@ -25,7 +26,7 @@ const PSI_MODULE_TITLES: Record<number, { fr: string; en: string }> = {
 export class PsiBuilder extends PmuBuilder {
   // PSI n'a pas de Module 3 (organigramme)
   getDefaultModules(): number[] {
-    return [1, 2, 4, 6, 7, 8];
+    return defaultModuleOrder('PSI');
   }
 
   protected getPsiModuleTitle(moduleNum: number): string {
@@ -95,16 +96,17 @@ export class PsiBuilder extends PmuBuilder {
         this.adaptSectionForPsi(s),
       );
 
-      psiSections.forEach((s: any) => {
+      // Numérotation selon la position du module dans le document (ordre CORO).
+      psiSections.forEach((s: any, i: number) => {
         this.subsectionTitlesById[
           `${this.sequentialNumber}:${s.id}`
-        ] = `${s.id} — ${s.title}`;
+        ] = `${this.sequentialNumber}.${i + 1} — ${s.title}`;
       });
 
-      for (const section of psiSections) {
+      for (const [i, section] of psiSections.entries()) {
         pdfSegments.push({
           type: 'html',
-          content: `<div>${renderModule1Section(section, false)}</div>`,
+          content: `<div>${renderModule1Section(section, false, `${this.sequentialNumber}.${i + 1}`)}</div>`,
           sequentialNumber: this.sequentialNumber,
           subsectionId: section.id,
         });

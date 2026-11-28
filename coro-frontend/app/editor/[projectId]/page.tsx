@@ -188,6 +188,14 @@ export default function EditorPage() {
             setActiveModule(saved.moduleIdx);
             setActiveSection(saved.sectionIdx);
             setEditingContent(section?.content || "");
+          } else if (docRes.data?.project?.documentType !== "PCA") {
+            // Ouverture sur le premier module de l'ordre CORO : la liste téléphonique.
+            const firstIdx = modules.findIndex((mod: any) => mod.moduleNumber === 2);
+            if (firstIdx > 0) {
+              setActiveModule(firstIdx);
+              setActiveSection(0);
+              setEditingContent(modules[firstIdx]?.sections?.[0]?.content || "");
+            }
           }
         } catch {
           /* position illisible : début du document */
@@ -551,6 +559,21 @@ export default function EditorPage() {
     );
 
   const modules = getModules();
+  // Ordre opérationnel CORO (même ordre que le PDF) : liste téléphonique, plans, rôles,
+  // procédures, description du site, introduction, registres. Les modules gardent leur
+  // index de stockage ; seul l'affichage et la numérotation suivent cet ordre.
+  const moduleRank = (mod: Module) => {
+    if (document.project?.documentType === "PCA") return mod.moduleNumber;
+    const rank = [2, 6, 3, 4, 7, 1, 8].indexOf(mod.moduleNumber);
+    return rank === -1 ? 100 + mod.moduleNumber : rank;
+  };
+  const orderedModules = modules
+    .map((mod, index) => ({ mod, index }))
+    .sort((a, b) => moduleRank(a.mod) - moduleRank(b.mod));
+  const positionOf = (index: number) => {
+    const position = orderedModules.findIndex((entry) => entry.index === index);
+    return position === -1 ? index + 1 : position + 1;
+  };
   const currentModule = modules[activeModule];
   const currentSection = currentModule?.sections?.[activeSection];
   const isSpecialModule = SPECIAL_MODULES.includes(currentModule?.moduleNumber);
@@ -714,7 +737,7 @@ export default function EditorPage() {
       }
       return (
         <Module8Section
-          displayNumber={activeModule + 1}
+          displayNumber={positionOf(activeModule)}
           projectId={projectId}
           onLockVersionChange={(lockVersion) =>
             setDocument((current) =>
@@ -778,7 +801,7 @@ export default function EditorPage() {
           </div>
         );
       }
-      return <Module7Section projectId={projectId} language={language} displayNumber={activeModule + 1} />;
+      return <Module7Section projectId={projectId} language={language} displayNumber={positionOf(activeModule)} />;
     }
     if (n === 6) {
       if (document.project.documentType === "PCA") {
@@ -827,7 +850,7 @@ export default function EditorPage() {
           </div>
         );
       }
-      return <Module6Section projectId={projectId} language={language} displayNumber={activeModule + 1} />;
+      return <Module6Section projectId={projectId} language={language} displayNumber={positionOf(activeModule)} />;
     }
     if (n === 4) {
       if (document.project.documentType === "PCA") {
@@ -1028,10 +1051,10 @@ export default function EditorPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
             <p className="text-xs mb-1" style={{ color: "#ADB5BD" }}>
-              Module {activeModule + 1} — {moduleTitle(currentModule)}
+              Module {positionOf(activeModule)} — {moduleTitle(currentModule)}
             </p>
             <h2 className="text-xl font-bold" style={{ color: "#2C3E50" }}>
-              {activeModule + 1}.{activeSection + 1} — {currentSection?.title}
+              {positionOf(activeModule)}.{activeSection + 1} — {currentSection?.title}
             </h2>
           </div>
           {!isEditing && !isReadOnly && (
@@ -1363,7 +1386,7 @@ export default function EditorPage() {
               </span>
             </div>
 
-            {modules.map((mod, modIdx) => {
+            {orderedModules.map(({ mod, index: modIdx }) => {
               const modValidations = validations.filter(
                 (v) => v.moduleNumber === mod.moduleNumber,
               );
@@ -1404,7 +1427,7 @@ export default function EditorPage() {
                         }}
                       >
                         <span>
-                          M{modIdx + 1} — {moduleTitle(mod)}
+                          M{positionOf(modIdx)} — {moduleTitle(mod)}
                         </span>
                         <div className="flex items-center gap-1.5">
                           {badgeLabel && (
@@ -1495,7 +1518,7 @@ export default function EditorPage() {
                               "transparent";
                         }}
                       >
-                        {modIdx + 1}.
+                        {positionOf(modIdx)}.
                         {(mod.sections || [])
                           .filter((candidate) => isNavSectionVisible(mod, candidate))
                           .findIndex((candidate) => candidate.id === section.id) + 1}{" "}
@@ -1721,7 +1744,7 @@ export default function EditorPage() {
                 {language === "fr" ? "Navigation rapide" : "Quick navigation"}
               </p>
               <div className="space-y-1">
-                {modules.map((mod, modPosition) => (
+                {orderedModules.map(({ mod, index: modPosition }) => (
                   <button
                     type="button"
                     key={mod.moduleNumber}
@@ -1736,7 +1759,7 @@ export default function EditorPage() {
                       className="font-mono font-bold"
                       style={{ color: "#C0392B" }}
                     >
-                      M{modPosition + 1}
+                      M{positionOf(modPosition)}
                     </span>{" "}
                     {moduleTitle(mod)}
                   </button>
@@ -1807,7 +1830,7 @@ export default function EditorPage() {
                 </span>
               </div>
 
-              {modules.map((mod, modIdx) => {
+              {orderedModules.map(({ mod, index: modIdx }) => {
                 const modValidations = validations.filter(
                   (v) => v.moduleNumber === mod.moduleNumber,
                 );
@@ -1838,7 +1861,7 @@ export default function EditorPage() {
                       }}
                     >
                       <span className="break-words">
-                        M{modIdx + 1} — {moduleTitle(mod)}
+                        M{positionOf(modIdx)} — {moduleTitle(mod)}
                       </span>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         {badgeColor && (
@@ -1904,7 +1927,7 @@ export default function EditorPage() {
                             fontWeight: isActive ? "600" : "400",
                           }}
                         >
-                          {modIdx + 1}.
+                          {positionOf(modIdx)}.
                           {(mod.sections || [])
                             .filter((candidate) => isNavSectionVisible(mod, candidate))
                             .findIndex((candidate) => candidate.id === section.id) + 1}{" "}
@@ -2040,7 +2063,7 @@ export default function EditorPage() {
                   {language === "fr" ? "Navigation rapide" : "Quick navigation"}
                 </p>
                 <div className="space-y-1">
-                  {modules.map((mod, modPosition) => (
+                  {orderedModules.map(({ mod, index: modPosition }) => (
                     <button
                       type="button"
                       key={mod.moduleNumber}
@@ -2058,7 +2081,7 @@ export default function EditorPage() {
                         className="font-mono font-bold"
                         style={{ color: "#C0392B" }}
                       >
-                        M{modPosition + 1}
+                        M{positionOf(modPosition)}
                       </span>{" "}
                       {moduleTitle(mod)}
                     </button>

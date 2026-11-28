@@ -901,6 +901,10 @@ export class ExportService {
     if (documentType === 'PCA') {
       return PCA_MODULE_TITLES[moduleNum]?.[lang] || `Module ${moduleNum}`;
     }
+    // Le PSI titre ses procédures « Procédures de sécurité incendie » (comme ses séparateurs).
+    if (documentType === 'PSI' && moduleNum === 4) {
+      return lang === 'fr' ? 'Procédures de sécurité incendie' : 'Fire Safety Procedures';
+    }
 
     return MODULE_TITLES[moduleNum]?.[lang] || `Module ${moduleNum}`;
   }

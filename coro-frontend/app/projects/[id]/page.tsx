@@ -62,6 +62,17 @@ const docTypeColors: Record<string, string> = {
   PGC: '#8E44AD', PRA: '#F39C12', PUE: '#E67E22',
 };
 
+// Les observations gardent la référence technique « Module N » ; l'affichage donne le nom
+// du module, car sa position dans le document suit l'ordre CORO.
+const OBSERVATION_MODULE_TITLES: Record<string, string> = {
+  'Module 1': 'Introduction', 'Module 2': 'Liste téléphonique', 'Module 3': 'Rôles et responsabilités',
+  'Module 4': 'Procédures', 'Module 6': 'Plans techniques', 'Module 7': 'Description du site', 'Module 8': 'Registres et annexes',
+};
+function observationModuleLabel(value: string, documentType?: string) {
+  if (documentType === 'PCA') return value;
+  return OBSERVATION_MODULE_TITLES[value] ?? value;
+}
+
 export default function ProjectDetailPage() {
   const router    = useRouter();
   const params    = useParams();
@@ -494,8 +505,8 @@ export default function ProjectDetailPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          selectedModules: project?.documentType === 'PCA' ? [1, 2, 3, 4, 5, 6, 7, 8] : [1, 2, 3, 4, 6, 7, 8],
-          moduleOrder: project?.documentType === 'PCA' ? [1, 2, 3, 4, 5, 6, 7, 8] : [1, 2, 3, 4, 6, 7, 8],
+          selectedModules: project?.documentType === 'PCA' ? [1, 2, 3, 4, 5, 6, 7, 8] : [2, 6, 3, 4, 7, 1, 8],
+          moduleOrder: project?.documentType === 'PCA' ? [1, 2, 3, 4, 5, 6, 7, 8] : [2, 6, 3, 4, 7, 1, 8],
           language: 'fr',
           isPreview: true,
         }),
@@ -910,7 +921,7 @@ export default function ProjectDetailPage() {
                   <li key={obs.id} className="text-sm rounded px-3 py-2" style={{ backgroundColor: '#FFFFFF', border: '1px solid #F5B7B1', color: '#2C3E50' }}>
                     {obs.module && (
                       <span className="text-xs font-bold px-1.5 py-0.5 rounded mr-2" style={{ backgroundColor: '#EBF5FB', color: '#2980B9' }}>
-                        {obs.module}
+                        {observationModuleLabel(obs.module, project?.documentType)}
                       </span>
                     )}
                     {obs.texte}
@@ -988,8 +999,12 @@ export default function ProjectDetailPage() {
                       className="rounded px-2 py-1.5 text-xs focus:outline-none"
                       style={{ border: '1px solid #CED4DA', color: '#6C757D', minWidth: '120px' }}>
                       <option value="">Module (optionnel)</option>
-                      {(project.documentType === 'PCA' ? [1, 2, 3, 4, 5, 6, 7, 8] : [1, 2, 3, 4, 6, 7, 8]).map(n => `Module ${n}`).map(m => (
-                        <option key={m} value={m}>{m}</option>
+                      {(project.documentType === 'PCA'
+                        ? [1, 2, 3, 4, 5, 6, 7, 8].map(n => ({ value: `Module ${n}`, label: `Module ${n}` }))
+                        : [[2, 'Liste téléphonique'], [6, 'Plans techniques'], [3, 'Rôles et responsabilités'], [4, 'Procédures'], [7, 'Description du site'], [1, 'Introduction'], [8, 'Registres et annexes']]
+                            .map(([n, title]) => ({ value: `Module ${n}`, label: String(title) }))
+                      ).map(m => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
                       ))}
                     </select>
                   </div>
@@ -1040,7 +1055,7 @@ export default function ProjectDetailPage() {
                         {obs.module && (
                           <span className="text-xs font-bold px-1.5 py-0.5 rounded mr-2"
                             style={{ backgroundColor: '#EBF5FB', color: '#2980B9' }}>
-                            {obs.module}
+                            {observationModuleLabel(obs.module, project?.documentType)}
                           </span>
                         )}
                         <span className="text-sm" style={{
