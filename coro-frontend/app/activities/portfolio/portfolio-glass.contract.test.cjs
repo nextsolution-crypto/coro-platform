@@ -101,7 +101,7 @@ test('vue Glass : libellés Legacy conservés (statistiques, filtres, en-têtes,
     'Aucune activité trouvée', 'Chargement du portefeuille...', 'Date à définir', 'Présentiel', 'Teams', 'Télécharger .ics']) {
     assert.ok(view.includes(text), 'libellé manquant : ' + text);
   }
-  for (const col of ['Client', 'Bâtiment', 'Activité', 'Mode', 'Date prévue', 'Statut']) assert.ok(view.includes(`'${col}'`), 'en-tête manquant : ' + col);
+  for (const col of ['Client', 'Bâtiment', 'Activité', 'Responsable', 'Date prévue', 'Statut', 'Tâches']) assert.ok(view.includes(`'${col}'`), 'en-tête manquant : ' + col);
 });
 
 test('registre : /activities/portfolio est en bêta native (jamais ga) ; les autres routes de travail ne sont ni natives ni ga (au plus re-teintées)', () => {

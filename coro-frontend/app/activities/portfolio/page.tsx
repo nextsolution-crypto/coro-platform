@@ -144,6 +144,9 @@ export default function ActivitiesPortfolioPage() {
             mode: row.mode,
             scheduledDate: row.scheduledDate,
             status: row.status,
+            leadName: row.leadName,
+            taskSummary: row.taskCount ? `${row.taskCompletedCount}/${row.taskCount} · ${hoursLabel(row.actualHours || 0)}` : null,
+            typeColor: typeVisual(row).color,
           }))}
           search={search}
           onSearch={setSearch}
@@ -157,7 +160,7 @@ export default function ActivitiesPortfolioPage() {
           filterType={filterType}
           onFilterType={setFilterType}
           statusLabels={Object.fromEntries(Object.entries(STATUS_CONFIG).map(([key, config]) => [key, config.label]))}
-          formatDate={value => formatCivilDate(value, { day: 'numeric', month: 'short', year: 'numeric' })}
+          formatDate={value => formatWhen(value)}
           onOpen={projectId => router.push(`/projects/${projectId}/activities`)}
           onDownloadIcs={handleDownloadIcs}
         />

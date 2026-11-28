@@ -27,6 +27,12 @@ export interface PortfolioRow {
   mode?: string;
   scheduledDate?: string | null;
   status: string;
+  /** Conseiller responsable (réservation en cours), résolu par la page. */
+  leadName?: string | null;
+  /** Résumé des tâches, ex. « 3/7 · 2 h », résolu par la page. */
+  taskSummary?: string | null;
+  /** Couleur du type d'activité, résolue par la page. */
+  typeColor?: string;
 }
 
 export interface PortfolioStats {
@@ -217,6 +223,8 @@ export default function PortfolioGlassView(props: PortfolioGlassViewProps) {
                       </p>
                       <div className="flex flex-wrap items-center gap-2">
                         {modeBadge(row)}
+                        {row.leadName && <span className="text-xs" style={{ color: 'var(--cg-text-secondary)' }}>👤 {row.leadName}</span>}
+                        {row.taskSummary && <span className="text-xs" style={{ color: 'var(--cg-text-muted)' }}>☑ {row.taskSummary}</span>}
                         {row.duration && (
                           <span className="text-xs inline-flex items-center gap-1" style={{ color: 'var(--cg-text-muted)' }}>
                             <Icon><Clock size={12} /></Icon>{row.duration}
@@ -242,7 +250,7 @@ export default function PortfolioGlassView(props: PortfolioGlassViewProps) {
             <GlassTable label="Activités" interactive minWidth={900} focusable={false}>
               <thead>
                 <tr>
-                  {['Client', 'Bâtiment', 'Activité', 'Mode', 'Date prévue', 'Statut'].map((col) => <th key={col} scope="col">{col}</th>)}
+                  {['Client', 'Bâtiment', 'Activité', 'Responsable', 'Date prévue', 'Statut', 'Tâches'].map((col) => <th key={col} scope="col">{col}</th>)}
                   <th scope="col"><span className="sr-only">Télécharger .ics</span></th>
                 </tr>
               </thead>
@@ -253,7 +261,7 @@ export default function PortfolioGlassView(props: PortfolioGlassViewProps) {
                     <tr key={row.id} style={{ cursor: 'pointer' }} onClick={() => props.onOpen(row.projectId)}>
                       <td style={{ fontWeight: 600 }}>{row.clientName}</td>
                       <td style={{ color: 'var(--cg-text-secondary)' }}>{row.buildingName}</td>
-                      <td style={{ color: 'var(--cg-text-secondary)', maxWidth: 240 }}>
+                      <td style={{ color: 'var(--cg-text-secondary)', maxWidth: 240, borderLeft: row.typeColor ? `4px solid ${row.typeColor}` : undefined }}>
                         {openButton(row, true)}
                         {row.duration && (
                           <span className="text-xs inline-flex items-center gap-1" style={{ color: 'var(--cg-text-muted)' }}>
@@ -261,11 +269,14 @@ export default function PortfolioGlassView(props: PortfolioGlassViewProps) {
                           </span>
                         )}
                       </td>
-                      <td>{modeBadge(row)}</td>
+                      <td className="text-xs" style={{ color: 'var(--cg-text-secondary)' }}>
+                        {row.leadName || <span style={{ color: 'var(--cg-text-muted)' }}>À affecter</span>}
+                      </td>
                       <td className="text-xs whitespace-nowrap" style={{ color: 'var(--cg-text-secondary)' }}>
                         {row.scheduledDate ? props.formatDate(row.scheduledDate) : <span style={{ color: 'var(--cg-text-muted)' }}>—</span>}
                       </td>
                       <td><StatusBadge tone={st.tone}>{st.label}</StatusBadge></td>
+                      <td className="text-xs whitespace-nowrap" style={{ color: 'var(--cg-text-secondary)' }}>{row.taskSummary || '—'}</td>
                       <td className="text-center" onClick={(e) => e.stopPropagation()}>{row.scheduledDate ? download(row) : null}</td>
                     </tr>
                   );
