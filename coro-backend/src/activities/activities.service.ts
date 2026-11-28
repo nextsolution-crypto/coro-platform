@@ -811,29 +811,77 @@ export class ActivitiesService {
 
   // Vue portefeuille client — toutes les activités de tous les projets d'un client
   async getClientPortfolio(clientId: string, actor: AdviserActor) {
+    // Vue client : tout conseiller lit les projets de son organisation (comme la fiche projet).
     const projects = await this.prisma.project.findMany({
-      where: { clientId, isActive: true, ...projectAccessWhere(actor) },
+      where: { clientId, isActive: true, ...projectReadWhere(actor) },
       include: {
         building: true,
-        activities: { orderBy: { scheduledDate: 'asc' } },
+        activities: {
+          orderBy: { scheduledDate: 'asc' },
+          include: {
+            activityType: { select: { code: true, nameFR: true, visualToken: true, iconKey: true } },
+            bookings: {
+              where: { status: { notIn: ['ANNULEE', 'REFUSEE'] } },
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: {
+                assignments: {
+                  where: { status: { in: ['PENDING', 'ACCEPTED'] } },
+                  select: { role: true, user: { select: { firstName: true, lastName: true } } },
+                },
+              },
+            },
+            tasks: { select: { status: true, timeEntries: { select: { heures: true } } } },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
+    const emails = [
+      ...new Set(
+        projects.flatMap((project: any) =>
+          project.activities.map((item: any) => item.assigneeEmail?.trim().toLowerCase()).filter(Boolean),
+        ),
+      ),
+    ] as string[];
+    const advisors = emails.length
+      ? await this.prisma.user.findMany({
+          where: { organizationId: actor.organizationId, email: { in: emails, mode: 'insensitive' } },
+          select: { email: true, firstName: true, lastName: true },
+        })
+      : [];
+    const nameByEmail = new Map(advisors.map((item) => [item.email.toLowerCase(), `${item.firstName} ${item.lastName}`.trim()]));
+    const isDone = (status: string) => status === 'termine' || status === 'fait';
 
     const total = projects.reduce((sum, p) => sum + p.activities.length, 0);
     const done = projects.reduce(
-      (sum, p) =>
-        sum + p.activities.filter((a) => a.status === 'termine').length,
+      (sum, p) => sum + p.activities.filter((a) => isDone(a.status)).length,
       0,
     );
 
     return {
-      projects: projects.map((p) => ({
+      projects: projects.map((p: any) => ({
         projectId: p.id,
         projectName: p.name,
         buildingName: p.building.name,
         documentType: p.documentType,
-        activities: p.activities,
+        activities: p.activities.map(({ bookings = [], tasks = [], ...activity }: any) => {
+          const lead =
+            bookings[0]?.assignments.find((item: any) => item.role === 'LEAD') ?? bookings[0]?.assignments[0];
+          return {
+            ...activity,
+            leadName: lead
+              ? `${lead.user.firstName} ${lead.user.lastName}`.trim()
+              : activity.assigneeEmail
+                ? nameByEmail.get(activity.assigneeEmail.trim().toLowerCase()) ?? null
+                : null,
+            taskCount: tasks.length,
+            taskCompletedCount: tasks.filter((task: any) => task.status === 'fait').length,
+            actualHours: round2(
+              tasks.reduce((sum: number, task: any) => sum + (task.timeEntries ?? []).reduce((t: number, e: any) => t + e.heures, 0), 0),
+            ),
+          };
+        }),
       })),
       summary: {
         total,

@@ -916,7 +916,16 @@ export class ProjectsService {
     return buildings
       .map((building) => {
         const sources = building.projects.flatMap((project) =>
-          project.documents.map((document) => ({
+          project.documents.map((rawDocument, index) => {
+            // L'approbation est portée par le projet : son document courant (le plus récent)
+            // prend le statut du projet validé ou exporté.
+            const document =
+              index === 0 &&
+              rawDocument.status !== 'ARCHIVED' &&
+              (project.status === 'VALIDATED' || project.status === 'EXPORTED')
+                ? { ...rawDocument, status: project.status }
+                : rawDocument;
+            return {
             documentId: document.id,
             documentTitle: document.title,
             documentStatus: document.status,
@@ -937,7 +946,8 @@ export class ProjectsService {
                   : 'APPROVAL_DATE_UNKNOWN'
                 : 'LAST_MODIFIED_DATE',
             current: document.status !== 'ARCHIVED',
-          })),
+            };
+          }),
         );
         const current = sources.filter((source) => source.current);
         const approved = current.filter(

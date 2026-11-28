@@ -50,9 +50,13 @@ const statusColors: Record<
   string,
   { bg: string; color: string; label: string }
 > = {
-  DRAFT: { bg: "#FEF9E7", color: "#F39C12", label: "Brouillon" },
-  ACTIVE: { bg: "#EAFAF1", color: "#27AE60", label: "Actif" },
-  ARCHIVED: { bg: "#F8F9FA", color: "#ADB5BD", label: "Archivé" },
+  // Mêmes statuts que la liste des projets (ProjectStatus).
+  DRAFT: { bg: "#F8F9FA", color: "#6C757D", label: "Brouillon" },
+  IN_PROGRESS: { bg: "#EBF5FB", color: "#2980B9", label: "En cours" },
+  REVIEW: { bg: "#FEF9E7", color: "#F39C12", label: "En révision" },
+  VALIDATED: { bg: "#EAFAF1", color: "#27AE60", label: "Validé" },
+  EXPORTED: { bg: "#F4ECF7", color: "#8E44AD", label: "Exporté" },
+  ARCHIVED: { bg: "#FDEDEC", color: "#C0392B", label: "Archivé" },
 };
 
 export default function BuildingDetailPage() {

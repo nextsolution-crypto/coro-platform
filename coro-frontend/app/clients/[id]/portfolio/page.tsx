@@ -6,6 +6,22 @@ import { Download } from 'lucide-react';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { formatCivilDate } from '@/app/planning/time';
+import { getActivityTypeVisual } from '@/app/planning/activityTypeVisual';
+
+function formatWhen(value: string) {
+  const date = new Date(value);
+  if (date.getUTCHours() === 0 && date.getUTCMinutes() === 0)
+    return formatCivilDate(value, { day: 'numeric', month: 'short', year: 'numeric' });
+  return date.toLocaleString('fr-CA', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Toronto' });
+}
+function typeColor(activity: any) {
+  return getActivityTypeVisual(activity.activityType ?? { code: activity.type, nameFR: activity.customLabel || activity.label, visualToken: 'NEUTRAL' }).color;
+}
+function taskLine(activity: any) {
+  if (!activity.taskCount) return '—';
+  const h = activity.actualHours || 0; const whole = Math.floor(h); const m = Math.round((h - whole) * 60);
+  return `${activity.taskCompletedCount}/${activity.taskCount} · ${m ? `${whole} h ${String(m).padStart(2, '0')}` : `${whole} h`}`;
+}
 import { toast } from '@/lib/toast';
 import { downloadActivityIcs } from '@/lib/download-ics';
 
@@ -70,7 +86,7 @@ export default function ClientPortfolioPage() {
   const buildings = Array.from(new Set(allActivities.map((a: any) => a.buildingName))).filter(Boolean);
 
   const total = filtered.length;
-  const done = filtered.filter((a: any) => a.status === 'termine').length;
+  const done = filtered.filter((a: any) => a.status === 'termine' || a.status === 'fait').length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
   if (loading) return (
@@ -174,7 +190,7 @@ export default function ClientPortfolioPage() {
         });
         if (projectActivities.length === 0) return null;
 
-        const projDone = projectActivities.filter((a: any) => a.status === 'termine').length;
+        const projDone = projectActivities.filter((a: any) => a.status === 'termine' || a.status === 'fait').length;
         const projPct = projectActivities.length > 0 ? Math.round((projDone / projectActivities.length) * 100) : 0;
 
         return (
@@ -254,13 +270,9 @@ export default function ClientPortfolioPage() {
                       </span>
 
                       <span className="text-xs" style={{ color: '#495057' }}>
-                        {activity.scheduledDate
-                          ? `📅 ${formatCivilDate(activity.scheduledDate, {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                            })}`
-                          : '📅 Date à définir'}
+                        {activity.scheduledDate ? `📅 ${formatWhen(activity.scheduledDate)}` : '📅 Date à définir'}
+                        {activity.leadName ? ` · 👤 ${activity.leadName}` : ''}
+                        {activity.taskCount ? ` · ☑ ${taskLine(activity)}` : ''}
                       </span>
                     </div>
 
@@ -289,7 +301,7 @@ export default function ClientPortfolioPage() {
               <table className="w-full min-w-[700px] text-sm" style={{ borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#FAFAFA' }}>
-                    {['Activité', 'Mode', 'Date prévue', 'Statut', ''].map(col => (
+                    {['Activité', 'Responsable', 'Date prévue', 'Statut', 'Tâches', ''].map(col => (
                       <th
                         key={col}
                         className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide"
@@ -311,7 +323,7 @@ export default function ClientPortfolioPage() {
                         key={activity.id}
                         style={{ backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}
                       >
-                        <td className="px-4 py-3" style={{ borderBottom: '1px solid #F8F9FA', color: '#2C3E50' }}>
+                        <td className="px-4 py-3" style={{ borderBottom: '1px solid #F8F9FA', color: '#2C3E50', borderLeft: `4px solid ${typeColor(activity)}` }}>
                           <p className="text-sm">{label}</p>
                           {activity.duration && (
                             <p className="text-xs" style={{ color: '#ADB5BD' }}>
@@ -320,16 +332,8 @@ export default function ClientPortfolioPage() {
                           )}
                         </td>
 
-                        <td className="px-4 py-3" style={{ borderBottom: '1px solid #F8F9FA' }}>
-                          <span
-                            className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap inline-flex items-center"
-                            style={{
-                              backgroundColor: activity.mode === 'teams' ? '#EBF5FB' : '#EAFAF1',
-                              color: activity.mode === 'teams' ? '#2980B9' : '#27AE60',
-                            }}
-                          >
-                            {activity.mode === 'teams' ? '💻 Teams' : '📍 Présentiel'}
-                          </span>
+                        <td className="px-4 py-3 text-xs" style={{ borderBottom: '1px solid #F8F9FA', color: '#495057' }}>
+                          {activity.leadName || 'À affecter'}
                         </td>
 
                         <td
@@ -340,11 +344,7 @@ export default function ClientPortfolioPage() {
   }}
 >
                           {activity.scheduledDate
-                            ? formatCivilDate(activity.scheduledDate, {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric',
-                              })
+                            ? formatWhen(activity.scheduledDate)
                             : <span style={{ color: '#ADB5BD' }}>—</span>}
                         </td>
 
@@ -359,6 +359,10 @@ export default function ClientPortfolioPage() {
                           >
                             {status.label}
                           </span>
+                        </td>
+
+                        <td className="px-4 py-3 text-xs whitespace-nowrap" style={{ borderBottom: '1px solid #F8F9FA', color: '#495057' }}>
+                          {taskLine(activity)}
                         </td>
 
                         <td className="px-3 py-3" style={{ borderBottom: '1px solid #F8F9FA' }}>
