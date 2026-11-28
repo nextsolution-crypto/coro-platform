@@ -159,6 +159,15 @@ export class ActivitiesService {
       },
       orderBy: [{ scheduledDate: 'asc' }, { id: 'asc' }],
     });
+    // Ancienne affectation par courriel : on affiche le nom du conseiller.
+    const emails = [...new Set(activities.map((item: any) => item.assigneeEmail?.trim().toLowerCase()).filter(Boolean))] as string[];
+    const advisors = emails.length
+      ? await this.prisma.user.findMany({
+          where: { organizationId: actor.organizationId, email: { in: emails, mode: 'insensitive' } },
+          select: { email: true, firstName: true, lastName: true },
+        })
+      : [];
+    const nameByEmail = new Map(advisors.map((item) => [item.email.toLowerCase(), `${item.firstName} ${item.lastName}`.trim()]));
     return activities.map(({ bookings = [], tasks = [], ...activity }: any) => {
       const lead =
         bookings[0]?.assignments.find((item: any) => item.role === 'LEAD') ??
@@ -174,7 +183,11 @@ export class ActivitiesService {
         clientName: activity.project.client.name,
         buildingName: activity.project.building.name,
         buildingAddress: activity.project.building.address,
-        leadName: lead ? `${lead.user.firstName} ${lead.user.lastName}`.trim() : null,
+        leadName: lead
+          ? `${lead.user.firstName} ${lead.user.lastName}`.trim()
+          : activity.assigneeEmail
+            ? nameByEmail.get(activity.assigneeEmail.trim().toLowerCase()) ?? null
+            : null,
         taskCount,
         taskCompletedCount,
         actualHours: round2(
