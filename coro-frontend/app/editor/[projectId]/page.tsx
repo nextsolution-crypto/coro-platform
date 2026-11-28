@@ -666,9 +666,34 @@ export default function EditorPage() {
               color: "#7D6608",
             }}
           >
-            Document en lecture seule. Les données spécialisées restent
-            consultables, mais aucune modification n’est permise.
+            Document en lecture seule : aucune modification n’est permise.
+            Le contenu complet (listes, tableaux, procédures, plans) se
+            consulte dans l’aperçu PDF du projet.
           </div>
+          {n === 4 && Array.isArray(currentModule.procedures) && currentModule.procedures.length > 0 && (
+            <section
+              className="rounded-md p-5"
+              style={{
+                backgroundColor: "#FFFFFF",
+                border: "1px solid #E9ECEF",
+              }}
+            >
+              <h3 className="mb-3 font-semibold" style={{ color: "#2C3E50" }}>
+                Procédures incluses ({currentModule.procedures.length})
+              </h3>
+              <ul className="space-y-1 text-sm" style={{ color: "#495057" }}>
+                {currentModule.procedures.map((proc: any, index: number) => (
+                  <li key={proc.id || proc.code || index}>
+                    <span className="font-semibold" style={{ color: "#2C3E50" }}>
+                      {proc.code}
+                    </span>
+                    {" — "}
+                    {(language === "en" ? proc.titleEN : proc.titleFR) || proc.titleFR || proc.title || ""}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           {(currentModule.sections || []).map((section: any) => (
             <section
               key={section.id}
@@ -681,13 +706,19 @@ export default function EditorPage() {
               <h3 className="mb-3 font-semibold" style={{ color: "#2C3E50" }}>
                 {section.title}
               </h3>
-              <div
-                className="text-sm leading-7"
-                style={{ color: "#495057" }}
-                dangerouslySetInnerHTML={{
-                  __html: formatContent(section.content || ""),
-                }}
-              />
+              {typeof section.content === "string" && section.content.trim() ? (
+                <div
+                  className="text-sm leading-7"
+                  style={{ color: "#495057" }}
+                  dangerouslySetInnerHTML={{
+                    __html: formatContent(section.content),
+                  }}
+                />
+              ) : (
+                <p className="text-sm" style={{ color: "#6C757D" }}>
+                  Contenu structuré : voir l’aperçu PDF.
+                </p>
+              )}
             </section>
           ))}
         </div>
@@ -867,6 +898,7 @@ export default function EditorPage() {
           }}
         />
         <Module4Section
+          displayNumber={positionOf(activeModule)}
           reloadToken={module4Reload}
           projectId={projectId}
           onLockVersionChange={(lockVersion) =>
@@ -999,6 +1031,7 @@ export default function EditorPage() {
       }
       return (
         <Module2Section
+          displayNumber={positionOf(activeModule)}
           projectId={projectId}
           onLockVersionChange={(lockVersion) =>
             setDocument((current) =>

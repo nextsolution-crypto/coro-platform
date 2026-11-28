@@ -25,6 +25,8 @@ interface Module2SectionProps {
   language?: "fr" | "en";
   onSave?: (data: Module2Data) => void;
   onLockVersionChange?: (lockVersion: number) => void;
+  /** Numéro affiché selon la position du module dans le document. */
+  displayNumber?: number;
 }
 
 function ensureIds<T extends { id?: string }>(
@@ -45,6 +47,7 @@ export default function Module2Section({
   language = "fr",
   onSave,
   onLockVersionChange,
+  displayNumber = 2,
 }: Module2SectionProps) {
   const isFr = language === "fr";
   const [section2_1, setSection2_1] = useState<PhoneEntry[]>([]);
@@ -256,7 +259,7 @@ export default function Module2Section({
       <div className="flex items-center justify-between mb-8">
         <div>
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
-            Module 2
+            Module {displayNumber}
           </p>
           <h1 className="text-3xl font-black text-gray-900 uppercase">
             {t.module}

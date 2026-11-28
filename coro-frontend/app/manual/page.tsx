@@ -72,7 +72,11 @@ export default function ManualPage() {
         } catch {
           return;
         }
-        document.getElementById(id)?.scrollIntoView({ block: "start" });
+        const target = document.getElementById(id);
+        // Un lien d’infobulle (/manual#article) ouvre directement les étapes.
+        const details = target?.querySelector("details");
+        if (details) details.open = true;
+        target?.scrollIntoView({ block: "start" });
       });
     };
     scrollToCurrentArticle();

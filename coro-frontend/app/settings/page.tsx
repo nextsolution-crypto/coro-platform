@@ -95,7 +95,7 @@ export default function SettingsPage() {
 
               {
                 icon: <FileText size={20} />,
-                label: 'Modèle Module 1',
+                label: 'Modèle d’introduction',
                 desc: 'Sections personnalisées pour vos documents',
                 path: '/settings/module1-template',
                 color: '#8E44AD',

@@ -1486,15 +1486,15 @@ export default function ConfiguratorPage() {
               <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>
                 Analyse en temps réel
               </h3>
-              <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>
-                Le score de conformité évalue le respect des normes réglementaires, pas l'avancement de votre saisie.
-              </p>
               {analyzing && (
                 <span className="text-xs animate-pulse flex-shrink-0" style={{ color: '#C0392B' }}>
                   Analyse...
                 </span>
               )}
               </div>
+              <p className="text-xs mt-1" style={{ color: '#6C757D' }}>
+                Le score de conformité évalue le respect des normes réglementaires, pas l'avancement de votre saisie.
+              </p>
             </div>
 
             {!analysis ? (

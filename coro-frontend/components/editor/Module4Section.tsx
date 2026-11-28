@@ -25,6 +25,8 @@ interface Module4SectionProps {
   onLockVersionChange?: (lockVersion: number) => void;
   /** Incrémenté quand le module 4 a été recalculé côté serveur (reprise des rôles). */
   reloadToken?: number;
+  /** Numéro affiché selon la position du module dans le document. */
+  displayNumber?: number;
 }
 
 type StepOverridesMap = Record<string, LocalizedStepOverride>;
@@ -61,6 +63,7 @@ export default function Module4Section({
   onSave,
   onLockVersionChange,
   reloadToken = 0,
+  displayNumber = 4,
 }: Module4SectionProps) {
   const isFr = language === "fr";
   const isFirstLoad = useRef(true);
@@ -395,7 +398,7 @@ export default function Module4Section({
       <div className="flex items-center justify-between mb-6">
         <div>
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
-            Module 4
+            Module {displayNumber}
           </p>
           <h1 className="text-3xl font-black text-gray-900 uppercase leading-tight">
             {t.module}
