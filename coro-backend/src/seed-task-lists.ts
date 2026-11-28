@@ -198,6 +198,7 @@ async function main() {
     ['formation_communication', ["Formation mesures d'urgence"]],
     ['formation_comportement', ["Formation mesures d'urgence"]],
     ['formation_locataires', ["Formation mesures d'urgence"]],
+    ['formation_sst_batiment_occupe', ["Formation mesures d'urgence"]],
     ['exercice_table', ["Exercice d'évacuation"]],
     ['exercice_evacuation', ["Exercice d'évacuation"]],
     ['releve_technique', ['Relevé technique']],

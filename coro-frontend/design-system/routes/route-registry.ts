@@ -126,6 +126,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { pattern: '/blog/new', family: 'admin', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'] },
   { pattern: '/settings', family: 'admin', shell: 'app', status: 'beta', styling: ['inline-hex'] },
   { pattern: '/settings/activity-types', family: 'admin', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex', 'tailwind'] },
+  { pattern: '/settings/training-questionnaires', family: 'admin', shell: 'app', status: 'legacy-only', styling: ['inline-hex', 'tailwind'] },
   { pattern: '/settings/feedback', family: 'admin', shell: 'none', status: 'beta', render: 'skin', styling: ['none'] },
   { pattern: '/support', family: 'admin', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex'] },
   { pattern: '/support/[id]', family: 'admin', shell: 'app', status: 'beta', render: 'skin', styling: ['inline-hex'] },

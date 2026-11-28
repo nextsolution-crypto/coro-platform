@@ -11,6 +11,7 @@ datasource db {
 }
 
 model Organization {
+  trainingQuestionnaires TrainingQuestionnaire[]
   id                     String                  @id @default(uuid())
   name                   String
   isInternal             Boolean                 @default(false)
@@ -4442,6 +4443,7 @@ model ProjectActivity {
   bookings                Booking[]
   advisorEligibilities    ProjectAdvisorEligibility[]
   exerciseReport          ExerciseReport?
+  trainingQuestionnaire   TrainingQuestionnaireSession?
   tasks                   ProjectTask[]               @relation("ActivityTasks")
   taskLists               ProjectTaskList[]           @relation("ActivityTaskLists")
 
@@ -11114,4 +11116,59 @@ model TextTranslation {
   createdAt      DateTime @default(now())
 
   @@unique([sourceHash, targetLang])
+}
+
+// Questionnaire post-formation : banque de questions par type de formation
+// (organizationId NULL = questionnaire CORO par défaut, adaptable par organisation).
+model TrainingQuestionnaire {
+  id               String   @id @default(uuid())
+  organizationId   String?
+  organization     Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  activityTypeCode String
+  title            String
+  passingPercent   Int      @default(80)
+  questions        Json
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([organizationId, activityTypeCode])
+}
+
+// Séance de questionnaire ouverte pour une activité de formation (code QR).
+// Les questions sont figées à l'ouverture : modifier la banque ensuite ne
+// change pas les résultats d'une séance.
+model TrainingQuestionnaireSession {
+  id                String                          @id @default(uuid())
+  organizationId    String
+  projectActivityId String                          @unique
+  projectActivity   ProjectActivity                 @relation(fields: [projectActivityId], references: [id], onDelete: Cascade)
+  buildingId        String?
+  questionnaireId   String?
+  title             String
+  passingPercent    Int
+  questions         Json
+  token             String                          @unique
+  isOpen            Boolean                         @default(true)
+  createdById       String
+  createdAt         DateTime                        @default(now())
+  closedAt          DateTime?
+  responses         TrainingQuestionnaireResponse[]
+
+  @@index([organizationId, buildingId])
+}
+
+model TrainingQuestionnaireResponse {
+  id              String                       @id @default(uuid())
+  sessionId       String
+  session         TrainingQuestionnaireSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  participantName String
+  answers         Json
+  correctCount    Int
+  totalCount      Int
+  percent         Int
+  passed          Boolean
+  submittedAt     DateTime                     @default(now())
+
+  @@index([sessionId])
 }

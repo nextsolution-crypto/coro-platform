@@ -696,6 +696,25 @@ export class OccupancyService {
       recommendations.push({ type: 'WARNING', category: 'EXERCISES', message: `Dernier exercice il y a ${Math.floor(daysSinceExercise / 30)} mois — exigence CNPI : 1 exercice par an.`, action: 'Planifier un exercice d\'évacuation dans les 30 prochains jours.' });
     }
 
+    // ── Questionnaires post-formation (12 derniers mois) ─────────────────
+    const trainingResponses = await this.prisma.trainingQuestionnaireResponse.findMany({
+      where: {
+        submittedAt: { gte: new Date(Date.now() - 365 * 86400000) },
+        session: { buildingId },
+      },
+      select: { percent: true, passed: true, sessionId: true },
+    });
+    const trainingParticipants = trainingResponses.length;
+    const trainingPassRate = trainingParticipants
+      ? Math.round((trainingResponses.filter((r) => r.passed).length / trainingParticipants) * 100)
+      : null;
+    const trainingAverage = trainingParticipants
+      ? Math.round(trainingResponses.reduce((sum, r) => sum + r.percent, 0) / trainingParticipants)
+      : null;
+    if (trainingPassRate !== null && trainingPassRate < 80) {
+      recommendations.push({ type: 'WARNING', category: 'TRAINING', message: `Taux de réussite aux questionnaires de formation : ${trainingPassRate} % sur 12 mois.`, action: 'Prévoir un rappel de formation pour les participants qui n’ont pas atteint le seuil.' });
+    }
+
     // ── Qualifications ────────────────────────────────────────────────────
     const allMembers = base.members as any[];
     const presentMembers = allMembers.filter(m => m.isPresent);
@@ -787,6 +806,12 @@ export class OccupancyService {
         daysSincePlan,
         isPlanValid,
         isPlanCurrent,
+      },
+      trainingAnalysis: {
+        sessions:     new Set(trainingResponses.map((r) => r.sessionId)).size,
+        participants: trainingParticipants,
+        averagePercent: trainingAverage,
+        passRate:     trainingPassRate,
       },
       exercisesAnalysis: {
         lastExerciseDate:    lastExercise?.triggeredAt || null,

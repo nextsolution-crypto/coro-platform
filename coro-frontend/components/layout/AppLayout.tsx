@@ -79,6 +79,7 @@ const ADMIN_GROUP = {
     { label: 'Rendement équipe',      path: '/dashboard/rendement',          icon: '📊' },
     { label: 'Modèles de tâches',    path: '/settings/task-templates',      icon: '✅' },
     { label: 'Types d’activités',     path: '/settings/activity-types',      icon: '◆' },
+    { label: 'Questionnaires de formation', path: '/settings/training-questionnaires', icon: '📝' },
     { label: 'Catégories timelog',   path: '/settings/timelog-categories',  icon: '🏷' },
     { label: 'Demandes de support',  path: '/support/console',              icon: '💬' },
   ],
