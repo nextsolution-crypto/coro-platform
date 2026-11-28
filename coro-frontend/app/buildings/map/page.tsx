@@ -1195,8 +1195,16 @@ export default function BuildingsMapPage() {
             }}
           >
             ⚠️ {withoutCoords.length} bâtiment
-            {withoutCoords.length > 1 ? "s" : ""} sans coordonnées valides — la
-            liste demeure accessible.
+            {withoutCoords.length > 1 ? "s" : ""} sans coordonnées valides :{" "}
+            {withoutCoords.slice(0, 5).map((building: any, index: number) => (
+              <span key={building.id}>
+                {index > 0 ? ", " : ""}
+                <a href={`/buildings/${building.id}`} style={{ color: "inherit", textDecoration: "underline" }}>
+                  {building.name}
+                </a>
+              </span>
+            ))}
+            {withoutCoords.length > 5 ? "…" : ""} — vérifiez l’adresse dans la fiche.
           </div>
         )}
       </div>

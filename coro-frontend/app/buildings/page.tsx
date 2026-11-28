@@ -69,6 +69,8 @@ export default function BuildingsPage() {
   const [loading, setLoading]       = useState(true);
   const [showModal, setShowModal]   = useState(false);
   const [loadError, setLoadError] = useState('');
+  const [search, setSearch] = useState('');
+  const [clientFilter, setClientFilter] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [createKey, setCreateKey] = useState(() => crypto.randomUUID());
   const [form, setForm] = useState({
@@ -181,6 +183,11 @@ export default function BuildingsPage() {
     backgroundColor: '#FFFFFF',
   };
 
+  const query = search.trim().toLocaleLowerCase('fr-CA');
+  const visibleBuildings = buildings.filter(building =>
+    (!clientFilter || building.client?.id === clientFilter) &&
+    (!query || [building.name, building.address, building.city, building.client?.name].some(value => value?.toLocaleLowerCase('fr-CA').includes(query))));
+
   return (
     <AppLayout>
       {/* Header */}
@@ -249,7 +256,21 @@ export default function BuildingsPage() {
         </div>
       ) : (
         <div className="grid gap-3">
-          {buildings.map(building => (
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input type="search" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Rechercher un bâtiment, une adresse ou une ville" aria-label="Rechercher un bâtiment"
+              className="flex-1 px-3 py-2 text-sm rounded"
+              style={{ border: '1px solid #DEE2E6', color: '#2C3E50', backgroundColor: '#FFFFFF' }} />
+            <select value={clientFilter} onChange={e => setClientFilter(e.target.value)} aria-label="Filtrer par client"
+              className="px-3 py-2 text-sm rounded" style={{ border: '1px solid #DEE2E6', color: '#2C3E50', backgroundColor: '#FFFFFF' }}>
+              <option value="">Tous les clients</option>
+              {clients.map(client => <option key={client.id} value={client.id}>{client.name}</option>)}
+            </select>
+          </div>
+          {visibleBuildings.length === 0 && (
+            <p className="text-sm py-6 text-center" style={{ color: '#6C757D' }}>Aucun bâtiment ne correspond à ces critères.</p>
+          )}
+          {visibleBuildings.map(building => (
             <div
               key={building.id}
               onClick={() => router.push(`/buildings/${building.id}`)}

@@ -27,6 +27,7 @@ export default function ClientsPage() {
   // Logo choisi dans le formulaire de création, envoyé juste après la création.
   const [newLogo, setNewLogo] = useState<string | null>(null);
   const [loadError, setLoadError] = useState('');
+  const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
   const createButtonRef = useRef<HTMLButtonElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -158,6 +159,11 @@ export default function ClientsPage() {
     } finally { setCreating(false); }
   };
 
+  const query = search.trim().toLocaleLowerCase('fr-CA');
+  const visibleClients = query
+    ? clients.filter(client => [client.name, client.city, client.email].some(value => value?.toLocaleLowerCase('fr-CA').includes(query)))
+    : clients;
+
   return (
     <AppLayout>
       {/* Header */}
@@ -211,7 +217,14 @@ export default function ClientsPage() {
         </div>
       ) : (
         <div className="grid gap-3">
-          {clients.map(client => (
+          <input type="search" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Rechercher un client, une ville ou un courriel" aria-label="Rechercher un client"
+            className="w-full sm:max-w-md px-3 py-2 text-sm rounded"
+            style={{ border: '1px solid #DEE2E6', color: '#2C3E50', backgroundColor: '#FFFFFF' }} />
+          {visibleClients.length === 0 && (
+            <p className="text-sm py-6 text-center" style={{ color: '#6C757D' }}>Aucun client ne correspond à « {search} ».</p>
+          )}
+          {visibleClients.map(client => (
             <div
               key={client.id}
               onClick={() => router.push(`/clients/${client.id}`)}

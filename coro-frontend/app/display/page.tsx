@@ -757,7 +757,7 @@ export default function DisplayManagerPage() {
         <header className={styles.hero}>
           <div>
             <span>Exploitation des plans d’évacuation</span>
-            <h1>Display Manager</h1>
+            <h1>Gestion des affichages</h1>
             <p>
               Préparer, contrôler et gouverner les affichages depuis les
               autorités existantes.
