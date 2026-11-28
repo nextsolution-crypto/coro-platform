@@ -13,7 +13,7 @@ export type ManualArticle = {
   route: string;
   sourceRefs: string[];
 };
-export const MANUAL_VERSION = '2026-11-28.7';
+export const MANUAL_VERSION = '2026-11-28.8';
 const both: ManualAudience[] = ['INTERNAL', 'CLIENT'];
 const internal: ManualAudience[] = ['INTERNAL'];
 const client: ManualAudience[] = ['CLIENT'];
@@ -1609,7 +1609,8 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     'Comprendre le score de préparation du bâtiment et ce qui le fait baisser.',
     [
       'Dans Sentinelle, ouvrez Résilience opérationnelle.',
-      'Lisez l’indice CORO : il pondère les rôles d’urgence couverts (40 %), les qualifications présentes (20 %), les plans de mesures d’urgence actifs (25 %) et les exercices d’évacuation (15 %).',
+      'Lisez l’indice CORO : il pondère les rôles d’urgence couverts (35 %), les qualifications présentes (15 %), les plans de mesures d’urgence actifs (25 %), les exercices d’évacuation (15 % : évacuations Sentinelle et rapports d’exercice approuvés) et les formations (10 % : taux de réussite aux questionnaires post-formation des 12 derniers mois).',
+      'L’onglet Formations liste les séances de questionnaire du bâtiment, avec les participants et leurs résultats.',
       'L’état est Opérationnel (85 % et plus), Capacité réduite (60 à 84 %) ou Critique (moins de 60 %). Le seuil cible est 70 %.',
       'Consultez les onglets Vue générale, Couverture rôles, Intelligence (recommandations) et Tendance 90 jours.',
       'Une lacune critique signale un rôle sans aucun membre présent; les substitutions automatiques actives sont listées.',
@@ -1640,7 +1641,7 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
     'Vous savez quels bâtiments et quelles lacunes traiter en premier.',
     ['coro-client-portal/app/intelligence/page.tsx'],
     undefined,
-    ['Les recommandations s’appuient sur les 4 composantes de l’indice CORO; elles ne remplacent pas l’avis de votre firme-conseil.'],
+    ['Les recommandations s’appuient sur les 5 composantes de l’indice CORO; elles ne remplacent pas l’avis de votre firme-conseil.'],
   ),
   article(
     'actions-correctives',
@@ -1841,7 +1842,7 @@ export const MANUAL_ARTICLES: readonly ManualArticle[] = [
       'Suivez les résultats dans la même fenêtre (participants, moyenne, taux de réussite), puis utilisez Fermer le questionnaire.',
       'Un administrateur adapte les questions de chaque type de formation dans Administration → Questionnaires de formation.',
     ],
-    'Les scores sont rattachés à l’activité et au bâtiment ; un taux de réussite inférieur à 80 % sur 12 mois ajoute une recommandation à l’indice CORO.',
+    'Les scores sont rattachés à l’activité et au bâtiment : le taux de réussite des 12 derniers mois compte pour 10 % de l’indice CORO, les participants s’ajoutent au registre de formation (7.1) du PMU et le client les voit dans l’onglet Formations de son bâtiment.',
     [
       'coro-frontend/components/TrainingQuestionnaireModal.tsx',
       'coro-frontend/app/settings/training-questionnaires/page.tsx',

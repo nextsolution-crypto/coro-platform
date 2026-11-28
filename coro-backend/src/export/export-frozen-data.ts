@@ -13,6 +13,16 @@
 
 export const FROZEN_EXPORT_DATA_VERSION = 1;
 
+/** Ligne du registre de formation tirée des questionnaires post-formation. */
+export interface TrainingRegisterRow {
+  nom: string;
+  formation: string;
+  date: string;
+  formateur: string;
+  resultat: string;
+  reussi: boolean;
+}
+
 export interface FrozenExportData {
   version: typeof FROZEN_EXPORT_DATA_VERSION;
   procedureDefaults: Record<string, unknown>[];
@@ -24,6 +34,8 @@ export interface FrozenExportData {
     photosData: unknown;
     extraData: unknown;
   } | null;
+  /** Absent des snapshots antérieurs : le registre reste alors manuel. */
+  trainingRegister?: TrainingRegisterRow[];
 }
 
 /** Interface de lecture utilisée par les builders PDF. */
@@ -37,6 +49,8 @@ export interface ExportDataSource {
   /** Procédures IA demandées, limitées au projet ou à la bibliothèque publiée. */
   customProcedures(ids: string[]): Promise<any[]>;
   module7(): Promise<FrozenExportData['module7']>;
+  /** Participants des questionnaires post-formation du bâtiment du projet. */
+  trainingRegister?(): Promise<TrainingRegisterRow[]>;
 }
 
 type Reader = {
@@ -44,7 +58,59 @@ type Reader = {
   procedureOverride: { findMany: (args: any) => PromiseLike<any[]> };
   customProcedure: { findMany: (args: any) => PromiseLike<any[]> };
   module7Data: { findUnique: (args: any) => PromiseLike<any> };
+  project?: { findFirst: (args: any) => PromiseLike<any> };
+  trainingQuestionnaireResponse?: { findMany: (args: any) => PromiseLike<any[]> };
+  user?: { findMany: (args: any) => PromiseLike<any[]> };
 };
+
+const civil = (value: Date | string | null | undefined) =>
+  value ? new Date(value).toISOString().slice(0, 10) : '';
+
+async function readTrainingRegister(
+  db: Reader,
+  projectId: string,
+  organizationId: string,
+): Promise<TrainingRegisterRow[]> {
+  if (!db.project || !db.trainingQuestionnaireResponse) return [];
+  const project = await db.project.findFirst({
+    where: { id: projectId, organizationId },
+    select: { buildingId: true },
+  });
+  if (!project?.buildingId) return [];
+  const responses = await db.trainingQuestionnaireResponse.findMany({
+    where: { session: { organizationId, buildingId: project.buildingId } },
+    orderBy: [{ submittedAt: 'asc' }, { id: 'asc' }],
+    select: {
+      participantName: true,
+      percent: true,
+      passed: true,
+      submittedAt: true,
+      session: {
+        select: {
+          title: true,
+          createdById: true,
+          projectActivity: { select: { label: true, customLabel: true, scheduledDate: true } },
+        },
+      },
+    },
+  });
+  const trainerIds = [...new Set(responses.map((r: any) => r.session.createdById))];
+  const trainers = trainerIds.length && db.user
+    ? await db.user.findMany({
+        where: { id: { in: trainerIds }, organizationId },
+        select: { id: true, firstName: true, lastName: true },
+      })
+    : [];
+  const names = new Map(trainers.map((t: any) => [t.id, `${t.firstName} ${t.lastName}`]));
+  return responses.map((r: any) => ({
+    nom: r.participantName,
+    formation: r.session.projectActivity?.customLabel || r.session.projectActivity?.label || r.session.title,
+    date: civil(r.session.projectActivity?.scheduledDate ?? r.submittedAt),
+    formateur: names.get(r.session.createdById) ?? '',
+    resultat: `${r.percent} %`,
+    reussi: Boolean(r.passed),
+  }));
+}
 
 const VOLATILE_KEYS = new Set(['createdAt', 'updatedAt']);
 
@@ -110,6 +176,7 @@ export function liveExportDataSource(
           }
         : null;
     },
+    trainingRegister: async () => readTrainingRegister(db, projectId, organizationId),
   };
 }
 
@@ -119,13 +186,14 @@ export async function captureFrozenExportData(
   input: { projectId: string; organizationId: string; content: unknown },
 ): Promise<FrozenExportData> {
   const live = liveExportDataSource(db, input.projectId, input.organizationId);
-  const [defaults, orgOverrides, projectOverrides, customs, module7] =
+  const [defaults, orgOverrides, projectOverrides, customs, module7, trainingRegister] =
     await Promise.all([
       live.procedureDefaults(),
       live.organizationOverrides(),
       live.projectOverrides(),
       live.customProcedures(requestedCustomIds(input.content)),
       live.module7(),
+      live.trainingRegister ? live.trainingRegister() : Promise.resolve([]),
     ]);
   return {
     version: FROZEN_EXPORT_DATA_VERSION,
@@ -134,6 +202,7 @@ export async function captureFrozenExportData(
     projectOverrides: plain(projectOverrides),
     customProcedures: plain(customs),
     module7: module7 ? (JSON.parse(JSON.stringify(module7)) as any) : null,
+    ...(trainingRegister.length ? { trainingRegister } : {}),
   };
 }
 
@@ -158,5 +227,6 @@ export function frozenExportDataSource(data: FrozenExportData): ExportDataSource
     customProcedures: async (ids: string[]) =>
       data.customProcedures.filter((row) => ids.includes(String(row.id))),
     module7: async () => data.module7,
+    trainingRegister: async () => data.trainingRegister ?? [],
   };
 }

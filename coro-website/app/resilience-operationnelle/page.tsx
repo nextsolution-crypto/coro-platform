@@ -18,7 +18,7 @@ type P = { searchParams?: Promise<Record<string, string | string[] | undefined>>
 /**
  * /resilience-operationnelle (MIG-03A) — the organisational level: understand, prepare, coordinate, act, recover, improve.
  * Family: resilience & operations (bridge between documentation and operations). NOT Sentinelle, NOT Incident, NOT a dashboard.
- * PRODUCT TRUTH (audited in coro-backend/src/occupancy, reminders and coro-client-portal): the resilience index (4 weighted components 40/20/25/15),
+ * PRODUCT TRUTH (audited in coro-backend/src/occupancy, reminders and coro-client-portal): the resilience index (5 weighted components 35/15/25/15/10),
  * emergency roles with primary/alternate members and an effective organisation, the occupancy register (QR + PIN), incident triggering with
  * SMS (consent only) and email, exercise mode, incident report and REX, organisational recommendations and corrective actions exist in code.
  * NOT claimed: compliance with, or certification to, ISO 22301 / CNPI / CNESST / NFPA / CCOHS (ISO 22301 is a management-system standard, certifiable
@@ -54,7 +54,7 @@ const copy = {
     proofTitle: 'Une plateforme qui sait qui est là et ce qu’il peut faire',
     highlights: [
       { title: 'Présence réelle', text: 'Le pointage par QR code et PIN indique qui est dans le bâtiment.' },
-      { title: 'Indice CORO', text: '4 composantes pondérées : rôles, qualifications, plans, exercices.' },
+      { title: 'Indice CORO', text: '5 composantes pondérées : rôles, qualifications, plans, exercices, formations.' },
       { title: 'Module Incident', text: 'Procédure du coordonnateur, mobilisation, journal et rapport.' },
       { title: 'Boucle REX', text: 'Après l’incident : retour d’expérience, recommandations et actions correctives pour améliorer le plan.' },
     ],
@@ -68,14 +68,15 @@ const copy = {
         items: ['Messages préfixés [EXERCICE]', 'Occupants non notifiés'], link: '' },
     ],
     indexLabel: 'Indice CORO de résilience', indexTitle: 'Un score pondéré qui répond à une question simple : sommes-nous vraiment prêts?',
-    indexText: 'L’indice CORO de résilience opérationnelle calcule la capacité d’intervention actuelle du bâtiment, pas sa capacité théorique. Il combine quatre composantes pondérées et se recalcule à partir des présences et des données à jour.',
+    indexText: 'L’indice CORO de résilience opérationnelle calcule la capacité d’intervention actuelle du bâtiment, pas sa capacité théorique. Il combine cinq composantes pondérées et se recalcule à partir des présences et des données à jour.',
     components: [
-      { label: 'Couverture des rôles', weight: '40 %', desc: 'Coordonnateur, EPI, secouristes, accompagnateurs PNA : présents ou absents?' },
-      { label: 'Qualifications', weight: '20 %', desc: 'RCR/DEA, extincteur, EPI, matières dangereuses : qui peut agir?' },
+      { label: 'Couverture des rôles', weight: '35 %', desc: 'Coordonnateur, EPI, secouristes, accompagnateurs PNA : présents ou absents?' },
+      { label: 'Qualifications', weight: '15 %', desc: 'RCR/DEA, extincteur, EPI, matières dangereuses : qui peut agir?' },
       { label: 'Plans approuvés', weight: '25 %', desc: 'PMU ou PSI validé et à jour dans CORO.' },
-      { label: 'Exercices', weight: '15 %', desc: 'Dernier exercice d’évacuation de moins de 12 mois.' },
+      { label: 'Exercices', weight: '15 %', desc: 'Dernier exercice d’évacuation de moins de 12 mois (Sentinelle ou rapport d’exercice).' },
+      { label: 'Formations', weight: '10 %', desc: 'Taux de réussite aux questionnaires post-formation des 12 derniers mois.' },
     ],
-    componentsLabel: 'Les quatre composantes de l’indice',
+    componentsLabel: 'Les cinq composantes de l’indice',
     orgLabel: 'Organisation d’urgence dynamique', orgTitle: 'Le coordonnateur titulaire sort du bâtiment. Le substitut prend le relais.',
     orgText: 'Chaque membre de l’équipe d’urgence est configuré avec son rôle, son type (titulaire ou substitut) et sa priorité. Quand la composition de l’équipe présente change, CORO recalcule l’organisation d’urgence effective.',
     orgItems: ['Rôles : coordonnateur, EPI, responsable du rassemblement, chercheur, surveillant de sortie, accompagnateur PNA, secouriste', 'Titulaires et substituts configurés par rôle et par bâtiment', 'Substitution visible sur le tableau de résilience', 'Lacune signalée si aucun coordonnateur ou secouriste n’est présent', 'Qualifications par membre : RCR/DEA, extincteur, EPI, matières dangereuses'],
@@ -95,7 +96,7 @@ const copy = {
       { title: 'Responsabilité de conformité', text: 'Les exigences de conservation et de documentation varient selon l’organisation et la réglementation applicable. CORO fournit la trace; la conformité demeure la responsabilité de l’organisation.' },
     ],
     intelLabel: 'Intelligence organisationnelle', intelTitle: 'Repérer les lacunes avant qu’un incident survienne',
-    intelText: 'À partir des quatre composantes de l’indice, CORO génère des recommandations classées par niveau de criticité, avant même qu’une urgence ne se déclare.',
+    intelText: 'À partir des cinq composantes de l’indice, CORO génère des recommandations classées par niveau de criticité, avant même qu’une urgence ne se déclare.',
     intelExamples: [['Critique', 'Aucun PMU ou PSI actif associé à ce bâtiment'], ['Critique', 'Aucun coordonnateur d’urgence ou substitut présent'], ['Critique', 'Aucun exercice d’évacuation enregistré'], ['Attention', 'Incidents répétés du même type en 90 jours : récurrence anormale']] as const,
     platform: 'Cette partie de la plateforme', platformTitle: 'Un socle produit relié', platformLead: 'La résilience opérationnelle s’appuie sur les autres parties de CORO : les documents à approuver, les mandats à réaliser, la performance à lire et l’accès du client.', explore: 'Explorer',
     products: [
@@ -137,7 +138,7 @@ const copy = {
     proofTitle: 'A platform that knows who is there and what they can do',
     highlights: [
       { title: 'Real presence', text: 'QR code and PIN check-in shows who is in the building.' },
-      { title: 'CORO Index', text: '4 weighted components: roles, qualifications, plans, drills.' },
+      { title: 'CORO Index', text: '5 weighted components: roles, qualifications, plans, drills, training.' },
       { title: 'Incident Module', text: 'Coordinator procedure, mobilization, log and report.' },
       { title: 'REX Loop', text: 'After the incident: lessons learned, recommendations and corrective actions to improve the plan.' },
     ],
@@ -151,14 +152,15 @@ const copy = {
         items: ['Messages prefixed [EXERCISE]', 'Occupants not notified'], link: '' },
     ],
     indexLabel: 'CORO Resilience Index', indexTitle: 'A weighted score that answers one simple question: are we actually ready?',
-    indexText: 'The CORO operational resilience index calculates the building’s current response capacity, not its theoretical capacity. It combines four weighted components and is recalculated from current presence and up-to-date data.',
+    indexText: 'The CORO operational resilience index calculates the building’s current response capacity, not its theoretical capacity. It combines five weighted components and is recalculated from current presence and up-to-date data.',
     components: [
-      { label: 'Role coverage', weight: '40 %', desc: 'Coordinator, FRT, first aiders, PNA escorts: present or absent?' },
-      { label: 'Qualifications', weight: '20 %', desc: 'CPR/AED, extinguisher, FRT, hazmat: who can actually act?' },
+      { label: 'Role coverage', weight: '35 %', desc: 'Coordinator, FRT, first aiders, PNA escorts: present or absent?' },
+      { label: 'Qualifications', weight: '15 %', desc: 'CPR/AED, extinguisher, FRT, hazmat: who can actually act?' },
       { label: 'Approved plans', weight: '25 %', desc: 'ERP or FSP validated and current in CORO.' },
-      { label: 'Drills', weight: '15 %', desc: 'Last evacuation drill within 12 months.' },
+      { label: 'Drills', weight: '15 %', desc: 'Last evacuation drill within 12 months (Sentinel or drill report).' },
+      { label: 'Training', weight: '10 %', desc: 'Pass rate on post-training questionnaires over the last 12 months.' },
     ],
-    componentsLabel: 'The four components of the index',
+    componentsLabel: 'The five components of the index',
     orgLabel: 'Dynamic emergency organization', orgTitle: 'The primary coordinator leaves the building. The alternate takes over.',
     orgText: 'Each emergency team member is configured with a role, a type (primary or alternate) and a priority. When the composition of the team on site changes, CORO recalculates the effective emergency organization.',
     orgItems: ['Roles: coordinator, FRT, assembly point warden, searcher, exit monitor, PNA escort, first aider', 'Primaries and alternates configured per role and building', 'Substitution visible on the resilience dashboard', 'Gap flagged if no coordinator or first aider is present', 'Qualifications per member: CPR/AED, extinguisher, FRT, hazmat'],
@@ -178,7 +180,7 @@ const copy = {
       { title: 'Compliance responsibility', text: 'Retention and documentation requirements vary by organization and applicable regulation. CORO provides the record; compliance remains the organization’s responsibility.' },
     ],
     intelLabel: 'Organizational intelligence', intelTitle: 'Identify gaps before an incident occurs',
-    intelText: 'From the four components of the index, CORO generates recommendations ranked by criticality, before any emergency occurs.',
+    intelText: 'From the five components of the index, CORO generates recommendations ranked by criticality, before any emergency occurs.',
     intelExamples: [['Critical', 'No active ERP or FSP linked to this building'], ['Critical', 'No emergency coordinator or alternate present'], ['Critical', 'No evacuation drill on record'], ['Attention', 'Repeated incidents of the same type within 90 days: abnormal recurrence']] as const,
     platform: 'This part of the platform', platformTitle: 'A connected product foundation', platformLead: 'Operational resilience relies on the other parts of CORO: documents to approve, mandates to deliver, performance to read and client access.', explore: 'Explore',
     products: [
