@@ -28,3 +28,12 @@ describe('Visibilité des projets', () => {
     expect(projectReadWhere({ ...base, role: 'ADMIN', projectVisibility: 'RESTRICTED' })).toEqual({ organizationId: 'o1' });
   });
 });
+
+describe('Équipe du client', () => {
+  it('donne accès à tous les projets du client en mode Restreinte', () => {
+    const where: any = projectReadWhere({ userId: 'u1', organizationId: 'o1', role: 'OPERATOR', projectVisibility: 'RESTRICTED' });
+    expect(where.OR).toEqual(expect.arrayContaining([
+      { client: { teamMembers: { some: { userId: 'u1' } } } },
+    ]));
+  });
+});

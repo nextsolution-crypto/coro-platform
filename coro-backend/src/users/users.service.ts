@@ -90,6 +90,7 @@ export class UsersService {
         isActive: true,
         horaireBase: true,
         timeZone: true,
+        planningCoordinator: true,
         timeZoneVerified: true,
         organization: {
           select: {

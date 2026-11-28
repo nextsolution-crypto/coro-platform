@@ -11,6 +11,7 @@ import {
   UsePipes,
   ValidationPipe,
   Request,
+  ForbiddenException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ClientsService } from './clients.service';
@@ -48,6 +49,18 @@ export class ClientsController {
   @Get(':id')
   findOne(@Param('id') id: string, @Request() req: any) {
     return this.clientsService.findOne(id, req.user.organizationId);
+  }
+
+  @Get(':id/team')
+  getTeam(@Param('id') id: string, @Request() req: any) {
+    if (!['ADMIN', 'SUPER_ADMIN', 'OPERATOR'].includes(req.user.role))
+      throw new ForbiddenException('Accès réservé aux conseillers.');
+    return this.clientsService.getTeam(id, req.user.organizationId);
+  }
+
+  @Put(':id/team')
+  setTeam(@Param('id') id: string, @Body() body: { userIds?: unknown }, @Request() req: any) {
+    return this.clientsService.setTeam(id, body?.userIds, req.user);
   }
 
   @Get(':id/client-users')

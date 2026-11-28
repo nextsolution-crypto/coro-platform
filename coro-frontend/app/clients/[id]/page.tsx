@@ -4,6 +4,7 @@ import { sessionMarker } from '@/lib/session';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
+import ClientTeamSection from './ClientTeamSection';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { formatPhone } from '@/lib/formatPhone';
@@ -371,6 +372,8 @@ export default function ClientDetailPage() {
               ))}
             </div>
           </div>
+
+          <ClientTeamSection clientId={clientId} />
 
           {/* Bâtiments associés */}
           {(

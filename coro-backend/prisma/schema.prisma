@@ -685,6 +685,7 @@ model User {
   organizationInvitationEvents          OrganizationUserInvitationEvent[]  @relation("OrganizationUserInvitationRecipient")
 
   @@unique([id, organizationId])
+  clientTeams                      ClientTeamMember[]                @relation("ClientTeamMember")
 }
 
 model OrganizationSettingsConflict {
@@ -3053,8 +3054,24 @@ model Client {
   provisioningRequest           ClientProvisioningRequest?
   invitationEvents              ClientInvitationEvent[]
   displayCorrectionObservations DisplayCorrectionObservation[]
+  teamMembers                   ClientTeamMember[]
 
   @@unique([id, organizationId])
+}
+
+/// Équipe d'un client : conseillers rattachés, qui voient tous ses projets en visibilité Restreinte.
+model ClientTeamMember {
+  id             String   @id @default(uuid())
+  clientId       String
+  client         Client   @relation(fields: [clientId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  userId         String
+  user           User     @relation("ClientTeamMember", fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  createdById    String?
+  createdAt      DateTime @default(now())
+
+  @@unique([clientId, userId])
+  @@index([userId, organizationId])
 }
 
 enum BookingAssignmentRole {
